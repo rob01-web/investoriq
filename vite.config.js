@@ -1,9 +1,10 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
-import inlineEditPlugin from './plugins/visual-editor/vite-plugin-react-inline-editor.js';
-import editModeDevPlugin from './plugins/visual-editor/vite-plugin-edit-mode.js';
-import iframeRouteRestorationPlugin from './plugins/vite-plugin-iframe-route-restoration.js';
+// Removed missing visual editor imports to prevent startup errors
+// import inlineEditPlugin from './plugins/visual-editor/vite-plugin-react-inline-editor.js';
+// import editModeDevPlugin from './plugins/visual-editor/vite-plugin-edit-mode.js';
+// import iframeRouteRestorationPlugin from './plugins/vite-plugin-iframe-route-restoration.js';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -129,7 +130,7 @@ window.fetch = function(...args) {
 			return response;
 		})
 		.catch(error => {
-			if (!url.match(/\.html?$/i)) {
+			if (!url.match(/\\.html?$/i)) {
 				console.error(error);
 			}
 
@@ -181,7 +182,7 @@ const addTransformIndexHtml = {
 			},
 			{
 				tag: 'script',
-				attrs: {type: 'module'},
+				attrs: { type: 'module' },
 				children: configHorizonsConsoleErrroHandler,
 				injectTo: 'head',
 			},
@@ -200,44 +201,39 @@ const addTransformIndexHtml = {
 		];
 
 		if (!isDev && process.env.TEMPLATE_BANNER_SCRIPT_URL && process.env.TEMPLATE_REDIRECT_URL) {
-			tags.push(
-				{
-					tag: 'script',
-					attrs: {
-						src: process.env.TEMPLATE_BANNER_SCRIPT_URL,
-						'template-redirect-url': process.env.TEMPLATE_REDIRECT_URL,
-					},
-					injectTo: 'head',
-				}
-			);
+			tags.push({
+				tag: 'script',
+				attrs: {
+					src: process.env.TEMPLATE_BANNER_SCRIPT_URL,
+					'template-redirect-url': process.env.TEMPLATE_REDIRECT_URL,
+				},
+				injectTo: 'head',
+			});
 		}
 
-		return {
-			html,
-			tags,
-		};
+		return { html, tags };
 	},
 };
 
 console.warn = () => {};
 
-const logger = createLogger()
-const loggerError = logger.error
+const logger = createLogger();
+const loggerError = logger.error;
 
 logger.error = (msg, options) => {
 	if (options?.error?.toString().includes('CssSyntaxError: [postcss]')) {
 		return;
 	}
-
 	loggerError(msg, options);
-}
+};
 
 export default defineConfig({
 	customLogger: logger,
 	plugins: [
-		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), iframeRouteRestorationPlugin()] : []),
+		// Removed broken plugin references
+		// ...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), iframeRouteRestorationPlugin()] : []),
 		react(),
-		addTransformIndexHtml
+		addTransformIndexHtml,
 	],
 	server: {
 		cors: true,
@@ -247,7 +243,7 @@ export default defineConfig({
 		allowedHosts: true,
 	},
 	resolve: {
-		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],
+		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
 		alias: {
 			'@': path.resolve(__dirname, './src'),
 		},
@@ -258,8 +254,8 @@ export default defineConfig({
 				'@babel/parser',
 				'@babel/traverse',
 				'@babel/generator',
-				'@babel/types'
-			]
-		}
-	}
+				'@babel/types',
+			],
+		},
+	},
 });
