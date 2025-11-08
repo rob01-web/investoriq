@@ -1,67 +1,43 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+// If your project uses the @ alias, keep these.
+// If not, change to relative imports like '../pages/LandingPage'
 import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
-import SampleReport from '@/pages/SampleReport';
 import LoginPage from '@/pages/Login';
 import SignUpPage from '@/pages/SignUp';
-import AdminDashboard from '@/pages/AdminDashboard';
-import PricingPage from '@/pages/Pricing';
-import { Loader2 } from 'lucide-react';
+import SampleReport from '@/pages/SampleReport';
 
-const PrivateRoute = ({ children, adminOnly = false }) => {
-  const { user, profile, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  if (adminOnly && profile?.role !== 'admin') {
-    return <Navigate to="/dashboard" />;
-  }
-
-  return children;
-};
-
-function App() {
+function NotFound() {
   return (
-    <Router>
-      <div className="min-h-screen bg-slate-50">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/sample-report" element={<SampleReport />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } 
-          />
-          <Route
-            path="/admin"
-            element={
-              <PrivateRoute adminOnly={true}>
-                <AdminDashboard />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Page Not Found</h1>
+        <p className="text-slate-600 mb-6">Let’s get you back to safety.</p>
+        <a
+          href="/"
+          className="inline-block px-5 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-[#1F8A8A] to-[#177272] hover:opacity-90 transition"
+        >
+          Go to Home
+        </a>
       </div>
-    </Router>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/sample-report" element={<SampleReport />} />
+      {/* convenience redirects */}
+      <Route path="/home" element={<Navigate to="/" replace />} />
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}

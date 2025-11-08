@@ -2,94 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------
+   INVESTORIQ — BRAND BASELINE
+   Deep Navy (#0F172A), Teal (#1F8A8A), Gold (#D4AF37)
+--------------------------------------- */
+
 @layer base {
   :root {
-    /* Your Elite InvestorIQ Brand Colors */
+    /* --- Color Palette --- */
     --background: 0 0% 100%;
-    --foreground: 215 25% 27%;
-    
+    --foreground: 220 15% 20%;
+
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
-    
+    --card-foreground: 220 15% 20%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
-    
-    /* Deep Blue Primary (your main brand blue) */
-    --primary: 217 91% 28%;  /* #0e3a7a - Deep institutional blue */
+    --popover-foreground: 220 15% 20%;
+
+    /* Brand Colors */
+    --primary: 188 64% 33%; /* #1F8A8A - Signature Teal */
     --primary-foreground: 0 0% 100%;
-    
-    /* Lighter Blue Secondary */
-    --secondary: 217 71% 53%;  /* #3b82f6 - Lighter blue for accents */
-    --secondary-foreground: 0 0% 100%;
-    
-    /* Muted Gold Accent */
-    --accent: 45 100% 51%;  /* #ffc107 - Muted gold */
-    --accent-foreground: 215 25% 27%;
-    
+
+    --secondary: 221 39% 11%; /* #0F172A - Deep Navy */
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 46 64% 53%; /* #D4AF37 - Gold Accent */
+    --accent-foreground: 221 39% 11%;
+
+    /* Neutrals */
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    
+
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 28%;
-    
+    --ring: 188 64% 33%;
+
+    /* Alerts */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border radius (rounded-xl) */
     --radius: 0.75rem;
   }
-  
+
   .dark {
-    --background: 215 28% 17%;
+    --background: 221 39% 11%;
     --foreground: 210 40% 98%;
-    
-    --card: 215 28% 17%;
+
+    --card: 221 39% 11%;
     --card-foreground: 210 40% 98%;
-    
-    --popover: 215 28% 17%;
+
+    --popover: 221 39% 11%;
     --popover-foreground: 210 40% 98%;
-    
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    
-    --secondary: 217 33% 17%;
+
+    --primary: 188 64% 45%;
+    --primary-foreground: 221 39% 11%;
+
+    --secondary: 188 64% 33%;
     --secondary-foreground: 210 40% 98%;
-    
-    --accent: 45 100% 51%;
-    --accent-foreground: 215 25% 27%;
-    
+
+    --accent: 46 64% 53%;
+    --accent-foreground: 221 39% 11%;
+
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    
+
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 188 64% 45%;
   }
-}
 
-body {
-  @apply bg-slate-50 text-slate-900;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  /* --- Global Typography & Smoothing --- */
+  body {
+    @apply bg-slate-50 text-slate-900;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-* {
-  @apply border-border;
-}
+  * {
+    @apply border-border;
+  }
 
-/* Additional professional styling */
-h1, h2, h3, h4, h5, h6 {
-  @apply font-semibold text-slate-900;
-}
+  /* --- Heading and UI Elements --- */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-slate-900 tracking-tight;
+  }
 
-a {
-  @apply transition-colors duration-200;
-}
+  a {
+    @apply transition-colors duration-200 hover:text-[#1F8A8A];
+  }
 
-button {
-  @apply transition-all duration-200;
+  button {
+    @apply transition-all duration-200 hover:opacity-90;
+  }
 }

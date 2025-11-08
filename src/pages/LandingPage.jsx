@@ -1,27 +1,39 @@
-import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { FileText, Cpu, Shield, Loader2, LogOut } from 'lucide-react';
-import HeroImage from '@/components/HeroImage';
-import BackButton from '@/components/BackButton';
+// src/pages/LandingPage.jsx
+import React, { useState } from "react";
+import { Helmet } from "react-helmet";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { FileText, Cpu, Shield, Loader2, LogOut } from "lucide-react";
+import HeroImage from "@/components/HeroImage";
+import BackButton from "@/components/BackButton";
+
+const PALETTE = {
+  deepNavy: "#0F172A",
+  teal: "#1F8A8A",
+  aqua: "#94D9D9",
+  gold: "#D4AF37",
+  gray: "#6B7280",
+};
 
 const FeatureCard = ({ icon, title, description, delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    transition={{ delay, duration: 0.5 }}
-    className="bg-white p-6 text-center border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition"
+    transition={{ delay, duration: 0.6, ease: "easeOut" }}
+    className="bg-white p-6 text-center border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
   >
-    <div className="flex items-center justify-center h-16 w-16 rounded-full bg-[#1F8A8A]/10 text-[#1F8A8A] mb-4 mx-auto">
+    <div
+      className="flex items-center justify-center h-16 w-16 rounded-full mb-4 mx-auto"
+      style={{ backgroundColor: `${PALETTE.teal}15`, color: PALETTE.teal }}
+    >
       {icon}
     </div>
     <h3 className="text-lg font-semibold mb-2 text-slate-900">{title}</h3>
-    <p className="text-slate-600 text-sm">{description}</p>
+    <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
   </motion.div>
 );
 
@@ -30,26 +42,30 @@ const LandingPage = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
+
   const logoUrl =
-    'https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/7c549d98bf6c15c8f3d897bc03104499.png';
+    "https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/7c549d98bf6c15c8f3d897bc03104499.png";
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     await signOut();
     setIsSigningOut(false);
-    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    navigate('/');
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    navigate("/");
   };
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <>
       <Helmet>
-        <title>InvestorIQ - Smarter Real Estate Decisions</title>
+        <title>InvestorIQ — Elite Real Estate Intelligence</title>
         <meta
           name="description"
-          content="Upload your property documents and receive a detailed institutional-style analysis within 48 hours. Smarter real estate decisions start here."
+          content="InvestorIQ delivers institutional-grade property analysis using advanced AI. Upload your deal and receive your Elite Report in 48 hours."
         />
       </Helmet>
 
@@ -72,7 +88,7 @@ const LandingPage = () => {
               </motion.div>
 
               <div className="flex items-center space-x-2 sm:space-x-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/sample-report')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/sample-report")}>
                   Sample Report
                 </Button>
                 {user ? (
@@ -80,7 +96,7 @@ const LandingPage = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => navigate("/dashboard")}
                       className="border-[#1F8A8A] text-[#1F8A8A] hover:bg-[#1F8A8A] hover:text-white transition"
                     >
                       Dashboard
@@ -100,15 +116,15 @@ const LandingPage = () => {
                   </>
                 ) : (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
                       Log In
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => navigate('/signup')}
-                      className="bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold hover:opacity-90 shadow-md"
+                      onClick={() => navigate("/signup")}
+                      className="bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-semibold hover:opacity-90 shadow-md"
                     >
-                      Sign Up
+                      Join InvestorIQ
                     </Button>
                   </>
                 )}
@@ -119,26 +135,25 @@ const LandingPage = () => {
 
         {/* HERO */}
         <main className="flex-grow">
-          <section className="py-20 sm:py-24 text-center bg-slate-50/50">
+          <section className="py-20 sm:py-24 text-center bg-gradient-to-b from-white via-[#f9fafb] to-[#f1f5f9]">
             <div className="max-w-4xl mx-auto px-4">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7 }}
-                className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-6"
+                className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#0F172A] mb-6"
               >
-                Smarter Real Estate Decisions.
+                Elite Property Intelligence for Modern Investors
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.7 }}
-                className="max-w-2xl mx-auto text-lg text-slate-600 mb-8"
+                className="max-w-2xl mx-auto text-lg text-slate-600 mb-8 leading-relaxed"
               >
-                Upload your <strong>property documents</strong> and our proprietary AI engine will
-                deliver a professional, data-backed analysis within 48 hours. Supports PDFs, images,
-                and all common document formats (max 10 MB each). Works for both off-market and MLS
-                properties when you have supporting files from your broker or agent.
+                Upload your <strong>property documents</strong> and our AI-driven analysis engine
+                delivers a comprehensive, data-backed <span className="text-[#1F8A8A] font-semibold">InvestorIQ Elite Report</span> within 48 hours.
+                Works for both <em>off-market</em> and MLS-listed deals.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -148,16 +163,16 @@ const LandingPage = () => {
               >
                 <Button
                   size="lg"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate("/dashboard")}
                   className="bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold px-8 py-3 rounded-lg shadow-md hover:scale-105 transition-transform"
                 >
-                  Upload Your Deal
+                  Analyze My Property
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => navigate('/sample-report')}
-                  className="border-2 border-[#1F8A8A] text-[#1F8A8A] font-semibold hover:bg-[#1F8A8A] hover:text-white transition-all"
+                  onClick={() => navigate("/sample-report")}
+                  className="border-2 border-[#D4AF37] text-[#0F172A] font-semibold hover:bg-[#D4AF37] hover:text-white transition-all"
                 >
                   View Sample Report
                 </Button>
@@ -167,14 +182,14 @@ const LandingPage = () => {
           </section>
 
           {/* FEATURES */}
-          <section id="features" className="py-20">
+          <section id="features" className="py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                <h2 className="text-3xl font-bold tracking-tight text-[#0F172A] sm:text-4xl">
                   Why Investors Choose InvestorIQ
                 </h2>
                 <p className="mt-4 text-lg text-slate-600">
-                  Institutional-quality analysis designed for modern investors.
+                  Institutional-grade intelligence designed for serious investors.
                 </p>
               </div>
 
@@ -182,19 +197,19 @@ const LandingPage = () => {
                 <FeatureCard
                   icon={<FileText size={28} />}
                   title="Comprehensive Reports"
-                  description="Full financial, risk, and market breakdown with charts, maps, and insights."
+                  description="Full financial, risk, and market breakdown with charts, maps, and performance indicators."
                   delay={0.1}
                 />
                 <FeatureCard
                   icon={<Cpu size={28} />}
-                  title="Proprietary Intelligence"
-                  description="InvestorIQ models evaluate your property using institutional-level frameworks."
+                  title="AI-Driven Intelligence"
+                  description="Our proprietary algorithms replicate the frameworks of institutional underwriters."
                   delay={0.2}
                 />
                 <FeatureCard
                   icon={<Shield size={28} />}
                   title="Verified Accuracy"
-                  description="Reports are structured and benchmarked against proven investment standards."
+                  description="Benchmarked against live market data and proven investment standards."
                   delay={0.3}
                 />
               </div>
@@ -202,25 +217,25 @@ const LandingPage = () => {
           </section>
 
           {/* PRICING */}
-          <section id="pricing" className="py-20 bg-slate-50/50">
+          <section id="pricing" className="py-20 bg-[#f9fafb]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                <h2 className="text-3xl font-bold tracking-tight text-[#0F172A] sm:text-4xl">
                   Simple, Transparent Pricing (USD)
                 </h2>
                 <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-                  The more information you upload, the more detailed and accurate your report will
-                  be. (10 MB max per document)
+                  The more details you provide, the more refined and accurate your analysis.
                 </p>
               </div>
 
+              {/* Pricing Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Single Report */}
-                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-lg flex flex-col">
-                  <h3 className="text-2xl font-bold text-slate-900 text-center">Single Report</h3>
+                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md flex flex-col hover:shadow-xl transition">
+                  <h3 className="text-2xl font-bold text-[#0F172A] text-center">Single Report</h3>
                   <p className="text-5xl font-extrabold my-4 text-[#1F8A8A] text-center">$299</p>
                   <p className="text-slate-600 mb-6 text-center">
-                    Try InvestorIQ once with no subscription.
+                    Try InvestorIQ once—no subscription required.
                   </p>
                   <a
                     href="https://buy.stripe.com/9B6aEZ4zK431ahb1UT2sM03"
@@ -230,19 +245,19 @@ const LandingPage = () => {
                   </a>
                 </div>
 
-                {/* InvestorIQ Monthly */}
-                <div className="bg-white p-8 rounded-2xl border-2 border-[#1F8A8A] shadow-xl flex flex-col">
-                  <div className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold bg-[#E6C14D]/20 text-[#1F8A8A]">
+                {/* Monthly Subscription */}
+                <div className="bg-white p-8 rounded-2xl border-2 border-[#D4AF37] shadow-xl flex flex-col relative">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#D4AF37] text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
                     Most Popular
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 text-center">
+                  <h3 className="text-2xl font-bold text-[#0F172A] text-center mt-2">
                     InvestorIQ Monthly
                   </h3>
                   <p className="text-5xl font-extrabold my-4 text-[#1F8A8A] text-center">
                     $249<span className="text-xl text-slate-500">/mo</span>
                   </p>
                   <p className="text-slate-600 mb-6 text-center">
-                    One IQ Report per month, ideal for consistent deal flow.
+                    One Elite Report per month for consistent deal flow.
                   </p>
                   <a
                     href="https://buy.stripe.com/aFa14p9U44318936b92sM01"
@@ -252,16 +267,16 @@ const LandingPage = () => {
                   </a>
                 </div>
 
-                {/* Pro Investor Monthly */}
-                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-lg flex flex-col">
-                  <h3 className="text-2xl font-bold text-slate-900 text-center">
+                {/* Pro Investor */}
+                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md flex flex-col hover:shadow-xl transition">
+                  <h3 className="text-2xl font-bold text-[#0F172A] text-center">
                     Pro Investor Monthly
                   </h3>
                   <p className="text-5xl font-extrabold my-4 text-[#1F8A8A] text-center">
                     $599<span className="text-xl text-slate-500">/mo</span>
                   </p>
                   <p className="text-slate-600 mb-6 text-center">
-                    Three IQ Reports per month, built for active investors.
+                    Three Elite Reports monthly for active portfolio builders.
                   </p>
                   <a
                     href="https://buy.stripe.com/9B67sN4zKgPN0GBdDB2sM02"
@@ -273,26 +288,25 @@ const LandingPage = () => {
               </div>
 
               {/* Add-On Reports */}
-              <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-xl p-6 shadow text-center">
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Need more this month?</h3>
+              <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl p-6 shadow text-center">
+                <h3 className="text-xl font-bold text-[#0F172A] mb-1">Need more this month?</h3>
                 <p className="text-slate-600 mb-4">
-                  Buy additional IQ Reports anytime. You can adjust quantity at checkout.
+                  Buy additional IQ Reports anytime—quantity adjustable at checkout.
                 </p>
                 <a
                   href="https://buy.stripe.com/eVq5kFeakarp4WR0QP2sM00"
-                  className="inline-block px-5 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-[#1F8A8A] to-[#177272] hover:opacity-90 transition"
+                  className="inline-block px-5 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-[#D4AF37] to-[#b9972b] hover:opacity-90 transition"
                 >
-                  Buy Additional IQ Reports - <span className="font-bold">$229</span>
+                  Buy Additional Reports – <span className="font-bold">$229</span>
                 </a>
                 <p className="text-xs text-slate-500 mt-3">
-                  If a report fails to generate, your IQ Report credit is automatically restored.
-                  No cash refunds.
+                  Failed generations automatically restore your IQ credit. No cash refunds.
                 </p>
               </div>
 
               <div className="mt-10 text-center text-sm text-slate-500">
                 InvestorIQ supports both off-market and MLS properties when documents are available.
-                Direct MLS integration is scheduled for early 2026.
+                MLS API integration is scheduled for early 2026.
               </div>
             </div>
           </section>
@@ -300,11 +314,12 @@ const LandingPage = () => {
 
         {/* FOOTER */}
         <footer className="py-6 border-t bg-white text-center text-slate-500 text-sm">
-          © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+          © 2025{" "}
+          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
       </div>
 
-      {/* BACK BUTTON (appears for external navigations) */}
+      {/* BACK BUTTON */}
       <BackButton />
     </>
   );
