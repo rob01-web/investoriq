@@ -1,179 +1,140 @@
-import React, { useState, useEffect } from "react";
-import { Helmet } from "react-helmet";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Mail, KeyRound, User } from "lucide-react";
+"use client";
+
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import BackButton from "@/components/BackButton";
+import { Loader2, Mail, Lock, User } from "lucide-react";
+import { supabase } from "@/lib/customSupabaseClient";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-const PALETTE = {
-  deepNavy: "#0F172A",
-  teal: "#1F8A8A",
-  gold: "#D4AF37",
-  gray: "#6B7280",
-};
-
-const SignUpPage = () => {
-  const navigate = useNavigate();
-  const { signUp, user } = useAuth();
-  const { toast } = useToast();
+export default function SignUpPage() {
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const logoUrl =
-    "https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/7c549d98bf6c15c8f3d897bc03104499.png";
-
-  useEffect(() => {
-    if (user) navigate("/dashboard");
-  }, [user, navigate]);
+  const [errorMsg, setErrorMsg] = useState("");
+  const navigate = useNavigate();
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signUp(email, password, { data: { full_name: fullName } });
+    setErrorMsg("");
 
-    if (!error) {
-      toast({
-        title: "Account Created!",
-        description: "Please verify your email to activate your InvestorIQ account.",
-      });
-      navigate("/login");
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
     } else {
-      toast({
-        title: "Sign-Up Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      navigate("/dashboard");
     }
     setLoading(false);
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Join InvestorIQ Elite</title>
-        <meta
-          name="description"
-          content="Create your InvestorIQ Elite account to access professional-grade property analytics powered by AI."
-        />
-      </Helmet>
+    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] px-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full mx-auto bg-white shadow-2xl rounded-2xl p-10 border border-slate-200"
+      >
+        <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
+          Create Your Account
+        </h1>
+        <p className="text-slate-600 text-center mb-8">
+          Join{" "}
+          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> to generate AI-powered
+          Property IQ Reports
+        </p>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-[#f9fafb] to-[#eef2f5] px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-8 md:p-10"
-        >
-          {/* LOGO & HEADER */}
-          <div className="text-center mb-8">
-            <Link
-              to="/"
-              className="inline-block"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            >
-              <img
-                src={logoUrl}
-                alt="InvestorIQ Logo"
-                className="h-20 sm:h-24 mx-auto transition-transform hover:scale-105"
-              />
-            </Link>
-            <h1 className="text-3xl font-extrabold text-[#0F172A] mt-5">
-              Create Your <span className="text-[#1F8A8A]">InvestorIQ</span> Account
-            </h1>
-            <p className="text-slate-600 text-sm mt-2">
-              Unlock institutional-grade analysis for your real estate deals.
-            </p>
-          </div>
-
-          {/* FORM */}
-          <form onSubmit={handleSignUp} className="space-y-5">
+        <form onSubmit={handleSignUp} className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+              Full Name
+            </label>
             <div className="relative">
-              <User className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <User className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Full Name"
+                required
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                required
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+              Email Address
+            </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <input
                 type="email"
-                placeholder="Email Address"
+                required
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+              Password
+            </label>
             <div className="relative">
-              <KeyRound className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <input
                 type="password"
-                placeholder="Password (min. 6 characters)"
+                required
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength="6"
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
               />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-bold rounded-lg shadow-md hover:scale-[1.02] transition-transform flex items-center justify-center disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Account...
-                </>
-              ) : (
-                "Create Account"
-              )}
-            </button>
-          </form>
-
-          {/* LINKS */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-slate-600">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                className="font-semibold text-[#1F8A8A] hover:underline transition"
-              >
-                Log In
-              </Link>
-            </p>
-            <p className="text-xs text-slate-400 mt-2">
-              Need help?{" "}
-              <a
-                href="mailto:support@investoriq.ai"
-                className="text-[#1F8A8A] font-semibold hover:underline"
-              >
-                Contact Support
-              </a>
-            </p>
           </div>
-        </motion.div>
-      </div>
 
-      {/* FOOTER */}
-      <footer className="py-6 border-t bg-white text-center text-slate-500 text-sm">
-        © 2025{" "}
-        <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+          {errorMsg && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">
+              {errorMsg}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-semibold py-3 rounded-lg hover:scale-[1.02] transition-all"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Account...
+              </>
+            ) : (
+              "Sign Up"
+            )}
+          </Button>
+        </form>
+
+        <p className="text-center text-slate-600 mt-6">
+          Already have an account?{" "}
+          <Link to="/login" className="text-[#1F8A8A] font-semibold hover:underline">
+            Log in here
+          </Link>
+        </p>
+      </motion.div>
+
+      <footer className="py-6 text-center text-slate-500 text-sm mt-10">
+        © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
       </footer>
-
-      <BackButton />
-    </>
+    </div>
   );
-};
-
-export default SignUpPage;
+}

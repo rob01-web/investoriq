@@ -1,6 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
+/**
+ * HeroImage Component — InvestorIQ
+ * ---------------------------------
+ * Clean, modern hero visual featuring the InvestorIQ dashboard preview.
+ * Subtle floating animation and brand color gradient for a professional aesthetic.
+ */
+
 const HeroImage = () => {
   return (
     <motion.div
@@ -11,22 +18,25 @@ const HeroImage = () => {
     >
       <div className="max-w-5xl mx-auto relative rounded-2xl overflow-hidden shadow-[0_10px_50px_rgba(0,0,0,0.15)]">
         {/* Background Gradient Glow */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#1F8A8A]/40 via-transparent to-[#0F172A]/30 z-10 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-tr from-iqteal/40 via-transparent to-iqnavy/30 z-10 pointer-events-none" />
 
         {/* Floating Hero Image */}
         <motion.img
           src="https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/ef4a5a622dd1724eb6ee59f669c129a6.jpg"
-          alt="InvestorIQ dashboard analytics shown on a laptop"
+          alt="InvestorIQ dashboard preview on a laptop screen"
           className="w-full h-auto object-cover rounded-2xl"
           initial={{ y: 0 }}
-          animate={{ y: [0, -5, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
 
-        {/* Optional Caption Overlay */}
-        <div className="absolute bottom-3 right-4 bg-white/70 backdrop-blur-sm text-[#0F172A] text-xs md:text-sm font-medium px-3 py-1 rounded-full shadow-sm z-20">
-          InvestorIQ Elite Analytics
+        {/* Caption Overlay */}
+        <div className="absolute bottom-3 right-4 bg-white/70 backdrop-blur-sm text-iqnavy text-xs md:text-sm font-medium px-3 py-1 rounded-full shadow-sm z-20">
+          InvestorIQ Dashboard Preview
         </div>
+
+        {/* Optional Gold Highlight Glow */}
+        <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-iqgold/0 via-iqgold/30 to-iqgold/0 opacity-50 blur-md pointer-events-none" />
       </div>
     </motion.div>
   );

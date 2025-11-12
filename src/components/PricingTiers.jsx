@@ -12,6 +12,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
   const isThisTierLoading = isLoading && activePriceId === tier.priceId;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -19,30 +20,36 @@ const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
       viewport={{ once: true }}
       transition={{ delay: 0.1 }}
       className={`relative p-8 rounded-2xl border-2 bg-white flex flex-col hover:shadow-xl transition-all duration-300 ${
-        tier.popular ? 'border-blue-600 shadow-lg' : 'border-slate-200'
+        tier.popular ? 'border-iqgold shadow-lg shadow-iqgold/20' : 'border-slate-200'
       }`}
     >
       {tier.popular && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+          <span className="bg-gradient-to-r from-iqgold to-yellow-500 text-iqnavy px-4 py-1 rounded-full text-sm font-semibold shadow-sm">
             Most Popular
           </span>
         </div>
       )}
-      <h3 className="text-xl font-bold mb-2 text-center">{tier.name}</h3>
-      <div className="text-3xl font-bold text-blue-600 mb-2 text-center">{tier.price}</div>
+
+      <h3 className="text-xl font-bold mb-2 text-center text-iqnavy">{tier.name}</h3>
+      <div className="text-3xl font-extrabold text-iqteal mb-2 text-center">{tier.price}</div>
       <p className="text-slate-600 mb-6 text-center h-12">{tier.description}</p>
+
       <ul className="space-y-3 mb-8 flex-grow">
         {tier.features.map((feature, fIndex) => (
           <li key={fIndex} className="flex items-start">
-            <Check className="text-blue-600 mr-2 h-5 w-5 flex-shrink-0" />
-            <span className="text-sm">{feature}</span>
+            <Check className="text-iqgold mr-2 h-5 w-5 flex-shrink-0" />
+            <span className="text-sm text-slate-800">{feature}</span>
           </li>
         ))}
       </ul>
-      <Button 
-        className="w-full mt-auto" 
-        variant={tier.popular ? 'default' : 'outline'}
+
+      <Button
+        className={`w-full mt-auto font-semibold ${
+          tier.popular
+            ? 'bg-gradient-to-r from-iqteal to-iqnavy text-white shadow-iqteal/30 hover:scale-[1.02]'
+            : 'border border-iqteal text-iqteal hover:bg-iqteal hover:text-white'
+        }`}
         onClick={() => onAction(tier)}
         disabled={isThisTierLoading}
       >
@@ -65,16 +72,16 @@ const PricingTiers = ({ title, description }) => {
 
   const pricingTiers = [
     {
-      name: 'Single Report',
+      name: 'Single IQ Report',
       price: '$199 USD',
       priceId: import.meta.env.VITE_STRIPE_SINGLE_REPORT_PRICE_ID,
       credits: 1,
-      description: 'Perfect for testing the waters',
+      description: 'Perfect for testing your first analysis',
       features: [
-        '1 Property Analysis',
-        '360° Comprehensive Report',
+        '1 Property IQ Report',
+        'Full 360° Data Analysis',
         'Charts & Heat Maps',
-        'PDF Download'
+        'Downloadable PDF'
       ]
     },
     {
@@ -82,9 +89,9 @@ const PricingTiers = ({ title, description }) => {
       price: '$895 USD',
       priceId: import.meta.env.VITE_STRIPE_5_REPORT_PRICE_ID,
       credits: 5,
-      description: 'Best for active investors',
+      description: 'Best value for active investors',
       features: [
-        '5 Property Analyses',
+        '5 Property IQ Reports',
         'Save Over 50%',
         'Priority Processing',
         'All Premium Features'
@@ -96,23 +103,23 @@ const PricingTiers = ({ title, description }) => {
       price: '$1,590 USD',
       priceId: import.meta.env.VITE_STRIPE_10_REPORT_PRICE_ID,
       credits: 10,
-      description: 'For serious portfolios',
+      description: 'For serious real estate portfolios',
       features: [
-        '10 Property Analyses',
+        '10 Property IQ Reports',
         'Save Over 60%',
-        'Fastest Processing',
+        'Fastest Turnaround',
         'Dedicated Support'
       ]
     },
     {
-      name: 'Enterprise',
+      name: 'Enterprise Access',
       price: 'Contact Us',
       priceId: null,
       credits: 0,
-      description: 'Coming Early 2026',
+      description: 'Coming early 2026',
       features: [
-        'MLS Integration',
-        'API Access',
+        'MLS Data Integration',
+        'Custom API Access',
         'White-Glove Support'
       ]
     }
@@ -125,24 +132,20 @@ const PricingTiers = ({ title, description }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // Not logged in, redirect to sign up
         navigate('/signup');
         return;
       }
-      
+
       const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         body: { priceId, credits }
       });
 
       if (error) throw new Error(`Function error: ${error.message}`);
       if (!data.id) throw new Error("Could not create Stripe checkout session.");
-      
+
       const stripe = await stripePromise;
       const result = await stripe.redirectToCheckout({ sessionId: data.id });
-
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
+      if (result.error) throw new Error(result.error.message);
 
     } catch (error) {
       console.error("Stripe Checkout Error:", error);
@@ -170,12 +173,13 @@ const PricingTiers = ({ title, description }) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-12">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">{title}</h2>
+        <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-iqnavy">{title}</h2>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto">{description}</p>
       </div>
+
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch max-w-7xl mx-auto">
         {pricingTiers.map((tier) => (
-          <Tier 
+          <Tier
             key={tier.name}
             tier={tier}
             onAction={handlePricingAction}

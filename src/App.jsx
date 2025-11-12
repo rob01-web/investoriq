@@ -1,8 +1,11 @@
+'use client';
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { PALETTE } from '@/lib/utils';
 
-// If your project uses the @ alias, keep these.
-// If not, change to relative imports like '../pages/LandingPage'
+// Core Pages
 import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
 import LoginPage from '@/pages/Login';
@@ -11,17 +14,37 @@ import SampleReport from '@/pages/SampleReport';
 
 function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Page Not Found</h1>
-        <p className="text-slate-600 mb-6">Let’s get you back to safety.</p>
+    <div
+      className="min-h-screen flex items-center justify-center px-6"
+      style={{
+        background: `linear-gradient(to bottom, #ffffff, ${PALETTE.paper})`,
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="text-center bg-white border border-slate-200 rounded-2xl shadow-xl p-10 max-w-md"
+      >
+        <h1
+          className="text-4xl font-extrabold mb-3"
+          style={{ color: PALETTE.deepNavy }}
+        >
+          Page Not Found
+        </h1>
+        <p className="text-slate-600 mb-8 text-base">
+          The page you’re looking for doesn’t exist or has been moved.
+        </p>
         <a
           href="/"
-          className="inline-block px-5 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-[#1F8A8A] to-[#177272] hover:opacity-90 transition"
+          className="inline-block px-6 py-3 rounded-lg font-semibold text-white shadow-md hover:scale-105 transition-transform"
+          style={{
+            background: `linear-gradient(to right, ${PALETTE.teal}, #177272)`,
+          }}
         >
-          Go to Home
+          Return to Home
         </a>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -34,9 +57,11 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/sample-report" element={<SampleReport />} />
-      {/* convenience redirects */}
+
+      {/* Convenience Redirects */}
       <Route path="/home" element={<Navigate to="/" replace />} />
-      {/* 404 */}
+
+      {/* 404 Fallback */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

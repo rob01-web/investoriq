@@ -1,165 +1,117 @@
-import React, { useState, useEffect } from "react";
-import { Helmet } from "react-helmet";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Lock, Mail } from "lucide-react";
+"use client";
+
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import BackButton from "@/components/BackButton";
+import { Loader2, Lock, Mail } from "lucide-react";
+import { supabase } from "@/lib/customSupabaseClient";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-const PALETTE = {
-  deepNavy: "#0F172A",
-  teal: "#1F8A8A",
-  gold: "#D4AF37",
-  gray: "#6B7280",
-};
-
-const LoginPage = () => {
-  const navigate = useNavigate();
-  const { signIn, user } = useAuth();
-  const { toast } = useToast();
+export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const navigate = useNavigate();
 
-  const logoUrl =
-    "https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/7c549d98bf6c15c8f3d897bc03104499.png";
-
-  useEffect(() => {
-    if (user) navigate("/dashboard");
-  }, [user, navigate]);
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
+    setErrorMsg("");
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
     if (error) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
+      setErrorMsg(error.message);
+    } else {
+      navigate("/dashboard");
     }
-    toast({
-      title: "Welcome Back!",
-      description: "You are now logged in to InvestorIQ Elite.",
-    });
-    navigate("/dashboard");
     setLoading(false);
   };
 
   return (
-    <>
-      <Helmet>
-        <title>InvestorIQ Elite Login</title>
-        <meta
-          name="description"
-          content="Access your InvestorIQ Elite dashboard to upload deals, generate reports, and analyze your portfolio."
-        />
-      </Helmet>
+    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] px-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full mx-auto bg-white shadow-2xl rounded-2xl p-10 border border-slate-200"
+      >
+        <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
+          Welcome Back
+        </h1>
+        <p className="text-slate-600 text-center mb-8">
+          Log in to your{" "}
+          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> account
+        </p>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-[#f9fafb] to-[#eef2f5] px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-8 md:p-10"
-        >
-          {/* LOGO & HEADING */}
-          <div className="text-center mb-8">
-            <Link
-              to="/"
-              className="inline-block"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            >
-              <img
-                src={logoUrl}
-                alt="InvestorIQ Logo"
-                className="h-20 sm:h-24 mx-auto transition-transform hover:scale-105"
-              />
-            </Link>
-            <h1 className="text-3xl font-extrabold text-[#0F172A] mt-5">
-              Welcome to <span className="text-[#1F8A8A]">InvestorIQ</span>
-            </h1>
-            <p className="text-slate-600 text-sm mt-2">
-              Sign in to access your <span className="font-medium text-[#1F8A8A]">Elite Dashboard</span>
-            </p>
-          </div>
-
-          {/* FORM */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+              Email Address
+            </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <input
                 type="email"
-                placeholder="Email Address"
+                required
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
-                required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+              Password
+            </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <input
                 type="password"
-                placeholder="Password"
+                required
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
-                required
               />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-bold rounded-lg shadow-md hover:scale-[1.02] transition-transform flex items-center justify-center disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Logging In...
-                </>
-              ) : (
-                "Login to Dashboard"
-              )}
-            </button>
-          </form>
+          {errorMsg && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">
+              {errorMsg}
+            </div>
+          )}
 
-          {/* FOOTER LINKS */}
-          <p className="text-center mt-6 text-sm text-slate-600">
-            New here?{" "}
-            <Link
-              to="/signup"
-              className="font-semibold text-[#1F8A8A] hover:underline transition"
-            >
-              Create an Account
-            </Link>
-          </p>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold py-3 rounded-lg hover:scale-[1.02] transition-all"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Signing In...
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </form>
 
-          <p className="text-center mt-2 text-xs text-slate-400">
-            Having trouble logging in?{" "}
-            <a
-              href="mailto:support@investoriq.ai"
-              className="text-[#1F8A8A] font-semibold hover:underline"
-            >
-              Contact Support
-            </a>
-          </p>
-        </motion.div>
-      </div>
+        <p className="text-center text-slate-600 mt-6">
+          Don’t have an account?{" "}
+          <Link to="/signup" className="text-[#1F8A8A] font-semibold hover:underline">
+            Sign up here
+          </Link>
+        </p>
+      </motion.div>
 
-      {/* FOOTER */}
-      <footer className="py-6 border-t bg-white text-center text-slate-500 text-sm">
-        © 2025{" "}
-        <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+      <footer className="py-6 text-center text-slate-500 text-sm mt-10">
+        © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
       </footer>
-
-      <BackButton />
-    </>
+    </div>
   );
-};
-
-export default LoginPage;
+}

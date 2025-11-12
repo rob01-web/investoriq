@@ -8,6 +8,14 @@ import { supabase } from "@/lib/customSupabaseClient";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { motion } from "framer-motion";
 
+/**
+ * InvestorIQ Upload Modal
+ * ------------------------
+ * Allows users to securely upload property documents for analysis.
+ * Automatically deducts credits and syncs metadata to Supabase.
+ * Fully aligned with InvestorIQ’s professional brand palette.
+ */
+
 const UploadModal = ({ open, onClose, onUpload }) => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -112,11 +120,16 @@ const UploadModal = ({ open, onClose, onUpload }) => {
       onUpload();
       setFormData({ propertyAddress: "", dealType: "off-market", files: [] });
       onClose();
+
+      toast({
+        title: "Upload Successful",
+        description: "Your documents have been submitted for analysis. Expect your InvestorIQ Report within 48 hours.",
+      });
     } catch (error) {
       console.error("Upload failed:", error);
       toast({
         title: "Upload Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -126,7 +139,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border border-[#1F8A8A]/20 shadow-2xl rounded-2xl">
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border border-iqteal/20 shadow-2xl rounded-2xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -134,7 +147,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
           className="bg-white/95 backdrop-blur-xl p-8"
         >
           <DialogHeader>
-            <DialogTitle className="text-2xl font-extrabold text-[#0F172A] text-center tracking-tight">
+            <DialogTitle className="text-2xl font-extrabold text-iqnavy text-center tracking-tight">
               Submit a New Deal
             </DialogTitle>
             <p className="text-center text-sm text-slate-500 mt-1">
@@ -156,7 +169,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, propertyAddress: e.target.value }))
                 }
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] text-slate-800 placeholder-slate-400 transition"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-iqteal text-slate-800 placeholder-slate-400 transition"
               />
             </div>
 
@@ -171,13 +184,13 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                     onClick={() => setFormData((prev) => ({ ...prev, dealType: type }))}
                     className={`p-4 rounded-lg border-2 font-semibold capitalize transition-all ${
                       formData.dealType === type
-                        ? "border-[#1F8A8A] bg-[#1F8A8A]/10 text-[#0F172A] shadow-sm"
-                        : "border-slate-200 text-slate-600 hover:border-[#1F8A8A]/40"
+                        ? "border-iqteal bg-iqteal/10 text-iqnavy shadow-sm"
+                        : "border-slate-200 text-slate-600 hover:border-iqteal/40"
                     }`}
                   >
                     {type === "off-market" ? "Off-Market" : "MLS Listing"}
                     <div className="text-xs text-slate-500 mt-1">
-                      {type === "off-market" ? "Private deal" : "Broker-listed"}
+                      {type === "off-market" ? "Private Deal" : "Broker-Listed"}
                     </div>
                   </button>
                 ))}
@@ -195,7 +208,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
 
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-[#D4AF37] hover:bg-[#D4AF37]/5 transition-all cursor-pointer"
+                className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-iqgold hover:bg-iqgold/5 transition-all cursor-pointer"
               >
                 <input
                   type="file"
@@ -206,9 +219,9 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                   className="hidden"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer select-none block">
-                  <Upload className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
-                  <div className="text-sm font-semibold text-[#0F172A] mb-1">
-                    Click to upload or drag & drop
+                  <Upload className="h-10 w-10 text-iqteal mx-auto mb-3" />
+                  <div className="text-sm font-semibold text-iqnavy mb-1">
+                    Click to Upload or Drag & Drop
                   </div>
                   <div className="text-xs text-slate-500">
                     Your files remain encrypted and confidential
@@ -224,7 +237,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                       className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg"
                     >
                       <div className="flex items-center space-x-3 overflow-hidden">
-                        <FileText className="h-5 w-5 text-[#1F8A8A] flex-shrink-0" />
+                        <FileText className="h-5 w-5 text-iqteal flex-shrink-0" />
                         <div className="truncate">
                           <div className="text-sm font-medium truncate">{file.name}</div>
                           <div className="text-xs text-slate-500">
@@ -252,14 +265,14 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                 variant="outline"
                 onClick={onClose}
                 disabled={isUploading}
-                className="border border-slate-300 text-slate-600 hover:text-[#1F8A8A] hover:border-[#1F8A8A] transition-all"
+                className="border border-slate-300 text-slate-600 hover:text-iqteal hover:border-iqteal transition-all"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isUploading}
-                className="bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-bold shadow-md hover:scale-[1.02] transition-transform"
+                className="bg-gradient-to-r from-iqgold to-yellow-500 text-white font-bold shadow-md hover:scale-[1.02] transition-transform"
               >
                 {isUploading ? (
                   <>

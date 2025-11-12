@@ -1,7 +1,8 @@
 ## Pages
-- [Admin Dashboard - InvestorIQ](/admindashboard): No description available
-- [Dashboard - InvestorIQ](/dashboard): Upload and manage your property analysis reports
-- [InvestorIQ - 360° Property Analysis for Real Estate Investors](/landing): Get hedge fund-quality property analysis reports for a fraction of the cost. Upload your deals and receive comprehensive 360° analysis with charts, graphs, and heat maps.
-- [Login - InvestorIQ](/login): No description available
-- [Sample Report - InvestorIQ](/samplereport): View a sample 360° property analysis report from InvestorIQ
-- [Sign Up - InvestorIQ](/signup): No description available
+
+- [Admin Dashboard - InvestorIQ](/admindashboard): Manage user reports, oversee performance metrics, and monitor platform insights in real time.
+- [Dashboard - InvestorIQ](/dashboard): Upload and manage your property analysis reports with ease.
+- [InvestorIQ - 360° Property Analysis for Real Estate Investors](/landing): Access institutional-grade property analysis powered by AI. Upload your deals and receive comprehensive IQ Reports with charts, graphs, and investment metrics.
+- [Login - InvestorIQ](/login): Securely access your InvestorIQ account.
+- [Sample Report - InvestorIQ](/samplereport): View a fully generated InvestorIQ sample report demonstrating advanced analysis and visuals.
+- [Sign Up - InvestorIQ](/signup): Create an account and start generating professional AI-powered IQ Reports.

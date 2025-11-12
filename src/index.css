@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /* ---------------------------------------
-   INVESTORIQ — BRAND BASELINE
-   Deep Navy (#0F172A), Teal (#1F8A8A), Gold (#D4AF37)
+   INVESTORIQ — GLOBAL BRAND BASELINE
+   Palette: Deep Navy (#0F172A), Teal (#1F8A8A), Gold (#D4AF37)
 --------------------------------------- */
 
 @layer base {
@@ -20,13 +20,13 @@
     --popover-foreground: 220 15% 20%;
 
     /* Brand Colors */
-    --primary: 188 64% 33%; /* #1F8A8A - Signature Teal */
+    --primary: 188 64% 33%; /* Teal */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 221 39% 11%; /* #0F172A - Deep Navy */
+    --secondary: 221 39% 11%; /* Deep Navy */
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 46 64% 53%; /* #D4AF37 - Gold Accent */
+    --accent: 46 64% 53%; /* Gold */
     --accent-foreground: 221 39% 11%;
 
     /* Neutrals */
@@ -41,10 +41,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Border radius (rounded-xl) */
+    /* Border Radius */
     --radius: 0.75rem;
   }
 
+  /* --- Dark Mode --- */
   .dark {
     --background: 221 39% 11%;
     --foreground: 210 40% 98%;
@@ -72,9 +73,13 @@
     --ring: 188 64% 45%;
   }
 
-  /* --- Global Typography & Smoothing --- */
+  /* --- Global Layout & Typography --- */
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-[#F9FAFB] text-slate-900;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -84,16 +89,90 @@
     @apply border-border;
   }
 
-  /* --- Heading and UI Elements --- */
+  /* --- Headings --- */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold text-slate-900 tracking-tight;
+    @apply font-semibold tracking-tight text-[#0F172A];
   }
 
+  h1 {
+    @apply text-4xl md:text-5xl font-extrabold;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl font-bold;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+
+  /* --- Links & Buttons --- */
   a {
     @apply transition-colors duration-200 hover:text-[#1F8A8A];
   }
 
   button {
-    @apply transition-all duration-200 hover:opacity-90;
+    @apply transition-all duration-200 hover:opacity-90 focus:outline-none focus-visible:ring-2;
+    --tw-ring-color: #1F8A8A;
+  }
+
+  /* --- Inputs & Forms --- */
+  input,
+  textarea,
+  select {
+    @apply focus:outline-none focus:ring-2 focus:ring-[#1F8A8A] rounded-lg;
+  }
+
+  /* --- Scrollbars --- */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  /* --- Selection Highlight --- */
+  ::selection {
+    background-color: #1F8A8A;
+    color: white;
+  }
+
+  /* --- Accessibility --- */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* --- Dialogs & Modals --- */
+  [data-reach-dialog-content] {
+    @apply rounded-2xl shadow-xl border border-slate-200;
+  }
+
+  /* --- Utility Enhancements --- */
+  .text-gradient {
+    @apply bg-gradient-to-r from-[#1F8A8A] to-[#177272] bg-clip-text text-transparent;
+  }
+
+  .gold-gradient {
+    @apply bg-gradient-to-r from-[#D4AF37] to-[#b9972b] bg-clip-text text-transparent;
+  }
+
+  .iq-card {
+    @apply bg-white rounded-2xl shadow-lg border border-slate-200 p-6;
+  }
+
+  .iq-glow {
+    box-shadow: 0 0 20px rgba(31, 138, 138, 0.25);
   }
 }

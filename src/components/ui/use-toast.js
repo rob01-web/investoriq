@@ -1,103 +1,97 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react';
 
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 1; // Limit concurrent toasts to keep UX clean
+let count = 0;
 
-let count = 0
+// --- Utility: Unique ID generator ---
 function generateId() {
-  count = (count + 1) % Number.MAX_VALUE
-  return count.toString()
+  count = (count + 1) % Number.MAX_VALUE;
+  return count.toString();
 }
 
+// --- Lightweight Toast Store ---
 const toastStore = {
   state: {
     toasts: [],
   },
   listeners: [],
-  
+
   getState: () => toastStore.state,
-  
+
   setState: (nextState) => {
     if (typeof nextState === 'function') {
-      toastStore.state = nextState(toastStore.state)
+      toastStore.state = nextState(toastStore.state);
     } else {
-      toastStore.state = { ...toastStore.state, ...nextState }
+      toastStore.state = { ...toastStore.state, ...nextState };
     }
-    
-    toastStore.listeners.forEach(listener => listener(toastStore.state))
+
+    toastStore.listeners.forEach((listener) => listener(toastStore.state));
   },
-  
+
   subscribe: (listener) => {
-    toastStore.listeners.push(listener)
+    toastStore.listeners.push(listener);
     return () => {
-      toastStore.listeners = toastStore.listeners.filter(l => l !== listener)
-    }
-  }
-}
+      toastStore.listeners = toastStore.listeners.filter((l) => l !== listener);
+    };
+  },
+};
 
-export const toast = ({ ...props }) => {
-  const id = generateId()
+// --- Toast Creation ---
+export const toast = ({ variant = 'default', duration = 5000, ...props }) => {
+  const id = generateId();
 
-  const update = (props) =>
+  const update = (newProps) =>
     toastStore.setState((state) => ({
       ...state,
       toasts: state.toasts.map((t) =>
-        t.id === id ? { ...t, ...props } : t
+        t.id === id ? { ...t, ...newProps } : t
       ),
-    }))
+    }));
 
-  const dismiss = () => toastStore.setState((state) => ({
-    ...state,
-    toasts: state.toasts.filter((t) => t.id !== id),
-  }))
+  const dismiss = () =>
+    toastStore.setState((state) => ({
+      ...state,
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }));
 
   toastStore.setState((state) => ({
     ...state,
-    toasts: [
-      { ...props, id, dismiss },
-      ...state.toasts,
-    ].slice(0, TOAST_LIMIT),
-  }))
+    toasts: [{ ...props, id, variant, duration, dismiss }, ...state.toasts].slice(
+      0,
+      TOAST_LIMIT
+    ),
+  }));
 
-  return {
-    id,
-    dismiss,
-    update,
-  }
-}
+  return { id, dismiss, update };
+};
 
+// --- React Hook: Subscribe to Toast Store ---
 export function useToast() {
-  const [state, setState] = useState(toastStore.getState())
-  
+  const [state, setState] = useState(toastStore.getState());
+
   useEffect(() => {
-    const unsubscribe = toastStore.subscribe((state) => {
-      setState(state)
-    })
-    
-    return unsubscribe
-  }, [])
-  
+    const unsubscribe = toastStore.subscribe((state) => setState(state));
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
-    const timeouts = []
+    const timeouts = [];
 
     state.toasts.forEach((toast) => {
-      if (toast.duration === Infinity) {
-        return
-      }
+      if (toast.duration === Infinity) return;
 
       const timeout = setTimeout(() => {
-        toast.dismiss()
-      }, toast.duration || 5000)
+        toast.dismiss();
+      }, toast.duration || 5000);
 
-      timeouts.push(timeout)
-    })
+      timeouts.push(timeout);
+    });
 
-    return () => {
-      timeouts.forEach((timeout) => clearTimeout(timeout))
-    }
-  }, [state.toasts])
+    return () => timeouts.forEach((timeout) => clearTimeout(timeout));
+  }, [state.toasts]);
 
   return {
     toast,
     toasts: state.toasts,
-  }
+  };
 }

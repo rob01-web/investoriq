@@ -15,13 +15,18 @@ const investorIQErrorOverlay = {
         console.error('[InvestorIQ Runtime Error]', e.message, e.filename, e.lineno)
       });
       window.addEventListener('unhandledrejection', (e) => {
-        console.error('[InvestorIQ Promise Error]', e.reason);
+        console.error('[InvestorIQ Promise Error]', e.reason)
       });
     `
     return {
       html,
       tags: [
-        { tag: 'script', attrs: { type: 'module' }, children: script, injectTo: 'head' },
+        {
+          tag: 'script',
+          attrs: { type: 'module' },
+          children: script,
+          injectTo: 'head',
+        },
       ],
     }
   },
@@ -69,5 +74,9 @@ export default defineConfig({
       external: [],
     },
   },
-  base: '/', // Works for custom domains like investoriq.tech
+  // ✅ Critical fix: relative asset base ensures proper loading on Vercel custom domain
+  base: './',
+  define: {
+    'process.env': process.env,
+  },
 })
