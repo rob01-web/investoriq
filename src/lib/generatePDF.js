@@ -1,11 +1,68 @@
 /**
- * InvestorIQ PDF Generator (Global pdfMake Version)
- * -------------------------------------------------
- * This version uses window.pdfMake loaded globally from index.html.
- * 100% compatible with Vite + Vercel + all browsers.
+ * InvestorIQ PDF Generator (CDN Loader Version)
+ * --------------------------------------------
+ * - Dynamically loads pdfMake + vfs_fonts from CDN at runtime
+ * - Avoids all ESM/CJS/Vite/Vercel build issues
+ * - Uses window.pdfMake once loaded
  */
 
 import { buildSampleReportDocDefinition } from "../lib/pdfSections";
+
+const PDFMAKE_CDN_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7";
+
+/**
+ * Dynamically load pdfMake + fonts from CDN and return window.pdfMake.
+ * Uses a cached promise so we only load once.
+ */
+function loadPdfMakeFromCdn() {
+  if (typeof window === "undefined") {
+    throw new Error("PDF generation is only available in the browser.");
+  }
+
+  // Already loaded
+  if (window.pdfMake && window.pdfMake.createPdf) {
+    return Promise.resolve(window.pdfMake);
+  }
+
+  // In-flight load
+  if (window.__investorIQPdfMakePromise) {
+    return window.__investorIQPdfMakePromise;
+  }
+
+  window.__investorIQPdfMakePromise = new Promise((resolve, reject) => {
+    // 1) Load pdfmake.min.js
+    const coreScript = document.createElement("script");
+    coreScript.src = `${PDFMAKE_CDN_BASE}/pdfmake.min.js`;
+    coreScript.async = true;
+
+    coreScript.onload = () => {
+      // 2) Load vfs_fonts.js after core is ready
+      const fontsScript = document.createElement("script");
+      fontsScript.src = `${PDFMAKE_CDN_BASE}/vfs_fonts.js`;
+      fontsScript.async = true;
+
+      fontsScript.onload = () => {
+        if (window.pdfMake && window.pdfMake.createPdf) {
+          resolve(window.pdfMake);
+        } else {
+          reject(new Error("pdfMake loaded but global pdfMake is missing."));
+        }
+      };
+
+      fontsScript.onerror = () =>
+        reject(new Error("Failed to load pdfMake fonts from CDN."));
+
+      document.head.appendChild(fontsScript);
+    };
+
+    coreScript.onerror = () =>
+      reject(new Error("Failed to load pdfMake core from CDN."));
+
+    document.head.appendChild(coreScript);
+  });
+
+  return window.__investorIQPdfMakePromise;
+}
 
 // Convert /public image to Base64
 async function loadImageBase64(path) {
@@ -27,9 +84,12 @@ async function loadImageBase64(path) {
 export const generatePDF = async (reportData = {}, options = {}) => {
   const { preview = false, fileName } = options;
 
-  // Ensure global pdfMake exists
-  if (!window.pdfMake) {
-    alert("PDF engine failed to load. Please refresh the page.");
+  let pdfMake;
+  try {
+    pdfMake = await loadPdfMakeFromCdn();
+  } catch (err) {
+    console.error("[InvestorIQ] Failed to load pdfMake:", err);
+    alert("PDF engine failed to load. Please check your connection and try again.");
     return;
   }
 
@@ -42,16 +102,16 @@ export const generatePDF = async (reportData = {}, options = {}) => {
     logoBase64,
   });
 
-  console.log("[InvestorIQ] PDF definition ready.");
-  
+  console.log("[InvestorIQ] PDF docDefinition ready.");
+
   try {
-    const pdf = window.pdfMake.createPdf(docDefinition);
+    const pdf = pdfMake.createPdf(docDefinition);
 
     if (preview) {
       const tab = window.open("", "_blank");
 
       if (!tab) {
-        alert("Popup blocked. Enable popups for InvestorIQ.");
+        alert("Popup blocked. Please enable popups for InvestorIQ.");
         return;
       }
 
@@ -73,18 +133,28 @@ export const generatePDF = async (reportData = {}, options = {}) => {
 
         iframe.src = URL.createObjectURL(blob);
       });
-
     } else {
-      const safeName = fileName || "InvestorIQ_Report.pdf";
+      const safeName =
+        fileName ||
+        `InvestorIQ_Report_${reportData?.property?.address || "Sample"}.pdf`;
+
       pdf.download(safeName);
     }
   } catch (err) {
     console.error("[InvestorIQ] PDF generation failed:", err);
-    alert("PDF generation error. Check console.");
+    alert("There was an error generating your PDF. Check console for details.");
   }
 };
 
 export const generatePDFBlob = async (reportData = {}) => {
+  let pdfMake;
+  try {
+    pdfMake = await loadPdfMakeFromCdn();
+  } catch (err) {
+    console.error("[InvestorIQ] Failed to load pdfMake for blob:", err);
+    throw err;
+  }
+
   return new Promise(async (resolve, reject) => {
     try {
       const logoBase64 = await loadImageBase64(
@@ -96,10 +166,9 @@ export const generatePDFBlob = async (reportData = {}) => {
         logoBase64,
       });
 
-      const pdf = window.pdfMake.createPdf(docDefinition);
+      const pdf = pdfMake.createPdf(docDefinition);
 
       pdf.getBlob((blob) => resolve(URL.createObjectURL(blob)));
-
     } catch (err) {
       reject(err);
     }
