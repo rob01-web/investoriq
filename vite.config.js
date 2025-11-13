@@ -12,10 +12,10 @@ const investorIQErrorOverlay = {
     if (!isDev) return html
     const script = `
       window.addEventListener('error', (e) => {
-        console.error('[InvestorIQ Runtime Error]', e.message, e.filename, e.lineno)
+        console.error('[InvestorIQ Runtime Error]', e.message, e.filename, e.lineno);
       });
       window.addEventListener('unhandledrejection', (e) => {
-        console.error('[InvestorIQ Promise Error]', e.reason)
+        console.error('[InvestorIQ Promise Error]', e.reason);
       });
     `
     return {
@@ -40,10 +40,11 @@ logger.error = (msg, options) => {
   originalError(msg, options)
 }
 
-// --- Main export ---
+// --- MAIN CONFIG EXPORT ---
 export default defineConfig({
   customLogger: logger,
   plugins: [react(), investorIQErrorOverlay],
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -54,6 +55,7 @@ export default defineConfig({
     },
     extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
   },
+
   server: {
     port: 5173,
     cors: true,
@@ -63,9 +65,11 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'credentialless',
     },
   },
+
   preview: {
     port: 4173,
   },
+
   build: {
     outDir: 'dist',
     sourcemap: false,
@@ -74,8 +78,10 @@ export default defineConfig({
       external: [],
     },
   },
-  // ✅ Critical fix: relative asset base ensures proper loading on Vercel custom domain
-  base: './',
+
+  // 🔥 THIS IS THE FIX FOR BLANK PAGE ON VERCEL
+  base: '',
+
   define: {
     'process.env': process.env,
   },
