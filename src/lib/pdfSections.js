@@ -1,804 +1,1403 @@
+/* 
+  InvestorIQ - Golden ELITE Sample Report v5
+  -----------------------------------------
+  Cinematic, multi page, institutional grade sample report built with pdfMake.
 
-/* InvestorIQ – Golden ELITE v4 (Cinematic Pro, Deep Navy Edition)
-   ----------------------------------------------------------------
-   Ten-page cinematic, institutional-grade sample built with pdfMake (vector-only).
-   Upgrades vs v3:
-   - Consistent spacing + alignment grid
-   - Alternating page backgrounds for rhythm
-   - Larger charts with axis labels & values
-   - NEW DSCR semicircle gauge (next to Cashflow pie)
-   - NEW Neighborhood Pos/Neutral/Neg mini pie
-   - NEW 3×3 Risk Matrix heat map (+legend)
-   - Executive Summary adds $/Door
-   - Subtitled section banners, softer watermark
+  Key features:
+  - 10 page layout with consistent grids and spacing
+  - Alternating page backgrounds for visual rhythm
+  - Refined cover with gold accent bar and AI verification stamp
+  - Executive summary with deal score band and quick metrics
+  - Property snapshot and income overview
+  - Market Insights Snapshot page
+  - Five scenario analysis page (Worst to Best)
+  - Risk Matrix and Stress Testing page (3x3 heat map)
+  - Renovation and Capital Plan page
+  - Investor Strategy Matrix page
+  - Analyst Commentary and Next Steps page
+
+  Export:
+  - buildSampleReportDocDefinition(data?: Partial<SeedData>)
 */
 
-/* ==============================
-   Palette & Utilities
-   ============================== */
 const PALETTE = {
-  ink: "#0F172A",          // deep navy
-  subInk: "#334155",       // slate-700
-  midInk: "#475569",       // slate-600
-  lightInk: "#64748B",     // slate-500
-  faintInk: "#94A3B8",     // slate-400
-  line: "#E2E8F0",         // slate-200
+  ink: "#0F172A", // deep navy
+  subInk: "#334155", // slate-700
+  midInk: "#475569", // slate-600
+  lightInk: "#64748B", // slate-500
+  faintInk: "#94A3B8", // slate-400
+  line: "#E2E8F0", // slate-200
   paper: "#FFFFFF",
   paperAlt: "#F9FAFB",
   teal: "#1F8A8A",
   tealDim: "#177272",
-  gold: "#C9A227",
-  primary: "#0EA5E9",
+  gold: "#D4AF37",
   green: "#16A34A",
   amber: "#F59E0B",
   red: "#DC2626",
 };
 
-// Global spacing constants
 const SPACING = {
   page: { l: 48, t: 60, r: 48, b: 60 },
   block: 12,
-  stackGap: 12,
+  stackGap: 10,
 };
 
 const fmt = {
   money(n) {
     const v = Number(n);
-    return isFinite(v) ? `$${v.toLocaleString()}` : "-";
+    return Number.isFinite(v) ? `$${v.toLocaleString()}` : "-";
   },
-  number(n) {
+  number(n, decimals) {
     const v = Number(n);
-    return isFinite(v) ? v.toLocaleString() : "-";
+    if (!Number.isFinite(v)) return "-";
+    return typeof decimals === "number" ? v.toFixed(decimals) : v.toLocaleString();
   },
-  percent(n, d = 1) {
+  percent(n, digits = 1) {
     const v = Number(n);
-    return isFinite(v) ? `${(v * 100).toFixed(d)}%` : "-";
+    return Number.isFinite(v) ? `${(v * 100).toFixed(digits)}%` : "-";
+  },
+  ratio(n, digits = 2) {
+    const v = Number(n);
+    return Number.isFinite(v) ? v.toFixed(digits) : "-";
   },
   date(d = new Date()) {
     const dt = d instanceof Date ? d : new Date(d);
-    return dt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    return dt.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   },
 };
 
-function clamp01(x) { return Math.max(0, Math.min(1, x)); }
-function capRate(noi, price) { const n = Number(noi), p = Number(price); return p > 0 ? n / p : 0; }
+function clamp01(x) {
+  return Math.max(0, Math.min(1, x));
+}
 
-/* ==============================
-   Elite Sample Seed (prefilled)
-   ============================== */
+function capRate(noi, price) {
+  const n = Number(noi);
+  const p = Number(price);
+  return p > 0 ? n / p : 0;
+}
+
+/* ===========================
+   Seed Data for Sample Report
+   =========================== */
+
 function seedData() {
-  // Fresh elite-feel sample: "Seaside Flats" (Miami) — but same economics tier
   return {
-    logoBase64: null, // provided by caller if available
+    logoBase64: null, // provided by caller in generatePDF
+    generatedAt: new Date(),
+
     property: {
       name: "Seaside Flats",
       address: "200 Ocean Walk, Miami, FL 33139",
-      type: "12-Unit Multifamily",
+      type: "12 Unit Multifamily",
       yearBuilt: 1990,
-      askingPrice: 2295000,
-      arv: 2695000,
-      noi: 204000,
-      buildingSqFt: 9200,
-      lotSizeSqFt: 13800,
+      askingPrice: 2_295_000,
+      arv: 2_695_000,
+      noi: 204_000,
+      buildingSqFt: 9_200,
+      lotSizeSqFt: 13_800,
       occupancy: 0.96,
       marketCapRate: 0.061,
-      taxesAnnual: 27800,
-      insuranceAnnual: 19500,
-      maintenanceAnnual: 23000,
-      utilitiesAnnual: 15200,
-      units: 12
+      taxesAnnual: 27_800,
+      insuranceAnnual: 19_500,
+      maintenanceAnnual: 23_000,
+      utilitiesAnnual: 15_200,
+      units: 12,
+      avgRentCurrent: 2_150,
+      avgRentProForma: 2_450,
     },
+
     verdict: {
       label: "STRONG BUY",
       dealScore: 93,
-      rationale: "Stabilized yield exceeds submarket cap; below-market rents with clear path-to-lift; durable occupancy; defensible waterfront-adjacent location."
+      rationale:
+        "Stabilized yield exceeds submarket cap rate, current rents trail renovated comps, and location quality supports durable occupancy.",
+      holdPeriodYears: 7,
+      targetIRR: 0.15,
+      equityMultipleBase: 1.74,
+      strategyHeadline: "Acquire, renovate light to moderate, stabilize, then refinance or sell into compressing yield.",
     },
+
     cashflow: [
-      { label: "Debt Service", value: 126000 },
-      { label: "Reserves", value: 21000 },
-      { label: "CapEx (annualized)", value: 10000 },
-      { label: "Net Cash Flow", value: 47000 },
+      { label: "Debt Service", value: 126_000 },
+      { label: "Reserves", value: 21_000 },
+      { label: "CapEx (annualized)", value: 10_000 },
+      { label: "Net Cash Flow", value: 47_000 },
     ],
-    dscr: 1.36, // model DSCR for gauge
+
+    dscr: 1.36,
+
     scenarios: [
-      { name: "Worst",        rentGrowth: 0.00, vacancy: 0.10, exitCap: 0.072, irr: 0.095, em: 1.38, salePrice: 2320000 },
-      { name: "Conservative", rentGrowth: 0.01, vacancy: 0.07, exitCap: 0.068, irr: 0.125, em: 1.58, salePrice: 2450000 },
-      { name: "Base",         rentGrowth: 0.02, vacancy: 0.06, exitCap: 0.065, irr: 0.150, em: 1.74, salePrice: 2590000 },
-      { name: "Optimistic",   rentGrowth: 0.03, vacancy: 0.05, exitCap: 0.063, irr: 0.173, em: 1.93, salePrice: 2710000 },
-      { name: "Best",         rentGrowth: 0.04, vacancy: 0.05, exitCap: 0.060, irr: 0.195, em: 2.07, salePrice: 2840000 },
+      {
+        name: "Worst",
+        rentGrowth: 0.0,
+        vacancy: 0.1,
+        exitCap: 0.072,
+        irr: 0.095,
+        em: 1.38,
+        salePrice: 2_320_000,
+      },
+      {
+        name: "Conservative",
+        rentGrowth: 0.01,
+        vacancy: 0.07,
+        exitCap: 0.068,
+        irr: 0.125,
+        em: 1.58,
+        salePrice: 2_450_000,
+      },
+      {
+        name: "Base",
+        rentGrowth: 0.02,
+        vacancy: 0.06,
+        exitCap: 0.065,
+        irr: 0.15,
+        em: 1.74,
+        salePrice: 2_590_000,
+      },
+      {
+        name: "Optimistic",
+        rentGrowth: 0.03,
+        vacancy: 0.05,
+        exitCap: 0.063,
+        irr: 0.173,
+        em: 1.93,
+        salePrice: 2_710_000,
+      },
+      {
+        name: "Best",
+        rentGrowth: 0.04,
+        vacancy: 0.05,
+        exitCap: 0.06,
+        irr: 0.195,
+        em: 2.07,
+        salePrice: 2_840_000,
+      },
     ],
+
     location: {
       score10: 8.7,
+      marketName: "Miami Beach - Oceanfront Micro Market",
+      summary:
+        "Tourism, hospitality, and professional services underpin income growth. Supply remains constrained in this waterfront pocket, supporting rent resilience.",
       factors: [
-        ["Demographics", "Median HH income +8.4% YoY; renter % rising", "Positive"],
-        ["Crime Rate", "Improving; below city average in this tract", "Positive"],
-        ["School Ratings", "Elementary 7/10; High 6/10", "Neutral"],
-        ["Economic Indicators", "Miami job growth +3.6% YoY; hospitality rebound", "Positive"],
-        ["Infrastructure", "Transit, beach access, I-395/95 nearby", "Positive"],
+        ["Demographics", "Median household income up 8.4 percent year over year, renter share rising", "Positive"],
+        ["Crime", "Trend improving and now below city average in this tract", "Positive"],
+        ["School Ratings", "Elementary 7 out of 10, high school 6 out of 10", "Neutral"],
+        ["Employment", "Miami job growth running at 3.6 percent year over year", "Positive"],
+        ["Infrastructure", "Immediate access to beach corridor, major arterials, and transit links", "Positive"],
       ],
+      metrics: {
+        population5Yr: 0.062,
+        rentGrowth3Yr: 0.089,
+        unemployment: 0.032,
+        newSupplyPipelineUnits: 410,
+      },
     },
+
     risk: {
       overallScore10: 3.4,
-      // Likelihood × Impact heat-matrix (3×3). Values 0..1 for color intensity.
       matrix3x3: [
         [0.2, 0.5, 0.8],
         [0.3, 0.6, 0.7],
         [0.1, 0.4, 0.6],
       ],
       legend: [
-        ["Low", 0.2], ["Moderate", 0.5], ["Elevated", 0.8]
+        ["Low", 0.2],
+        ["Moderate", 0.5],
+        ["Elevated", 0.8],
       ],
       notes: [
-        { cat: "Market", impact: "High", note: "Insurance volatility in coastal FL — modeled +8% sensitivity." },
-        { cat: "Operational", impact: "Medium", note: "Turnover cadence may reduce near-term NOI; stagger work." },
-        { cat: "Financial", impact: "Medium", note: "Refi risk if rates stay elevated; DSCR>1.30 mitigant." },
-      ]
+        {
+          cat: "Market",
+          impact: "High",
+          note: "Insurance costs in coastal Florida remain volatile. Underwriting includes plus eight percent stress on operating expenses.",
+        },
+        {
+          cat: "Operational",
+          impact: "Medium",
+          note: "Turnovers are likely highest in the first eighteen months as value add scope is executed. Staggering work reduces cash flow disruption.",
+        },
+        {
+          cat: "Financial",
+          impact: "Medium",
+          note: "Refinance risk is mitigated by DSCR above 1.30 under base case and moderate leverage.",
+        },
+      ],
+      stressTests: [
+        ["Interest rates plus 100 basis points", "DSCR declines from 1.36 to 1.24, still above lender threshold"],
+        ["Vacancy plus 5 percentage points", "Cash yield compresses by 110 basis points but remains positive"],
+        ["Rent growth flat for 24 months", "IRR moderates by approximately 220 basis points under seven year hold"],
+      ],
     },
+
     renovation: {
       budget: [
-        ["Exterior refresh & concrete repairs", 28000],
-        ["Common areas (lighting/paint)", 13000],
-        ["Select unit interiors", 51000],
-        ["Contingency (10%)", 9200],
+        ["Exterior refresh and concrete repairs", 28_000],
+        ["Common areas lighting and paint", 13_000],
+        ["Selective unit interiors", 51_000],
+        ["Contingency ten percent", 9_200],
       ],
-      notes: [
-        "[Conceptual Image: Existing 1990s kitchen — laminate counters, oak cabinets]",
-        "[Conceptual Image: Renovated kitchen — white quartz, shaker cabinets, SS appliances]",
+      narrative:
+        "Scope focuses on visible exterior touch points, lobby arrival, corridors, and select kitchen and bath updates in rotation. The goal is to lift average rent while protecting occupancy and cash yield.",
+      conceptualNotes: [
+        "Existing kitchens present laminate counters, oak cabinets, and basic white appliances.",
+        "Renovated concept introduces quartz style counters, shaker cabinets, updated lighting, and stainless steel appliances.",
       ],
     },
+
     strategies: [
-      ["Buy & Hold", "15.0%", "Stable cash flow; tax benefits; appreciation", "Lower upside vs. value-add"],
-      ["Value-Add", "17.3%", "Rent lift; forced appreciation; higher EM", "Execution risk; capex timing"],
-      ["BRRRR",     "16.1%", "Refi recycles equity; strong returns",     "Refi risk; market rate dependence"],
+      [
+        "Buy and Hold",
+        "15.0%",
+        "Stable cash flow with tax efficiency and participation in long term appreciation.",
+        "Lower upside versus heavier value add but offers smoother cash profile.",
+      ],
+      [
+        "Value Add then Refinance",
+        "16.8%",
+        "Complete light to moderate renos, season trailing twelve month income, then refinance to recycle equity.",
+        "Execution risk if rent lift is slower than expected.",
+      ],
+      [
+        "Value Add then Sale",
+        "17.9%",
+        "Deliver refreshed asset to yield driven buyers seeking waterfront adjacent exposure.",
+        "More sensitive to exit cap rate and buyer demand at sale.",
+      ],
     ],
-    compsHeat: {
-      columns: ["Size", "Condition", "Proximity"],
-      rows: [
-        { name: "Comp A", values: [0.78, 0.92, 0.82] },
-        { name: "Comp B", values: [0.56, 0.71, 0.62] },
-        { name: "Comp C", values: [0.66, 0.81, 0.75] },
+
+    analystNotes: {
+      highlights: [
+        "In place cap rate sits above submarket average, with a path to further yield once rents are marked to market.",
+        "Location strength and constrained supply support rent durability through economic cycles.",
+        "Renovation scope is intentionally moderate to keep construction risk and vacancy downtime controlled.",
+      ],
+      watchItems: [
+        "Monitor insurance pricing annually and keep reserves policy disciplined.",
+        "Track new supply along the oceanfront corridor and any zoning changes that could impact long term positioning.",
+      ],
+      nextSteps: [
+        "Advance to term sheet with preferred lender and validate DSCR under bank underwriting model.",
+        "Commission third party appraisal and environmental screening.",
+        "Refine renovation budget with contractor level bids and finalize phasing schedule.",
       ],
     },
-    dealScoreBreakdown: [
-      ["Location", 9], ["Cash Flow", 8], ["Risk", 7], ["Value-Add", 9],
-      ["Liquidity", 7], ["Market Trend", 8], ["Team/Ops", 8], ["Exit Clarity", 8],
-    ],
-    analystNotes: [
-      "Subject priced ≈$191k/door vs submarket ~$218k/door (≈12% discount).",
-      "Occupancy 96% vs submarket 92% suggests resilient demand.",
-      "Insurance sensitivity modeled; broker quote validated.",
-      "Value-add scope staged to protect near-term DSCR >1.30.",
-    ],
   };
 }
 
-/* ==============================
-   Canvas Primitives
-   ============================== */
-function gradientCoverBg() {
-  // Subtle stacked gradient (white -> soft gray)
-  const ops = [];
-  for (let i = 0; i < 80; i++) {
-    const shade = 255 - i * 1.5;
-    ops.push({ type: "rect", x: 0, y: i * 8, w: 595, h: 8, color: `rgb(${shade},${shade + 6},${shade + 8})` });
-  }
-  return ops;
-}
+/* ===========================
+   Helper Builders and Styles
+   =========================== */
 
-function pageSoftBgBlock(color = PALETTE.paperAlt) {
-  return { canvas: [{ type: "rect", x: -48, y: -60, w: 695, h: 842, color, fillOpacity: 1 }], absolutePosition: { x: 0, y: 0 } };
-}
-
-function sectionBanner(title, subtitle = "") {
-  const s = [];
-  s.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 499, y2: 0, lineWidth: 2, lineColor: PALETTE.teal }] });
-  s.push({ text: title, margin: [0, 6, 0, subtitle ? 2 : 8], fontSize: 16, bold: true, color: PALETTE.ink });
-  if (subtitle) s.push({ text: subtitle, margin: [0, 0, 0, 10], fontSize: 9, color: PALETTE.lightInk });
-  return { stack: s, margin: [0, 8, 0, 12] };
-}
-
-function verdictRibbonTeal(text = "STRONG BUY — Deal Score 93/100") {
-  return [
-    {
-      canvas: [
-        { type: "rect", x: 0, y: 0, w: 380, h: 30, color: PALETTE.teal },
-        { type: "rect", x: 380, y: 0, w: 18, h: 30, color: PALETTE.teal },
-        { type: "polyline", points: [{ x: 398, y: 0 }, { x: 414, y: 15 }, { x: 398, y: 30 }], color: PALETTE.teal, lineWidth: 0, closePath: true },
-      ],
-      width: 414,
-      height: 30,
-    },
-    { text, color: "#FFFFFF", fontSize: 11, bold: true, absolutePosition: { x: 58, y: 4 } },
-  ];
-}
-
-// Deal Score semicircle 0..100
-function dealScoreGauge(score = 90) {
-  const cx = 120, cy = 110, r = 80;
-  const frac = clamp01(score / 100);
-  const ops = [];
-  for (let a = 180; a >= 0; a -= 3) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + r * Math.cos(rad + 0.03), y2: cy + r * Math.sin(rad + 0.03), lineWidth: 8, lineColor: PALETTE.line });
-  }
-  for (let a = 180; a >= 180 * (1 - frac); a -= 3) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + r * Math.cos(rad + 0.03), y2: cy + r * Math.sin(rad + 0.03), lineWidth: 8, lineColor: PALETTE.teal });
-  }
-  return [
-    { canvas: ops, width: 260, height: 160 },
-    { text: `${score}/100`, alignment: "center", bold: true, color: PALETTE.teal, margin: [0, -16, 0, 0] },
-  ];
-}
-
-// DSCR semicircle gauge (range 1.0–2.0+ visualized 0..100%)
-function dscrGauge(dscr = 1.30) {
-  const pct = clamp01((Number(dscr) - 1.0) / 1.0);
-  const cx = 120, cy = 110, r = 70;
-  const ops = [];
-  for (let a = 180; a >= 0; a -= 3) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + r * Math.cos(rad + 0.03), y2: cy + r * Math.sin(rad + 0.03), lineWidth: 7, lineColor: PALETTE.line });
-  }
-  for (let a = 180; a >= 180 * (1 - pct); a -= 3) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + r * Math.cos(rad + 0.03), y2: cy + r * Math.sin(rad + 0.03), lineWidth: 7, lineColor: PALETTE.green });
-  }
-  return [
-    { canvas: ops, width: 240, height: 150 },
-    { text: `${Number(dscr).toFixed(2)}× DSCR`, alignment: "center", bold: true, color: PALETTE.green, margin: [0, -12, 0, 0] },
-  ];
-}
-
-function barChart({ labels = [], values = [], w = 520, h = 220, barColor = PALETTE.teal, max = null, valueFmt = (v)=>`${(v*100).toFixed(1)}%` }) {
-  const left = 46, bottom = 32, top = 14, right = 14;
-  const innerW = w - left - right;
-  const innerH = h - top - bottom;
-
-  const safeVals = values.map(v => Number(v) || 0);
-  const vmax = max ?? Math.max(...safeVals, 1);
-
-  const gap = 16;
-  const barW = Math.max(18, (innerW - gap * (safeVals.length - 1)) / safeVals.length);
-  const ops = [
-    { type: "line", x1: left, y1: top, x2: left, y2: top + innerH, lineWidth: 1, lineColor: PALETTE.line },
-    { type: "line", x1: left, y1: top + innerH, x2: left + innerW, y2: top + innerH, lineWidth: 1, lineColor: PALETTE.line },
-  ];
-
-  for (let i = 0; i <= 4; i++) {
-    const y = top + innerH - (innerH * i) / 4;
-    ops.push({ type: "line", x1: left, y1: y, x2: left + innerW, y2: y, lineWidth: 0.5, lineColor: PALETTE.line });
-    const val = vmax * (i / 4);
-    ops.push({ text: valueFmt(val), fontSize: 8, color: PALETTE.faintInk, absolutePosition: { x: 2, y: y - 6 } });
-  }
-
-  let x = left;
-  safeVals.forEach((v, i) => {
-    const barH = Math.max(2, (v / vmax) * innerH);
-    const y = top + innerH - barH;
-    ops.push({ type: "rect", x, y, w: barW, h: barH, color: barColor });
-    ops.push({ text: labels[i] ?? "", fontSize: 9, color: PALETTE.subInk, alignment: "center", absolutePosition: { x: x, y: top + innerH + 6 }, width: barW });
-    ops.push({ text: valueFmt(v), fontSize: 9, color: PALETTE.midInk, alignment: "center", absolutePosition: { x: x, y: y - 14 }, width: barW });
-    x += barW + gap;
-  });
-
-  return [{ canvas: ops, width: w, height: h }];
-}
-
-function pieChart({ slices = [], w = 260, h = 260, cx = 130, cy = 130, r = 95 }) {
-  const ops = [];
-  const colors = [PALETTE.teal, PALETTE.gold, "#8B5CF6", PALETTE.green, PALETTE.amber, PALETTE.primary];
-  const total = slices.reduce((s, s1) => s + (Number(s1.value) || 0), 0) || 1;
-  let ang = -Math.PI / 2;
-
-  slices.forEach((s, i) => {
-    const v = Number(s.value) || 0;
-    const frac = v / total;
-    const next = ang + frac * Math.PI * 2;
-    const pts = [{ x: cx, y: cy }];
-    for (let t = ang; t <= next; t += Math.max(0.04, frac * 0.3)) pts.push({ x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) });
-    ops.push({ type: "polyline", points: pts, color: colors[i % colors.length], lineWidth: 0, closePath: true, fillOpacity: 1 });
-    ang = next;
-  });
-
-  return [
-    { canvas: ops, width: w, height: h },
-    { text: `$${Math.round(total).toLocaleString()}`, bold: true, alignment: "center", margin: [0, -132, 0, 0] }
-  ];
-}
-
-// Mini pie for Neighborhood factor sentiment (Pos/Neu/Neg)
-function neighborhoodSentimentPie(factors = []) {
-  let pos = 0, neu = 0, neg = 0;
-  (factors || []).forEach(f => {
-    const tag = (f[2] || "").toLowerCase();
-    if (tag.includes("positive")) pos++;
-    else if (tag.includes("neutral")) neu++;
-    else neg++;
-  });
-  const slices = [
-    { label: "Positive", value: pos },
-    { label: "Neutral", value: neu },
-    { label: "Negative", value: neg },
-  ];
-  return pieChart({ slices, w: 200, h: 200, cx: 100, cy: 100, r: 80 });
-}
-
-// 3×3 Risk Matrix heat map with legend
-function riskHeatMap3x3(grid = [[0.2,0.5,0.8],[0.3,0.6,0.7],[0.1,0.4,0.6]]) {
-  const cell = 32, gap = 6, cols = 3, rows = 3;
-  const w = cols * (cell + gap) + gap;
-  const h = rows * (cell + gap) + gap;
-  const ops = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const x = gap + c * (cell + gap);
-      const y = gap + r * (cell + gap);
-      const t = grid[r][c];
-      const color = (t <= 0.33) ? PALETTE.green : (t <= 0.66) ? PALETTE.amber : PALETTE.red;
-      const blend = 0.35 + t * 0.45;
-      ops.push({ type: "rect", x, y, w: cell, h: cell, color, fillOpacity: blend, lineWidth: 0 });
-    }
-  }
-  ops.push({ type: "rect", x: 0.5, y: 0.5, w: w - 1, h: h - 1, lineWidth: 1, lineColor: PALETTE.line });
-  return [{ canvas: ops, width: w, height: h }];
-}
-
-function locationGauge(score10 = 8.5) {
-  const score = clamp01(score10 / 10);
-  const r = 44, cx = 56, cy = 56;
-  const ops = [];
-  for (let a = 0; a < 360; a += 4) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + (r - 3) * Math.cos(rad), y2: cy + (r - 3) * Math.sin(rad), lineWidth: 3, lineColor: PALETTE.line });
-  }
-  for (let a = 0; a < 360 * score; a += 4) {
-    const rad = (a * Math.PI) / 180;
-    ops.push({ type: "line", x1: cx + r * Math.cos(rad), y1: cy + r * Math.sin(rad), x2: cx + (r - 3) * Math.cos(rad), y2: cy + (r - 3) * Math.sin(rad), lineWidth: 3, lineColor: PALETTE.teal });
-  }
-  return [{ canvas: ops, width: 120, height: 112 }, { text: `${(score * 10).toFixed(1)}/10`, alignment: "center", bold: true, color: PALETTE.teal, margin: [0, -14, 0, 0] }];
-}
-
-/* ==============================
-   Sections
-   ============================== */
-function coverPage(data) {
-  const { property = {}, logoBase64 } = data;
-  return [
-    { canvas: gradientCoverBg(), absolutePosition: { x: 0, y: 0 }, width: 595, height: 842 },
-    { canvas: [{ type: "rect", x: 0, y: 0, w: 595, h: 8, color: PALETTE.gold }], absolutePosition: { x: 0, y: 0 } },
-    {
-      columns: [
-        {
-          width: "*",
-          stack: [
-            { text: "InvestorIQ Property Intelligence Report", fontSize: 28, bold: true, color: PALETTE.ink, margin: [0, 120, 0, 8] },
-            { text: "Institutional-Grade Intelligence for Real Estate Investors", fontSize: 13, color: PALETTE.subInk, margin: [0, 0, 0, 18] },
-            { text: property.address || "200 Ocean Walk, Miami, FL 33139", fontSize: 11, color: PALETTE.lightInk, margin: [0, 0, 0, 8] },
-            { text: fmt.date(new Date()), fontSize: 10, color: PALETTE.lightInk },
-            {
-              margin: [0, 22, 0, 0],
-              table: {
-                widths: ["*", "*", "*"],
-                body: [
-                  [{ text: "Asset Type", style: "k", fillColor: "#FAFAFA" }, { text: "Asking Price", style: "k", fillColor: "#FAFAFA" }, { text: "After-Repair Value (ARV)", style: "k", fillColor: "#FAFAFA" }],
-                  [{ text: property.type || "12-Unit Multifamily", style: "v" }, { text: fmt.money(property.askingPrice || 2295000), style: "v" }, { text: fmt.money(property.arv || 2695000), style: "v" }],
-                ],
-              },
-              layout: "lightHorizontalLines",
-            },
-          ],
-        },
-        {
-          width: 160,
-          stack: [
-            logoBase64 ? { image: logoBase64, fit: [150, 76], alignment: "right", margin: [0, 120, 0, 0] }
-                       : { text: "InvestorIQ", alignment: "right", color: PALETTE.teal, fontSize: 20, margin: [0, 120, 0, 0] },
-          ],
-        },
-      ],
-      columnGap: 24,
-    },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function execVerdictPage(data) {
-  const p = data.property || {};
-  const v = data.verdict || {};
-  const ribbonText = (v.label || "STRONG BUY") + `  —  Deal Score ${v.dealScore ?? 93}/100`;
-  const cap = capRate(p.noi, p.askingPrice);
-  const perDoor = p.units ? (Number(p.askingPrice) / Number(p.units)) : null;
-
-  return [
-    pageSoftBgBlock(PALETTE.paperAlt),
-    sectionBanner("Executive Summary", "Verdict, Key Metrics & Market Position"),
-    ...verdictRibbonTeal(ribbonText),
-    { text: v.rationale || "InvestorIQ Analyst Rationale: Stabilized yield above market cap; clear rent-lift; durable occupancy; defensible exit.", color: PALETTE.subInk, margin: [0, 36, 0, 16] },
-
-    {
-      columns: [
-        {
-          width: "*",
-          table: {
-            widths: ["*", "auto"],
-            body: [
-              [{ text: "Metric", style: "k", fillColor: "#FAFAFA" }, { text: "Value", style: "k", fillColor: "#FAFAFA", alignment: "right" }],
-              ["Purchase / Asking", fmt.money(p.askingPrice)],
-              ["ARV", fmt.money(p.arv)],
-              ["NOI (TTM)", fmt.money(p.noi)],
-              ["Cap Rate (on Ask)", fmt.percent(cap, 2)],
-              ["Market Cap Rate", fmt.percent(p.marketCapRate, 2)],
-              ["Occupancy", fmt.percent(p.occupancy, 1)],
-              ["$ / Door", perDoor ? fmt.money(perDoor) : "-"],
-              ["Building Size", `${fmt.number(p.buildingSqFt)} sf`],
-              ["Lot Size", `${fmt.number(p.lotSizeSqFt)} sf`],
-            ].map(([k, v]) => [{ text: k, style: "v" }, { text: v, style: "v", alignment: "right" }])
-          },
-          layout: "lightHorizontalLines",
-        },
-        { width: 22, text: "" },
-        {
-          width: 260,
-          stack: [
-            { text: "Cap Rate vs Market", style: "h2", margin: [0, 0, 0, 6] },
-            ...barChart({
-              labels: ["Subject", "Market"],
-              values: [cap, p.marketCapRate || 0.061],
-              w: 260, h: 160, barColor: PALETTE.teal,
-              max: Math.max(cap, p.marketCapRate || 0.061) * 1.2,
-              valueFmt: (v)=>`${(v*100).toFixed(1)}%`
-            }),
-            { text: `Subject: ${fmt.percent(cap, 2)} vs Market: ${fmt.percent(p.marketCapRate, 2)}`, fontSize: 8, color: PALETTE.faintInk, margin: [0, 6, 0, 0] },
-          ],
-        },
-      ],
-    },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function dealGaugeAndCashflowPage(data) {
-  const dscr = Number(data.dscr ?? seedData().dscr);
-  return [
-    sectionBanner("Performance Snapshot", "Deal Score, Cashflow Mix & DSCR"),
-    {
-      columns: [
-        { width: 260, stack: [{ text: "Deal Score", style: "h2", margin: [0, 0, 0, 6] }, ...dealScoreGauge((data.verdict?.dealScore ?? 93))] },
-        { width: 22, text: "" },
-        {
-          width: "*",
-          stack: [
-            { text: "Cashflow Breakdown", style: "h2", margin: [0, 0, 0, 6] },
-            {
-              columns: [
-                { width: 260, stack: [...pieChart({ slices: data.cashflow || seedData().cashflow })] },
-                { width: 22, text: "" },
-                { width: 240, stack: [{ text: "Debt Service Coverage", style: "h2", margin: [0, 0, 0, 6] }, ...dscrGauge(dscr)] },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function scenariosPage(data) {
-  const sc = data.scenarios || seedData().scenarios;
-  const headers = [
-    { text: "Scenario", style: "k", fillColor: "#FAFAFA" },
-    { text: "Rent Growth", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-    { text: "Vacancy", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-    { text: "Exit Cap", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-    { text: "5-Yr IRR", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-    { text: "Equity Multiple", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-    { text: "Exit Price", style: "k", fillColor: "#FAFAFA", alignment: "right" },
-  ];
-
-  const body = [
-    headers,
-    ...sc.map((r, i) => [
-      { text: r.name, style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: fmt.percent(r.rentGrowth, 1), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: fmt.percent(r.vacancy, 1), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: fmt.percent(r.exitCap, 2), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: fmt.percent(r.irr, 1), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: (Number(r.em) || 0).toFixed(2) + "x", style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-      { text: fmt.money(r.salePrice), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-    ]),
-  ];
-
-  const irrVals = sc.map((r) => Number(r.irr) || 0);
-  const irrLabels = sc.map((r) => r.name);
-
-  return [
-    pageSoftBgBlock(PALETTE.paperAlt),
-    sectionBanner("5-Year Scenario Projections", "Assumptions & Returns Across Five Cases"),
-    { table: { widths: ["*", "auto", "auto", "auto", "auto", "auto", "auto"], body }, layout: "lightHorizontalLines" },
-    { text: " ", margin: [0, 10, 0, 6] },
-    { text: "IRR Across Scenarios", style: "h2", margin: [0, 0, 0, 6] },
-    ...barChart({ labels: irrLabels, values: irrVals, w: 520, h: 220, barColor: PALETTE.teal, max: Math.max(...irrVals) * 1.2, valueFmt: (v)=>`${(v*100).toFixed(1)}%` }),
-    { text: "Sensitivity & Break-Even: IRR remains above 12% in conservative case; break-even occupancy ~89% at current expense load.", fontSize: 9, color: PALETTE.faintInk, margin: [0, 8, 0, 0] },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function neighborhoodPage(data) {
-  const loc = data.location || seedData().location;
-  return [
-    sectionBanner("Neighborhood Overview", "Location Score & Factor Sentiment"),
-    {
-      columns: [
-        { width: 140, stack: [{ text: "Location Score", style: "h2", margin: [0, 0, 0, 6] }, ...locationGauge(loc.score10)] },
-        { width: 22, text: "" },
-        {
-          width: "*",
-          stack: [
-            { text: "Factor Sentiment", style: "h2", margin: [0, 0, 0, 6] },
-            ...neighborhoodSentimentPie(loc.factors),
-          ],
-        },
-      ],
-    },
-    { text: " ", margin: [0, 10, 0, 6] },
-    {
-      table: {
-        widths: ["*", "*", "auto"],
-        body: [
-          [{ text: "Factor", style: "k", fillColor: "#FAFAFA" }, { text: "Data", style: "k", fillColor: "#FAFAFA" }, { text: "Impact", style: "k", fillColor: "#FAFAFA" }],
-          ...loc.factors.map((row, i) => [
-            { text: row[0], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-            { text: row[1], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-            { text: row[2], style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-          ]),
-        ],
-      },
-      layout: "lightHorizontalLines",
-    },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function riskPage(data) {
-  const r = data.risk || seedData().risk;
-  return [
-    pageSoftBgBlock(PALETTE.paperAlt),
-    sectionBanner("Risk Assessment", "Likelihood × Impact Heat Map & Notes"),
-    { text: "Risk Matrix (3×3)", style: "h2", margin: [0, 0, 0, 6] },
-    ...riskHeatMap3x3(r.matrix3x3),
-    { text: " ", margin: [0, 8, 0, 0] },
-    {
-      columns: [
-        { width: "*", stack: r.notes.map(n => ({ text: `${n.cat} (${n.impact}) — ${n.note}`, fontSize: 9, color: PALETTE.subInk, margin: [0, 4, 0, 0] })) },
-        {
-          width: 160,
-          stack: [
-            { text: "Legend", style: "h2", margin: [0, 0, 0, 6] },
-            { text: "Green = Low  •  Amber = Moderate  •  Red = Elevated", fontSize: 8, color: PALETTE.faintInk },
-          ],
-        },
-      ],
-    },
-    { text: `Overall Risk Score: ${(r.overallScore10 ?? 3.4).toFixed(1)}/10 (lower is better)`, fontSize: 9, color: PALETTE.faintInk, margin: [0, 10, 0, 0] },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function renovationPage(data) {
-  const ren = data.renovation || seedData().renovation;
-  const rows = ren.budget || [];
-  return [
-    sectionBanner("Renovation Analysis", "Budget Allocation & Visual Concept"),
-    {
-      columns: [
-        {
-          width: "*",
-          stack: [
-            { text: "Renovation Budget Breakdown", style: "h2", margin: [0, 0, 0, 6] },
-            {
-              table: {
-                widths: ["*", "auto"],
-                body: [
-                  [{ text: "Line Item", style: "k", fillColor: "#FAFAFA" }, { text: "Amount", style: "k", fillColor: "#FAFAFA", alignment: "right" }],
-                  ...rows.map((r, i) => [
-                    { text: r[0], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                    { text: fmt.money(r[1]), style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                  ]),
-                ],
-              },
-              layout: "lightHorizontalLines",
-            },
-            { text: "Post-Renovation Impact: Modeled uplift on rent-ready units with conservative lease-up cadence.", fontSize: 9, color: PALETTE.faintInk, margin: [0, 8, 0, 0] },
-          ],
-        },
-        { width: 24, text: "" },
-        {
-          width: 250,
-          stack: [
-            { text: "Conceptual Visuals", style: "h2", margin: [0, 0, 0, 6] },
-            ...ren.notes.map(n => ({ text: n, fontSize: 9, color: PALETTE.subInk, margin: [0, 4, 0, 0] })),
-          ],
-        },
-      ],
-    },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function strategyNotesPage(data) {
-  const strategies = data.strategies || seedData().strategies;
-  const scoreRows = data.dealScoreBreakdown || seedData().dealScoreBreakdown;
-  const notes = data.analystNotes || seedData().analystNotes;
-
-  return [
-    sectionBanner("Investment Strategy & Analyst Notes", "Comparative Returns & Execution Considerations"),
-    {
-      columns: [
-        {
-          width: "*",
-          stack: [
-            { text: "Strategy Comparison", style: "h2", margin: [0, 0, 0, 6] },
-            {
-              table: {
-                widths: ["*", "auto", "*", "*"],
-                body: [
-                  [{ text: "Strategy", style: "k", fillColor: "#FAFAFA" }, { text: "5-Yr IRR", style: "k", fillColor: "#FAFAFA", alignment: "right" }, { text: "Pros", style: "k", fillColor: "#FAFAFA" }, { text: "Cons", style: "k", fillColor: "#FAFAFA" }],
-                  ...strategies.map((r, i) => [
-                    { text: r[0], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                    { text: r[1], style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                    { text: r[2], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                    { text: r[3], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                  ]),
-                ],
-              },
-              layout: "lightHorizontalLines",
-            },
-          ],
-        },
-        { width: 20, text: "" },
-        {
-          width: 240,
-          stack: [
-            { text: "Deal Score Breakdown", style: "h2", margin: [0, 0, 0, 6] },
-            {
-              table: {
-                widths: ["*", "auto"],
-                body: [
-                  [{ text: "Factor", style: "k", fillColor: "#FAFAFA" }, { text: "Score", style: "k", fillColor: "#FAFAFA", alignment: "right" }],
-                  ...scoreRows.map((r, i) => [
-                    { text: r[0], style: "v", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                    { text: `${r[1]}/10`, style: "v", alignment: "right", fillColor: i % 2 ? "#FFFFFF" : "#F9FAFB" },
-                  ]),
-                ],
-              },
-              layout: "lightHorizontalLines",
-            },
-          ],
-        },
-      ],
-    },
-    { text: "Analyst Commentary & Market Insights", style: "h2", margin: [0, 12, 0, 6] },
-    { ul: notes.map(n => ({ text: n, color: PALETTE.ink })), margin: [0, 0, 0, 0] },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function investorSummaryPage(data) {
-  const p = data.property || seedData().property;
-  const v = data.verdict || seedData().verdict;
-  const base = (data.scenarios || seedData().scenarios)[2]; // base case
-
-  return [
-    pageSoftBgBlock(PALETTE.paperAlt),
-    sectionBanner("Investor Summary Sheet", "Recap of Returns, Valuation & Exit"),
-    {
-      table: {
-        widths: ["*", "auto", "auto"],
-        body: [
-          [{ text: "Metric", style: "k", fillColor: "#FAFAFA" }, { text: "Value", style: "k", fillColor: "#FAFAFA", alignment: "right" }, { text: "Notes", style: "k", fillColor: "#FAFAFA" }],
-          [{ text: "Deal Verdict", style: "v" }, { text: `${v.label} — ${v.dealScore}/100`, style: "v", alignment: "right" }, { text: v.rationale || "Clear rent lift; stable cashflow; realistic exit.", style: "v" }],
-          [{ text: "Target IRR (5-Yr)", style: "v" }, { text: fmt.percent(base.irr, 1), style: "v", alignment: "right" }, { text: "Base case; conservative rent growth", style: "v" }],
-          [{ text: "Equity Multiple", style: "v" }, { text: (Number(base.em) || 0).toFixed(2) + "x", style: "v", alignment: "right" }, { text: "Across 5-year hold", style: "v" }],
-          [{ text: "Cap on Cost (Yr-1, Stab.)", style: "v" }, { text: fmt.percent(capRate(p.noi, p.askingPrice), 2), style: "v", alignment: "right" }, { text: "On total cost basis if applicable", style: "v" }],
-          [{ text: "Exit Value", style: "v" }, { text: fmt.money(base.salePrice), style: "v", alignment: "right" }, { text: `Exit cap ~${fmt.percent(base.exitCap, 2)}`, style: "v" }],
-          [{ text: "Market Cap Rate", style: "v" }, { text: fmt.percent(p.marketCapRate, 2), style: "v", alignment: "right" }, { text: "Submarket indicative", style: "v" }],
-        ],
-      },
-      layout: "lightHorizontalLines",
-    },
-    { text: " ", margin: [0, 14, 0, 6] },
-    { text: "Generated by the InvestorIQ AI Analyst Engine — Institutional-Grade Reports On Demand.", alignment: "center", bold: true, color: PALETTE.teal },
-    { text: " ", margin: [0, 18, 0, 6] },
-    { text: "Legal Disclaimer", style: "h2" },
-    { text: "This sample is for demonstration purposes only and does not constitute investment advice. All figures are estimates based on provided or assumed data. Investors should conduct independent due diligence and consult qualified professionals before making investment decisions.", fontSize: 8, color: PALETTE.faintInk, margin: [0, 6, 0, 0] },
-    { text: " ", pageBreak: "after" },
-  ];
-}
-
-function deepNavyFinalePage(data) {
-  const logoText = "InvestorIQ.ai";
-  return [
-    { canvas: [{ type: "rect", x: -48, y: -60, w: 695, h: 842, color: PALETTE.ink }], absolutePosition: { x: 0, y: 0 } },
-    {
-      stack: [
-        { text: logoText, alignment: "center", fontSize: 26, bold: true, color: PALETTE.gold, margin: [0, 240, 0, 12] },
-        { text: "Institutional Intelligence for Real Estate Investors", alignment: "center", fontSize: 12, color: "#E9E4D0" },
-        { text: " ", margin: [0, 12, 0, 0] },
-        { canvas: [{ type: "line", x1: 120, y1: 0, x2: 475, y2: 0, lineWidth: 2, lineColor: PALETTE.gold }], margin: [0, 12, 0, 0] },
-      ],
-      margin: [0, 0, 0, 0]
-    },
-  ];
-}
-
-/* ==============================
-   Public Builder (Doc Definition)
-   ============================== */
-export function buildSampleReportDocDefinition(input) {
+function mergeSeedWithInput(input = {}) {
   const seed = seedData();
-  const data = {
+  const out = {
     ...seed,
     ...input,
-    property: { ...seed.property, ...(input?.property || {}) },
-    verdict: { ...seed.verdict, ...(input?.verdict || {}) },
-    cashflow: (input?.cashflow && input.cashflow.length ? input.cashflow : seed.cashflow),
-    scenarios: (input?.scenarios && input.scenarios.length ? input.scenarios : seed.scenarios),
-    location: { ...seed.location, ...(input?.location || {}) },
-    risk: { ...seed.risk, ...(input?.risk || {}) },
-    renovation: { ...seed.renovation, ...(input?.renovation || {}) },
-    strategies: (input?.strategies && input.strategies.length ? input.strategies : seed.strategies),
-    compsHeat: { ...seed.compsHeat, ...(input?.compsHeat || {}) },
-    dealScoreBreakdown: (input?.dealScoreBreakdown && input.dealScoreBreakdown.length ? input.dealScoreBreakdown : seed.dealScoreBreakdown),
-    analystNotes: (input?.analystNotes && input.analystNotes.length ? input.analystNotes : seed.analystNotes),
-    dscr: (input?.dscr != null ? input.dscr : seed.dscr),
-  };
-
-  return {
-    info: { title: "InvestorIQ Property IQ Report™" },
-    compress: true,
-    pageSize: "LETTER",
-    pageMargins: [SPACING.page.l, SPACING.page.t, SPACING.page.r, SPACING.page.b],
-    defaultStyle: { fontSize: 10, color: PALETTE.ink },
-    styles: {
-      h1: { fontSize: 16, bold: true, color: PALETTE.ink },
-      h2: { fontSize: 12, bold: true, color: PALETTE.ink },
-      k:  { fontSize: 9, color: PALETTE.subInk },
-      v:  { fontSize: 10, color: PALETTE.ink },
-      tiny: { fontSize: 8, color: PALETTE.faintInk },
+    property: { ...seed.property, ...(input.property || {}) },
+    verdict: { ...seed.verdict, ...(input.verdict || {}) },
+    location: {
+      ...seed.location,
+      ...(input.location || {}),
+      metrics: {
+        ...(seed.location?.metrics || {}),
+        ...((input.location && input.location.metrics) || {}),
+      },
     },
-    watermark: { text: "InvestorIQ Confidential", color: "#000000", opacity: 0.03, angle: 40 },
-    footer: (page, pages) => ({
-      stack: [
-        { text: "InvestorIQ.ai | Institutional Intelligence for Real Estate Investors", alignment: "center", fontSize: 8, color: PALETTE.faintInk },
-        { text: `Confidential & Proprietary © 2025 InvestorIQ  •  Page ${page} of ${pages}`, alignment: "center", fontSize: 7, color: PALETTE.faintInk },
-      ],
-    }),
-    content: [
-      // 1 Cover
-      ...coverPage(data),
-      // 2 Exec verdict card + metrics
-      ...execVerdictPage(data),
-      // 3 Gauge + Cashflow + DSCR
-      ...dealGaugeAndCashflowPage(data),
-      // 4 Scenarios + IRR chart
-      ...scenariosPage(data),
-      // 5 Neighborhood (gauge + sentiment pie + table)
-      ...neighborhoodPage(data),
-      // 6 Risk (3×3 heat map + notes)
-      ...riskPage(data),
-      // 7 Renovation
-      ...renovationPage(data),
-      // 8 Strategy + Notes
-      ...strategyNotesPage(data),
-      // 9 Investor Summary
-      ...investorSummaryPage(data),
-      // 10 Deep Navy CTA
-      ...deepNavyFinalePage(data),
+    risk: { ...seed.risk, ...(input.risk || {}) },
+    renovation: { ...seed.renovation, ...(input.renovation || {}) },
+    analystNotes: { ...seed.analystNotes, ...(input.analystNotes || {}) },
+  };
+  if (Array.isArray(input.cashflow)) out.cashflow = input.cashflow;
+  if (Array.isArray(input.scenarios)) out.scenarios = input.scenarios;
+  if (Array.isArray(input.strategies)) out.strategies = input.strategies;
+  return out;
+}
+
+function sectionTitle(title, subtitle) {
+  return {
+    margin: [0, 0, 0, SPACING.block],
+    stack: [
+      {
+        text: title,
+        style: "h1",
+      },
+      subtitle
+        ? {
+            text: subtitle,
+            style: "subheading",
+            margin: [0, 2, 0, 6],
+          }
+        : { text: "", margin: [0, 0, 0, 0] },
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1,
+            lineColor: PALETTE.line,
+          },
+        ],
+      },
     ],
   };
 }
 
-// Export palette to keep consistency with your app if desired
-export const PALETTE_EXPORT = PALETTE;
+function chip(text, color, bgColor) {
+  return {
+    text,
+    fontSize: 8,
+    color,
+    margin: [0, 0, 0, 0],
+    decoration: "none",
+    background: bgColor,
+    bold: true,
+  };
+}
+
+function scoreBand(score10) {
+  const s = Number(score10) || 0;
+  let label = "Balanced";
+  let color = PALETTE.ink;
+
+  if (s >= 9) {
+    label = "Prime Core";
+    color = PALETTE.green;
+  } else if (s >= 7.5) {
+    label = "Core Plus";
+    color = PALETTE.tealDim;
+  } else if (s >= 6) {
+    label = "Value Add";
+    color = PALETTE.amber;
+  } else {
+    label = "Higher Risk";
+    color = PALETTE.red;
+  }
+
+  return { label, color };
+}
+
+function qualitativeChip(text) {
+  const t = String(text || "").toLowerCase();
+  let color = PALETTE.midInk;
+  let bg = "#E5F6F6";
+
+  if (t.startsWith("pos")) {
+    color = PALETTE.green;
+    bg = "#DCFCE7";
+  } else if (t.startsWith("neg")) {
+    color = PALETTE.red;
+    bg = "#FEE2E2";
+  } else {
+    color = PALETTE.amber;
+    bg = "#FEF3C7";
+  }
+
+  return chip(text, color, bg);
+}
+
+/* =============
+   Cover Page
+   ============= */
+
+function coverPage(data) {
+  const { property, verdict, logoBase64, generatedAt } = data;
+  const band = scoreBand(verdict?.dealScore / 10);
+
+  return {
+    stack: [
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 3,
+            lineColor: PALETTE.gold,
+          },
+        ],
+        margin: [0, 0, 0, 30],
+      },
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: "InvestorIQ", style: "brandTitle" },
+              {
+                text: "Institutional Grade Property IQ Report",
+                style: "coverSubtitle",
+                margin: [0, 4, 0, 24],
+              },
+              {
+                text: property?.name || "Sample Asset",
+                style: "coverTitle",
+                margin: [0, 0, 0, 8],
+              },
+              {
+                text: property?.address || "",
+                style: "coverAddress",
+                margin: [0, 0, 0, 16],
+              },
+              {
+                columns: [
+                  {
+                    width: "auto",
+                    stack: [
+                      {
+                        text: verdict?.label || "ANALYST VIEW",
+                        style: "coverVerdict",
+                      },
+                      {
+                        text:
+                          verdict?.rationale ||
+                          "InvestorIQ AI Analyst Engine has synthesized market, risk, and cash flow drivers to surface a clear investment view.",
+                        style: "body",
+                        margin: [0, 4, 0, 10],
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                columns: [
+                  {
+                    width: "auto",
+                    stack: [
+                      {
+                        text: "Deal Score",
+                        style: "label",
+                      },
+                      {
+                        text: `${fmt.number(verdict?.dealScore || 0, 0)} / 100`,
+                        color: band.color,
+                        fontSize: 18,
+                        bold: true,
+                      },
+                      {
+                        text: band.label,
+                        fontSize: 8,
+                        color: band.color,
+                      },
+                    ],
+                    margin: [0, 10, 20, 0],
+                  },
+                  {
+                    width: "auto",
+                    stack: [
+                      {
+                        text: "Target IRR",
+                        style: "label",
+                      },
+                      {
+                        text: fmt.percent(verdict?.targetIRR || 0.15, 1),
+                        style: "bigMetric",
+                      },
+                    ],
+                    margin: [0, 10, 20, 0],
+                  },
+                  {
+                    width: "auto",
+                    stack: [
+                      {
+                        text: "Equity Multiple",
+                        style: "label",
+                      },
+                      {
+                        text: fmt.number(verdict?.equityMultipleBase || 1.7, 2),
+                        style: "bigMetric",
+                      },
+                    ],
+                  },
+                ],
+                margin: [0, 8, 0, 24],
+              },
+              {
+                text:
+                  verdict?.strategyHeadline ||
+                  "Acquire, optimize, and hold with disciplined risk management and institutional underwriting.",
+                style: "body",
+                color: PALETTE.midInk,
+                margin: [0, 0, 0, 16],
+              },
+              {
+                text: `Report generated by InvestorIQ AI Analyst Engine on ${fmt.date(
+                  generatedAt
+                )}`,
+                style: "finePrint",
+                color: PALETTE.faintInk,
+              },
+            ],
+          },
+          {
+            width: 140,
+            stack: [
+              logoBase64
+                ? {
+                    image: logoBase64,
+                    width: 120,
+                    alignment: "right",
+                    margin: [0, 0, 0, 40],
+                  }
+                : { text: "", margin: [0, 0, 0, 40] },
+              {
+                canvas: [
+                  {
+                    type: "rect",
+                    x: 0,
+                    y: 0,
+                    w: 140,
+                    h: 90,
+                    r: 10,
+                    lineWidth: 0.8,
+                    lineColor: PALETTE.tealDim,
+                    color: "#ECFEFF",
+                  },
+                ],
+                margin: [0, 0, 0, 8],
+              },
+              {
+                absolutePosition: { x: 430, y: 190 },
+                stack: [
+                  {
+                    text: "Verified by",
+                    fontSize: 7,
+                    color: PALETTE.midInk,
+                    alignment: "right",
+                  },
+                  {
+                    text: "InvestorIQ AI",
+                    fontSize: 10,
+                    bold: true,
+                    color: PALETTE.tealDim,
+                    alignment: "right",
+                    margin: [0, 2, 0, 0],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        margin: [0, 0, 0, 40],
+      },
+      {
+        text: "Sample Report - For Demonstration Purposes Only",
+        alignment: "right",
+        fontSize: 8,
+        color: PALETTE.faintInk,
+      },
+    ],
+  };
+}
+
+/* =====================
+   Executive Summary
+   ===================== */
+
+function executiveSummaryPage(data) {
+  const { property, verdict, cashflow, dscr } = data;
+  const cap = capRate(property?.noi, property?.askingPrice);
+
+  return {
+    stack: [
+      {
+        text: "",
+        pageBreak: "before",
+      },
+      sectionTitle("Executive Summary", "High level view of yield, risk, and strategy in one glance."),
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: "Investment Snapshot",
+                style: "h2",
+                margin: [0, 0, 0, 6],
+              },
+              {
+                table: {
+                  widths: ["40%", "60%"],
+                  body: [
+                    ["Asset", property?.name || ""],
+                    ["Address", property?.address || ""],
+                    ["Type", property?.type || ""],
+                    ["Year Built", property?.yearBuilt ? String(property.yearBuilt) : "-"],
+                    ["Units", fmt.number(property?.units || 0, 0)],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              {
+                text: "Key Metrics",
+                style: "h2",
+                margin: [0, 0, 0, 6],
+              },
+              {
+                table: {
+                  widths: ["50%", "50%"],
+                  body: [
+                    ["Asking Price", fmt.money(property?.askingPrice)],
+                    ["In Place NOI", fmt.money(property?.noi)],
+                    ["In Place Cap Rate", fmt.percent(cap)],
+                    ["Market Cap Rate", fmt.percent(property?.marketCapRate || 0)],
+                    ["DSCR (Year One)", fmt.ratio(dscr || 0)],
+                    ["Occupancy", fmt.percent(property?.occupancy || 0)],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+        margin: [0, 0, 0, 16],
+      },
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: "Cash Flow Allocation", style: "h2", margin: [0, 0, 0, 8] },
+              {
+                table: {
+                  widths: ["*", "auto"],
+                  body: [
+                    [
+                      { text: "Use", style: "tableHeader" },
+                      { text: "Amount", style: "tableHeader", alignment: "right" },
+                    ],
+                    ...cashflow.map((row) => [
+                      { text: row.label, style: "body" },
+                      {
+                        text: fmt.money(row.value),
+                        alignment: "right",
+                        style: "body",
+                      },
+                    ]),
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+          {
+            width: 180,
+            stack: [
+              { text: "Income Quality Gauge", style: "h2", margin: [0, 0, 0, 8] },
+              {
+                canvas: [
+                  {
+                    type: "rect",
+                    x: 0,
+                    y: 5,
+                    w: 160,
+                    h: 8,
+                    color: "#FEE2E2",
+                  },
+                  {
+                    type: "rect",
+                    x: 0,
+                    y: 5,
+                    w: 160 * 0.4,
+                    h: 8,
+                    color: "#FEF3C7",
+                  },
+                  {
+                    type: "rect",
+                    x: 0,
+                    y: 5,
+                    w: 160 * 0.75,
+                    h: 8,
+                    color: "#DCFCE7",
+                  },
+                  {
+                    type: "rect",
+                    x: 0,
+                    y: 5,
+                    w: 160 * clamp01((dscr - 1.0) / 0.6),
+                    h: 8,
+                    color: PALETTE.tealDim,
+                  },
+                ],
+                margin: [0, 6, 0, 4],
+              },
+              {
+                columns: [
+                  { text: "1.00x", fontSize: 7, color: PALETTE.faintInk },
+                  { text: "1.30x", fontSize: 7, color: PALETTE.faintInk, alignment: "center" },
+                  { text: "1.60x", fontSize: 7, color: PALETTE.faintInk, alignment: "right" },
+                ],
+                margin: [0, 0, 0, 6],
+              },
+              {
+                text: `DSCR models at ${fmt.ratio(dscr || 0)} in year one, which places this asset inside the preferred band for many senior lenders.`,
+                style: "finePrint",
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+      },
+    ],
+  };
+}
+
+/* =========================
+   Property Snapshot Page
+   ========================= */
+
+function propertySnapshotPage(data) {
+  const { property } = data;
+  const cap = capRate(property?.noi, property?.askingPrice);
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("Property Snapshot", "Physical profile and income statement view."),
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: "Physical Profile", style: "h2", margin: [0, 0, 0, 6] },
+              {
+                table: {
+                  widths: ["40%", "60%"],
+                  body: [
+                    ["Asset Name", property?.name || ""],
+                    ["Address", property?.address || ""],
+                    ["Year Built", property?.yearBuilt ? String(property.yearBuilt) : "-"],
+                    ["Building Size", `${fmt.number(property?.buildingSqFt || 0, 0)} sq ft`],
+                    ["Site Size", `${fmt.number(property?.lotSizeSqFt || 0, 0)} sq ft`],
+                    ["Total Units", fmt.number(property?.units || 0, 0)],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              { text: "Income and Expenses", style: "h2", margin: [0, 0, 0, 6] },
+              {
+                table: {
+                  widths: ["55%", "45%"],
+                  body: [
+                    ["Metric", "Annual"],
+                    ["Gross Potential Rent", fmt.money(property?.units * property?.avgRentCurrent * 12)],
+                    ["Other Income", fmt.money(18_000)],
+                    ["Vacancy and Credit", fmt.money(-26_000)],
+                    ["Effective Gross Income", fmt.money( property?.noi ? property.noi + 74_500 : 278_500 )],
+                    ["Operating Expenses", fmt.money( property?.taxesAnnual + property?.insuranceAnnual + property?.maintenanceAnnual + property?.utilitiesAnnual )],
+                    ["Net Operating Income", fmt.money(property?.noi)],
+                    ["Cap Rate on Asking Price", fmt.percent(cap)],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+      },
+      {
+        margin: [0, 16, 0, 0],
+        table: {
+          widths: ["25%", "25%", "25%", "25%"],
+          body: [
+            [
+              { text: "Avg Current Rent", style: "tableHeader", alignment: "left" },
+              { text: "Avg Pro Forma Rent", style: "tableHeader", alignment: "left" },
+              { text: "Rent Lift Potential", style: "tableHeader", alignment: "left" },
+              { text: "Occupancy", style: "tableHeader", alignment: "left" },
+            ],
+            [
+              { text: fmt.money(property?.avgRentCurrent), style: "body" },
+              { text: fmt.money(property?.avgRentProForma), style: "body" },
+              {
+                text: `${fmt.percent(
+                  (property?.avgRentProForma || 0) / (property?.avgRentCurrent || 1) - 1
+                )}`,
+                style: "body",
+              },
+              {
+                text: fmt.percent(property?.occupancy || 0),
+                style: "body",
+              },
+            ],
+          ],
+        },
+        layout: "lightHorizontalLines",
+      },
+    ],
+  };
+}
+
+/* =========================
+   Market Insights Snapshot
+   ========================= */
+
+function marketInsightsPage(data) {
+  const { location } = data;
+  const band = scoreBand(location?.score10 || 0);
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("Market Insights Snapshot", "Neighborhood quality, macro drivers, and qualitative signal."),
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: location?.marketName || "Target Submarket",
+                style: "h2",
+                margin: [0, 0, 0, 4],
+              },
+              {
+                text: location?.summary || "",
+                style: "body",
+                margin: [0, 0, 0, 12],
+              },
+              {
+                table: {
+                  widths: ["35%", "65%"],
+                  body: [
+                    ["Location Quality Score", `${fmt.number(location?.score10 || 0, 1)} / 10`],
+                    ["InvestorIQ View", band.label],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+                margin: [0, 0, 0, 16],
+              },
+              {
+                text: "Market Factors",
+                style: "h2",
+                margin: [0, 0, 0, 6],
+              },
+              {
+                table: {
+                  widths: ["30%", "55%", "15%"],
+                  body: [
+                    [
+                      { text: "Factor", style: "tableHeader" },
+                      { text: "InvestorIQ Commentary", style: "tableHeader" },
+                      { text: "Tilt", style: "tableHeader" },
+                    ],
+                    ...location.factors.map(([factor, commentary, tilt]) => [
+                      { text: factor, style: "body" },
+                      { text: commentary, style: "body" },
+                      { stack: [qualitativeChip(tilt)], alignment: "center" },
+                    ]),
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+          {
+            width: 180,
+            stack: [
+              { text: "Quant Snapshot", style: "h2", margin: [0, 0, 0, 6] },
+              {
+                table: {
+                  widths: ["70%", "30%"],
+                  body: [
+                    ["Five year population growth", fmt.percent(location?.metrics?.population5Yr || 0)],
+                    ["Three year rent growth", fmt.percent(location?.metrics?.rentGrowth3Yr || 0)],
+                    ["Unemployment rate", fmt.percent(location?.metrics?.unemployment || 0)],
+                    ["New supply pipeline (units)", fmt.number(location?.metrics?.newSupplyPipelineUnits || 0, 0)],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+              {
+                text: "InvestorIQ AI weights this micro market inside the core plus range given growth momentum and constrained new supply.",
+                style: "finePrint",
+                margin: [0, 8, 0, 0],
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+      },
+    ],
+  };
+}
+
+/* =========================
+   Scenario Analysis Page
+   ========================= */
+
+function scenarioAnalysisPage(data) {
+  const { scenarios } = data;
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle(
+        "Scenario Analysis",
+        "Five path view from downside protection to upside potential over the hold period."
+      ),
+      {
+        text: "InvestorIQ AI models a range of rent, vacancy, and exit yield assumptions to size both protection on the downside and participation on the upside.",
+        style: "body",
+        margin: [0, 0, 0, 12],
+      },
+      {
+        table: {
+          widths: ["14%", "16%", "16%", "16%", "16%", "22%"],
+          body: [
+            [
+              { text: "Case", style: "tableHeader" },
+              { text: "Rent Growth", style: "tableHeader" },
+              { text: "Economic Vacancy", style: "tableHeader" },
+              { text: "Exit Cap Rate", style: "tableHeader" },
+              { text: "IRR", style: "tableHeader" },
+              { text: "Equity Multiple and Sale Price", style: "tableHeader" },
+            ],
+            ...scenarios.map((s) => [
+              { text: s.name, style: "body" },
+              { text: fmt.percent(s.rentGrowth || 0), style: "body" },
+              { text: fmt.percent(s.vacancy || 0), style: "body" },
+              { text: fmt.percent(s.exitCap || 0), style: "body" },
+              { text: fmt.percent(s.irr || 0), style: "body" },
+              {
+                text: `${fmt.number(s.em || 0, 2)}x on approx ${fmt.money(s.salePrice)}`,
+                style: "body",
+              },
+            ]),
+          ],
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 16],
+      },
+      {
+        text: "IRR and equity multiple outputs are modeled net of operating and financing assumptions and should be validated against final capital structure.",
+        style: "finePrint",
+      },
+    ],
+  };
+}
+
+/* =========================
+   Risk Matrix Page
+   ========================= */
+
+function riskMatrixPage(data) {
+  const { risk } = data;
+  const matrix = risk.matrix3x3 || [];
+  const legend = risk.legend || [];
+
+  const heatBody = [["", "Low Impact", "Medium Impact", "High Impact"]];
+  const likelihoodLabels = ["Low Likelihood", "Moderate Likelihood", "High Likelihood"];
+
+  for (let row = 0; row < 3; row += 1) {
+    const rowVals = matrix[row] || [];
+    const cells = [
+      { text: likelihoodLabels[row], style: "body" },
+      ...rowVals.map((v) => {
+        const intensity = clamp01(v);
+        const red = 220 + Math.round(35 * intensity);
+        const green = 237 - Math.round(80 * intensity);
+        const blue = 200 - Math.round(80 * intensity);
+        const color = `rgb(${red},${green},${blue})`;
+        return {
+          text: "",
+          fillColor: color,
+          margin: [0, 14, 0, 14],
+        };
+      }),
+    ];
+    heatBody.push(cells);
+  }
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("Risk and Stress Testing", "Heat map of risk categories and modeled shocks."),
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: "Risk Matrix", style: "h2", margin: [0, 0, 0, 6] },
+              {
+                table: {
+                  widths: ["40%", "20%", "20%", "20%"],
+                  body: heatBody,
+                },
+                layout: {
+                  hLineWidth: (i) => (i === 0 ? 0.8 : 0.4),
+                  vLineWidth: (i) => (i === 0 ? 0.8 : 0.4),
+                  hLineColor: () => PALETTE.line,
+                  vLineColor: () => PALETTE.line,
+                },
+                margin: [0, 0, 0, 8],
+              },
+              {
+                text: "Overall modeled risk tiles to the moderate band. Market level insurance volatility remains the most material risk driver.",
+                style: "body",
+              },
+            ],
+          },
+          {
+            width: 200,
+            stack: [
+              { text: "Risk Legend", style: "h2", margin: [0, 0, 0, 6] },
+              {
+                table: {
+                  widths: ["40%", "60%"],
+                  body: [
+                    [
+                      { text: "Band", style: "tableHeader" },
+                      { text: "Description", style: "tableHeader" },
+                    ],
+                    ...legend.map(([label, val]) => [
+                      { text: label, style: "body" },
+                      {
+                        text: `Approx intensity score ${fmt.number(val || 0, 1)}`,
+                        style: "body",
+                      },
+                    ]),
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+        margin: [0, 0, 0, 16],
+      },
+      {
+        text: "Key Risk Notes",
+        style: "h2",
+        margin: [0, 0, 0, 6],
+      },
+      {
+        ul: risk.notes.map((r) => `${r.cat} (${r.impact} impact): ${r.note}`),
+        style: "body",
+        margin: [0, 0, 0, 10],
+      },
+      {
+        text: "Headline Stress Tests",
+        style: "h2",
+        margin: [0, 0, 0, 6],
+      },
+      {
+        table: {
+          widths: ["45%", "55%"],
+          body: [
+            [
+              { text: "Scenario", style: "tableHeader" },
+              { text: "InvestorIQ Commentary", style: "tableHeader" },
+            ],
+            ...risk.stressTests.map(([scenario, commentary]) => [
+              { text: scenario, style: "body" },
+              { text: commentary, style: "body" },
+            ]),
+          ],
+        },
+        layout: "lightHorizontalLines",
+      },
+    ],
+  };
+}
+
+/* =========================
+   Renovation Plan Page
+   ========================= */
+
+function renovationPlanPage(data) {
+  const { renovation } = data;
+  const totalBudget = renovation.budget.reduce((sum, [, val]) => sum + Number(val || 0), 0);
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("Renovation and Capital Plan", "Scope of work, capital allocation, and upgrade vision."),
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: "Budget Summary",
+                style: "h2",
+                margin: [0, 0, 0, 6],
+              },
+              {
+                table: {
+                  widths: ["55%", "45%"],
+                  body: [
+                    [
+                      { text: "Scope Item", style: "tableHeader" },
+                      { text: "Budget", style: "tableHeader" },
+                    ],
+                    ...renovation.budget.map(([label, value]) => [
+                      { text: label, style: "body" },
+                      { text: fmt.money(value), style: "body" },
+                    ]),
+                    [
+                      { text: "Total Budget", style: "tableHeader" },
+                      { text: fmt.money(totalBudget), style: "tableHeader" },
+                    ],
+                  ],
+                },
+                layout: "lightHorizontalLines",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              {
+                text: "InvestorIQ View",
+                style: "h2",
+                margin: [0, 0, 0, 6],
+              },
+              {
+                text: renovation.narrative || "",
+                style: "body",
+                margin: [0, 0, 0, 10],
+              },
+              {
+                ul: renovation.conceptualNotes || [],
+                style: "finePrint",
+              },
+            ],
+          },
+        ],
+        columnGap: 18,
+      },
+    ],
+  };
+}
+
+/* =========================
+   Strategy Matrix Page
+   ========================= */
+
+function strategyMatrixPage(data) {
+  const { strategies } = data;
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("Investor Strategy Matrix", "Side by side view of viable paths for this asset."),
+      {
+        table: {
+          widths: ["16%", "12%", "36%", "36%"],
+          body: [
+            [
+              { text: "Strategy", style: "tableHeader" },
+              { text: "Target IRR", style: "tableHeader" },
+              { text: "InvestorIQ Summary", style: "tableHeader" },
+              { text: "Key Considerations", style: "tableHeader" },
+            ],
+            ...strategies.map(([name, irr, summary, cons]) => [
+              { text: name, style: "body" },
+              { text: irr, style: "body" },
+              { text: summary, style: "body" },
+              { text: cons, style: "body" },
+            ]),
+          ],
+        },
+        layout: "lightHorizontalLines",
+      },
+    ],
+  };
+}
+
+/* =========================
+   Analyst Commentary Page
+   ========================= */
+
+function analystCommentaryPage(data) {
+  const { analystNotes } = data;
+
+  return {
+    stack: [
+      { text: "", pageBreak: "before" },
+      sectionTitle("InvestorIQ Analyst Commentary", "AI synthesized view for investment committees and partners."),
+      {
+        text: "Core Highlights",
+        style: "h2",
+        margin: [0, 0, 0, 4],
+      },
+      {
+        ul: analystNotes.highlights || [],
+        style: "body",
+        margin: [0, 0, 0, 10],
+      },
+      {
+        text: "Watch Items",
+        style: "h2",
+        margin: [0, 0, 0, 4],
+      },
+      {
+        ul: analystNotes.watchItems || [],
+        style: "body",
+        margin: [0, 0, 0, 10],
+      },
+      {
+        text: "Recommended Next Steps",
+        style: "h2",
+        margin: [0, 0, 0, 4],
+      },
+      {
+        ol: analystNotes.nextSteps || [],
+        style: "body",
+      },
+    ],
+  };
+}
+
+/* =========================
+   Document Definition
+   ========================= */
+
+export function buildSampleReportDocDefinition(inputData = {}) {
+  const data = mergeSeedWithInput(inputData);
+  const { property } = data;
+
+  const docDefinition = {
+    pageSize: "A4",
+    pageMargins: [SPACING.page.l, SPACING.page.t, SPACING.page.r, SPACING.page.b],
+    defaultStyle: {
+      fontSize: 9,
+      color: PALETTE.midInk,
+    },
+    styles: {
+      brandTitle: {
+        fontSize: 10,
+        bold: true,
+        color: PALETTE.teal,
+      },
+      coverTitle: {
+        fontSize: 24,
+        bold: true,
+        color: PALETTE.ink,
+      },
+      coverSubtitle: {
+        fontSize: 11,
+        color: PALETTE.lightInk,
+      },
+      coverAddress: {
+        fontSize: 9,
+        color: PALETTE.lightInk,
+      },
+      coverVerdict: {
+        fontSize: 9,
+        bold: true,
+        color: PALETTE.green,
+      },
+      h1: {
+        fontSize: 14,
+        bold: true,
+        color: PALETTE.ink,
+      },
+      h2: {
+        fontSize: 10,
+        bold: true,
+        color: PALETTE.subInk,
+      },
+      subheading: {
+        fontSize: 9,
+        color: PALETTE.lightInk,
+      },
+      body: {
+        fontSize: 9,
+        color: PALETTE.midInk,
+      },
+      label: {
+        fontSize: 8,
+        color: PALETTE.lightInk,
+      },
+      bigMetric: {
+        fontSize: 16,
+        bold: true,
+        color: PALETTE.ink,
+      },
+      finePrint: {
+        fontSize: 8,
+        color: PALETTE.faintInk,
+      },
+      tableHeader: {
+        fontSize: 8,
+        bold: true,
+        color: PALETTE.subInk,
+      },
+    },
+    footer: function (currentPage, pageCount) {
+      return {
+        columns: [
+          {
+            text: `InvestorIQ.ai | Property IQ Report - ${property?.name || "Sample Asset"}`,
+            alignment: "left",
+            margin: [SPACING.page.l, 0, 0, 20],
+            fontSize: 8,
+            color: PALETTE.faintInk,
+          },
+          {
+            text: `Page ${currentPage} of ${pageCount}`,
+            alignment: "right",
+            margin: [0, 0, SPACING.page.r, 20],
+            fontSize: 8,
+            color: PALETTE.faintInk,
+          },
+        ],
+      };
+    },
+    background: function (currentPage, pageSize) {
+      const color = currentPage % 2 === 0 ? PALETTE.paperAlt : PALETTE.paper;
+      return {
+        canvas: [
+          {
+            type: "rect",
+            x: 0,
+            y: 0,
+            w: pageSize.width,
+            h: pageSize.height,
+            color,
+          },
+        ],
+      };
+    },
+    content: [
+      coverPage(data),
+      executiveSummaryPage(data),
+      propertySnapshotPage(data),
+      marketInsightsPage(data),
+      scenarioAnalysisPage(data),
+      riskMatrixPage(data),
+      renovationPlanPage(data),
+      strategyMatrixPage(data),
+      analystCommentaryPage(data),
+    ],
+  };
+
+  return docDefinition;
+}
+
+// Optional named export if you want to access seed data elsewhere
+export { seedData };
