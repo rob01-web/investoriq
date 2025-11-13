@@ -1,8 +1,22 @@
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
+/**
+ * InvestorIQ PDF Generator (Vercel-Safe Version)
+ * ----------------------------------------------
+ * Uses dynamic import for pdfMake + vfs_fonts to avoid Rollup build errors.
+ */
+
 import { buildSampleReportDocDefinition } from "../lib/pdfSections";
 
-pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || {};
+// Lazy-load pdfMake + fonts for build compatibility
+async function getPdfMake() {
+  const pdfMakeModule = await import("pdfmake/build/pdfmake.js");
+  const pdfFontsModule = await import("pdfmake/build/vfs_fonts.js");
+
+  const pdfMake = pdfMakeModule.default || pdfMakeModule;
+  const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+
+  pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || {};
+  return pdfMake;
+}
 
 // Convert /public image to base64
 async function loadImageBase64(path) {
@@ -20,61 +34,63 @@ async function loadImageBase64(path) {
   }
 }
 
-/**
- * InvestorIQ PDF Generator (Launch-Ready Version)
- * ----------------------------------------------
- * Uses pre-opened tab + blob URL to ensure no blank screen.
- */
+// Main generator
 export const generatePDF = async (reportData = {}, options = {}) => {
   const { preview = false, fileName } = options;
+  const pdfMake = await getPdfMake();
 
-  // ✅ Load logo (works both locally & deployed)
-  const logoBase64 = await loadImageBase64(`${window.location.origin}/assets/logo.png`);
+  const logoBase64 = await loadImageBase64(
+    `${window.location.origin}/assets/logo.png`
+  );
 
-  // ✅ Build document definition
   const docDefinition = buildSampleReportDocDefinition({
     ...reportData,
     logoBase64,
   });
 
-  // Debug: ensure it’s not empty
   console.log("[InvestorIQ] docDefinition:", docDefinition);
-  console.log("[InvestorIQ] content length:", docDefinition?.content?.length || 0);
 
   try {
     const pdf = pdfMake.createPdf(docDefinition);
 
     if (preview) {
-      // ✅ Pre-open tab so Chrome doesn't block it
       const newTab = window.open("about:blank", "_blank");
-
       pdf.getBlob((blob) => {
-  if (!blob) {
-    newTab.document.write(
-      "<h3 style='font-family:sans-serif;padding:40px;color:#444'>Failed to generate PDF. Please try again.</h3>"
-    );
-    return;
-  }
-
-  const blobUrl = URL.createObjectURL(blob);
-
-  // ✅ Embed PDF inside the tab so it always renders
-  newTab.document.write(`
-    <html>
-      <head><title>InvestorIQ Sample Report</title></head>
-      <body style="margin:0;padding:0;overflow:hidden;background:#f9fafb;">
-        <iframe
-          src="${blobUrl}"
-          width="100%"
-          height="100%"
-          style="border:0;position:fixed;top:0;left:0;"
-        ></iframe>
-      </body>
-    </html>
-  `);
-  newTab.document.close();
-});
-
+        if (!blob) {
+          newTab.document.write(
+            "<h3 style='font-family:sans-serif;padding:40px;color:#444'>Failed to generate PDF. Please try again.</h3>"
+          );
+          return;
+        }
+        const blobUrl = URL.createObjectURL(blob);
+        newTab.document.write(`
+          <html>
+            <head>
+              <title>InvestorIQ Sample Report</title>
+              <style>
+                html, body {
+                  margin: 0;
+                  padding: 0;
+                  height: 100%;
+                  background: #f9fafb;
+                }
+                iframe {
+                  border: 0;
+                  position: fixed;
+                  top: 0;
+                  left: 0;
+                  width: 100%;
+                  height: 100%;
+                }
+              </style>
+            </head>
+            <body>
+              <iframe src="${blobUrl}"></iframe>
+            </body>
+          </html>
+        `);
+        newTab.document.close();
+      });
     } else {
       const safeName =
         fileName ||
@@ -83,15 +99,19 @@ export const generatePDF = async (reportData = {}, options = {}) => {
     }
   } catch (error) {
     console.error("[InvestorIQ] PDF generation failed:", error);
-    alert("Something went wrong generating your report. Check the console for details.");
+    alert("Something went wrong generating your report. Check the console.");
   }
 };
 
-// Generate blob for in-app modal previews
+// Blob version for in-app preview
 export const generatePDFBlob = async (reportData = {}) => {
+  const pdfMake = await getPdfMake();
+
   return new Promise(async (resolve, reject) => {
     try {
-      const logoBase64 = await loadImageBase64(`${window.location.origin}/assets/logo.png`);
+      const logoBase64 = await loadImageBase64(
+        `${window.location.origin}/assets/logo.png`
+      );
       const docDefinition = buildSampleReportDocDefinition({
         ...reportData,
         logoBase64,
