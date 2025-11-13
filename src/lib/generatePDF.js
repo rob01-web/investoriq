@@ -1,21 +1,11 @@
 /**
- * InvestorIQ PDF Generator (FINAL WORKING VERSION)
- * ------------------------------------------------
- * - Loads pdfMake correctly in Vite
- * - Loads Roboto fonts manually
- * - No reliance on missing vfs_fonts.js
- * - Fully stable blob -> iframe delivery
+ * InvestorIQ PDF Generator (Global pdfMake Version)
+ * -------------------------------------------------
+ * This version uses window.pdfMake loaded globally from index.html.
+ * 100% compatible with Vite + Vercel + all browsers.
  */
 
 import { buildSampleReportDocDefinition } from "../lib/pdfSections";
-
-// Import core pdfMake
-import pdfMake from "pdfmake/build/pdfmake.js";
-// Import Roboto font JSON provided by pdfmake
-import pdfFonts from "pdfmake/build/vfs_fonts.js";
-
-// Bind fonts immediately (critical!)
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 // Convert /public image to Base64
 async function loadImageBase64(path) {
@@ -37,6 +27,12 @@ async function loadImageBase64(path) {
 export const generatePDF = async (reportData = {}, options = {}) => {
   const { preview = false, fileName } = options;
 
+  // Ensure global pdfMake exists
+  if (!window.pdfMake) {
+    alert("PDF engine failed to load. Please refresh the page.");
+    return;
+  }
+
   const logoBase64 = await loadImageBase64(
     `${window.location.origin}/assets/logo.png`
   );
@@ -46,16 +42,16 @@ export const generatePDF = async (reportData = {}, options = {}) => {
     logoBase64,
   });
 
-  console.log("[InvestorIQ] Building PDF…");
-
+  console.log("[InvestorIQ] PDF definition ready.");
+  
   try {
-    const pdf = pdfMake.createPdf(docDefinition);
+    const pdf = window.pdfMake.createPdf(docDefinition);
 
     if (preview) {
       const tab = window.open("", "_blank");
 
       if (!tab) {
-        alert("Popup blocked. Please enable popups for InvestorIQ.");
+        alert("Popup blocked. Enable popups for InvestorIQ.");
         return;
       }
 
@@ -74,22 +70,20 @@ export const generatePDF = async (reportData = {}, options = {}) => {
             "<h2 style='padding:40px;font-family:sans-serif;color:#444'>Failed to generate PDF.</h2>";
           return;
         }
+
         iframe.src = URL.createObjectURL(blob);
       });
-    } else {
-      const safeName =
-        fileName ||
-        `InvestorIQ_Report_${reportData?.property?.address || "Sample"}.pdf`;
 
+    } else {
+      const safeName = fileName || "InvestorIQ_Report.pdf";
       pdf.download(safeName);
     }
   } catch (err) {
     console.error("[InvestorIQ] PDF generation failed:", err);
-    alert("There was an error generating your PDF.");
+    alert("PDF generation error. Check console.");
   }
 };
 
-// Blob version
 export const generatePDFBlob = async (reportData = {}) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -102,9 +96,10 @@ export const generatePDFBlob = async (reportData = {}) => {
         logoBase64,
       });
 
-      const pdf = pdfMake.createPdf(docDefinition);
+      const pdf = window.pdfMake.createPdf(docDefinition);
 
       pdf.getBlob((blob) => resolve(URL.createObjectURL(blob)));
+
     } catch (err) {
       reject(err);
     }
