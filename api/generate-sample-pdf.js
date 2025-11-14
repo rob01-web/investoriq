@@ -1,5 +1,3 @@
-// FINAL FIXED VERSION — DOCUMENT_CONTENT EMPTY ISSUE SOLVED
-
 export const config = {
   runtime: "nodejs",
 };
@@ -11,18 +9,23 @@ import DocRaptor from "docraptor";
 export default async function handler(req, res) {
   try {
 
-    // 🔥 Absolute path — guaranteed to work on Vercel
-    const htmlPath = path.join(process.cwd(), "public", "reports", "sample-report.html");
+    // Load HTML from the public folder
+    const htmlPath = path.join(
+      process.cwd(),
+      "public",
+      "reports",
+      "sample-report.html"
+    );
 
-    console.log("Attempting to load:", htmlPath);
+    console.log("Loading HTML from:", htmlPath);
 
-    let html = "";
+    let html;
     try {
       html = await fs.readFile(htmlPath, "utf8");
-    } catch (err) {
-      console.error("FAILED TO READ HTML FILE:", err);
+    } catch (readErr) {
+      console.error("Failed to read HTML file:", readErr);
       return res.status(500).json({
-        error: "Could not read HTML file.",
+        error: "HTML file could not be read",
         path: htmlPath,
       });
     }
@@ -31,32 +34,39 @@ export default async function handler(req, res) {
 
     if (!html || html.trim().length < 50) {
       return res.status(500).json({
-        error: "HTML file is empty or missing.",
+        error: "HTML content is empty or too small",
         length: html.length,
         path: htmlPath,
       });
     }
 
-    // Fix any module scripts (DocRaptor can't run them)
-    html = html.replace(/<script[^>]*type="module"[^>]*>[\s\S]*?<\/script>/gi, "");
+    // Remove unsupported module scripts
+    html = html.replace(
+      /<script[^>]*type="module"[^>]*>[\s\S]*?<\/script>/gi,
+      ""
+    );
 
     const docraptor = new DocRaptor({
       apiKey: process.env.DOCRAPTOR_API_KEY,
     });
 
-    const pdf = await docraptor.createDoc({
+    const pdfBuffer = await docraptor.createDoc({
       test: false,
       document_type: "pdf",
       name: "sample-report.pdf",
       document_content: html,
       javascript: true,
-      prince_options: { media: "print" },
+      prince_options: {
+        media: "print",
+      },
     });
 
-    // Return PDF
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'inline; filename="sample-report.pdf"');
-    return res.send(Buffer.from(pdf));
+    res.setHeader(
+      "Content-Disposition",
+      'inline; filename="sample-report.pdf"'
+    );
+    return res.send(Buffer.from(pdfBuffer));
 
   } catch (err) {
     console.error("PDF GENERATION ERROR:", err);
