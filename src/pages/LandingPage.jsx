@@ -2,7 +2,6 @@ import React from "react";
 import { Helmet } from "react-helmet";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import InvestorIQHeader from "@/components/InvestorIQHeader"; // ✅ new reusable header
 
 export default function LandingPage() {
   const heroUrl = "/hero-dashboard.jpg";
@@ -17,9 +16,6 @@ export default function LandingPage() {
           content="Upload property documents and let InvestorIQ’s AI engine generate data-backed Property IQ Reports™ with institutional precision."
         />
       </Helmet>
-
-      {/* HEADER */}
-      <InvestorIQHeader />
 
       {/* HERO SECTION */}
       <main className="min-h-[80vh] bg-gradient-to-b from-white via-[#F9FAFB] to-[#EEF2F6]">
