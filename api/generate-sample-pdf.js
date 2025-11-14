@@ -48,10 +48,11 @@ export default async function handler(req, res) {
 
           // Check for DocRaptor error response
           const text = buffer.toString();
-          if (text.startsWith("{") && text.includes("error")) {
-            console.error("DocRaptor Error:", text);
-            return reject(new Error(text));
-          }
+          if (text.startsWith("{")) {
+  console.error("❌ DocRaptor returned non-PDF payload:", text);
+  return reject(new Error("DocRaptor returned an error response. See logs."));
+}
+
 
           resolve(buffer);
         });
