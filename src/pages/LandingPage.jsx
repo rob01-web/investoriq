@@ -37,7 +37,9 @@ export default function LandingPage() {
             within 48 hours. Works for both off-market and MLS-listed deals.
           </p>
 
+          {/* BUTTON GROUP */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+
             {/* PRIMARY CTA */}
             <Button
               size="lg"
@@ -47,7 +49,7 @@ export default function LandingPage() {
               Analyze My Property
             </Button>
 
-            {/* VIEW SAMPLE REPORT — OPEN NEW TAB */}
+            {/* VIEW SAMPLE REPORT — OPEN HTML */}
             <Button
               size="lg"
               variant="outline"
@@ -56,6 +58,17 @@ export default function LandingPage() {
             >
               View Sample Report
             </Button>
+
+            {/* DOWNLOAD PDF — DOCRAPTOR */}
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-[#1F8A8A] text-[#1F8A8A] px-8 py-3 rounded-xl hover:bg-[#1F8A8A]/10 transition"
+              onClick={() => window.open("/api/generate-sample-pdf", "_blank")}
+            >
+              Download PDF
+            </Button>
+
           </div>
 
           {/* HERO IMAGE */}
