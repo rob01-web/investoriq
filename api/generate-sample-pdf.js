@@ -1,6 +1,8 @@
 // TEMP DEBUG VERSION
 
-export const config = { runtime: "nodejs18.x" };
+export const config = {
+  runtime: 'nodejs',  // ✅ This is correct
+};
 
 import fs from "fs";
 import path from "path";
