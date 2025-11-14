@@ -1,7 +1,6 @@
-// Force Node.js runtime (NOT edge)
-export const config = {
-  runtime: "nodejs"
-};
+// TEMP DEBUG VERSION
+
+export const config = { runtime: "nodejs18.x" };
 
 import fs from "fs";
 import path from "path";
@@ -9,20 +8,16 @@ import https from "https";
 
 export default async function handler(req, res) {
   try {
-    // Load local HTML template
     const filePath = path.resolve("./public/reports/sample-report.html");
     const htmlString = fs.readFileSync(filePath, "utf8");
 
-    // Prepare DocRaptor payload
     const payload = JSON.stringify({
-      test: false, // change to false when doing final production PDF
+      test: true,
       document_content: htmlString,
-      name: "sample-report.pdf",
+      name: "debug.pdf",
       document_type: "pdf",
       javascript: true,
-      prince_options: {
-        media: "screen"
-      }
+      prince_options: { media: "screen" }
     });
 
     const options = {
@@ -37,39 +32,33 @@ export default async function handler(req, res) {
       }
     };
 
-    // Send request to DocRaptor using Promise wrapper
-    const pdfBuffer = await new Promise((resolve, reject) => {
-      const request = https.request(options, (response) => {
+    const rawResponse = await new Promise((resolve, reject) => {
+      const req = https.request(options, (response) => {
         let chunks = [];
-
-        response.on("data", (chunk) => chunks.push(chunk));
-        response.on("end", () => {
-          const buffer = Buffer.concat(chunks);
-
-          // Check for DocRaptor error response
-          const text = buffer.toString();
-          if (text.startsWith("{")) {
-  console.error("❌ DocRaptor returned non-PDF payload:", text);
-  return reject(new Error("DocRaptor returned an error response. See logs."));
-}
-
-
-          resolve(buffer);
-        });
+        response.on("data", (c) => chunks.push(c));
+        response.on("end", () => resolve(Buffer.concat(chunks)));
       });
-
-      request.on("error", reject);
-      request.write(payload);
-      request.end();
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
     });
 
-    // Send PDF to browser
+    // ⛔ IMPORTANT: Just return whatever DocRaptor sent.
+    const text = rawResponse.toString("utf8");
+
+    // If it's JSON, show JSON. If it's PDF binary, return as PDF.
+    if (text.trim().startsWith("{")) {
+      res.setHeader("Content-Type", "application/json");
+      return res.status(200).send(text);
+    }
+
+    // Otherwise assume it's a PDF
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'inline; filename="sample-report.pdf"');
-    res.end(pdfBuffer);
+    res.setHeader("Content-Disposition", 'inline; filename="debug.pdf"');
+    res.end(rawResponse);
 
   } catch (err) {
-    console.error("PDF generation failed:", err);
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }
