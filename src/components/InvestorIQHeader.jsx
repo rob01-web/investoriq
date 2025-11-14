@@ -1,12 +1,6 @@
 import React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
-/**
- * InvestorIQHeader Component
- * --------------------------
- * Reusable responsive header with smooth scroll, animated logo,
- * sticky background, and navigation links.
- */
 export default function InvestorIQHeader() {
   const logoUrl = "/assets/logo.png";
 
@@ -20,14 +14,15 @@ export default function InvestorIQHeader() {
     <motion.header
       style={{
         backgroundColor: headerBg,
-        boxShadow: shadowOpacity ? `0 4px 16px rgba(0,0,0,${shadowOpacity.get()})` : "none",
+        boxShadow: `0 4px 16px rgba(0,0,0,${shadowOpacity.get()})`,
       }}
       className="w-full backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 transition-all"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between py-4 px-6 sm:px-10">
-        {/* LOGO — Smooth Scroll to Top */}
+        
+        {/* LOGO — always return home */}
         <motion.div
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => (window.location.href = "/")}
           style={{ scale, cursor: "pointer" }}
           className="flex items-center select-none"
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -41,12 +36,19 @@ export default function InvestorIQHeader() {
 
         {/* NAVIGATION */}
         <nav className="flex items-center gap-5 text-sm font-semibold text-slate-700">
-          <a href="/sample-report" className="hover:text-[#1F8A8A] transition">
+          <a
+            href="/reports/sample-report.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#1F8A8A] transition"
+          >
             Sample Report
           </a>
+
           <a href="/login" className="hover:text-[#1F8A8A] transition">
             Log In
           </a>
+
           <a
             href="/signup"
             className="bg-[#D4AF37] text-white px-5 py-2.5 rounded-lg hover:bg-[#b9972b] shadow-md transition"
