@@ -8,16 +8,18 @@ import https from "https";
 
 export default async function handler(req, res) {
   try {
+    // Load HTML file
     const filePath = path.join(process.cwd(), "public", "reports", "sample-report.html");
     const html = fs.readFileSync(filePath, "utf8");
 
+    // DocRaptor payload
     const payload = JSON.stringify({
-      test: true,                          // IMPORTANT: test mode (free)
+      test: true,
       name: "sample-report.pdf",
       document_type: "pdf",
       document_content: html,
       javascript: true,
-      prince_options: { media: "screen" },
+      prince_options: { media: "screen" }
     });
 
     const options = {
@@ -28,19 +30,22 @@ export default async function handler(req, res) {
       auth: `${process.env.DOCRAPTOR_API_KEY}:`,
       headers: {
         "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload),
-      },
+        "Content-Length": Buffer.byteLength(payload)
+      }
     };
 
+    // Send request
     const rawResponse = await new Promise((resolve, reject) => {
       const req = https.request(options, (response) => {
         let chunks = [];
         response.on("data", (chunk) => chunks.push(chunk));
-        response.on("end", () => resolve({ 
-          buffer: Buffer.concat(chunks),
-          status: response.statusCode,
-          headers: response.headers
-        }));
+        response.on("end", () =>
+          resolve({
+            buffer: Buffer.concat(chunks),
+            status: response.statusCode,
+            headers: response.headers,
+          })
+        );
       });
 
       req.on("error", reject);
@@ -50,20 +55,24 @@ export default async function handler(req, res) {
 
     const { buffer, status } = rawResponse;
 
-    // If response is JSON, it's an error — show it
+    // If response is JSON or XML, it's an error → show readable message
     const text = buffer.toString("utf8");
-    if (text.startsWith("{") || text.startsWith("<")) {
+    if (
+      text.trim().startsWith("{") ||
+      text.trim().startsWith("<") ||
+      status !== 200
+    ) {
       res.setHeader("Content-Type", "application/json");
       return res.status(200).send(text);
     }
 
-    // Otherwise assume it's a PDF binary
+    // Otherwise return PDF
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'inline; filename="sample-report.pdf"');
     return res.send(buffer);
 
   } catch (err) {
     console.error("PDF ERROR:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
