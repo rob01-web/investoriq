@@ -8,31 +8,32 @@ import DocRaptor from "docraptor";
 
 export default async function handler(req, res) {
   try {
-    // Read the sample report HTML file
+    // Load HTML
     const filePath = path.join(process.cwd(), "public", "reports", "sample-report.html");
     const htmlString = fs.readFileSync(filePath, "utf8");
 
-    // Create the client (NOT a constructor!)
-    const docraptor = new DocRaptor.DocApi();
-    docraptor.apiClient.authentications["api_key"].apiKey = process.env.DOCRAPTOR_API_KEY;
+    // Create client (new SDK structure)
+    const client = new DocRaptor.DocApi();
+    client.apiClient.basePath = "https://api.docraptor.com";
+    client.apiClient.authentications.api_key.apiKey = process.env.DOCRAPTOR_API_KEY;
 
-    // Prepare the payload
-    const response = await docraptor.createDoc({
+    // Create PDF
+    const pdfBuffer = await client.createDoc({
       test: false,
-      document_content: htmlString,
       name: "sample-report.pdf",
       document_type: "pdf",
+      document_content: htmlString,
       javascript: true,
-      prince_options: { media: "screen" },
+      prince_options: { media: "screen" }
     });
 
     // Return PDF
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'inline; filename="sample-report.pdf"');
-    return res.send(Buffer.from(response));
+    return res.send(Buffer.from(pdfBuffer));
 
   } catch (err) {
-    console.error("PDF GEN ERROR:", err);
+    console.error("PDF ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 }
