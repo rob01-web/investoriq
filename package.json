@@ -7,7 +7,9 @@
   "homepage": "https://investoriq.tech",
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "vite --host --port 5173",
+    "dev": "vite",
+    "generate-charts": "node api/lib/generateCharts.js",
+    "prebuild": "npm run generate-charts",
     "build": "vite build",
     "preview": "vite preview --host --port 4173"
   },
@@ -26,6 +28,8 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@stripe/stripe-js": "^2.1.11",
     "@supabase/supabase-js": "2.30.0",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "cmdk": "^1.0.0",
