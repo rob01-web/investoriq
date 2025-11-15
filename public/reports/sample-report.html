@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>InvestorIQ Sample Report - 145 Wellington Street North, Hamilton ON</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0F172A;
+      --teal: #1F8A8A;
+      --gold: #D4AF37;
+      --bg-soft: #F3F4F6;
+      --border-soft: #E5E7EB;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: var(--navy);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .report-container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Merriweather", "Times New Roman", serif;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 4px 0 8px 0;
+    }
+
+    .tagline {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9CA3AF;
+    }
+
+    .section {
+      padding: 24px 24px 28px 24px;
+      background: #ffffff;
+    }
+
+    .section-header {
+      border-bottom: 2px solid var(--gold);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .section-number {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-soft);
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      padding: 12px 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      background: #ECFEFF;
+      color: var(--teal);
+    }
+
+    .pill.bad {
+      background: #FEF2F2;
+      color: #B91C1C;
+    }
+
+    .pill.neutral {
+      background: #EEF2FF;
+      color: #4338CA;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      background: #0F172A;
+      color: #F9FAFB;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #CBD5F5;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: #E5E7EB;
+      margin-top: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-soft);
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #F9FAFB;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td {
+      background: #F9FAFB;
+    }
+
+    .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6B7280;
+    }
+
+    .summary-bullets {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .summary-bullets ul {
+      margin: 4px 0 0 18px;
+      padding: 0;
+    }
+
+    .summary-bullets li {
+      margin-bottom: 4px;
+    }
+
+    .highlight {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+    }
+
+    .disclaimer {
+      font-size: 10px;
+      color: #6B7280;
+      line-height: 1.4;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 10px;
+      color: #9CA3AF;
+      text-align: right;
+    }
+
+    .header-strip {
+      border-top: 4px solid var(--gold);
+      padding-top: 12px;
+      margin-bottom: 18px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .watermark {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #D1D5DB;
+      margin-top: 6px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid #E5E7EB;
+      background: #F9FAFB;
+    }
+
+    .dscr-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #ECFEFF;
+      color: #0369A1;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .risk-positive {
+      color: #16A34A;
+      font-weight: 600;
+    }
+
+    .risk-negative {
+      color: #B91C1C;
+      font-weight: 600;
+    }
+
+    .subsection-title {
+      font-weight: 600;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .small {
+      font-size: 11px;
+    }
+
+    .scenario-label {
+      font-weight: 600;
+    }
+
+    /* New Teal Executive Verdict Left Bar */
+.verdict-leftbar {
+  border-left: 10px solid #1F8A8A; /* Thick teal executive bar */
+  padding: 6px 0 6px 14px;
+  font-family: "Merriweather", serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+  max-width: 460px; /* prevents full-column stretching; keeps it compact */
+}
+
+  </style>
+</head>
+<body>
+  <div class="report-container">
+
+    <!-- 1.0 Executive Summary -->
+    <div class="section no-break">
+      <div class="header-strip">
+        <div class="header-top">
+          <div>
+            <div class="brand-mark">INVESTORIQ</div>
+            <div class="tagline">Institutional Grade Property Intelligence</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px; font-weight:600; color:var(--navy);">
+              Sample Property IQ Report
+            </div>
+            <div style="font-size:11px; color:#6B7280;">
+              145 Wellington Street North, Hamilton, Ontario
+            </div>
+            <div class="watermark">Sample Report - InvestorIQ.ai</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-number">1.0 Executive Summary</div>
+        <h1>145 Wellington Street North, Hamilton ON</h1>
+        <p class="small">24 Unit Mid Rise Multifamily | Hamilton Central | Ontario, Canada</p>
+      </div>
+
+      <div class="verdict-leftbar">
+        INVESTORIQ VERDICT: BUY (VALUE ADD)
+      </div>
+
+      <div class="grid-2">
+        <div>
+          
+          <p class="label" style="margin-top:10px;">InvestorIQ Deal Score</p>
+          <h2 style="color:var(--gold); margin-bottom:6px;">76 / 100</h2>
+
+          <p>
+            The analysis indicates this twenty four unit Hamilton mid rise as a compelling value add acquisition for investors who can execute a focused renovation and rent optimization plan. In place income already supports positive leverage, while achievable repositioning should lift net operating income and unlock additional equity over a five year hold. Pricing is modestly below recent comparable trades on a price per door and cap rate basis, with strong tenant demand and limited new supply in the immediate area.
+          </p>
+          <p>
+            The primary opportunity is to modernize dated interiors, rebalance under market rents toward current Hamilton benchmarks, and improve operating efficiency while preserving a stable rent roll. The primary risks relate to construction execution, interest rate volatility at refinance, and potential policy changes affecting rent growth in Ontario.
+          </p>
+        </div>
+
+        <div class="card no-break">
+          <p class="label">Key Metrics Snapshot</p>
+          <table>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+            <tr>
+              <td>Purchase Price</td>
+              <td>$5,450,000</td>
+            </tr>
+            <tr>
+              <td>Total Project Cost</td>
+              <td>$5,890,000</td>
+            </tr>
+            <tr>
+              <td>Stabilized Cap Rate on Cost</td>
+              <td>5.90 percent</td>
+            </tr>
+            <tr>
+              <td>5 Year Levered IRR (Base Case)</td>
+              <td>14.5 percent</td>
+            </tr>
+            <tr>
+              <td>Equity Multiple (Base Case)</td>
+              <td>1.90 x</td>
+            </tr>
+            <tr>
+              <td>Year 1 Cash on Cash (Stabilized)</td>
+              <td>7.1 percent</td>
+            </tr>
+          </table>
+          <p class="small" style="margin-top:8px;">
+            Assumption: Stabilized reflects execution of planned interior and common area upgrades within the first eighteen to twenty four months.
+          </p>
+        </div>
+      </div>
+
+      <div class="summary-bullets">
+        <div>
+          <p class="label">Key Upside Drivers</p>
+          <ul>
+            <li>In place cap rate of approximately <span class="highlight">5.25 percent</span> with positive leverage relative to current debt markets.</li>
+            <li>Average in place rents estimated to be <span class="highlight">8 to 12 percent below</span> achievable market levels for comparable stabilized product in Hamilton Central.</li>
+            <li>Concrete mid rise construction with functional layouts and on site parking, supporting long term durability and liquidity.</li>
+            <li>Hamilton has shown sustained population and income growth with increasing spillover demand from Greater Toronto Area renters.</li>
+            <li>Renovation program is targeted and repeatable with a clear path to value creation and measured capital intensity.</li>
+          </ul>
+        </div>
+        <div>
+          <p class="label">Key Risks and Constraints</p>
+          <ul>
+            <li>Execution and cost control risk related to unit renovations and common area upgrades.</li>
+            <li>Refinance proceeds in Year 3 are sensitive to interest rate outcomes and lender appetite.</li>
+            <li>Ontario regulatory environment can moderate rent growth over time and may limit upside in certain units.</li>
+            <li>Exit pricing is exposed to broader cap rate movements in Canadian multifamily markets.</li>
+            <li>Management intensity is higher than Core assets given value add scope and unit turnover profile.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        InvestorIQ Rating: BUY | Value Add Multifamily | Sample Report for Demonstration Only
+      </div>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 2.0 Unit Level Value Add Analysis -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2.0 Unit Level Value Add Analysis</div>
+        <h2>Current Rent Positioning and Value Add Scope</h2>
+      </div>
+
+      <p>
+        The property is a twenty four unit mid rise with a mix of one and two bedroom suites. Interiors are clean and functional but largely original to early two thousand era renovations, with laminate countertops, older appliances, and dated finishes. Nearby renovated stock is achieving meaningfully higher rents for similar floor areas. InvestorIQ classifies this asset as <span class="highlight">Value Add</span> rather than Core, given the clear and actionable renovation and rent repositioning thesis.
+      </p>
+
+      <div class="grid-2">
+        <div class="no-break">
+          <p class="subsection-title">Unit Mix and Rent Lift Summary</p>
+          <table>
+            <tr>
+              <th>Unit Type</th>
+              <th>Count</th>
+              <th>Average Sq Ft</th>
+              <th>Current Average Rent</th>
+              <th>Market Target Rent</th>
+              <th>Planned Lift</th>
+            </tr>
+            <tr>
+              <td>1 Bedroom</td>
+              <td>14</td>
+              <td>620</td>
+              <td>$1,600</td>
+              <td>$1,750</td>
+              <td>$150</td>
+            </tr>
+            <tr>
+              <td>2 Bedroom</td>
+              <td>10</td>
+              <td>820</td>
+              <td>$1,900</td>
+              <td>$2,075</td>
+              <td>$175</td>
+            </tr>
+          </table>
+          <p class="small">
+            Assumption: Market target rents are based on stabilized comparable buildings within two kilometres, adjusted for on site parking and building age.
+          </p>
+        </div>
+
+        <div class="no-break">
+          <p class="subsection-title">Renovation ROI Overview</p>
+          <table>
+            <tr>
+              <th>Scope</th>
+              <th>Approximate Cost per Unit</th>
+              <th>Indicative Rent Lift</th>
+              <th>Simple Payback</th>
+            </tr>
+            <tr>
+              <td>Kitchen and Appliance Refresh</td>
+              <td>$7,500</td>
+              <td>$90 per month</td>
+              <td>7.0 years</td>
+            </tr>
+            <tr>
+              <td>Bathroom Upgrades</td>
+              <td>$3,000</td>
+              <td>$35 per month</td>
+              <td>7.1 years</td>
+            </tr>
+            <tr>
+              <td>Flooring and Paint</td>
+              <td>$4,000</td>
+              <td>$45 per month</td>
+              <td>7.4 years</td>
+            </tr>
+          </table>
+          <p class="small">
+            The combined interior program is expected to average approximately $14,500 per fully renovated unit, targeting a total rent uplift of $150 to $175 per month. This equates to a simple pre leverage cash on cost return in the 12 to 14 percent range.
+          </p>
+        </div>
+      </div>
+
+      <p class="subsection-title">Portfolio Strategy Classification</p>
+      <p>
+        Based on in place performance, achievable rent lift, and renovation scope, InvestorIQ classifies this asset as a <span class="highlight">Value Add multifamily</span> opportunity. For diversified portfolios, the property fits naturally alongside Core and Core Plus holdings as a measured source of incremental total return, with moderate elevation in risk profile and management requirements. Execution discipline, contractor selection, and conservative assumptions at refinance are critical to preserving downside protection.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 3.0 Five Year Cash Flow Projections -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3.0 Five Year Cash Flow Projections</div>
+        <h2>Scenario Analysis and Five Year Outlook</h2>
+      </div>
+
+      <p>
+        InvestorIQ models five distinct cases to understand return sensitivity across a range of macro and execution outcomes. The Base Case reflects disciplined completion of the renovation program within two years, steady lease up to target rents, and exit at a cap rate consistent with historical Hamilton mid rise transactions. Conservative and Worst Case scenarios stress rent growth, vacancy, and exit pricing, while Optimistic and Best Case scenarios assume stronger rent performance and pricing support.
+      </p>
+
+      <div class="grid-2">
+        <div class="no-break">
+          <p class="subsection-title">Scenario Assumptions</p>
+          <table>
+            <tr>
+              <th>Scenario</th>
+              <th>Annual Rent Growth</th>
+              <th>Economic Vacancy</th>
+              <th>Expense Growth</th>
+              <th>Exit Cap Rate</th>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Worst</span></td>
+              <td>1.0 percent</td>
+              <td>7.0 percent</td>
+              <td>3.5 percent</td>
+              <td>6.15 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Conservative</span></td>
+              <td>1.75 percent</td>
+              <td>6.0 percent</td>
+              <td>3.0 percent</td>
+              <td>5.95 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Base</span></td>
+              <td>2.25 percent</td>
+              <td>5.0 percent</td>
+              <td>2.75 percent</td>
+              <td>5.75 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Optimistic</span></td>
+              <td>2.75 percent</td>
+              <td>4.5 percent</td>
+              <td>2.5 percent</td>
+              <td>5.55 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Best</span></td>
+              <td>3.25 percent</td>
+              <td>4.0 percent</td>
+              <td>2.25 percent</td>
+              <td>5.40 percent</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="no-break">
+          <p class="subsection-title">Five Year Projection Summary</p>
+          <table>
+            <tr>
+              <th>Scenario</th>
+              <th>Levered IRR</th>
+              <th>Equity Multiple</th>
+              <th>Projected Sale Price</th>
+            </tr>
+            <tr>
+              <td>Worst</td>
+              <td>9.1 percent</td>
+              <td>1.40 x</td>
+              <td>$5,850,000</td>
+            </tr>
+            <tr>
+              <td>Conservative</td>
+              <td>12.2 percent</td>
+              <td>1.65 x</td>
+              <td>$6,080,000</td>
+            </tr>
+            <tr>
+              <td>Base</td>
+              <td>14.5 percent</td>
+              <td>1.90 x</td>
+              <td>$6,320,000</td>
+            </tr>
+            <tr>
+              <td>Optimistic</td>
+              <td>16.7 percent</td>
+              <td>2.05 x</td>
+              <td>$6,520,000</td>
+            </tr>
+            <tr>
+              <td>Best</td>
+              <td>18.8 percent</td>
+              <td>2.20 x</td>
+              <td>$6,740,000</td>
+            </tr>
+          </table>
+          <p class="small">
+            Assumption: Sale pricing is estimated using stabilized Year 5 net operating income and the scenario specific exit cap rate.
+          </p>
+        </div>
+      </div>
+
+      <div class="no-break" style="margin-top:20px;">
+        <p class="subsection-title">Five Year Levered IRR by Scenario</p>
+        <div id="irr_chart" style="width:100%; height:260px; border:1px solid #E5E7EB; border-radius:8px; background:#F9FAFB;" class="no-break"></div>
+      </div>
+
+      <p class="subsection-title" style="margin-top:18px;">Break Even Occupancy Analysis</p>
+      <p>
+        Under the current financing assumptions, Year 1 debt service is projected at approximately $245,000. Stabilized Year 1 net operating income is estimated at roughly $290,000, resulting in a Year 1 DSCR in the range of 1.18 times. InvestorIQ estimates that break even occupancy, defined as DSCR near 1.00 times, occurs at approximately 90 percent economic occupancy based on the projected rent roll and expense structure. This provides a measurable but not excessive buffer against short term vacancy or collection volatility.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 4.0 Neighborhood Analysis -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4.0 Neighborhood Analysis</div>
+        <h2>Hamilton Central Location Review</h2>
+      </div>
+
+      <p>
+        The property is located in Hamilton Central, within walking distance of downtown employment nodes, transit connections, and daily amenities. The area has benefitted from sustained population growth, an influx of Greater Toronto Area commuters, and ongoing public and private investment in infrastructure and housing. InvestorIQ assigns a Location Score of <span class="highlight">8 out of 10</span> based on demand depth, income growth, and long term rental fundamentals.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Location Factor Summary</p>
+        <table>
+          <tr>
+            <th>Factor</th>
+            <th>Data Point or Assessment</th>
+            <th>Impact on Subject</th>
+          </tr>
+          <tr>
+            <td>Demographics</td>
+            <td>Hamilton population growth estimated at 7 to 8 percent over the last five years with rising median household income and a growing share of young professionals and families.</td>
+            <td class="risk-positive">Positive: Supports steady rental demand and income growth.</td>
+          </tr>
+          <tr>
+            <td>Crime and Safety</td>
+            <td>Hamilton Central has pockets of elevated reported crime relative to suburban submarkets, balanced by ongoing streetscape improvements and increasing resident engagement.</td>
+            <td>Neutral to Slightly Negative: Requires appropriate tenant screening and on site management presence.</td>
+          </tr>
+          <tr>
+            <td>Schools and Family Appeal</td>
+            <td>Reasonable access to local schools and parks, though the asset primarily caters to working professionals and downsizers rather than families with small children.</td>
+            <td>Neutral: Education quality is not the primary demand driver for this property.</td>
+          </tr>
+          <tr>
+            <td>Economic Drivers</td>
+            <td>Diverse employment base including health care, education, manufacturing, logistics, and professional services, with spillover employment from Greater Toronto Area.</td>
+            <td class="risk-positive">Positive: Reduces exposure to a single industry and supports broad renter base.</td>
+          </tr>
+          <tr>
+            <td>Infrastructure and Access</td>
+            <td>Proximity to major transit routes, Hamilton GO Centre, and planned transportation investments, alongside reasonable access to Highway 403 and the QEW.</td>
+            <td class="risk-positive">Positive: Attractive for commuters and mobility constrained tenants.</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 5.0 Risk Assessment -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5.0 Risk Assessment</div>
+        <h2>Risk Matrix and Mitigation Framework</h2>
+      </div>
+
+      <p>
+        InvestorIQ assigns an Overall Risk Score of <span class="highlight">8.0 out of 10</span>, where lower values indicate lower risk. This reflects a combination of stable demand and location quality, balanced against renovation execution, interest rate, and policy related considerations. The property is not low risk Core, but represents a measured Value Add profile that should be appropriate for investors seeking enhanced returns in exchange for elevated management intensity and execution work.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Risk Matrix</p>
+        <table>
+          <tr>
+            <th>Risk Category</th>
+            <th>Specific Risk</th>
+            <th>Impact</th>
+            <th>Mitigation Strategy</th>
+          </tr>
+          <tr>
+            <td>Property Specific</td>
+            <td>Renovation cost overruns or extended unit downtime during interior upgrades.</td>
+            <td class="risk-negative">High</td>
+            <td>Phase renovations, lock pricing with reputable contractors, maintain contingency budget, and prioritize units with natural turnover to avoid forced vacancies.</td>
+          </tr>
+          <tr>
+            <td>Market</td>
+            <td>Softening rental demand or slower than expected absorption of higher rents.</td>
+            <td>Medium</td>
+            <td>Stagger rent increases, maintain competitive positioning on service and maintenance, and focus on quality of finishes rather than premium pricing alone.</td>
+          </tr>
+          <tr>
+            <td>Financial</td>
+            <td>Adverse interest rate movement at refinance or at exit, reducing proceeds and equity returns.</td>
+            <td class="risk-negative">High</td>
+            <td>Consider fixed rate or rate cap strategies, underwrite refinance proceeds conservatively, and maintain flexibility to extend hold or adjust business plan if needed.</td>
+          </tr>
+          <tr>
+            <td>Operational</td>
+            <td>Higher than anticipated management intensity and tenant turnover during repositioning.</td>
+            <td>Medium</td>
+            <td>Engage experienced multifamily management with value add track record, set clear communication with tenants, and align incentives with measurable milestones.</td>
+          </tr>
+          <tr>
+            <td>Regulatory</td>
+            <td>Changes to rent control policies or tenant protection rules that limit rent growth or recovery of capital investments.</td>
+            <td>Medium</td>
+            <td>Track policy developments closely, allocate a margin of safety in rent growth assumptions, and focus on long term income durability rather than aggressive rent spikes.</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="subsection-title" style="margin-top:16px;">Risk Score Construction</p>
+      <p class="small">
+        The Overall Risk Score of 8.0 is derived using a structured framework. Starting from a neutral baseline of 5.0, High impact risks add approximately 1.0 point each, Medium risks add 0.5 points each, Low risks add 0.2 points, and strong mitigations reduce the score by 0.3 points each. Based on the mix of identified risks and planned mitigations, this results in a net score that reflects moderate to moderately high risk relative to Core assets, appropriate for a Value Add strategy.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 6.0 Renovation and ROI Narrative -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">6.0 Renovation and ROI Narrative</div>
+        <h2>Capital Plan and Return on Investment</h2>
+      </div>
+
+      <p>
+        The capital plan focuses on targeted interior upgrades, modernizing common areas, and addressing selected building systems to support stable long term operations. InvestorIQ assumes a total renovation budget of approximately $440,000, equating to roughly $18,300 per unit when including common areas and building systems. The intent is to deliver a unit and building experience consistent with competing upper tier rental stock in Hamilton Central without moving into luxury positioning.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Renovation Budget Breakdown</p>
+        <table>
+          <tr>
+            <th>Category</th>
+            <th>Estimated Cost</th>
+            <th>Share of Budget</th>
+            <th>Primary Objective</th>
+          </tr>
+          <tr>
+            <td>Interior Suites</td>
+            <td>$348,000</td>
+            <td>79 percent</td>
+            <td>Upgrade kitchens, baths, flooring, and lighting to support target rent lift and tenant retention.</td>
+          </tr>
+          <tr>
+            <td>Common Areas</td>
+            <td>$52,000</td>
+            <td>12 percent</td>
+            <td>Refresh corridors, lobby, and entry experience to align with suite quality and market expectations.</td>
+          </tr>
+          <tr>
+            <td>Building Systems</td>
+            <td>$40,000</td>
+            <td>9 percent</td>
+            <td>Address targeted mechanical and building envelope items to support reliability and reduce unplanned capital outlays.</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="subsection-title" style="margin-top:16px;">Narrative ROI Assessment</p>
+      <p>
+        On a consolidated basis, the renovation program is expected to generate an incremental annual net operating income uplift in the range of $80,000 to $90,000 once fully stabilized. Relative to the projected $440,000 capital outlay, this implies a simple cash on cost return of approximately 18 to 20 percent before financing effects. After layering in modest vacancy during turnover and execution risk, InvestorIQ considers a base case uplift of $75,000 in stabilized NOI to be a reasonable underwriting anchor, which still supports a high teens pre leverage return on the renovation capital invested.
+      </p>
+      <p>
+        Importantly, the renovation plan does not rely on repositioning the property to a narrow premium luxury segment. Rather, it aims to deliver clean, durable, and contemporary units that remain accessible to a broad segment of working households. This approach supports resilience across cycles and reduces the risk of extended vacancy if economic conditions soften.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 7.0 Investment Strategy Comparison -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">7.0 Investment Strategy Comparison</div>
+        <h2>Strategy Fit and Relative Performance</h2>
+      </div>
+
+      <p class="subsection-title">Strategy Comparison Assumptions</p>
+      <p class="small">
+        For consistency across InvestorIQ reports, strategy comparisons follow a standardized framework unless explicitly overridden by investor instructions or JSON inputs. Buy and Hold assumes a five year hold with minimal capital expenditures beyond maintenance and exit at a stabilized market cap rate on Year 5 NOI. Value Add assumes completion of renovations in Years 1 and 2, a potential refinance in Year 3 where DSCR allows, and exit in Year 5 based on uplifted NOI. BRRRR assumes intensive renovation in Year 1, a cash out refinance in Year 2 at approximately seventy five percent of after repair value, and a long duration hold where performance is evaluated primarily using post refinance cash on cash return instead of classic five year IRR, unless a specific hold period is provided.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Strategy Comparison Table</p>
+        <table>
+          <tr>
+            <th>Strategy</th>
+            <th>Illustrative Five Year IRR</th>
+            <th>Key Pros</th>
+            <th>Key Cons</th>
+          </tr>
+          <tr>
+            <td>Buy and Hold</td>
+            <td>Approximately 11 to 12 percent</td>
+            <td>Lower execution complexity, stable income profile, emphasis on long term capital preservation and modest growth.</td>
+            <td>Leaves a portion of rent uplift and value creation unrealized; lower total return than Value Add or BRRRR paths for investors willing to accept more risk.</td>
+          </tr>
+          <tr>
+            <td>Value Add (Base Case)</td>
+            <td>Approximately 14 to 15 percent</td>
+            <td>Balances renovation driven value creation with manageable risk; aligns with business plan assumed in this report; supports higher equity multiple and more meaningful wealth creation over five years.</td>
+            <td>Requires disciplined project management, contractor oversight, and careful planning around unit turnover to avoid cash flow volatility.</td>
+          </tr>
+          <tr>
+            <td>BRRRR Variant</td>
+            <td>Post refi CoC in the 8 to 10 percent range</td>
+            <td>Allows investors to recycle a meaningful share of initial equity if refinance proceeds are sufficient; long term wealth building from a low equity basis.</td>
+            <td>Sensitive to refinance valuations and loan terms; may increase leverage and amplify risk if executed aggressively; results are highly path dependent.</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="subsection-title" style="margin-top:16px;">InvestorIQ Recommended Strategy</p>
+      <p>
+        InvestorIQ recommends pursuing the <span class="highlight">Value Add</span> strategy as the primary path for this asset. The combination of clear rent repositioning, attractive simple ROI on renovation capital, and moderate leverage creates a balanced return profile that targets mid teens levered IRR while preserving resilience under less favourable scenarios. Buy and Hold remains credible for lower risk investors but underutilizes the building potential, while a more aggressive BRRRR approach would require stronger confidence in refinance valuations and lender appetite than is warranted in the current rate environment.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 8.0 Deal Score Breakdown -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">8.0 Deal Score Breakdown</div>
+        <h2>InvestorIQ Deal Score Components</h2>
+      </div>
+
+      <p>
+        The InvestorIQ Deal Score of <span class="highlight">76 out of 100</span> reflects a balanced assessment of location quality, income durability, value add potential, and risk exposure. Scores are assigned on a scale from 1 to 10 across eight factors, then weighted to produce a composite figure. This framework supports consistent, comparable evaluation across different properties and markets.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Factor Level Scores</p>
+        <table>
+          <tr>
+            <th>Factor</th>
+            <th>Score (1 to 10)</th>
+            <th>Weight</th>
+            <th>Weighted Contribution</th>
+          </tr>
+          <tr>
+            <td>Location</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Cash Flow Strength</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>DSCR</td>
+            <td>7</td>
+            <td>10 percent</td>
+            <td>7.0</td>
+          </tr>
+          <tr>
+            <td>Liquidity and Exit</td>
+            <td>7</td>
+            <td>10 percent</td>
+            <td>7.0</td>
+          </tr>
+          <tr>
+            <td>Market Outlook</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Value Add Potential</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Risk Profile</td>
+            <td>8</td>
+            <td>10 percent</td>
+            <td>8.0</td>
+          </tr>
+          <tr>
+            <td>Management Intensity</td>
+            <td>6</td>
+            <td>10 percent</td>
+            <td>6.0</td>
+          </tr>
+          <tr>
+            <th colspan="3">Total Deal Score</th>
+            <th>76.0</th>
+          </tr>
+        </table>
+      </div>
+
+      <div class="no-break" style="margin-top:20px;">
+        <p class="subsection-title">Deal Score Factor Breakdown Chart</p>
+        <div id="deal_score_chart" style="width:100%; height:260px; border:1px solid #E5E7EB; border-radius:8px; background:#F9FAFB;" class="no-break"></div>
+      </div>
+
+      <p class="subsection-title" style="margin-top:18px;">Interpretation</p>
+      <p>
+        Location, cash flow strength, market outlook, and value add potential are all scored in the upper range and carry relatively high weights, which drives a positive composite outcome. DSCR and liquidity are solid but not exceptional, reflecting moderate leverage and some sensitivity to refinance terms. Management intensity is scored slightly lower, acknowledging that day to day oversight requirements will be higher than a fully stabilized Core asset. Taken together, these inputs support a Buy rating, with returns that should be attractive for investors comfortable with Value Add execution risk.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 9.0 Advanced Financial Modeling -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">9.0 Advanced Financial Modeling</div>
+        <h2>Discounted Cash Flow and Comparable Analysis</h2>
+      </div>
+
+      <p class="subsection-title">Discounted Cash Flow Summary</p>
+      <p>
+        InvestorIQ models five years of projected levered cash flows under the Base Case Value Add plan and discounts them using a twelve percent rate, consistent with a Value Add risk profile in Canadian multifamily markets. Under these assumptions, the net present value of equity cash flows is modestly positive, indicating that Base Case pricing is broadly aligned with the required return threshold. Conservative and Worst Case scenarios approach break even NPV, reinforcing the importance of disciplined acquisition pricing and cost control on the renovation side.
+      </p>
+
+      <p class="subsection-title" style="margin-top:12px;">Comparable Transaction Analysis</p>
+      <div class="no-break">
+        <table>
+          <tr>
+            <th>Comparable</th>
+            <th>Location</th>
+            <th>Distance</th>
+            <th>Units</th>
+            <th>Price per Door</th>
+            <th>Cap Rate</th>
+          </tr>
+          <tr>
+            <td>Maple Court Residences</td>
+            <td>Hamilton Central</td>
+            <td>1.6 km</td>
+            <td>20</td>
+            <td>$230,000</td>
+            <td>5.00 percent</td>
+          </tr>
+          <tr>
+            <td>King Street Flats</td>
+            <td>Downtown Hamilton</td>
+            <td>0.9 km</td>
+            <td>28</td>
+            <td>$240,000</td>
+            <td>4.85 percent</td>
+          </tr>
+          <tr>
+            <td>Harbourview Place</td>
+            <td>North End Hamilton</td>
+            <td>2.3 km</td>
+            <td>26</td>
+            <td>$225,000</td>
+            <td>5.10 percent</td>
+          </tr>
+        </table>
+        <p class="small" style="margin-top:8px;">
+          No materially different asset classes or distant suburban comparables were used. All three transactions represent mid rise multifamily within approximately two and a half kilometres of the subject. Subject pricing at roughly $227,000 per door sits slightly below the average of these trades, with an in place cap rate modestly above observed market levels.
+        </p>
+      </div>
+
+      <p class="subsection-title" style="margin-top:14px;">Relative Positioning</p>
+      <p>
+        On a price per door basis, the subject is acquired at a modest discount to recent Hamilton Central transactions, while in place yields are slightly higher due to the current rent and expense structure. This provides a margin of safety if rent uplift or exit pricing are weaker than anticipated, but does not fully immunize the investment from adverse rate or policy shocks. For investors seeking Value Add exposure in a growing secondary market with strong links to the Greater Toronto Area, the risk and return balance appears competitive relative to other options.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 10.0 Final Recommendations -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">10.0 Final Recommendations</div>
+        <h2>Action Plan, Negotiation Strategy, and Deal Breakers</h2>
+      </div>
+
+      <p class="subsection-title">Action Items</p>
+      <ul>
+        <li>Engage a reputable Hamilton based multifamily property management firm with demonstrable Value Add experience to refine the renovation schedule and leasing plan.</li>
+        <li>Obtain contractor quotes for interior suites, common area, and building systems to validate the budget assumptions used in this analysis.</li>
+        <li>Confirm lender appetite and indicative terms for both acquisition and potential Year 3 refinance scenarios, including DSCR covenants and amortization assumptions.</li>
+        <li>Undertake detailed unit by unit inspections to confirm physical condition, identify any latent defects, and refine the prioritization of capital projects.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Negotiation Strategy</p>
+      <ul>
+        <li>Use the modest discount versus recent comparable trades and the projected renovation capital requirements to justify measured price negotiation from the current ask.</li>
+        <li>Seek seller cooperation around access for early contractor walkthroughs and limited pre closing work scoping to reduce execution uncertainty.</li>
+        <li>Prioritize flexibility on closing timelines to align possession with contractor and property management availability rather than purely on calendar speed.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Due Diligence Checklist</p>
+      <ul>
+        <li>Review full historical financials including trailing twenty four month rent roll, operating statements, and capital expenditures.</li>
+        <li>Obtain and review building condition reports, environmental assessments where available, and any existing engineering studies.</li>
+        <li>Verify compliance with local fire, safety, and residential tenancy regulations, including any outstanding orders or open permits.</li>
+        <li>Confirm actual unit sizes, parking counts, and amenity features against marketing materials and existing leases.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Red Flags and Deal Breakers</p>
+      <ul>
+        <li>Material structural, environmental, or building system issues that significantly increase long term capital requirements beyond current assumptions.</li>
+        <li>Evidence of sustained collection problems or tenant profile concerns that materially increase operational risk.</li>
+        <li>Significant tightening of lender standards or projected DSCR shortfalls that limit refinance flexibility and reduce equity returns below hurdle levels.</li>
+        <li>Regulatory or zoning changes that restrict planned renovation scope or limit practical ability to reposition rents toward market levels.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:14px;">The Bottom Line</p>
+      <p>
+        On balance, InvestorIQ views 145 Wellington Street North as an attractive Value Add multifamily investment in a growing secondary market, appropriate for investors who are comfortable with moderate renovation and management execution risk in pursuit of mid teens levered returns. The property is not risk free and is sensitive to construction execution and capital markets conditions, but is acquired at a sensible basis with a clear, repeatable plan to create value. For well capitalized sponsors with access to strong local operating partners, this opportunity aligns with a Buy decision within a diversified portfolio.
+      </p>
+    </div>
+
+    <div style="page-break-before: always;"></div>
+
+    <!-- 11.0 Legal Disclaimer -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">11.0 Legal Disclaimer</div>
+        <h2>Important Information and Limitations</h2>
+      </div>
+
+      <p class="disclaimer">
+        This Sample Property IQ Report has been prepared by InvestorIQ for illustrative and educational purposes only and is based on hypothetical assumptions and example data. It does not relate to an actual transaction and should not be relied upon as the basis for any investment decision. In a live engagement, all financial projections, valuations, and conclusions would be derived from client supplied materials, third party data sources, and additional assumptions that may differ from those used in this sample.
+      </p>
+      <p class="disclaimer">
+        InvestorIQ is not registered as a dealer, adviser, or portfolio manager in any jurisdiction and does not provide personalized investment advice, recommendations, or solicitations to buy or sell any security, property, or financial product. The analysis contained in this report is opinion based, forward looking, and inherently uncertain. Actual results may differ materially from the projections and scenarios presented due to changes in market conditions, interest rates, operating performance, regulatory environments, and other factors beyond the control of any party.
+      </p>
+      <p class="disclaimer">
+        Investors are solely responsible for conducting their own due diligence and for obtaining independent legal, tax, financial, and technical advice before entering into any transaction. By reviewing this report, you acknowledge that InvestorIQ has no obligation to update or revise the analysis or conclusions contained herein, and that InvestorIQ shall not be liable for any losses or damages arising from the use of, or reliance on, this sample report.
+      </p>
+
+      <div class="footer-note">
+        © InvestorIQ Technologies Inc. All rights reserved. Sample output for demonstration only.
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Charts Scripts -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load("current", { packages: ["corechart"] });
+    google.charts.setOnLoadCallback(drawCharts);
+
+    function drawCharts() {
+      drawIRRChart();
+      drawDealScoreChart();
+    }
+
+    function drawIRRChart() {
+      var data = google.visualization.arrayToDataTable([
+        ["Scenario", "Levered IRR"],
+        ["Worst", 9.1],
+        ["Conservative", 12.2],
+        ["Base", 14.5],
+        ["Optimistic", 16.7],
+        ["Best", 18.8]
+      ]);
+
+      var options = {
+        title: "Five Year Levered IRR by Scenario",
+        legend: { position: "none" },
+        height: 240,
+        chartArea: { left: 60, right: 20, top: 50, bottom: 40 },
+        vAxis: {
+          title: "IRR (percent)",
+          format: "#'%'"
+        },
+        hAxis: {
+          textStyle: { fontSize: 11 }
+        },
+        colors: ["#1F8A8A"]
+      };
+
+      var chart = new google.visualization.ColumnChart(document.getElementById("irr_chart"));
+      chart.draw(data, options);
+    }
+
+    function drawDealScoreChart() {
+      var data = google.visualization.arrayToDataTable([
+        ["Factor", "Weighted Contribution"],
+        ["Location", 12.0],
+        ["Cash Flow", 12.0],
+        ["DSCR", 7.0],
+        ["Liquidity", 7.0],
+        ["Market Outlook", 12.0],
+        ["Value Add", 12.0],
+        ["Risk Profile", 8.0],
+        ["Management Intensity", 6.0]
+      ]);
+
+      var options = {
+        title: "Deal Score Factor Breakdown",
+        legend: { position: "none" },
+        height: 240,
+        chartArea: { left: 80, right: 20, top: 50, bottom: 60 },
+        hAxis: {
+          textStyle: { fontSize: 11 },
+          slantedText: true,
+          slantedTextAngle: 30
+        },
+        vAxis: {
+          title: "Weighted Points",
+          viewWindow: { min: 0, max: 20 }
+        },
+        colors: ["#D4AF37"]
+      };
+
+      var chart = new google.visualization.ColumnChart(document.getElementById("deal_score_chart"));
+      chart.draw(data, options);
+    }
+  </script>
+</body>
+</html>
