@@ -8,9 +8,9 @@ import https from "https";
 
 export default async function handler(req, res) {
   try {
-    // Load HTML file
-    const filePath = path.join(process.cwd(), "public", "reports", "sample-report.html");
-    const html = fs.readFileSync(filePath, "utf8");
+    // Load HTML file (bundled inside /api/html/)
+const filePath = path.join(process.cwd(), "api", "html", "sample-report.html");
+const html = fs.readFileSync(filePath, "utf8");
 
     // DocRaptor payload
     const payload = JSON.stringify({
