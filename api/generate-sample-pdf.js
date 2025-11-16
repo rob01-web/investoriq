@@ -1,7 +1,3 @@
-export const config = {
-  runtime: "nodejs20.x",
-};
-
 import fs from "fs";
 import path from "path";
 import https from "https";
@@ -9,9 +5,6 @@ import url from "url";
 
 export default async function handler(req, res) {
   try {
-    // -----------------------------------------
-    // 1) Load HTML template safely on Vercel
-    // -----------------------------------------
     const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
     const filePath = path.join(__dirname, "html", "sample-report.html");
 
@@ -21,17 +14,9 @@ export default async function handler(req, res) {
 
     let html = fs.readFileSync(filePath, "utf8");
 
-    // -----------------------------------------
-    // 2) Replace relative chart paths with absolute URLs
-    // DocRaptor REQUIRES absolute URLs
-    // -----------------------------------------
     const baseUrl = "https://investoriq.tech";
-
     html = html.replace(/src="\/charts\//g, `src="${baseUrl}/charts/`);
 
-    // -----------------------------------------
-    // 3) Prepare DocRaptor payload
-    // -----------------------------------------
     const payload = JSON.stringify({
       test: false,
       name: "sample-report.pdf",
@@ -44,9 +29,6 @@ export default async function handler(req, res) {
       },
     });
 
-    // -----------------------------------------
-    // 4) Send request to DocRaptor
-    // -----------------------------------------
     const options = {
       hostname: "api.docraptor.com",
       port: 443,
@@ -80,17 +62,11 @@ export default async function handler(req, res) {
     const { buffer, status } = rawResponse;
     const text = buffer.toString("utf8").trim();
 
-    // -----------------------------------------
-    // 5) If DocRaptor returned an error body
-    // -----------------------------------------
     if (status !== 200 || text.startsWith("{") || text.startsWith("<")) {
       res.setHeader("Content-Type", "application/json");
-      return res.status(200).send(text); // send back DocRaptor error
+      return res.status(200).send(text);
     }
 
-    // -----------------------------------------
-    // 6) Return PDF
-    // -----------------------------------------
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -103,3 +79,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+// MUST be at bottom
+export const config = {
+  runtime: "nodejs20.x",
+};
