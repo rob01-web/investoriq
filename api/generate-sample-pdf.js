@@ -1,39 +1,52 @@
 export const config = {
-  runtime: "nodejs",
+  runtime: "nodejs20.x",
 };
 
 import fs from "fs";
 import path from "path";
 import https from "https";
-import { generateAllCharts } from "./lib/generateCharts.js";
+import url from "url";
 
 export default async function handler(req, res) {
   try {
-    // 1) Generate /public/charts/*.png at 5× quality
-    await generateAllCharts();
+    // -----------------------------------------
+    // 1) Load HTML template safely on Vercel
+    // -----------------------------------------
+    const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+    const filePath = path.join(__dirname, "html", "sample-report.html");
 
-    // 2) Load HTML template (already points to /charts/*.png)
-    const filePath = path.join(
-      process.cwd(),
-      "api",
-      "html",
-      "sample-report.html"
-    );
-    const html = fs.readFileSync(filePath, "utf8");
+    if (!fs.existsSync(filePath)) {
+      throw new Error("sample-report.html NOT FOUND at: " + filePath);
+    }
 
-    // 3) DocRaptor payload (PRODUCTION mode, no JS needed)
+    let html = fs.readFileSync(filePath, "utf8");
+
+    // -----------------------------------------
+    // 2) Replace relative chart paths with absolute URLs
+    // DocRaptor REQUIRES absolute URLs
+    // -----------------------------------------
+    const baseUrl = "https://investoriq.tech";
+
+    html = html.replace(/src="\/charts\//g, `src="${baseUrl}/charts/`);
+
+    // -----------------------------------------
+    // 3) Prepare DocRaptor payload
+    // -----------------------------------------
     const payload = JSON.stringify({
-      test: false, // set true if you want the "test" watermark
+      test: false,
       name: "sample-report.pdf",
       document_type: "pdf",
       document_content: html,
-      javascript: false, // charts are static images now
+      javascript: false,
       prince_options: {
         media: "print",
-        dpi: 300, // crisp print quality
+        dpi: 300,
       },
     });
 
+    // -----------------------------------------
+    // 4) Send request to DocRaptor
+    // -----------------------------------------
     const options = {
       hostname: "api.docraptor.com",
       port: 443,
@@ -46,7 +59,6 @@ export default async function handler(req, res) {
       },
     };
 
-    // 4) Send request to DocRaptor
     const rawResponse = await new Promise((resolve, reject) => {
       const reqApi = https.request(options, (response) => {
         const chunks = [];
@@ -68,19 +80,24 @@ export default async function handler(req, res) {
     const { buffer, status } = rawResponse;
     const text = buffer.toString("utf8").trim();
 
-    // If DocRaptor returns JSON/XML, it’s an error
+    // -----------------------------------------
+    // 5) If DocRaptor returned an error body
+    // -----------------------------------------
     if (status !== 200 || text.startsWith("{") || text.startsWith("<")) {
       res.setHeader("Content-Type", "application/json");
-      return res.status(200).send(text);
+      return res.status(200).send(text); // send back DocRaptor error
     }
 
-    // 5) Return PDF
+    // -----------------------------------------
+    // 6) Return PDF
+    // -----------------------------------------
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       'inline; filename="sample-report.pdf"'
     );
     return res.send(buffer);
+
   } catch (err) {
     console.error("PDF ERROR:", err);
     return res.status(500).json({ error: err.message });

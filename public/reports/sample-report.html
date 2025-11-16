@@ -304,18 +304,18 @@
     }
 
     /* New Teal Executive Verdict Left Bar */
-    .verdict-leftbar {
-      border-left: 10px solid #1F8A8A; /* Thick teal executive bar */
-      padding: 6px 0 6px 14px;
-      font-family: "Merriweather", serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--navy);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 16px;
-      max-width: 460px; /* prevents full-column stretching; keeps it compact */
-    }
+.verdict-leftbar {
+  border-left: 10px solid #1F8A8A; /* Thick teal executive bar */
+  padding: 6px 0 6px 14px;
+  font-family: "Merriweather", serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+  max-width: 460px; /* prevents full-column stretching; keeps it compact */
+}
 
   </style>
 </head>
@@ -354,6 +354,7 @@
 
       <div class="grid-2">
         <div>
+          
           <p class="label" style="margin-top:10px;">InvestorIQ Deal Score</p>
           <h2 style="color:var(--gold); margin-bottom:6px;">76 / 100</h2>
 
@@ -506,6 +507,7 @@
               <td>7.4 years</td>
             </tr>
           </table>
+          <!-- InvestorIQ Renovation ROI vs Rent Lift Chart -->
           <div class="no-break" style="margin:18px 0 20px 0; text-align:center;">
             <img
               src="/charts/renovation_roi.png"
@@ -513,6 +515,7 @@
               style="max-width:100%; height:auto;"
             />
           </div>
+
           <p class="small">
             The combined interior program is expected to average approximately $14,500 per fully renovated unit, targeting a total rent uplift of $150 to $175 per month. This equates to a simple pre leverage cash on cost return in the 12 to 14 percent range.
           </p>
@@ -537,15 +540,14 @@
       <p>
         InvestorIQ models five distinct cases to understand return sensitivity across a range of macro and execution outcomes. The Base Case reflects disciplined completion of the renovation program within two years, steady lease up to target rents, and exit at a cap rate consistent with historical Hamilton mid rise transactions. Conservative and Worst Case scenarios stress rent growth, vacancy, and exit pricing, while Optimistic and Best Case scenarios assume stronger rent performance and pricing support.
       </p>
-
-      <!-- InvestorIQ Gold 5-Year Cash Flow Trendline -->
-      <div class="no-break" style="margin:18px 0; text-align:center;">
-        <img
-          src="/charts/cashflow_5yr.png"
-          alt="Five Year Cash Flow Trendline"
-          style="max-width:100%; height:auto;"
-        />
-      </div>
+<!-- InvestorIQ Gold 5-Year Cash Flow Trendline -->
+<div class="no-break" style="margin:18px 0; text-align:center;">
+  <img
+    src="/charts/cashflow_5yr.png"
+    alt="Five Year Cash Flow Trendline"
+    style="max-width:100%; height:auto;"
+  />
+</div>
 
       <div class="grid-2">
         <div class="no-break">
@@ -641,33 +643,35 @@
           </p>
         </div>
       </div>
+<!-- InvestorIQ Year-by-Year Cash Flow Trendlines -->
 
       <div class="no-break" style="margin-top:20px;">
         <p class="subsection-title">Five Year Levered IRR by Scenario</p>
+        <!-- InvestorIQ Cap Rate Sensitivity Heatmap -->
 
-        <div class="no-break" style="width:100%; border:1px solid #E5E7EB; border-radius:8px; background:#FFFFFF; padding:12px; display:flex; justify-content:center;">
-          <img
-            src="/charts/irr_scenario.png"
-            alt="IRR Scenario Chart"
-            style="max-width:100%; height:auto;"
-          />
-        </div>
+    <div class="no-break" style="width:100%; border:1px solid #E5E7EB; border-radius:8px; background:#FFFFFF; padding:12px; display:flex; justify-content:center;">
+  <img 
+    src="/charts/irr_scenario.png"
+    alt="IRR Scenario Chart"
+    style="max-width:100%; height:auto;"
+  />
+</div>
+      
+      <p class="subsection-title" style="margin-top:18px;">Break Even Occupancy Analysis</p>
 
-        <p class="subsection-title" style="margin-top:18px;">Break Even Occupancy Analysis</p>
-
-        <div class="no-break" style="margin:12px 0 20px 0; text-align:center;">
-          <img
-            src="/charts/breakeven_dscr.png"
-            alt="Break-Even Occupancy Chart"
-            style="max-width:100%; height:auto;"
-          />
-        </div>
-
-        <p>
-          Under the current financing assumptions, Year 1 debt service is projected at approximately $245,000...
-        </p>
-      </div>
-    </div>
+<!-- Break-Even Occupancy (DSCR Curve) -->
+<div class="no-break" style="margin:12px 0 20px 0; text-align:center;">
+  <img
+    src="/charts/breakeven_dscr.png"
+    alt="Break-Even Occupancy Chart"
+    style="max-width:100%; height:auto;"
+  />
+</div>
+  
+<p>
+  Under the current financing assumptions, Year 1 debt service is projected at approximately $245,000...
+</p>
+</div>
 
     <div style="page-break-before: always;"></div>
 
@@ -733,56 +737,59 @@
       </p>
 
       <div class="no-break">
-        <p class="subsection-title">Risk Matrix (Visual Summary)</p>
+  <p class="subsection-title">Risk Matrix (Visual Summary)</p>
 
-        <div style="text-align:center; padding:14px 0;">
-          <img
-            src="/charts/risk_radar.png"
-            alt="Risk Impact Radar Chart"
-            style="max-width:100%; height:auto;"
-          />
-        </div>
+    <!-- InvestorIQ Risk Impact Radar (Static PNG) -->
+  <div style="text-align:center; padding:14px 0;">
+    <img 
+      src="/charts/risk_radar.png"
+      alt="Risk Impact Radar Chart"
+      style="max-width:100%; height:auto;"
+    />
+  </div>
+</div>
 
-        <p class="subsection-title" style="margin-top:18px;">Detailed Risk Matrix</p>
-        <table>
-          <tr>
-            <th>Risk Category</th>
-            <th>Specific Risk</th>
-            <th>Impact</th>
-            <th>Mitigation Strategy</th>
-          </tr>
-          <tr>
-            <td>Property Specific</td>
-            <td>Renovation cost overruns or extended unit downtime during interior upgrades.</td>
-            <td class="risk-negative">High</td>
-            <td>Phase renovations, lock pricing with reputable contractors, maintain contingency budget, and prioritize units with natural turnover.</td>
-          </tr>
-          <tr>
-            <td>Market</td>
-            <td>Softening rental demand or slower absorption of higher rents.</td>
-            <td>Medium</td>
-            <td>Stagger rent increases, maintain competitive positioning on service and maintenance.</td>
-          </tr>
-          <tr>
-            <td>Financial</td>
-            <td>Adverse interest rate movement at refinance or exit.</td>
-            <td class="risk-negative">High</td>
-            <td>Use fixed rate or caps, underwrite refinance conservatively.</td>
-          </tr>
-          <tr>
-            <td>Operational</td>
-            <td>Higher management intensity and turnover during repositioning.</td>
-            <td>Medium</td>
-            <td>Engage experienced management teams and align incentives.</td>
-          </tr>
-          <tr>
-            <td>Regulatory</td>
-            <td>Rent control or policy changes limiting rent growth.</td>
-            <td>Medium</td>
-            <td>Track policy developments and build conservative assumptions.</td>
-          </tr>
-        </table>
-      </div>
+  <!-- Original Risk Matrix Table (kept for detail) -->
+  <p class="subsection-title" style="margin-top:18px;">Detailed Risk Matrix</p>
+  <table>
+    <tr>
+      <th>Risk Category</th>
+      <th>Specific Risk</th>
+      <th>Impact</th>
+      <th>Mitigation Strategy</th>
+    </tr>
+    <tr>
+      <td>Property Specific</td>
+      <td>Renovation cost overruns or extended unit downtime during interior upgrades.</td>
+      <td class="risk-negative">High</td>
+      <td>Phase renovations, lock pricing with reputable contractors, maintain contingency budget, and prioritize units with natural turnover.</td>
+    </tr>
+    <tr>
+      <td>Market</td>
+      <td>Softening rental demand or slower absorption of higher rents.</td>
+      <td>Medium</td>
+      <td>Stagger rent increases, maintain competitive positioning on service and maintenance.</td>
+    </tr>
+    <tr>
+      <td>Financial</td>
+      <td>Adverse interest rate movement at refinance or exit.</td>
+      <td class="risk-negative">High</td>
+      <td>Use fixed rate or caps, underwrite refinance conservatively.</td>
+    </tr>
+    <tr>
+      <td>Operational</td>
+      <td>Higher management intensity and turnover during repositioning.</td>
+      <td>Medium</td>
+      <td>Engage experienced management teams and align incentives.</td>
+    </tr>
+    <tr>
+      <td>Regulatory</td>
+      <td>Rent control or policy changes limiting rent growth.</td>
+      <td>Medium</td>
+      <td>Track policy developments and build conservative assumptions.</td>
+    </tr>
+  </table>
+</div>
 
       <p class="subsection-title" style="margin-top:16px;">Risk Score Construction</p>
       <p class="small">
@@ -835,17 +842,18 @@
 
       <p class="subsection-title" style="margin-top:16px;">Narrative ROI Assessment</p>
 
-      <div class="no-break" style="margin:22px 0; text-align:center;">
-        <img
-          src="/charts/noi_waterfall.png"
-          alt="NOI Waterfall Chart"
-          style="max-width:100%; height:auto;"
-        />
-      </div>
+<!-- NOI Value Creation Waterfall -->
+<div class="no-break" style="margin:22px 0; text-align:center;">
+  <img
+    src="/charts/noi_waterfall.png"
+    alt="NOI Waterfall Chart"
+    style="max-width:100%; height:auto;"
+  />
+</div>
 
-      <p>
-        On a consolidated basis, the renovation program is expected to generate...
-      </p>
+<p>
+  On a consolidated basis, the renovation program is expected to generate...
+</p>
       <p>
         Importantly, the renovation plan does not rely on repositioning the property to a narrow premium luxury segment. Rather, it aims to deliver clean, durable, and contemporary units that remain accessible to a broad segment of working households. This approach supports resilience across cycles and reduces the risk of extended vacancy if economic conditions soften.
       </p>
@@ -911,21 +919,22 @@
       </div>
 
       <p>
-        The InvestorIQ Deal Score of <span class="highlight">76 out of 100</span> reflects a balanced risk-adjusted return profile, 
-        driven by strong location fundamentals, solid cash flow durability, and clear value-add execution pathways.
-      </p>
+  The InvestorIQ Deal Score of <span class="highlight">76 out of 100</span> reflects a balanced risk-adjusted return profile, 
+  driven by strong location fundamentals, solid cash flow durability, and clear value-add execution pathways.
+</p>
 
-      <div class="no-break" style="margin:22px 0; text-align:center;">
-        <img
-          src="/charts/deal_score_radar.png"
-          alt="Deal Score Radar Chart"
-          style="max-width:100%; height:auto;"
-        />
-      </div>
+<!-- InvestorIQ Deal Score Spider Chart (Static PNG) -->
+<div class="no-break" style="margin:22px 0; text-align:center;">
+  <img
+    src="/charts/deal_score_radar.png"
+    alt="Deal Score Radar Chart"
+    style="max-width:100%; height:auto;"
+  />
+</div>
 
-      <div class="no-break">
-        <p class="subsection-title">Factor Level Scores</p>
-        <table>
+<div class="no-break">
+  <p class="subsection-title">Factor Level Scores</p>
+  <table>
           <tr>
             <th>Factor</th>
             <th>Score (1 to 10)</th>
@@ -988,21 +997,26 @@
       </div>
 
       <div class="no-break" style="margin-top:20px;">
-        <p class="subsection-title">Deal Score Factor Breakdown Chart</p>
+  <p class="subsection-title">Deal Score Factor Breakdown Chart</p>
 
-        <div style="text-align:center; padding:12px 0;">
-          <img
-            src="/charts/deal_score_bar.png"
-            alt="Deal Score Breakdown Chart"
-            style="max-width:100%; height:auto;"
-          />
-        </div>
-      </div>
+  <!-- InvestorIQ Deal Score Bar (Static PNG) -->
+  <div style="text-align:center; padding:12px 0;">
+    <img 
+      src="/charts/deal_score_bar.png"
+      alt="Deal Score Breakdown Chart"
+      style="max-width:100%; height:auto;"
+    />
+  </div>
 
-      <p class="subsection-title" style="margin-top:18px;">Interpretation</p>
-      <p>
-        Location, cash flow strength, market outlook, and value add potential are all scored in the upper range and carry relatively high weights...
-      </p>
+</div>
+
+</div>
+
+<p class="subsection-title" style="margin-top:18px;">Interpretation</p>
+<p>
+  Location, cash flow strength, market outlook, and value add potential are all scored in the upper range and carry relatively high weights...
+</p>
+
     </div>
 
     <div style="page-break-before: always;"></div>
@@ -1015,14 +1029,14 @@
       </div>
 
       <p class="subsection-title">Discounted Cash Flow Summary</p>
-
-      <div class="no-break" style="margin:20px 0; text-align:center;">
-        <img
-          src="/charts/expense_ratio.png"
-          alt="Operating Expense Ratio Donut Chart"
-          style="max-width:100%; height:auto;"
-        />
-      </div>
+      <!-- InvestorIQ Expense Ratio Donut Chart -->
+<div class="no-break" style="margin:20px 0; text-align:center;">
+  <img
+    src="/charts/expense_ratio.png"
+    alt="Operating Expense Ratio Donut Chart"
+    style="max-width:100%; height:auto;"
+  />
+</div>
 
       <p>
         InvestorIQ models five years of projected levered cash flows under the Base Case Value Add plan and discounts them using a twelve percent rate, consistent with a Value Add risk profile in Canadian multifamily markets. Under these assumptions, the net present value of equity cash flows is modestly positive, indicating that Base Case pricing is broadly aligned with the required return threshold. Conservative and Worst Case scenarios approach break even NPV, reinforcing the importance of disciplined acquisition pricing and cost control on the renovation side.
@@ -1070,22 +1084,24 @@
       </div>
 
       <p class="subsection-title" style="margin-top:14px;">Relative Positioning</p>
-      <p>
+            <p>
         On a price per door basis, the subject is acquired at a modest discount to recent Hamilton Central transactions, while in place yields are slightly higher due to the current rent and expense structure. This provides a margin of safety if rent uplift or exit pricing are weaker than anticipated, but does not fully immunize the investment from adverse rate or policy shocks. For investors seeking Value Add exposure in a growing secondary market with strong links to the Greater Toronto Area, the risk and return balance appears competitive relative to other options.
       </p>
     </div>
 
-    <div class="no-break" style="margin:30px 0; text-align:center;">
-      <img
-        src="/charts/cashflow_waterfall.png"
-        alt="InvestorIQ 5-Year Cash Flow Waterfall"
-        style="max-width:100%; height:auto;"
-      />
-    </div>
+    <!-- InvestorIQ 5-Year Cash Flow Waterfall -->
+<div class="no-break" style="margin:30px 0; text-align:center;">
+  <img 
+    src="/charts/cashflow_waterfall.png"
+    alt="InvestorIQ 5-Year Cash Flow Waterfall"
+    style="max-width:100%; height:auto;"
+  />
+</div>
 
     <div style="page-break-before: always;"></div>
 
     <!-- 10.0 Final Recommendations -->
+
     <div class="section">
       <div class="section-header">
         <div class="section-number">10.0 Final Recommendations</div>
@@ -1113,6 +1129,14 @@
         <li>Obtain and review building condition reports, environmental assessments where available, and any existing engineering studies.</li>
         <li>Verify compliance with local fire, safety, and residential tenancy regulations, including any outstanding orders or open permits.</li>
         <li>Confirm actual unit sizes, parking counts, and amenity features against marketing materials and existing leases.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Red Flags and Deal Breakers</p>
+      <ul>
+        <li>Material structural, environmental, or building system issues that significantly increase long term capital requirements beyond current assumptions.</li>
+        <li>Evidence of sustained collection problems or tenant profile concerns that materially increase operational risk.</li>
+        <li>Significant tightening of lender standards or projected DSCR shortfalls that limit refinance flexibility and reduce equity returns below hurdle levels.</li>
+        <li>Regulatory or zoning changes that restrict planned renovation scope or limit practical ability to reposition rents toward market levels.</li>
       </ul>
 
       <p class="subsection-title" style="margin-top:14px;">The Bottom Line</p>
@@ -1145,5 +1169,6 @@
       </div>
     </div>
   </div>
+
 </body>
 </html>
