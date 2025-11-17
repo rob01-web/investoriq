@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     html = html.replace(/src="\/charts\//g, `src="${baseUrl}/charts/`);
 
     const payload = JSON.stringify({
-      test: false,
+      test: true,
       name: "sample-report.pdf",
       document_type: "pdf",
       document_content: html,
