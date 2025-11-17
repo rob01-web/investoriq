@@ -25,8 +25,8 @@ export default async function handler(req, res) {
       javascript: false,
       prince_options: {
         media: "print",
-        dpi: 300,
-      },
+        dpi: 300
+      }
     });
 
     const options = {
@@ -37,19 +37,18 @@ export default async function handler(req, res) {
       auth: `${process.env.DOCRAPTOR_API_KEY}:`,
       headers: {
         "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload),
-      },
+        "Content-Length": Buffer.byteLength(payload)
+      }
     };
 
     const rawResponse = await new Promise((resolve, reject) => {
-      const reqApi = https.request(options, (response) => {
+      const reqApi = https.request(options, response => {
         const chunks = [];
-        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("data", chunk => chunks.push(chunk));
         response.on("end", () =>
           resolve({
             buffer: Buffer.concat(chunks),
-            status: response.statusCode,
-            headers: response.headers,
+            status: response.statusCode
           })
         );
       });
@@ -68,19 +67,14 @@ export default async function handler(req, res) {
     }
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      'inline; filename="sample-report.pdf"'
-    );
-    return res.send(buffer);
-
+    res.setHeader("Content-Disposition", 'inline; filename="sample-report.pdf"');
+    res.send(buffer);
   } catch (err) {
     console.error("PDF ERROR:", err);
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 }
 
-// MUST be at bottom
 export const config = {
-  runtime: "nodejs20.x",
+  runtime: "nodejs20.x"
 };
