@@ -1,1 +1,12 @@
-{}
+{
+  "version": 2,
+  "functions": {
+    "api/generate-sample-pdf.js": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 60
+    }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "cleanUrls": true
+}
