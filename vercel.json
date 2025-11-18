@@ -1,8 +1,6 @@
 {
-  "version": 2,
   "functions": {
-    "api/generate-sample-pdf.js": {
-      "runtime": "nodejs",
+    "api/**/*.js": {
       "maxDuration": 60
     }
   }
