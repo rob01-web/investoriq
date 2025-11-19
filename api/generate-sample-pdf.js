@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   try {
     // Correct absolute path to sample-report.html
-    const htmlPath = path.join(__dirname, "api", "html", "sample-report.html");
+    const htmlPath = path.join(__dirname, "html", "sample-report.html");
 
     if (!fs.existsSync(htmlPath)) {
       console.error("Missing HTML template:", htmlPath);
