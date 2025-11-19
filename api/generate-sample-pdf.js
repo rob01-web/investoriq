@@ -1,50 +1,21 @@
-// api/generate-sample-pdf.js
-//
-// InvestorIQ – Sample Report PDF Generator (DocRaptor, TEST MODE ONLY)
-// -------------------------------------------------------------------
-// This route:
-// - Reads the static DocRaptor-compatible HTML template from /api/html/sample-report.html
-// - Sends it to DocRaptor with `test: true` to AVOID consuming production credits
-// - Streams the resulting PDF back to the client
-//
-// IMPORTANT:
-// - This file is HARD-LOCKED to DocRaptor TEST MODE.
-// - To use your ONE production credit later, you will manually flip TEST_MODE to false,
-//   redeploy, generate the final PDF once, then flip it back to true.
+// api/generate-sample-pdf.js (ESM Version)
+// ----------------------------------------
+// InvestorIQ – Sample Report Generator (DocRaptor TEST MODE)
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// 🔒 Hard-locked test mode (safe by default)
+// Resolve __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 🔒 Hard lock: ALWAYS TEST MODE unless manually changed
 const TEST_MODE = true;
 
 const DOCRAPTOR_API_KEY = process.env.DOCRAPTOR_API_KEY;
 
-if (!DOCRAPTOR_API_KEY) {
-  console.warn(
-    "[InvestorIQ] WARNING: DOCRAPTOR_API_KEY is not set. PDF generation will fail until this is configured."
-  );
-}
-
-// Helper to read the HTML template
-function loadSampleReportHtml() {
-  const htmlPath = path.join(
-    process.cwd(),
-    "api",
-    "html",
-    "sample-report.html"
-  );
-
-  if (!fs.existsSync(htmlPath)) {
-    throw new Error(
-      `Sample report HTML not found at: ${htmlPath}. Make sure api/html/sample-report.html exists in the repo.`
-    );
-  }
-
-  return fs.readFileSync(htmlPath, "utf8");
-}
-
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
@@ -53,26 +24,33 @@ module.exports = async (req, res) => {
   if (!DOCRAPTOR_API_KEY) {
     return res.status(500).json({
       error:
-        "DocRaptor API key is not configured. Set DOCRAPTOR_API_KEY in your environment.",
+        "DocRaptor API key not set. Add DOCRAPTOR_API_KEY to Vercel environment.",
     });
   }
 
   try {
-    const html = loadSampleReportHtml();
+    // Correct absolute path to sample-report.html
+    const htmlPath = path.join(__dirname, "..", "html", "sample-report.html");
 
-    const authHeader =
-      "Basic " +
-      Buffer.from(`${DOCRAPTOR_API_KEY}:`).toString("base64");
+    if (!fs.existsSync(htmlPath)) {
+      console.error("Missing HTML template:", htmlPath);
+      return res.status(500).json({
+        error: `sample-report.html not found at: ${htmlPath}`,
+      });
+    }
 
-    const docRaptorPayload = {
-      test: TEST_MODE, // 🔒 always true unless you explicitly change it
+    const html = fs.readFileSync(htmlPath, "utf8");
+
+    const payload = {
+      test: TEST_MODE,
       document_type: "pdf",
       name: "investoriq-sample-report.pdf",
       document_content: html,
-      prince_options: {
-        media: "print",
-      },
+      prince_options: { media: "print" },
     };
+
+    const authHeader =
+      "Basic " + Buffer.from(`${DOCRAPTOR_API_KEY}:`).toString("base64");
 
     const response = await fetch("https://docraptor.com/docs", {
       method: "POST",
@@ -80,14 +58,14 @@ module.exports = async (req, res) => {
         Authorization: authHeader,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(docRaptorPayload),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[InvestorIQ] DocRaptor error:", errorText);
+      console.error("DocRaptor error:", errorText);
       return res.status(500).json({
-        error: "DocRaptor failed to generate PDF",
+        error: "DocRaptor PDF generation failed",
         details: errorText,
       });
     }
@@ -102,10 +80,10 @@ module.exports = async (req, res) => {
 
     return res.status(200).send(buffer);
   } catch (err) {
-    console.error("[InvestorIQ] PDF generation error:", err);
+    console.error("Unexpected PDF generation error:", err);
     return res.status(500).json({
-      error: "Unexpected error while generating PDF",
-      details: err.message || String(err),
+      error: "Internal Server Error",
+      details: err.message,
     });
   }
-};
+}
