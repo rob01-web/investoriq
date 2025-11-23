@@ -1,0 +1,234 @@
+{
+  "property": {
+    "name": "Riverbend Heights",
+    "subtitle": "144-Unit Tier III Institutional Multifamily",
+    "address": "2250 Riverside Drive",
+    "city": "London",
+    "province": "ON",
+    "postal_code": "N6K 3Y2",
+    "country": "Canada",
+    "asset_class": "Multifamily",
+    "strategy": "Core-Plus with Light Value-Add"
+  },
+
+  "summary": {
+    "units": 144,
+    "purchase_price": 34200000,
+    "closing_costs": 1350000,
+    "renovation_budget": 5400000,
+    "total_project_cost": 40950000,
+    "stabilized_cap_rate_target": 0.052,
+    "going_in_cap_rate_estimate": 0.046,
+    "hold_period_years": 5,
+    "base_case_irr_5yr": 0.097,
+    "downside_case_irr_5yr": 0.064,
+    "upside_case_irr_5yr": 0.129,
+    "best_case_irr_5yr": 0.148,
+    "project_theme": "Stabilized core-plus income with measured value-add upside in a growing secondary market."
+  },
+
+  "unit_mix": [
+    {
+      "type": "1BR",
+      "count": 72,
+      "share": 0.5,
+      "avg_sqft": 630,
+      "current_avg_rent": 1425,
+      "underwritten_market_rent": 1595,
+      "renovated_target_rent": 1675
+    },
+    {
+      "type": "2BR",
+      "count": 60,
+      "share": 0.4167,
+      "avg_sqft": 840,
+      "current_avg_rent": 1795,
+      "underwritten_market_rent": 1995,
+      "renovated_target_rent": 2095
+    },
+    {
+      "type": "3BR",
+      "count": 12,
+      "share": 0.0833,
+      "avg_sqft": 1080,
+      "current_avg_rent": 2095,
+      "underwritten_market_rent": 2295,
+      "renovated_target_rent": 2395
+    }
+  ],
+
+  "operating_assumptions": {
+    "vacancy_rate_stabilized": 0.04,
+    "other_income_per_unit_month": 55,
+    "operating_expense_ratio": 0.39,
+    "market_rent_growth": 0.027,
+    "expense_growth_rate": 0.03,
+    "exit_cap_rate": 0.05,
+    "reversion_year": 5,
+    "leasing_loss_during_renovation_pct": 0.08,
+    "renovation_duration_years": 2
+  },
+
+  "loan_terms": {
+    "ltv": 0.65,
+    "interest_rate": 0.055,
+    "interest_only_years": 2,
+    "amort_years": 30,
+    "fees_pct": 0.01,
+    "loan_type": "CMHC-Insured Conventional Multifamily",
+    "assumed_refinance_year": 3
+  },
+
+  "capital_stack": {
+    "senior_loan_amount": 26617500,
+    "equity_requirement": 14332500,
+    "closing_costs_financed_pct": 0.5,
+    "renovation_financed_pct": 0.5
+  },
+
+  "irr_scenarios": {
+    "downside": 6.4,
+    "base": 9.7,
+    "upside": 12.9,
+    "best": 14.8,
+    "summary": "IRR profiles under varying rent growth, exit cap, and renovation execution assumptions."
+  },
+
+  "cash_flow_projection": {
+    "years": [1, 2, 3, 4, 5],
+    "levered_cash_flow_millions": [1.51, 1.6, 1.71, 1.83, 1.96],
+    "cumulative_cash_flow_millions": [1.51, 3.11, 4.82, 6.65, 8.61],
+    "avg_cash_yield": 0.074,
+    "base_case_exit_value_millions": 151.8
+  },
+
+  "income_statement_snapshot": {
+    "annualized": {
+      "gross_potential_rent_millions": 12.96,
+      "vacancy_loss_millions": -0.52,
+      "other_income_millions": 0.23,
+      "effective_gross_income_millions": 12.44,
+      "operating_expenses_millions": -4.85,
+      "noi_millions": 7.59,
+      "debt_service_millions": -4.48,
+      "pre_tax_cash_flow_millions": 3.11
+    },
+    "margins": {
+      "operating_expense_pct": 39,
+      "noi_margin_pct": 61,
+      "debt_yield_pct": 0.114,
+      "dscr_current": 1.34,
+      "lender_min_dscr": 1.2
+    }
+  },
+
+  "noi_waterfall_millions": {
+    "gross_income": 12.96,
+    "vacancy_loss": -0.52,
+    "other_income": 0.23,
+    "effective_gross_income": 12.44,
+    "operating_expenses": -4.85,
+    "noi": 7.59,
+    "debt_service": -4.48,
+    "cash_flow": 3.11
+  },
+
+  "break_even_analysis": {
+    "break_even_occupancy_pct": 79.2,
+    "current_dscr": 1.34,
+    "lender_min_dscr": 1.2,
+    "stress_test_occupancies_pct": [70, 75, 80, 85, 90, 95],
+    "stress_test_dscr_estimates": [0.98, 1.10, 1.22, 1.33, 1.45, 1.57]
+  },
+
+  "renovation_program": {
+    "total_capex_millions": 5.4,
+    "value_created_millions": 9.3,
+    "capex_per_unit": 37500,
+    "interior_scope_summary": "In-suite finishes, flooring, lighting, appliance replacement, paint.",
+    "exterior_scope_summary": "Common area refresh, lobby, corridors, landscaping, signage.",
+    "systems_scope_summary": "Selective HVAC, plumbing, and electrical upgrades as required.",
+    "expected_rent_uplift_pct": 0.09
+  },
+
+  "renovation_roi": {
+    "capex_invested_millions": 5.4,
+    "value_created_millions": 9.3,
+    "gross_return_on_cost": 1.72,
+    "commentary": "At stabilization, the program is expected to generate attractive incremental value relative to invested capital, assuming market support for renovated rents."
+  },
+
+  "equity_waterfall_millions": {
+    "initial_equity": 14.3,
+    "cumulative_cash_flow": 9.0,
+    "refinance_proceeds": 5.5,
+    "sale_proceeds": 19.5,
+    "total_equity_distributions": 34.0,
+    "equity_multiple": 2.38,
+    "note": "Illustrative, not a legal waterfall model. Actual sponsor/LP splits and fees are structure-dependent."
+  },
+
+  "deal_score": {
+    "location": 7.6,
+    "market": 7.1,
+    "asset_quality": 7.8,
+    "financials": 8.2,
+    "value_add": 8.0,
+    "risk": 6.7,
+    "composite_score": 7.6,
+    "commentary": "Riverbend Heights ranks strongest on asset quality, financial profile, and value-add potential, with manageable but non-trivial exposure to CapEx and interest-rate risk."
+  },
+
+  "risk_profile": {
+    "market_volatility": 6.1,
+    "location_risk": 5.9,
+    "tenant_profile": 6.6,
+    "capex_risk": 7.3,
+    "debt_risk": 5.7,
+    "sponsor_risk": 6.9,
+    "key_risks": [
+      "Renovation execution risk and cost overruns.",
+      "Interest-rate risk at refinance and exit.",
+      "Potential for slower-than-expected rent growth in a secondary market.",
+      "Regulatory risk related to rent control and tenant protections."
+    ],
+    "mitigants": [
+      "Conservative leverage relative to Tier III institutional norms.",
+      "Stabilized in-place income with diversified tenancy.",
+      "Phased renovation approach to preserve cash flow.",
+      "Capital reserves for contingency and CapEx."
+    ]
+  },
+
+  "charts": {
+    "irr_scenario": "charts/institutional/irr_scenario.png",
+    "cash_flow": "charts/institutional/cash_flow.png",
+    "cashflow_5yr": "charts/institutional/cashflow_5yr.png",
+    "expense_ratio": "charts/institutional/expense_ratio.png",
+    "break_even_occupancy": "charts/institutional/break_even_occupancy.png",
+    "breakeven_dscr": "charts/institutional/breakeven_dscr.png",
+    "noi_waterfall": "charts/institutional/noi_waterfall.png",
+    "renovation_roi": "charts/institutional/renovation_roi.png",
+    "deal_score_bar": "charts/institutional/deal_score_bar.png",
+    "deal_score_radar": "charts/institutional/deal_score_radar.png",
+    "risk_radar": "charts/institutional/risk_radar.png",
+    "cashflow_waterfall": "charts/institutional/cashflow_waterfall.png"
+  },
+
+  "sources_and_citations": {
+    "verified_data": [
+      "User-uploaded rent rolls (CSV, XLSX, PDF).",
+      "User-uploaded operating statements (T12).",
+      "User-uploaded purchase agreements and loan term sheets.",
+      "Any third-party reports provided by the user (e.g., building condition reports)."
+    ],
+    "planned_public_data": [
+      "Statistics Canada (Census, demographic, labour market).",
+      "CMHC Rental Market Survey & housing data (Canada) — Coming Q1 2026.",
+      "HUD FMR & US Census datasets (for US properties).",
+      "Municipal open-data portals (zoning, planning, permits, boundaries).",
+      "WalkScore API for transit, walk, and bike score."
+    ],
+    "disclaimer": "All market-level and forward-looking metrics in this sample report are illustrative. InvestorIQ Estimates represent modeled assumptions based on scenario frameworks and publicly available patterns. Full public data integration launches Q1 2026."
+  }
+}
