@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InvestorIQ Sample Report – Riverbend Heights (London, ON)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #0F172A;
+      --teal: #1F8A8A;
+      --gold: #D4AF37;
+      --bg-soft: #F3F4F6;
+      --border-soft: #E5E7EB;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: var(--navy);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .report-container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: "Merriweather", "Times New Roman", serif;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 4px 0 8px 0;
+    }
+
+    .tagline {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9CA3AF;
+    }
+
+    .section {
+      padding: 24px 24px 28px 24px;
+      background: #ffffff;
+    }
+
+    .section-header {
+      border-bottom: 2px solid var(--gold);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .section-number {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 18px;
+    }
+
+    .grid-2-balanced {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-soft);
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      padding: 12px 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      background: #ECFEFF;
+      color: var(--teal);
+    }
+
+    .pill.bad {
+      background: #FEF2F2;
+      color: #B91C1C;
+    }
+
+    .pill.neutral {
+      background: #EEF2FF;
+      color: #4338CA;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border-soft);
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #F9FAFB;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td {
+      background: #F9FAFB;
+    }
+
+    .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6B7280;
+    }
+
+    .summary-bullets {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .summary-bullets ul {
+      margin: 4px 0 0 18px;
+      padding: 0;
+    }
+
+    .summary-bullets li {
+      margin-bottom: 4px;
+    }
+
+    .highlight {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+    }
+
+    .disclaimer {
+      font-size: 10px;
+      color: #6B7280;
+      line-height: 1.4;
+    }
+
+    .small {
+      font-size: 11px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 10px;
+      color: #9CA3AF;
+      text-align: right;
+    }
+
+    .header-strip {
+      border-top: 4px solid var(--gold);
+      padding-top: 12px;
+      margin-bottom: 18px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .watermark {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #D1D5DB;
+      margin-top: 6px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid #E5E7EB;
+      background: #F9FAFB;
+    }
+
+    .dscr-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #ECFEFF;
+      color: #0369A1;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .risk-positive {
+      color: #16A34A;
+      font-weight: 600;
+    }
+
+    .risk-negative {
+      color: #B91C1C;
+      font-weight: 600;
+    }
+
+    .subsection-title {
+      font-weight: 600;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .scenario-label {
+      font-weight: 600;
+    }
+
+    .section-intro {
+      margin-bottom: 10px;
+    }
+
+    /* Executive verdict */
+    .verdict-leftbar {
+      border-left: 10px solid var(--teal);
+      padding: 6px 0 6px 14px;
+      font-family: "Merriweather", serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+      max-width: 520px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      background: #0F172A;
+      color: #F9FAFB;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #CBD5F5;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: #E5E7EB;
+      margin-top: 2px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .chart-block {
+      margin: 18px 0;
+      text-align: center;
+    }
+
+    .chart-block img {
+  max-width: 65%;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Small supporting charts */
+.chart-small img {
+  max-width: 45%;
+  height: auto;
+  margin: 12px auto;
+  display: block;
+}
+
+/* Standard analytical charts */
+.chart-medium img {
+  max-width: 65%;
+  height: auto;
+  margin: 16px auto;
+  display: block;
+}
+
+/* Hero charts */
+.chart-large img {
+  max-width: 85%;
+  height: auto;
+  margin: 20px auto;
+  display: block;
+}
+
+
+    .report-footer {
+      margin-top: 18px;
+      font-size: 10px;
+      color: #9CA3AF;
+      text-align: center;
+    }
+  
+    /* Pagination tuning for DocRaptor */
+    h2, h3, .subsection-title, .section-number {
+      page-break-after: avoid;
+    }
+
+    table, ul, ol, .chart-block, .summary-bullets {
+      page-break-inside: avoid;
+    }
+
+    .section-intro {
+      page-break-inside: avoid;
+    }
+</style>
+<link rel="stylesheet" media="screen" href="screen.css">
+<link rel="stylesheet" media="print" href="print.css">
+
+</head>
+<body>
+  <div class="report-container">
+
+    <!-- 1.0 Executive Summary -->
+    <section class="section no-break">
+      <div class="header-strip">
+        <div class="header-top">
+          <div>
+            <div class="brand-mark">INVESTORIQ</div>
+            <div class="tagline">Institutional Grade Property Intelligence</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px; font-weight:600; color:var(--navy);">
+              Sample Property IQ Report
+            </div>
+            <div style="font-size:11px; color:#6B7280;">
+              Riverbend Heights · South London (Westminster / Pond Mills)
+            </div>
+            <div class="watermark">Sample Report – IQ-Assisted Estimates Only</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-number">1.0 Executive Summary</div>
+        <h1>Riverbend Heights – London, Ontario</h1>
+        <p class="small">144-Unit Tier III Institutional Multifamily · South London (Westminster / Pond Mills)</p>
+      </div>
+
+      <div class="verdict-leftbar">
+        INVESTORIQ VERDICT: BUY (VALUE ADD MULTIFAMILY)
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <p class="label" style="margin-top:10px;">InvestorIQ Deal Score</p>
+          <h2 style="color:var(--gold); margin-bottom:6px;">76 / 100</h2>
+
+          <p>
+            InvestorIQ classifies Riverbend Heights as a <span class="highlight">Value Add multifamily</span> acquisition in a growing South London submarket anchored by major employment corridors, 401 access, and stable workforce housing demand. In-place income already supports positive leverage, while a focused interior and common area upgrade program is expected to lift net operating income and unlock meaningful equity over a five-year hold.
+          </p>
+          <p>
+            At the assumed purchase basis, the property is acquired at a modest discount to recent London South mid-rise trades on a price-per-door and implied in-place cap rate basis. The opportunity is to modernize dated suites, close the gap to market rents, and improve operating efficiency while preserving a resilient rent roll targeted to working households rather than a narrow luxury segment.
+          </p>
+        </div>
+
+        <div class="card no-break">
+          <p class="label">Key Metrics Snapshot (Base Case)</p>
+          <table>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+            <tr>
+              <td>Purchase Price</td>
+              <td>$27,360,000</td>
+            </tr>
+            <tr>
+              <td>Total Project Cost (Incl. CapEx)</td>
+              <td>$29,000,000</td>
+            </tr>
+            <tr>
+              <td>Equity Required (35% of Total Cost)</td>
+              <td>$10,150,000</td>
+            </tr>
+            <tr>
+              <td>Stabilized Cap Rate on Cost</td>
+              <td>5.90 percent</td>
+            </tr>
+            <tr>
+              <td>5-Year Levered IRR (Base Case)</td>
+              <td>14.5 percent</td>
+            </tr>
+            <tr>
+              <td>Equity Multiple (Base Case)</td>
+              <td>1.90 x</td>
+            </tr>
+            <tr>
+              <td>Year 1 Cash-on-Cash (Stabilized)</td>
+              <td>7.1 percent</td>
+            </tr>
+          </table>
+          <p class="small" style="margin-top:8px;">
+            <strong>Note:</strong> All return estimates are <span class="highlight">InvestorIQ Estimates</span> based on IQ-Assisted underwriting assumptions and should be independently verified by investors and their advisors.
+          </p>
+        </div>
+      </div>
+
+      <div class="summary-bullets no-break">
+        <div>
+          <p class="label">Key Upside Drivers</p>
+          <ul>
+            <li>In-place cap rate in the mid five percent range with positive leverage relative to current fixed-rate mortgage options.</li>
+            <li>Average in-place rents estimated to be <span class="highlight">8 to 12 percent below</span> achievable levels for renovated stock in comparable South London mid-rise assets.</li>
+            <li>Concrete construction, functional layouts, and on-site parking support long-term durability, liquidity, and refinanceability.</li>
+            <li>South London location benefits from proximity to 401, major employment nodes, and a stable renter base anchored by working households.</li>
+            <li>Renovation program is repeatable and scoped to deliver strong simple ROI without relying on top-decile luxury positioning.</li>
+          </ul>
+        </div>
+        <div>
+          <p class="label">Key Risks and Constraints</p>
+          <ul>
+            <li>Renovation execution risk and cost inflation across a multi-year interior and common area upgrade program.</li>
+            <li>Refinance and exit proceeds are sensitive to interest rate paths and lender appetite for mid-rise multifamily exposure.</li>
+            <li>Regulatory constraints and rent guidelines in Ontario may moderate the pace of rent growth in certain units.</li>
+            <li>Exit pricing is exposed to broader cap rate movements in Canadian multifamily markets and London specifically.</li>
+            <li>Management intensity is higher than Core assets given value-add scope, unit turnover, and project oversight requirements.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        InvestorIQ Rating: BUY · Value Add Multifamily · Sample Report for Demonstration Only
+      </div>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 2.0 Unit-Level Value Add Analysis -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">2.0 Unit-Level Value Add Analysis</div>
+        <h2>Rent Positioning and Renovation Thesis</h2>
+      </div>
+
+      <p class="section-intro">
+        Riverbend Heights consists of 144 units with a mix of one- and two-bedroom suites. Interiors are clean and functional but reflect an earlier renovation vintage, with dated kitchens, baths, and finishes relative to renovated South London comparables. InvestorIQ classifies this as a <span class="highlight">Value Add</span> opportunity with a clear path to rent repositioning through targeted upgrades and disciplined turnover management.
+      </p>
+
+      <div class="grid-2">
+        <div class="no-break">
+          <p class="subsection-title">Illustrative Unit Mix and Rent Lift</p>
+          <table>
+            <tr>
+              <th>Unit Type</th>
+              <th>Count</th>
+              <th>Average Sq Ft</th>
+              <th>Current Avg Rent</th>
+              <th>Target Market Rent</th>
+              <th>Planned Lift</th>
+            </tr>
+            <tr>
+              <td>1 Bedroom</td>
+              <td>80</td>
+              <td>620</td>
+              <td>$1,650</td>
+              <td>$1,825</td>
+              <td>$175</td>
+            </tr>
+            <tr>
+              <td>2 Bedroom</td>
+              <td>64</td>
+              <td>820</td>
+              <td>$1,950</td>
+              <td>$2,150</td>
+              <td>$200</td>
+            </tr>
+          </table>
+          <p class="small">
+            <strong>InvestorIQ Estimate:</strong> Market target rents reflect renovated mid-rise comparables in South London within a 3–4 km radius, adjusted for building age, suite size, and on-site parking.
+          </p>
+        </div>
+
+        <div class="no-break">
+          <p class="subsection-title">Renovation ROI Overview</p>
+          <table>
+            <tr>
+              <th>Scope</th>
+              <th>Approximate Cost per Unit</th>
+              <th>Indicative Rent Lift</th>
+              <th>Simple Payback</th>
+            </tr>
+            <tr>
+              <td>Kitchen &amp; Appliance Refresh</td>
+              <td>$9,000</td>
+              <td>$100 per month</td>
+              <td>7.5 years</td>
+            </tr>
+            <tr>
+              <td>Bathroom Upgrades</td>
+              <td>$3,500</td>
+              <td>$35 per month</td>
+              <td>8.3 years</td>
+            </tr>
+            <tr>
+              <td>Flooring, Paint &amp; Lighting</td>
+              <td>$4,000</td>
+              <td>$45 per month</td>
+              <td>7.4 years</td>
+            </tr>
+          </table>
+
+          <div class="chart-block no-break">
+            <img
+              src="https://investoriq.tech/charts/institutional/renovation_roi.png"
+              alt="Renovation ROI and Rent Lift Chart"
+            />
+          </div>
+
+          <p class="small">
+            On a consolidated basis, the interior program is expected to average approximately $16,500 per fully upgraded unit, targeting a total rent uplift of $175 to $200 per month. This equates to a simple pre-leverage cash-on-cost return in the low-to-mid teens, before considering refinancing or exit value creation.
+          </p>
+        </div>
+      </div>
+
+      <p class="subsection-title">Portfolio Strategy Context</p>
+      <p>
+        Within a diversified portfolio, Riverbend Heights fits as a <span class="highlight">Value Add</span> allocation alongside Core and Core Plus assets. It offers higher targeted total return in exchange for moderate renovation and management execution risk. For sponsors with strong local operating partners in London, the unit-level value-add thesis is clear, repeatable, and aligned with resilient demand from working households seeking clean, upgraded rental housing at attainable price points.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 3.0 Scenario Analysis & Five-Year Outlook -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">3.0 Scenario Analysis &amp; Five-Year Outlook</div>
+        <h2>Cash Flow Projections and Return Sensitivities</h2>
+      </div>
+
+      <p class="section-intro">
+        InvestorIQ models five scenarios to understand how returns evolve under varying rent growth, vacancy, expense inflation, and exit pricing assumptions. The <span class="highlight">Base Case</span> assumes timely completion of the renovation program within two years, stabilization at target rents, and exit at a cap rate consistent with recent London South mid-rise trades. Conservative and Worst Case scenarios stress rent growth, vacancy, and exit cap rates, while Optimistic and Best Case scenarios assume modestly stronger fundamentals and pricing support.
+      </p>
+
+      <div class="chart-block no-break">
+        <img
+          src="https://investoriq.tech/charts/institutional/cashflow_5yr.png"
+          alt="Five Year Cash Flow Trendline by Scenario"
+        />
+      </div>
+
+      <div class="grid-2-balanced">
+        <div class="no-break">
+          <p class="subsection-title">Scenario Assumptions</p>
+          <table>
+            <tr>
+              <th>Scenario</th>
+              <th>Rent Growth</th>
+              <th>Economic Vacancy</th>
+              <th>Expense Growth</th>
+              <th>Exit Cap Rate</th>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Worst</span></td>
+              <td>1.0 percent</td>
+              <td>7.0 percent</td>
+              <td>3.5 percent</td>
+              <td>6.10 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Conservative</span></td>
+              <td>1.75 percent</td>
+              <td>6.0 percent</td>
+              <td>3.0 percent</td>
+              <td>5.90 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Base</span></td>
+              <td>2.25 percent</td>
+              <td>5.0 percent</td>
+              <td>2.75 percent</td>
+              <td>5.70 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Optimistic</span></td>
+              <td>2.75 percent</td>
+              <td>4.5 percent</td>
+              <td>2.5 percent</td>
+              <td>5.50 percent</td>
+            </tr>
+            <tr>
+              <td><span class="scenario-label">Best</span></td>
+              <td>3.25 percent</td>
+              <td>4.0 percent</td>
+              <td>2.25 percent</td>
+              <td>5.35 percent</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="no-break">
+          <p class="subsection-title">Five-Year Return Summary</p>
+          <table>
+            <tr>
+              <th>Scenario</th>
+              <th>Levered IRR</th>
+              <th>Equity Multiple</th>
+              <th>Illustrative Sale Price</th>
+            </tr>
+            <tr>
+              <td>Worst</td>
+              <td>9.1 percent</td>
+              <td>1.40 x</td>
+              <td>$29.8 million</td>
+            </tr>
+            <tr>
+              <td>Conservative</td>
+              <td>12.2 percent</td>
+              <td>1.65 x</td>
+              <td>$31.0 million</td>
+            </tr>
+            <tr>
+              <td>Base</td>
+              <td>14.5 percent</td>
+              <td>1.90 x</td>
+              <td>$32.2 million</td>
+            </tr>
+            <tr>
+              <td>Optimistic</td>
+              <td>16.7 percent</td>
+              <td>2.05 x</td>
+              <td>$33.2 million</td>
+            </tr>
+            <tr>
+              <td>Best</td>
+              <td>18.8 percent</td>
+              <td>2.20 x</td>
+              <td>$34.3 million</td>
+            </tr>
+          </table>
+          <p class="small">
+            <strong>InvestorIQ Estimate:</strong> Sale values are derived from stabilized Year 5 net operating income under each scenario and the scenario-specific exit cap rate.
+          </p>
+        </div>
+      </div>
+
+      <div class="chart-block no-break">
+        <img
+          src="https://investoriq.tech/charts/institutional/irr_scenario.png"
+          alt="Five-Year IRR Distribution by Scenario"
+        />
+      </div>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 4.0 Neighborhood Fundamentals -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">4.0 Neighborhood Fundamentals</div>
+        <h2>South London (Westminster / Pond Mills) Location Review</h2>
+      </div>
+
+      <p class="section-intro">
+        Riverbend Heights is located in South London in the Westminster / Pond Mills area, benefiting from proximity to major transportation routes, employment corridors, and daily amenities. The submarket has seen steady population growth, a deep renter pool anchored by working households, and increasing demand for renovated, professionally managed rental housing.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Location Factor Summary</p>
+        <table>
+          <tr>
+            <th>Factor</th>
+            <th>InvestorIQ Assessment</th>
+            <th>Impact on Subject</th>
+          </tr>
+          <tr>
+            <td>Demographics</td>
+            <td>Stable and gradually growing population with a mix of working professionals, service workers, and long-term residents.</td>
+            <td class="risk-positive">Positive: Supports consistent rental demand across cycles.</td>
+          </tr>
+          <tr>
+            <td>Employment Access</td>
+            <td>Good access to Wellington Road, Highbury Avenue, and the 401, linking to industrial, logistics, healthcare, and service employment nodes.</td>
+            <td class="risk-positive">Positive: Attractive to commuting households seeking convenient access to jobs.</td>
+          </tr>
+          <tr>
+            <td>Amenities</td>
+            <td>Proximity to grocery, pharmacy, quick-service food, and community services within a short drive or bus ride.</td>
+            <td>Neutral to Positive: Supports day-to-day livability and tenant retention.</td>
+          </tr>
+          <tr>
+            <td>Schools &amp; Parks</td>
+            <td>Reasonable access to local schools and green space, though the asset primarily targets working adults rather than family-centric tenancy.</td>
+            <td>Neutral: Not the primary demand driver but supports diversified tenant mix.</td>
+          </tr>
+          <tr>
+            <td>Crime &amp; Perception</td>
+            <td>Some pockets of elevated reported crime in South London relative to prime North London neighbourhoods, balanced by ongoing reinvestment and community stabilization.</td>
+            <td>Neutral to Slightly Negative: Reinforces the importance of professional management, lighting, and access control.</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="small" style="margin-top:10px;">
+        <strong>InvestorIQ Location Score:</strong> 8 out of 10, reflecting strong employment access, durable renter demand, and balanced fundamentals appropriate for a Value Add strategy.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 5.0 Risk Scoring & Sensitivities -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">5.0 Risk Scoring &amp; Sensitivities</div>
+        <h2>Risk Matrix and Mitigation Framework</h2>
+      </div>
+
+      <p class="section-intro">
+        InvestorIQ assigns an Overall Risk Score of <span class="highlight">8.0 out of 10</span>, where lower values indicate lower relative risk. Riverbend Heights is not a Core asset, but represents a measured Value Add profile with clearly identified renovation, market, and financial risks that can be actively managed by an experienced sponsor.
+      </p>
+
+      <div class="chart-block chart-large no-break">
+        <img
+          src="https://investoriq.tech/charts/institutional/risk_radar.png"
+          alt="Risk Factor Radar Chart"
+        />
+      </div>
+
+      <div class="no-break">
+        <p class="subsection-title">Detailed Risk Matrix</p>
+        <table>
+          <tr>
+            <th>Risk Category</th>
+            <th>Specific Risk</th>
+            <th>Impact</th>
+            <th>Mitigation Strategy</th>
+          </tr>
+          <tr>
+            <td>Property Specific</td>
+            <td>Renovation cost overruns or prolonged unit downtime during upgrades.</td>
+            <td class="risk-negative">High</td>
+            <td>Use phased renovations, locked contractor pricing where possible, and maintain a contingency reserve; prioritize natural turnover units first.</td>
+          </tr>
+          <tr>
+            <td>Market</td>
+            <td>Slower rent growth or weaker tenant demand in South London relative to assumptions.</td>
+            <td>Medium</td>
+            <td>Maintain competitive positioning on service and maintenance; underwrite conservative rent growth and monitor competing supply.</td>
+          </tr>
+          <tr>
+            <td>Financial</td>
+            <td>Refinance proceeds and exit pricing sensitive to interest rate and cap rate movements.</td>
+            <td class="risk-negative">High</td>
+            <td>Structure financing with fixed or hedged rates where appropriate; assume modestly wider exit cap rates in downside scenarios.</td>
+          </tr>
+          <tr>
+            <td>Operational</td>
+            <td>Higher management intensity and turnover during repositioning period.</td>
+            <td>Medium</td>
+            <td>Engage experienced property management with Value Add track record; align incentives to cash flow stability and renovation milestones.</td>
+          </tr>
+          <tr>
+            <td>Regulatory</td>
+            <td>Constraints on rent increases and evolving rental regulatory environment in Ontario.</td>
+            <td>Medium</td>
+            <td>Build conservative escalation assumptions; monitor policy changes; avoid business plans reliant on aggressive rent steps beyond guideline.</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="subsection-title" style="margin-top:16px;">Risk Score Construction</p>
+      <p class="small">
+        Starting from a neutral baseline of 5.0, High impact risks add approximately 1.0 point each, Medium risks add 0.5 points, Low risks add 0.2 points, and strong mitigations reduce the score by 0.3 to 0.5 points. Based on the mix of identified risks and mitigations, InvestorIQ arrives at an Overall Risk Score of 8.0, appropriate for a measured Value Add multifamily strategy in a growing secondary market.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 6.0 Renovation Program & ROI -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">6.0 Renovation Program &amp; ROI</div>
+        <h2>Capital Plan and Value Creation</h2>
+      </div>
+
+      <p class="section-intro">
+        The renovation program for Riverbend Heights focuses on upgrading interior suites, refreshing common areas, and addressing targeted building systems to support long-term operational stability. InvestorIQ assumes a total renovation budget of approximately $2.35 million, or roughly $16,300 per unit inclusive of building systems and shared areas.
+      </p>
+
+      <div class="no-break">
+        <p class="subsection-title">Renovation Budget Breakdown</p>
+        <table>
+          <tr>
+            <th>Category</th>
+            <th>Estimated Cost</th>
+            <th>Share of Budget</th>
+            <th>Primary Objective</th>
+          </tr>
+          <tr>
+            <td>Interior Suites</td>
+            <td>$1,900,000</td>
+            <td>81 percent</td>
+            <td>Upgrade kitchens, baths, flooring, and lighting to support rent uplift and tenant retention.</td>
+          </tr>
+          <tr>
+            <td>Common Areas</td>
+            <td>$270,000</td>
+            <td>11 percent</td>
+            <td>Refresh corridors, lobby, and entry experience to align with upgraded suites and market expectations.</td>
+          </tr>
+          <tr>
+            <td>Building Systems</td>
+            <td>$180,000</td>
+            <td>8 percent</td>
+            <td>Address selective mechanical, envelope, and life-safety items to reduce unplanned capital outlays.</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="chart-block no-break">
+        <img
+          src="https://investoriq.tech/charts/institutional/noi_waterfall.png"
+          alt="NOI Waterfall – Impact of Renovation Program"
+        />
+      </div>
+
+      <p>
+        On a consolidated basis, the renovation plan is targeted to deliver a meaningful uplift in stabilized net operating income while maintaining an attainable rent profile for the South London renter base. By avoiding an aggressive luxury repositioning strategy, the sponsor seeks to balance return enhancement with resilience in softer macro scenarios.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 7.0 Debt Structure & Financing -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">7.0 Debt Structure &amp; Financing</div>
+        <h2>Leverage, DSCR, and Refinance Considerations</h2>
+      </div>
+
+      <p class="section-intro">
+        InvestorIQ assumes an acquisition financing structure consistent with institutional-quality mid-rise multifamily in Ontario, with conservative leverage and DSCR thresholds aligned to lender requirements. While final terms will depend on lender selection and prevailing market conditions at closing, the structure is intended to prioritize durability of cash flows and refinance flexibility.
+      </p>
+
+      <div class="grid-2-balanced">
+        <div class="no-break">
+          <p class="subsection-title">Illustrative Capital Structure (Acquisition)</p>
+          <table>
+            <tr>
+              <th>Component</th>
+              <th>Assumed Terms</th>
+            </tr>
+            <tr>
+              <td>Senior Loan-to-Cost</td>
+              <td>65 percent of total project cost</td>
+            </tr>
+            <tr>
+              <td>Interest Rate</td>
+              <td>5.25 percent fixed (illustrative)</td>
+            </tr>
+            <tr>
+              <td>Amortization</td>
+              <td>30 years</td>
+            </tr>
+            <tr>
+              <td>Going-In DSCR (Year 1)</td>
+              <td>Approximately 1.30x (InvestorIQ Estimate)</td>
+            </tr>
+            <tr>
+              <td>Refinance Year</td>
+              <td>Target Year 3 post-stabilization</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="no-break">
+          <p class="subsection-title">DSCR and Break-Even Sensitivity</p>
+          <div class="chart-block">
+            <img
+              src="https://investoriq.tech/charts/institutional/break_even_occupancy.png"
+              alt="Break-Even Occupancy Analysis"
+            />
+          </div>
+          <p class="small">
+            <strong>InvestorIQ Estimate:</strong> Under the Base Case, the asset remains comfortably above break-even occupancy and DSCR thresholds. In downside scenarios, DSCR approaches lender minimums but does not fall materially below break-even, reinforcing the importance of conservative leverage and disciplined operating management.
+          </p>
+        </div>
+      </div>
+
+      <p class="subsection-title">Refinance Considerations</p>
+      <p>
+        InvestorIQ assumes a potential refinance in Year 3 following renovation completion and stabilization. Refinance proceeds are sensitive to cap rate and interest rate environments at that time. The Base Case assumes modest value creation sufficient to return a portion of investor equity while maintaining prudent leverage. More aggressive BRRRR-style execution is possible but would introduce higher financial risk and is not assumed in the Base Case.
+      </p>
+      <p class="subsection-title">Refinance Sensitivity Matrix (Year 3)</p>
+      <div class="no-break">
+        <table>
+          <tr>
+            <th>Exit Cap Rate →<br />Interest Rate ↓</th>
+            <th>5.50 percent</th>
+            <th>5.70 percent</th>
+            <th>5.90 percent</th>
+            <th>6.10 percent</th>
+          </tr>
+          <tr>
+            <td><strong>4.75 percent</strong></td>
+            <td>Approx. 72 percent LTV</td>
+            <td>Approx. 70 percent LTV</td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>5.25 percent</strong></td>
+            <td>Approx. 70 percent LTV</td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>5.75 percent</strong></td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+            <td>Approx. 62 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>6.25 percent</strong></td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+            <td>Approx. 62 percent LTV</td>
+            <td>Approx. 60 percent LTV</td>
+          </tr>
+        </table>
+        <p class="small" style="margin-top:8px;">
+          <strong>InvestorIQ Estimate:</strong> This illustrative matrix shows achievable loan-to-value ratios at
+          a potential Year 3 refinance under varying interest rate and exit cap rate scenarios. The Base Case assumes
+          a 5.25 percent interest rate and 5.70 percent exit cap rate, yielding approximately mid-60s LTV and providing
+          capacity for a measured but not overly aggressive cash-out refinance.
+        </p>
+      </div>
+
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 8.0 Deal Scorecard & Radar -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">8.0 Deal Scorecard &amp; Radar</div>
+        <h2>InvestorIQ Deal Score Components</h2>
+      </div>
+
+      <p class="section-intro">
+        The InvestorIQ Deal Score of <span class="highlight">76 out of 100</span> reflects a balanced risk-adjusted return profile. The score blends location strength, cash flow durability, value-add potential, market outlook, and risk profile into a single summary indicator designed to complement — not replace — detailed underwriting.
+      </p>
+
+      <div class="chart-block no-break">
+        <img
+          src="https://investoriq.tech/charts/institutional/deal_score_radar.png"
+          alt="Deal Score Radar Chart"
+        />
+      </div>
+
+      <div class="no-break">
+        <p class="subsection-title">Factor-Level Scores</p>
+        <table>
+          <tr>
+            <th>Factor</th>
+            <th>Score (1–10)</th>
+            <th>Weight</th>
+            <th>Weighted Contribution</th>
+          </tr>
+          <tr>
+            <td>Location</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Cash Flow Strength</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>DSCR / Coverage</td>
+            <td>7</td>
+            <td>10 percent</td>
+            <td>7.0</td>
+          </tr>
+          <tr>
+            <td>Liquidity &amp; Exit</td>
+            <td>7</td>
+            <td>10 percent</td>
+            <td>7.0</td>
+          </tr>
+          <tr>
+            <td>Market Outlook</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Value Add Potential</td>
+            <td>8</td>
+            <td>15 percent</td>
+            <td>12.0</td>
+          </tr>
+          <tr>
+            <td>Risk Profile</td>
+            <td>8</td>
+            <td>10 percent</td>
+            <td>8.0</td>
+          </tr>
+          <tr>
+            <td>Management Intensity</td>
+            <td>6</td>
+            <td>10 percent</td>
+            <td>6.0</td>
+          </tr>
+          <tr>
+            <th colspan="3">Total Deal Score</th>
+            <th>76.0</th>
+          </tr>
+        </table>
+      </div>
+
+      <div class="chart-block no-break" style="margin-top:18px;">
+        <img
+          src="https://investoriq.tech/charts/institutional/deal_score_bar.png"
+          alt="Deal Score Factor Breakdown Bar Chart"
+        />
+      </div>
+
+      <p class="subsection-title" style="margin-top:16px;">Interpretation</p>
+      <p>
+        Location quality, cash flow strength, and value-add potential all score in the upper range and carry relatively high weights, supporting the Buy recommendation. Risk profile and management intensity scores reflect the added complexity of executing a multi-year renovation program in a working-class submarket, but remain within the range considered appropriate for institutional Value Add capital.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 9.0 Advanced Financial Modeling -->
+<section class="section page-break">
+  <div class="section-header">
+    <div class="section-number">9.0 Advanced Financial Modeling</div>
+    <h2>Expense Profile, DCF, and Comparable Positioning</h2>
+  </div>
+
+  <p class="section-intro">
+    InvestorIQ uses a standardized discounted cash flow (DCF) framework to evaluate Riverbend Heights under the Value Add Base Case. The model incorporates revenue, operating expense, capital expenditure, and financing assumptions consistent with London multifamily benchmarks and sponsor business plans, then discounts equity cash flows at a rate aligned with Value Add risk expectations.
+  </p>
+
+  <div class="chart-block no-break">
+    <img
+      src="https://investoriq.tech/charts/institutional/expense_ratio.png"
+      alt="Operating Expense Ratio Chart"
+    />
+  </div>
+
+  <p>
+    The projected stabilized operating expense ratio is broadly consistent with comparable mid-rise assets in the London market. Incremental maintenance and management intensity during the renovation phase is offset over time by efficiencies and more predictable capital planning once the building reaches a new steady state.
+  </p>
+
+  <p class="subsection-title" style="margin-top:14px;">Comparable Transaction Context</p>
+  <div class="no-break">
+    <table>
+      <tr>
+        <th>Comparable</th>
+        <th>Submarket</th>
+        <th>Approx. Distance</th>
+        <th>Units</th>
+        <th>Price per Door</th>
+        <th>Cap Rate (Stabilized)</th>
+      </tr>
+      <tr>
+        <td>Southridge Flats</td>
+        <td>South London</td>
+        <td>2.1 km</td>
+        <td>120</td>
+        <td>$235,000</td>
+        <td>5.10 percent</td>
+      </tr>
+      <tr>
+        <td>Westminster Place</td>
+        <td>Westminster</td>
+        <td>1.7 km</td>
+        <td>96</td>
+        <td>$242,000</td>
+        <td>4.95 percent</td>
+      </tr>
+      <tr>
+        <td>Pond Mills Terrace</td>
+        <td>Pond Mills</td>
+        <td>3.0 km</td>
+        <td>110</td>
+        <td>$228,000</td>
+        <td>5.15 percent</td>
+      </tr>
+    </table>
+    <p class="small" style="margin-top:8px;">
+      <strong>InvestorIQ Estimate:</strong> Subject pricing in the mid-$220,000s per door sits modestly below the simple average of these illustrative comparables, while in-place yields are slightly higher due to current rent and expense structure. This provides a margin of safety if rent uplift or exit cap rates are less favourable than modeled.
+    </p>
+  </div>
+
+  <p class="subsection-title" style="margin-top:12px;">Relative Positioning</p>
+  <p>
+    Subject acquisition at approximately <span class="highlight">$190,000 per door</span>
+    (calculated as $27.36 million divided by 144 units) represents an estimated
+    <span class="highlight">12 to 15 percent discount</span> to these stabilized comparables.
+    This discount reflects the need for capital investment and the current revenue profile,
+    providing meaningful downside protection and reinforcing the value-add thesis even if
+    rent growth or exit pricing prove less favourable than Base Case assumptions.
+  </p>
+
+  <!-- ⭐ REPLACEMENT CHART (NEW ELITE PNG) -->
+  <div class="chart-block chart-medium no-break" style="margin-top:22px;">
+    <img
+      src="/charts/institutional/equity_return_components.png"
+      alt="Equity Return Components"
+    />
+  </div>
+
+  <p>
+    Discounted at a 12 percent equity hurdle rate, the Base Case DCF produces a modestly positive net present value, signalling that the assumed acquisition pricing is broadly aligned with required return thresholds. Conservative and Worst Case scenarios approach break-even, reinforcing the importance of disciplined pricing, cost control, and contingency planning.
+  </p>
+
+  <div class="watermark" style="text-align:center; margin-top:16px;">
+    InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+  </div>
+
+</section>
+
+    <!-- 10.0 Final Recommendations -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">10.0 Final Recommendations</div>
+        <h2>Action Plan, Negotiation Strategy, and Deal Breakers</h2>
+      </div>
+
+      <p class="subsection-title">Immediate Action Items</p>
+      <ul>
+        <li>Engage a reputable London-based multifamily property management firm with proven Value Add execution experience in South London.</li>
+        <li>Obtain contractor quotes for interior suites, common areas, and building systems to validate the renovation budget and timeline.</li>
+        <li>Confirm lender appetite, indicative terms, and DSCR tests for both acquisition and potential Year 3 refinance scenarios.</li>
+        <li>Complete detailed unit-by-unit inspections to confirm physical condition, identify latent defects, and fine-tune the renovation sequence.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Negotiation Strategy</p>
+      <ul>
+        <li>Use the modest discount to recent London South mid-rise trades and the required renovation capital to justify measured price negotiation.</li>
+        <li>Prioritize flexibility on closing timing to align with contractor availability and property management onboarding rather than a purely accelerated close.</li>
+        <li>Seek seller cooperation on pre-closing access for contractor walkthroughs and limited non-invasive scoping to reduce execution uncertainty.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Due Diligence Focus</p>
+      <ul>
+        <li>Review full historical financials, including multi-year operating statements and detailed rent rolls.</li>
+        <li>Obtain and review building condition assessments, environmental reports where applicable, and any existing engineering studies.</li>
+        <li>Verify compliance with local building, fire, and residential tenancy regulations, including any outstanding orders or by-law issues.</li>
+        <li>Confirm actual unit sizes, parking counts, utility metering, and amenity packages relative to marketing materials and underwriting assumptions.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:12px;">Red Flags and Potential Deal Breakers</p>
+      <ul>
+        <li>Discovery of material structural, environmental, or building system deficiencies that substantially increase long-term capital needs beyond current assumptions.</li>
+        <li>Evidence of systemic collection issues, destabilized tenancy, or tenant profile concerns that materially elevate operational risk.</li>
+        <li>Significant tightening of lender standards or projected DSCR shortfalls that reduce equity returns below investor hurdle rates.</li>
+        <li>Regulatory or zoning constraints that restrict planned renovation scope or limit the practical ability to reposition rents toward market levels.</li>
+      </ul>
+
+      <p class="subsection-title" style="margin-top:14px;">The Bottom Line</p>
+      <p>
+        On balance, InvestorIQ views Riverbend Heights as an attractive Value Add multifamily investment in a growing South London submarket, suitable for investors comfortable with moderate renovation and management execution risk in pursuit of mid-teens levered returns. The opportunity is not risk-free, but is acquired at a sensible basis with a clear, repeatable plan to create value through disciplined capital deployment and operating execution.
+      </p>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+    <!-- 11.0 Methodology & Data Transparency -->
+    <section class="section page-break">
+      <div class="section-header">
+        <div class="section-number">11.0 Methodology &amp; Data Transparency</div>
+        <h2>InvestorIQ Estimates, Data Sources, and Limitations</h2>
+      </div>
+
+      <p class="section-intro">
+        This Sample Property IQ Report combines user-style property information with <span class="highlight">InvestorIQ Estimates</span> generated by the InvestorIQ analysis framework. The objective is to provide an institutional-quality underwriting lens while remaining transparent about data sources, modeled assumptions, and limitations. All figures in this sample are illustrative and for demonstration only.
+      </p>
+
+      <h3>11.1 Verified Inputs (In a Live Engagement)</h3>
+      <p>
+        In a live engagement, the following inputs are treated as verified and expected to be supported by source documents provided by the client and third parties:
+      </p>
+      <ul>
+        <li>In-place rent roll, unit mix, and current lease terms.</li>
+        <li>Historical operating statements (T12 and multi-year history where available).</li>
+        <li>Purchase price, closing costs, capital structure, and fee arrangements.</li>
+        <li>Known capital expenditure items and property condition information.</li>
+      </ul>
+
+      <h3>11.2 InvestorIQ Estimates (Modeled Assumptions)</h3>
+      <p>
+        The following inputs are modeled as <strong>InvestorIQ Estimates</strong> using internal underwriting frameworks, scenario analysis, and publicly observable patterns. These estimates should always be independently validated by investors and their professional advisors:
+      </p>
+      <ul>
+        <li>Forward rent growth, expense growth, and inflation assumptions.</li>
+        <li>Submarket vacancy expectations and lease-up timing.</li>
+        <li>Market-driven exit cap rate ranges and refinance terms.</li>
+        <li>Stabilized occupancy levels, bad debt allowances, and reserve policies.</li>
+      </ul>
+
+      <h3>11.3 Public Data &amp; Future Integrations (Planned – Q1 2026+)</h3>
+      <p>
+        Over time, InvestorIQ intends to further enhance its analysis with additional public and third-party data integrations, including but not limited to:
+      </p>
+      <ul>
+        <li>Statistics Canada and census-based demographic and income trends.</li>
+        <li>CMHC rental market and multifamily indicators (for Canadian assets).</li>
+        <li>Municipal open-data portals for zoning, permits, and planning activity.</li>
+        <li>Crime, school quality, and livability indices from third-party API providers.</li>
+      </ul>
+
+      <h3>11.4 Important Limitations and Legal Disclaimer</h3>
+      <p class="disclaimer">
+        This Sample Property IQ Report has been prepared by InvestorIQ for illustrative and educational purposes only, based on hypothetical assumptions and example data. It does not relate to an actual transaction and should not be relied upon as the basis for any investment decision. In a live engagement, all financial projections, valuations, and conclusions would be derived from client-supplied materials, third-party data sources, and additional assumptions that may differ from those used in this sample.
+      </p>
+      <p class="disclaimer">
+        InvestorIQ is not registered as a dealer, adviser, or portfolio manager in any jurisdiction and does not provide personalized investment advice, recommendations, or solicitations to buy or sell any security, property, or financial product. The analysis contained in this report is opinion-based, forward-looking, and inherently uncertain. Actual results may differ materially from the projections and scenarios presented due to changes in market conditions, interest rates, operating performance, regulatory environments, and other factors beyond the control of any party.
+      </p>
+      <p class="disclaimer">
+        Investors are solely responsible for conducting their own due diligence and for obtaining independent legal, tax, financial, and technical advice before entering into any transaction. By reviewing this report, you acknowledge that InvestorIQ has no obligation to update or revise the analysis or conclusions contained herein, and that InvestorIQ shall not be liable for any losses or damages arising from the use of, or reliance on, this sample report.
+      </p>
+
+      <div class="report-footer">
+        © InvestorIQ Technologies Inc. · Institutional-Grade Property Intelligence · Sample Output Only
+      </div>
+    <div class="watermark" style="text-align:center; margin-top:16px;">
+  InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
+</div>
+
+    </section>
+
+  </div>
+</body>
+</html>

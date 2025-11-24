@@ -1,0 +1,7 @@
+
+/* PRINT MODE (institutional, dense) */
+body { font-family: Inter, sans-serif; margin:0; padding:0; }
+.report-container { width:100%; padding:24px; }
+h1, h2, h3, .section-number, .subsection-title { page-break-after:avoid; }
+table, img, p, div, ul, ol { page-break-inside:avoid; }
+.chart-waterfall img { max-width:65% !important; margin:12px auto !important; display:block; }
