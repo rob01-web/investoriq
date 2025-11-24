@@ -1,18 +1,28 @@
-// api/generate-sample-pdf.js (Vercel + DocRaptor + Public HTML Fetch)
-// InvestorIQ – Sample Report Generator (DocRaptor TEST MODE)
+// api/generate-sample-pdf.js
+// InvestorIQ – Sample Report Generator (DocRaptor TEST MODE – single source from /api/html)
 
+// ESM imports
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Resolve __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 🔒 Hard lock: ALWAYS TEST MODE unless manually changed
 const TEST_MODE = true;
 
-const PUBLIC_HTML_URL =
-  "https://investoriq.tech/reports/sample-report.html";
+const DOCRAPTOR_API_KEY = process.env.DOCRAPTOR_API_KEY;
 
 export default async function handler(req, res) {
+  // Only allow POST
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
-  const DOCRAPTOR_API_KEY = process.env.DOCRAPTOR_API_KEY;
+  // Ensure API key exists
   if (!DOCRAPTOR_API_KEY) {
     return res.status(500).json({
       error:
@@ -21,23 +31,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🔥 Step 1 — Load HTML from public URL
-    const htmlResponse = await fetch(PUBLIC_HTML_URL);
+    // 🔥 Step 1 — Load HTML from local template inside the function bundle
+    const htmlPath = path.join(__dirname, "html", "sample-report.html");
 
-    if (!htmlResponse.ok) {
-      const error = await htmlResponse.text();
-      console.error("Failed to fetch public HTML:", error);
+    if (!fs.existsSync(htmlPath)) {
+      console.error("Missing HTML template:", htmlPath);
       return res.status(500).json({
-        error: "Failed to load HTML from public URL",
-        details: error,
+        error: "sample-report.html not found",
+        details: htmlPath,
       });
     }
 
-    const html = await htmlResponse.text();
+    const html = fs.readFileSync(htmlPath, "utf8");
 
     // 🔥 Step 2 — Prepare DocRaptor payload
     const payload = {
-      test: TEST_MODE,
+      test: TEST_MODE, // ✅ still in TEST MODE – no real credits used
       document_type: "pdf",
       name: "investoriq-sample-report.pdf",
       document_content: html,
@@ -48,7 +57,7 @@ export default async function handler(req, res) {
     const authHeader =
       "Basic " + Buffer.from(`${DOCRAPTOR_API_KEY}:`).toString("base64");
 
-    // 🔥 Step 4 — DocRaptor request
+    // 🔥 Step 4 — Send to DocRaptor
     const response = await fetch("https://docraptor.com/docs", {
       method: "POST",
       headers: {
@@ -67,7 +76,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🔥 Step 5 — Return final PDF
+    // 🔥 Step 5 — Return PDF buffer
     const buffer = Buffer.from(await response.arrayBuffer());
 
     res.setHeader("Content-Type", "application/pdf");
