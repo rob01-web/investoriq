@@ -380,7 +380,42 @@
       color: #9CA3AF;
       text-align: center;
     }
-  </style>
+  
+    /* Pagination tuning for DocRaptor */
+    h2, h3, .subsection-title, .section-number {
+      page-break-after: avoid;
+    }
+
+    table, ul, ol, .chart-block, .summary-bullets {
+      page-break-inside: avoid;
+    }
+
+    .section-intro {
+      page-break-inside: avoid;
+    }
+</style>
+<link rel="stylesheet" media="screen" href="screen.css">
+<link rel="stylesheet" media="print" href="print.css">
+
+<style>
+/* Force perfect browser alignment */
+.chart-block, .chart-block img, .chart-waterfall, .chart-waterfall img {
+  display:block !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  text-align:center !important;
+}
+.chart-block img, .chart-waterfall img {
+  max-width:65% !important;
+  height:auto !important;
+}
+.section, .report-container {
+  max-width:900px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+</style>
+
 </head>
 <body>
   <div class="report-container">
@@ -444,6 +479,10 @@
               <td>$29,000,000</td>
             </tr>
             <tr>
+              <td>Equity Required (35% of Total Cost)</td>
+              <td>$10,150,000</td>
+            </tr>
+            <tr>
               <td>Stabilized Cap Rate on Cost</td>
               <td>5.90 percent</td>
             </tr>
@@ -466,7 +505,7 @@
         </div>
       </div>
 
-      <div class="summary-bullets">
+      <div class="summary-bullets no-break">
         <div>
           <p class="label">Key Upside Drivers</p>
           <ul>
@@ -714,17 +753,6 @@
           alt="Five-Year IRR Distribution by Scenario"
         />
       </div>
-
-      <p class="subsection-title">Break-Even Analysis</p>
-      <div class="chart-block no-break">
-        <img
-          src="https://investoriq.tech/charts/institutional/breakeven_dscr.png"
-          alt="Break-Even DSCR and Occupancy"
-        />
-      </div>
-      <p>
-        Under current financing assumptions, Year 1 debt service coverage ratio (DSCR) remains above lender minimums with a reasonable cushion in the Base Case and remains at or near break-even even in stressed vacancy and rent scenarios. This supports the view that downside risk is primarily a function of exit pricing and renovation execution rather than immediate debt service strain.
-      </p>
     <div class="watermark" style="text-align:center; margin-top:16px;">
   InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
 </div>
@@ -798,7 +826,7 @@
         InvestorIQ assigns an Overall Risk Score of <span class="highlight">8.0 out of 10</span>, where lower values indicate lower relative risk. Riverbend Heights is not a Core asset, but represents a measured Value Add profile with clearly identified renovation, market, and financial risks that can be actively managed by an experienced sponsor.
       </p>
 
-      <div class="chart-block no-break">
+      <div class="chart-block chart-large no-break">
         <img
           src="https://investoriq.tech/charts/institutional/risk_radar.png"
           alt="Risk Factor Radar Chart"
@@ -974,6 +1002,53 @@
       <p>
         InvestorIQ assumes a potential refinance in Year 3 following renovation completion and stabilization. Refinance proceeds are sensitive to cap rate and interest rate environments at that time. The Base Case assumes modest value creation sufficient to return a portion of investor equity while maintaining prudent leverage. More aggressive BRRRR-style execution is possible but would introduce higher financial risk and is not assumed in the Base Case.
       </p>
+      <p class="subsection-title">Refinance Sensitivity Matrix (Year 3)</p>
+      <div class="no-break">
+        <table>
+          <tr>
+            <th>Exit Cap Rate →<br />Interest Rate ↓</th>
+            <th>5.50 percent</th>
+            <th>5.70 percent</th>
+            <th>5.90 percent</th>
+            <th>6.10 percent</th>
+          </tr>
+          <tr>
+            <td><strong>4.75 percent</strong></td>
+            <td>Approx. 72 percent LTV</td>
+            <td>Approx. 70 percent LTV</td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>5.25 percent</strong></td>
+            <td>Approx. 70 percent LTV</td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>5.75 percent</strong></td>
+            <td>Approx. 68 percent LTV</td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+            <td>Approx. 62 percent LTV</td>
+          </tr>
+          <tr>
+            <td><strong>6.25 percent</strong></td>
+            <td>Approx. 66 percent LTV</td>
+            <td>Approx. 64 percent LTV</td>
+            <td>Approx. 62 percent LTV</td>
+            <td>Approx. 60 percent LTV</td>
+          </tr>
+        </table>
+        <p class="small" style="margin-top:8px;">
+          <strong>InvestorIQ Estimate:</strong> This illustrative matrix shows achievable loan-to-value ratios at
+          a potential Year 3 refinance under varying interest rate and exit cap rate scenarios. The Base Case assumes
+          a 5.25 percent interest rate and 5.70 percent exit cap rate, yielding approximately mid-60s LTV and providing
+          capacity for a measured but not overly aggressive cash-out refinance.
+        </p>
+      </div>
+
     <div class="watermark" style="text-align:center; margin-top:16px;">
   InvestorIQ Sample Report – IQ-Assisted Estimates Only – Not Investment Advice
 </div>
@@ -1141,10 +1216,20 @@
           <strong>InvestorIQ Estimate:</strong> Subject pricing in the mid-$220,000s per door sits modestly below the simple average of these illustrative comparables, while in-place yields are slightly higher due to current rent and expense structure. This provides a margin of safety if rent uplift or exit cap rates are less favourable than modeled.
         </p>
       </div>
+        <p class="subsection-title" style="margin-top:12px;">Relative Positioning</p>
+        <p>
+          Subject acquisition at approximately <span class="highlight">$190,000 per door</span>
+          (calculated as $27.36 million divided by 144 units) represents an estimated
+          <span class="highlight">12 to 15 percent discount</span> to these stabilized comparables.
+          This discount reflects the need for capital investment and the current revenue profile,
+          providing meaningful downside protection and reinforcing the value-add thesis even if
+          rent growth or exit pricing prove less favourable than Base Case assumptions.
+        </p>
+      </div>
 
-      <div class="chart-block no-break" style="margin-top:22px;">
+      <div class="chart-block chart-large no-break" style="margin-top:22px;">
         <img
-          src="https://investoriq.tech/charts/institutional/cashflow_waterfall.png"
+          src="https://investoriq.tech/charts/institutional/cashflow_waterfall.png" class="chart-waterfall"
           alt="Five-Year Equity Cash Flow Waterfall"
         />
       </div>
