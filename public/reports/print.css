@@ -1,7 +1,126 @@
+/* ================================
+   INVESTORIQ – PRINT STYLES (V1)
+   Balanced Institutional Format
+   ================================ */
 
-/* PRINT MODE (institutional, dense) */
-body { font-family: Inter, sans-serif; margin:0; padding:0; }
-.report-container { width:100%; padding:24px; }
-h1, h2, h3, .section-number, .subsection-title { page-break-after:avoid; }
-table, img, p, div, ul, ol { page-break-inside:avoid; }
-.chart-waterfall img { max-width:65% !important; margin:12px auto !important; display:block; }
+/* BASE */
+body {
+  font-family: Inter, sans-serif;
+  margin: 0;
+  padding: 0;
+  color: #0F172A;
+  line-height: 1.4;
+}
+
+.report-container {
+  width: 100%;
+  padding: 32px 40px;
+  box-sizing: border-box;
+}
+
+/* HEADINGS */
+h1, h2, h3, h4, h5,
+.section-number,
+.section-header,
+.subsection-title {
+  page-break-after: avoid;
+  margin-top: 0;
+  margin-bottom: 10px;
+  line-height: 1.25;
+}
+
+/* PARAGRAPH / TEXT SPACING */
+p, .section-intro {
+  margin: 10px 0 14px 0 !important;
+  page-break-inside: avoid;
+}
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 20px 0 !important;
+  page-break-inside: avoid;
+}
+
+th, td {
+  padding: 6px 8px;
+}
+
+th {
+  background: #F3F4F6;
+}
+
+tr {
+  page-break-inside: avoid;
+}
+
+/* LISTS */
+ul, ol {
+  margin: 10px 0 14px 20px !important;
+  page-break-inside: avoid;
+}
+
+/* CHART BLOCKS */
+.chart-block {
+  margin: 18px auto !important;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+/* Small Charts */
+.chart-small img {
+  max-width: 45% !important;
+  height: auto;
+  margin: 14px auto !important;
+  display: block;
+}
+
+/* Medium Charts */
+.chart-medium img {
+  max-width: 65% !important;
+  height: auto;
+  margin: 16px auto !important;
+  display: block;
+}
+
+/* Large (Hero) Charts */
+.chart-large img {
+  max-width: 90% !important;
+  height: auto;
+  margin: 20px auto !important;
+  display: block;
+}
+
+/* WATERFALL SPECIAL FIX */
+.chart-waterfall img {
+  max-width: 90% !important;
+  height: auto;
+  margin: 20px auto !important;
+  page-break-inside: avoid;
+}
+
+/* SECTION CONTAINERS */
+.section {
+  margin-bottom: 32px !important;
+  page-break-inside: avoid;
+}
+
+/* AVOID PAGE-BREAK ORPHANS/WEIRD GAPS */
+.section-header {
+  margin-bottom: 8px !important;
+  page-break-after: avoid;
+}
+
+.section > *:first-child {
+  page-break-before: avoid;
+}
+
+/* WATERMARK */
+.watermark {
+  margin-top: 18px !important;
+  font-size: 11px;
+  color: #64748B;
+  text-align: center;
+  page-break-inside: avoid;
+}
