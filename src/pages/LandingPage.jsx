@@ -10,7 +10,7 @@ export default function LandingPage() {
     <>
       {/* META TAGS */}
       <Helmet>
-        <title>InvestorIQ — Institutional Intelligence for Modern Investors</title>
+        <title>InvestorIQ — Institutional Property Intelligence for Modern Investors</title>
         <meta
           name="description"
           content="Upload property documents and let InvestorIQ’s AI engine generate data-backed Property IQ Reports™ with institutional precision."
@@ -26,12 +26,12 @@ export default function LandingPage() {
           className="max-w-5xl mx-auto px-6 text-center pt-24 sm:pt-28"
         >
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#0F172A] leading-tight">
-            Institutional Intelligence for{" "}
+            Institutional Property Intelligence for{" "}
             <span className="text-[#1F8A8A]">Modern Investors</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 mt-6 leading-relaxed">
-            Upload your property documents and our AI-driven underwriting engine delivers
+            Upload your property documents and our IQ-driven underwriting engine delivers
             a comprehensive, data-backed{" "}
             <span className="text-[#1F8A8A] font-semibold">Property IQ Report™</span>{" "}
             within 48 hours. Works for both off-market and MLS-listed deals.
