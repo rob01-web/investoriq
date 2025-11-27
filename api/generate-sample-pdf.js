@@ -1,8 +1,9 @@
 // api/generate-sample-pdf.js
 // InvestorIQ – Sample Report Generator (Public HTML → DocRaptor)
 
-const TEST_MODE = true;
+import { ensureSentenceIntegrity } from "./lib/sentenceIntegrity.js";
 
+const TEST_MODE = true;
 const PUBLIC_HTML_URL = "https://investoriq.tech/reports/sample-report.html";
 
 export default async function handler(req, res) {
