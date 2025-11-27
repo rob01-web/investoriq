@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 export default async function handler(req, res) {
   try {
-    // 1. Parse input JSON (for now use sample JSON)
+    // 1. Parse input JSON
     const data = req.body || {};
 
     // 2. Load the HTML template
@@ -25,11 +25,16 @@ export default async function handler(req, res) {
 
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
 
-    // 3. TODO: Insert AI-generated narrative here
-    // For now placeholders:
-    const finalHtml = htmlTemplate
-      .replace("{{EXEC_SUMMARY}}", "EXEC SUMMARY GOES HERE")
-      .replace("{{CASH_FLOW_PROJECTIONS}}", "PROJECTIONS GO HERE");
+    // 3. Insert AI-generated narrative pieces (ONLY EXEC SUMMARY for now)
+    let finalHtml = htmlTemplate;
+
+    // 🔥 EXEC SUMMARY — FIRST PLACEHOLDER
+    finalHtml = finalHtml.replace(
+      "{{EXEC_SUMMARY}}",
+      data.execSummary || ""
+    );
+
+    // (Other placeholders will be added *one at a time* later)
 
     // 4. Ensure sentence integrity
     const { html: safeHtml, warnings } = ensureSentenceIntegrity(finalHtml, {
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
       warnings.forEach(w => console.warn(" - " + w));
     }
 
-    // 5. Send to DocRaptor (placeholder)
+    // 5. Send to DocRaptor (placeholder for now)
     const pdfResponse = await axios.post(
       "https://docraptor.com/docs",
       {
