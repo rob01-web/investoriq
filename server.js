@@ -1,4 +1,7 @@
 // server.js — Local API server for InvestorIQ
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import bodyParser from "body-parser";
 import handler from "./api/generate-client-report.js";
