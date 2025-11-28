@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Test InvestorIQ PDF Generator</h2>
+  <button onclick="generatePDF()">Generate PDF</button>
+
+  <script>
+    async function generatePDF() {
+      const response = await fetch('http://localhost:3000/api/generate-client-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          execSummary: "HELLO FROM THE TEST HTML!"
+        })
+      });
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "InvestorIQ-Test.pdf";
+      a.click();
+    }
+  </script>
+</body>
+</html>
