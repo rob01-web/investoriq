@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>InvestorIQ Sample Report – Riverbend Heights (London, ON)</title>
+  <title>InvestorIQ Sample Report – {{PROPERTY_NAME}} ({{CITY}}, {{PROVINCE}})</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -414,7 +414,7 @@
           Sample Property IQ Report
         </div>
         <div style="font-size:11px; color:#6B7280;">
-          Riverbend Heights · South London (Westminster / Pond Mills)
+          {{PROPERTY_NAME}} · {{PROPERTY_SUBMARKET}}
         </div>
         <div class="watermark">Sample Report – IQ-Assisted Estimates Only</div>
       </div>
@@ -423,7 +423,7 @@
 
   <div class="section-header">
     <div class="section-number">1.0 Executive Summary</div>
-    <h1>Riverbend Heights – London, Ontario</h1>
+    <h1>{{PROPERTY_NAME}} – {{CITY}}, {{PROVINCE}}</h1>
     <p class="small">144-Unit Tier III Institutional Multifamily · South London (Westminster / Pond Mills)</p>
   </div>
 
@@ -451,31 +451,31 @@
         </tr>
         <tr>
           <td>Purchase Price</td>
-          <td>$27,360,000</td>
+          <td>{{PURCHASE_PRICE}}</td>
         </tr>
         <tr>
           <td>Total Project Cost (Incl. CapEx)</td>
-          <td>$29,000,000</td>
+          <td>{{TOTAL_PROJECT_COST}}</td>
         </tr>
         <tr>
           <td>Equity Required (35% of Total Cost)</td>
-          <td>$10,150,000</td>
+          <td>{{EQUITY_REQUIRED}}</td>
         </tr>
         <tr>
           <td>Stabilized Cap Rate on Cost</td>
-          <td>5.90 percent</td>
+          <td>{{CAP_RATE_ON_COST}}</td>
         </tr>
         <tr>
           <td>5-Year Levered IRR (Base Case)</td>
-          <td>14.5 percent</td>
+          <td>{{LEVERED_IRR}}</td>
         </tr>
         <tr>
           <td>Equity Multiple (Base Case)</td>
-          <td>1.90 x</td>
+          <td>{{EQUITY_MULTIPLE}}</td>
         </tr>
         <tr>
           <td>Year 1 Cash-on-Cash (Stabilized)</td>
-          <td>7.1 percent</td>
+          <td>{{YEAR1_COC}}</td>
         </tr>
       </table>
       <p class="small" style="margin-top:8px;">
@@ -531,32 +531,7 @@
   <div class="grid-2">
     <div class="no-break">
       <p class="subsection-title">Illustrative Unit Mix and Rent Lift</p>
-      <table>
-        <tr>
-          <th>Unit Type</th>
-          <th>Count</th>
-          <th>Average Sq Ft</th>
-          <th>Current Avg Rent</th>
-          <th>Target Market Rent</th>
-          <th>Planned Lift</th>
-        </tr>
-        <tr>
-          <td>1 Bedroom</td>
-          <td>80</td>
-          <td>620</td>
-          <td>$1,650</td>
-          <td>$1,825</td>
-          <td>$175</td>
-        </tr>
-        <tr>
-          <td>2 Bedroom</td>
-          <td>64</td>
-          <td>820</td>
-          <td>$1,950</td>
-          <td>$2,150</td>
-          <td>$200</td>
-        </tr>
-      </table>
+      {{UNIT_MIX_TABLE}}
       <p class="small">
         <strong>InvestorIQ Estimate:</strong> Market target rents reflect renovated mid-rise comparables in South London within a 3–4 km radius, adjusted for building age, suite size, and on-site parking.
       </p>
@@ -564,36 +539,11 @@
 
     <div class="no-break">
       <p class="subsection-title">Renovation ROI Overview</p>
-      <table>
-        <tr>
-          <th>Scope</th>
-          <th>Approximate Cost per Unit</th>
-          <th>Indicative Rent Lift</th>
-          <th>Simple Payback</th>
-        </tr>
-        <tr>
-          <td>Kitchen &amp; Appliance Refresh</td>
-          <td>$9,000</td>
-          <td>$100 per month</td>
-          <td>7.5 years</td>
-        </tr>
-        <tr>
-          <td>Bathroom Upgrades</td>
-          <td>$3,500</td>
-          <td>$35 per month</td>
-          <td>8.3 years</td>
-        </tr>
-        <tr>
-          <td>Flooring, Paint &amp; Lighting</td>
-          <td>$4,000</td>
-          <td>$45 per month</td>
-          <td>7.4 years</td>
-        </tr>
-      </table>
+      {{RENOVATION_TABLE}}
 
       <div class="chart-block chart-small no-break">
         <img
-          src="https://investoriq.tech/charts/institutional/renovation_roi.png"
+          src="{{RENOVATION_CHART_URL}}"
           alt="Renovation ROI and Rent Lift Chart"
         />
       </div>
@@ -628,7 +578,7 @@
 
   <div class="chart-block no-break">
     <img
-      src="https://investoriq.tech/charts/institutional/cashflow_5yr.png"
+      src="{{CASHFLOW_CHART_URL}}"
       alt="Five Year Cash Flow Trendline by Scenario"
     />
   </div>
@@ -638,92 +588,12 @@
 
       <div>
         <p class="subsection-title">Scenario Assumptions</p>
-        <table>
-          <tr>
-            <th>Scenario</th>
-            <th>Rent Growth</th>
-            <th>Economic Vacancy</th>
-            <th>Expense Growth</th>
-            <th>Exit Cap Rate</th>
-          </tr>
-          <tr>
-            <td><span class="scenario-label">Worst</span></td>
-            <td>1.0 percent</td>
-            <td>7.0 percent</td>
-            <td>3.5 percent</td>
-            <td>6.10 percent</td>
-          </tr>
-          <tr>
-            <td><span class="scenario-label">Conservative</span></td>
-            <td>1.75 percent</td>
-            <td>6.0 percent</td>
-            <td>3.0 percent</td>
-            <td>5.90 percent</td>
-          </tr>
-          <tr>
-            <td><span class="scenario-label">Base</span></td>
-            <td>2.25 percent</td>
-            <td>5.0 percent</td>
-            <td>2.75 percent</td>
-            <td>5.70 percent</td>
-          </tr>
-          <tr>
-            <td><span class="scenario-label">Optimistic</span></td>
-            <td>2.75 percent</td>
-            <td>4.5 percent</td>
-            <td>2.5 percent</td>
-            <td>5.50 percent</td>
-          </tr>
-          <tr>
-            <td><span class="scenario-label">Best</span></td>
-            <td>3.25 percent</td>
-            <td>4.0 percent</td>
-            <td>2.25 percent</td>
-            <td>5.35 percent</td>
-          </tr>
-        </table>
+        {{SCENARIO_TABLE}}
       </div>
 
       <div>
         <p class="subsection-title">Five-Year Return Summary</p>
-        <table>
-          <tr>
-            <th>Scenario</th>
-            <th>Levered IRR</th>
-            <th>Equity Multiple</th>
-            <th>Illustrative Sale Price</th>
-          </tr>
-          <tr>
-            <td>Worst</td>
-            <td>9.1 percent</td>
-            <td>1.40 x</td>
-            <td>$29.8 million</td>
-          </tr>
-          <tr>
-            <td>Conservative</td>
-            <td>12.2 percent</td>
-            <td>1.65 x</td>
-            <td>$31.0 million</td>
-          </tr>
-          <tr>
-            <td>Base</td>
-            <td>14.5 percent</td>
-            <td>1.90 x</td>
-            <td>$32.2 million</td>
-          </tr>
-          <tr>
-            <td>Optimistic</td>
-            <td>16.7 percent</td>
-            <td>2.05 x</td>
-            <td>$33.2 million</td>
-          </tr>
-          <tr>
-            <td>Best</td>
-            <td>18.8 percent</td>
-            <td>2.20 x</td>
-            <td>$34.3 million</td>
-          </tr>
-        </table>
+        {{RETURN_SUMMARY_TABLE}}
         <p class="small">
           <strong>InvestorIQ Estimate:</strong> Sale values are derived from stabilized Year 5 net operating income under each scenario and the scenario-specific exit cap rate.
         </p>
@@ -734,7 +604,7 @@
 
   <div class="chart-block chart-medium no-break" style="margin-top:14px;">
     <img
-      src="https://investoriq.tech/charts/institutional/irr_scenario.png"
+      src="{{IRR_SCENARIO_CHART_URL}}"
       alt="Five-Year IRR Distribution by Scenario"
     />
   </div>
@@ -817,7 +687,7 @@
 
   <div class="chart-block chart-medium no-break" style="margin-top:14px;">
     <img
-      src="https://investoriq.tech/charts/institutional/risk_radar.png"
+      src="{{RISK_RADAR_CHART_URL}}"
       alt="Risk Factor Radar Chart"
     />
   </div>
@@ -889,37 +759,12 @@
 
   <div class="no-break">
     <p class="subsection-title">Renovation Budget Breakdown</p>
-    <table>
-      <tr>
-        <th>Category</th>
-        <th>Estimated Cost</th>
-        <th>Share of Budget</th>
-        <th>Primary Objective</th>
-      </tr>
-      <tr>
-        <td>Interior Suites</td>
-        <td>$1,900,000</td>
-        <td>81 percent</td>
-        <td>Upgrade kitchens, baths, flooring, and lighting to support rent uplift and tenant retention.</td>
-      </tr>
-      <tr>
-        <td>Common Areas</td>
-        <td>$270,000</td>
-        <td>11 percent</td>
-        <td>Refresh corridors, lobby, and entry experience to align with upgraded suites and market expectations.</td>
-      </tr>
-      <tr>
-        <td>Building Systems</td>
-        <td>$180,000</td>
-        <td>8 percent</td>
-        <td>Address selective mechanical, envelope, and life-safety items to reduce unplanned capital outlays.</td>
-      </tr>
-    </table>
+    {{CAPITAL_PLAN_TABLE}}
   </div>
 
   <div class="chart-block chart-medium no-break">
     <img
-      src="https://investoriq.tech/charts/institutional/noi_waterfall.png"
+      src="https://investoriq.tech/{{NOI_WATERFALL_CHART_URL}}"
       alt="NOI Waterfall – Impact of Renovation Program"
     />
   </div>
@@ -983,7 +828,7 @@
 
       <div class="chart-block chart-medium">
         <img
-          src="https://investoriq.tech/charts/institutional/break_even_occupancy.png"
+          src="https://investoriq.tech/{{BREAKEVEN_CHART_URL}}"
           alt="Break-Even Occupancy Analysis"
         />
       </div>
@@ -1006,7 +851,7 @@
         <th>Exit Cap Rate →<br />Interest Rate ↓</th>
         <th>5.50 percent</th>
         <th>5.70 percent</th>
-        <th>5.90 percent</th>
+        <th>{{CAP_RATE_ON_COST}}</th>
         <th>6.10 percent</th>
       </tr>
       <tr>
@@ -1066,7 +911,7 @@
 
   <div class="chart-block chart-medium no-break">
     <img
-      src="https://investoriq.tech/charts/institutional/deal_score_radar.png"
+      src="{{DEAL_SCORE_RADAR_CHART_URL}}"
       alt="Deal Score Radar Chart"
     />
   </div>
@@ -1079,73 +924,14 @@
 
   <div class="no-break">
     <p class="subsection-title">Factor-Level Scores</p>
-    <table>
-      <tr>
-        <th>Factor</th>
-        <th>Score (1–10)</th>
-        <th>Weight</th>
-        <th>Weighted Contribution</th>
-      </tr>
-      <tr>
-        <td>Location</td>
-        <td>8</td>
-        <td>15 percent</td>
-        <td>12.0</td>
-      </tr>
-      <tr>
-        <td>Cash Flow Strength</td>
-        <td>8</td>
-        <td>15 percent</td>
-        <td>12.0</td>
-      </tr>
-      <tr>
-        <td>DSCR / Coverage</td>
-        <td>7</td>
-        <td>10 percent</td>
-        <td>7.0</td>
-      </tr>
-      <tr>
-        <td>Liquidity &amp; Exit</td>
-        <td>7</td>
-        <td>10 percent</td>
-        <td>7.0</td>
-      </tr>
-      <tr>
-        <td>Market Outlook</td>
-        <td>8</td>
-        <td>15 percent</td>
-        <td>12.0</td>
-      </tr>
-      <tr>
-        <td>Value Add Potential</td>
-        <td>8</td>
-        <td>15 percent</td>
-        <td>12.0</td>
-      </tr>
-      <tr>
-        <td>Risk Profile</td>
-        <td>8</td>
-        <td>10 percent</td>
-        <td>8.0</td>
-      </tr>
-      <tr>
-        <td>Management Intensity</td>
-        <td>6</td>
-        <td>10 percent</td>
-        <td>6.0</td>
-      </tr>
-      <tr>
-        <th colspan="3">Total Deal Score</th>
-        <th>76.0</th>
-      </tr>
-    </table>
+    {{DEAL_SCORE_TABLE}}
   </div>
 </section>
 
 <!-- Static bar chart -->
 <div class="chart-block chart-small no-break" style="margin-top:18px;">
   <img
-    src="https://investoriq.tech/charts/institutional/deal_score_bar.png"
+    src="{{DEAL_SCORE_BAR_CHART_URL}}"
     alt="Deal Score Factor Breakdown Bar Chart"
   />
 </div>
@@ -1179,7 +965,7 @@
 
   <div class="chart-block chart-small no-break">
     <img
-      src="https://investoriq.tech/charts/institutional/expense_ratio.png"
+      src="{{EXPENSE_RATIO_CHART_URL}}"
       alt="Operating Expense Ratio Chart"
     />
   </div>
@@ -1208,19 +994,19 @@
       </tr>
       <tr>
         <td>5-Year Levered IRR</td>
-        <td>14.5 percent</td>
+        <td>{{LEVERED_IRR}}</td>
       </tr>
       <tr>
         <td>Equity Multiple</td>
-        <td>1.90 x</td>
+        <td>{{EQUITY_MULTIPLE}}</td>
       </tr>
       <tr>
         <td>Stabilized Cap Rate on Cost</td>
-        <td>5.90 percent</td>
+        <td>{{CAP_RATE_ON_COST}}</td>
       </tr>
       <tr>
         <td>Total Equity Required</td>
-        <td>$10,150,000</td>
+        <td>{{EQUITY_REQUIRED}}</td>
       </tr>
       <tr>
         <td>Illustrative Sale Price (Year 5)</td>
@@ -1236,40 +1022,7 @@
 
   <p class="subsection-title" style="margin-top:14px;">Comparable Transaction Context</p>
   <div class="no-break">
-    <table>
-      <tr>
-        <th>Comparable</th>
-        <th>Submarket</th>
-        <th>Approx. Distance</th>
-        <th>Units</th>
-        <th>Price per Door</th>
-        <th>Cap Rate (Stabilized)</th>
-      </tr>
-      <tr>
-        <td>Southridge Flats</td>
-        <td>South London</td>
-        <td>2.1 km</td>
-        <td>120</td>
-        <td>$235,000</td>
-        <td>5.10 percent</td>
-      </tr>
-      <tr>
-        <td>Westminster Place</td>
-        <td>Westminster</td>
-        <td>1.7 km</td>
-        <td>96</td>
-        <td>$242,000</td>
-        <td>4.95 percent</td>
-      </tr>
-      <tr>
-        <td>Pond Mills Terrace</td>
-        <td>Pond Mills</td>
-        <td>3.0 km</td>
-        <td>110</td>
-        <td>$228,000</td>
-        <td>5.15 percent</td>
-      </tr>
-    </table>
+    {{COMPARABLES_TABLE}}
 
     <p class="small" style="margin-top:8px;">
       <strong>InvestorIQ Estimate:</strong> Subject pricing in the mid-$220,000s per door sits modestly
@@ -1293,7 +1046,7 @@
   <!-- ⭐ REPLACEMENT CHART (NEW ELITE PNG) -->
   <div class="chart-block chart-large no-break" style="margin-top:22px;">
     <img
-      src="https://investoriq.tech/charts/institutional/equity_return_components.png"
+      src="{{EQUITY_COMPONENTS_CHART_URL}}"
       alt="Equity Return Components"
     />
   </div>
