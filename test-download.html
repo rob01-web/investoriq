@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>InvestorIQ PDF Test</title>
+</head>
+<body>
+  <h1>InvestorIQ PDF Test – Full Dynamic Payload</h1>
+  <button onclick="downloadPDF()">Generate PDF</button>
+
+  <script>
+    async function downloadPDF() {
+      const payload = {
+        property: {
+          name: "Samplewood Apartments",
+          city: "Toronto",
+          province: "Ontario",
+          submarket: "Downtown East",
+          unitCount: 144,
+          assetClass: "Tier III Institutional Multifamily"
+        },
+
+        financials: {
+          purchasePrice: 31500000,
+          totalProjectCost: 33200000,
+          equityRequired: 12000000,
+          capRateOnCost: 0.058,
+          leveredIrr: 0.152,
+          equityMultiple: 2.0,
+          year1CoC: 0.075
+        },
+
+        tables: {
+          unitMix: [
+            {
+              type: "1 Bedroom",
+              count: 80,
+              avgSqft: 620,
+              currentRent: 1650,
+              targetRent: 1825
+            },
+            {
+              type: "2 Bedroom",
+              count: 64,
+              avgSqft: 820,
+              currentRent: 1950,
+              targetRent: 2150
+            }
+          ],
+
+          renovationSummary: [
+            { scope: "Kitchen & Appliances", costPerSuite: 9000, rentLift: 100 },
+            { scope: "Bathroom Upgrades", costPerSuite: 3500, rentLift: 35 },
+            { scope: "Flooring / Paint / Lighting", costPerSuite: 4000, rentLift: 45 }
+          ],
+
+          scenarios: [
+            { name: "Worst",        rentGrowth: 0.01,   vacancy: 0.07, expenseGrowth: 0.035, exitCap: 0.061 },
+            { name: "Conservative", rentGrowth: 0.0175, vacancy: 0.06, expenseGrowth: 0.03,  exitCap: 0.059 },
+            { name: "Base",         rentGrowth: 0.0225, vacancy: 0.05, expenseGrowth: 0.0275,exitCap: 0.057 },
+            { name: "Optimistic",   rentGrowth: 0.0275, vacancy: 0.045,expenseGrowth: 0.026, exitCap: 0.055 },
+            { name: "Best",         rentGrowth: 0.0325, vacancy: 0.04, expenseGrowth: 0.0225,exitCap: 0.0535 }
+          ],
+
+          returnSummary: [
+            { name: "Worst",        irr: 0.091, equityMultiple: 1.4,  salePriceText: "$29.8 million" },
+            { name: "Conservative", irr: 0.122, equityMultiple: 1.65, salePriceText: "$31.1 million" },
+            { name: "Base",         irr: 0.145, equityMultiple: 1.9,  salePriceText: "$32.2 million" },
+            { name: "Optimistic",   irr: 0.167, equityMultiple: 2.05, salePriceText: "$33.2 million" },
+            { name: "Best",         irr: 0.188, equityMultiple: 2.2,  salePriceText: "$34.3 million" }
+          ],
+
+          capitalPlan: [
+            {
+              category: "Interior Suites",
+              estimatedCost: 1900000,
+              shareOfBudget: 0.81,
+              objective: "Upgrade kitchens, baths, flooring, and lighting to support rent uplift and tenant retention."
+            },
+            {
+              category: "Common Areas & Curb Appeal",
+              estimatedCost: 260000,
+              shareOfBudget: 0.11,
+              objective: "Refresh corridors, lobby, and entry experience to align with upgraded suites and market expectations."
+            },
+            {
+              category: "Building Systems",
+              estimatedCost: 180000,
+              shareOfBudget: 0.08,
+              objective: "Address selective mechanical, envelope, and life-safety items to reduce unplanned capital outlays."
+            }
+          ],
+
+          comps: [
+            {
+              name: "Southridge Flats",
+              submarket: "South London",
+              distanceKm: 2.1,
+              units: 120,
+              pricePerDoor: 235000,
+              capRate: 0.051
+            },
+            {
+              name: "Westminster Place",
+              submarket: "Westminster",
+              distanceKm: 1.7,
+              units: 96,
+              pricePerDoor: 242000,
+              capRate: 0.0495
+            },
+            {
+              name: "Pond Mills Terrace",
+              submarket: "Pond Mills",
+              distanceKm: 3.0,
+              units: 110,
+              pricePerDoor: 228000,
+              capRate: 0.0515
+            }
+          ],
+
+          dealScore: [
+            { factor: "Location",              score: 8, weight: 0.15, weighted: 12.0 },
+            { factor: "Cash Flow Strength",    score: 8, weight: 0.15, weighted: 12.0 },
+            { factor: "Value-Add Potential",   score: 7, weight: 0.15, weighted: 10.5 },
+            { factor: "Market Resilience",     score: 8, weight: 0.15, weighted: 12.0 },
+            { factor: "Exit Liquidity",        score: 7, weight: 0.10, weighted: 7.0 },
+            { factor: "Business Plan Clarity", score: 8, weight: 0.10, weighted: 8.0 },
+            { factor: "Sponsor Experience",    score: 8, weight: 0.10, weighted: 8.0 },
+            { factor: "Management Intensity",  score: 6, weight: 0.10, weighted: 6.0 }
+          ],
+          totalDealScore: 76.0
+        },
+
+        charts: {
+          renovationChartUrl: "https://investoriq.tech/charts/institutional/renovation_roi.png",
+          cashflowChartUrl: "https://investoriq.tech/charts/institutional/cashflow_5yr.png",
+          irrScenarioChartUrl: "https://investoriq.tech/charts/institutional/irr_scenario.png",
+          riskRadarChartUrl: "https://investoriq.tech/charts/institutional/risk_radar.png",
+          dealScoreRadarChartUrl: "https://investoriq.tech/charts/institutional/deal_score_radar.png",
+          dealScoreBarChartUrl: "https://investoriq.tech/charts/institutional/deal_score_bar.png",
+          expenseRatioChartUrl: "https://investoriq.tech/charts/institutional/expense_ratio.png",
+          equityComponentsChartUrl: "https://investoriq.tech/charts/institutional/equity_return_components.png",
+          noiWaterfallChartUrl: "https://investoriq.tech/charts/institutional/noi_waterfall.png",
+          breakevenChartUrl: "https://investoriq.tech/charts/institutional/break_even_occupancy.png"
+        },
+
+        sections: {
+          execSummary: "This is the elite InvestorIQ executive summary for Samplewood Apartments...",
+          unitValueAdd: "Unit value-add analysis across 1BR and 2BR suites highlights clear per-door ROI with controlled renovation scope...",
+          cashFlowProjections: "Under the Worst, Conservative, Base, Optimistic, and Best cases, cash flows and exit valuations evolve as follows...",
+          neighborhoodAnalysis: "Downtown East offers diversified employment drivers, strong transit connectivity, and resilient renter demand...",
+          riskAssessment: "Key risks revolve around renovation execution, interest rate paths, and macro-level rental regulations...",
+          renovationNarrative: "The capital plan emphasizes suites first, followed by common areas and targeted systems to unlock NOI...",
+          debtStructure: "Senior debt is sized to a ~1.30x DSCR at Year 1 with a targeted refinance in Year 3, maintaining conservative leverage...",
+          dealScoreSummary: "A 76/100 Deal Score reflects strong fundamentals with measured value-add risk concentrated in execution and interest rates...",
+          dealScoreInterpretation: "Location, cash flow strength, and value-add potential are the primary return drivers, while regulatory and financing risks are manageable...",
+          advancedModelingIntro: "InvestorIQ’s standardized DCF applies a 12% equity hurdle to scenario-weighted cash flows, stress-testing rent, vacancy, and exit cap assumptions...",
+          dcfInterpretation: "Discounted at 12%, the Base Case generates a modestly positive NPV, with downside cases clustering around break-even and upside cases delivering attractive risk-adjusted returns...",
+          finalRecommendation: "On balance, InvestorIQ views Samplewood Apartments as a Buy for investors targeting mid-teens IRR with controlled value-add execution risk and durable market fundamentals..."
+        }
+      };
+
+      const response = await fetch("/api/generate-client-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("PDF generation failed:", text);
+        alert("PDF generation failed. Check console for details.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "InvestorIQ-Test.pdf";
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
