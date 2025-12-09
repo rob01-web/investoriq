@@ -1,5 +1,7 @@
 // api/generate-client-report.js
 
+import dotenv from "dotenv";
+dotenv.config();
 import { ensureSentenceIntegrity } from "./lib/sentenceIntegrity.js";
 import fs from "fs";
 import path from "path";
