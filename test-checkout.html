@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stripe Test Checkout</title>
+</head>
+<body>
+  <h1>InvestorIQ — Test Checkout</h1>
+
+  <button onclick="buySingle()">Buy Single Report ($499)</button>
+
+  <script>
+    async function buySingle() {
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productType: "singleReport",   // ✅ MUST MATCH BACKEND
+          userId: "test-user-123",       // optional
+          userEmail: "hello@investoriq.tech" // optional
+        })
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Error creating checkout session");
+        console.error(data);
+      }
+    }
+  </script>
+</body>
+</html>
