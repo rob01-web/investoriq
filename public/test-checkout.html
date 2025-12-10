@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stripe Test Checkout</title>
+</head>
+<body>
+  <h1>InvestorIQ - Test Checkout (NEW VERSION)</h1>
+
+  <button onclick="buySingle()">Buy Single Report ($499)</button>
+
+  <script>
+  async function buySingle() {
+    console.log("Attempting checkout…");
+
+    try {
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productType: "singleReport",
+          userId: "test-user-123",
+          userEmail: "hello@investoriq.tech"
+        })
+      });
+
+      console.log("Raw response object:", response);
+
+      const data = await response.json();
+      console.log("Session data:", data);
+
+      if (data.url) {
+        console.log("Redirecting to Stripe:", data.url);
+        // ⬇️ THIS is the real redirect
+        window.location.href = data.url;
+      } else {
+        console.log("ERROR (session creation):", data);
+        alert("Error creating checkout session");
+      }
+
+    } catch (error) {
+      console.error("🔥 FETCH FAILED:", error);
+      alert("Fetch failed — check console.");
+    }
+  }
+</script>
+</body>
+</html>
