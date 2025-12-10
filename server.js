@@ -1,8 +1,10 @@
 // server.js — Local API server for InvestorIQ
 import express from "express";
-import bodyParser from "body-parser";
+import bodyParser from "body-parser"; // currently unused but fine to keep
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import generateClientReport from "./api/generate-client-report.js";
 import createCheckoutSession from "./api/create-checkout-session.js";
@@ -11,6 +13,10 @@ import webhookHandler from "./api/webhook.js";
 dotenv.config();
 
 const app = express();
+
+// --- Resolve __dirname for ES modules ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Enable CORS for all routes
 app.use(cors());
@@ -26,8 +32,8 @@ app.post(
 // 🚨 JSON parser comes AFTER webhook route only
 app.use(express.json({ limit: "10mb" }));
 
-// Static assets
-app.use(express.static("."));
+// 🚨 STATIC FILES FIX — serve ONLY the public folder as static assets
+app.use(express.static(path.join(__dirname, "public")));
 
 // PDF generation route
 app.post("/api/generate-client-report", (req, res) =>
