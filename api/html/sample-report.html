@@ -111,11 +111,18 @@
   min-width: 0;
 }
 
-    .grid-2-balanced {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
+    .grid-2 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.grid-2-balanced {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
 
     .grid-3 {
       display: grid;
@@ -435,8 +442,8 @@ ul, ol {
   page-break-inside: avoid;
 }
 </style>
-<link rel="stylesheet" media="screen" href="screen.css">
-<link rel="stylesheet" media="print" href="print.css">
+<!-- <link rel="stylesheet" media="screen" href="screen.css"> -->
+<!-- <link rel="stylesheet" media="print" href="print.css"> -->
 
 </head>
 <body>
@@ -455,9 +462,11 @@ ul, ol {
           Sample Property IQ Report
         </div>
         <div style="font-size:11px; color:#6B7280;">
-          {{PROPERTY_NAME}} · {{PROPERTY_SUBMARKET}}
-        </div>
-  </div>
+  {{PROPERTY_NAME}} · {{PROPERTY_SUBMARKET}}
+</div>
+      </div> <!-- close the right-side text-align:right div -->
+    </div>   <!-- close .header-top -->
+  </div>     <!-- close .header-strip -->
 
   <div class="section-header">
     <div class="section-number">1.0 Executive Summary</div>
@@ -546,8 +555,9 @@ ul, ol {
   </div>
 
   <div class="footer-note">
-    InvestorIQ Rating: BUY · Value Add Multifamily · Sample Report for Demonstration Only
-  
+  InvestorIQ Rating: BUY · Value Add Multifamily · Sample Report for Demonstration Only
+</div>
+
 </section>
 
     <!-- 2.0 Unit-Level Value Add Analysis -->
