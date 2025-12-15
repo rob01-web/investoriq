@@ -121,7 +121,7 @@ async function generateIrrScenarioChart() {
         {
           label: "5-Year Levered IRR (InvestorIQ Estimate)",
           data,
-          borderRadius: 8,
+          borderRadius: 6, // ⬅ slightly tighter
           backgroundColor: [
             "rgba(15, 23, 42, 0.80)",
             "rgba(31, 138, 138, 0.85)",
@@ -132,32 +132,52 @@ async function generateIrrScenarioChart() {
       ]
     },
     options: {
+      responsive: false,
+      maintainAspectRatio: false,
+
+      layout: {
+        padding: {
+          top: 10,
+          bottom: 6,
+          left: 12,
+          right: 12
+        }
+      },
+
       plugins: {
         title: {
           display: true,
           text: "IRR by Scenario – 5-Year Levered Returns",
           color: BRAND.navy,
-          font: { size: 26 }
+          font: {
+            size: 20,
+            weight: "600"
+          },
+          padding: {
+            bottom: 10
+          }
         },
         legend: {
+          position: "top",
           labels: {
             color: BRAND.navy,
-            font: { size: 16 }
+            font: { size: 12 }
           }
         }
       },
+
       scales: {
         x: {
           ticks: {
             color: BRAND.navy,
-            font: { size: 14 }
+            font: { size: 12 }
           },
           grid: { display: false }
         },
         y: {
           ticks: {
             color: BRAND.slate,
-            font: { size: 14 },
+            font: { size: 12 },
             callback: (v) => v + "%"
           },
           grid: {
@@ -866,32 +886,44 @@ async function generateCashflowWaterfallChart() {
       ]
     },
     options: {
+      layout: {
+        padding: {
+          top: 10,
+          bottom: 6
+        }
+      },
       plugins: {
         title: {
           display: true,
           text: "Equity Cash Flow Waterfall – Riverbend Heights",
           color: BRAND.navy,
-          font: { size: 22 }
+          font: { size: 20 }
         },
         legend: { display: false }
       },
       scales: {
         x: {
-          ticks: { color: BRAND.navy, maxRotation: 45, minRotation: 30 },
+          ticks: {
+            color: BRAND.navy,
+            maxRotation: 30,
+            minRotation: 0,
+            font: { size: 12 }
+          },
           grid: { display: false }
         },
         y: {
           ticks: {
             color: BRAND.slate,
+            font: { size: 12 },
             callback: (v) => "$" + v.toFixed(1) + "M"
           },
           grid: { color: BRAND.grid }
         }
       }
     }
-  };
+  }; // ✅ THIS SEMICOLON IS THE FIX
 
-  await writeHeroChart("cashflow_waterfall.png", config);
+  await writeChart("cashflow_waterfall.png", config);
 }
 
 // ------------------------------
