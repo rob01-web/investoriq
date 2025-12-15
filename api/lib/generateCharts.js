@@ -36,6 +36,12 @@ const BRAND = {
 };
 
 // ------------------------
+// Hero chart canvas (institutional standard)
+// ------------------------
+const HERO_WIDTH = 1600;
+const HERO_HEIGHT = 1000;
+
+// ------------------------
 // Canvas defaults
 // ------------------------
 const WIDTH = 1200;
@@ -64,20 +70,38 @@ const riverbend = JSON.parse(fs.readFileSync(datasetPath, "utf8"));
 // ------------------------
 // ChartJS canvas instance
 // ------------------------
+// Standard charts
 const chartJSNodeCanvas = new ChartJSNodeCanvas({
   width: WIDTH,
   height: HEIGHT,
   backgroundColour: "#FFFFFF"
 });
 
+// Hero / primary analytical charts
+const heroChartJSNodeCanvas = new ChartJSNodeCanvas({
+  width: HERO_WIDTH,
+  height: HERO_HEIGHT,
+  backgroundColour: "#FFFFFF"
+});
+
 // ------------------------
-// Helper: write chart file
+// Helper: write chart file (STANDARD charts)
 // ------------------------
 async function writeChart(filename, config) {
   const buffer = await chartJSNodeCanvas.renderToBuffer(config);
   const outPath = path.join(chartsDir, filename);
   fs.writeFileSync(outPath, buffer);
   console.log(`✅ Generated: ${filename}`);
+}
+
+// ------------------------
+// Helper: write HERO chart file (primary analytical charts)
+// ------------------------
+async function writeHeroChart(filename, config) {
+  const buffer = await heroChartJSNodeCanvas.renderToBuffer(config);
+  const outPath = path.join(chartsDir, filename);
+  fs.writeFileSync(outPath, buffer);
+  console.log(`🏆 Generated HERO: ${filename}`);
 }
 
 // ------------------------
@@ -867,7 +891,7 @@ async function generateCashflowWaterfallChart() {
     }
   };
 
-  await writeChart("cashflow_waterfall.png", config);
+  await writeHeroChart("cashflow_waterfall.png", config);
 }
 
 // ------------------------------
