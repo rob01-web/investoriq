@@ -5,6 +5,10 @@
   <title>InvestorIQ Sample Report – {{PROPERTY_NAME}} ({{CITY}}, {{PROVINCE}})</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
   <style>
+    @page {
+    size: Letter;
+    margin: 36px 36px 48px 36px;
+  }
     :root {
       --navy: #0F172A;
       --teal: #1F8A8A;
@@ -29,14 +33,20 @@
     }
 
     body {
-  padding: 24px;
-  padding-bottom: 72px;
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: var(--navy);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
     .report-container {
-      max-width: 960px;
-      margin: 0 auto;
-    }
+  width: 100%;
+  padding: 24px 32px 72px 32px;
+  box-sizing: border-box;
+}
 
     h1,
     h2,
@@ -73,8 +83,8 @@
     }
 
     .section {
-  margin-top: 18px;      /* <--- add this */
-  padding: 28px 32px 32px 32px;
+  margin-top: 18px;
+  padding: 24px 0;
   background: #ffffff;
 }
 
@@ -92,11 +102,14 @@
       margin-bottom: 4px;
     }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 18px;
-    }
+    .grid-2,
+.grid-2-balanced,
+.grid-3,
+.summary-bullets,
+.metric-grid {
+  width: 100%;
+  min-width: 0;
+}
 
     .grid-2-balanced {
       display: grid;
@@ -344,11 +357,11 @@
   text-align: center;
 }
 
-.chart-block img {
-  max-width: 65%;
-  height: auto;
-  margin: 0 auto;
-  display: block;
+.chart-block img,
+.chart-small img,
+.chart-medium img,
+.chart-large img {
+  max-width: 100%;
 }
 
 /* Small supporting charts */
@@ -555,8 +568,8 @@ ul, ol {
     </p>
 
     <p>
-      Renovation scope is intentionally focused on high-impact interior upgrades—kitchens, bathrooms,
-      flooring, fixtures, and in-suite finishes—that historically generate the strongest rent response
+      Renovation scope is intentionally focused on high-impact interior upgrades–kitchens, bathrooms,
+      flooring, fixtures, and in-suite finishes–that historically generate the strongest rent response
       within this submarket. Comparable renovated assets demonstrate consistent tenant demand at higher
       price points without material increases in vacancy, supporting the durability of projected rent
       lifts.
@@ -652,7 +665,7 @@ ul, ol {
             <td>$270,000</td>
             <td>Indirect</td>
             <td>Included above</td>
-            <td>—</td>
+            <td>–</td>
           </tr>
           <tr>
             <td>Building Systems / Contingency</td>
@@ -660,7 +673,7 @@ ul, ol {
             <td>$180,000</td>
             <td>Indirect</td>
             <td>Included above</td>
-            <td>—</td>
+            <td>–</td>
           </tr>
           <tr>
             <td><strong>Total Program (Blended)</strong></td>
@@ -1000,7 +1013,7 @@ ul, ol {
         </tr>
         <tr>
           <td><strong>Total Program</strong></td>
-          <td>—</td>
+          <td>–</td>
           <td><strong>$2,350,000</strong></td>
           <td><strong>100 percent</strong></td>
           <td>Stabilize asset and reposition revenue profile</td>
@@ -1284,7 +1297,7 @@ ul, ol {
           <td><strong>Total Deal Score</strong></td>
           <td>Weighted composite InvestorIQ score</td>
           <td><strong>100%</strong></td>
-          <td><strong>—</strong></td>
+          <td><strong>–</strong></td>
           <td><strong>7.79 / 10</strong></td>
         </tr>
       </tbody>
@@ -1506,13 +1519,13 @@ ul, ol {
         </tr>
         <tr>
           <td><strong>Comparable Average</strong></td>
-          <td>—</td>
-          <td>—</td>
-          <td>—</td>
-          <td>—</td>
+          <td>–</td>
+          <td>–</td>
+          <td>–</td>
+          <td>–</td>
           <td><strong>$231,500</strong></td>
           <td><strong>5.23%</strong></td>
-          <td>—</td>
+          <td>–</td>
         </tr>
       </tbody>
     </table>
