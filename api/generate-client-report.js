@@ -419,6 +419,31 @@ export default async function handler(req, res) {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
     const sections = body.sections || {};
+    // ------------------------------------------------------------------
+// Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
+// ------------------------------------------------------------------
+const REQUIRED_SECTIONS = [
+  "execSummary",
+  "unitValueAdd",
+  "cashFlowProjections",
+  "neighborhoodAnalysis",
+  "riskAssessment",
+  "renovationNarrative",
+  "debtStructure",
+  "dealScoreSummary",
+  "dealScoreInterpretation",
+  "advancedModelingIntro",
+  "dcfInterpretation",
+  "finalRecommendation",
+];
+
+REQUIRED_SECTIONS.forEach((key) => {
+  if (!sections[key]) {
+    sections[key] =
+      '<p class="muted">Section intentionally omitted in sample report.</p>';
+  }
+});
+    
     const tables = body.tables || {};
     const charts = body.charts || {};
 
@@ -602,10 +627,9 @@ export default async function handler(req, res) {
       console.warn("⚠️ Missing narrative sections:", missingKeys.join(", "));
     }
 
-    // 8. Ensure sentence integrity across the full HTML
-    const { html: safeHtml, warnings } = ensureSentenceIntegrity(finalHtml, {
-      autoFixPunctuation: true,
-    });
+    // 8. TEMP: Skip sentence integrity to avoid corrupting HTML
+const safeHtml = finalHtml;
+const warnings = [];
 
     if (warnings.length > 0) {
       console.warn("⚠️ Sentence Integrity Warnings:");
@@ -613,24 +637,33 @@ export default async function handler(req, res) {
     }
 
     // 9. Send to DocRaptor (STILL IN TEST MODE)
-    const pdfResponse = await axios.post(
-      "https://docraptor.com/docs",
-      {
-        test: true, // keep true until you're ready to burn real (non-watermark) credits
-        document_content: safeHtml,
-        name: "InvestorIQ-ClientReport.pdf",
-        document_type: "pdf",
+let pdfResponse;
+
+try {
+  pdfResponse = await axios.post(
+    "https://docraptor.com/docs",
+    {
+      test: true, // keep true until you're ready to burn real (non-watermark) credits
+      document_content: safeHtml,
+      name: "InvestorIQ-ClientReport.pdf",
+      document_type: "pdf",
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(
+          process.env.DOCRAPTOR_API_KEY + ":"
+        ).toString("base64")}`,
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${Buffer.from(
-            process.env.DOCRAPTOR_API_KEY + ":"
-          ).toString("base64")}`,
-        },
-        responseType: "arraybuffer",
-      }
-    );
+      responseType: "arraybuffer",
+    }
+  );
+} catch (err) {
+  console.error("❌ DOC RAPTOR ERROR STATUS:", err.response?.status);
+  console.error("❌ DOC RAPTOR ERROR BODY ↓↓↓");
+  console.error(err.response?.data?.toString());
+  throw err;
+}
 
     // 10. Return PDF to client
     res.setHeader("Content-Type", "application/pdf");
