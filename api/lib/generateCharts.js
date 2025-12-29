@@ -569,59 +569,60 @@ async function generateNoiWaterfallChart() {
 // CHART 8: RENOVATION ROI
 // ---------------------------------
 async function generateRenovationRoiChart() {
-  const r = riverbend.renovation_roi;
-
   const labels = ["Capex Invested", "Value Created"];
-  const values = [r.capex_invested_millions, r.value_created_millions];
+  const values = [5.3, 9.2]; // (or whatever your real values are)
+
+  const data = {
+    labels,
+    datasets: [
+  {
+    label: "Program Economics (Millions, InvestorIQ Estimate)",
+    data: values,
+    borderRadius: 6,
+    barThickness: 140,
+    maxBarThickness: 180,
+    backgroundColor: [
+      "rgba(15, 23, 42, 0.90)",
+      "rgba(212, 175, 55, 0.90)"
+    ]
+  }
+]
+  };
 
   const config = {
     type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Program Economics (Millions, InvestorIQ Estimate)",
-          data: values,
-          borderRadius: 6,
-          backgroundColor: [
-            "rgba(15, 23, 42, 0.90)",
-            "rgba(212, 175, 55, 0.90)"
-          ]
-        }
-      ]
-    },
+    data,
     options: {
-      plugins: {
-        title: {
-          display: true,
-          text: "Renovation Program – Capital vs. Value Creation",
-          color: BRAND.navy,
-          font: { size: 22 }
-        },
-        legend: {
-          labels: {
-            color: BRAND.navy,
-            font: { size: 14 }
-          }
+      responsive: false,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 10,
+          bottom: 6,
+          left: 12,
+          right: 12
         }
+      },
+      plugins: {
+        legend: { display: true }
       },
       scales: {
         x: {
-          ticks: { color: BRAND.navy },
-          grid: { display: false }
+          grid: { display: false },
+          categoryPercentage: 0.9,
+          barPercentage: 0.95
         },
         y: {
+          beginAtZero: true,
           ticks: {
-            color: BRAND.slate,
-            callback: (v) => "$" + v.toFixed(1) + "M"
-          },
-          grid: { color: BRAND.grid }
+            callback: (value) => `$${value}M`
+          }
         }
       }
     }
   };
 
-  await writeChart("renovation_roi.png", config);
+  await writeChart("renovation_roi.png", config, { height: 520 });
 }
 
 // ---------------------------------
@@ -654,10 +655,17 @@ async function generateDealScoreBarChart() {
       labels,
       datasets: [
         {
-          label: "Score (0–10, InvestorIQ Framework)",
+          label: "Score (0-10, InvestorIQ Framework)",
           data: values,
           borderRadius: 6,
-          backgroundColor: "rgba(31, 138, 138, 0.90)"
+          backgroundColor: [
+            "rgba(31, 138, 138, 0.90)", // Location
+            "rgba(31, 138, 138, 0.90)", // Market
+            "rgba(15, 23, 42, 0.88)",   // Asset Quality (navy)
+            "rgba(212, 175, 55, 0.92)", // Financials (gold accent)
+            "rgba(31, 138, 138, 0.90)", // Value-Add
+            "rgba(15, 23, 42, 0.82)"    // Risk (inverse) in navy
+          ]
         }
       ]
     },
