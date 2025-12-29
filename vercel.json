@@ -4,6 +4,9 @@
       "maxDuration": 60
     }
   },
+  "redirects": [
+    { "source": "/app", "destination": "/dashboard", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/" }
