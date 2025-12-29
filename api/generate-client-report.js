@@ -347,30 +347,81 @@ function buildCompsTable(rows = []) {
 }
 
 // ---------- Chart Helper ----------
+const CHART_BASE_URL =
+  process.env.CHART_BASE_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://investoriq.tech");
+
+// Default to inlining charts so the report always picks up the latest PNGs.
+// Set INLINE_CHARTS=false in environments where you serve charts from a CDN.
+const INLINE_CHARTS =
+  process.env.INLINE_CHARTS === undefined
+    ? true
+    : process.env.INLINE_CHARTS === "true";
+
+console.log(
+  `[charts] INLINE_CHARTS=${INLINE_CHARTS} CHART_BASE_URL=${CHART_BASE_URL}`
+);
+
+function chartVersion(filename) {
+  try {
+    const stat = fs.statSync(
+      path.join(process.cwd(), "public", "charts", "institutional", filename)
+    );
+    return String(stat.mtime.getTime());
+  } catch (err) {
+    return String(Date.now());
+  }
+}
+
+function chartUrl(filename) {
+  const version = chartVersion(filename);
+  return `${CHART_BASE_URL}/charts/institutional/${filename}?v=${version}`;
+}
+
+function inlineChart(filename, fallbackUrl) {
+  if (!INLINE_CHARTS) return fallbackUrl;
+  const imgPath = path.join(
+    process.cwd(),
+    "public",
+    "charts",
+    "institutional",
+    filename
+  );
+  try {
+    const b64 = fs.readFileSync(imgPath).toString("base64");
+    return `data:image/png;base64,${b64}`;
+  } catch (err) {
+    console.warn(`Inline chart missing (${filename}), using fallback URL`);
+    return fallbackUrl;
+  }
+}
 
 function applyChartPlaceholders(html, charts = {}) {
   const defaults = {
-    renovationChartUrl:
-      "https://investoriq.tech/charts/institutional/renovation_roi.png",
-    cashflowChartUrl:
-      "https://investoriq.tech/charts/institutional/cashflow_5yr.png",
-    irrScenarioChartUrl:
-      "https://investoriq.tech/charts/institutional/irr_scenario.png",
-    riskRadarChartUrl:
-      "https://investoriq.tech/charts/institutional/risk_radar.png",
-    dealScoreRadarChartUrl:
-      "https://investoriq.tech/charts/institutional/deal_score_radar.png",
-    dealScoreBarChartUrl:
-      "https://investoriq.tech/charts/institutional/deal_score_bar.png",
-    expenseRatioChartUrl:
-      "https://investoriq.tech/charts/institutional/expense_ratio.png",
-    equityComponentsChartUrl:
-      "https://investoriq.tech/charts/institutional/equity_return_components.png",
-    noiWaterfallChartUrl:
-      "https://investoriq.tech/charts/institutional/noi_waterfall.png",
-    breakevenChartUrl:
-      "https://investoriq.tech/charts/institutional/break_even_occupancy.png",
+    renovationChartUrl: inlineChart("renovation_roi.png", chartUrl("renovation_roi.png")),
+    cashflowChartUrl: inlineChart("cashflow_5yr.png", chartUrl("cashflow_5yr.png")),
+    irrScenarioChartUrl: inlineChart("irr_scenario.png", chartUrl("irr_scenario.png")),
+    riskRadarChartUrl: inlineChart("risk_radar.png", chartUrl("risk_radar.png")),
+    dealScoreRadarChartUrl: inlineChart(
+      "deal_score_radar.png",
+      chartUrl("deal_score_radar.png")
+    ),
+    dealScoreBarChartUrl: inlineChart("deal_score_bar.png", chartUrl("deal_score_bar.png")),
+    expenseRatioChartUrl: inlineChart("expense_ratio.png", chartUrl("expense_ratio.png")),
+    equityComponentsChartUrl: inlineChart(
+      "equity_return_components.png",
+      chartUrl("equity_return_components.png")
+    ),
+    noiWaterfallChartUrl: inlineChart("noi_waterfall.png", chartUrl("noi_waterfall.png")),
+    breakevenChartUrl: inlineChart(
+      "break_even_occupancy.png",
+      chartUrl("break_even_occupancy.png")
+    ),
   };
+
+  console.log("[charts] dealScoreBarChartUrl:", defaults.dealScoreBarChartUrl.slice(0, 80));
 
   const merged = { ...defaults, ...(charts || {}) };
 

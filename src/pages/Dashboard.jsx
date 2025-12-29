@@ -16,7 +16,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [reportData, setReportData] = useState(null);
+const [reportData, setReportData] = useState(null);
+
+const STRIPE_SINGLE_REPORT_LINK = "https://buy.stripe.com/bJe6oJaY89nl9d75752sM04";
+const credits = Number(profile?.report_credits ?? 0);
 
   const handleUploadSuccess = async () => {
     toast({
@@ -124,11 +127,29 @@ export default function Dashboard() {
             </div>
 
             <div className="text-right mt-4 sm:mt-0">
-              <div className="font-bold text-lg text-slate-700">Report Credits</div>
-              <div className="text-4xl font-extrabold text-[#D4AF37]">
-                {profile?.report_credits ?? '...'}
-              </div>
-            </div>
+  <div className="font-bold text-lg text-slate-700">Report Credits</div>
+  <div className="text-4xl font-extrabold text-[#D4AF37]">
+    {profile?.report_credits ?? '...'}
+  </div>
+
+  {credits === 0 && (
+    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+      <p className="text-sm font-semibold text-slate-900">You have 0 report credits.</p>
+      <p className="mt-1 text-sm text-slate-600">
+        Buy 1 credit to unlock uploads and generate your report.
+        <span className="ml-2 font-semibold text-slate-900">Promo code:</span>{" "}
+        <span className="font-mono text-slate-900">INVESTORIQ</span>
+      </p>
+
+      <a
+        href={STRIPE_SINGLE_REPORT_LINK}
+        className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-[#1F8A8A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#177272]"
+      >
+        Buy 1 Report Credit
+      </a>
+    </div>
+  )}
+</div>
           </motion.div>
 
           {/* UPLOAD SECTION */}
