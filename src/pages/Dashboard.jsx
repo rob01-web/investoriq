@@ -8,7 +8,6 @@ import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import UploadModal from '@/components/UploadModal';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
-import BackButton from '@/components/BackButton';
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -284,7 +283,6 @@ const credits = Number(profile?.report_credits ?? 0);
         onClose={() => setIsModalOpen(false)}
         onUpload={handleUploadSuccess}
       />
-      <BackButton />
     </>
   );
 }
