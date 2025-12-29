@@ -1,8 +1,10 @@
 import React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 
 export default function InvestorIQHeader() {
   const logoUrl = "/assets/logo.png";
+  const { user, signOut } = useAuth();
 
   // Scroll-based effects
   const { scrollY } = useScroll();
@@ -45,16 +47,30 @@ export default function InvestorIQHeader() {
             Sample Report
           </a>
 
-          <a href="/login" className="hover:text-[#1F8A8A] transition">
-            Log In
-          </a>
+          {user ? (
+            <button
+              onClick={async () => {
+                await signOut();
+                window.location.href = "/login";
+              }}
+              className="inline-flex items-center rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+            >
+              Log out
+            </button>
+          ) : (
+            <>
+              <a href="/login" className="hover:text-[#1F8A8A] transition">
+                Log In
+              </a>
 
-          <a
-            href="/signup"
-            className="bg-[#D4AF37] text-white px-5 py-2.5 rounded-lg hover:bg-[#b9972b] shadow-md transition"
-          >
-            Join InvestorIQ
-          </a>
+              <a
+                href="/signup"
+                className="bg-[#D4AF37] text-white px-5 py-2.5 rounded-lg hover:bg-[#b9972b] shadow-md transition"
+              >
+                Join InvestorIQ
+              </a>
+            </>
+          )}
         </nav>
       </div>
     </motion.header>
