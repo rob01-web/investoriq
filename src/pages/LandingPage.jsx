@@ -23,14 +23,14 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="max-w-5xl mx-auto px-6 text-center pt-24 sm:pt-28"
+          className="max-w-5xl mx-auto px-6 text-center pt-16 sm:pt-20 pb-12"
         >
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#0F172A] leading-tight">
+          <h1 className="text-5xl sm:text-6xl md:text-6xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
             Institutional Property Intelligence for{" "}
             <span className="text-[#1F8A8A]">Modern Investors</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-600 mt-6 leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-700 mt-4 leading-7 max-w-3xl mx-auto">
             Upload your property documents and our IQ-driven underwriting engine delivers
             a comprehensive, data-backed{" "}
             <span className="text-[#1F8A8A] font-semibold">Property IQ Report™</span>{" "}
@@ -39,11 +39,10 @@ export default function LandingPage() {
 
           {/* BUTTON GROUP */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
-
             {/* PRIMARY CTA */}
             <Button
               size="lg"
-              className="bg-[#1F8A8A] text-white font-semibold px-8 py-3 rounded-xl hover:bg-[#177272] shadow-md transition-transform hover:scale-105"
+              className="inline-flex items-center rounded-lg border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               onClick={() => (window.location.href = "/signup")}
             >
               Analyze My Property
@@ -53,7 +52,7 @@ export default function LandingPage() {
             <Button
               size="lg"
               variant="outline"
-              className="border-[#1F8A8A] text-[#1F8A8A] px-8 py-3 rounded-xl hover:bg-[#1F8A8A]/10 transition"
+              className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
               onClick={() => window.open("/reports/sample-report.html", "_blank")}
             >
               View Sample Report
@@ -63,16 +62,15 @@ export default function LandingPage() {
             <Button
               size="lg"
               variant="outline"
-              className="border-[#1F8A8A] text-[#1F8A8A] px-8 py-3 rounded-xl hover:bg-[#1F8A8A]/10 transition"
+              className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
               onClick={() => window.open("/api/generate-sample-pdf", "_blank")}
             >
               Download PDF
             </Button>
-
           </div>
 
           {/* HERO IMAGE */}
-          <div className="mt-16 relative">
+          <div className="mt-12 relative">
             <div className="overflow-hidden rounded-2xl shadow-2xl border border-slate-200">
               <img
                 src={heroUrl}
@@ -86,7 +84,7 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-slate-500 text-sm">
-        © 2025{" "}
+        Ac 2025{" "}
         <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
       </footer>
     </>
