@@ -3,7 +3,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 
 export default function InvestorIQHeader() {
-  const logoUrl = "/assets/logo.png";
   const { user, signOut } = useAuth();
 
   // Scroll-based effects
@@ -29,12 +28,9 @@ export default function InvestorIQHeader() {
           className="flex items-center select-none"
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
-          <img
-            src={logoUrl}
-            alt="InvestorIQ Logo"
-            className="h-14 sm:h-16 md:h-18 w-auto object-contain transition-transform"
-            style={{ filter: "grayscale(1) brightness(0)" }}
-          />
+          <a href="/" className="inline-flex items-center gap-3">
+            <img src="/brand/logo-primary.svg" alt="InvestorIQ" className="h-8 w-auto" />
+          </a>
         </motion.div>
 
         {/* NAVIGATION */}
