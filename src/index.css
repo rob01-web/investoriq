@@ -113,6 +113,10 @@
     color: #0F172A;
   }
 
+  a:hover {
+    color: #0d1326;
+  }
+
   button {
     @apply transition-all duration-200 focus:outline-none focus-visible:ring-2;
     --tw-ring-color: #0F172A;

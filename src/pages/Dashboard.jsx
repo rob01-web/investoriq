@@ -106,7 +106,7 @@ const credits = Number(profile?.report_credits ?? 0);
         />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] p-4 sm:p-8 flex flex-col">
+      <div className="min-h-screen bg-white p-4 sm:p-8 flex flex-col">
         <div className="max-w-5xl mx-auto flex-grow">
           {/* HEADER */}
           <motion.div
@@ -119,7 +119,7 @@ const credits = Number(profile?.report_credits ?? 0);
               <h1 className="text-4xl font-extrabold text-[#0F172A]">
                 Welcome, {profile?.full_name || 'Investor'}
               </h1>
-              <p className="text-slate-600 mt-2">
+              <p className="text-[#334155] mt-2 font-semibold">
                 Upload your documents to generate your{' '}
                 <span className="text-[#1F8A8A] font-semibold">Property IQ Report™</span>.
               </p>
@@ -134,7 +134,7 @@ const credits = Number(profile?.report_credits ?? 0);
   {credits === 0 && (
     <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
       <p className="text-sm font-semibold text-slate-900">You have 0 report credits.</p>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-[#334155]">
         Buy 1 credit to unlock uploads and generate your report.
         <span className="ml-2 font-semibold text-slate-900">Promo code:</span>{" "}
         <span className="font-mono text-slate-900">INVESTORIQ</span>
@@ -163,14 +163,14 @@ const credits = Number(profile?.report_credits ?? 0);
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">
                   Upload Property Documents
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-[#334155] leading-relaxed font-medium">
                   Upload <strong>PDFs, spreadsheets, or property photos.</strong> <br />
                   <span className="text-[#1F8A8A] font-semibold">
                     The more you upload, the smarter your report.
                   </span>{' '}
                   (10 MB max per file)
                 </p>
-                <p className="text-slate-500 text-sm mt-2">
+                <p className="text-[#334155] text-sm mt-2">
                   Works for both <strong>off-market</strong> and MLS properties.
                 </p>
               </div>
@@ -208,7 +208,7 @@ const credits = Number(profile?.report_credits ?? 0);
                       className="flex justify-between border-b border-slate-100 pb-1 last:border-none"
                     >
                       <span>{file.name}</span>
-                      <span className="text-slate-500 text-xs">
+                      <span className="text-[#334155] text-xs">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </span>
                     </li>
@@ -256,7 +256,7 @@ const credits = Number(profile?.report_credits ?? 0);
               <h3 className="text-2xl font-bold text-[#0F172A] mb-2">
                 Report Generated Successfully
               </h3>
-              <p className="text-slate-600 mb-6">
+              <p className="text-[#334155] mb-6 font-medium">
                 Address: {reportData.address} <br />
                 Valuation: ${reportData.valuation.toLocaleString()} <br />
                 Confidence: {reportData.confidence}%

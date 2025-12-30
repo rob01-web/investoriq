@@ -46,7 +46,7 @@ export default function ReportHistory() {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] p-6 sm:p-10 flex flex-col">
+      <div className="min-h-screen bg-white p-6 sm:p-10 flex flex-col">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,12 +56,12 @@ export default function ReportHistory() {
           {/* HEADER */}
           <div className="text-center mb-10">
             <h1 className="text-4xl font-extrabold text-[#0F172A]">
-              <span className="text-[#1F8A8A]">InvestorIQ</span> Report History
+              <span className="text-[#0F172A]">InvestorIQ</span> Report History
             </h1>
-            <p className="text-slate-600 mt-2 text-lg">
+            <p className="text-[#334155] mt-2 text-lg">
               Access your past Property IQ Reports and download them anytime.
             </p>
-            <div className="mt-4 h-1 w-24 bg-gradient-to-r from-[#D4AF37] to-[#1F8A8A] mx-auto rounded-full" />
+            <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
           </div>
 
           {/* LOADING STATE */}
@@ -77,19 +77,19 @@ export default function ReportHistory() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="bg-white rounded-2xl shadow-xl p-10 text-center border border-slate-200"
+              className="bg-white rounded-xl shadow-sm p-10 text-center border border-slate-200"
             >
-              <FileText className="h-12 w-12 mx-auto text-[#1F8A8A] mb-3" />
+              <FileText className="h-12 w-12 mx-auto text-[#0F172A] mb-3" />
               <h3 className="text-xl font-bold text-[#0F172A] mb-1">
                 No Reports Yet
               </h3>
-              <p className="text-slate-600 mb-6">
+              <p className="text-[#334155] mb-6">
                 Upload your first property documents to generate your first
                 InvestorIQ Property IQ Report™.
               </p>
               <Button
                 onClick={() => (window.location.href = "/dashboard")}
-                className="bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold shadow-md hover:scale-105 transition-transform"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 Upload a New Deal
               </Button>
@@ -104,7 +104,7 @@ export default function ReportHistory() {
             >
               <table className="w-full border-collapse rounded-xl overflow-hidden">
                 <thead>
-                  <tr className="bg-gradient-to-r from-[#1F8A8A]/10 to-[#D4AF37]/10 text-left text-[#0F172A] text-sm font-semibold">
+                  <tr className="text-left text-[#0F172A] text-sm font-semibold bg-slate-50">
                     <th className="p-4 border-b border-slate-200">
                       Property Address
                     </th>
@@ -119,13 +119,13 @@ export default function ReportHistory() {
                   {reports.map((r) => (
                     <tr
                       key={r.id}
-                      className="hover:bg-[#1F8A8A]/5 transition border-b border-slate-100"
+                      className="hover:bg-slate-50 transition border-b border-slate-100"
                     >
                       <td className="p-4 text-slate-800 font-medium">
                         {r.property_address || "N/A"}
                       </td>
-                      <td className="p-4 text-slate-500 text-sm flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-[#1F8A8A]" />
+                      <td className="p-4 text-[#334155] text-sm flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-[#0F172A]" />
                         {new Date(r.created_at).toLocaleDateString()}
                       </td>
                       <td className="p-4">
@@ -144,7 +144,7 @@ export default function ReportHistory() {
                       <td className="p-4 text-right">
                         <Button
                           size="sm"
-                          className="bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white text-xs px-3 py-1 font-semibold rounded-md hover:scale-105 transition-transform"
+                          className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] text-white text-xs px-3 py-1 font-semibold hover:bg-[#0d1326]"
                           onClick={() =>
                             alert(`Download for ${r.property_address} coming soon.`)
                           }
@@ -161,9 +161,9 @@ export default function ReportHistory() {
         </motion.div>
 
         {/* FOOTER */}
-        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-slate-500 text-sm mt-12">
+        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
           © 2025{" "}
-          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+          <span className="font-semibold text-[#0F172A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
 
         <BackButton />

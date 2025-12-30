@@ -14,7 +14,7 @@ const CallToAction = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-gradient-to-r from-iqnavy to-iqteal py-20 relative overflow-hidden">
+    <section className="bg-[#0F172A] py-20 relative overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -34,7 +34,7 @@ const CallToAction = () => {
             size="lg"
             variant="default"
             onClick={() => navigate('/dashboard')}
-            className="shadow-lg shadow-iqgold/20 hover:shadow-iqgold/30"
+            className="rounded-md border border-white bg-white text-[#0F172A] font-semibold px-6 py-3 hover:bg-slate-100"
           >
             Upload Your Property
           </Button>
@@ -42,7 +42,7 @@ const CallToAction = () => {
           <Button
             size="lg"
             variant="outline"
-            className="border-2 border-iqgold text-iqgold hover:bg-iqgold hover:text-iqnavy transition-all duration-200"
+            className="rounded-md border border-slate-200 text-white px-6 py-3 hover:border-white"
             onClick={() => navigate('/sample-report')}
           >
             View Sample IQ Report
@@ -51,7 +51,7 @@ const CallToAction = () => {
       </motion.div>
 
       {/* Subtle overlay for depth */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-black/5 pointer-events-none" />
     </section>
   );
 };

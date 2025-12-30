@@ -36,7 +36,7 @@ const ReportPreviewButton = ({ reportData }) => {
           onClick={handlePreview}
           disabled={loading}
           aria-label="Preview InvestorIQ report"
-          className="bg-gradient-to-r from-[#D4AF37] to-[#B9972B] text-white hover:brightness-110 hover:scale-[1.03] transition-all duration-300 font-semibold rounded-lg shadow-md"
+          className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] text-white text-sm font-semibold px-5 py-3 hover:bg-[#0d1326]"
         >
           {loading ? "Generating..." : "Preview Report"}
         </Button>
@@ -52,7 +52,7 @@ const ReportPreviewButton = ({ reportData }) => {
               transition={{ duration: 0.3 }}
             >
               <motion.div
-                className="w-8 h-8 border-4 border-[#D4AF37] border-t-[#1F8A8A] rounded-full animate-spin mb-2"
+                className="w-8 h-8 border-4 border-[#0F172A] border-t-transparent rounded-full animate-spin mb-2"
                 transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
               />
               <p className="text-sm text-[#0F172A] font-semibold tracking-wide">
