@@ -125,7 +125,7 @@ const credits = Number(profile?.report_credits ?? 0);
               </p>
             </div>
 
-            <div className="text-right mt-4 sm:mt-0">
+  <div className="text-right mt-4 sm:mt-0">
   <div className="font-bold text-lg text-slate-700">Report Credits</div>
   <div className="text-4xl font-extrabold text-[#D4AF37]">
     {profile?.report_credits ?? '...'}
@@ -142,7 +142,7 @@ const credits = Number(profile?.report_credits ?? 0);
 
       <a
         href={STRIPE_SINGLE_REPORT_LINK}
-        className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-[#1F8A8A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#177272]"
+        className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
       >
         Buy 1 Report Credit
       </a>
@@ -156,7 +156,7 @@ const credits = Number(profile?.report_credits ?? 0);
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 md:p-10"
+            className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-10"
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
               <div>
@@ -179,7 +179,7 @@ const credits = Number(profile?.report_credits ?? 0);
                 size="lg"
                 onClick={() => document.getElementById('fileInput').click()}
                 disabled={!profile || profile.report_credits <= 0}
-                className="bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold shadow-md hover:scale-105 transition-transform rounded-lg"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 <UploadCloud className="mr-2 h-5 w-5" />
                 Upload Files
@@ -232,7 +232,7 @@ const credits = Number(profile?.report_credits ?? 0);
                 size="lg"
                 onClick={handleAnalyze}
                 disabled={uploadedFiles.length === 0 || loading}
-                className="px-10 bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-bold hover:scale-105 transition-transform rounded-xl shadow-lg"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
                   <>
@@ -251,7 +251,7 @@ const credits = Number(profile?.report_credits ?? 0);
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="mt-12 bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center"
+              className="mt-12 bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center"
             >
               <h3 className="text-2xl font-bold text-[#0F172A] mb-2">
                 Report Generated Successfully
@@ -264,7 +264,7 @@ const credits = Number(profile?.report_credits ?? 0);
               <Button
                 size="lg"
                 onClick={() => toast({ title: 'Download Started', description: 'Check your downloads folder.' })}
-                className="bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold shadow-md hover:scale-105 transition-transform"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 <FileDown className="mr-2 h-5 w-5" /> Download Report
               </Button>

@@ -32,7 +32,8 @@ export default function InvestorIQHeader() {
           <img
             src={logoUrl}
             alt="InvestorIQ Logo"
-            className="h-16 sm:h-20 md:h-24 w-auto object-contain transition-transform hover:scale-105"
+            className="h-14 sm:h-16 md:h-18 w-auto object-contain transition-transform"
+            style={{ filter: "grayscale(1) brightness(0)" }}
           />
         </motion.div>
 
