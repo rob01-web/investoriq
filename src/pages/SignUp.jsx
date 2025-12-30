@@ -45,7 +45,7 @@ export default function SignUpPage() {
         <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
           Create Your Account
         </h1>
-        <p className="text-slate-600 text-center mb-8">
+        <p className="text-[#334155] text-center mb-8">
           Join{" "}
           <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> to generate AI-powered
           Property IQ Reports
@@ -124,7 +124,7 @@ export default function SignUpPage() {
           </Button>
         </form>
 
-        <p className="text-center text-slate-600 mt-6">
+        <p className="text-center text-[#334155] mt-6">
           Already have an account?{" "}
           <Link to="/login" className="text-[#1F8A8A] font-semibold hover:underline">
             Log in here
@@ -132,7 +132,7 @@ export default function SignUpPage() {
         </p>
       </motion.div>
 
-      <footer className="py-6 text-center text-slate-500 text-sm mt-10">
+      <footer className="py-6 text-center text-[#334155] text-sm mt-10">
         © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
       </footer>
     </div>

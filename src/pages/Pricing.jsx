@@ -57,7 +57,7 @@ const tiers = [
 
 const PricingTile = ({ tier }) => (
   <div
-    className={`bg-white rounded-xl border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
+    className={`bg-white rounded-lg border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
     style={tier.highlight ? { borderColor: PALETTE.teal } : {}}
   >
     {tier.highlight && (
@@ -79,7 +79,7 @@ const PricingTile = ({ tier }) => (
       {tier.price}
       <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
     </p>
-    <p className="text-slate-700 mb-6 text-center font-semibold">{tier.description}</p>
+    <p className="text-[#334155] mb-6 text-center font-semibold">{tier.description}</p>
 
     <ul className="space-y-3 mb-8">
       {tier.features.map((feature, i) => (
@@ -88,7 +88,7 @@ const PricingTile = ({ tier }) => (
             className="h-5 w-5 mr-3 mt-1 flex-shrink-0"
             style={{ color: PALETTE.gold }}
           />
-          <span className="text-slate-700">{feature}</span>
+          <span className="text-[#334155]">{feature}</span>
         </li>
       ))}
     </ul>
@@ -121,7 +121,7 @@ export default function PricingPage() {
           >
             Simple, Transparent Pricing
           </h1>
-          <p className="text-lg text-slate-700 max-w-2xl mx-auto mb-10">
+          <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
             All prices are in USD. If a report fails to generate or contains errors, your IQ credit
             is automatically restored for regeneration. InvestorIQ does not issue cash refunds.
           </p>
@@ -133,14 +133,14 @@ export default function PricingPage() {
           </div>
 
           {/* Add-on: Additional Reports */}
-          <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-xl p-6 shadow-sm text-center">
+          <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-lg p-6 shadow-sm text-center">
             <h3
               className="text-xl font-bold mb-1"
               style={{ color: PALETTE.deepNavy }}
             >
               Need Additional Reports?
             </h3>
-            <p className="text-slate-700 font-semibold mb-4">
+            <p className="text-[#334155] font-semibold mb-4">
               Purchase extra Property IQ Reports anytime. Quantities can be adjusted during checkout.
             </p>
             <a
@@ -149,7 +149,7 @@ export default function PricingPage() {
             >
               Buy Additional Reports — <span className="font-bold">$229</span>
             </a>
-            <p className="text-xs text-slate-500 mt-3">
+            <p className="text-xs text-[#334155] mt-3">
               Failed generations automatically restore your IQ credit. No cash refunds.
             </p>
           </div>

@@ -67,7 +67,7 @@ export default function AdminDashboard() {
             <h1 className="text-4xl font-extrabold text-[#0F172A] mb-2">
               Admin <span className="text-[#1F8A8A]">Control Panel</span>
             </h1>
-            <p className="text-slate-600 text-lg">
+            <p className="text-[#334155] text-lg font-medium">
               Monitor InvestorIQ usage, reports, and user activity in real time.
             </p>
             <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
                 <motion.div
                   whileHover={{ scale: 1.03 }}
-                  className="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 text-center"
+                  className="bg-white border border-slate-200 shadow-sm rounded-lg p-6 text-center"
                 >
                   <Users className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
                   <h3 className="text-xl font-bold text-[#0F172A] mb-1">Total Users</h3>
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200"
+                className="bg-white rounded-lg shadow-sm p-8 border border-slate-200"
               >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-[#0F172A]">
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {recentReports.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8">
+                  <p className="text-[#334155] text-center py-8">
                     No recent reports available.
                   </p>
                 ) : (
@@ -154,13 +154,13 @@ export default function AdminDashboard() {
                           key={r.id || i}
                           className="hover:bg-[#1F8A8A]/5 transition border-b border-slate-100"
                         >
-                          <td className="p-4 text-slate-800 font-medium">
+                          <td className="p-4 text-[#0F172A] font-semibold">
                             {r.property_address || "N/A"}
                           </td>
-                          <td className="p-4 text-slate-500 text-sm">
+                          <td className="p-4 text-[#334155] text-sm font-medium">
                             {r.user_email || "Unknown"}
                           </td>
-                          <td className="p-4 text-slate-500 text-sm">
+                          <td className="p-4 text-[#334155] text-sm font-medium">
                             {new Date(r.created_at).toLocaleDateString()}
                           </td>
                           <td className="p-4">
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* FOOTER */}
-        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-slate-500 text-sm mt-12">
+        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
           © 2025{" "}
           <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
