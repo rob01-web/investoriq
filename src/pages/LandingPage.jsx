@@ -18,7 +18,7 @@ export default function LandingPage() {
       </Helmet>
 
       {/* HERO SECTION */}
-      <main className="min-h-[80vh] bg-gradient-to-b from-white via-[#F9FAFB] to-[#EEF2F6]">
+      <main className="min-h-[80vh] bg-white">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -17,7 +17,7 @@ const WelcomeMessage = () => {
       transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
     >
       Welcome to{" "}
-      <span className="font-extrabold bg-gradient-to-r from-iqteal via-iqgold to-iqteal text-transparent bg-clip-text">
+      <span className="font-extrabold text-[#0F172A]">
         InvestorIQ
       </span>
       , the AI-powered platform delivering institutional-grade real estate insights. 

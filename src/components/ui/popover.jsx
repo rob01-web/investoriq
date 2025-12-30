@@ -20,7 +20,7 @@ const PopoverContent = React.forwardRef(
         )}
         {...props}
       >
-        <div className="h-px w-full bg-gradient-to-r from-iqgold/40 via-iqteal/30 to-transparent mb-3"></div>
+        <div className="h-px w-full bg-slate-200 mb-3"></div>
         {props.children}
       </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
