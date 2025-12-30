@@ -57,14 +57,12 @@ const tiers = [
 
 const PricingTile = ({ tier }) => (
   <div
-    className={`bg-white rounded-2xl shadow-lg p-8 flex flex-col border transition-transform duration-300 hover:scale-[1.02] ${
-      tier.highlight ? 'border-[1.5px]' : 'border-slate-200'
-    }`}
+    className={`bg-white rounded-xl border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
     style={tier.highlight ? { borderColor: PALETTE.teal } : {}}
   >
     {tier.highlight && (
       <div
-        className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold shadow-sm"
+        className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold border border-slate-200 bg-slate-50"
         style={{
           backgroundColor: `${PALETTE.teal}20`,
           color: PALETTE.teal,
@@ -81,7 +79,7 @@ const PricingTile = ({ tier }) => (
       {tier.price}
       <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
     </p>
-    <p className="text-slate-600 mb-6 text-center">{tier.description}</p>
+    <p className="text-slate-700 mb-6 text-center font-semibold">{tier.description}</p>
 
     <ul className="space-y-3 mb-8">
       {tier.features.map((feature, i) => (
@@ -97,10 +95,7 @@ const PricingTile = ({ tier }) => (
 
     <a
       href={tier.href}
-      className="mt-auto w-full py-3 text-center font-bold rounded-lg text-white shadow-md hover:shadow-xl transition"
-      style={{
-        background: `linear-gradient(to right, ${PALETTE.navy}, ${PALETTE.teal})`,
-      }}
+      className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition"
     >
       Get Started
     </a>
@@ -138,22 +133,19 @@ export default function PricingPage() {
           </div>
 
           {/* Add-on: Additional Reports */}
-          <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl p-6 shadow text-center">
+          <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-xl p-6 shadow-sm text-center">
             <h3
               className="text-xl font-bold mb-1"
               style={{ color: PALETTE.deepNavy }}
             >
               Need Additional Reports?
             </h3>
-            <p className="text-slate-600 mb-4">
+            <p className="text-slate-700 font-semibold mb-4">
               Purchase extra Property IQ Reports anytime. Quantities can be adjusted during checkout.
             </p>
             <a
               href={STRIPE_LINKS.addon}
-              className="inline-block px-5 py-3 rounded-lg font-semibold text-white hover:opacity-90 transition"
-              style={{
-                background: `linear-gradient(to right, ${PALETTE.gold}, #b9972b)`,
-              }}
+              className="inline-block px-5 py-3 rounded-md font-semibold text-white border border-[#0F172A] bg-[#0F172A] hover:bg-[#0d1326] transition"
             >
               Buy Additional Reports — <span className="font-bold">$229</span>
             </a>
