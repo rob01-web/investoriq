@@ -1,7 +1,7 @@
 <svg width="520" height="80" viewBox="0 0 520 80" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
   <g transform="translate(8,12)">
     <rect x="0" y="0" width="10" height="56" fill="#FFFFFF"/>
-    <rect x="12" y="0" width="2" height="56" fill="#FFFFFF"/>
+    <rect x="12" y="0" width="3" height="56" fill="#FFFFFF"/>
     <defs>
       <mask id="q-cut-inverse" maskUnits="userSpaceOnUse">
         <rect x="17" y="0" width="48" height="56" fill="white"/>
@@ -9,7 +9,7 @@
       </mask>
     </defs>
     <rect x="17" y="0" width="48" height="56" fill="#FFFFFF" mask="url(#q-cut-inverse)"/>
-    <rect x="59" y="50" width="12" height="2" fill="#FFFFFF"/>
+    <rect x="59" y="50" width="12" height="3" fill="#FFFFFF"/>
   </g>
   <text x="90" y="55" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-weight="900" font-size="38" letter-spacing="-0.02em" fill="#FFFFFF">
     INVESTORIQ

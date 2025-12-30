@@ -2,14 +2,13 @@
   <defs>
     <mask id="iq-mask-64">
       <rect x="0" y="0" width="64" height="64" fill="#fff"/>
-      <rect x="20" y="4" width="24" height="40" fill="#000"/>
+      <rect x="20" y="4" width="24" height="40" fill="black"/>
     </mask>
   </defs>
-  <g transform="translate(8,8)" mask="url(#iq-mask-64)">
+  <g transform="translate(8,8)">
     <rect x="0" y="0" width="8" height="48" fill="#0F172A"/>
-    <rect x="0" y="0" width="2" height="48" fill="#D4AF37"/>
-    <rect x="10" y="0" width="2" height="48" fill="#0F172A"/>
-    <rect x="16" y="0" width="32" height="48" fill="#0F172A"/>
-    <rect x="42" y="44" width="10" height="2" fill="#0F172A"/>
+    <rect x="12" y="0" width="2" height="48" fill="#0F172A"/>
+    <rect x="16" y="0" width="32" height="48" fill="#0F172A" mask="url(#iq-mask-64)"/>
+    <rect x="42" y="44" width="10" height="2" fill="#D4AF37"/>
   </g>
 </svg>
