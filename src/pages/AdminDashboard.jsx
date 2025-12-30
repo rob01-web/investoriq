@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] p-8">
+      <div className="min-h-screen bg-white p-8">
         <motion.div
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
             <p className="text-slate-600 text-lg">
               Monitor InvestorIQ usage, reports, and user activity in real time.
             </p>
-            <div className="mt-4 h-1 w-24 bg-gradient-to-r from-[#D4AF37] to-[#1F8A8A] mx-auto rounded-full" />
+            <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
           </div>
 
           {/* STATS GRID */}
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
                 ) : (
                   <table className="w-full border-collapse rounded-xl overflow-hidden">
                     <thead>
-                      <tr className="bg-gradient-to-r from-[#1F8A8A]/10 to-[#D4AF37]/10 text-left text-[#0F172A] text-sm font-semibold">
+                      <tr className="text-left text-[#0F172A] text-sm font-semibold bg-slate-50">
                         <th className="p-4 border-b border-slate-200">Property</th>
                         <th className="p-4 border-b border-slate-200">User</th>
                         <th className="p-4 border-b border-slate-200">Created</th>

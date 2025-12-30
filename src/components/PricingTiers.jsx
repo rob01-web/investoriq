@@ -19,13 +19,13 @@ const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: 0.1 }}
-      className={`relative p-8 rounded-2xl border-2 bg-white flex flex-col hover:shadow-xl transition-all duration-300 ${
-        tier.popular ? 'border-iqgold shadow-lg shadow-iqgold/20' : 'border-slate-200'
+      className={`relative p-8 rounded-xl border bg-white flex flex-col shadow-sm ${
+        tier.popular ? 'border-[#0F172A]' : 'border-slate-200'
       }`}
     >
       {tier.popular && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <span className="bg-gradient-to-r from-iqgold to-yellow-500 text-iqnavy px-4 py-1 rounded-full text-sm font-semibold shadow-sm">
+          <span className="border border-slate-200 bg-slate-50 text-[#0F172A] px-4 py-1 rounded-full text-sm font-semibold">
             Most Popular
           </span>
         </div>
@@ -33,7 +33,7 @@ const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
 
       <h3 className="text-xl font-bold mb-2 text-center text-iqnavy">{tier.name}</h3>
       <div className="text-3xl font-extrabold text-iqteal mb-2 text-center">{tier.price}</div>
-      <p className="text-slate-600 mb-6 text-center h-12">{tier.description}</p>
+      <p className="text-[#334155] mb-6 text-center h-12 font-medium">{tier.description}</p>
 
       <ul className="space-y-3 mb-8 flex-grow">
         {tier.features.map((feature, fIndex) => (
@@ -45,10 +45,10 @@ const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
       </ul>
 
       <Button
-        className={`w-full mt-auto font-semibold ${
+        className={`w-full mt-auto font-semibold rounded-md ${
           tier.popular
-            ? 'bg-gradient-to-r from-iqteal to-iqnavy text-white shadow-iqteal/30 hover:scale-[1.02]'
-            : 'border border-iqteal text-iqteal hover:bg-iqteal hover:text-white'
+            ? 'border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+            : 'border border-slate-300 text-[#0F172A] hover:border-slate-400 hover:bg-slate-50'
         }`}
         onClick={() => onAction(tier)}
         disabled={isThisTierLoading}

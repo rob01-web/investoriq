@@ -30,12 +30,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] px-6">
+    <div className="min-h-screen flex flex-col justify-center bg-white px-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full mx-auto bg-white shadow-2xl rounded-2xl p-10 border border-slate-200"
+        className="max-w-md w-full mx-auto bg-white shadow-lg rounded-2xl p-10 border border-slate-200"
       >
         <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
           Welcome Back
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#1F8A8A] to-[#177272] text-white font-semibold py-3 rounded-lg hover:scale-[1.02] transition-all"
+            className="w-full inline-flex items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] text-white text-sm font-semibold py-3 hover:bg-[#0d1326] transition"
           >
             {loading ? (
               <>

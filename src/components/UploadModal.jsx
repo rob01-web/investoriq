@@ -272,7 +272,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
               <Button
                 type="submit"
                 disabled={isUploading}
-                className="bg-gradient-to-r from-iqgold to-yellow-500 text-white font-bold shadow-md hover:scale-[1.02] transition-transform"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] text-white font-semibold px-4 py-2 hover:bg-[#0d1326]"
               >
                 {isUploading ? (
                   <>

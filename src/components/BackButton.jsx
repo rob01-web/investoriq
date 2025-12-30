@@ -24,9 +24,9 @@ const BackButton = ({ label = 'Back to Dashboard', to = '/' }) => {
   return (
     <button
       onClick={handleClick}
-      className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full
-      bg-gradient-to-r from-iqteal to-iqnavy text-white font-semibold shadow-md shadow-iqnavy/30
-      hover:shadow-lg hover:scale-[1.04] hover:opacity-90 transition-all duration-200"
+      className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-md
+      border border-[#0F172A] bg-[#0F172A] text-white font-semibold shadow-sm
+      hover:bg-[#0d1326] transition-colors duration-200"
       aria-label={label}
     >
       <ArrowLeft className="h-4 w-4" />

@@ -35,7 +35,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-white via-[#F9FAFB] to-[#EAEAEA] px-6">
+    <div className="min-h-screen flex flex-col justify-center bg-white px-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -112,7 +112,7 @@ export default function SignUpPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#D4AF37] to-[#b9972b] text-white font-semibold py-3 rounded-lg hover:scale-[1.02] transition-all"
+            className="w-full inline-flex items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] text-white text-sm font-semibold py-3 hover:bg-[#0d1326] transition"
           >
             {loading ? (
               <>

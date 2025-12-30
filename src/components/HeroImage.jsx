@@ -17,8 +17,6 @@ const HeroImage = () => {
       transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
     >
       <div className="max-w-5xl mx-auto relative rounded-2xl overflow-hidden shadow-[0_10px_50px_rgba(0,0,0,0.15)]">
-        {/* Background Gradient Glow */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-iqteal/40 via-transparent to-iqnavy/30 z-10 pointer-events-none" />
 
         {/* Floating Hero Image */}
         <motion.img
@@ -31,12 +29,9 @@ const HeroImage = () => {
         />
 
         {/* Caption Overlay */}
-        <div className="absolute bottom-3 right-4 bg-white/70 backdrop-blur-sm text-iqnavy text-xs md:text-sm font-medium px-3 py-1 rounded-full shadow-sm z-20">
+        <div className="absolute bottom-3 right-4 bg-white/90 backdrop-blur-sm text-[#0F172A] text-xs md:text-sm font-medium px-3 py-1 rounded-md shadow-sm z-20">
           InvestorIQ Dashboard Preview
         </div>
-
-        {/* Optional Gold Highlight Glow */}
-        <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-iqgold/0 via-iqgold/30 to-iqgold/0 opacity-50 blur-md pointer-events-none" />
       </div>
     </motion.div>
   );
