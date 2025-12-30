@@ -77,7 +77,7 @@ export default function ReportHistory() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="bg-white rounded-xl shadow-sm p-10 text-center border border-slate-200"
+              className="bg-white rounded-lg shadow-sm p-10 text-center border border-slate-200"
             >
               <FileText className="h-12 w-12 mx-auto text-[#0F172A] mb-3" />
               <h3 className="text-xl font-bold text-[#0F172A] mb-1">
@@ -100,9 +100,9 @@ export default function ReportHistory() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200"
+              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200"
             >
-              <table className="w-full border-collapse rounded-xl overflow-hidden">
+              <table className="w-full border-collapse rounded-lg overflow-hidden">
                 <thead>
                   <tr className="text-left text-[#0F172A] text-sm font-semibold bg-slate-50">
                     <th className="p-4 border-b border-slate-200">

@@ -126,7 +126,7 @@ const credits = Number(profile?.report_credits ?? 0);
             </div>
 
   <div className="text-right mt-4 sm:mt-0">
-  <div className="font-bold text-lg text-slate-700">Report Credits</div>
+  <div className="font-bold text-lg text-[#0F172A]">Report Credits</div>
   <div className="text-4xl font-extrabold text-[#D4AF37]">
     {profile?.report_credits ?? '...'}
   </div>
@@ -201,7 +201,7 @@ const credits = Number(profile?.report_credits ?? 0);
                 <h3 className="font-semibold mb-3 text-[#0F172A]">
                   Files Selected ({uploadedFiles.length})
                 </h3>
-                <ul className="space-y-2 text-sm text-slate-700">
+                <ul className="space-y-2 text-sm text-[#334155] font-medium">
                   {uploadedFiles.map((file, idx) => (
                     <li
                       key={idx}
@@ -218,7 +218,7 @@ const credits = Number(profile?.report_credits ?? 0);
             )}
 
             {/* DISCLAIMER */}
-            <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-slate-700 flex items-start gap-2">
+            <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-[#1F8A8A] flex-shrink-0 mt-[2px]" />
               <span>
                 <strong className="text-[#0F172A]">Note:</strong> Report accuracy depends on
@@ -273,7 +273,7 @@ const credits = Number(profile?.report_credits ?? 0);
         </div>
 
         {/* FOOTER */}
-        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-slate-500 text-sm mt-12">
+        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
           © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
       </div>

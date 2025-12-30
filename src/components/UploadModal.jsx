@@ -150,7 +150,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
             <DialogTitle className="text-2xl font-extrabold text-iqnavy text-center tracking-tight">
               Submit a New Deal
             </DialogTitle>
-            <p className="text-center text-sm text-slate-500 mt-1">
+            <p className="text-center text-sm text-[#334155] mt-1">
               InvestorIQ will analyze your documents using institutional-grade frameworks.
             </p>
           </DialogHeader>
@@ -158,7 +158,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
           <form onSubmit={handleSubmit} className="space-y-6 mt-6">
             {/* Property Address */}
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-semibold text-slate-800">
+              <Label htmlFor="address" className="text-sm font-semibold text-[#0F172A]">
                 Property Address *
               </Label>
               <input
@@ -175,7 +175,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
 
             {/* Deal Type */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-800">Deal Type *</Label>
+              <Label className="text-sm font-semibold text-[#0F172A]">Deal Type *</Label>
               <div className="grid grid-cols-2 gap-3">
                 {["off-market", "mls"].map((type) => (
                   <button
@@ -185,11 +185,11 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                     className={`p-4 rounded-lg border-2 font-semibold capitalize transition-all ${
                       formData.dealType === type
                         ? "border-iqteal bg-iqteal/10 text-iqnavy shadow-sm"
-                        : "border-slate-200 text-slate-600 hover:border-iqteal/40"
+                        : "border-slate-200 text-[#334155] hover:border-iqteal/40"
                     }`}
                   >
                     {type === "off-market" ? "Off-Market" : "MLS Listing"}
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-[#334155] mt-1">
                       {type === "off-market" ? "Private Deal" : "Broker-Listed"}
                     </div>
                   </button>
@@ -199,10 +199,10 @@ const UploadModal = ({ open, onClose, onUpload }) => {
 
             {/* File Upload */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-slate-800">
+              <Label className="text-sm font-semibold text-[#0F172A]">
                 Upload Documents {formData.dealType === "off-market" ? "*" : "(Optional)"}
               </Label>
-              <p className="text-xs text-slate-600 mb-1">
+              <p className="text-xs text-[#334155] mb-1">
                 Upload rent rolls, photos, or financials (PDF, DOC, XLS, CSV; 10MB max per file)
               </p>
 
@@ -223,7 +223,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                   <div className="text-sm font-semibold text-iqnavy mb-1">
                     Click to Upload or Drag & Drop
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-[#334155]">
                     Your files remain encrypted and confidential
                   </div>
                 </label>
@@ -240,7 +240,7 @@ const UploadModal = ({ open, onClose, onUpload }) => {
                         <FileText className="h-5 w-5 text-iqteal flex-shrink-0" />
                         <div className="truncate">
                           <div className="text-sm font-medium truncate">{file.name}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-[#334155]">
                             {(file.size / 1024).toFixed(1)} KB
                           </div>
                         </div>

@@ -40,7 +40,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
           Welcome Back
         </h1>
-        <p className="text-slate-600 text-center mb-8">
+        <p className="text-[#334155] text-center mb-8">
           Log in to your{" "}
           <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> account
         </p>
@@ -101,7 +101,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="text-center text-slate-600 mt-6">
+        <p className="text-center text-[#334155] mt-6">
           Don’t have an account?{" "}
           <Link to="/signup" className="text-[#1F8A8A] font-semibold hover:underline">
             Sign up here
@@ -109,7 +109,7 @@ export default function LoginPage() {
         </p>
       </motion.div>
 
-      <footer className="py-6 text-center text-slate-500 text-sm mt-10">
+      <footer className="py-6 text-center text-[#334155] text-sm mt-10">
         © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
       </footer>
     </div>
