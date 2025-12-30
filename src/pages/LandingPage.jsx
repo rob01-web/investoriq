@@ -72,6 +72,36 @@ export default function LandingPage() {
             </Button>
           </div>
 
+          {/* REPORT-FIRST CUES */}
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <a
+              href="/reports/sample-report.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-40 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm hover:shadow-md transition"
+            >
+              <div className="h-2 w-20 rounded-full bg-[#0F172A] mb-3" />
+              <div className="space-y-2">
+                <div className="h-2 w-full rounded bg-slate-200" />
+                <div className="h-2 w-3/4 rounded bg-slate-200" />
+                <div className="h-2 w-5/6 rounded bg-slate-200" />
+                <div className="h-2 w-2/3 rounded bg-slate-200" />
+              </div>
+              <div className="mt-3 text-xs font-semibold text-[#0F172A]">
+                Sample Report Preview
+              </div>
+            </a>
+
+            <div className="flex flex-wrap justify-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-[#0F172A]">
+                Institutional Report Standard
+              </span>
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-[#0F172A]">
+                5-year IRR + DSCR Sensitivities
+              </span>
+            </div>
+          </div>
+
           {/* HERO IMAGE */}
           <div className="mt-10 relative">
             <div className="overflow-hidden rounded-2xl shadow-2xl border border-slate-200">
