@@ -23,8 +23,11 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="max-w-5xl mx-auto px-6 text-center pt-16 sm:pt-20 pb-12"
+          className="max-w-5xl mx-auto px-6 text-center pt-14 sm:pt-18 pb-10"
         >
+          <p className="text-xs tracking-[0.18em] uppercase text-[#1F8A8A] mb-3 font-semibold">
+            Institutional Underwriting
+          </p>
           <h1 className="text-5xl sm:text-6xl md:text-6xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
             Institutional Property Intelligence for{" "}
             <span className="text-[#1F8A8A]">Modern Investors</span>
@@ -38,7 +41,7 @@ export default function LandingPage() {
           </p>
 
           {/* BUTTON GROUP */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
             {/* PRIMARY CTA */}
             <Button
               size="lg"
@@ -70,7 +73,7 @@ export default function LandingPage() {
           </div>
 
           {/* HERO IMAGE */}
-          <div className="mt-12 relative">
+          <div className="mt-10 relative">
             <div className="overflow-hidden rounded-2xl shadow-2xl border border-slate-200">
               <img
                 src={heroUrl}

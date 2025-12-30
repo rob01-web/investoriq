@@ -37,7 +37,7 @@ export default function InvestorIQHeader() {
         </motion.div>
 
         {/* NAVIGATION */}
-        <nav className="flex items-center gap-5 text-sm font-semibold text-slate-700">
+        <nav className="flex items-center gap-6 text-sm font-semibold text-[#0F172A]">
           <a
             href="/reports/sample-report.html"
             target="_blank"
@@ -53,7 +53,7 @@ export default function InvestorIQHeader() {
                 await signOut();
                 window.location.href = "/login";
               }}
-              className="inline-flex items-center rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+              className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
             >
               Log out
             </button>
@@ -65,7 +65,7 @@ export default function InvestorIQHeader() {
 
               <a
                 href="/signup"
-                className="bg-[#D4AF37] text-white px-5 py-2.5 rounded-lg hover:bg-[#b9972b] shadow-md transition"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 Join InvestorIQ
               </a>
