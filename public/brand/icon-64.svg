@@ -9,7 +9,7 @@
   <g transform="translate(8,8)">
     <rect x="0" y="0" width="8" height="48" fill="#0F172A"/>
     <rect x="12" y="0" width="2" height="48" fill="#0F172A"/>
-    <rect x="16" y="2" width="32" height="44" fill="#0F172A" mask="url(#iq-mask-64)"/>
-    <rect x="42" y="46" width="10" height="2" fill="#D4AF37"/>
+    <rect x="16" y="4" width="32" height="40" fill="#0F172A" mask="url(#iq-mask-64)"/>
+    <rect x="42" y="48" width="10" height="2" fill="#0F172A"/>
   </g>
 </svg>
