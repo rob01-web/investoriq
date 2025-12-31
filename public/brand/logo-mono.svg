@@ -1,17 +1,5 @@
 <svg width="520" height="80" viewBox="0 0 520 80" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
-  <g transform="translate(12,12)">
-    <rect x="0" y="0" width="10" height="56" fill="#000000"/>
-    <rect x="14" y="0" width="3" height="56" fill="#000000"/>
-    <defs>
-      <mask id="q-open-mono" maskUnits="userSpaceOnUse">
-        <rect x="30" y="8" width="50" height="40" fill="white"/>
-        <rect x="60" y="40" width="20" height="12" fill="black"/>
-      </mask>
-    </defs>
-    <circle cx="55" cy="28" r="20" fill="none" stroke="#000000" stroke-width="10" mask="url(#q-open-mono)"/>
-    <rect x="70" y="44" width="12" height="12" fill="#000000"/>
-  </g>
-  <text x="98" y="55" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-weight="900" font-size="38" letter-spacing="-0.02em" fill="#000000">
-    INVESTORIQ
+  <text x="0" y="56" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-size="38" letter-spacing="-0.02em" fill="#000000">
+    <tspan font-weight="500">Investor</tspan><tspan font-weight="700">IQ</tspan>
   </text>
 </svg>
