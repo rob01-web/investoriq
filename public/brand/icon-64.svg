@@ -1,15 +1,15 @@
 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IQ monogram icon">
   <defs>
-    <mask id="iq-mask-64">
-      <rect x="0" y="0" width="64" height="64" fill="#fff"/>
-      <rect x="20" y="4" width="24" height="40" fill="black"/>
-      <rect x="38" y="22" width="6" height="3" fill="black"/>
+    <mask id="iq-open-64" maskUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="64" height="64" fill="white"/>
+      <rect x="20" y="8" width="24" height="36" fill="black"/>
+      <rect x="34" y="28" width="8" height="6" fill="black"/>
     </mask>
   </defs>
   <g transform="translate(8,8)">
     <rect x="0" y="0" width="8" height="48" fill="#0F172A"/>
     <rect x="12" y="0" width="2" height="48" fill="#0F172A"/>
-    <rect x="16" y="4" width="32" height="40" fill="#0F172A" mask="url(#iq-mask-64)"/>
-    <rect x="42" y="48" width="10" height="2" fill="#0F172A"/>
+    <circle cx="32" cy="24" r="18" fill="none" stroke="#0F172A" stroke-width="8" mask="url(#iq-open-64)"/>
+    <rect x="44" y="40" width="8" height="8" fill="#0F172A"/>
   </g>
 </svg>

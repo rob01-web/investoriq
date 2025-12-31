@@ -2,8 +2,14 @@
   <g transform="translate(12,12)">
     <rect x="0" y="0" width="10" height="56" fill="#FFFFFF"/>
     <rect x="14" y="0" width="3" height="56" fill="#FFFFFF"/>
-    <circle cx="55" cy="28" r="20" fill="none" stroke="#FFFFFF" stroke-width="10"/>
-    <rect x="70" y="46" width="10" height="10" fill="#FFFFFF"/>
+    <defs>
+      <mask id="q-open-inverse" maskUnits="userSpaceOnUse">
+        <rect x="30" y="8" width="50" height="40" fill="white"/>
+        <rect x="60" y="40" width="20" height="12" fill="black"/>
+      </mask>
+    </defs>
+    <circle cx="55" cy="28" r="20" fill="none" stroke="#FFFFFF" stroke-width="10" mask="url(#q-open-inverse)"/>
+    <rect x="70" y="44" width="12" height="12" fill="#FFFFFF"/>
   </g>
   <text x="98" y="55" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-weight="900" font-size="38" letter-spacing="-0.02em" fill="#FFFFFF">
     INVESTORIQ
