@@ -1,5 +1,5 @@
 <svg width="520" height="80" viewBox="0 0 520 80" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
-  <text x="0" y="56" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-size="38" letter-spacing="-0.02em" fill="#000000">
-    <tspan font-weight="500">Investor</tspan><tspan font-weight="700">IQ</tspan>
+  <text x="0" y="56" font-family="Inter Tight, 'Space Grotesk', sans-serif" font-size="38" letter-spacing="-0.02em">
+    <tspan font-weight="500" fill="#000000">Investor</tspan><tspan font-weight="600" fill="#BFA76B">IQ</tspan>
   </text>
 </svg>
