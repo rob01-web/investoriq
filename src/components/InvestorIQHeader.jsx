@@ -29,7 +29,7 @@ export default function InvestorIQHeader() {
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
           <a href="/" className="inline-flex items-center gap-3">
-            <img src="/brand/logo-primary.svg" alt="InvestorIQ" className="h-8 w-auto" />
+            <img src="/brand/investoriq-wordmark.svg" alt="InvestorIQ" className="h-8 w-auto" />
           </a>
         </motion.div>
 
