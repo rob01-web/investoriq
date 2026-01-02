@@ -64,13 +64,15 @@ function loadPdfMakeFromCdn() {
   return window.__investorIQPdfMakePromise;
 }
 
-// Convert /public image to Base64
+// Convert /public image (or svg) to Base64
 async function loadImageBase64(path) {
   try {
     const response = await fetch(path);
+    if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
+
     const blob = await response.blob();
 
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
@@ -79,6 +81,13 @@ async function loadImageBase64(path) {
     console.warn("[InvestorIQ] Logo failed to load:", err);
     return null;
   }
+}
+
+function buildSafePdfFileName(reportData, fileNameOverride) {
+  const address = reportData?.property?.address || "Sample";
+  // Basic cleanup for file systems
+  const safeAddress = String(address).replace(/[\/\\:*?"<>|]/g, "-").trim();
+  return fileNameOverride || `InvestorIQ_Report_${safeAddress}.pdf`;
 }
 
 export const generatePDF = async (reportData = {}, options = {}) => {
@@ -93,9 +102,9 @@ export const generatePDF = async (reportData = {}, options = {}) => {
     return;
   }
 
-  const logoBase64 = await loadImageBase64(
-    `${window.location.origin}/brand/investoriq-wordmark.svg`
-  );
+  // ✅ Canonical logo path (from /public/brand)
+  const logoUrl = `${window.location.origin}/brand/investoriq-wordmark.svg`;
+  const logoBase64 = await loadImageBase64(logoUrl);
 
   const docDefinition = buildSampleReportDocDefinition({
     ...reportData,
@@ -130,14 +139,10 @@ export const generatePDF = async (reportData = {}, options = {}) => {
             "<h2 style='padding:40px;font-family:sans-serif;color:#444'>Failed to generate PDF.</h2>";
           return;
         }
-
         iframe.src = URL.createObjectURL(blob);
       });
     } else {
-      const safeName =
-        fileName ||
-        `InvestorIQ_Report_${reportData?.property?.address || "Sample"}.pdf`;
-
+      const safeName = buildSafePdfFileName(reportData, fileName);
       pdf.download(safeName);
     }
   } catch (err) {
@@ -157,9 +162,9 @@ export const generatePDFBlob = async (reportData = {}) => {
 
   return new Promise(async (resolve, reject) => {
     try {
-      const logoBase64 = await loadImageBase64(
-        `${window.location.origin}/brand/investoriq-wordmark.svg`
-      );
+      // ✅ Same canonical logo path as generatePDF()
+      const logoUrl = `${window.location.origin}/brand/investoriq-wordmark.svg`;
+      const logoBase64 = await loadImageBase64(logoUrl);
 
       const docDefinition = buildSampleReportDocDefinition({
         ...reportData,
@@ -168,7 +173,10 @@ export const generatePDFBlob = async (reportData = {}) => {
 
       const pdf = pdfMake.createPdf(docDefinition);
 
-      pdf.getBlob((blob) => resolve(URL.createObjectURL(blob)));
+      pdf.getBlob((blob) => {
+        if (!blob) return reject(new Error("Failed to generate PDF blob."));
+        resolve(URL.createObjectURL(blob));
+      });
     } catch (err) {
       reject(err);
     }
