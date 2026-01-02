@@ -94,7 +94,7 @@ export const generatePDF = async (reportData = {}, options = {}) => {
   }
 
   const logoBase64 = await loadImageBase64(
-    `${window.location.origin}/assets/logo.png`
+    `${window.location.origin}/brand/investoriq-wordmark.svg`
   );
 
   const docDefinition = buildSampleReportDocDefinition({
@@ -158,7 +158,7 @@ export const generatePDFBlob = async (reportData = {}) => {
   return new Promise(async (resolve, reject) => {
     try {
       const logoBase64 = await loadImageBase64(
-        `${window.location.origin}/assets/logo.png`
+        `${window.location.origin}/brand/investoriq-wordmark.svg`
       );
 
       const docDefinition = buildSampleReportDocDefinition({
