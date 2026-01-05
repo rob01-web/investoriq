@@ -17,7 +17,6 @@ export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
 const [reportData, setReportData] = useState(null);
 
-const STRIPE_SINGLE_REPORT_LINK = "https://buy.stripe.com/bJe6oJaY89nl9d75752sM04";
 const credits = Number(profile?.report_credits ?? 0);
 
   const handleUploadSuccess = async () => {
