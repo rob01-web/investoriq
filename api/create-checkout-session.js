@@ -40,10 +40,14 @@ export default async function handler(req, res) {
     }
 
     // Default redirect URLs for now (we can wire real pages later)
-    const defaultSuccessUrl =
-      successUrl || "http://localhost:3000/test-download.html?checkout=success";
-    const defaultCancelUrl =
-      cancelUrl || "http://localhost:3000/index.html?checkout=cancel";
+    const baseUrl =
+  process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
+
+const defaultSuccessUrl =
+  successUrl || `${baseUrl}/dashboard?checkout=success`;
+
+const defaultCancelUrl =
+  cancelUrl || `${baseUrl}/dashboard?checkout=cancel`;
 
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,

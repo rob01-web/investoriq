@@ -141,11 +141,11 @@ const credits = Number(profile?.report_credits ?? 0);
       </p>
 
       <a
-        href={STRIPE_SINGLE_REPORT_LINK}
-        className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
-      >
-        Buy 1 Report Credit
-      </a>
+  href={STRIPE_SINGLE_REPORT_LINK}
+  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F172A] focus-visible:ring-offset-2"
+>
+  Buy 1 Report Credit
+</a>
     </div>
   )}
 </div>
@@ -176,14 +176,19 @@ const credits = Number(profile?.report_credits ?? 0);
               </div>
 
               <Button
-                size="lg"
-                onClick={() => document.getElementById('fileInput').click()}
-                disabled={!profile || profile.report_credits <= 0}
-                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-              >
-                <UploadCloud className="mr-2 h-5 w-5" />
-                Upload Files
-              </Button>
+  size="lg"
+  onClick={() => {
+    if (!profile || profile.report_credits <= 0) {
+      window.location.href = '/buy-credits'
+      return
+    }
+    document.getElementById('fileInput').click()
+  }}
+  className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
+>
+  <UploadCloud className="mr-2 h-5 w-5" />
+  {profile && profile.report_credits > 0 ? 'Upload Files' : 'Buy Credits'}
+</Button>
             </div>
 
             <input
