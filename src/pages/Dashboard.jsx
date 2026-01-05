@@ -148,7 +148,7 @@ const credits = Number(profile?.report_credits ?? 0);
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productType: 'single',
+          productType: 'singleReport',
           // Send user info so Stripe metadata can be used later (credits)
           userId: profile?.id || '',
           userEmail: profile?.email || '',
