@@ -140,12 +140,42 @@ const credits = Number(profile?.report_credits ?? 0);
         <span className="font-mono text-slate-900">INVESTORIQ</span>
       </p>
 
-      <a
-  href={STRIPE_SINGLE_REPORT_LINK}
+      <button
+  type="button"
+  onClick={async () => {
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productType: 'single',
+          // Send user info so Stripe metadata can be used later (credits)
+          userId: profile?.id || '',
+          userEmail: profile?.email || '',
+          // Optional: override return URLs (keeps it explicit)
+          successUrl: `${window.location.origin}/dashboard?checkout=success`,
+          cancelUrl: `${window.location.origin}/dashboard?checkout=cancel`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.url) {
+        alert(data?.error || 'Unable to start checkout. Please try again.');
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert('Unable to start checkout. Please try again.');
+    }
+  }}
   className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F172A] focus-visible:ring-offset-2"
 >
   Buy 1 Report Credit
-</a>
+</button>
+
     </div>
   )}
 </div>
