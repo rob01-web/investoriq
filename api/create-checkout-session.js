@@ -57,9 +57,9 @@ const defaultCancelUrl =
       quantity: 1,
     },
   ],
-  allow_promotion_codes: true, // ⭐ THIS IS THE KEY
-  success_url: defaultSuccessUrl,
-  cancel_url: defaultCancelUrl,
+  allow_promotion_codes: true,
+  success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${origin}/pricing?canceled=1`,
   metadata: {
     productType,
     userId: userId || "",
