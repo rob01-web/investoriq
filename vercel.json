@@ -4,12 +4,9 @@
       "maxDuration": 60
     }
   },
-  "redirects": [
-    { "source": "/app", "destination": "/dashboard", "permanent": false }
-  ],
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "^/api/(.*)", "dest": "/api/$1" },
+    { "src": "^(?!/assets/).*", "dest": "/index.html" }
   ]
 }
