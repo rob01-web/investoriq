@@ -1,7 +1,4 @@
 // api/create-checkout-session.js
-import dotenv from "dotenv";
-dotenv.config();
-
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -27,49 +24,54 @@ const PRICE_CONFIG = {
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const { productType, successUrl, cancelUrl, userId, userEmail } =
-      req.body || {};
+    const { productType, planKey, successUrl, cancelUrl, userId, userEmail } = req.body || {};
 
-    const config = PRICE_CONFIG[productType];
+    // Backward compatible:
+    // - Dashboard sends productType: "singleReport"
+    // - We also accept planKey if present and map it to an existing productType
+    const normalizedProductType =
+      productType ||
+      (planKey === "single" ? "singleReport" : null) ||
+      planKey;
+
+    const config = PRICE_CONFIG[normalizedProductType];
 
     if (!config) {
       return res.status(400).json({ error: "Invalid productType" });
     }
 
-    // Default redirect URLs for now (we can wire real pages later)
-    const baseUrl =
-  process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
+    const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
 
-const defaultSuccessUrl =
-  successUrl || `${baseUrl}/dashboard?checkout=success`;
+    const finalSuccessUrl =
+      typeof successUrl === "string" && successUrl.length > 0
+        ? successUrl
+        : `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
 
-const defaultCancelUrl =
-  cancelUrl || `${baseUrl}/dashboard?checkout=cancel`;
+    const finalCancelUrl =
+      typeof cancelUrl === "string" && cancelUrl.length > 0
+        ? cancelUrl
+        : `${baseUrl}/pricing?canceled=1`;
 
     const session = await stripe.checkout.sessions.create({
-  mode: config.mode,
-  line_items: [
-    {
-      price: config.priceId,
-      quantity: 1,
-    },
-  ],
-  allow_promotion_codes: true,
-  success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-  cancel_url: `${origin}/pricing?canceled=1`,
-  metadata: {
-    productType,
-    userId: userId || "",
-    userEmail: userEmail || "",
-  },
-});
+      mode: config.mode,
+      line_items: [{ price: config.priceId, quantity: 1 }],
+      allow_promotion_codes: true,
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
+      metadata: {
+        productType: normalizedProductType || "",
+        userId: userId || "",
+        userEmail: userEmail || "",
+      },
+    });
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error("❌ Error creating checkout session:", err);
+    console.error("Error creating checkout session:", err);
     return res.status(500).json({ error: "Failed to create checkout session" });
   }
 }
