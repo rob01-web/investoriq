@@ -21,38 +21,44 @@ export default function Dashboard() {
   const credits = Number(profile?.report_credits ?? 0);
 
   const startCheckout = async () => {
-    try {
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productType: 'singleReport',
-          userId: profile?.id || '',
-          userEmail: profile?.email || '',
-        }),
-      });
+  try {
+    const origin = window.location.origin;
 
-      const data = await res.json();
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planKey: 'single',
+        productType: 'singleReport',
+        userId: profile?.id || '',
+        userEmail: profile?.email || '',
+        successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${origin}/pricing?canceled=1`,
+      }),
+    });
 
-      if (!res.ok || !data?.url) {
-        toast({
-          title: 'Checkout could not be started',
-          description: data?.error || 'Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
+    const data = await res.json().catch(() => ({}));
 
-      window.location.href = data.url;
-    } catch (err) {
-      console.error(err);
+    if (!res.ok || !data?.url) {
       toast({
         title: 'Checkout could not be started',
-        description: 'Please try again.',
+        description: data?.error || 'Please try again.',
         variant: 'destructive',
       });
+      console.error('create-checkout-session failed:', res.status, data);
+      return;
     }
-  };
+
+    window.location.href = data.url;
+  } catch (err) {
+    console.error(err);
+    toast({
+      title: 'Checkout could not be started',
+      description: 'Please try again.',
+      variant: 'destructive',
+    });
+  }
+};
 
   const handleUploadSuccess = async () => {
     toast({
