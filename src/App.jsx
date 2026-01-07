@@ -14,6 +14,7 @@ import Dashboard from '@/pages/Dashboard';
 import LoginPage from '@/pages/Login';
 import SignUpPage from '@/pages/SignUp';
 import SampleReport from '@/pages/SampleReport';
+import CheckoutSuccess from '@/pages/CheckoutSuccess';
 
 function NotFound() {
   return (
@@ -90,6 +91,16 @@ export default function App() {
         element={
           <MainLayout>
             <SampleReport />
+          </MainLayout>
+        }
+      />
+
+      {/* CHECKOUT SUCCESS */}
+      <Route
+        path="/checkout/success"
+        element={
+          <MainLayout>
+            <CheckoutSuccess />
           </MainLayout>
         }
       />
