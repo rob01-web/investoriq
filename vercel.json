@@ -1,12 +1,17 @@
 {
   "functions": {
-    "api/**/*.js": {
-      "maxDuration": 60
-    }
+    "api/**/*.js": { "maxDuration": 60 }
   },
   "routes": [
     { "handle": "filesystem" },
-    { "src": "^/api/(.*)", "dest": "/api/$1" },
-    { "src": "^(?!/assets/).*", "dest": "/index.html" }
+
+    { "src": "^/api/(.*)$", "dest": "/api/$1" },
+
+    { "src": "^/assets/(.*)$", "dest": "/assets/$1" },
+    { "src": "^/favicon\\.svg$", "dest": "/favicon.svg" },
+    { "src": "^/favicon\\.ico$", "dest": "/favicon.ico" },
+    { "src": "^/robots\\.txt$", "dest": "/robots.txt" },
+
+    { "src": "^(?!/api/|/assets/).*$", "dest": "/index.html" }
   ]
 }
