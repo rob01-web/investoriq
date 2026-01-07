@@ -50,22 +50,22 @@ const defaultCancelUrl =
   cancelUrl || `${baseUrl}/dashboard?checkout=cancel`;
 
     const session = await stripe.checkout.sessions.create({
-      mode: config.mode,
-      line_items: [
-        {
-          price: config.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: defaultSuccessUrl,
-      cancel_url: defaultCancelUrl,
-      // We'll use this metadata later in the webhook to attach credits
-      metadata: {
-        productType,
-        userId: userId || "",
-        userEmail: userEmail || "",
-      },
-    });
+  mode: config.mode,
+  line_items: [
+    {
+      price: config.priceId,
+      quantity: 1,
+    },
+  ],
+  allow_promotion_codes: true, // ⭐ THIS IS THE KEY
+  success_url: defaultSuccessUrl,
+  cancel_url: defaultCancelUrl,
+  metadata: {
+    productType,
+    userId: userId || "",
+    userEmail: userEmail || "",
+  },
+});
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
