@@ -79,8 +79,8 @@ export default defineConfig({
     },
   },
 
-  // 🔥 THIS IS THE FIX FOR BLANK PAGE ON VERCEL
-  base: '',
+  // ✅ Use absolute asset paths so deep routes load JS correctly on Vercel
+base: '/',
 
   define: {
     'process.env': process.env,
