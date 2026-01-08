@@ -5,21 +5,57 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
 });
 
-// Map friendly product keys to your real Stripe Price IDs
+// Canonical productType contract (LOCKED):
+// single, monthly_1, monthly_3, addon_1, addon_3, addon_5
+function normalizeProductType({ productType, planKey }) {
+  const raw = productType || planKey || "";
+  if (!raw) return "";
+
+  const map = {
+    // ✅ Canonical
+    single: "single",
+    monthly_1: "monthly_1",
+    monthly_3: "monthly_3",
+    addon_1: "addon_1",
+    addon_3: "addon_3",
+    addon_5: "addon_5",
+
+    // ✅ Legacy (back-compat)
+    singleReport: "single",
+    monthlyPro: "monthly_1",
+    monthly3Reports: "monthly_3",
+    monthly3: "monthly_3",
+    addOn: "addon_1",
+
+    // ✅ Legacy planKey style
+    // (old: planKey === "single" -> "singleReport")
+    // now we lock it to canonical "single"
+  };
+
+  return map[raw] || "";
+}
+
 const PRICE_CONFIG = {
-  singleReport: {
-    priceId: "price_1SZwBNPlUvcaYNKZCK6V3lTX", // $499 one-time
-    mode: "payment",
-  },
-  monthlyPro: {
-    priceId: "price_1SZwDVPlUvcaYNKZBZLV4uSp", // $349/month
-    mode: "subscription",
-  },
-  addOn: {
-    priceId: "price_1SZwFCPlUvcaYNKZFKMxTF2G", // $299 one-time
-    mode: "payment",
-  },
+  single: { priceId: process.env.STRIPE_PRICE_SINGLE, mode: "payment" },
+  monthly_1: { priceId: process.env.STRIPE_PRICE_MONTHLY_1, mode: "subscription" },
+  monthly_3: { priceId: process.env.STRIPE_PRICE_MONTHLY_3, mode: "subscription" },
+
+  addon_1: { priceId: process.env.STRIPE_PRICE_ADDON_1, mode: "payment" },
+  addon_3: { priceId: process.env.STRIPE_PRICE_ADDON_3, mode: "payment" },
+  addon_5: { priceId: process.env.STRIPE_PRICE_ADDON_5, mode: "payment" },
 };
+
+function requiredEnvFor(productType) {
+  switch (productType) {
+    case "single": return "STRIPE_PRICE_SINGLE";
+    case "monthly_1": return "STRIPE_PRICE_MONTHLY_1";
+    case "monthly_3": return "STRIPE_PRICE_MONTHLY_3";
+    case "addon_1": return "STRIPE_PRICE_ADDON_1";
+    case "addon_3": return "STRIPE_PRICE_ADDON_3";
+    case "addon_5": return "STRIPE_PRICE_ADDON_5";
+    default: return "UNKNOWN";
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -30,18 +66,18 @@ export default async function handler(req, res) {
 
     const { productType, planKey, successUrl, cancelUrl, userId, userEmail } = req.body || {};
 
-    // Backward compatible:
-    // - Dashboard sends productType: "singleReport"
-    // - We also accept planKey if present and map it to an existing productType
-    const normalizedProductType =
-      productType ||
-      (planKey === "single" ? "singleReport" : null) ||
-      planKey;
-
+    const normalizedProductType = normalizeProductType({ productType, planKey });
     const config = PRICE_CONFIG[normalizedProductType];
 
     if (!config) {
       return res.status(400).json({ error: "Invalid productType" });
+    }
+
+    if (!config.priceId) {
+      return res.status(500).json({
+        error: `Missing Stripe Price ID env var for "${normalizedProductType}".`,
+        expectedEnv: requiredEnvFor(normalizedProductType),
+      });
     }
 
     const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
@@ -63,6 +99,7 @@ export default async function handler(req, res) {
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
       metadata: {
+        // 🔒 webhook should trust THIS canonical value
         productType: normalizedProductType || "",
         userId: userId || "",
         userEmail: userEmail || "",

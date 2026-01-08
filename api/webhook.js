@@ -18,9 +18,12 @@ const supabaseAdmin = createClient(
 );
 
 function creditsForProductType(productType) {
+  // Keep your current mappings, add safe aliases for the 3-report plan.
   if (productType === "singleReport") return 1;
-  if (productType === "monthlyPro") return 1; // adjust later if monthly gives >1
-  if (productType === "addOn") return 1;      // adjust later for quantity
+  if (productType === "monthlyPro") return 1; // 1 report / month
+  if (productType === "monthly3Reports") return 3; // 3 reports / month (safe alias)
+  if (productType === "monthly3") return 3; // safe alias
+  if (productType === "addOn") return 1; // adjust later for quantity if you add it
   return 0;
 }
 
@@ -52,86 +55,77 @@ export default async function handler(req, res) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("❌ Stripe signature verification failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error("❌ Stripe signature verification failed:", err?.message || err);
+    return res.status(400).send(`Webhook Error: ${err?.message || "Invalid signature"}`);
   }
 
   console.log("💳 Stripe event received:", event.type);
 
-  if (event.type === "checkout.session.completed") {
+  // Only process what we actually support.
+  if (event.type !== "checkout.session.completed") {
+    return res.status(200).json({ received: true });
+  }
+
   const session = event.data.object;
 
   const userId = session?.metadata?.userId;
   const productType = session?.metadata?.productType;
 
   if (!userId || !productType) {
-    console.warn("⚠️ Missing metadata userId/productType", {
-      userId,
-      productType,
-    });
+    console.warn("⚠️ Missing metadata userId/productType", { userId, productType });
+    // Ignore: we can't safely credit without metadata
     return res.status(200).json({ received: true });
   }
 
   const creditsToAdd = creditsForProductType(productType);
-
   if (!creditsToAdd) {
     console.warn("⚠️ Unknown productType:", productType);
+    // Ignore: we don't want to credit unknown product types
     return res.status(200).json({ received: true });
   }
 
-  // ✅ Idempotency: prevent double-crediting if Stripe retries
-  // Requires a table 'stripe_events' (I’ll give you the SQL below)
   const eventId = event.id;
+  const sessionId = session?.id;
 
-  try {
-    const { data: already } = await supabaseAdmin
-      .from("stripe_events")
-      .select("id")
-      .eq("id", eventId)
-      .maybeSingle();
+  // ✅ Idempotency (HARD): INSERT FIRST. If duplicate => already processed => return 200.
+  const { error: insertErr } = await supabaseAdmin
+    .from("stripe_events")
+    .insert([
+      {
+        id: eventId,
+        type: event.type,
+        user_id: userId,
+        session_id: sessionId,
+        product_type: productType,
+      },
+    ]);
 
-    if (already?.id) {
+  if (insertErr) {
+    const msg = String(insertErr.message || "").toLowerCase();
+
+    // Treat duplicate/unique constraint violations as "already processed"
+    if (msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists")) {
       console.log("ℹ️ Event already processed:", eventId);
       return res.status(200).json({ received: true });
     }
-  } catch (e) {
-    // If the table doesn't exist yet, we'll still proceed once.
-    console.warn("⚠️ stripe_events table missing or unreadable (ok for now).");
+
+    console.error("❌ Failed to record stripe event (idempotency insert):", insertErr);
+    // 500 => Stripe retries => good
+    return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
-  // Fetch current credits
-  const { data: profile, error: fetchError } = await supabaseAdmin
-    .from("profiles")
-    .select("id, report_credits")
-    .eq("id", userId)
-    .single();
+  // ✅ Atomic credit increment via RPC (race-condition proof)
+  const { error: rpcErr } = await supabaseAdmin.rpc("add_report_credits", {
+    p_user_id: userId,
+    p_add: creditsToAdd,
+  });
 
-  if (fetchError || !profile) {
-    console.error("❌ No profile found for userId:", userId, fetchError);
-    return res.status(200).json({ received: true });
-  }
-
-  const newCredits = Number(profile.report_credits || 0) + creditsToAdd;
-
-  const { error: updateError } = await supabaseAdmin
-    .from("profiles")
-    .update({ report_credits: newCredits })
-    .eq("id", userId);
-
-  if (updateError) {
-    console.error("❌ Failed to update credits:", updateError);
+  if (rpcErr) {
+    console.error("❌ Failed to increment credits (rpc):", rpcErr);
+    // 500 => Stripe retries (safe because idempotency is now strong)
     return res.status(500).json({ error: "Credit update failed" });
   }
 
-  // Mark event processed (idempotency)
-  try {
-    await supabaseAdmin.from("stripe_events").insert([{ id: eventId }]);
-  } catch (e) {
-    // ok if table missing; create it for production reliability
-  }
-
   console.log(`✅ Added ${creditsToAdd} credit(s) to userId=${userId} (${productType})`);
-}
-
   return res.status(200).json({ received: true });
 }
