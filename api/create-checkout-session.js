@@ -90,7 +90,7 @@ export default async function handler(req, res) {
     const finalCancelUrl =
       typeof cancelUrl === "string" && cancelUrl.length > 0
         ? cancelUrl
-        : `${baseUrl}/pricing?canceled=1`;
+        : `${baseUrl}/dashboard?canceled=1`;
 
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,
