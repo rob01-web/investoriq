@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { CheckCircle } from 'lucide-react';
 import { PALETTE } from '@/lib/utils';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'; // adjust if your hook name differs
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const tiers = [
   {
@@ -100,7 +100,7 @@ function PricingTile({ tier, onCheckout, loadingKey }) {
 }
 
 export default function PricingPage() {
-  const { user } = useSupabaseAuth(); // if this differs in your project, tell me and I’ll adjust
+  const { user } = useAuth();
   const [loadingKey, setLoadingKey] = useState(null);
 
   const handleCheckout = async (productType) => {
