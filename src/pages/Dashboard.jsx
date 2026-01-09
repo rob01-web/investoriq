@@ -63,7 +63,7 @@ export default function Dashboard() {
   const handleUploadSuccess = async () => {
     toast({
       title: 'Upload Successful',
-      description: 'Your deal is being analyzed by the InvestorIQ AI Analyst Engine.',
+      description: 'Your documents are being reviewed by the InvestorIQ underwriting framework.',
     });
     if (profile?.id) await fetchProfile(profile.id);
   };
@@ -171,7 +171,7 @@ export default function Dashboard() {
 
             <div className="text-right mt-4 sm:mt-0">
               <div className="font-bold text-lg text-[#0F172A]">Report Credits</div>
-              <div className="text-4xl font-extrabold text-[#D4AF37]">{profile ? credits : '...'}</div>
+              <div className="text-4xl font-extrabold text-[#0F172A]">{profile ? credits : '...'}</div>
 
               <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
                 {credits === 0 && (
@@ -188,7 +188,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={startCheckout}
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F172A] focus-visible:ring-offset-2"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
                 >
                   Buy Credits
                 </button>
@@ -324,7 +324,7 @@ export default function Dashboard() {
 
         {/* FOOTER */}
         <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
-          © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+          (c) 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
       </div>
 

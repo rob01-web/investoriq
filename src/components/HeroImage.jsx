@@ -20,8 +20,8 @@ const HeroImage = () => {
 
         {/* Floating Hero Image */}
         <motion.img
-          src="https://horizons-cdn.hostinger.com/75ea0594-14c3-4644-b473-69366dd2e129/ef4a5a622dd1724eb6ee59f669c129a6.jpg"
-          alt="InvestorIQ dashboard preview on a laptop screen"
+          src="/hero-sample-report.jpg"
+          alt="InvestorIQ institutional underwriting report preview"
           className="w-full h-auto object-cover rounded-2xl"
           initial={{ y: 0 }}
           animate={{ y: [0, -4, 0] }}

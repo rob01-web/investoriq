@@ -26,7 +26,7 @@
     --secondary: 188 64% 33%; /* Teal as accent */
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 46 64% 53%; /* Gold */
+    --accent: 188 64% 33%; /* Keep accent aligned with teal */
     --accent-foreground: 221 39% 11%;
 
     /* Neutrals */
@@ -36,6 +36,8 @@
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 221 39% 11%;
+    --focus-ring-color: #D4AF37;
+    --focus-ring-offset: 2px;
 
     /* Alerts */
     --destructive: 0 84% 60%;
@@ -62,7 +64,7 @@
     --secondary: 188 64% 33%;
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 46 64% 53%;
+    --accent: 188 64% 33%;
     --accent-foreground: 221 39% 11%;
 
     --muted: 217 33% 17%;
@@ -71,6 +73,8 @@
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 188 64% 45%;
+    --focus-ring-color: #D4AF37;
+    --focus-ring-offset: 2px;
   }
 
   /* --- Global Layout & Typography --- */
@@ -117,16 +121,34 @@
     color: #0d1326;
   }
 
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    outline: none;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow:
+      0 0 0 var(--focus-ring-offset, 2px) #ffffff,
+      0 0 0 calc(var(--focus-ring-offset, 2px) + 2px) rgba(212, 175, 55, 0.4) !important;
+    outline: none !important;
+  }
+
   button {
-    @apply transition-all duration-200 focus:outline-none focus-visible:ring-2;
-    --tw-ring-color: #0F172A;
+    @apply transition-all duration-200;
   }
 
   /* --- Inputs & Forms --- */
   input,
   textarea,
   select {
-    @apply focus:outline-none focus:ring-2 focus:ring-[#0F172A] rounded-lg;
+    @apply rounded-lg;
   }
 
   /* --- Scrollbars --- */

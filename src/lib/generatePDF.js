@@ -103,7 +103,7 @@ export const generatePDF = async (reportData = {}, options = {}) => {
   }
 
   // ✅ Canonical logo path (from /public/brand)
-  const logoUrl = `${window.location.origin}/brand/investoriq-wordmark.svg`;
+  const logoUrl = `${window.location.origin}/brand/logo-wordmark.svg`;
   const logoBase64 = await loadImageBase64(logoUrl);
 
   const docDefinition = buildSampleReportDocDefinition({
@@ -163,7 +163,7 @@ export const generatePDFBlob = async (reportData = {}) => {
   return new Promise(async (resolve, reject) => {
     try {
       // ✅ Same canonical logo path as generatePDF()
-      const logoUrl = `${window.location.origin}/brand/investoriq-wordmark.svg`;
+      const logoUrl = `${window.location.origin}/brand/logo-wordmark.svg`;
       const logoBase64 = await loadImageBase64(logoUrl);
 
       const docDefinition = buildSampleReportDocDefinition({

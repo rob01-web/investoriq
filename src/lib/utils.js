@@ -23,7 +23,7 @@ export const PALETTE = {
   deepNavy: "#0F172A", // core background / headers
   teal: "#1F8A8A", // primary accent
   aqua: "#94D9D9", // secondary accent
-  gold: "#D4AF37", // highlight / key lines
+  gold: "#0F172A", // reserved for wordmark only; keep UI accents navy/teal
   grayDark: "#374151",
   grayMid: "#6B7280",
   grayLight: "#E5E7EB",

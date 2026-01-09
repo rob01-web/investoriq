@@ -3,9 +3,8 @@ import { motion } from "framer-motion";
 
 /**
  * WelcomeMessage — InvestorIQ
- * -----------------------------
- * A sleek, animated intro blurb that introduces the platform's
- * mission and reinforces the brand's premium, data-driven tone.
+ * A sleek, animated intro blurb that reinforces the platform's
+ * premium, document-led underwriting tone.
  */
 
 const WelcomeMessage = () => {
@@ -20,8 +19,8 @@ const WelcomeMessage = () => {
       <span className="font-extrabold text-[#0F172A]">
         InvestorIQ
       </span>
-      , the AI-powered platform delivering institutional-grade real estate insights. 
-      Instantly generate 360° IQ Reports with data analytics, charts, and market heat maps.
+      , the document-based underwriting platform delivering institutional-grade real estate insights.
+      Instantly generate 360-degree IQ Reports with structured data analytics, charts, and market heat maps.
     </motion.p>
   );
 };

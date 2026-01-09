@@ -37,7 +37,7 @@ const PDFPreviewModal = ({
             onClick={onClose}
             size="icon"
             variant="ghost"
-            className="text-white hover:text-[#D4AF37]"
+            className="text-white hover:text-slate-100"
             aria-label="Close preview"
           >
             <X className="h-5 w-5" />

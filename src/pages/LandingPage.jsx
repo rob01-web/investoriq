@@ -4,8 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
-  const heroUrl = "/hero-dashboard.jpg";
-
+  
   return (
     <>
       {/* META TAGS */}

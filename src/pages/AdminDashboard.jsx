@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Helmet } from "react-helmet";
@@ -27,7 +25,7 @@ export default function AdminDashboard() {
           .select("*", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(5);
-        const activeCount = reports.filter((r) => r.status === "Processing").length;
+        const activeCount = (reports || []).filter((r) => r.status === "Processing").length;
 
         setStats({
           totalUsers: userCount || 0,
@@ -48,7 +46,7 @@ export default function AdminDashboard() {
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard – InvestorIQ</title>
+        <title>Admin Dashboard - InvestorIQ</title>
         <meta
           name="description"
           content="Administrative overview of user activity, report performance, and platform usage for InvestorIQ."
@@ -87,7 +85,7 @@ export default function AdminDashboard() {
                 >
                   <Users className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
                   <h3 className="text-xl font-bold text-[#0F172A] mb-1">Total Users</h3>
-                  <p className="text-4xl font-extrabold text-[#D4AF37]">
+                  <p className="text-4xl font-extrabold text-[#0F172A]">
                     {stats.totalUsers}
                   </p>
                 </motion.div>
@@ -98,7 +96,7 @@ export default function AdminDashboard() {
                 >
                   <FileText className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
                   <h3 className="text-xl font-bold text-[#0F172A] mb-1">Total Reports</h3>
-                  <p className="text-4xl font-extrabold text-[#D4AF37]">
+                  <p className="text-4xl font-extrabold text-[#0F172A]">
                     {stats.totalReports}
                   </p>
                 </motion.div>
@@ -109,7 +107,7 @@ export default function AdminDashboard() {
                 >
                   <BarChart3 className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
                   <h3 className="text-xl font-bold text-[#0F172A] mb-1">Active Reports</h3>
-                  <p className="text-4xl font-extrabold text-[#D4AF37]">
+                  <p className="text-4xl font-extrabold text-[#0F172A]">
                     {stats.activeReports}
                   </p>
                 </motion.div>
@@ -188,8 +186,7 @@ export default function AdminDashboard() {
 
         {/* FOOTER */}
         <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
-          © 2025{" "}
-          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+          (c) 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
         </footer>
       </div>
     </>

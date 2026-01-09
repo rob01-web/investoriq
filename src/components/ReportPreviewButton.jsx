@@ -56,7 +56,7 @@ const ReportPreviewButton = ({ reportData }) => {
                 transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
               />
               <p className="text-sm text-[#0F172A] font-semibold tracking-wide">
-                Analyzing with AI...
+                Reviewing with the document-based underwriting framework...
               </p>
             </motion.div>
           )}

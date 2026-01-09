@@ -1,15 +1,6 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IQ monogram icon small">
-  <defs>
-    <mask id="iq-open-32" maskUnits="userSpaceOnUse">
-      <rect x="0" y="0" width="32" height="32" fill="white"/>
-      <rect x="12" y="4" width="12" height="14" fill="black"/>
-      <rect x="18" y="13" width="4" height="3" fill="black"/>
-    </mask>
-  </defs>
-  <g transform="translate(4,4)">
-    <rect x="0" y="0" width="6" height="24" fill="#0F172A"/>
-    <rect x="9" y="0" width="2" height="24" fill="#0F172A"/>
-    <circle cx="18" cy="12" r="10" fill="none" stroke="#0F172A" stroke-width="6" mask="url(#iq-open-32)"/>
-    <rect x="24" y="18" width="6" height="4" fill="#0F172A"/>
-  </g>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ icon small">
+  <title>InvestorIQ Icon</title>
+  <path d="M16 2L28 14L16 26L4 14L16 2Z" fill="#0F172A"/>
+  <path d="M16 2L28 14L24 18L16 10L8 18L4 14L16 2Z" fill="#0E9FA4"/>
+  <rect x="12.5" y="12.5" width="7" height="7" fill="white"/>
 </svg>

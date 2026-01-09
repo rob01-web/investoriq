@@ -46,9 +46,8 @@ export default function SignUpPage() {
           Create Your Account
         </h1>
         <p className="text-[#334155] text-center mb-8">
-          Join{" "}
-          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> to generate AI-powered
-          Property IQ Reports
+          Join <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> to generate
+          document-based Property IQ Reports.
         </p>
 
         <form onSubmit={handleSignUp} className="space-y-6">
@@ -61,7 +60,7 @@ export default function SignUpPage() {
               <input
                 type="text"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-slate-800"
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -78,7 +77,7 @@ export default function SignUpPage() {
               <input
                 type="email"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-slate-800"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -95,7 +94,7 @@ export default function SignUpPage() {
               <input
                 type="password"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1F8A8A] outline-none text-slate-800"
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-slate-800"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -124,17 +123,17 @@ export default function SignUpPage() {
           </Button>
         </form>
 
-        <p className="text-center text-[#334155] mt-6">
+        <p className="text-center text-sm text-[#334155] mt-6">
           Already have an account?{" "}
           <Link to="/login" className="text-[#1F8A8A] font-semibold hover:underline">
-            Log in here
+            Log In
           </Link>
         </p>
-      </motion.div>
 
-      <footer className="py-6 text-center text-[#334155] text-sm mt-10">
-        © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
-      </footer>
+        <p className="text-center text-xs text-slate-500 mt-4">
+          © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
+        </p>
+      </motion.div>
     </div>
   );
 }

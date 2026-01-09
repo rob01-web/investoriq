@@ -1,5 +1,14 @@
-<svg width="520" height="80" viewBox="0 0 520 80" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
-  <text x="0" y="56" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="38" letter-spacing="-0.02em">
-    <tspan font-weight="500" fill="#FFFFFF">Investor</tspan><tspan dx="0.8" font-weight="600" fill="#FFFFFF">I</tspan><tspan font-weight="600" fill="#D4AF37">Q</tspan>
-  </text>
+<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ inverse">
+  <title>InvestorIQ Inverse</title>
+  <g transform="translate(12 12)">
+    <path d="M64 0L116 52L64 104L12 52L64 0Z" fill="#FFFFFF"/>
+    <path d="M64 0L116 52L96 72L64 40L32 72L12 52L64 0Z" fill="#6EC7C5"/>
+    <rect x="52" y="52" width="24" height="24" fill="#0F172A"/>
+  </g>
+  <g transform="translate(152 32)">
+    <text x="0" y="80" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
+      <tspan font-weight="600" fill="#FFFFFF">Investor</tspan>
+      <tspan font-weight="700" fill="#D4AF37">IQ</tspan>
+    </text>
+  </g>
 </svg>
