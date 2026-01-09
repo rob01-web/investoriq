@@ -16,6 +16,9 @@ import SignUpPage from '@/pages/SignUp';
 import SampleReport from '@/pages/SampleReport';
 import CheckoutSuccess from '@/pages/CheckoutSuccess';
 
+// ✅ ADD THIS
+import PricingPage from '@/pages/Pricing';
+
 function NotFound() {
   return (
     <MainLayout>
@@ -91,6 +94,16 @@ export default function App() {
         element={
           <MainLayout>
             <SampleReport />
+          </MainLayout>
+        }
+      />
+
+      {/* ✅ ADD THIS (PUBLIC PRICING PAGE) */}
+      <Route
+        path="/pricing"
+        element={
+          <MainLayout>
+            <PricingPage />
           </MainLayout>
         }
       />
