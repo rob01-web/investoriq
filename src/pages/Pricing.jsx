@@ -1,158 +1,176 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { CheckCircle } from 'lucide-react';
 import { PALETTE } from '@/lib/utils';
-
-const STRIPE_LINKS = {
-  single:   'https://buy.stripe.com/9B6aEZ4zK431ahb1UT2sM03', // $299 one-time
-  monthly1: 'https://buy.stripe.com/aFa14p9U44318936b92sM01', // $249/mo
-  monthly3: 'https://buy.stripe.com/9B67sN4zKgPN0GBdDB2sM02', // $599/mo
-  addon:    'https://buy.stripe.com/eVq5kFeakarp4WR0QP2sM00', // $229 one-time, qty adjustable
-};
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'; // adjust if your hook name differs
 
 const tiers = [
   {
     title: 'Single Report',
-    price: '$299',
+    price: '$699',
     cadence: 'one-time',
-    href: STRIPE_LINKS.single,
+    productType: 'single',
     description: 'Access InvestorIQ once — no subscription required.',
     features: [
-      '1 Property IQ Report',
+      '1 InvestorIQ underwriting report credit',
       'Institutional-grade PDF analysis',
-      '48-hour turnaround',
-      'Automatic regeneration if report fails',
+      'Fast turnaround',
+      'Automatic credit restoration if generation fails',
     ],
   },
   {
-    title: 'InvestorIQ Monthly',
-    price: '$249',
-    cadence: '/month',
-    href: STRIPE_LINKS.monthly1,
-    highlight: true,
-    description: 'Ideal for consistent deal flow — 1 report per month.',
-    features: [
-      '1 Property IQ Report per month',
-      'Institutional-grade analysis',
-      '48-hour turnaround',
-      'Unused reports roll over for 30 days',
-    ],
-  },
-  {
-    title: 'Pro Investor Monthly',
+    title: 'Professional Subscription',
     price: '$599',
     cadence: '/month',
-    href: STRIPE_LINKS.monthly3,
-    description: 'For active investors managing multiple properties.',
+    productType: 'monthly_1',
+    highlight: true,
+    description: 'Ideal for consistent deal flow — 1 report credit per month.',
     features: [
-      '3 Property IQ Reports per month',
+      '1 underwriting report credit per month',
+      'Institutional-grade analysis',
+      'Cancel anytime',
+      'Unused credits roll over for 60 days',
+    ],
+  },
+  {
+    title: 'Institutional Subscription',
+    price: '$1,497',
+    cadence: '/month',
+    productType: 'monthly_3',
+    description: 'For active investors underwriting multiple opportunities.',
+    features: [
+      '3 underwriting report credits per month',
       'Institutional-grade analysis',
       'Priority processing',
-      'Unused reports roll over for 30 days',
+      'Unused credits roll over for 60 days',
     ],
   },
 ];
 
-const PricingTile = ({ tier }) => (
-  <div
-    className={`bg-white rounded-lg border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
-    style={tier.highlight ? { borderColor: PALETTE.teal } : {}}
-  >
-    {tier.highlight && (
-      <div
-        className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold border border-slate-200 bg-slate-50"
-        style={{
-          backgroundColor: `${PALETTE.teal}20`,
-          color: PALETTE.teal,
-        }}
-      >
-        Most Popular
-      </div>
-    )}
+function PricingTile({ tier, onCheckout, loadingKey }) {
+  const isLoading = loadingKey === tier.productType;
 
-    <h3 className="text-2xl font-bold text-center mb-2" style={{ color: PALETTE.deepNavy }}>
-      {tier.title}
-    </h3>
-    <p className="text-5xl font-extrabold text-center mb-4" style={{ color: PALETTE.teal }}>
-      {tier.price}
-      <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
-    </p>
-    <p className="text-[#334155] mb-6 text-center font-semibold">{tier.description}</p>
-
-    <ul className="space-y-3 mb-8">
-      {tier.features.map((feature, i) => (
-        <li key={i} className="flex items-start">
-          <CheckCircle
-            className="h-5 w-5 mr-3 mt-1 flex-shrink-0"
-            style={{ color: PALETTE.gold }}
-          />
-          <span className="text-[#334155]">{feature}</span>
-        </li>
-      ))}
-    </ul>
-
-    <a
-      href={tier.href}
-      className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition"
+  return (
+    <div
+      className={`bg-white rounded-lg border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
+      style={tier.highlight ? { borderColor: PALETTE.teal } : {}}
     >
-      Get Started
-    </a>
-  </div>
-);
+      {tier.highlight && (
+        <div
+          className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold border border-slate-200 bg-slate-50"
+          style={{
+            backgroundColor: `${PALETTE.teal}20`,
+            color: PALETTE.teal,
+          }}
+        >
+          Most Popular
+        </div>
+      )}
+
+      <h3 className="text-2xl font-bold text-center mb-2" style={{ color: PALETTE.deepNavy }}>
+        {tier.title}
+      </h3>
+      <p className="text-5xl font-extrabold text-center mb-4" style={{ color: PALETTE.teal }}>
+        {tier.price}
+        <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
+      </p>
+      <p className="text-[#334155] mb-6 text-center font-semibold">{tier.description}</p>
+
+      <ul className="space-y-3 mb-8">
+        {tier.features.map((feature, i) => (
+          <li key={i} className="flex items-start">
+            <CheckCircle className="h-5 w-5 mr-3 mt-1 flex-shrink-0" style={{ color: PALETTE.gold }} />
+            <span className="text-[#334155]">{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        type="button"
+        onClick={() => onCheckout(tier.productType)}
+        disabled={isLoading}
+        className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {isLoading ? 'Redirecting…' : 'Get Started'}
+      </button>
+    </div>
+  );
+}
 
 export default function PricingPage() {
+  const { user } = useSupabaseAuth(); // if this differs in your project, tell me and I’ll adjust
+  const [loadingKey, setLoadingKey] = useState(null);
+
+  const handleCheckout = async (productType) => {
+    try {
+      if (!user?.id) {
+        // Force auth first for institutional flow
+        window.location.href = `/login?next=/pricing`;
+        return;
+      }
+
+      setLoadingKey(productType);
+
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productType,
+          userId: user.id,
+          userEmail: user.email,
+          // Do NOT pass cancelUrl; let server default to /dashboard?canceled=1
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        console.error('Checkout session error:', data);
+        alert('Unable to start checkout. Please try again.');
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert('Unable to start checkout. Please try again.');
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
   return (
     <>
       <Helmet>
         <title>Pricing — InvestorIQ</title>
         <meta
           name="description"
-          content="Transparent pricing for institutional real estate analysis. Choose a single Property IQ Report or subscribe for ongoing insights."
+          content="Institutional pricing for real estate underwriting reports. Choose single purchase or subscription access."
         />
       </Helmet>
 
       <div className="min-h-screen bg-slate-50 py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          <h1
-            className="text-4xl md:text-5xl font-extrabold mb-3"
-            style={{ color: PALETTE.deepNavy }}
-          >
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Simple, Transparent Pricing
           </h1>
+
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
-            All prices are in USD. If a report fails to generate or contains errors, your IQ credit
-            is automatically restored for regeneration. InvestorIQ does not issue cash refunds.
+            All prices are in USD. If a report fails to generate or contains errors, your IQ credit is automatically restored for regeneration. InvestorIQ does not issue cash refunds.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {tiers.map((t) => (
-              <PricingTile key={t.title} tier={t} />
+              <PricingTile key={t.title} tier={t} onCheckout={handleCheckout} loadingKey={loadingKey} />
             ))}
           </div>
 
-          {/* Add-on: Additional Reports */}
-          <div className="mt-12 max-w-3xl mx-auto bg-white border border-slate-200 rounded-lg p-6 shadow-sm text-center">
-            <h3
-              className="text-xl font-bold mb-1"
-              style={{ color: PALETTE.deepNavy }}
-            >
-              Need Additional Reports?
-            </h3>
-            <p className="text-[#334155] font-semibold mb-4">
-              Purchase extra Property IQ Reports anytime. Quantities can be adjusted during checkout.
-            </p>
-            <a
-              href={STRIPE_LINKS.addon}
-              className="inline-block px-5 py-3 rounded-md font-semibold text-white border border-[#0F172A] bg-[#0F172A] hover:bg-[#0d1326] transition"
-            >
-              Buy Additional Reports — <span className="font-bold">$229</span>
-            </a>
-            <p className="text-xs text-[#334155] mt-3">
-              Failed generations automatically restore your IQ credit. No cash refunds.
-            </p>
-          </div>
+          <p className="text-sm text-[#334155] mt-10">
+            <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>
+              Volume pricing available for select institutional investors.
+            </span>
+          </p>
         </div>
       </div>
     </>
