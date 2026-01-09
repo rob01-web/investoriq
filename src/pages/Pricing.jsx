@@ -155,7 +155,11 @@ export default function PricingPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Simple, Transparent Pricing
           </h1>
-
+          <p className="text-sm text-[#334155] mt-2">
+  <a href="/dashboard" className="underline hover:no-underline">
+    Back to Dashboard
+  </a>
+</p>
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
             All prices are in USD. If a report fails to generate or contains errors, your IQ credit is automatically restored for regeneration. InvestorIQ does not issue cash refunds.
           </p>
