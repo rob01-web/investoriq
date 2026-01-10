@@ -63,7 +63,7 @@ export default function LandingPage() {
           <div className="mt-14 relative">
             <div className="overflow-hidden rounded-2xl shadow-2xl border border-slate-200 bg-white">
               <img
-                src="/hero-sample-report.jpg"
+                src="/hero-image.png"
                 alt="InvestorIQ institutional underwriting report preview"
                 className="w-full object-contain"
               />
