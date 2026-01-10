@@ -1,10 +1,19 @@
 <svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
   <title>InvestorIQ</title>
+
+  <!-- MARK: stacked-square geometry (institutional) -->
   <g transform="translate(12 12)">
-    <path d="M64 0L116 52L64 104L12 52L64 0Z" fill="#0F172A"/>
-    <path d="M64 0L116 52L96 72L64 40L32 72L12 52L64 0Z" fill="#0E9FA4"/>
-    <rect x="52" y="52" width="24" height="24" fill="white"/>
+    <g transform="translate(64 64) rotate(45) translate(-64 -64)">
+      <!-- Top tile (teal) -->
+      <rect x="44" y="28" width="44" height="44" rx="4" fill="#1F8A8A"/>
+      <!-- Bottom tile (navy) -->
+      <rect x="56" y="60" width="44" height="44" rx="4" fill="#0F172A"/>
+      <!-- Negative notch to create interlock -->
+      <rect x="56" y="48" width="20" height="20" fill="#FFFFFF"/>
+    </g>
   </g>
+
+  <!-- WORDMARK: keep Investor navy + IQ gold -->
   <g transform="translate(152 32)">
     <text x="0" y="80" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
       <tspan font-weight="600" fill="#0F172A">Investor</tspan>
