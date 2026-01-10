@@ -20,7 +20,7 @@ const HeroImage = () => {
 
         {/* Floating Hero Image */}
         <motion.img
-          src="/hero-sample-report.jpg"
+          src="/hero-image.png"
           alt="InvestorIQ institutional underwriting report preview"
           className="w-full h-auto object-cover rounded-2xl"
           initial={{ y: 0 }}
