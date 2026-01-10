@@ -30,8 +30,8 @@ export default function InvestorIQHeader() {
         >
           <a href="/" className="inline-flex items-center gap-3">
             <picture>
-              <source srcSet="/brand/logo-wordmark.svg" media="(max-width: 640px)" />
-              <img src="/brand/logo-primary.svg" alt="InvestorIQ" className="h-9 sm:h-10 w-auto" loading="eager" />
+              <source srcSet="/brand/logo-wordmark.jpg" media="(max-width: 640px)" />
+              <img src="/brand/logo-primary.jpg" alt="InvestorIQ" className="h-9 sm:h-10 w-auto" loading="eager" />
             </picture>
           </a>
         </motion.div>

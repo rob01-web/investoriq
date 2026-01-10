@@ -1,17 +1,27 @@
-<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
+<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
   <title>InvestorIQ</title>
-
-  <!-- MARK (the one you love): diamond + notch -->
-  <g transform="translate(12 12)">
-    <path d="M64 0L116 52L64 104L12 52L64 0Z" fill="#0F172A"/>
-    <path d="M64 0L116 52L96 72L64 40L32 72L12 52L64 0Z" fill="#1F8A8A"/>
-    <rect x="52" y="52" width="24" height="24" fill="#FFFFFF"/>
+  <defs>
+    <linearGradient id="markTeal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1F8A8A"/>
+      <stop offset="1" stop-color="#0E9FA4"/>
+    </linearGradient>
+    <linearGradient id="markNavy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#0B1222"/>
+    </linearGradient>
+    <linearGradient id="iqGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D4AF37"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16 16)">
+    <polygon points="56,44 112,100 56,156 0,100" fill="url(#markNavy)"/>
+    <polygon points="56,0 112,56 56,112 0,56" fill="url(#markTeal)"/>
   </g>
-
-  <!-- WORDMARK (NO SPACE): Investor (navy) + IQ (gold) -->
-  <g transform="translate(152 32)">
-    <text x="0" y="80" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
-      <tspan font-weight="600" fill="#0F172A">Investor</tspan><tspan font-weight="700" fill="#D4AF37">IQ</tspan>
+  <g transform="translate(152 40)">
+    <text x="0" y="76" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
+      <tspan font-weight="600" fill="#0F172A">Investor</tspan>
+      <tspan font-weight="700" fill="url(#iqGold)">IQ</tspan>
     </text>
   </g>
 </svg>
