@@ -14,14 +14,15 @@
       <stop offset="1" stop-color="#B8860B"/>
     </linearGradient>
   </defs>
+
   <g transform="translate(16 16)">
     <polygon points="56,44 112,100 56,156 0,100" fill="url(#markNavy)"/>
     <polygon points="56,0 112,56 56,112 0,56" fill="url(#markTeal)"/>
   </g>
+
   <g transform="translate(152 40)">
     <text x="0" y="76" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
-      <tspan font-weight="600" fill="#0F172A">Investor</tspan>
-      <tspan font-weight="700" fill="url(#iqGold)">IQ</tspan>
+      <tspan font-weight="600" fill="#0F172A">Investor</tspan><tspan dx="-6" font-weight="700" fill="url(#iqGold)">IQ</tspan>
     </text>
   </g>
 </svg>
