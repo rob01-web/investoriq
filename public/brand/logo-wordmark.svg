@@ -1,7 +1,9 @@
-<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ wordmark">
-  <title>InvestorIQ Wordmark</title>
-  <text x="0" y="110" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="96" letter-spacing="-0.02em">
-    <tspan font-weight="600" fill="#0F172A">Investor</tspan>
-    <tspan font-weight="700" fill="#D4AF37">IQ</tspan>
-  </text>
+<svg width="520" height="160" viewBox="0 0 520 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="InvestorIQ">
+  <title>InvestorIQ</title>
+
+  <g transform="translate(12 32)">
+    <text x="0" y="80" font-family="Inter, 'Inter Tight', 'Space Grotesk', sans-serif" font-size="72" letter-spacing="-0.02em">
+      <tspan font-weight="600" fill="#0F172A">Investor</tspan><tspan font-weight="700" fill="#D4AF37">IQ</tspan>
+    </text>
+  </g>
 </svg>
