@@ -18,6 +18,9 @@ export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
+  const removeUploadedFile = (index) => {
+  setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+};
 
   const credits = Number(profile?.report_credits ?? 0);
 
@@ -83,6 +86,7 @@ export default function Dashboard() {
     }
 
     setUploadedFiles(files);
+    setAcknowledged(false);
   };
 
   const handleAnalyze = async () => {
@@ -252,14 +256,25 @@ export default function Dashboard() {
                 <ul className="space-y-2 text-sm text-[#334155] font-medium">
                   {uploadedFiles.map((file, idx) => (
                     <li
-                      key={idx}
-                      className="flex justify-between border-b border-slate-100 pb-1 last:border-none"
-                    >
-                      <span>{file.name}</span>
-                      <span className="text-[#334155] text-xs">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </span>
-                    </li>
+  key={idx}
+  className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
+>
+  <div className="min-w-0">
+    <div className="truncate">{file.name}</div>
+    <div className="text-[#334155] text-xs">
+      {(file.size / 1024 / 1024).toFixed(2)} MB
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => removeUploadedFile(idx)}
+    className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
+    aria-label={`Remove ${file.name}`}
+  >
+    Remove
+  </button>
+</li>
                   ))}
                 </ul>
               </div>
@@ -301,7 +316,24 @@ export default function Dashboard() {
             <div className="flex justify-center mt-8">
               <Button
                 size="lg"
-                onClick={handleAnalyze}
+                onClick={() => {
+  if (!profile || credits <= 0) {
+    window.location.href = '/pricing';
+    return;
+  }
+
+  if (!acknowledged) {
+    toast({
+      title: 'Acknowledgement required',
+      description:
+        'Please acknowledge the document-based limitations before uploading files.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  document.getElementById('fileInput')?.click();
+}}
                 disabled={uploadedFiles.length === 0 || loading || !acknowledged}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
