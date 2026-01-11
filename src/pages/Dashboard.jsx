@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [reportData, setReportData] = useState(null);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   const credits = Number(profile?.report_credits ?? 0);
 
@@ -273,12 +274,35 @@ export default function Dashboard() {
               </span>
             </div>
 
+            <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+  <label className="flex items-start gap-3 text-sm text-slate-700">
+    <input
+      type="checkbox"
+      checked={acknowledged}
+      onChange={(e) => setAcknowledged(e.target.checked)}
+      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
+    />
+    <span>
+      <span className="font-medium">
+        I acknowledge that InvestorIQ produces document-based underwriting only,
+        does not provide investment or appraisal advice,
+        and will disclose any missing or degraded inputs in the final report.
+      </span>
+      <br />
+      <span className="mt-1 block text-xs text-slate-500">
+        Analysis outputs are generated strictly from the documents provided.
+        No assumptions or gap-filling are performed.
+      </span>
+    </span>
+  </label>
+</div>
+
             {/* ACTION BUTTON */}
             <div className="flex justify-center mt-8">
               <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={uploadedFiles.length === 0 || loading}
+                disabled={uploadedFiles.length === 0 || loading || !acknowledged}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
