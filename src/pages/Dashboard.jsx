@@ -225,12 +225,23 @@ export default function Dashboard() {
               <Button
                 size="lg"
                 onClick={() => {
-                  if (!profile || credits <= 0) {
-                    window.location.href = '/pricing';
-                    return;
-                  }
-                  document.getElementById('fileInput')?.click();
-                }}
+  if (!profile || credits <= 0) {
+    window.location.href = '/pricing';
+    return;
+  }
+
+  if (!acknowledged) {
+    toast({
+      title: 'Acknowledgement required',
+      description:
+        'Please acknowledge the document-based limitations before uploading files.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  document.getElementById('fileInput')?.click();
+}}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 <UploadCloud className="mr-2 h-5 w-5" />
