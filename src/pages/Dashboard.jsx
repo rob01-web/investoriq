@@ -543,6 +543,11 @@ setIsModalOpen(true);
                     or appraisal advice, and will disclose any missing or degraded inputs in the final report.
                   </span>
                   <br />
+
+                  <div className="mt-1 text-xs text-slate-500">
+  Accepted disclosures v2026-01-14
+</div>
+
                   <span className="mt-1 block text-xs text-slate-500">
                     Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are
                     performed.
