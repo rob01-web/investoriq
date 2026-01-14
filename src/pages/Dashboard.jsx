@@ -60,6 +60,47 @@ export default function Dashboard() {
     });
   }
 };
+  
+    const recordLegalAcceptance = async () => {
+    if (!profile?.id) return false;
+
+    // LOCKED policy metadata
+    const policyKey = 'upload_ack';
+    const policyVersion = '2026-01-14';
+
+    const policyText =
+      'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
+
+    // Simple deterministic hash (browser-native, no deps)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(policyText);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const policyTextHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+    try {
+      const res = await fetch('/api/legal-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          policyKey,
+          policyVersion,
+          policyTextHash,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error('Legal acceptance API failed:', await res.text());
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Legal acceptance error:', err);
+      return false;
+    }
+  };
 
   const handleUploadSuccess = async () => {
     toast({
@@ -333,23 +374,34 @@ export default function Dashboard() {
                 <Button
                   size="lg"
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!profile || credits <= 0) {
                       window.location.href = '/pricing';
                       return;
                     }
 
                     if (!acknowledged) {
-                      toast({
-                        title: 'Acknowledgement required',
-                        description:
-                          'Please acknowledge the document-based limitations before uploading files.',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
+  toast({
+    title: 'Acknowledgement required',
+    description:
+      'Please acknowledge the document-based limitations before uploading files.',
+    variant: 'destructive',
+  });
+  return;
+}
 
-                    setIsModalOpen(true);
+const accepted = await recordLegalAcceptance();
+if (!accepted) {
+  toast({
+    title: 'Unable to record acknowledgement',
+    description:
+      'We could not record your acceptance of the required disclosures. Please try again.',
+    variant: 'destructive',
+  });
+  return;
+}
+
+setIsModalOpen(true);
                   }}
                   className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
                 >
