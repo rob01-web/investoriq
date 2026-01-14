@@ -419,7 +419,7 @@ export default function Dashboard() {
   id="fileInput"
   type="file"
   multiple
-  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
+  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
   onChange={handleUpload}
   className="hidden"
 />
