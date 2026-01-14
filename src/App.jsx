@@ -139,7 +139,7 @@ export default function App() {
       <Route
         path="/login"
         element={
-          <MainLayout>
+          <MainLayout showFooter={false}>
             <LoginPage />
           </MainLayout>
         }
@@ -148,7 +148,7 @@ export default function App() {
       <Route
         path="/signup"
         element={
-          <MainLayout>
+          <MainLayout showFooter={false}>
             <SignUpPage />
           </MainLayout>
         }
@@ -177,7 +177,7 @@ export default function App() {
       <Route
         path="/checkout/success"
         element={
-          <MainLayout>
+          <MainLayout showFooter={false}>
             <CheckoutSuccess />
           </MainLayout>
         }

@@ -130,9 +130,6 @@ export default function SignUpPage() {
           </Link>
         </p>
 
-        <p className="text-center text-xs text-slate-500 mt-4">
-          © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
-        </p>
       </motion.div>
     </div>
   );

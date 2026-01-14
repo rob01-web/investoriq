@@ -109,9 +109,6 @@ export default function LoginPage() {
         </p>
       </motion.div>
 
-      <footer className="py-6 text-center text-[#334155] text-sm mt-10">
-        © 2025 <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span>. All Rights Reserved.
-      </footer>
     </div>
   );
 }

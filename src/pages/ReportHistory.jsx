@@ -160,12 +160,6 @@ export default function ReportHistory() {
           )}
         </motion.div>
 
-        {/* FOOTER */}
-        <footer className="py-6 border-t border-slate-200 bg-white/80 backdrop-blur-md text-center text-[#334155] text-sm mt-12">
-          © 2025{" "}
-          <span className="font-semibold text-[#0F172A]">InvestorIQ</span>. All Rights Reserved.
-        </footer>
-
         <BackButton />
       </div>
     </>
