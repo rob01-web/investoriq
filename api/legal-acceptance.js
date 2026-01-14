@@ -41,26 +41,25 @@ export default async function handler(req, res) {
 
     const userAgent = req.headers['user-agent'] || null;
 
-        const { error } = await supabase
+            const { error } = await supabase
       .from('legal_acceptances')
-      .insert({
-        user_id: userId,
-        user_email: userEmail,
-        policy_key: policyKey,
-        policy_version: policyVersion,
-        policy_text_hash: policyTextHash,
-        ip,
-        user_agent: userAgent,
-      });
+      .upsert(
+        {
+          user_id: userId,
+          user_email: userEmail,
+          policy_key: policyKey,
+          policy_version: policyVersion,
+          policy_text_hash: policyTextHash,
+          ip,
+          user_agent: userAgent,
+        },
+        {
+          onConflict: 'user_id,policy_key,policy_version,policy_text_hash',
+        }
+      );
 
     if (error) {
-      // If we already recorded this exact acceptance, treat as success.
-      // Postgres unique violation code is 23505.
-      if (error.code === '23505') {
-        return res.status(200).json({ success: true, alreadyAccepted: true });
-      }
-
-      console.error('Supabase insert error:', error);
+      console.error('Supabase upsert error:', error);
       return res.status(500).json({ error: 'Failed to record acceptance' });
     }
 
