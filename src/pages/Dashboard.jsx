@@ -238,31 +238,88 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <Button
-  size="lg"
-  onClick={() => {
-    if (!profile || credits <= 0) {
-      window.location.href = '/pricing';
-      return;
-    }
+              <div className="flex flex-col items-end gap-3">
+  <Button
+    size="lg"
+    type="button"
+    onClick={() => {
+      if (!profile || credits <= 0) {
+        window.location.href = '/pricing';
+        return;
+      }
 
-    if (!acknowledged) {
-      toast({
-        title: 'Acknowledgement required',
-        description:
-          'Please acknowledge the document-based limitations before uploading files.',
-        variant: 'destructive',
-      });
-      return;
-    }
+      if (!acknowledged) {
+        toast({
+          title: 'Acknowledgement required',
+          description:
+            'Please acknowledge the document-based limitations before uploading files.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    document.getElementById('fileInput')?.click();
-  }}
-  className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
->
-  <UploadCloud className="mr-2 h-5 w-5" />
-  {profile && credits > 0 ? 'Upload Files' : 'Buy Credits'}
-</Button>
+      setIsModalOpen(true);
+    }}
+    className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
+  >
+    <UploadCloud className="mr-2 h-5 w-5" />
+    Add file(s)
+  </Button>
+
+  {isModalOpen && (
+  <div
+    className="fixed inset-0 z-50"
+    onClick={() => setIsModalOpen(false)}
+    aria-hidden="true"
+  >
+    <div
+      className="absolute right-4 top-[140px] w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-label="Insert file"
+    >
+      <div className="text-sm font-semibold text-[#0F172A]">Insert file</div>
+      <div className="mt-2 grid gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setIsModalOpen(false);
+            document.getElementById('fileInput')?.click();
+          }}
+          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+        >
+          Upload files
+          <div className="text-xs font-normal text-slate-500">
+            PDFs, spreadsheets, or images
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsModalOpen(false);
+            document.getElementById('cameraInput')?.click();
+          }}
+          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+        >
+          Camera
+          <div className="text-xs font-normal text-slate-500">
+            Take photos of documents
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(false)}
+          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+</div>
             </div>
 
             <input
@@ -270,6 +327,16 @@ export default function Dashboard() {
               type="file"
               multiple
               accept=".pdf,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
+              onChange={handleUpload}
+              className="hidden"
+            />
+
+            <input
+              id="cameraInput"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
               onChange={handleUpload}
               className="hidden"
             />
