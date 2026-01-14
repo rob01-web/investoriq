@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -76,6 +74,100 @@ export default function Dashboard() {
 
   // allow selecting the same file again later
   e.target.value = '';
+
+  // --- File type enforcement (allowlist + hard block) ---
+  const allowedExt = new Set([
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'csv',
+    'ppt',
+    'pptx',
+    'jpg',
+    'jpeg',
+    'png',
+    'txt',
+  ]);
+
+  // Block executables / scripts even if someone bypasses the picker
+  const blockedExt = new Set([
+    'exe',
+    'msi',
+    'bat',
+    'cmd',
+    'com',
+    'scr',
+    'pif',
+    'cpl',
+    'jar',
+    'js',
+    'jse',
+    'vbs',
+    'vbe',
+    'ps1',
+    'psm1',
+    'psd1',
+    'sh',
+    'bash',
+    'zsh',
+    'py',
+    'rb',
+    'php',
+    'pl',
+    'dll',
+    'sys',
+    'lnk',
+  ]);
+
+  const getExt = (name) => {
+    const base = (name || '').trim().toLowerCase();
+    const lastDot = base.lastIndexOf('.');
+    if (lastDot === -1) return '';
+    return base.slice(lastDot + 1);
+  };
+
+  const blocked = [];
+  const invalid = [];
+
+  for (const f of files) {
+    const ext = getExt(f.name);
+
+    if (!ext) {
+      invalid.push(f.name || '(unnamed file)');
+      continue;
+    }
+
+    if (blockedExt.has(ext)) {
+      blocked.push(f.name);
+      continue;
+    }
+
+    if (!allowedExt.has(ext)) {
+      invalid.push(f.name);
+      continue;
+    }
+  }
+
+  if (blocked.length > 0) {
+    toast({
+      title: 'Blocked file type',
+      description: `For security reasons, these file types are not allowed: ${blocked.join(', ')}`,
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  if (invalid.length > 0) {
+    toast({
+      title: 'Unsupported file type',
+      description:
+        'Allowed: PDF, DOC, DOCX, XLS, XLSX, CSV, PPT, PPTX, JPG, JPEG, PNG.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
   const oversized = files.some((f) => f.size > 10 * 1024 * 1024);
   if (oversized) {
@@ -160,7 +252,7 @@ export default function Dashboard() {
     }
   };
 
-  return (
+    return (
     <>
       <Helmet>
         <title>InvestorIQ Dashboard - Property IQ Reports</title>
@@ -208,7 +300,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={startCheckout}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
                 >
                   Buy Credits
                 </button>
@@ -237,83 +329,100 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <div className="flex flex-col items-end gap-3">
-  <Button
-    size="lg"
-    type="button"
-    onClick={() => {
-      if (!profile || credits <= 0) {
-        window.location.href = '/pricing';
-        return;
-      }
+              <div className="relative flex flex-col items-end gap-3">
+                <Button
+                  size="lg"
+                  type="button"
+                  onClick={() => {
+                    if (!profile || credits <= 0) {
+                      window.location.href = '/pricing';
+                      return;
+                    }
 
-      if (!acknowledged) {
-        toast({
-          title: 'Acknowledgement required',
-          description:
-            'Please acknowledge the document-based limitations before uploading files.',
-          variant: 'destructive',
-        });
-        return;
-      }
+                    if (!acknowledged) {
+                      toast({
+                        title: 'Acknowledgement required',
+                        description:
+                          'Please acknowledge the document-based limitations before uploading files.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-      setIsModalOpen(true);
-    }}
-    className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-  >
-    <UploadCloud className="mr-2 h-5 w-5" />
-    Add file(s)
-  </Button>
+                    setIsModalOpen(true);
+                  }}
+                  className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
+                >
+                  <UploadCloud className="mr-2 h-5 w-5" />
+                  Add file(s)
+                </Button>
 
-  {isModalOpen && (
-  <div
-    className="fixed inset-0 z-50"
-    onClick={() => setIsModalOpen(false)}
-    aria-hidden="true"
-  >
-    <div
-      className="absolute right-4 top-[140px] w-[420px] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-      onClick={(e) => e.stopPropagation()}
-      role="dialog"
-      aria-label="Upload documents"
-    >
-      <div className="text-sm font-semibold text-[#0F172A]">Upload Documents</div>
-      <div className="mt-2 text-xs text-slate-600">
-        Upload rent rolls, photos, or financials (10 MB max per file).
-      </div>
+                {isModalOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsModalOpen(false)}
+                      aria-hidden="true"
+                    />
 
-      <button
-        type="button"
-        onClick={() => {
-          setIsModalOpen(false);
-          document.getElementById('fileInput')?.click();
-        }}
-        className="mt-3 w-full rounded-lg border-2 border-dashed border-slate-200 bg-white px-4 py-6 text-center hover:bg-slate-50"
-      >
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white">
-          <UploadCloud className="h-5 w-5 text-[#1F8A8A]" />
-        </div>
-        <div className="text-sm font-semibold text-[#0F172A]">
-          Click to Upload or Drag &amp; Drop
-        </div>
-        <div className="mt-1 text-xs text-slate-500">
-          Your files remain encrypted and confidential
-        </div>
-      </button>
-    </div>
-  </div>
-)}
-</div>
+                    <div
+                      className="absolute right-0 top-full z-50 mt-2 w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                      onClick={(e) => e.stopPropagation()}
+                      role="dialog"
+                      aria-label="Insert file"
+                    >
+                      <div className="text-sm font-semibold text-[#0F172A]">Insert file</div>
+                      <div className="mt-2 grid gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsModalOpen(false);
+                            document.getElementById('fileInput')?.click();
+                          }}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+                        >
+                          Upload files
+                          <div className="text-xs font-normal text-slate-500">
+                            PDFs, spreadsheets, or images
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsModalOpen(false);
+                            document.getElementById('cameraInput')?.click();
+                          }}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+                        >
+                          Camera
+                          <div className="text-xs font-normal text-slate-500">
+                            Take photos of documents
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsModalOpen(false)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <input
-              id="fileInput"
-              type="file"
-              multiple
-              accept=".pdf,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
-              onChange={handleUpload}
-              className="hidden"
-            />
+  id="fileInput"
+  type="file"
+  multiple
+  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
+  onChange={handleUpload}
+  className="hidden"
+/>
 
             <input
               id="cameraInput"
@@ -326,40 +435,38 @@ export default function Dashboard() {
             />
 
             {/* FILE PREVIEW */}
-{uploadedFiles.length > 0 && (
-  <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
-    <h3 className="font-semibold mb-3 text-[#0F172A]">
-      Files Selected ({uploadedFiles.length})
-    </h3>
+            {uploadedFiles.length > 0 && (
+              <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 className="font-semibold mb-3 text-[#0F172A]">
+                  Files Selected ({uploadedFiles.length})
+                </h3>
 
-    <ul className="space-y-2 text-sm text-[#334155]">
-      {uploadedFiles.map((file, idx) => (
-        <li
-          key={idx}
-          className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
-        >
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-[#0F172A]">
-              {file.name}
-            </div>
-            <div className="text-xs text-[#334155]">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </div>
-          </div>
+                <ul className="space-y-2 text-sm text-[#334155]">
+                  {uploadedFiles.map((file, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-[#0F172A]">{file.name}</div>
+                        <div className="text-xs text-[#334155]">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </div>
 
-          <button
-            type="button"
-            onClick={() => removeUploadedFile(idx)}
-            className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
-            aria-label={`Remove ${file.name}`}
-          >
-            Remove
-          </button>
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
+                      <button
+                        type="button"
+                        onClick={() => removeUploadedFile(idx)}
+                        className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
+                        aria-label={`Remove ${file.name}`}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* DISCLAIMER */}
             <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
@@ -371,45 +478,44 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
-  <label className="flex items-start gap-3 text-sm text-slate-700">
-    <input
-      type="checkbox"
-      checked={acknowledged}
-      onChange={(e) => setAcknowledged(e.target.checked)}
-      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
-    />
-    <span>
-      <span className="font-medium">
-        I acknowledge that InvestorIQ produces document-based underwriting only,
-        does not provide investment or appraisal advice,
-        and will disclose any missing or degraded inputs in the final report.
-      </span>
-      <br />
-      <span className="mt-1 block text-xs text-slate-500">
-        Analysis outputs are generated strictly from the documents provided.
-        No assumptions or gap-filling are performed.
-      </span>
-    </span>
-  </label>
-</div>
+              <label className="flex items-start gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(e) => setAcknowledged(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
+                />
+                <span>
+                  <span className="font-medium">
+                    I acknowledge that InvestorIQ produces document-based underwriting only, does not provide investment
+                    or appraisal advice, and will disclose any missing or degraded inputs in the final report.
+                  </span>
+                  <br />
+                  <span className="mt-1 block text-xs text-slate-500">
+                    Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are
+                    performed.
+                  </span>
+                </span>
+              </label>
+            </div>
 
             {/* ACTION BUTTON */}
-<div className="flex justify-center mt-8">
-  <Button
-    size="lg"
-    onClick={handleAnalyze}
-    disabled={uploadedFiles.length === 0 || loading || !acknowledged}
-    className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-  >
-    {loading ? (
-      <>
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing...
-      </>
-    ) : (
-      'Generate IQ Report'
-    )}
-  </Button>
-</div>
+            <div className="flex justify-center mt-8">
+              <Button
+                size="lg"
+                onClick={handleAnalyze}
+                disabled={uploadedFiles.length === 0 || loading || !acknowledged}
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing...
+                  </>
+                ) : (
+                  'Generate IQ Report'
+                )}
+              </Button>
+            </div>
           </motion.div>
 
           {/* RESULT CARD */}
@@ -441,9 +547,7 @@ export default function Dashboard() {
             </motion.div>
           )}
         </div>
-
       </div>
-
-      </>
+        </>
   );
 }
