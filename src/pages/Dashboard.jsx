@@ -259,37 +259,40 @@ export default function Dashboard() {
             />
 
             {/* FILE PREVIEW */}
-            {uploadedFiles.length > 0 && (
-              <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 text-[#0F172A]">
-                  Files Selected ({uploadedFiles.length})
-                </h3>
-                <ul className="space-y-2 text-sm text-[#334155] font-medium">
-                  {uploadedFiles.map((file, idx) => (
-                    <li
-  key={idx}
-  className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
->
-  <div className="min-w-0">
-    <div className="truncate">{file.name}</div>
-    <div className="text-[#334155] text-xs">
-      {(file.size / 1024 / 1024).toFixed(2)} MB
-    </div>
-  </div>
+{uploadedFiles.length > 0 && (
+  <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+    <h3 className="font-semibold mb-3 text-[#0F172A]">
+      Files Selected ({uploadedFiles.length})
+    </h3>
 
-  <button
-    type="button"
-    onClick={() => removeUploadedFile(idx)}
-    className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
-    aria-label={`Remove ${file.name}`}
-  >
-    Remove
-  </button>
-</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+    <ul className="space-y-2 text-sm text-[#334155]">
+      {uploadedFiles.map((file, idx) => (
+        <li
+          key={idx}
+          className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
+        >
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-[#0F172A]">
+              {file.name}
+            </div>
+            <div className="text-xs text-[#334155]">
+              {(file.size / 1024 / 1024).toFixed(2)} MB
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => removeUploadedFile(idx)}
+            className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
+            aria-label={`Remove ${file.name}`}
+          >
+            Remove
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
             {/* DISCLAIMER */}
             <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
