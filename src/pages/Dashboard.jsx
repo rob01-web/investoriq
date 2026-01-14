@@ -272,34 +272,34 @@ export default function Dashboard() {
     aria-hidden="true"
   >
     <div
-      className="absolute right-4 top-[140px] w-[280px] rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+      className="absolute right-4 top-[140px] w-[420px] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
       onClick={(e) => e.stopPropagation()}
       role="dialog"
       aria-label="Upload documents"
     >
-      <div className="grid gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setIsModalOpen(false);
-            document.getElementById('fileInput')?.click();
-          }}
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
-        >
-          Upload documents
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setIsModalOpen(false);
-            document.getElementById('cameraInput')?.click();
-          }}
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
-        >
-          Camera
-        </button>
+      <div className="text-sm font-semibold text-[#0F172A]">Upload Documents</div>
+      <div className="mt-2 text-xs text-slate-600">
+        Upload rent rolls, photos, or financials (10 MB max per file).
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setIsModalOpen(false);
+          document.getElementById('fileInput')?.click();
+        }}
+        className="mt-3 w-full rounded-lg border-2 border-dashed border-slate-200 bg-white px-4 py-6 text-center hover:bg-slate-50"
+      >
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white">
+          <UploadCloud className="h-5 w-5 text-[#1F8A8A]" />
+        </div>
+        <div className="text-sm font-semibold text-[#0F172A]">
+          Click to Upload or Drag &amp; Drop
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
+          Your files remain encrypted and confidential
+        </div>
+      </button>
     </div>
   </div>
 )}
