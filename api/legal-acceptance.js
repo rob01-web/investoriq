@@ -23,6 +23,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+        // Server-derived identity (cannot be spoofed by client)
+    const { data: userData, error: userErr } =
+      await supabase.auth.admin.getUserById(userId);
+
+    if (userErr) {
+      console.error('Auth lookup error:', userErr);
+      return res.status(500).json({ error: 'Failed to verify user identity' });
+    }
+
+    const userEmail = userData?.user?.email || null;
+
     const ip =
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
       req.socket?.remoteAddress ||
@@ -34,6 +45,7 @@ export default async function handler(req, res) {
       .from('legal_acceptances')
       .insert({
         user_id: userId,
+        user_email: userEmail,
         policy_key: policyKey,
         policy_version: policyVersion,
         policy_text_hash: policyTextHash,
