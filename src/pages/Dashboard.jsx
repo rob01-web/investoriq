@@ -5,7 +5,6 @@ import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
-import UploadModal from '@/components/UploadModal';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 
@@ -273,13 +272,12 @@ export default function Dashboard() {
     aria-hidden="true"
   >
     <div
-      className="absolute right-4 top-[140px] w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+      className="absolute right-4 top-[140px] w-[280px] rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
       onClick={(e) => e.stopPropagation()}
       role="dialog"
-      aria-label="Insert file"
+      aria-label="Upload documents"
     >
-      <div className="text-sm font-semibold text-[#0F172A]">Insert file</div>
-      <div className="mt-2 grid gap-2">
+      <div className="grid gap-2">
         <button
           type="button"
           onClick={() => {
@@ -288,10 +286,7 @@ export default function Dashboard() {
           }}
           className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
         >
-          Upload files
-          <div className="text-xs font-normal text-slate-500">
-            PDFs, spreadsheets, or images
-          </div>
+          Upload documents
         </button>
 
         <button
@@ -303,17 +298,6 @@ export default function Dashboard() {
           className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
         >
           Camera
-          <div className="text-xs font-normal text-slate-500">
-            Take photos of documents
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(false)}
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Cancel
         </button>
       </div>
     </div>
@@ -460,11 +444,6 @@ export default function Dashboard() {
 
       </div>
 
-      <UploadModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUpload={handleUploadSuccess}
-      />
-    </>
+      </>
   );
 }
