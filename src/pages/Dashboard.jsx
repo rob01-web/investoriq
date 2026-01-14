@@ -73,21 +73,37 @@ export default function Dashboard() {
   };
 
   const handleUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    const oversized = files.some((f) => f.size > 10 * 1024 * 1024);
+  const files = Array.from(e.target.files || []);
 
-    if (oversized) {
-      toast({
-        title: 'File Too Large',
-        description: 'Each file must be under 10 MB.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  // allow selecting the same file again later
+  e.target.value = '';
 
-    setUploadedFiles(files);
-    setAcknowledged(false);
-  };
+  const oversized = files.some((f) => f.size > 10 * 1024 * 1024);
+  if (oversized) {
+    toast({
+      title: 'File Too Large',
+      description: 'Each file must be under 10 MB.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  // Append new files instead of overwriting existing ones
+  setUploadedFiles((prev) => {
+    const combined = [...prev, ...files];
+
+    // Prevent accidental duplicates (same name + size)
+    const seen = new Set();
+    return combined.filter((f) => {
+      const key = `${f.name}__${f.size}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  });
+
+  // IMPORTANT: do not force re-acknowledgement on each upload.
+};
 
   const handleAnalyze = async () => {
     if (uploadedFiles.length === 0) {
