@@ -18,52 +18,6 @@ export default function Dashboard() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [ackLocked, setAckLocked] = useState(false);
   const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
-  useEffect(() => {
-  const loadAcceptance = async () => {
-    if (!profile?.id) return;
-
-    try {
-      const policyTextHash = await computePolicyTextHash();
-
-      const { data: row, error } = await supabase
-        .from('legal_acceptances')
-        .select('accepted_at, policy_key, policy_version, policy_text_hash')
-        .eq('user_id', profile.id)
-        .eq('policy_key', POLICY_KEY)
-        .eq('policy_version', POLICY_VERSION)
-        .eq('policy_text_hash', policyTextHash)
-        .order('accepted_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      console.log('[InvestorIQ] legal_acceptances load', {
-        profileId: profile.id,
-        policy_key: POLICY_KEY,
-        policy_version: POLICY_VERSION,
-        policy_text_hash: policyTextHash,
-        row,
-        error,
-      });
-
-      if (error) {
-        console.error('Failed to load legal acceptance:', error);
-        return;
-      }
-
-      if (!row?.accepted_at) return;
-
-      setAcknowledged(true);
-      setAckLocked(true);
-      setAckAcceptedAtLocal(row.accepted_at);
-    } catch (err) {
-      console.error('Failed to load legal acceptance:', err);
-    }
-  };
-
-  loadAcceptance();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [profile?.id]);
-
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
