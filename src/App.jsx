@@ -74,63 +74,85 @@ function TermsPage() {
         verifying all inputs and results and for obtaining independent professional advice as needed.
       </p>
 
-      <h2>3. Document-only and no assumptions</h2>
+      <h2>3. Acceptance of terms and policy versioning</h2>
+      <p>
+       By accessing or using the InvestorIQ platform, including by uploading documents or generating
+       reports, you acknowledge and agree to be bound by the then-current version of InvestorIQ’s
+       Terms of Use, Privacy Policy, and Analysis Disclosures.
+      </p>
+
+      <p>
+       Acceptance is provided through an explicit acknowledgment mechanism within the platform and
+       applies to the specific policy versions in effect at the time of acknowledgment. Once accepted,
+       such acceptance remains valid for all subsequent use of the platform unless and until the
+       applicable policies are modified or replaced.
+      </p>
+
+      <p>
+       InvestorIQ may update these policies from time to time. When a policy is materially updated,
+       users will be required to review and explicitly acknowledge the updated version before
+       continuing to use the affected features of the platform. InvestorIQ maintains audit records
+       of policy acknowledgments, including the applicable policy version and acceptance timestamp,
+       for compliance, security, and legal purposes.
+      </p>
+ 
+       <h2>4. Document-only and no assumptions</h2>
       <p>
         InvestorIQ does not assume, infer, normalize, or fill gaps. If inputs are missing, conflicting,
         or degraded, the limitation may be disclosed and may reduce report completeness.
       </p>
 
-      <h2>4. Accounts and eligibility</h2>
+      <h2>5. Accounts and eligibility</h2>
       <p>
         You are responsible for maintaining the confidentiality of your account credentials and for all
         activity under your account.
       </p>
 
-      <h2>5. Your content and permissions</h2>
+      <h2>6. Your content and permissions</h2>
       <p>
         You represent that you have the right to upload and use the documents you provide, including
         any third-party materials. You grant InvestorIQ a limited license to process your documents
         solely to provide the service, generate outputs, and maintain security, audit, and support logs.
       </p>
 
-      <h2>6. Payments, credits, and delivery</h2>
+      <h2>7. Payments, credits, and delivery</h2>
       <p>
         Certain features require paid credits. Credits are consumed when a report is generated as
         described in the product flow. If a technical error prevents delivery after a successful charge,
         InvestorIQ may provide a replacement credit or an appropriate remedy consistent with operational policy.
       </p>
 
-      <h2>7. Availability and changes</h2>
+      <h2>8. Availability and changes</h2>
       <p>
         InvestorIQ may modify, suspend, or discontinue features to maintain security, compliance, or service quality.
       </p>
 
-      <h2>8. Limitation of liability</h2>
+      <h2>9. Limitation of liability</h2>
       <p>
         To the maximum extent permitted by law, InvestorIQ is not liable for any indirect, incidental,
         special, consequential, exemplary, or punitive damages, or for loss of profits, revenue, data,
         business opportunities, or goodwill arising from or related to your use of the service or outputs.
       </p>
 
-      <h2>9. Indemnity</h2>
+      <h2>10. Indemnity</h2>
       <p>
         You agree to indemnify and hold InvestorIQ harmless from claims arising out of your uploaded content,
         your use of outputs, or your violation of these Terms.
       </p>
 
-      <h2>10. Termination</h2>
+      <h2>11. Termination</h2>
       <p>
         You may stop using InvestorIQ at any time. InvestorIQ may suspend or terminate access if required
         for security, compliance, or abuse prevention.
       </p>
 
-      <h2>11. Governing law</h2>
+      <h2>12. Governing law</h2>
       <p>
         These Terms are governed by the laws of Ontario and the federal laws of Canada applicable therein,
         without regard to conflict of laws principles.
       </p>
 
-      <h2>12. Contact</h2>
+      <h2>13. Contact</h2>
       <p>
         Questions about these Terms: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a>
       </p>
