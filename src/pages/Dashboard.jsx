@@ -64,11 +64,7 @@ export default function Dashboard() {
     const recordLegalAcceptance = async () => {
     if (!profile?.id) return false;
 
-    // LOCKED policy metadata
-    const policyKey = 'upload_ack';
-    const policyVersion = '2026-01-14';
-
-    const policyText =
+        const policyText =
       'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
 
     // Simple deterministic hash (browser-native, no deps)
@@ -82,10 +78,8 @@ export default function Dashboard() {
       const res = await fetch('/api/legal-acceptance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+                body: JSON.stringify({
           userId: profile.id,
-          policyKey,
-          policyVersion,
           policyTextHash,
         }),
       });

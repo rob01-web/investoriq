@@ -30,11 +30,7 @@ if (!userId || !policyTextHash) {
   return res.status(400).json({ error: 'Missing required fields' });
 }
 
-    if (!userId || !policyKey || !policyVersion || !policyTextHash) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-        // Server-derived identity (cannot be spoofed by client)
+    // Server-derived identity (cannot be spoofed by client)
     const { data: userData, error: userErr } =
       await supabase.auth.admin.getUserById(userId);
 
