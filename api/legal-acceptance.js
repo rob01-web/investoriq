@@ -48,22 +48,17 @@ if (!userId || !policyTextHash) {
 
     const userAgent = req.headers['user-agent'] || null;
 
-            const { error } = await supabase
+                const { error } = await supabase
       .from('legal_acceptances')
-      .upsert(
-        {
-          user_id: userId,
-          user_email: userEmail,
-          policy_key: POLICY_KEY,
-policy_version: POLICY_VERSION,
-policy_text_hash: policyTextHash,
-          ip,
-          user_agent: userAgent,
-        },
-        {
-          onConflict: 'user_id,policy_key,policy_version,policy_text_hash',
-        }
-      );
+      .insert({
+        user_id: userId,
+        user_email: userEmail,
+        policy_key: POLICY_KEY,
+        policy_version: POLICY_VERSION,
+        policy_text_hash: policyTextHash,
+        ip,
+        user_agent: userAgent,
+      });
 
     if (error) {
       console.error('Supabase upsert error:', error);
