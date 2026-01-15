@@ -17,25 +17,34 @@ import CheckoutSuccess from '@/pages/CheckoutSuccess';
 // ✅ ADD THIS
 import PricingPage from '@/pages/Pricing';
 
-function LegalShell({ title, children }) {
+function LegalShell({ title, effectiveLabel, children }) {
   return (
     <MainLayout>
       <div
         className="min-h-screen px-6 py-16"
-        style={{ background: `linear-gradient(to bottom, #ffffff, ${PALETTE.paper})` }}
+        style={{ backgroundColor: PALETTE.paper }}
       >
         <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl p-10">
-          <h1 className="text-3xl font-extrabold mb-6" style={{ color: PALETTE.deepNavy }}>
-            {title}
-          </h1>
+          <div className="mb-6">
+            <h1 className="text-3xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
+              {title}
+            </h1>
+            {effectiveLabel ? (
+              <div className="mt-2 text-sm text-slate-500">
+                {effectiveLabel}
+              </div>
+            ) : null}
+          </div>
+
           <div className="prose prose-slate max-w-none">
             {children}
           </div>
+
           <div className="mt-10">
             <Link
               to="/"
-              className="inline-block px-6 py-3 rounded-lg font-semibold text-white shadow-md hover:scale-105 transition-transform"
-              style={{ background: `linear-gradient(to right, ${PALETTE.teal}, #177272)` }}
+              className="inline-block px-6 py-3 rounded-lg font-semibold text-white shadow-md transition-opacity"
+              style={{ backgroundColor: PALETTE.teal }}
             >
               Return to Home
             </Link>
@@ -46,37 +55,184 @@ function LegalShell({ title, children }) {
   );
 }
 
-function TermsPagePlaceholder() {
+function TermsPage() {
   return (
-    <LegalShell title="Terms of Use">
+    <LegalShell
+      title="Terms of Use"
+      effectiveLabel="Effective: 2026-01-14"
+    >
+      <h2>1. Overview</h2>
       <p>
-        This page will contain the InvestorIQ Terms of Use. Until final terms are published, do not rely on this page for legal guidance.
+        InvestorIQ is a document-based real estate underwriting platform. Outputs are produced from
+        the documents you upload. InvestorIQ is not a brokerage, appraiser, lender, or advisor.
+      </p>
+
+      <h2>2. Not advice and no reliance</h2>
+      <p>
+        InvestorIQ does not provide financial advice, investment advice, appraisal advice, legal advice,
+        tax advice, or accounting advice. Outputs are informational only. You are responsible for
+        verifying all inputs and results and for obtaining independent professional advice as needed.
+      </p>
+
+      <h2>3. Document-only and no assumptions</h2>
+      <p>
+        InvestorIQ does not assume, infer, normalize, or fill gaps. If inputs are missing, conflicting,
+        or degraded, the limitation may be disclosed and may reduce report completeness.
+      </p>
+
+      <h2>4. Accounts and eligibility</h2>
+      <p>
+        You are responsible for maintaining the confidentiality of your account credentials and for all
+        activity under your account.
+      </p>
+
+      <h2>5. Your content and permissions</h2>
+      <p>
+        You represent that you have the right to upload and use the documents you provide, including
+        any third-party materials. You grant InvestorIQ a limited license to process your documents
+        solely to provide the service, generate outputs, and maintain security, audit, and support logs.
+      </p>
+
+      <h2>6. Payments, credits, and delivery</h2>
+      <p>
+        Certain features require paid credits. Credits are consumed when a report is generated as
+        described in the product flow. If a technical error prevents delivery after a successful charge,
+        InvestorIQ may provide a replacement credit or an appropriate remedy consistent with operational policy.
+      </p>
+
+      <h2>7. Availability and changes</h2>
+      <p>
+        InvestorIQ may modify, suspend, or discontinue features to maintain security, compliance, or service quality.
+      </p>
+
+      <h2>8. Limitation of liability</h2>
+      <p>
+        To the maximum extent permitted by law, InvestorIQ is not liable for any indirect, incidental,
+        special, consequential, exemplary, or punitive damages, or for loss of profits, revenue, data,
+        business opportunities, or goodwill arising from or related to your use of the service or outputs.
+      </p>
+
+      <h2>9. Indemnity</h2>
+      <p>
+        You agree to indemnify and hold InvestorIQ harmless from claims arising out of your uploaded content,
+        your use of outputs, or your violation of these Terms.
+      </p>
+
+      <h2>10. Termination</h2>
+      <p>
+        You may stop using InvestorIQ at any time. InvestorIQ may suspend or terminate access if required
+        for security, compliance, or abuse prevention.
+      </p>
+
+      <h2>11. Governing law</h2>
+      <p>
+        These Terms are governed by the laws of Ontario and the federal laws of Canada applicable therein,
+        without regard to conflict of laws principles.
+      </p>
+
+      <h2>12. Contact</h2>
+      <p>
+        Questions about these Terms: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a>
       </p>
     </LegalShell>
   );
 }
 
-function PrivacyPagePlaceholder() {
+function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy">
+    <LegalShell
+      title="Privacy Policy"
+      effectiveLabel="Effective: 2026-01-14"
+    >
+      <h2>1. What we collect</h2>
+      <ul>
+        <li>Account information (name, email)</li>
+        <li>Uploaded documents and associated metadata (file name, type, size)</li>
+        <li>Usage and security logs (timestamps, actions, IP address, user agent)</li>
+        <li>Payment-related metadata from Stripe (we do not store full card details)</li>
+      </ul>
+
+      <h2>2. How we use information</h2>
+      <ul>
+        <li>To provide the service and generate document-based outputs</li>
+        <li>To maintain auditability and legal acceptance records</li>
+        <li>To prevent fraud, abuse, and unauthorized access</li>
+        <li>To provide support and troubleshoot errors</li>
+        <li>To comply with legal obligations</li>
+      </ul>
+
+      <h2>3. Service providers</h2>
       <p>
-        This page will contain the InvestorIQ Privacy Policy. Until final policy is published, do not rely on this page for privacy disclosures.
+        InvestorIQ uses service providers to operate the platform. This may include infrastructure,
+        authentication, payments, and document rendering vendors (for example: Vercel, Supabase, Stripe,
+        and DocRaptor). Providers process data only to deliver services to InvestorIQ.
+      </p>
+
+      <h2>4. Data retention</h2>
+      <p>
+        We retain information for as long as necessary to provide the service, maintain audit and security records,
+        comply with legal requirements, and resolve disputes. Retention periods may vary by data type and obligation.
+      </p>
+
+      <h2>5. Security</h2>
+      <p>
+        We use reasonable administrative, technical, and organizational safeguards designed to protect information.
+        No method of transmission or storage is completely secure.
+      </p>
+
+      <h2>6. Your choices</h2>
+      <p>
+        You may request access, correction, or deletion of your account information subject to legal and operational
+        requirements, including audit and security log retention.
+      </p>
+
+      <h2>7. Contact</h2>
+      <p>
+        Privacy questions: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a>
       </p>
     </LegalShell>
   );
 }
 
-function DisclosuresPagePlaceholder() {
+function DisclosuresPage() {
   return (
-    <LegalShell title="Analysis Disclosures">
+    <LegalShell
+      title="Analysis Disclosures"
+      effectiveLabel="Version: v2026-01-14"
+    >
+      <h2>1. Document-based outputs only</h2>
       <p>
-        InvestorIQ outputs are produced strictly from documents uploaded by the user. The system does not assume, infer, normalize, or fill gaps.
+        InvestorIQ produces underwriting outputs strictly from the documents you upload. Outputs are not created
+        from external data sources unless explicitly identified as such within the report.
       </p>
+
+      <h2>2. No assumptions and no gap-filling</h2>
       <p>
-        Missing, conflicting, or degraded source data is disclosed. Users remain responsible for decisions and outcomes.
+        InvestorIQ does not assume, infer, normalize, or fill missing values. If information is missing, conflicting,
+        or degraded, the output may be incomplete and the limitation may be disclosed.
       </p>
+
+      <h2>3. Not advice</h2>
       <p>
-        InvestorIQ does not provide financial, legal, appraisal, or investment advice.
+        InvestorIQ does not provide financial advice, investment advice, appraisal advice, legal advice, tax advice,
+        or accounting advice. Outputs are informational and must not be relied upon as a substitute for professional judgment.
+      </p>
+
+      <h2>4. User responsibility</h2>
+      <p>
+        You are responsible for the accuracy, completeness, and legality of the documents you upload and for validating
+        outputs before making decisions. Investment decisions involve risk and outcomes depend on factors beyond the platform.
+      </p>
+
+      <h2>5. Auditability and acceptance</h2>
+      <p>
+        InvestorIQ may maintain audit and security logs and may record acceptance of disclosures to support compliance,
+        defensibility, and system integrity.
+      </p>
+
+      <h2>6. Contact</h2>
+      <p>
+        Questions about disclosures: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a>
       </p>
     </LegalShell>
   );
@@ -184,9 +340,9 @@ export default function App() {
       />
 
             {/* LEGAL ROUTES (PUBLIC) */}
-      <Route path="/terms" element={<TermsPagePlaceholder />} />
-      <Route path="/privacy" element={<PrivacyPagePlaceholder />} />
-      <Route path="/disclosures" element={<DisclosuresPagePlaceholder />} />
+      <Route path="/terms" element={<TermsPage />} />
+<Route path="/privacy" element={<PrivacyPage />} />
+<Route path="/disclosures" element={<DisclosuresPage />} />
 
       {/* DASHBOARD (can customize later) */}
       <Route
