@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -15,11 +16,65 @@ export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [ackLocked, setAckLocked] = useState(false);
+  const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
+  useEffect(() => {
+  const loadAcceptance = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const policyTextHash = await computePolicyTextHash();
+
+      const { data, error } = await supabase
+        .from('legal_acceptances')
+        .select('accepted_at')
+        .eq('user_id', profile.id)
+        .eq('policy_key', POLICY_KEY)
+        .eq('policy_version', POLICY_VERSION)
+        .eq('policy_text_hash', policyTextHash)
+        .order('accepted_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Failed to load legal acceptance:', error);
+        return;
+      }
+
+      const row = data?.[0];
+      if (!row?.accepted_at) return;
+
+      setAcknowledged(true);
+      setAckLocked(true);
+      setAckAcceptedAtLocal(row.accepted_at);
+    } catch (err) {
+      console.error('Failed to load legal acceptance:', err);
+    }
+  };
+
+  loadAcceptance();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [profile?.id]);
+
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
 
   const credits = Number(profile?.report_credits ?? 0);
+
+    // Immutable policy identity (must match server constants)
+  const POLICY_KEY = 'analysis_disclosures';
+  const POLICY_VERSION = 'v2026-01-14';
+
+  const policyText =
+    'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
+
+  const computePolicyTextHash = async () => {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(policyText);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
 
   const startCheckout = async () => {
   try {
@@ -64,15 +119,7 @@ export default function Dashboard() {
     const recordLegalAcceptance = async () => {
     if (!profile?.id) return false;
 
-        const policyText =
-      'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
-
-    // Simple deterministic hash (browser-native, no deps)
-    const encoder = new TextEncoder();
-    const data = encoder.encode(policyText);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const policyTextHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    const policyTextHash = await computePolicyTextHash();
 
     try {
       const res = await fetch('/api/legal-acceptance', {
@@ -384,17 +431,6 @@ export default function Dashboard() {
   return;
 }
 
-const accepted = await recordLegalAcceptance();
-if (!accepted) {
-  toast({
-    title: 'Unable to record acknowledgement',
-    description:
-      'We could not record your acceptance of the required disclosures. Please try again.',
-    variant: 'destructive',
-  });
-  return;
-}
-
 setIsModalOpen(true);
                   }}
                   className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
@@ -526,11 +562,35 @@ setIsModalOpen(true);
             <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
               <label className="flex items-start gap-3 text-sm text-slate-700">
                 <input
-                  type="checkbox"
-                  checked={acknowledged}
-                  onChange={(e) => setAcknowledged(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
-                />
+  type="checkbox"
+  checked={acknowledged}
+  disabled={ackLocked}
+  onChange={async (e) => {
+    const next = e.target.checked;
+
+    // Do not allow unchecking once accepted (institutional audit posture)
+    if (!next) return;
+
+    // Attempt to record acceptance immediately when the user checks the box
+    const accepted = await recordLegalAcceptance();
+    if (!accepted) {
+      toast({
+        title: 'Unable to record acknowledgement',
+        description:
+          'We could not record your acceptance of the required disclosures. Please try again.',
+        variant: 'destructive',
+      });
+      setAcknowledged(false);
+      setAckLocked(false);
+      return;
+    }
+
+    setAcknowledged(true);
+setAckLocked(true);
+setAckAcceptedAtLocal(new Date().toISOString());
+  }}
+  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
+/>
                 <span>
                   <span className="font-medium">
                     I acknowledge that InvestorIQ produces document-based underwriting only, does not provide investment
@@ -540,6 +600,9 @@ setIsModalOpen(true);
 
                   <div className="mt-1 text-xs text-slate-500">
   Accepted disclosures v2026-01-14
+  {ackAcceptedAtLocal
+    ? ` on ${new Date(ackAcceptedAtLocal).toLocaleString()}`
+    : ''}
 </div>
 
                   <span className="mt-1 block text-xs text-slate-500">
