@@ -61,7 +61,7 @@ if (!userId || !policyTextHash) {
       });
 
     if (error) {
-      console.error('Supabase upsert error:', error);
+      console.error('Supabase insert error:', error);
       return res.status(500).json({ error: 'Failed to record acceptance' });
     }
 
