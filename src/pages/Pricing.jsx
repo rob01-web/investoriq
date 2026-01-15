@@ -161,8 +161,9 @@ export default function PricingPage() {
   </a>
 </p>
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
-            All prices are in USD. If a report fails to generate or contains errors, your IQ credit is automatically restored for regeneration. InvestorIQ does not issue cash refunds.
-          </p>
+  All prices are in USD. Report credits are non-refundable once report generation begins. In the
+  event of a verified technical error, a replacement credit may be issued to allow regeneration.
+</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {tiers.map((t) => (

@@ -59,7 +59,7 @@ function TermsPage() {
   return (
     <LegalShell
       title="Terms of Use"
-      effectiveLabel="Effective: 2026-01-14"
+      effectiveLabel="Version: v2026-01-14"
     >
       <h2>1. Overview</h2>
       <p>
@@ -115,11 +115,24 @@ function TermsPage() {
         solely to provide the service, generate outputs, and maintain security, audit, and support logs.
       </p>
 
-      <h2>7. Payments, credits, and delivery</h2>
+      <h2>7. Payments, credits, and refunds</h2>
       <p>
-        Certain features require paid credits. Credits are consumed when a report is generated as
-        described in the product flow. If a technical error prevents delivery after a successful charge,
-        InvestorIQ may provide a replacement credit or an appropriate remedy consistent with operational policy.
+        Certain features of the InvestorIQ platform require the purchase and use of report credits.
+        Credits are consumed when a report generation process is initiated, whether or not the
+        resulting output is fully completed, due to the immediate allocation of computational, processing,
+        and document-rendering resources.
+
+        Because InvestorIQ provides custom, document-specific analytical outputs generated on demand,
+        purchases are non-refundable once report generation has begun, including in cases of partial generation.
+
+        Notwithstanding the foregoing, InvestorIQ is committed to fair and reasonable treatment of users. If a
+        report fails to generate as intended due to a verified technical error attributable to the platform,
+        InvestorIQ may, at its discretion, issue a replacement credit to the user to allow the report to be
+        regenerated. Replacement credits are the sole remedy for such situations and do not constitute a cash refund.
+
+        InvestorIQ does not offer cash refunds, chargebacks, or reversals for completed or initiated report generation.
+        Users are responsible for ensuring the accuracy, completeness, and suitability of uploaded documents prior to
+        initiating report generation.
       </p>
 
       <h2>8. Availability and changes</h2>
