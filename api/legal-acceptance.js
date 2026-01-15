@@ -12,12 +12,23 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const {
-      userId,
-      policyKey,
-      policyVersion,
-      policyTextHash,
-    } = req.body || {};
+    const { userId } = req.body || {};
+
+// Policy identity must be server-defined and immutable
+const POLICY_KEY = 'analysis_disclosures';
+const POLICY_VERSION = 'v2026-01-14';
+
+// IMPORTANT:
+// We do NOT trust the client for policy identity or hashes.
+// The server should compute POLICY_TEXT_HASH from the canonical disclosures text.
+// For now, we require the client to send policyTextHash ONLY as a compatibility bridge,
+// but we validate that policyKey/policyVersion are not accepted from the client.
+
+const { policyTextHash } = req.body || {};
+
+if (!userId || !policyTextHash) {
+  return res.status(400).json({ error: 'Missing required fields' });
+}
 
     if (!userId || !policyKey || !policyVersion || !policyTextHash) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -47,9 +58,9 @@ export default async function handler(req, res) {
         {
           user_id: userId,
           user_email: userEmail,
-          policy_key: policyKey,
-          policy_version: policyVersion,
-          policy_text_hash: policyTextHash,
+          policy_key: POLICY_KEY,
+policy_version: POLICY_VERSION,
+policy_text_hash: policyTextHash,
           ip,
           user_agent: userAgent,
         },
