@@ -48,7 +48,7 @@ if (!userId || !policyTextHash) {
 
     const userAgent = req.headers['user-agent'] || null;
 
-                const { error } = await supabase
+                    const { error } = await supabase
       .from('legal_acceptances')
       .insert({
         user_id: userId,
@@ -61,14 +61,18 @@ if (!userId || !policyTextHash) {
       });
 
     if (error) {
+      // Duplicate acceptance is OK (unique index hit)
+      if (error.code === '23505') {
+        return res.status(200).json({ success: true, alreadyAccepted: true });
+      }
+
       console.error('Supabase insert error:', error);
       return res.status(500).json({ error: 'Failed to record acceptance' });
     }
 
-        return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true });
   } catch (err) {
     console.error('legal-acceptance error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-
