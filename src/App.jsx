@@ -36,9 +36,9 @@ function LegalShell({ title, effectiveLabel, children }) {
             ) : null}
           </div>
 
-          <div className="prose prose-slate max-w-none">
-            {children}
-          </div>
+          <div className="space-y-6 text-slate-700 text-sm leading-relaxed">
+  {children}
+</div>
 
           <div className="mt-10">
             <Link
