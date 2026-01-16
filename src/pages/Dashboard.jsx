@@ -284,9 +284,43 @@ const credits = Number(profile?.report_credits ?? 0);
     'Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.',
 };
 
-      const { generatePDF } = await import('@/lib/generatePDF');
-      await generatePDF(analysis);
+      const res = await fetch('/api/generate-client-report', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    userId: profile.id,
+    analysis,
+  }),
+});
 
+if (res.status === 403) {
+  toast({
+    title: 'Insufficient report credits',
+    description: 'Please purchase additional credits to generate another report.',
+    variant: 'destructive',
+  });
+  return;
+}
+
+if (!res.ok) {
+  throw new Error('Report generation failed');
+}
+
+// Download PDF returned by server
+const blob = await res.blob();
+const url = window.URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'InvestorIQ_Report.pdf';
+document.body.appendChild(a);
+a.click();
+a.remove();
+window.URL.revokeObjectURL(url);
+
+// Refresh credits from server
+if (profile?.id) {
+  await fetchProfile(profile.id);
+}
       setReportData({
   address: extracted.address || 'Address not found in uploaded documents.',
 });
