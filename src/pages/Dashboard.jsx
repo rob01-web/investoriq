@@ -18,15 +18,16 @@ export default function Dashboard() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [ackLocked, setAckLocked] = useState(false);
   const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
+  const [ackSubmitting, setAckSubmitting] = useState(false);
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
 
-  const credits = Number(profile?.report_credits ?? 0);
+  // Immutable policy identity (must match server constants)
+const POLICY_KEY = 'analysis_disclosures';
+const POLICY_VERSION = 'v2026-01-14';
 
-    // Immutable policy identity (must match server constants)
-  const POLICY_KEY = 'analysis_disclosures';
-  const POLICY_VERSION = 'v2026-01-14';
+const credits = Number(profile?.report_credits ?? 0);
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -109,7 +110,7 @@ export default function Dashboard() {
   const handleUploadSuccess = async () => {
     toast({
       title: 'Upload Successful',
-      description: 'Your documents are being reviewed by the InvestorIQ underwriting framework.',
+      description: 'Your documents have been received and queued for processing.',
     });
     if (profile?.id) await fetchProfile(profile.id);
   };
@@ -527,12 +528,17 @@ setIsModalOpen(true);
                 <input
   type="checkbox"
   checked={acknowledged}
-  disabled={ackLocked}
+  disabled={ackLocked || ackSubmitting}
   onChange={async (e) => {
     const next = e.target.checked;
 
     // Do not allow unchecking once accepted (institutional audit posture)
     if (!next) return;
+
+    // Belt + suspenders: block duplicate submits
+    if (ackLocked || acknowledged || ackSubmitting) return;
+
+    setAckSubmitting(true);
 
     // Attempt to record acceptance immediately when the user checks the box
     const accepted = await recordLegalAcceptance();
@@ -545,12 +551,14 @@ setIsModalOpen(true);
       });
       setAcknowledged(false);
       setAckLocked(false);
+      setAckSubmitting(false);
       return;
     }
 
     setAcknowledged(true);
-setAckLocked(true);
-setAckAcceptedAtLocal(new Date().toISOString());
+    setAckLocked(true);
+    setAckAcceptedAtLocal(new Date().toISOString());
+    setAckSubmitting(false);
   }}
   className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
 />
