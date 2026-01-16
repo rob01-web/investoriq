@@ -294,11 +294,13 @@ const credits = Number(profile?.report_credits ?? 0);
       return;
     }
 
-    const userCredits = profile?.credits || 0;
-    if (userCredits <= 0) {
+    const userCredits = profile?.credits ?? 0;
+    console.log("Current Credit Count:", userCredits); // This helps us see the "truth" in the console
+
+    if (userCredits < 1) {
       toast({
         title: "Insufficient Credits",
-        description: "Please top up your account to generate new reports.",
+        description: `You have ${userCredits} credits. Please top up to generate a report.`,
         variant: "destructive",
       });
       return;
