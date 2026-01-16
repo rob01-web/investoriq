@@ -7,10 +7,15 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios"; // DocRaptor
+import { createClient } from "@supabase/supabase-js";
 
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // ---------- Formatting Helpers ----------
 
@@ -469,6 +474,29 @@ export default async function handler(req, res) {
   try {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
+        const { userId } = body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    // ---- CREDIT DECREMENT GUARD (AUTHORITATIVE) ----
+    const { data: creditRow, error: creditErr } = await supabase
+      .from("profiles")
+      .update({
+        report_credits: supabase.raw("report_credits - 1"),
+      })
+      .eq("id", userId)
+      .gt("report_credits", 0)
+      .select("report_credits")
+      .single();
+
+    if (creditErr || !creditRow) {
+      console.error("Credit decrement blocked:", creditErr);
+      return res.status(403).json({
+        error: "Insufficient report credits",
+      });
+    }
     const sections = body.sections || {};
     // ------------------------------------------------------------------
 // Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
