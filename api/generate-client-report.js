@@ -744,9 +744,51 @@ try {
   throw err;
 }
 
-    // 10. Return PDF to client
-    res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfResponse.data);
+    // 10. Persist Report to Supabase Storage
+    const timestamp = Date.now();
+    const fileName = `report_${userId}_${timestamp}.pdf`;
+    const storagePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("generated_reports")
+      .upload(storagePath, pdfResponse.data, {
+        contentType: "application/pdf",
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("❌ Storage Upload Error:", uploadError);
+      throw new Error("Failed to upload report to storage");
+    }
+
+    // 11. Record Metadata in Database
+    const { error: dbError } = await supabase.from("reports").insert({
+      user_id: userId,
+      property_name: property.name || "Unknown Property",
+      storage_path: storagePath,
+    });
+
+    if (dbError) {
+      console.error("❌ Database Insert Error:", dbError);
+      // We don't throw here so the user still gets their report link
+    }
+
+    // 12. Generate Signed URL for immediate viewing (valid for 1 hour)
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from("generated_reports")
+      .createSignedUrl(storagePath, 3600);
+
+    if (signedError) {
+      console.error("❌ Signed URL Error:", signedError);
+      throw new Error("Failed to generate access link");
+    }
+
+    // 13. Return JSON with the report URL
+    res.status(200).json({ 
+      success: true, 
+      url: signedData.signedUrl 
+    });
   } catch (err) {
     console.error("❌ Error generating report:", err);
     res.status(500).json({ error: "Failed to generate report" });

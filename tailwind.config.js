@@ -18,11 +18,21 @@ export default {
         grayMid: "#6B7280",
         grayLight: "#E5E7EB",
         paper: "#F9FAFB",
-        border: "#E5E7EB", // バ. fixes the "border-border" class
+        border: "#E5E7EB",
       },
       borderColor: {
         DEFAULT: "#E5E7EB",
       },
+      // ADDED FOR V1.0 LOADING OVERLAY
+      keyframes: {
+        progress: {
+          '0%': { width: '0%' },
+          '100%': { width: '100%' },
+        }
+      },
+      animation: {
+        progress: 'progress 20s ease-in-out infinite',
+      }
     },
   },
   plugins: [],

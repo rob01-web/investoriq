@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,6 +19,33 @@ export default function Dashboard() {
   const [ackLocked, setAckLocked] = useState(false);
   const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
   const [ackSubmitting, setAckSubmitting] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+
+  const fetchReports = async () => {
+    if (!profile?.id) return;
+    try {
+      setReportsLoading(true);
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReports(data || []);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchReports();
+    }
+  }, [profile?.id]);
+
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
@@ -306,25 +334,27 @@ if (!res.ok) {
   throw new Error('Report generation failed');
 }
 
-// Download PDF returned by server
-const blob = await res.blob();
-const url = window.URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = 'InvestorIQ_Report.pdf';
-document.body.appendChild(a);
-a.click();
-a.remove();
-window.URL.revokeObjectURL(url);
+const data = await res.json();
+
+if (!data.url) {
+  throw new Error('Report URL not received from server');
+}
+
+// Open PDF in new tab immediately
+window.open(data.url, '_blank');
 
 // Refresh credits from server
 if (profile?.id) {
   await fetchProfile(profile.id);
 }
-      setReportData({
-  address: extracted.address || 'Address not found in uploaded documents.',
-});
 
+// Trigger automatic refresh of the reports table
+fetchReports();
+
+setReportData({
+  address: extracted.address || 'Address not found in uploaded documents.',
+  reportUrl: data.url,
+});
       toast({
         title: 'IQ Report Generated',
         description: 'Your Property IQ Report is ready to download.',
@@ -535,37 +565,36 @@ setIsModalOpen(true);
               className="hidden"
             />
 
-            {/* FILE PREVIEW */}
+            {/* STAGED FILES LIST */}
             {uploadedFiles.length > 0 && (
-              <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 text-[#0F172A]">
-                  Files Selected ({uploadedFiles.length})
-                </h3>
-
-                <ul className="space-y-2 text-sm text-[#334155]">
-                  {uploadedFiles.map((file, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2 last:border-none"
+              <div className="mt-8 border-t border-slate-100 pt-6">
+                <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-4">
+                  Staged Documents ({uploadedFiles.length})
+                </h4>
+                <div className="space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg"
                     >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-[#0F172A]">{file.name}</div>
-                        <div className="text-xs text-[#334155]">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-semibold text-[#0F172A] truncate">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </div>
+                        </span>
                       </div>
-
                       <button
                         type="button"
-                        onClick={() => removeUploadedFile(idx)}
-                        className="shrink-0 text-xs font-semibold text-[#0F172A] underline underline-offset-4 hover:opacity-80"
-                        aria-label={`Remove ${file.name}`}
+                        onClick={() => removeUploadedFile(index)}
+                        className="text-xs font-bold text-red-700 hover:text-red-900 uppercase tracking-tight ml-4 shrink-0"
                       >
                         Remove
                       </button>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
 
@@ -581,57 +610,54 @@ setIsModalOpen(true);
             <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
               <label className="flex items-start gap-3 text-sm text-slate-700">
                 <input
-  type="checkbox"
-  checked={acknowledged}
-  disabled={ackLocked || ackSubmitting}
-  onChange={async (e) => {
-    const next = e.target.checked;
+                  type="checkbox"
+                  checked={acknowledged}
+                  disabled={ackLocked || ackSubmitting}
+                  onChange={async (e) => {
+                    const next = e.target.checked;
 
-    // Do not allow unchecking once accepted (institutional audit posture)
-    if (!next) return;
+                    // Do not allow unchecking once accepted (institutional audit posture)
+                    if (!next) return;
 
-    // Belt + suspenders: block duplicate submits
-    if (ackLocked || acknowledged || ackSubmitting) return;
+                    // Belt and suspenders: block duplicate submits
+                    if (ackLocked || acknowledged || ackSubmitting) return;
 
-    setAckSubmitting(true);
+                    setAckSubmitting(true);
 
-    // Attempt to record acceptance immediately when the user checks the box
-    const accepted = await recordLegalAcceptance();
-if (!accepted?.ok) {
-      toast({
-        title: 'Unable to record acknowledgement',
-        description:
-          'We could not record your acceptance of the required disclosures. Please try again.',
-        variant: 'destructive',
-      });
-      setAcknowledged(false);
-      setAckLocked(false);
-      setAckSubmitting(false);
-      return;
-    }
+                    // Attempt to record acceptance immediately when the user checks the box
+                    const accepted = await recordLegalAcceptance();
+                    if (!accepted?.ok) {
+                      toast({
+                        title: 'Unable to record acknowledgement',
+                        description:
+                          'We could not record your acceptance of the required disclosures. Please try again.',
+                        variant: 'destructive',
+                      });
+                      setAcknowledged(false);
+                      setAckLocked(false);
+                      setAckSubmitting(false);
+                      return;
+                    }
 
-    setAcknowledged(true);
-    setAckLocked(true);
-    setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString());
-    setAckSubmitting(false);
-  }}
-  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
-/>
-                <span>
+                    setAcknowledged(true);
+                    setAckLocked(true);
+                    setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString());
+                    setAckSubmitting(false);
+                  }}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0F172A]"
+                />
+                <span className="flex flex-col">
                   <span className="font-medium">
                     I acknowledge that InvestorIQ produces document-based underwriting only, does not provide investment
                     or appraisal advice, and will disclose any missing or degraded inputs in the final report.
                   </span>
-                  <br />
-
-                  <div className="mt-1 text-xs text-slate-500">
-  Accepted disclosures v2026-01-14
-  {ackAcceptedAtLocal
-    ? ` on ${new Date(ackAcceptedAtLocal).toLocaleString()}`
-    : ''}
-</div>
-
-                  <span className="mt-1 block text-xs text-slate-500">
+                  <span className="mt-1 text-xs text-slate-500">
+                    Accepted disclosures v2026-01-14
+                    {ackAcceptedAtLocal
+                      ? ` on ${new Date(ackAcceptedAtLocal).toLocaleString()}`
+                      : ''}
+                  </span>
+                  <span className="mt-1 text-xs text-slate-500">
                     Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are
                     performed.
                   </span>
@@ -672,12 +698,12 @@ if (!accepted?.ok) {
 </p>
               <Button
                 size="lg"
-                onClick={() =>
-                  toast({
-                    title: 'Download Started',
-                    description: 'Check your downloads folder.',
-                  })
-                }
+                onClick={() => {
+                  if (reportData?.reportUrl) {
+                    window.open(reportData.reportUrl, '_blank');
+                  }
+                }}
+                
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 <FileDown className="mr-2 h-5 w-5" /> Download Report
@@ -685,7 +711,103 @@ if (!accepted?.ok) {
             </motion.div>
           )}
         </div>
+        {/* RECENT REPORTS TABLE */}
+          <div className="mt-12 mb-20">
+            <h2 className="text-xl font-bold text-[#0F172A] mb-6">Recent Property IQ Reports</h2>
+            <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                      Property Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {reportsLoading ? (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-8 text-center text-sm text-slate-500">
+                        Retrieving report records...
+                      </td>
+                    </tr>
+                  ) : reports.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-8 text-center text-sm text-slate-500">
+                        No reports found in your vault.
+                      </td>
+                    </tr>
+                  ) : (
+                    reports.map((report) => (
+                      <tr key={report.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                          {new Date(report.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#0F172A]">
+                          {report.property_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={async () => {
+                              const { data, error } = await supabase.storage
+                                .from('generated_reports')
+                                .createSignedUrl(report.storage_path, 3600);
+                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                            }}
+                            className="text-[#1F8A8A] hover:text-[#0F172A] font-bold mr-4"
+                          >
+                            Download
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm('Are you sure you want to permanently remove this report?')) {
+                                try {
+                                  await supabase.storage
+                                    .from('generated_reports')
+                                    .remove([report.storage_path]);
+                                  await supabase.from('reports').delete().eq('id', report.id);
+                                  toast({ title: "Report Deleted" });
+                                  fetchReports();
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }
+                            }}
+                            className="text-red-700 hover:text-red-900 font-bold"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
-        </>
+
+      {/* INSTITUTIONAL LOADING OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-sm text-center">
+            <Loader2 className="h-12 w-12 text-[#0F172A] animate-spin mb-6" />
+            <h3 className="text-xl font-bold text-[#0F172A] mb-2">Underwriting in Progress</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              InvestorIQ is analyzing your documents and generating your institutional-grade Property IQ Report. This usually takes 15-30 seconds.
+            </p>
+            <div className="mt-6 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+              <div className="bg-[#1F8A8A] h-full animate-progress" style={{ width: '60%' }} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
