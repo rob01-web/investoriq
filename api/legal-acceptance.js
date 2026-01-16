@@ -48,7 +48,7 @@ if (!userId || !policyTextHash) {
 
     const userAgent = req.headers['user-agent'] || null;
 
-                    const { error } = await supabase
+                        const { data: insertedRow, error } = await supabase
       .from('legal_acceptances')
       .insert({
         user_id: userId,
@@ -58,19 +58,46 @@ if (!userId || !policyTextHash) {
         policy_text_hash: policyTextHash,
         ip,
         user_agent: userAgent,
-      });
+      })
+      .select('accepted_at')
+      .single();
 
     if (error) {
       // Duplicate acceptance is OK (unique index hit)
       if (error.code === '23505') {
-        return res.status(200).json({ success: true, alreadyAccepted: true });
+        const { data: existingRow, error: readErr } = await supabase
+          .from('legal_acceptances')
+          .select('accepted_at')
+          .eq('user_id', userId)
+          .eq('policy_key', POLICY_KEY)
+          .eq('policy_version', POLICY_VERSION)
+          .eq('policy_text_hash', policyTextHash)
+          .order('accepted_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (readErr) {
+          console.error('Supabase read-after-duplicate error:', readErr);
+          return res
+            .status(200)
+            .json({ success: true, alreadyAccepted: true });
+        }
+
+        return res.status(200).json({
+          success: true,
+          alreadyAccepted: true,
+          accepted_at: existingRow?.accepted_at || null,
+        });
       }
 
       console.error('Supabase insert error:', error);
       return res.status(500).json({ error: 'Failed to record acceptance' });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      accepted_at: insertedRow?.accepted_at || null,
+    });
   } catch (err) {
     console.error('legal-acceptance error:', err);
     return res.status(500).json({ error: 'Internal server error' });
