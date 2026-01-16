@@ -284,87 +284,61 @@ const credits = Number(profile?.report_credits ?? 0);
 };
 
   const handleAnalyze = async () => {
+    // 1. Validation
     if (uploadedFiles.length === 0) {
       toast({
         title: 'No Files Selected',
         description: 'Please upload at least one document before generating your IQ Report.',
+        variant: "destructive",
       });
       return;
     }
 
+    const userCredits = profile?.credits || 0;
+    if (userCredits <= 0) {
+      toast({
+        title: "Insufficient Credits",
+        description: "Please top up your account to generate new reports.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 2. Start Loading Overlay
     setLoading(true);
 
     try {
-      const extracted = {};
-
-      uploadedFiles.forEach((file) => {
-        if (file.name.endsWith('.pdf')) extracted.address = '123 Example Ave (from PDF)';
-        if (file.name.endsWith('.xlsx')) extracted.beds = 4;
-        if (file.name.endsWith('.jpg')) extracted.notes = 'Image data recognized';
+      // 3. Call the actual API
+      const response = await fetch('/api/generate-client-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_name: "Asset Underwriting Test",
+          user_id: profile.id
+        }),
       });
 
-      const coreQuestion = null;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate report');
+      }
+
+      // 4. Success Actions
+      setReportData({ address: "Asset Underwriting Test" });
+      await fetchReports(); // Refresh the table automatically
+      await fetchProfile(); // Update the credit count on screen
       
-      const analysis = {
-  ...extracted,
-  coreQuestion,
-  summary:
-    'Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.',
-};
-
-      const res = await fetch('/api/generate-client-report', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    userId: profile.id,
-    analysis,
-  }),
-});
-
-if (res.status === 403) {
-  toast({
-    title: 'Insufficient report credits',
-    description: 'Please purchase additional credits to generate another report.',
-    variant: 'destructive',
-  });
-  return;
-}
-
-if (!res.ok) {
-  throw new Error('Report generation failed');
-}
-
-const data = await res.json();
-
-if (!data.url) {
-  throw new Error('Report URL not received from server');
-}
-
-// Open PDF in new tab immediately
-window.open(data.url, '_blank');
-
-// Refresh credits from server
-if (profile?.id) {
-  await fetchProfile(profile.id);
-}
-
-// Trigger automatic refresh of the reports table
-fetchReports();
-
-setReportData({
-  address: extracted.address || 'Address not found in uploaded documents.',
-  reportUrl: data.url,
-});
       toast({
-        title: 'IQ Report Generated',
-        description: 'Your Property IQ Report is ready to download.',
+        title: "Analysis Complete",
+        description: "Your Property IQ Report is ready in the vault.",
       });
-    } catch (err) {
-      console.error(err);
+
+    } catch (error) {
+      console.error("Generation Error:", error);
       toast({
-        title: 'Analysis Failed',
-        description: 'Please try again or contact support if the issue continues.',
-        variant: 'destructive',
+        title: "Underwriting Failed",
+        description: error.message || "An error occurred with the AI engine.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -565,30 +539,30 @@ setIsModalOpen(true);
               className="hidden"
             />
 
-            {/* STAGED FILES LIST */}
+            {/* STAGED DOCUMENTS */}
             {uploadedFiles.length > 0 && (
               <div className="mt-8 border-t border-slate-100 pt-6">
-                <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-4">
+                <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-[0.2em] mb-4">
                   Staged Documents ({uploadedFiles.length})
                 </h4>
                 <div className="space-y-2">
                   {uploadedFiles.map((file, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg"
+                      className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-3 rounded-lg"
                     >
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-semibold text-[#0F172A] truncate">
                           {file.name}
                         </span>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeUploadedFile(index)}
-                        className="text-xs font-bold text-red-700 hover:text-red-900 uppercase tracking-tight ml-4 shrink-0"
+                        onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
+                        className="text-[10px] font-bold text-red-700 hover:text-red-900 uppercase tracking-widest ml-4 shrink-0"
                       >
                         Remove
                       </button>
@@ -684,7 +658,7 @@ setIsModalOpen(true);
             </div>
           </motion.div>
 
-          {/* RESULT CARD */}
+                    {/* RESULT CARD */}
           {reportData && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -692,10 +666,12 @@ setIsModalOpen(true);
               transition={{ delay: 0.4 }}
               className="mt-12 bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center"
             >
-              <h3 className="text-2xl font-bold text-[#0F172A] mb-2">Report Generated Successfully</h3>
+              <h3 className="text-2xl font-bold text-[#0F172A] mb-2">
+                Report Generated Successfully
+              </h3>
               <p className="text-[#334155] mb-6 font-medium">
-  Address: {reportData.address}
-</p>
+                Address: {reportData.address}
+              </p>
               <Button
                 size="lg"
                 onClick={() => {
@@ -703,28 +679,38 @@ setIsModalOpen(true);
                     window.open(reportData.reportUrl, '_blank');
                   }
                 }}
-                
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 <FileDown className="mr-2 h-5 w-5" /> Download Report
               </Button>
             </motion.div>
           )}
-        </div>
-        {/* RECENT REPORTS TABLE */}
+
+          {/* RECENT REPORTS TABLE */}
           <div className="mt-12 mb-20">
-            <h2 className="text-xl font-bold text-[#0F172A] mb-6">Recent Property IQ Reports</h2>
+            <h2 className="text-xl font-bold text-[#0F172A] mb-6">
+              Recent Property IQ Reports
+            </h2>
             <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider"
+                    >
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-bold text-[#0F172A] uppercase tracking-wider"
+                    >
                       Property Name
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-bold text-[#0F172A] uppercase tracking-wider"
+                    >
                       Actions
                     </th>
                   </tr>
@@ -732,19 +718,28 @@ setIsModalOpen(true);
                 <tbody className="bg-white divide-y divide-slate-200">
                   {reportsLoading ? (
                     <tr>
-                      <td colSpan="3" className="px-6 py-8 text-center text-sm text-slate-500">
+                      <td
+                        colSpan="3"
+                        className="px-6 py-8 text-center text-sm text-slate-500"
+                      >
                         Retrieving report records...
                       </td>
                     </tr>
                   ) : reports.length === 0 ? (
                     <tr>
-                      <td colSpan="3" className="px-6 py-8 text-center text-sm text-slate-500">
+                      <td
+                        colSpan="3"
+                        className="px-6 py-8 text-center text-sm text-slate-500"
+                      >
                         No reports found in your vault.
                       </td>
                     </tr>
                   ) : (
                     reports.map((report) => (
-                      <tr key={report.id} className="hover:bg-slate-50 transition-colors">
+                      <tr
+                        key={report.id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                           {new Date(report.created_at).toLocaleDateString()}
                         </td>
@@ -754,10 +749,11 @@ setIsModalOpen(true);
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={async () => {
-                              const { data, error } = await supabase.storage
+                              const { data } = await supabase.storage
                                 .from('generated_reports')
                                 .createSignedUrl(report.storage_path, 3600);
-                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                              if (data?.signedUrl)
+                                window.open(data.signedUrl, '_blank');
                             }}
                             className="text-[#1F8A8A] hover:text-[#0F172A] font-bold mr-4"
                           >
@@ -765,13 +761,20 @@ setIsModalOpen(true);
                           </button>
                           <button
                             onClick={async () => {
-                              if (confirm('Are you sure you want to permanently remove this report?')) {
+                              if (
+                                confirm(
+                                  'Are you sure you want to permanently remove this report?'
+                                )
+                              ) {
                                 try {
                                   await supabase.storage
                                     .from('generated_reports')
                                     .remove([report.storage_path]);
-                                  await supabase.from('reports').delete().eq('id', report.id);
-                                  toast({ title: "Report Deleted" });
+                                  await supabase
+                                    .from('reports')
+                                    .delete()
+                                    .eq('id', report.id);
+                                  toast({ title: 'Report Deleted' });
                                   fetchReports();
                                 } catch (err) {
                                   console.error(err);
@@ -799,11 +802,11 @@ setIsModalOpen(true);
           <div className="bg-white p-8 rounded-2xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-sm text-center">
             <Loader2 className="h-12 w-12 text-[#0F172A] animate-spin mb-6" />
             <h3 className="text-xl font-bold text-[#0F172A] mb-2">Underwriting in Progress</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">
-              InvestorIQ is analyzing your documents and generating your institutional-grade Property IQ Report. This usually takes 15-30 seconds.
+            <p className="text-slate-600 text-sm leading-relaxed text-center">
+              InvestorIQ is analyzing your documents and generating your institutional-grade Property IQ Report.
             </p>
             <div className="mt-6 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-              <div className="bg-[#1F8A8A] h-full animate-progress" style={{ width: '60%' }} />
+              <div className="bg-[#1F8A8A] h-full animate-progress" />
             </div>
           </div>
         </div>
