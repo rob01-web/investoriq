@@ -41,6 +41,15 @@ const credits = Number(profile?.report_credits ?? 0);
 
   const startCheckout = async () => {
   try {
+    if (!profile?.id || !profile?.email) {
+      toast({
+        title: 'Please sign in',
+        description: 'You must be signed in to purchase credits.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const origin = window.location.origin;
 
     const res = await fetch('/api/create-checkout-session', {
@@ -49,8 +58,8 @@ const credits = Number(profile?.report_credits ?? 0);
       body: JSON.stringify({
         planKey: 'single',
         productType: 'singleReport',
-        userId: profile?.id || '',
-        userEmail: profile?.email || '',
+        userId: profile.id,
+        userEmail: profile.email,
         successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${origin}/pricing?canceled=1`,
       }),
@@ -94,12 +103,17 @@ const credits = Number(profile?.report_credits ?? 0);
         }),
       });
 
-      if (!res.ok) {
+        if (!res.ok) {
         console.error('Legal acceptance API failed:', await res.text());
-        return false;
+        return { ok: false };
       }
 
-      return true;
+      const data = await res.json().catch(() => ({}));
+
+      // If the API returns the authoritative server timestamp, use it.
+      const acceptedAt = data?.accepted_at || data?.acceptedAt || null;
+
+      return { ok: true, acceptedAt };
     } catch (err) {
       console.error('Legal acceptance error:', err);
       return false;
@@ -343,12 +357,24 @@ const credits = Number(profile?.report_credits ?? 0);
                 )}
 
                 <button
-                  type="button"
-                  onClick={startCheckout}
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
-                >
-                  Buy Credits
-                </button>
+  type="button"
+  onClick={() => {
+    if (!acknowledged) {
+      toast({
+        title: 'Acknowledgement required',
+        description:
+          'Please acknowledge the document-based limitations before purchasing credits.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    startCheckout();
+  }}
+  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
+>
+  Buy Credits
+</button>
               </div>
             </div>
           </motion.div>
@@ -541,7 +567,7 @@ setIsModalOpen(true);
 
     // Attempt to record acceptance immediately when the user checks the box
     const accepted = await recordLegalAcceptance();
-    if (!accepted) {
+if (!accepted?.ok) {
       toast({
         title: 'Unable to record acknowledgement',
         description:
@@ -556,7 +582,7 @@ setIsModalOpen(true);
 
     setAcknowledged(true);
     setAckLocked(true);
-    setAckAcceptedAtLocal(new Date().toISOString());
+    setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString());
     setAckSubmitting(false);
   }}
   className="mt-1 h-4 w-4 rounded border-slate-300 text-[#D4AF37] focus:ring-[#D4AF37]"
