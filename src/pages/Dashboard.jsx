@@ -275,25 +275,21 @@ const credits = Number(profile?.report_credits ?? 0);
         if (file.name.endsWith('.jpg')) extracted.notes = 'Image data recognized';
       });
 
-      const coreQuestion =
-        prompt('Core Question? (Example: "5-year IRR projection?")') || '5-year value-add analysis.';
-
+      const coreQuestion = null;
+      
       const analysis = {
-        ...extracted,
-        coreQuestion,
-        summary: 'InvestorIQ analysis generated using institutional-grade modeling.',
-        valuation: 5000000,
-        confidence: 96,
-      };
+  ...extracted,
+  coreQuestion,
+  summary:
+    'Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.',
+};
 
       const { generatePDF } = await import('@/lib/generatePDF');
       await generatePDF(analysis);
 
       setReportData({
-        address: extracted.address,
-        valuation: analysis.valuation,
-        confidence: analysis.confidence,
-      });
+  address: extracted.address || 'Address not found in uploaded documents.',
+});
 
       toast({
         title: 'IQ Report Generated',
@@ -638,10 +634,8 @@ if (!accepted?.ok) {
             >
               <h3 className="text-2xl font-bold text-[#0F172A] mb-2">Report Generated Successfully</h3>
               <p className="text-[#334155] mb-6 font-medium">
-                Address: {reportData.address} <br />
-                Valuation: ${reportData.valuation.toLocaleString()} <br />
-                Confidence: {reportData.confidence}%
-              </p>
+  Address: {reportData.address}
+</p>
               <Button
                 size="lg"
                 onClick={() =>
