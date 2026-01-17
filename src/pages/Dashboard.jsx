@@ -41,8 +41,24 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchProfile(); // Forces the app to check your credits immediately
-    fetchReports();
+    const syncEverything = async () => {
+      await fetchProfile();
+      await fetchReports();
+    };
+
+    if (profile?.id) {
+      syncEverything();
+      
+      // ELITE PERFORMANCE: Automatically check for newly purchased credits every 2 seconds
+      // This ensures if they just came from checkout, the credit appears without a refresh.
+      const fastInterval = setInterval(fetchProfile, 2000);
+      const timeout = setTimeout(() => clearInterval(fastInterval), 10000);
+
+      return () => {
+        clearInterval(fastInterval);
+        clearTimeout(timeout);
+      };
+    }
   }, [profile?.id]);
 
   const removeUploadedFile = (index) => {
@@ -283,33 +299,35 @@ const credits = Number(profile?.report_credits ?? 0);
 };
 
   const handleAnalyze = async () => {
-    // 1. Validation
     if (uploadedFiles.length === 0) {
       toast({
-        title: 'No Files Selected',
-        description: 'Please upload at least one document before generating your IQ Report.',
+        title: 'Document Required',
+        description: 'Please upload your OM or Rent Roll to begin institutional underwriting.',
         variant: "destructive",
       });
       return;
     }
 
-    const userCredits = profile?.credits ?? 0;
-    console.log("Current Credit Count:", userCredits); // This helps us see the "truth" in the console
-
-    if (userCredits < 1) {
+    // ELITE UX: Trigger the "Working" state immediately so it feels snappy
+    setLoading(true); 
+    
+    // Background handshake: Double-check credits one last time
+    await fetchProfile(); 
+    
+    if ((profile?.credits ?? 0) < 1) {
+      setLoading(false);
       toast({
-        title: "Insufficient Credits",
-        description: `You have ${userCredits} credits. Please top up to generate a report.`,
+        title: "Credit Balance: 0",
+        description: "Please ensure your account has active credits to generate reports.",
         variant: "destructive",
       });
       return;
     }
 
-    // 2. Start Loading Overlay
+    // 3. Start Loading Overlay
     setLoading(true);
 
     try {
-      // 3. Call the actual API
       const response = await fetch('/api/generate-client-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
