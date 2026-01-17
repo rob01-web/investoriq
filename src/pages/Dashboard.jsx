@@ -42,7 +42,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const syncEverything = async () => {
-      await fetchProfile();
+      await fetchProfile(profile.id);
       await fetchReports();
     };
 
@@ -51,7 +51,7 @@ export default function Dashboard() {
       
       // ELITE PERFORMANCE: Automatically check for newly purchased credits every 2 seconds
       // This ensures if they just came from checkout, the credit appears without a refresh.
-      const fastInterval = setInterval(fetchProfile, 2000);
+      const fastInterval = setInterval(() => fetchProfile(profile.id), 2000);
       const timeout = setTimeout(() => clearInterval(fastInterval), 10000);
 
       return () => {
@@ -312,7 +312,7 @@ const credits = Number(profile?.report_credits ?? 0);
     setLoading(true); 
     
     // Background handshake: Force a refresh to find the latest data
-    await fetchProfile(); 
+    await fetchProfile(profile.id); // Update the credit count on screen
     
     // MATCHING SUPABASE: Look specifically for report_credits
     const verifiedCredits = Number(profile?.report_credits ?? 0);
@@ -362,7 +362,7 @@ const credits = Number(profile?.report_credits ?? 0);
       });
 
       await fetchReports(); // Refresh the table automatically
-      await fetchProfile(); // Update the credit count on screen
+      await fetchProfile(profile.id);
 
       toast({
         title: "Analysis Complete",
