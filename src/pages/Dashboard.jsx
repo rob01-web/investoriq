@@ -336,7 +336,7 @@ const credits = Number(profile?.report_credits ?? 0);
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           property_name: "Asset Underwriting Test",
-          user_id: profile.id
+          userId: profile.id
         }),
       });
 
