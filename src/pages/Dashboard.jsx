@@ -335,9 +335,9 @@ const credits = Number(profile?.report_credits ?? 0);
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          property_name: "Asset Underwriting Test",
-          userId: profile.id
-        }),
+  property_name: "Asset Underwriting Test",
+  userId: profile.id
+}),
       });
 
             if (!response.ok) {
@@ -370,13 +370,14 @@ const credits = Number(profile?.report_credits ?? 0);
       });
 
     } catch (error) {
-      console.error("Generation Error:", error);
+      console.error("Generation Error FULL:", error, error?.stack);
       toast({
         title: "Underwriting Failed",
         description: error.message || "An error occurred with the AI engine.",
         variant: "destructive",
       });
-    } finally {
+    } 
+    finally {
       setLoading(false);
     }
   };

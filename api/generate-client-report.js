@@ -808,6 +808,6 @@ try {
 
   } catch (err) {
     console.error("❌ Error generating report:", err);
-    res.status(500).json({ error: "Failed to generate report" });
+    res.status(500).json({ error: err?.message || "Failed to generate report" });
   }
 }
