@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
-
+  const [propertyName, setPropertyName] = useState('');
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -299,11 +299,20 @@ const credits = Number(profile?.report_credits ?? 0);
 };
 
   const handleAnalyze = async () => {
+    if (!propertyName.trim()) {
+      toast({
+        title: 'Property name required',
+        description: 'Enter a property name before generating your report.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (uploadedFiles.length === 0) {
       toast({
         title: 'Document Required',
         description: 'Please upload your OM or Rent Roll to begin institutional underwriting.',
-        variant: "destructive",
+        variant: 'destructive',
       });
       return;
     }
@@ -335,7 +344,7 @@ const credits = Number(profile?.report_credits ?? 0);
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-  property_name: "Asset Underwriting Test",
+  property_name: propertyName.trim(),
   userId: profile.id
 }),
       });
@@ -356,7 +365,7 @@ const credits = Number(profile?.report_credits ?? 0);
 
       // Keep the result card functional (optional download button)
       setReportData({
-        address: "Asset Underwriting Test",
+        address: propertyName.trim(),
         reportUrl: data.url,
         reportId: data.reportId || null,
       });
@@ -459,13 +468,27 @@ const credits = Number(profile?.report_credits ?? 0);
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Upload Property Documents</h2>
-                <p className="text-[#334155] leading-relaxed font-medium">
-                  Upload <strong>PDFs, spreadsheets, or property photos.</strong>
-                  <br />
-                  <span className="text-[#1F8A8A] font-semibold">The more you upload, the smarter your report.</span>{' '}
-                  (10 MB max per file)
-                </p>
+                <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
+
+<div className="mb-4">
+  <label className="block text-sm font-semibold text-[#0F172A] mb-1">
+    Property Name
+  </label>
+  <input
+    type="text"
+    value={propertyName}
+    onChange={(e) => setPropertyName(e.target.value)}
+    placeholder="e.g. 123 Main Street Apartments"
+    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
+  />
+</div>
+
+<p className="text-[#334155] leading-relaxed font-medium">
+  Upload <strong>PDFs, spreadsheets, or property photos.</strong>
+  <br />
+  <span className="text-[#1F8A8A] font-semibold">The more you upload, the smarter your report.</span>{' '}
+  (10 MB max per file)
+</p>
                 <p className="text-[#334155] text-sm mt-2">
                   Works for both <strong>off-market</strong> and MLS properties.
                 </p>

@@ -474,7 +474,7 @@ export default async function handler(req, res) {
   try {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
-        const { userId } = body;
+const { userId, property_name } = body;
 
     if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
@@ -542,12 +542,12 @@ REQUIRED_SECTIONS.forEach((key) => {
     const charts = body.charts || {};
 
     // Optional property payload; falls back to the Riverbend Heights sample
-    const property = body.property || {
-      name: "Riverbend Heights",
-      city: "London",
-      province: "Ontario",
-      submarket: "South London (Westminster / Pond Mills)",
-    };
+    const property = {
+  name: property_name || "Unknown Property",
+  city: "",
+  province: "",
+  submarket: "",
+};
 
     // Optional financials payload; falls back to sample values
     const financials = body.financials || {
@@ -763,10 +763,10 @@ try {
     const { data: reportRow, error: reportCreateError } = await supabase
       .from("reports")
       .insert({
-        user_id: userId,
-        property_name: property?.name || "Unknown Property",
-        storage_path: "pending",
-      })
+  user_id: userId,
+  property_name: property_name || "Unknown Property",
+  storage_path: "pending",
+})
       .select("id")
       .single();
 
