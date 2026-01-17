@@ -481,22 +481,37 @@ export default async function handler(req, res) {
     }
 
     // ---- CREDIT DECREMENT GUARD (AUTHORITATIVE) ----
-    const { data: creditRow, error: creditErr } = await supabase
-      .from("profiles")
-      .update({
-        report_credits: supabase.raw("report_credits - 1"),
-      })
-      .eq("id", userId)
-      .gt("report_credits", 0)
-      .select("report_credits")
-      .single();
+// Atomic decrement using optimistic concurrency (no raw SQL)
+const { data: currentProfile, error: currentErr } = await supabase
+  .from("profiles")
+  .select("report_credits")
+  .eq("id", userId)
+  .single();
 
-    if (creditErr || !creditRow) {
-      console.error("Credit decrement blocked:", creditErr);
-      return res.status(403).json({
-        error: "Insufficient report credits",
-      });
-    }
+if (currentErr || !currentProfile) {
+  console.error("Failed to read current credits:", currentErr);
+  return res.status(500).json({ error: "Failed to generate report" });
+}
+
+const currentCredits = Number(currentProfile.report_credits ?? 0);
+
+if (currentCredits < 1) {
+  return res.status(403).json({ error: "Insufficient report credits" });
+}
+
+const { data: creditRow, error: creditErr } = await supabase
+  .from("profiles")
+  .update({ report_credits: currentCredits - 1 })
+  .eq("id", userId)
+  .eq("report_credits", currentCredits) // concurrency guard
+  .select("report_credits")
+  .single();
+
+if (creditErr || !creditRow) {
+  console.error("Credit decrement blocked:", creditErr);
+  return res.status(403).json({ error: "Insufficient report credits" });
+}
+
     const sections = body.sections || {};
     // ------------------------------------------------------------------
 // Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
