@@ -308,17 +308,20 @@ const credits = Number(profile?.report_credits ?? 0);
       return;
     }
 
-    // ELITE UX: Trigger the "Working" state immediately so it feels snappy
+    // ELITE UX: Trigger the "Working" state immediately
     setLoading(true); 
     
-    // Background handshake: Double-check credits one last time
+    // Background handshake: Force a refresh to find the latest data
     await fetchProfile(); 
     
-    if ((profile?.credits ?? 0) < 1) {
+    // MATCHING SUPABASE: Look specifically for report_credits
+    const verifiedCredits = Number(profile?.report_credits ?? 0);
+
+    if (verifiedCredits < 1) {
       setLoading(false);
       toast({
-        title: "Credit Balance: 0",
-        description: "Please ensure your account has active credits to generate reports.",
+        title: "Insufficient Credits",
+        description: "Your balance is 0. Please ensure your purchase has processed.",
         variant: "destructive",
       });
       return;
