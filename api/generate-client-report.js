@@ -541,7 +541,6 @@ REQUIRED_SECTIONS.forEach((key) => {
     const tables = body.tables || {};
     const charts = body.charts || {};
 
-    // Optional property payload; falls back to the Riverbend Heights sample
     const property = {
   name: property_name || "Unknown Property",
   city: "",
