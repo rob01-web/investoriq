@@ -41,9 +41,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (profile?.id) {
-      fetchReports();
-    }
+    fetchProfile(); // Forces the app to check your credits immediately
+    fetchReports();
   }, [profile?.id]);
 
   const removeUploadedFile = (index) => {
