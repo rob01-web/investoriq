@@ -744,10 +744,26 @@ try {
   throw err;
 }
 
-    // 10. Persist Report to Supabase Storage
-    const timestamp = Date.now();
-    const fileName = `report_${userId}_${timestamp}.pdf`;
-    const storagePath = `${userId}/${fileName}`;
+        // 10. Create DB row first so we have a deterministic report_id for storage
+    const { data: reportRow, error: reportCreateError } = await supabase
+      .from("reports")
+      .insert({
+        user_id: userId,
+        property_name: property?.name || "Unknown Property",
+        storage_path: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (reportCreateError || !reportRow?.id) {
+      console.error("❌ Report DB Create Error:", reportCreateError);
+      throw new Error("Failed to create report record");
+    }
+
+    const reportId = reportRow.id;
+
+    // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
+    const storagePath = `${userId}/${reportId}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from("generated_reports")
@@ -762,19 +778,18 @@ try {
       throw new Error("Failed to upload report to storage");
     }
 
-    // 11. Record Metadata in Database
-    const { error: dbError } = await supabase.from("reports").insert({
-      user_id: userId,
-      property_name: property.name || "Unknown Property",
-      storage_path: storagePath,
-    });
+    // 12. Update DB row with final storage_path
+    const { error: reportUpdateError } = await supabase
+      .from("reports")
+      .update({ storage_path: storagePath })
+      .eq("id", reportId);
 
-    if (dbError) {
-      console.error("❌ Database Insert Error:", dbError);
-      // We don't throw here so the user still gets their report link
+    if (reportUpdateError) {
+      console.error("❌ Report DB Update Error:", reportUpdateError);
+      // Do not throw. The PDF is stored and we can still return the signed URL.
     }
 
-    // 12. Generate Signed URL for immediate viewing (valid for 1 hour)
+    // 13. Generate Signed URL for immediate viewing (valid for 1 hour)
     const { data: signedData, error: signedError } = await supabase.storage
       .from("generated_reports")
       .createSignedUrl(storagePath, 3600);
@@ -784,11 +799,13 @@ try {
       throw new Error("Failed to generate access link");
     }
 
-    // 13. Return JSON with the report URL
-    res.status(200).json({ 
-      success: true, 
-      url: signedData.signedUrl 
+    // 14. Return JSON with the report URL and report_id
+    res.status(200).json({
+      success: true,
+      reportId,
+      url: signedData.signedUrl,
     });
+
   } catch (err) {
     console.error("❌ Error generating report:", err);
     res.status(500).json({ error: "Failed to generate report" });

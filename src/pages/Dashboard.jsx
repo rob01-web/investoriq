@@ -340,19 +340,33 @@ const credits = Number(profile?.report_credits ?? 0);
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+            if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to generate report');
       }
 
-      // 4. Success Actions
-      setReportData({ address: "Asset Underwriting Test" });
+      const data = await response.json().catch(() => ({}));
+
+      if (!data?.url) {
+        throw new Error('Report generated but no access link was returned');
+      }
+
+      // Open PDF immediately in a new tab (required UX)
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+
+      // Keep the result card functional (optional download button)
+      setReportData({
+        address: "Asset Underwriting Test",
+        reportUrl: data.url,
+        reportId: data.reportId || null,
+      });
+
       await fetchReports(); // Refresh the table automatically
       await fetchProfile(); // Update the credit count on screen
-      
+
       toast({
         title: "Analysis Complete",
-        description: "Your Property IQ Report is ready in the vault.",
+        description: "Your Property IQ Report opened in a new tab and is saved in your vault.",
       });
 
     } catch (error) {
