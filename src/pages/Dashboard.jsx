@@ -204,7 +204,7 @@ const credits = Number(profile?.report_credits ?? 0);
     await fetchProfile(profile.id);
   };
 
-  const handleUpload = (e) => {
+    const handleUpload = async (e) => {
   const files = Array.from(e.target.files || []);
 
   // allow selecting the same file again later
@@ -314,8 +314,96 @@ const credits = Number(profile?.report_credits ?? 0);
     return;
   }
 
+    // Create a job the moment the user begins uploading (async underwriting anchor)
+  if (profile?.id && !jobId) {
+    const { data, error } = await supabase
+      .from('analysis_jobs')
+      .insert({
+        user_id: profile.id,
+        property_name: propertyName.trim() || 'Untitled Property',
+        status: 'queued',
+        prompt_version: 'v2026-01-17',
+        parser_version: 'v1',
+        template_version: 'v2026-01-14',
+        scoring_version: 'v1',
+      })
+      .select('id')
+      .single();
+
+    if (error || !data?.id) {
+      console.error('Failed to create analysis job:', error);
+      toast({
+        title: 'Unable to start analysis job',
+        description: 'We could not initialize your underwriting run. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setJobId(data.id);
+  }
+
+    // Upload files to Supabase Storage under this underwriting job
+  if (!profile?.id || !jobId) {
+    toast({
+      title: 'Upload blocked',
+      description: 'Unable to initialize your underwriting run. Please try again.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  const bucket = 'staged_uploads';
+
+  for (const file of files) {
+    // Prevent path injection
+    const safeName = String(file.name || 'file').replaceAll('/', '_');
+    const objectPath = `staged/${profile.id}/${jobId}/${safeName}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from(bucket)
+      .upload(objectPath, file, {
+        contentType: file.type || 'application/octet-stream',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadErr) {
+      console.error('Staged upload failed:', uploadErr);
+      toast({
+        title: 'Upload failed',
+        description: `Failed to upload ${safeName}. Please try again.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const { error: rowErr } = await supabase
+      .from('analysis_job_files')
+      .insert({
+        job_id: jobId,
+        user_id: profile.id,
+        bucket,
+        object_path: objectPath,
+        original_filename: safeName,
+        mime_type: file.type || 'application/octet-stream',
+        bytes: file.size,
+      });
+
+    if (rowErr) {
+      console.error('analysis_job_files insert failed:', rowErr);
+      toast({
+        title: 'Upload recorded incompletely',
+        description: `File uploaded but could not be linked to your job: ${safeName}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+  }
+
   // Append new files instead of overwriting existing ones
   setUploadedFiles((prev) => {
+
     const combined = [...prev, ...files];
 
     // Prevent accidental duplicates (same name + size)
