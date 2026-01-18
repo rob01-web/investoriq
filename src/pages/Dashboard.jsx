@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
-  const [propertyName, setPropertyName] = useState('');
+    const [propertyName, setPropertyName] = useState('');
+  const [jobId, setJobId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -163,12 +164,44 @@ const credits = Number(profile?.report_credits ?? 0);
     }
   };
 
-  const handleUploadSuccess = async () => {
+    const handleUploadSuccess = async () => {
+    if (!profile?.id) return;
+
+    // Create a job the moment the user begins uploading (async underwriting anchor)
+    if (!jobId) {
+      const { data, error } = await supabase
+        .from('analysis_jobs')
+        .insert({
+          user_id: profile.id,
+          property_name: propertyName.trim() || 'Untitled Property',
+          status: 'queued',
+          prompt_version: 'v2026-01-17',
+          parser_version: 'v1',
+          template_version: 'v2026-01-14',
+          scoring_version: 'v1',
+        })
+        .select('id')
+        .single();
+
+      if (error || !data?.id) {
+        console.error('Failed to create analysis job:', error);
+        toast({
+          title: 'Unable to start analysis job',
+          description: 'We could not initialize your underwriting run. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setJobId(data.id);
+    }
+
     toast({
       title: 'Upload Successful',
       description: 'Your documents have been received and queued for processing.',
     });
-    if (profile?.id) await fetchProfile(profile.id);
+
+    await fetchProfile(profile.id);
   };
 
   const handleUpload = (e) => {
