@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
-    const [propertyName, setPropertyName] = useState('');
+  const [propertyName, setPropertyName] = useState('');
   const [jobId, setJobId] = useState(null);
+  const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -41,14 +42,59 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    const syncEverything = async () => {
-      await fetchProfile(profile.id);
-      await fetchReports();
-    };
+  const fetchInProgressJobs = async () => {
+  if (!profile?.id) return;
 
-    if (profile?.id) {
-      syncEverything();
+  const { data, error } = await supabase
+    .from('analysis_jobs')
+    .select('id, property_name, status, created_at')
+    .eq('user_id', profile.id)
+    .in('status', [
+      'queued',
+      'validating_inputs',
+      'extracting',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ])
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('Failed to fetch in-progress jobs:', error);
+    return;
+  }
+
+  setInProgressJobs(data || []);
+};
+
+  useEffect(() => {
+  const syncEverything = async () => {
+    await fetchProfile(profile.id);
+    await fetchReports();
+    await fetchInProgressJobs();
+
+    // Reuse the most recent queued or in-progress job (supports walk-away / return later)
+    if (!jobId) {
+      const { data: existingJob, error } = await supabase
+        .from('analysis_jobs')
+        .select('id, status, created_at')
+        .eq('user_id', profile.id)
+        .in('status', ['queued', 'validating_inputs'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && existingJob?.id) {
+        setJobId(existingJob.id);
+      }
+    }
+  };
+
+  if (profile?.id) {
+    syncEverything();
       
       // ELITE PERFORMANCE: Automatically check for newly purchased credits every 2 seconds
       // This ensures if they just came from checkout, the credit appears without a refresh.
@@ -314,51 +360,55 @@ const credits = Number(profile?.report_credits ?? 0);
     return;
   }
 
-    // Create a job the moment the user begins uploading (async underwriting anchor)
-  if (profile?.id && !jobId) {
-    const { data, error } = await supabase
-      .from('analysis_jobs')
-      .insert({
-        user_id: profile.id,
-        property_name: propertyName.trim() || 'Untitled Property',
-        status: 'queued',
-        prompt_version: 'v2026-01-17',
-        parser_version: 'v1',
-        template_version: 'v2026-01-14',
-        scoring_version: 'v1',
-      })
-      .select('id')
-      .single();
+    // Use a local job id to avoid React state timing issues
+let effectiveJobId = jobId;
 
-    if (error || !data?.id) {
-      console.error('Failed to create analysis job:', error);
-      toast({
-        title: 'Unable to start analysis job',
-        description: 'We could not initialize your underwriting run. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
+// Create a job the moment the user begins uploading (async underwriting anchor)
+if (profile?.id && !effectiveJobId) {
+  const { data, error } = await supabase
+    .from('analysis_jobs')
+    .insert({
+      user_id: profile.id,
+      property_name: propertyName.trim() || 'Untitled Property',
+      status: 'queued',
+      prompt_version: 'v2026-01-17',
+      parser_version: 'v1',
+      template_version: 'v2026-01-14',
+      scoring_version: 'v1',
+    })
+    .select('id')
+    .single();
 
-    setJobId(data.id);
-  }
-
-    // Upload files to Supabase Storage under this underwriting job
-  if (!profile?.id || !jobId) {
+  if (error || !data?.id) {
+    console.error('Failed to create analysis job:', error);
     toast({
-      title: 'Upload blocked',
-      description: 'Unable to initialize your underwriting run. Please try again.',
+      title: 'Unable to start analysis job',
+      description: 'We could not initialize your underwriting run. Please try again.',
       variant: 'destructive',
     });
     return;
   }
 
-  const bucket = 'staged_uploads';
+  effectiveJobId = data.id;
+  setJobId(effectiveJobId);
+}
 
-  for (const file of files) {
-    // Prevent path injection
-    const safeName = String(file.name || 'file').replaceAll('/', '_');
-    const objectPath = `staged/${profile.id}/${jobId}/${safeName}`;
+// Upload files to Supabase Storage under this underwriting job
+if (!profile?.id || !effectiveJobId) {
+  toast({
+    title: 'Upload blocked',
+    description: 'Unable to initialize your underwriting run. Please try again.',
+    variant: 'destructive',
+  });
+  return;
+}
+
+const bucket = 'staged_uploads';
+
+for (const file of files) {
+  // Prevent path injection
+  const safeName = String(file.name || 'file').replaceAll('/', '_');
+  const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
 
     const { error: uploadErr } = await supabase.storage
       .from(bucket)
@@ -378,10 +428,10 @@ const credits = Number(profile?.report_credits ?? 0);
       return;
     }
 
-    const { error: rowErr } = await supabase
+        const { error: rowErr } = await supabase
       .from('analysis_job_files')
       .insert({
-        job_id: jobId,
+        job_id: effectiveJobId,
         user_id: profile.id,
         bucket,
         object_path: objectPath,
@@ -461,55 +511,52 @@ const credits = Number(profile?.report_credits ?? 0);
     setLoading(true);
 
     try {
-      const response = await fetch('/api/generate-client-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-  property_name: propertyName.trim(),
-  userId: profile.id
-}),
-      });
+  if (!jobId) {
+    toast({
+      title: 'Analysis not initialized',
+      description: 'Please upload at least one document before generating.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-            if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate report');
-      }
+  const { error: statusErr } = await supabase
+    .from('analysis_jobs')
+    .update({
+      status: 'validating_inputs',
+      started_at: new Date().toISOString(),
+      property_name: propertyName.trim() || 'Untitled Property',
+    })
+    .eq('id', jobId)
+    .eq('user_id', profile.id);
 
-      const data = await response.json().catch(() => ({}));
+  if (statusErr) {
+    console.error('Failed to advance job status:', statusErr);
+    toast({
+      title: 'Unable to start analysis',
+      description: 'Please try again.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-      if (!data?.url) {
-        throw new Error('Report generated but no access link was returned');
-      }
+  toast({
+    title: 'Report queued',
+    description: 'Your underwriting run has started. You may safely close this page and return later.',
+  });
 
-      // Open PDF immediately in a new tab (required UX)
-      window.open(data.url, '_blank', 'noopener,noreferrer');
-
-      // Keep the result card functional (optional download button)
-      setReportData({
-        address: propertyName.trim(),
-        reportUrl: data.url,
-        reportId: data.reportId || null,
-      });
-
-      await fetchReports(); // Refresh the table automatically
-      await fetchProfile(profile.id);
-
-      toast({
-        title: "Analysis Complete",
-        description: "Your Property IQ Report opened in a new tab and is saved in your vault.",
-      });
-
-    } catch (error) {
-      console.error("Generation Error FULL:", error, error?.stack);
-      toast({
-        title: "Underwriting Failed",
-        description: error.message || "An error occurred with the AI engine.",
-        variant: "destructive",
-      });
-    } 
-    finally {
-      setLoading(false);
-    }
+  await fetchInProgressJobs();
+  await fetchReports();
+} catch (error) {
+  console.error('Queue Error FULL:', error, error?.stack);
+  toast({
+    title: 'Unable to queue report',
+    description: error.message || 'An error occurred while starting the underwriting run.',
+    variant: 'destructive',
+  });
+} finally {
+  setLoading(false);
+}
   };
 
     return (
@@ -866,6 +913,37 @@ setIsModalOpen(true);
               </Button>
             </motion.div>
           )}
+
+          {/* IN-PROGRESS ANALYSIS JOBS */}
+{inProgressJobs.length > 0 && (
+  <div className="mt-12">
+    <h2 className="text-xl font-bold text-[#0F172A] mb-6">
+      In Progress
+    </h2>
+
+    <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm divide-y">
+      {inProgressJobs.map((job) => (
+        <div
+          key={job.id}
+          className="flex items-center justify-between px-6 py-4"
+        >
+          <div>
+            <div className="text-sm font-semibold text-[#0F172A]">
+              {job.property_name || 'Untitled Property'}
+            </div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
+              Status: {job.status.replaceAll('_', ' ')}
+            </div>
+          </div>
+
+          <div className="text-sm font-semibold text-[#1F8A8A]">
+            Processing
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
           {/* RECENT REPORTS TABLE */}
           <div className="mt-12 mb-20">
