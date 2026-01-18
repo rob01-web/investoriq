@@ -411,12 +411,12 @@ for (const file of files) {
   const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
 
     const { error: uploadErr } = await supabase.storage
-      .from(bucket)
-      .upload(objectPath, file, {
-        contentType: file.type || 'application/octet-stream',
-        cacheControl: '3600',
-        upsert: false,
-      });
+  .from(bucket)
+  .upload(objectPath, file, {
+    contentType: file.type || 'application/octet-stream',
+    cacheControl: '3600',
+    upsert: true, // allow safe overwrite of staged files
+  });
 
     if (uploadErr) {
       console.error('Staged upload failed:', uploadErr);
