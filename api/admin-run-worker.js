@@ -6,19 +6,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const adminKey = req.headers['x-admin-key'] || '';
-    const expectedKey = process.env.ADMIN_RUN_KEY || '';
+    
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-    if (!expectedKey) {
-      return res.status(500).json({ error: 'Server misconfigured: ADMIN_RUN_KEY missing' });
-    }
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
 
-    if (!adminKey || adminKey !== expectedKey) {
+    if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAuth = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY || '', {
+      auth: { persistSession: false },
+    });
+
+    const { data: userRes, error: userErr } = await supabaseAuth.auth.getUser(token);
+
+    if (userErr || !userRes?.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const adminEmail = 'hello@investoriq.tech';
+    if ((userRes.user.email || '').toLowerCase() !== adminEmail) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
     if (!supabaseUrl || !serviceRoleKey) {
       return res.status(500).json({ error: 'Server misconfigured: Supabase service role missing' });
