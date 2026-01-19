@@ -743,32 +743,40 @@ if (verifiedCredits < 1) {
               </div>
 
               <div className="relative flex flex-col items-end gap-3">
-                <Button
-                  size="lg"
-                  type="button"
-                  onClick={async () => {
-                    if (!profile || credits <= 0) {
-                      window.location.href = '/pricing';
-                      return;
-                    }
+                <button
+  type="button"
+  onClick={async () => {
+    if (!profile || credits <= 0) {
+      window.location.href = '/pricing';
+      return;
+    }
 
-                    if (!acknowledged) {
-  toast({
-    title: 'Acknowledgement required',
-    description:
-      'Please acknowledge the document-based limitations before uploading files.',
-    variant: 'destructive',
-  });
-  return;
-}
+    if (!propertyName.trim()) {
+      toast({
+        title: 'Property name required',
+        description: 'Enter a property name before uploading documents.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-setIsModalOpen(true);
-                  }}
-                  className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-                >
+    if (!acknowledged) {
+      toast({
+        title: 'Acknowledgement required',
+        description:
+          'Please acknowledge the document-based limitations before uploading files.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsModalOpen(true);
+  }}
+  className="inline-flex items-center gap-2 rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
+>
                   <UploadCloud className="mr-2 h-5 w-5" />
                   Add file(s)
-                </Button>
+                </button>
 
                 {isModalOpen && (
                   <>
