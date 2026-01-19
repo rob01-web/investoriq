@@ -15,25 +15,26 @@ import { supabase } from "@/lib/customSupabaseClient";
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Admin Operations (manual queue runner)
-  const [adminRunKey, setAdminRunKey] = useState("");
   const [runLoading, setRunLoading] = useState(false);
   const [runResult, setRunResult] = useState(null);
 
   const runQueueNow = async () => {
-    if (!adminRunKey.trim()) {
-      setRunResult({ ok: false, message: "Admin Run Key is required." });
-      return;
-    }
-
+    
     setRunLoading(true);
     setRunResult(null);
 
     try {
+            const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token || "";
+
       const res = await fetch("/api/admin-run-worker", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-key": adminRunKey.trim(),
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({}),
       });
@@ -153,43 +154,25 @@ import { supabase } from "@/lib/customSupabaseClient";
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Admin Run Key
-                  </label>
-                  <input
-                    type="password"
-                    value={adminRunKey}
-                    onChange={(e) => setAdminRunKey(e.target.value)}
-                    placeholder="Paste the ADMIN_RUN_KEY"
-                    className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
-                  />
-                  <div className="mt-2 text-xs text-slate-500">
-                    This key is not stored. You must paste it each session.
-                  </div>
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={runQueueNow}
-                    disabled={runLoading}
-                    className="inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
-                  >
-                    {runLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processing.
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle className="mr-2 h-5 w-5" />
-                        Process Queue Now
-                      </>
-                    )}
-                  </button>
-                </div>
+                            <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={runQueueNow}
+                  disabled={runLoading}
+                  className="inline-flex items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
+                >
+                  {runLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Processing.
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="mr-2 h-5 w-5" />
+                      Process Queue Now
+                    </>
+                  )}
+                </button>
               </div>
 
               {runResult && (
