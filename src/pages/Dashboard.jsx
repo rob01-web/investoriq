@@ -251,7 +251,7 @@ const credits = Number(profile?.report_credits ?? 0);
   };
 
     const handleUpload = async (e) => {
-  const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []);
 
   // allow selecting the same file again later
   e.target.value = '';
@@ -781,11 +781,13 @@ setIsModalOpen(true);
                     >
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-semibold text-[#0F172A] truncate">
-                          {file.name}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </span>
+  {file.name}
+</span>
+<span className="text-[10px] text-slate-500 font-bold uppercase">
+  {file.size < 1024 * 1024 
+    ? `${(file.size / 1024).toFixed(2)} KB` 
+    : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
+</span>
                       </div>
                       <button
                         type="button"
