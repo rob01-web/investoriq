@@ -9,6 +9,13 @@ export default async function handler(req, res) {
     
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return res.status(500).json({
+        error: 'Server misconfigured: missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_ANON_KEY',
+      });
+    }
 
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
@@ -17,7 +24,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const supabaseAuth = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY || '', {
+        const supabaseAuth = createClient(supabaseUrl, anonKey, {
       auth: { persistSession: false },
     });
 
@@ -32,11 +39,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return res.status(500).json({ error: 'Server misconfigured: Supabase service role missing' });
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
