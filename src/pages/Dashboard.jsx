@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -11,6 +11,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
   const [propertyName, setPropertyName] = useState('');
+  const propertyNameRef = useRef('');
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -259,8 +260,8 @@ const credits = Number(profile?.report_credits ?? 0);
       const { data, error } = await supabase
         .from('analysis_jobs')
         .insert({
-          user_id: profile.id,
-          property_name: propertyName.trim() || 'Untitled Property',
+                    user_id: profile.id,
+          property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
           status: 'queued',
           prompt_version: 'v2026-01-17',
           parser_version: 'v1',
@@ -410,7 +411,7 @@ if (profile?.id && !effectiveJobId) {
     .from('analysis_jobs')
     .insert({
       user_id: profile.id,
-      property_name: propertyName.trim() || 'Untitled Property',
+      property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
       status: 'queued',
       prompt_version: 'v2026-01-17',
       parser_version: 'v1',
@@ -703,14 +704,12 @@ if (verifiedCredits < 1) {
   <label className="block text-sm font-semibold text-[#0F172A] mb-1">
     Property Name
   </label>
-    <input
-    type="text"
-    value={propertyName}
-    onChange={async (e) => {
+      onChange={async (e) => {
       const next = e.target.value;
+      propertyNameRef.current = next;
       setPropertyName(next);
 
-      // If a job already exists, persist the name immediately (no need to wait for Generate)
+      // If a job already exists, persist the name immediately
       if (profile?.id && jobId) {
         const { error } = await supabase
           .from('analysis_jobs')
@@ -723,10 +722,10 @@ if (verifiedCredits < 1) {
         }
       }
     }}
+
     placeholder="e.g. 123 Main Street Apartments"
     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
-  />
-</div>
+  </div>
 
 <p className="text-[#334155] leading-relaxed font-medium">
   Upload <strong>PDFs, spreadsheets, or property photos.</strong>
