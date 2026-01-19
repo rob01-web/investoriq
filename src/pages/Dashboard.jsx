@@ -518,21 +518,35 @@ for (const file of files) {
     // ELITE UX: Trigger the "Working" state immediately
     setLoading(true); 
     
-    // Background handshake: Force a refresh to find the latest data
-    await fetchProfile(profile.id); 
-    
-    // MATCHING SUPABASE: Look specifically for report_credits
-    const verifiedCredits = Number(profile?.report_credits ?? 0);
+    // Deterministic credit check (do NOT rely on React state here)
+const { data: creditsRow, error: creditsErr } = await supabase
+  .from('profiles')
+  .select('report_credits')
+  .eq('id', profile.id)
+  .maybeSingle();
 
-    if (verifiedCredits < 1) {
-      setLoading(false);
-      toast({
-        title: "Insufficient Credits",
-        description: "Your balance is 0. Please ensure your purchase has processed.",
-        variant: "destructive",
-      });
-      return;
-    }
+if (creditsErr) {
+  console.error('Failed to verify credits:', creditsErr);
+  setLoading(false);
+  toast({
+    title: 'Unable to verify credits',
+    description: 'Please refresh and try again.',
+    variant: 'destructive',
+  });
+  return;
+}
+
+const verifiedCredits = Number(creditsRow?.report_credits ?? 0);
+
+if (verifiedCredits < 1) {
+  setLoading(false);
+  toast({
+    title: 'Insufficient Credits',
+    description: 'Your balance is 0. Please ensure your purchase has processed.',
+    variant: 'destructive',
+  });
+  return;
+}
 
     try {
       if (!jobId) {
