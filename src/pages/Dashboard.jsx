@@ -704,7 +704,11 @@ if (verifiedCredits < 1) {
   <label className="block text-sm font-semibold text-[#0F172A] mb-1">
     Property Name
   </label>
-      onChange={async (e) => {
+
+  <input
+    type="text"
+    value={propertyName}
+    onChange={async (e) => {
       const next = e.target.value;
       propertyNameRef.current = next;
       setPropertyName(next);
@@ -722,10 +726,10 @@ if (verifiedCredits < 1) {
         }
       }
     }}
-
     placeholder="e.g. 123 Main Street Apartments"
     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
-  </div>
+  />
+</div>
 
 <p className="text-[#334155] leading-relaxed font-medium">
   Upload <strong>PDFs, spreadsheets, or property photos.</strong>
