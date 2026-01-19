@@ -9,6 +9,7 @@ import MainLayout from '@/layouts/MainLayout';
 // Core Pages
 import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
+import AdminDashboard from '@/pages/AdminDashboard';
 import LoginPage from '@/pages/Login';
 import SignUpPage from '@/pages/SignUp';
 import SampleReport from '@/pages/SampleReport';
@@ -16,6 +17,38 @@ import CheckoutSuccess from '@/pages/CheckoutSuccess';
 
 // ✅ ADD THIS
 import PricingPage from '@/pages/Pricing';
+import { supabase } from '@/lib/customSupabaseClient';
+
+function DashboardSwitch() {
+  const [ready, setReady] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const adminEmail = "hello@investoriq.tech";
+
+      if (!mounted) return;
+      setIsAdmin(user?.email === adminEmail);
+      setReady(true);
+    };
+
+    run();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!ready) return null;
+
+  return isAdmin ? <AdminDashboard /> : <Dashboard />;
+}
 
 function LegalShell({ title, effectiveLabel, children }) {
   return (
@@ -380,11 +413,11 @@ export default function App() {
 <Route path="/disclosures" element={<DisclosuresPage />} />
 
       {/* DASHBOARD (can customize later) */}
-      <Route
+            <Route
         path="/dashboard"
         element={
           <MainLayout>
-            <Dashboard />
+            <DashboardSwitch />
           </MainLayout>
         }
       />
