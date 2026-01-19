@@ -76,19 +76,33 @@ export default function Dashboard() {
     await fetchReports();
     await fetchInProgressJobs();
 
-    // Reuse the most recent queued or in-progress job (supports walk-away / return later)
+        // Reuse the most recent in-progress job (supports walk-away / return later)
     if (!jobId) {
       const { data: existingJob, error } = await supabase
         .from('analysis_jobs')
-        .select('id, status, created_at')
+        .select('id, status, created_at, property_name')
         .eq('user_id', profile.id)
-        .in('status', ['queued', 'validating_inputs'])
+        .in('status', [
+          'queued',
+          'validating_inputs',
+          'extracting',
+          'underwriting',
+          'scoring',
+          'rendering',
+          'pdf_generating',
+          'publishing',
+        ])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (!error && existingJob?.id) {
         setJobId(existingJob.id);
+
+        // Hydrate the input only if the user has not typed anything yet
+        if (!propertyName.trim() && existingJob.property_name) {
+          setPropertyName(existingJob.property_name);
+        }
       }
     }
   };
@@ -689,10 +703,26 @@ if (verifiedCredits < 1) {
   <label className="block text-sm font-semibold text-[#0F172A] mb-1">
     Property Name
   </label>
-  <input
+    <input
     type="text"
     value={propertyName}
-    onChange={(e) => setPropertyName(e.target.value)}
+    onChange={async (e) => {
+      const next = e.target.value;
+      setPropertyName(next);
+
+      // If a job already exists, persist the name immediately (no need to wait for Generate)
+      if (profile?.id && jobId) {
+        const { error } = await supabase
+          .from('analysis_jobs')
+          .update({ property_name: next.trim() || 'Untitled Property' })
+          .eq('id', jobId)
+          .eq('user_id', profile.id);
+
+        if (error) {
+          console.error('Failed to update property name:', error);
+        }
+      }
+    }}
     placeholder="e.g. 123 Main Street Apartments"
     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
   />
