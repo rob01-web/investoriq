@@ -3,6 +3,12 @@
   "functions": {
     "api/**/*.js": { "maxDuration": 60 }
   },
+  "crons": [
+    {
+      "path": "/api/cron-worker",
+      "schedule": "* * * * *"
+    }
+  ],
   "routes": [
     { "handle": "filesystem" },
 
