@@ -108,6 +108,33 @@ export default function Dashboard() {
     }
   }, [profile?.id]);
 
+  // REAL-TIME LISTENER: Watch for status changes (Queued -> Underwriting -> Success)
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'analysis_jobs',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        () => {
+          // Whenever a job changes status in the DB, refresh the UI list
+          fetchInProgressJobs();
+          fetchReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
@@ -525,7 +552,8 @@ for (const file of files) {
     .update({
       status: 'validating_inputs',
       started_at: new Date().toISOString(),
-      property_name: propertyName.trim() || 'Untitled Property',
+      // This grabs WHATEVER the user typed in the box
+      property_name: propertyName.trim() || 'Untitled Property', 
     })
     .eq('id', jobId)
     .eq('user_id', profile.id);
@@ -542,8 +570,14 @@ for (const file of files) {
 
   toast({
     title: 'Report queued',
-    description: 'Your underwriting run has started. You may safely close this page and return later.',
+    description: 'Your underwriting report has started. You may safely close this page and return later.',
   });
+
+  // This forces the UI to show the new name immediately
+  await fetchInProgressJobs();
+
+  // ELITE SYNC: Refresh the list immediately so "Forest City Manor" appears
+  await fetchInProgressJobs();
 
   await fetchInProgressJobs();
   await fetchReports();
