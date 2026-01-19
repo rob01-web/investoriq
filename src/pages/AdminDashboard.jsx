@@ -13,17 +13,14 @@ import { supabase } from "@/lib/customSupabaseClient";
   });
   const [recentReports, setRecentReports] = useState([]);
 
-  // Admin Operations (manual worker)
+  // Admin Operations (manual queue runner)
   const [adminRunKey, setAdminRunKey] = useState("");
   const [runLoading, setRunLoading] = useState(false);
   const [runResult, setRunResult] = useState(null);
 
   const runQueueNow = async () => {
     if (!adminRunKey.trim()) {
-      setRunResult({
-        ok: false,
-        message: "Admin Run Key is required.",
-      });
+      setRunResult({ ok: false, message: "Admin Run Key is required." });
       return;
     }
 
@@ -66,7 +63,7 @@ import { supabase } from "@/lib/customSupabaseClient";
     }
   };
 
-  useEffect(() => {
+    useEffect(() => {
     const fetchAdminData = async () => {
       setLoading(true);
       try {
@@ -124,7 +121,7 @@ import { supabase } from "@/lib/customSupabaseClient";
             <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
           </div>
 
-                    {/* OPERATIONS */}
+                              {/* OPERATIONS */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
