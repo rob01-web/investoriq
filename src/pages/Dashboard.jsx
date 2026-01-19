@@ -519,7 +519,7 @@ for (const file of files) {
     setLoading(true); 
     
     // Background handshake: Force a refresh to find the latest data
-    await fetchProfile(profile.id); // Update the credit count on screen
+    await fetchProfile(profile.id); 
     
     // MATCHING SUPABASE: Look specifically for report_credits
     const verifiedCredits = Number(profile?.report_credits ?? 0);
@@ -534,63 +534,62 @@ for (const file of files) {
       return;
     }
 
-    // 3. Start Loading Overlay
-    setLoading(true);
-
     try {
-  if (!jobId) {
-    toast({
-      title: 'Analysis not initialized',
-      description: 'Please upload at least one document before generating.',
-      variant: 'destructive',
-    });
-    return;
-  }
+      if (!jobId) {
+        toast({
+          title: 'Analysis not initialized',
+          description: 'Please upload at least one document before generating.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
 
-  const { error: statusErr } = await supabase
-    .from('analysis_jobs')
-    .update({
-      status: 'validating_inputs',
-      started_at: new Date().toISOString(),
-      // This grabs WHATEVER the user typed in the box
-      property_name: propertyName.trim() || 'Untitled Property', 
-    })
-    .eq('id', jobId)
-    .eq('user_id', profile.id);
+      // ELITE SYNC: This final update pushes the actual name and triggers the backend credit deduction
+      const { error: statusErr } = await supabase
+        .from('analysis_jobs')
+        .update({
+          status: 'validating_inputs',
+          started_at: new Date().toISOString(),
+          // This grabs WHATEVER you typed (e.g., Forest City Manor)
+          property_name: propertyName.trim() || 'Untitled Property', 
+        })
+        .eq('id', jobId)
+        .eq('user_id', profile.id);
 
-  if (statusErr) {
-    console.error('Failed to advance job status:', statusErr);
-    toast({
-      title: 'Unable to start analysis',
-      description: 'Please try again.',
-      variant: 'destructive',
-    });
-    return;
-  }
+      if (statusErr) {
+        console.error('Failed to advance job status:', statusErr);
+        toast({
+          title: 'Unable to start analysis',
+          description: 'Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
 
-  toast({
-    title: 'Report queued',
-    description: 'Your underwriting report has started. You may safely close this page and return later.',
-  });
+      toast({
+        title: 'Report queued',
+        description: 'Your underwriting report has started. You may safely close this page and return later.',
+      });
 
-  // This forces the UI to show the new name immediately
-  await fetchInProgressJobs();
+      // REFRESH DATA: This forces the name to update AND the credit to drop from 4 to 3
+      await Promise.all([
+        fetchInProgressJobs(),
+        fetchReports(),
+        fetchProfile(profile.id) 
+      ]);
 
-  // ELITE SYNC: Refresh the list immediately so "Forest City Manor" appears
-  await fetchInProgressJobs();
-
-  await fetchInProgressJobs();
-  await fetchReports();
-} catch (error) {
-  console.error('Queue Error FULL:', error, error?.stack);
-  toast({
-    title: 'Unable to queue report',
-    description: error.message || 'An error occurred while starting the underwriting run.',
-    variant: 'destructive',
-  });
-} finally {
-  setLoading(false);
-}
+    } catch (error) {
+      console.error('Queue Error FULL:', error, error?.stack);
+      toast({
+        title: 'Unable to queue report',
+        description: error.message || 'An error occurred while starting the underwriting run.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
     return (
