@@ -12,6 +12,7 @@ import { supabase } from "@/lib/customSupabaseClient";
     activeReports: 0,
   });
   const [recentReports, setRecentReports] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Admin Operations (manual queue runner)
   const [adminRunKey, setAdminRunKey] = useState("");
@@ -64,9 +65,16 @@ import { supabase } from "@/lib/customSupabaseClient";
   };
 
     useEffect(() => {
-    const fetchAdminData = async () => {
+        const fetchAdminData = async () => {
       setLoading(true);
       try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        const adminEmail = "hello@investoriq.tech";
+        setIsAdmin(user?.email === adminEmail);
+
         const { count: userCount } = await supabase
           .from("users")
           .select("*", { count: "exact", head: true });
@@ -122,88 +130,94 @@ import { supabase } from "@/lib/customSupabaseClient";
           </div>
 
                               {/* OPERATIONS */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-                  <Shield className="h-5 w-5 text-[#0F172A]" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-[#0F172A] uppercase tracking-[0.18em]">
-                    Operations
+                    {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+                    <Shield className="h-5 w-5 text-[#0F172A]" />
                   </div>
-                  <div className="text-sm font-medium text-[#334155]">
-                    Manual queue processing for early access operations.
+                  <div>
+                    <div className="text-sm font-bold text-[#0F172A] uppercase tracking-[0.18em]">
+                      Operations
+                    </div>
+                    <div className="text-sm font-medium text-[#334155]">
+                      Manual queue processing for early access operations.
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Admin Run Key
-                </label>
-                <input
-                  type="password"
-                  value={adminRunKey}
-                  onChange={(e) => setAdminRunKey(e.target.value)}
-                  placeholder="Paste the ADMIN_RUN_KEY"
-                  className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
-                />
-                <div className="mt-2 text-xs text-slate-500">
-                  This key is not stored. You must paste it each session.
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Admin Run Key
+                  </label>
+                  <input
+                    type="password"
+                    value={adminRunKey}
+                    onChange={(e) => setAdminRunKey(e.target.value)}
+                    placeholder="Paste the ADMIN_RUN_KEY"
+                    className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
+                  />
+                  <div className="mt-2 text-xs text-slate-500">
+                    This key is not stored. You must paste it each session.
+                  </div>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={runQueueNow}
+                    disabled={runLoading}
+                    className="inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
+                  >
+                    {runLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing.
+                      </>
+                    ) : (
+                      <>
+                        <PlayCircle className="mr-2 h-5 w-5" />
+                        Process Queue Now
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={runQueueNow}
-                  disabled={runLoading}
-                  className="inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
+              {runResult && (
+                <div
+                  className={`mt-5 rounded-lg border p-4 text-sm font-medium ${
+                    runResult.ok
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-red-200 bg-red-50 text-red-900"
+                  }`}
                 >
-                  {runLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle className="mr-2 h-5 w-5" />
-                      Process Queue Now
-                    </>
+                  <div>{runResult.message}</div>
+                  {runResult.details && (
+                    <div className="mt-2 text-xs opacity-80">
+                      Details: {runResult.details}
+                    </div>
                   )}
-                </button>
-              </div>
-            </div>
-
-            {runResult && (
-              <div
-                className={`mt-5 rounded-lg border p-4 text-sm font-medium ${
-                  runResult.ok
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    : "border-red-200 bg-red-50 text-red-900"
-                }`}
-              >
-                <div>{runResult.message}</div>
-                {runResult.details ? (
-                  <div className="mt-2 text-xs opacity-80">Details: {runResult.details}</div>
-                ) : null}
-                {runResult.ok && runResult.jobIds && runResult.jobIds.length > 0 ? (
-                  <div className="mt-2 text-xs opacity-80">
-                    Job IDs: {runResult.jobIds.slice(0, 5).join(", ")}
-                    {runResult.jobIds.length > 5 ? " ..." : ""}
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </motion.div>
+                  {runResult.ok &&
+                    runResult.jobIds &&
+                    runResult.jobIds.length > 0 && (
+                      <div className="mt-2 text-xs opacity-80">
+                        Job IDs: {runResult.jobIds.slice(0, 5).join(", ")}
+                        {runResult.jobIds.length > 5 ? " ..." : ""}
+                      </div>
+                    )}
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* STATS GRID */}
           {loading ? (
