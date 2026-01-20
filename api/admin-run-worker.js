@@ -168,7 +168,7 @@ export default async function handler(req, res) {
   user_id: job.user_id,
   type: 'status_transition',
   bucket: 'system',
-  object_path: null,
+  object_path: `analysis_jobs/${job.id}/status_transition_${nowIso}.json`,
   payload: {
     from_status: 'underwriting',
     to_status: 'scoring',
@@ -202,7 +202,7 @@ export default async function handler(req, res) {
   user_id: job.user_id,
   type: 'status_transition',
   bucket: 'system',
-  object_path: null,
+  object_path: `analysis_jobs/${job.id}/status_transition_${nowIso}.json`,
   payload: {
     from_status: 'underwriting',
     to_status: 'scoring',
