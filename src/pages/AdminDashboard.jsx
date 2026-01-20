@@ -73,8 +73,9 @@ import { supabase } from "@/lib/customSupabaseClient";
           data: { user },
         } = await supabase.auth.getUser();
 
-        const adminEmail = "hello@investoriq.tech";
-        setIsAdmin(user?.email === adminEmail);
+                const adminEmail = "hello@investoriq.tech";
+        const userEmail = (user?.email || "").toLowerCase().trim();
+        setIsAdmin(userEmail === adminEmail);
 
         const { count: userCount } = await supabase
           .from("users")

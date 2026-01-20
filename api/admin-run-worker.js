@@ -98,7 +98,7 @@ export default async function handler(req, res) {
         artifacts.push({
           job_id: job.id,
           user_id: job.user_id,
-          artifact_type: 'status_transition',
+          type: 'status_transition',
           payload: {
             from_status: 'queued',
             to_status: 'extracting',
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         artifacts.push({
           job_id: job.id,
           user_id: job.user_id,
-          artifact_type: 'status_transition',
+          type: 'status_transition',
           payload: {
             from_status: 'extracting',
             to_status: 'underwriting',
