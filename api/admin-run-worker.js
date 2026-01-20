@@ -48,6 +48,8 @@ export default async function handler(req, res) {
       auth: { persistSession: false },
     });
 
+    const supabase = supabaseAdmin;
+
     const now = new Date();
     const nowIso = now.toISOString();
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
