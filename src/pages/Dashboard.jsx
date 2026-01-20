@@ -745,7 +745,9 @@ if (verifiedCredits < 1) {
               <div className="relative flex flex-col items-end gap-3">
                 <button
   type="button"
+  disabled={!propertyName.trim()}
   onClick={async () => {
+
     if (!profile || credits <= 0) {
       window.location.href = '/pricing';
       return;
@@ -772,7 +774,12 @@ if (verifiedCredits < 1) {
 
     setIsModalOpen(true);
   }}
-  className="inline-flex items-center gap-2 rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
+    className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold
+    ${
+      propertyName.trim()
+        ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+        : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+    }`}
 >
                   <UploadCloud className="mr-2 h-5 w-5" />
                   Add file(s)
