@@ -69,9 +69,12 @@ export default async function handler(req, res) {
   ])
   .not('started_at', 'is', null);
 
-    if (inProgressErr) {
-      return res.status(500).json({ error: 'Failed to fetch in-progress jobs', details: inProgressErr.message });
-    }
+    if (inProgressError) {
+  return res.status(500).json({
+    error: 'Failed to fetch in-progress jobs',
+    details: inProgressError.message
+  });
+}
 
     const timedOutJobs = (inProgressJobs || []).filter((job) => {
       const startedAt = job.started_at ? new Date(job.started_at) : null;
