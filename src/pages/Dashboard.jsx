@@ -970,11 +970,11 @@ if (verifiedCredits < 1) {
             </div>
 
             {/* ACTION BUTTON */}
-            <div className="flex justify-center mt-8">
+                        <div className="flex flex-col items-center mt-8">
               <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={uploadedFiles.length === 0 || loading || !acknowledged}
+                disabled={!propertyName.trim() || uploadedFiles.length === 0 || loading || !acknowledged}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
@@ -985,6 +985,24 @@ if (verifiedCredits < 1) {
                   'Generate IQ Report'
                 )}
               </Button>
+
+              {!propertyName.trim() && (
+                <div className="mt-2 text-xs font-semibold text-red-700">
+                  Enter a property name to generate a report.
+                </div>
+              )}
+
+              {propertyName.trim() && uploadedFiles.length === 0 && (
+                <div className="mt-2 text-xs font-semibold text-red-700">
+                  Upload at least one document to generate a report.
+                </div>
+              )}
+
+              {propertyName.trim() && uploadedFiles.length > 0 && !acknowledged && (
+                <div className="mt-2 text-xs font-semibold text-red-700">
+                  Acknowledge the disclosures to generate a report.
+                </div>
+              )}
             </div>
           </motion.div>
 
