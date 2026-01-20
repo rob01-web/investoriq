@@ -53,28 +53,29 @@ export default async function handler(req, res) {
     const now = new Date();
     const nowIso = now.toISOString();
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
+    const inProgressStatuses = [
+  'validating_inputs',
+  'extracting',
+  'underwriting',
+  'scoring',
+  'rendering',
+  'pdf_generating',
+  'publishing',
+];
 
     // Timeout guard: mark long-running jobs as failed
-    const { data: inProgressJobs, error: inProgressError } = await supabase
-  .from('analysis_jobs')
-  .select('*')
-  .in('status', [
-    'validating_inputs',
-    'extracting',
-    'underwriting',
-    'scoring',
-    'rendering',
-    'pdf_generating',
-    'publishing',
-  ])
-  .not('started_at', 'is', null);
+        const { data: inProgressJobs, error: inProgressError } = await supabase
+      .from('analysis_jobs')
+      .select('id, user_id, status, started_at, created_at')
+      .in('status', inProgressStatuses)
+      .not('started_at', 'is', null);
 
     if (inProgressError) {
-  return res.status(500).json({
-    error: 'Failed to fetch in-progress jobs',
-    details: inProgressError.message
-  });
-}
+      return res.status(500).json({
+        error: 'Failed to fetch in-progress jobs',
+        details: inProgressError.message,
+      });
+    }
 
     const timedOutJobs = (inProgressJobs || []).filter((job) => {
       const startedAt = job.started_at ? new Date(job.started_at) : null;
@@ -94,7 +95,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to mark timed-out jobs', details: failErr.message });
       }
 
-            const timeoutArtifacts = timedOutJobs.map((job) => ({
+      const timeoutArtifacts = timedOutJobs.map((job) => ({
         job_id: job.id,
         user_id: job.user_id,
         type: 'worker_event',
@@ -163,18 +164,18 @@ export default async function handler(req, res) {
           from_status: 'queued',
           to_status: 'extracting',
         });
-        artifacts.push({
-  job_id: job.id,
-  user_id: job.user_id,
-  type: 'status_transition',
-  bucket: 'system',
-  object_path: `analysis_jobs/${job.id}/status_transition_${nowIso}.json`,
-  payload: {
-    from_status: 'underwriting',
-    to_status: 'scoring',
-    timestamp: nowIso,
-  },
-});
+                        artifacts.push({
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'status_transition',
+          bucket: 'system',
+          object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
+          payload: {
+            from_status: 'queued',
+            to_status: 'extracting',
+            timestamp: nowIso,
+          },
+        });
       });
     }
 
@@ -198,17 +199,17 @@ export default async function handler(req, res) {
           to_status: 'underwriting',
         });
         artifacts.push({
-  job_id: job.id,
-  user_id: job.user_id,
-  type: 'status_transition',
-  bucket: 'system',
-  object_path: `analysis_jobs/${job.id}/status_transition_${nowIso}.json`,
-  payload: {
-    from_status: 'underwriting',
-    to_status: 'scoring',
-    timestamp: nowIso,
-  },
-});
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'status_transition',
+          bucket: 'system',
+          object_path: `analysis_jobs/${job.id}/status_transition/extracting_to_underwriting/${nowIso}.json`,
+          payload: {
+            from_status: 'extracting',
+            to_status: 'underwriting',
+            timestamp: nowIso,
+          },
+        });
       });
     }
 
@@ -240,15 +241,15 @@ export default async function handler(req, res) {
           from_status: 'underwriting',
           to_status: 'scoring',
         });
-                artifacts.push({
+        artifacts.push({
           job_id: job.id,
           user_id: job.user_id,
           type: 'status_transition',
           bucket: 'system',
-          object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
+          object_path: `analysis_jobs/${job.id}/status_transition/underwriting_to_scoring/${nowIso}.json`,
           payload: {
-            from_status: 'queued',
-            to_status: 'extracting',
+            from_status: 'underwriting',
+            to_status: 'scoring',
             timestamp: nowIso,
           },
         });
@@ -267,9 +268,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      processed: transitions.length,
+      advanced_count: transitions.length,
+      timeout_failed_count: timedOutJobs.length,
       transitions,
-      message: transitions.length === 0 ? 'No queued or extracting jobs found' : undefined,
     });
   } catch (err) {
     console.error('admin-run-worker error:', err);
