@@ -95,16 +95,18 @@ export default async function handler(req, res) {
       }
 
       const timeoutArtifacts = timedOutJobs.map((job) => ({
-        job_id: job.id,
-        user_id: job.user_id,
-        type: 'worker_event',
-        payload: {
-          event: 'timeout',
-          status_was: job.status,
-          threshold_minutes: 60,
-          timestamp: nowIso,
-        },
-      }));
+  job_id: job.id,
+  user_id: job.user_id,
+  type: 'worker_event',
+  bucket: 'system',
+  object_path: null,
+  payload: {
+    event: 'timeout',
+    status_was: job.status,
+    threshold_minutes: 60,
+    timestamp: nowIso,
+  },
+}));
 
       const { error: timeoutArtifactErr } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -162,15 +164,17 @@ export default async function handler(req, res) {
           to_status: 'extracting',
         });
         artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          payload: {
-            from_status: 'queued',
-            to_status: 'extracting',
-            timestamp: nowIso,
-          },
-        });
+  job_id: job.id,
+  user_id: job.user_id,
+  type: 'status_transition',
+  bucket: 'system',
+  object_path: null,
+  payload: {
+    from_status: 'underwriting',
+    to_status: 'scoring',
+    timestamp: nowIso,
+  },
+});
       });
     }
 
@@ -194,15 +198,17 @@ export default async function handler(req, res) {
           to_status: 'underwriting',
         });
         artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          payload: {
-            from_status: 'extracting',
-            to_status: 'underwriting',
-            timestamp: nowIso,
-          },
-        });
+  job_id: job.id,
+  user_id: job.user_id,
+  type: 'status_transition',
+  bucket: 'system',
+  object_path: null,
+  payload: {
+    from_status: 'underwriting',
+    to_status: 'scoring',
+    timestamp: nowIso,
+  },
+});
       });
     }
 
@@ -235,15 +241,17 @@ export default async function handler(req, res) {
           to_status: 'scoring',
         });
         artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          payload: {
-            from_status: 'underwriting',
-            to_status: 'scoring',
-            timestamp: nowIso,
-          },
-        });
+  job_id: job.id,
+  user_id: job.user_id,
+  type: 'status_transition',
+  bucket: 'system',
+  object_path: null,
+  payload: {
+    from_status: 'underwriting',
+    to_status: 'scoring',
+    timestamp: nowIso,
+  },
+});
       });
     }
 
