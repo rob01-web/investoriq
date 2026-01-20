@@ -53,7 +53,7 @@ import { supabase } from "@/lib/customSupabaseClient";
       setRunResult({
         ok: true,
         message: `Queue processed. Jobs advanced: ${data?.processed ?? 0}.`,
-        jobIds: Array.isArray(data?.jobIds) ? data.jobIds : [],
+        transitions: Array.isArray(data?.transitions) ? data.transitions : [],
       });
     } catch (err) {
       setRunResult({
@@ -190,11 +190,22 @@ import { supabase } from "@/lib/customSupabaseClient";
                     </div>
                   )}
                   {runResult.ok &&
-                    runResult.jobIds &&
-                    runResult.jobIds.length > 0 && (
-                      <div className="mt-2 text-xs opacity-80">
-                        Job IDs: {runResult.jobIds.slice(0, 5).join(", ")}
-                        {runResult.jobIds.length > 5 ? " ..." : ""}
+                    runResult.transitions &&
+                    runResult.transitions.length > 0 && (
+                      <div className="mt-3 text-xs">
+                        <div className="mb-2 font-semibold uppercase tracking-[0.18em] text-[10px]">
+                          Advanced Jobs
+                        </div>
+                        <div className="space-y-1 text-emerald-900/80">
+                          {runResult.transitions.slice(0, 6).map((transition) => (
+                            <div key={`${transition.job_id}-${transition.to_status}`}>
+                              {transition.job_id} {transition.from_status} {"->"} {transition.to_status}
+                            </div>
+                          ))}
+                          {runResult.transitions.length > 6 && (
+                            <div>and {runResult.transitions.length - 6} more</div>
+                          )}
+                        </div>
                       </div>
                     )}
                 </div>
