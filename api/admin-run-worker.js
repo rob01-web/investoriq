@@ -94,19 +94,19 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to mark timed-out jobs', details: failErr.message });
       }
 
-      const timeoutArtifacts = timedOutJobs.map((job) => ({
-  job_id: job.id,
-  user_id: job.user_id,
-  type: 'worker_event',
-  bucket: 'system',
-  object_path: 'events/timeout',
-  payload: {
-    event: 'timeout',
-    status_was: job.status,
-    threshold_minutes: 60,
-    timestamp: nowIso,
-  },
-}));
+            const timeoutArtifacts = timedOutJobs.map((job) => ({
+        job_id: job.id,
+        user_id: job.user_id,
+        type: 'worker_event',
+        bucket: 'internal',
+        object_path: `analysis_jobs/${job.id}/worker_event/timeout/${nowIso}.json`,
+        payload: {
+          event: 'timeout',
+          status_was: job.status,
+          threshold_minutes: 60,
+          timestamp: nowIso,
+        },
+      }));
 
       const { error: timeoutArtifactErr } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -240,18 +240,18 @@ export default async function handler(req, res) {
           from_status: 'underwriting',
           to_status: 'scoring',
         });
-        artifacts.push({
-  job_id: job.id,
-  user_id: job.user_id,
-  type: 'status_transition',
-  bucket: 'system',
-  object_path: null,
-  payload: {
-    from_status: 'underwriting',
-    to_status: 'scoring',
-    timestamp: nowIso,
-  },
-});
+                artifacts.push({
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'status_transition',
+          bucket: 'system',
+          object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
+          payload: {
+            from_status: 'queued',
+            to_status: 'extracting',
+            timestamp: nowIso,
+          },
+        });
       });
     }
 
