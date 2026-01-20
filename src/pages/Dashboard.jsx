@@ -784,6 +784,11 @@ if (verifiedCredits < 1) {
                   <UploadCloud className="mr-2 h-5 w-5" />
                   Add file(s)
                 </button>
+                                {!propertyName.trim() && (
+                  <div className="mt-2 text-xs font-semibold text-red-700">
+                    Enter a property name to enable uploads.
+                  </div>
+                )}
 
                 {isModalOpen && (
                   <>
