@@ -99,7 +99,7 @@ export default async function handler(req, res) {
   user_id: job.user_id,
   type: 'worker_event',
   bucket: 'system',
-  object_path: null,
+  object_path: 'events/timeout',
   payload: {
     event: 'timeout',
     status_was: job.status,
