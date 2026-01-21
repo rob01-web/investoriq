@@ -521,6 +521,7 @@ export default async function handler(req, res) {
           let storagePath = null;
           let generatorSource = 'generate-client-report';
           let generatorError = null;
+          let generatorFailurePayload = null;
 
           if (!job.user_id) {
             generatorError = 'Missing user_id for report generation.';
@@ -565,7 +566,8 @@ export default async function handler(req, res) {
                 ? forwardedKey[0]
                 : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
-              const reportRes = await fetch(`${baseUrl}/api/generate-client-report`, {
+              const fetchUrl = `${baseUrl}/api/generate-client-report`;
+              const reportRes = await fetch(fetchUrl, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
@@ -574,19 +576,23 @@ export default async function handler(req, res) {
                 }),
               });
 
-              const reportData = await reportRes.json().catch(() => ({}));
-              if (!reportRes.ok || !reportData?.reportId) {
-                generatorError =
-                  reportData?.error ||
-                  `Report generation failed (${reportRes.status})`;
-                if (reportRes.status) {
-                  generatorError += ` | status=${reportRes.status}`;
-                }
-                generatorError += ` | response=${JSON.stringify(reportData)}`;
-                generatorError += ` | has_admin_key=${Boolean(headers['x-admin-run-key'])}`;
+              if (!reportRes.ok) {
+                const rawText = await reportRes.text();
+                generatorFailurePayload = {
+                  status: reportRes.status,
+                  response_text_preview: rawText.slice(0, 500),
+                  has_admin_key: Boolean(headers['x-admin-run-key']),
+                  target_url: fetchUrl,
+                };
+                generatorError = `Report generation failed (${reportRes.status})`;
               } else {
-                reportId = reportData.reportId;
-                storagePath = `${job.user_id}/${reportId}.pdf`;
+                const reportData = await reportRes.json().catch(() => ({}));
+                if (!reportData?.reportId) {
+                  generatorError = `Report generation failed (${reportRes.status})`;
+                } else {
+                  reportId = reportData.reportId;
+                  storagePath = `${job.user_id}/${reportId}.pdf`;
+                }
               }
             }
           }
@@ -630,6 +636,7 @@ export default async function handler(req, res) {
               event: 'report_generation_failed',
               error: generatorError,
               timestamp: nowIso,
+              ...(generatorFailurePayload || {}),
             });
 
             if (workerEventErr) {
