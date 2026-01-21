@@ -559,12 +559,15 @@ export default async function handler(req, res) {
             if (!baseUrl) {
               generatorError = 'Missing base URL for report generation.';
             } else {
+              const headers = { 'Content-Type': 'application/json' };
+              const forwardedKey = req.headers['x-admin-run-key'];
+              headers['x-admin-run-key'] = Array.isArray(forwardedKey)
+                ? forwardedKey[0]
+                : forwardedKey || process.env.ADMIN_RUN_KEY || '';
+
               const reportRes = await fetch(`${baseUrl}/api/generate-client-report`, {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-admin-run-key': process.env.ADMIN_RUN_KEY || '',
-                },
+                headers,
                 body: JSON.stringify({
                   userId: job.user_id,
                   property_name: job.property_name,
@@ -573,7 +576,14 @@ export default async function handler(req, res) {
 
               const reportData = await reportRes.json().catch(() => ({}));
               if (!reportRes.ok || !reportData?.reportId) {
-                generatorError = reportData?.error || `Report generation failed (${reportRes.status})`;
+                generatorError =
+                  reportData?.error ||
+                  `Report generation failed (${reportRes.status})`;
+                if (reportRes.status) {
+                  generatorError += ` | status=${reportRes.status}`;
+                }
+                generatorError += ` | response=${JSON.stringify(reportData)}`;
+                generatorError += ` | has_admin_key=${Boolean(headers['x-admin-run-key'])}`;
               } else {
                 reportId = reportData.reportId;
                 storagePath = `${job.user_id}/${reportId}.pdf`;
