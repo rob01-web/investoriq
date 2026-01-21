@@ -315,13 +315,7 @@ export default async function handler(req, res) {
     const maxPasses = 10;
     const maxSeconds = 20;
     const startTime = Date.now();
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.headers.host;
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : host
-      ? `${protocol}://${host}`
-      : '';
+    const baseUrl = (process.env.PUBLIC_SITE_URL || 'https://investoriq.tech').replace(/\/$/, '');
 
     while (passesRun < maxPasses && (Date.now() - startTime) / 1000 < maxSeconds) {
       nowIso = new Date().toISOString();
