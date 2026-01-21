@@ -472,6 +472,13 @@ function applyChartPlaceholders(html, charts = {}) {
 
 export default async function handler(req, res) {
   try {
+    const adminRunKey = process.env.ADMIN_RUN_KEY || "";
+    const headerKey = req.headers["x-admin-run-key"];
+
+    if (!adminRunKey || headerKey !== adminRunKey) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     // 1. Parse input JSON (structured)
     const body = req.body || {};
 const { userId, property_name } = body;
@@ -479,38 +486,6 @@ const { userId, property_name } = body;
     if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
     }
-
-    // ---- CREDIT DECREMENT GUARD (AUTHORITATIVE) ----
-// Atomic decrement using optimistic concurrency (no raw SQL)
-const { data: currentProfile, error: currentErr } = await supabase
-  .from("profiles")
-  .select("report_credits")
-  .eq("id", userId)
-  .single();
-
-if (currentErr || !currentProfile) {
-  console.error("Failed to read current credits:", currentErr);
-  return res.status(500).json({ error: "Failed to generate report" });
-}
-
-const currentCredits = Number(currentProfile.report_credits ?? 0);
-
-if (currentCredits < 1) {
-  return res.status(403).json({ error: "Insufficient report credits" });
-}
-
-const { data: creditRow, error: creditErr } = await supabase
-  .from("profiles")
-  .update({ report_credits: currentCredits - 1 })
-  .eq("id", userId)
-  .eq("report_credits", currentCredits) // concurrency guard
-  .select("report_credits")
-  .single();
-
-if (creditErr || !creditRow) {
-  console.error("Credit decrement blocked:", creditErr);
-  return res.status(403).json({ error: "Insufficient report credits" });
-}
 
     const sections = body.sections || {};
     // ------------------------------------------------------------------
