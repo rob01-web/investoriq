@@ -734,7 +734,7 @@ export default async function handler(req, res) {
             .eq('id', job.id);
 
           if (completedErr) {
-            return res.status(500).json({ error: 'Failed to mark job completed', details: completedErr.message });
+            return res.status(500).json({ error: 'Failed to mark job published', details: completedErr.message });
           }
 
           transitions.push({
