@@ -451,7 +451,10 @@ export default async function handler(req, res) {
             } else {
               const reportRes = await fetch(`${baseUrl}/api/generate-client-report`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-admin-run-key': process.env.ADMIN_RUN_KEY || '',
+                },
                 body: JSON.stringify({
                   userId: job.user_id,
                   property_name: job.property_name,
