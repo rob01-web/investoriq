@@ -475,11 +475,7 @@ export default async function handler(req, res) {
     const adminRunKey = (process.env.ADMIN_RUN_KEY || "").trim();
     let headerKey = req.headers["x-admin-run-key"];
     if (Array.isArray(headerKey)) headerKey = headerKey[0];
-    if (typeof headerKey === "string") {
-      headerKey = headerKey.trim();
-    } else {
-      headerKey = "";
-    }
+    headerKey = (typeof headerKey === "string" ? headerKey : "").trim();
 
     if (!adminRunKey) {
       return res
@@ -492,6 +488,8 @@ export default async function handler(req, res) {
         error: "Unauthorized",
         hint: "bad admin key",
         has_header: Boolean(headerKey),
+        env_key_len: adminRunKey.length,
+        header_key_len: headerKey.length,
       });
     }
 
