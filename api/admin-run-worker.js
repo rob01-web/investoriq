@@ -104,6 +104,116 @@ export default async function handler(req, res) {
       return error;
     };
 
+    const hasCreditConsumed = async (jobId) => {
+      const { data, error } = await supabaseAdmin
+        .from('analysis_artifacts')
+        .select('id')
+        .eq('job_id', jobId)
+        .eq('type', 'credit_consumed')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        return { error };
+      }
+
+      return { consumed: !!data?.id };
+    };
+
+    const consumeCreditOnce = async (job) => {
+      const { consumed, error: consumedErr } = await hasCreditConsumed(job.id);
+      if (consumedErr) {
+        return { error: consumedErr };
+      }
+      if (consumed) {
+        return { skipped: true };
+      }
+
+      const { data: profileRow, error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .select('report_credits')
+        .eq('id', job.user_id)
+        .single();
+
+      if (profileErr || !profileRow) {
+        return { error: profileErr || new Error('Missing profile') };
+      }
+
+      const currentCredits = Number(profileRow.report_credits ?? 0);
+      if (currentCredits < 1) {
+        const failUpdate = { status: 'failed' };
+        if (supportsFailedAt) {
+          failUpdate.failed_at = nowIso;
+        }
+
+        const { error: failErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update(failUpdate)
+          .eq('id', job.id);
+
+        if (failErr) {
+          return { error: failErr };
+        }
+
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          'publishing',
+          'failed',
+          { user_id: job.user_id, error: 'Insufficient credits' }
+        );
+
+        if (transitionErr) {
+          return { error: transitionErr };
+        }
+
+        const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'credit_failed', {
+          event: 'credit_failed',
+          reason: 'Insufficient credits',
+          credits_available: currentCredits,
+          timestamp: nowIso,
+        });
+
+        if (workerEventErr) {
+          return { error: workerEventErr };
+        }
+
+        return { failed: true };
+      }
+
+      const { data: creditRow, error: creditErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ report_credits: currentCredits - 1 })
+        .eq('id', job.user_id)
+        .eq('report_credits', currentCredits)
+        .select('report_credits')
+        .single();
+
+      if (creditErr || !creditRow) {
+        return { error: creditErr || new Error('Credit decrement failed') };
+      }
+
+      const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+        {
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'credit_consumed',
+          bucket: 'system',
+          object_path: `analysis_jobs/${job.id}/credit/consumed/${safeTimestamp(nowIso)}.json`,
+          payload: {
+            before: currentCredits,
+            after: currentCredits - 1,
+            timestamp: nowIso,
+          },
+        },
+      ]);
+
+      if (artifactErr) {
+        return { error: artifactErr };
+      }
+
+      return { ok: true };
+    };
+
     const canUseColumn = async (columnName) => {
       const { error } = await supabaseAdmin.from('analysis_jobs').select(columnName).limit(1);
       if (!error) return true;
@@ -593,6 +703,24 @@ export default async function handler(req, res) {
               error: 'Failed to write status transition artifact',
               details: publishingTransitionErr.message,
             });
+          }
+
+          const creditResult = await consumeCreditOnce(job);
+          if (creditResult?.error) {
+            return res.status(500).json({
+              error: 'Failed to consume credits',
+              details: creditResult.error.message || String(creditResult.error),
+            });
+          }
+
+          if (creditResult?.failed) {
+            transitions.push({
+              job_id: job.id,
+              from_status: 'publishing',
+              to_status: 'failed',
+            });
+            passTransitions += 1;
+            continue;
           }
 
           const completeUpdate = { status: 'completed' };
