@@ -88,6 +88,48 @@ function replaceAll(str, token, value) {
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
 }
 
+const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (document parsing not enabled)";
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function neutralizeHardcodedValues(html, replacement) {
+  const bodyStart = html.indexOf("<body");
+  if (bodyStart === -1) return html;
+  const bodyStartClose = html.indexOf(">", bodyStart);
+  const bodyEnd = html.lastIndexOf("</body>");
+  if (bodyStartClose === -1 || bodyEnd === -1) return html;
+
+  const head = html.slice(0, bodyStartClose + 1);
+  const body = html.slice(bodyStartClose + 1, bodyEnd);
+  const tail = html.slice(bodyEnd);
+
+  let out = body;
+  out = out.replace(/<(td|th)([^>]*)>[^<]*\d[^<]*<\/\1>/gi, (match, tag, attrs) => {
+    return `<${tag}${attrs}>${replacement}</${tag}>`;
+  });
+  out = out.replace(/<h2([^>]*)>[^<]*\d[^<]*<\/h2>/gi, (match, attrs) => {
+    return `<h2${attrs}>${replacement}</h2>`;
+  });
+  out = out.replace(/<p([^>]*)>[^<]*\d[^<]*<\/p>/gi, (match, attrs) => {
+    return `<p${attrs}>${replacement}</p>`;
+  });
+  out = out.replace(/<li([^>]*)>[^<]*\d[^<]*<\/li>/gi, (match, attrs) => {
+    return `<li${attrs}>${replacement}</li>`;
+  });
+  out = out.replace(/<span([^>]*)>[^<]*\d[^<]*<\/span>/gi, (match, attrs) => {
+    return `<span${attrs}>${replacement}</span>`;
+  });
+
+  return `${head}${out}${tail}`;
+}
+
 // ---------- Dynamic Table Builders ----------
 
 function buildUnitMixTable(rows = []) {
@@ -496,7 +538,7 @@ export default async function handler(req, res) {
 
     // 1. Parse input JSON (structured)
     const body = req.body || {};
-const { userId, property_name } = body;
+const { userId, property_name, jobId } = body;
 
     if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
@@ -540,17 +582,31 @@ REQUIRED_SECTIONS.forEach((key) => {
 };
 
     // Optional financials payload; falls back to sample values
-    const financials = body.financials || {
-      purchasePrice: 27360000,
-      totalProjectCost: 29000000,
-      equityRequired: 10150000,
-      capRateOnCost: 0.059,
-      leveredIrr: 0.145,
-      equityMultiple: 1.9,
-      year1CoC: 0.071,
-    };
+    const financials = body.financials || {};
 
     const getSection = (key) => sections[key] || "";
+
+    let documentSourcesHtml = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
+    if (jobId) {
+      const { data: sourceRows, error: sourceErr } = await supabase
+        .from("analysis_job_files")
+        .select("original_filename, created_at")
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: true });
+
+      if (!sourceErr && sourceRows && sourceRows.length > 0) {
+        const items = sourceRows
+          .map((row) => {
+            const name = escapeHtml(row.original_filename || "Unnamed file");
+            const createdAt = row.created_at
+              ? new Date(row.created_at).toLocaleString()
+              : "Unknown date";
+            return `<li>${name} — ${escapeHtml(createdAt)}</li>`;
+          })
+          .join("");
+        documentSourcesHtml = `<ul>${items}</ul>`;
+      }
+    }
 
     // 2. Load the HTML template (SACRED MASTER COPY)
     const templatePath = path.join(__dirname, "html", "sample-report.html");
@@ -603,6 +659,13 @@ REQUIRED_SECTIONS.forEach((key) => {
       "{{YEAR1_COC}}",
       formatPercent(financials.year1CoC)
     );
+    finalHtml = replaceAll(finalHtml, "{{PURCHASE_PRICE}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{TOTAL_PROJECT_COST}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{EQUITY_REQUIRED}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{CAP_RATE_ON_COST}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{LEVERED_IRR}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{EQUITY_MULTIPLE}}", DATA_NOT_AVAILABLE);
+    finalHtml = replaceAll(finalHtml, "{{YEAR1_COC}}", DATA_NOT_AVAILABLE);
 
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
@@ -690,6 +753,10 @@ REQUIRED_SECTIONS.forEach((key) => {
       "{{FINAL_RECOMMENDATION}}",
       getSection("finalRecommendation")
     );
+
+    finalHtml = neutralizeHardcodedValues(finalHtml, DATA_NOT_AVAILABLE);
+
+    finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
 
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");

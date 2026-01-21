@@ -70,7 +70,7 @@ export default async function handler(req, res) {
           .eq('status', status);
 
         if (error) {
-          throw error;
+          return [status, 0];
         }
 
         return [status, count || 0];
@@ -87,10 +87,6 @@ export default async function handler(req, res) {
       .limit(1)
       .maybeSingle();
 
-    if (oldestQueuedErr) {
-      return res.status(500).json({ error: 'Failed to fetch oldest queued job', details: oldestQueuedErr.message });
-    }
-
     const { data: latestFailed, error: latestFailedErr } = await supabaseAdmin
       .from('analysis_jobs')
       .select('updated_at')
@@ -99,25 +95,17 @@ export default async function handler(req, res) {
       .limit(1)
       .maybeSingle();
 
-    if (latestFailedErr) {
-      return res.status(500).json({ error: 'Failed to fetch latest failed job', details: latestFailedErr.message });
-    }
-
     const { data: recentJobs, error: recentJobsErr } = await supabaseAdmin
       .from('analysis_jobs')
       .select('id, property_name, status, created_at, updated_at, user_id')
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (recentJobsErr) {
-      return res.status(500).json({ error: 'Failed to fetch recent jobs', details: recentJobsErr.message });
-    }
-
     return res.status(200).json({
       counts_by_status: countsByStatus,
-      oldest_queued_at: oldestQueued?.created_at || null,
-      latest_failed_at: latestFailed?.updated_at || null,
-      recent_jobs: recentJobs || [],
+      oldest_queued_at: oldestQueuedErr ? null : oldestQueued?.created_at || null,
+      latest_failed_at: latestFailedErr ? null : latestFailed?.updated_at || null,
+      recent_jobs: recentJobsErr ? [] : recentJobs || [],
     });
   } catch (err) {
     console.error('queue-metrics error:', err);

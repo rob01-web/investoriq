@@ -567,6 +567,7 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                   userId: job.user_id,
                   property_name: job.property_name,
+                  jobId: job.id,
                 }),
               });
 
