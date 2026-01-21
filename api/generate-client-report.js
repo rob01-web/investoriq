@@ -472,11 +472,27 @@ function applyChartPlaceholders(html, charts = {}) {
 
 export default async function handler(req, res) {
   try {
-    const adminRunKey = process.env.ADMIN_RUN_KEY || "";
-    const headerKey = req.headers["x-admin-run-key"];
+    const adminRunKey = (process.env.ADMIN_RUN_KEY || "").trim();
+    let headerKey = req.headers["x-admin-run-key"];
+    if (Array.isArray(headerKey)) headerKey = headerKey[0];
+    if (typeof headerKey === "string") {
+      headerKey = headerKey.trim();
+    } else {
+      headerKey = "";
+    }
 
-    if (!adminRunKey || headerKey !== adminRunKey) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!adminRunKey) {
+      return res
+        .status(500)
+        .json({ error: "Server misconfigured: missing ADMIN_RUN_KEY" });
+    }
+
+    if (!headerKey || headerKey !== adminRunKey) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        hint: "bad admin key",
+        has_header: Boolean(headerKey),
+      });
     }
 
     // 1. Parse input JSON (structured)
