@@ -164,18 +164,18 @@ export default async function handler(req, res) {
           from_status: 'queued',
           to_status: 'extracting',
         });
-                        artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          bucket: 'system',
-          object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
-          payload: {
-            from_status: 'queued',
-            to_status: 'extracting',
-            timestamp: nowIso,
-          },
-        });
+          artifacts.push({
+  job_id: job.id,
+  user_id: job.user_id,
+  type: 'status_transition',
+  bucket: 'system',
+  object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
+  payload: {
+    from_status: 'queued',
+    to_status: 'extracting',
+    timestamp: nowIso,
+  },
+});
       });
     }
 
