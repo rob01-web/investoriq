@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     const supabase = supabaseAdmin;
 
     const now = new Date();
-    const nowIso = now.toISOString();
+    let nowIso = now.toISOString();
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
       'queued',
@@ -89,6 +89,43 @@ export default async function handler(req, res) {
       return error;
     };
 
+    const writeWorkerEventArtifact = async (jobId, userId, eventName, payload) => {
+      const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
+        {
+          job_id: jobId,
+          user_id: userId ?? null,
+          type: 'worker_event',
+          bucket: 'internal',
+          object_path: `analysis_jobs/${jobId}/worker_event/${eventName}/${safeTimestamp(nowIso)}.json`,
+          payload: payload || {},
+        },
+      ]);
+
+      return error;
+    };
+
+    const canUseColumn = async (columnName) => {
+      const { error } = await supabaseAdmin.from('analysis_jobs').select(columnName).limit(1);
+      if (!error) return true;
+      const message = String(error.message || '').toLowerCase();
+      if (message.includes('column') && message.includes(columnName.toLowerCase())) {
+        return false;
+      }
+      throw error;
+    };
+
+    let supportsCompletedAt = false;
+    let supportsFailedAt = false;
+    try {
+      supportsCompletedAt = await canUseColumn('completed_at');
+      supportsFailedAt = await canUseColumn('failed_at');
+    } catch (err) {
+      return res.status(500).json({
+        error: 'Failed to detect analysis_jobs columns',
+        details: err?.message || String(err),
+      });
+    }
+
     // Timeout guard: mark long-running jobs as failed
     const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
@@ -111,9 +148,13 @@ export default async function handler(req, res) {
 
     if (timedOutJobs.length > 0) {
         const timedOutIds = timedOutJobs.map((job) => job.id);
+      const timeoutUpdate = { status: 'failed' };
+      if (supportsFailedAt) {
+        timeoutUpdate.failed_at = nowIso;
+      }
       const { error: failErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .update({ status: 'failed' })
+        .update(timeoutUpdate)
         .in('id', timedOutIds);
 
       if (failErr) {
@@ -141,7 +182,7 @@ export default async function handler(req, res) {
         user_id: job.user_id,
         type: 'worker_event',
         bucket: 'internal',
-        object_path: `analysis_jobs/${job.id}/worker_event/timeout/${nowIso}.json`,
+        object_path: `analysis_jobs/${job.id}/worker_event/timeout/${safeTimestamp(nowIso)}.json`,
         payload: {
           event: 'timeout',
           status_was: job.status,
@@ -159,143 +200,438 @@ export default async function handler(req, res) {
       }
     }
 
-    // Pull a small batch of queued jobs
-    const { data: queuedJobs, error: queuedErr } = await supabaseAdmin
-      .from('analysis_jobs')
-      .select('id, user_id, status, started_at')
-      .eq('status', 'queued')
-      .order('created_at', { ascending: true })
-      .limit(10);
-
-    if (queuedErr) {
-      return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
-    }
-
-    const { data: extractingJobs, error: extractingErr } = await supabaseAdmin
-      .from('analysis_jobs')
-      .select('id, user_id, status, started_at')
-      .eq('status', 'extracting')
-      .order('created_at', { ascending: true })
-      .limit(10);
-
     const transitions = [];
+    let passesRun = 0;
+    const maxPasses = 10;
+    const maxSeconds = 20;
+    const startTime = Date.now();
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host;
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : host
+      ? `${protocol}://${host}`
+      : '';
 
-    if (extractingErr) {
-      return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
-    }
+    while (passesRun < maxPasses && (Date.now() - startTime) / 1000 < maxSeconds) {
+      nowIso = new Date().toISOString();
+      let passTransitions = 0;
 
-    if (queuedJobs && queuedJobs.length > 0) {
-      const queuedIds = queuedJobs.map((j) => j.id);
-      const { error: queuedUpdErr } = await supabaseAdmin
+      // Pull a small batch of queued jobs
+      const { data: queuedJobs, error: queuedErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .update({
-          status: 'extracting',
-          started_at: nowIso,
-        })
-        .in('id', queuedIds);
+        .select('id, user_id, status, started_at')
+        .eq('status', 'queued')
+        .order('created_at', { ascending: true })
+        .limit(10);
 
-      if (queuedUpdErr) {
-        return res.status(500).json({ error: 'Failed to advance queued jobs', details: queuedUpdErr.message });
+      if (queuedErr) {
+        return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
       }
 
-      for (const job of queuedJobs) {
-        transitions.push({
-          job_id: job.id,
-          from_status: 'queued',
-          to_status: 'extracting',
-        });
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          'queued',
-          'extracting',
-          { user_id: job.user_id }
-        );
+      const { data: extractingJobs, error: extractingErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .select('id, user_id, status, started_at')
+        .eq('status', 'extracting')
+        .order('created_at', { ascending: true })
+        .limit(10);
 
-        if (transitionErr) {
-          return res.status(500).json({
-            error: 'Failed to write status transition artifact',
-            details: transitionErr.message,
+      if (extractingErr) {
+        return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
+      }
+
+      if (queuedJobs && queuedJobs.length > 0) {
+        const queuedIds = queuedJobs.map((j) => j.id);
+        const { error: queuedUpdErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update({
+            status: 'extracting',
+            started_at: nowIso,
+          })
+          .in('id', queuedIds);
+
+        if (queuedUpdErr) {
+          return res.status(500).json({ error: 'Failed to advance queued jobs', details: queuedUpdErr.message });
+        }
+
+        for (const job of queuedJobs) {
+          transitions.push({
+            job_id: job.id,
+            from_status: 'queued',
+            to_status: 'extracting',
           });
+          passTransitions += 1;
+          const transitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'queued',
+            'extracting',
+            { user_id: job.user_id }
+          );
+
+          if (transitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: transitionErr.message,
+            });
+          }
         }
       }
-    }
 
-    if (extractingJobs && extractingJobs.length > 0) {
-      const extractingIds = extractingJobs.map((j) => j.id);
-      const { error: extractingUpdErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .update({
-          status: 'underwriting',
-        })
-        .in('id', extractingIds);
+      if (extractingJobs && extractingJobs.length > 0) {
+        const extractingIds = extractingJobs.map((j) => j.id);
+        const { error: extractingUpdErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update({
+            status: 'underwriting',
+          })
+          .in('id', extractingIds);
 
-      if (extractingUpdErr) {
-        return res.status(500).json({ error: 'Failed to advance extracting jobs', details: extractingUpdErr.message });
-      }
+        if (extractingUpdErr) {
+          return res.status(500).json({ error: 'Failed to advance extracting jobs', details: extractingUpdErr.message });
+        }
 
-      for (const job of extractingJobs) {
-        transitions.push({
-          job_id: job.id,
-          from_status: 'extracting',
-          to_status: 'underwriting',
-        });
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          'extracting',
-          'underwriting',
-          { user_id: job.user_id }
-        );
-
-        if (transitionErr) {
-          return res.status(500).json({
-            error: 'Failed to write status transition artifact',
-            details: transitionErr.message,
+        for (const job of extractingJobs) {
+          transitions.push({
+            job_id: job.id,
+            from_status: 'extracting',
+            to_status: 'underwriting',
           });
+          passTransitions += 1;
+          const transitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'extracting',
+            'underwriting',
+            { user_id: job.user_id }
+          );
+
+          if (transitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: transitionErr.message,
+            });
+          }
         }
       }
-    }
 
-    const { data: underwritingJobs, error: underwritingErr } = await supabaseAdmin
-      .from('analysis_jobs')
-      .select('id, user_id, status, started_at')
-      .eq('status', 'underwriting')
-      .order('created_at', { ascending: true })
-      .limit(10);
-
-    if (underwritingErr) {
-      return res.status(500).json({ error: 'Failed to fetch underwriting jobs', details: underwritingErr.message });
-    }
-
-    if (underwritingJobs && underwritingJobs.length > 0) {
-      const underwritingIds = underwritingJobs.map((j) => j.id);
-      const { error: underwritingUpdErr } = await supabaseAdmin
+      const { data: underwritingJobs, error: underwritingErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .update({ status: 'scoring' })
-        .in('id', underwritingIds);
+        .select('id, user_id, status, started_at')
+        .eq('status', 'underwriting')
+        .order('created_at', { ascending: true })
+        .limit(10);
 
-      if (underwritingUpdErr) {
-        return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
+      if (underwritingErr) {
+        return res.status(500).json({ error: 'Failed to fetch underwriting jobs', details: underwritingErr.message });
       }
 
-      for (const job of underwritingJobs) {
-        transitions.push({
-          job_id: job.id,
-          from_status: 'underwriting',
-          to_status: 'scoring',
-        });
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          'underwriting',
-          'scoring',
-          { user_id: job.user_id }
-        );
+      if (underwritingJobs && underwritingJobs.length > 0) {
+        const underwritingIds = underwritingJobs.map((j) => j.id);
+        const { error: underwritingUpdErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update({ status: 'scoring' })
+          .in('id', underwritingIds);
 
-        if (transitionErr) {
-          return res.status(500).json({
-            error: 'Failed to write status transition artifact',
-            details: transitionErr.message,
-          });
+        if (underwritingUpdErr) {
+          return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
         }
+
+        for (const job of underwritingJobs) {
+          transitions.push({
+            job_id: job.id,
+            from_status: 'underwriting',
+            to_status: 'scoring',
+          });
+          passTransitions += 1;
+          const transitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'underwriting',
+            'scoring',
+            { user_id: job.user_id }
+          );
+
+          if (transitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: transitionErr.message,
+            });
+          }
+        }
+      }
+
+      const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .select('id, user_id, status, created_at, property_name')
+        .eq('status', 'scoring')
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (scoringErr) {
+        return res.status(500).json({ error: 'Failed to fetch scoring jobs', details: scoringErr.message });
+      }
+
+      if (scoringJobs && scoringJobs.length > 0) {
+        for (const job of scoringJobs) {
+          const { data: renderingUpdate, error: renderingErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({ status: 'rendering' })
+            .eq('id', job.id)
+            .eq('status', 'scoring')
+            .select('id')
+            .maybeSingle();
+
+          if (renderingErr) {
+            return res.status(500).json({ error: 'Failed to advance scoring job', details: renderingErr.message });
+          }
+
+          if (!renderingUpdate?.id) {
+            continue;
+          }
+
+          transitions.push({
+            job_id: job.id,
+            from_status: 'scoring',
+            to_status: 'rendering',
+          });
+          passTransitions += 1;
+          const scoringTransitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'scoring',
+            'rendering',
+            { user_id: job.user_id }
+          );
+
+          if (scoringTransitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: scoringTransitionErr.message,
+            });
+          }
+
+          let reportId = null;
+          let storagePath = null;
+          let generatorSource = 'generate-client-report';
+          let generatorError = null;
+
+          if (!job.user_id) {
+            generatorError = 'Missing user_id for report generation.';
+          }
+
+          if (job.user_id) {
+            const reportQuery = supabaseAdmin
+              .from('reports')
+              .select('id, storage_path, created_at')
+              .eq('user_id', job.user_id);
+
+            if (job.property_name) {
+              reportQuery.eq('property_name', job.property_name);
+            }
+
+            if (job.created_at) {
+              reportQuery.gte('created_at', job.created_at);
+            }
+
+            const { data: existingReports, error: reportErr } = await reportQuery
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (reportErr) {
+              return res.status(500).json({ error: 'Failed to check existing reports', details: reportErr.message });
+            }
+
+            if (existingReports && existingReports.length > 0 && existingReports[0].storage_path) {
+              reportId = existingReports[0].id;
+              storagePath = existingReports[0].storage_path;
+              generatorSource = 'existing_report';
+            }
+          }
+
+          if (!storagePath) {
+            if (!baseUrl) {
+              generatorError = 'Missing base URL for report generation.';
+            } else {
+              const reportRes = await fetch(`${baseUrl}/api/generate-client-report`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: job.user_id,
+                  property_name: job.property_name,
+                }),
+              });
+
+              const reportData = await reportRes.json().catch(() => ({}));
+              if (!reportRes.ok || !reportData?.reportId) {
+                generatorError = reportData?.error || `Report generation failed (${reportRes.status})`;
+              } else {
+                reportId = reportData.reportId;
+                storagePath = `${job.user_id}/${reportId}.pdf`;
+              }
+            }
+          }
+
+          if (generatorError) {
+            const failUpdate = { status: 'failed' };
+            if (supportsFailedAt) {
+              failUpdate.failed_at = nowIso;
+            }
+            const { error: failErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update(failUpdate)
+              .eq('id', job.id);
+
+            if (failErr) {
+              return res.status(500).json({ error: 'Failed to mark scoring job failed', details: failErr.message });
+            }
+
+            transitions.push({
+              job_id: job.id,
+              from_status: 'rendering',
+              to_status: 'failed',
+            });
+            passTransitions += 1;
+
+            const failedTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'rendering',
+              'failed',
+              { user_id: job.user_id, error: generatorError }
+            );
+
+            if (failedTransitionErr) {
+              return res.status(500).json({
+                error: 'Failed to write failed status transition artifact',
+                details: failedTransitionErr.message,
+              });
+            }
+
+            const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
+              event: 'report_generation_failed',
+              error: generatorError,
+              timestamp: nowIso,
+            });
+
+            if (workerEventErr) {
+              return res.status(500).json({
+                error: 'Failed to write report generation failure artifact',
+                details: workerEventErr.message,
+              });
+            }
+
+            continue;
+          }
+
+          const reportEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation', {
+            event: 'report_generation',
+            source: generatorSource,
+            report_id: reportId,
+            storage_path: storagePath,
+            timestamp: nowIso,
+          });
+
+          if (reportEventErr) {
+            return res.status(500).json({
+              error: 'Failed to write report generation artifact',
+              details: reportEventErr.message,
+            });
+          }
+
+          const { error: pdfGenErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({ status: 'pdf_generating' })
+            .eq('id', job.id);
+
+          if (pdfGenErr) {
+            return res.status(500).json({ error: 'Failed to advance job to pdf_generating', details: pdfGenErr.message });
+          }
+
+          transitions.push({
+            job_id: job.id,
+            from_status: 'rendering',
+            to_status: 'pdf_generating',
+          });
+          passTransitions += 1;
+          const pdfTransitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'rendering',
+            'pdf_generating',
+            { user_id: job.user_id, report_id: reportId }
+          );
+
+          if (pdfTransitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: pdfTransitionErr.message,
+            });
+          }
+
+          const { error: publishingErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({ status: 'publishing' })
+            .eq('id', job.id);
+
+          if (publishingErr) {
+            return res.status(500).json({ error: 'Failed to advance job to publishing', details: publishingErr.message });
+          }
+
+          transitions.push({
+            job_id: job.id,
+            from_status: 'pdf_generating',
+            to_status: 'publishing',
+          });
+          passTransitions += 1;
+          const publishingTransitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'pdf_generating',
+            'publishing',
+            { user_id: job.user_id, report_id: reportId }
+          );
+
+          if (publishingTransitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: publishingTransitionErr.message,
+            });
+          }
+
+          const completeUpdate = { status: 'completed' };
+          if (supportsCompletedAt) {
+            completeUpdate.completed_at = nowIso;
+          }
+
+          const { error: completedErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update(completeUpdate)
+            .eq('id', job.id);
+
+          if (completedErr) {
+            return res.status(500).json({ error: 'Failed to mark job completed', details: completedErr.message });
+          }
+
+          transitions.push({
+            job_id: job.id,
+            from_status: 'publishing',
+            to_status: 'completed',
+          });
+          passTransitions += 1;
+          const completedTransitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            'publishing',
+            'completed',
+            { user_id: job.user_id, report_id: reportId }
+          );
+
+          if (completedTransitionErr) {
+            return res.status(500).json({
+              error: 'Failed to write status transition artifact',
+              details: completedTransitionErr.message,
+            });
+          }
+        }
+      }
+
+      passesRun += 1;
+
+      if (passTransitions === 0) {
+        break;
       }
     }
 
@@ -304,6 +640,7 @@ export default async function handler(req, res) {
       advanced_count: transitions.length,
       timeout_failed_count: timedOutJobs.length,
       transitions,
+      passes_run: passesRun,
     });
   } catch (err) {
     console.error('admin-run-worker error:', err);
