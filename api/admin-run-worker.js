@@ -723,7 +723,7 @@ export default async function handler(req, res) {
             continue;
           }
 
-          const completeUpdate = { status: 'completed' };
+          const completeUpdate = { status: 'published' };
           if (supportsCompletedAt) {
             completeUpdate.completed_at = nowIso;
           }
@@ -740,13 +740,13 @@ export default async function handler(req, res) {
           transitions.push({
             job_id: job.id,
             from_status: 'publishing',
-            to_status: 'completed',
+            to_status: 'published',
           });
           passTransitions += 1;
           const completedTransitionErr = await writeStatusTransitionArtifact(
             job.id,
             'publishing',
-            'completed',
+            'published',
             { user_id: job.user_id, report_id: reportId }
           );
 
