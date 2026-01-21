@@ -99,37 +99,6 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function neutralizeHardcodedValues(html, replacement) {
-  const bodyStart = html.indexOf("<body");
-  if (bodyStart === -1) return html;
-  const bodyStartClose = html.indexOf(">", bodyStart);
-  const bodyEnd = html.lastIndexOf("</body>");
-  if (bodyStartClose === -1 || bodyEnd === -1) return html;
-
-  const head = html.slice(0, bodyStartClose + 1);
-  const body = html.slice(bodyStartClose + 1, bodyEnd);
-  const tail = html.slice(bodyEnd);
-
-  let out = body;
-  out = out.replace(/<(td|th)([^>]*)>[^<]*\d[^<]*<\/\1>/gi, (match, tag, attrs) => {
-    return `<${tag}${attrs}>${replacement}</${tag}>`;
-  });
-  out = out.replace(/<h2([^>]*)>[^<]*\d[^<]*<\/h2>/gi, (match, attrs) => {
-    return `<h2${attrs}>${replacement}</h2>`;
-  });
-  out = out.replace(/<p([^>]*)>[^<]*\d[^<]*<\/p>/gi, (match, attrs) => {
-    return `<p${attrs}>${replacement}</p>`;
-  });
-  out = out.replace(/<li([^>]*)>[^<]*\d[^<]*<\/li>/gi, (match, attrs) => {
-    return `<li${attrs}>${replacement}</li>`;
-  });
-  out = out.replace(/<span([^>]*)>[^<]*\d[^<]*<\/span>/gi, (match, attrs) => {
-    return `<span${attrs}>${replacement}</span>`;
-  });
-
-  return `${head}${out}${tail}`;
-}
-
 // ---------- Dynamic Table Builders ----------
 
 function buildUnitMixTable(rows = []) {
@@ -753,8 +722,6 @@ REQUIRED_SECTIONS.forEach((key) => {
       "{{FINAL_RECOMMENDATION}}",
       getSection("finalRecommendation")
     );
-
-    finalHtml = neutralizeHardcodedValues(finalHtml, DATA_NOT_AVAILABLE);
 
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
 
