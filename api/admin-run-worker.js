@@ -54,21 +54,46 @@ export default async function handler(req, res) {
     const nowIso = now.toISOString();
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
-  'validating_inputs',
-  'extracting',
-  'underwriting',
-  'scoring',
-  'rendering',
-  'pdf_generating',
-  'publishing',
-];
+      'queued',
+      'validating_inputs',
+      'extracting',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ];
+
+    const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
+
+    const writeStatusTransitionArtifact = async (jobId, fromStatus, toStatus, meta) => {
+      const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
+        {
+          job_id: jobId,
+          user_id: meta?.user_id ?? null,
+          type: 'status_transition',
+          bucket: 'system',
+          object_path: `analysis_jobs/${jobId}/status_transition/${fromStatus}_to_${toStatus}/${safeTimestamp(
+            nowIso
+          )}.json`,
+          payload: {
+            job_id: jobId,
+            from_status: fromStatus,
+            to_status: toStatus,
+            at: nowIso,
+            meta: meta || {},
+          },
+        },
+      ]);
+
+      return error;
+    };
 
     // Timeout guard: mark long-running jobs as failed
-        const { data: inProgressJobs, error: inProgressError } = await supabase
+    const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
       .select('id, user_id, status, started_at, created_at')
-      .in('status', inProgressStatuses)
-      .not('started_at', 'is', null);
+      .in('status', inProgressStatuses);
 
     if (inProgressError) {
       return res.status(500).json({
@@ -85,7 +110,7 @@ export default async function handler(req, res) {
     });
 
     if (timedOutJobs.length > 0) {
-      const timedOutIds = timedOutJobs.map((job) => job.id);
+        const timedOutIds = timedOutJobs.map((job) => job.id);
       const { error: failErr } = await supabaseAdmin
         .from('analysis_jobs')
         .update({ status: 'failed' })
@@ -93,6 +118,22 @@ export default async function handler(req, res) {
 
       if (failErr) {
         return res.status(500).json({ error: 'Failed to mark timed-out jobs', details: failErr.message });
+      }
+
+      for (const job of timedOutJobs) {
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          job.status,
+          'failed',
+          { event: 'timeout', threshold_minutes: 60, user_id: job.user_id }
+        );
+
+        if (transitionErr) {
+          return res.status(500).json({
+            error: 'Failed to write timeout status transition artifact',
+            details: transitionErr.message,
+          });
+        }
       }
 
       const timeoutArtifacts = timedOutJobs.map((job) => ({
@@ -138,7 +179,6 @@ export default async function handler(req, res) {
       .limit(10);
 
     const transitions = [];
-    const artifacts = [];
 
     if (extractingErr) {
       return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
@@ -158,25 +198,26 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to advance queued jobs', details: queuedUpdErr.message });
       }
 
-      queuedJobs.forEach((job) => {
+      for (const job of queuedJobs) {
         transitions.push({
           job_id: job.id,
           from_status: 'queued',
           to_status: 'extracting',
         });
-          artifacts.push({
-  job_id: job.id,
-  user_id: job.user_id,
-  type: 'status_transition',
-  bucket: 'system',
-  object_path: `analysis_jobs/${job.id}/status_transition/queued_to_extracting/${nowIso}.json`,
-  payload: {
-    from_status: 'queued',
-    to_status: 'extracting',
-    timestamp: nowIso,
-  },
-});
-      });
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          'queued',
+          'extracting',
+          { user_id: job.user_id }
+        );
+
+        if (transitionErr) {
+          return res.status(500).json({
+            error: 'Failed to write status transition artifact',
+            details: transitionErr.message,
+          });
+        }
+      }
     }
 
     if (extractingJobs && extractingJobs.length > 0) {
@@ -192,25 +233,26 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to advance extracting jobs', details: extractingUpdErr.message });
       }
 
-      extractingJobs.forEach((job) => {
+      for (const job of extractingJobs) {
         transitions.push({
           job_id: job.id,
           from_status: 'extracting',
           to_status: 'underwriting',
         });
-        artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          bucket: 'system',
-          object_path: `analysis_jobs/${job.id}/status_transition/extracting_to_underwriting/${nowIso}.json`,
-          payload: {
-            from_status: 'extracting',
-            to_status: 'underwriting',
-            timestamp: nowIso,
-          },
-        });
-      });
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          'extracting',
+          'underwriting',
+          { user_id: job.user_id }
+        );
+
+        if (transitionErr) {
+          return res.status(500).json({
+            error: 'Failed to write status transition artifact',
+            details: transitionErr.message,
+          });
+        }
+      }
     }
 
     const { data: underwritingJobs, error: underwritingErr } = await supabaseAdmin
@@ -235,34 +277,25 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
       }
 
-      underwritingJobs.forEach((job) => {
+      for (const job of underwritingJobs) {
         transitions.push({
           job_id: job.id,
           from_status: 'underwriting',
           to_status: 'scoring',
         });
-        artifacts.push({
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'status_transition',
-          bucket: 'system',
-          object_path: `analysis_jobs/${job.id}/status_transition/underwriting_to_scoring/${nowIso}.json`,
-          payload: {
-            from_status: 'underwriting',
-            to_status: 'scoring',
-            timestamp: nowIso,
-          },
-        });
-      });
-    }
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          'underwriting',
+          'scoring',
+          { user_id: job.user_id }
+        );
 
-    if (artifacts.length > 0) {
-      const { error: artifactErr } = await supabaseAdmin
-        .from('analysis_artifacts')
-        .insert(artifacts);
-
-      if (artifactErr) {
-        return res.status(500).json({ error: 'Failed to write analysis artifacts', details: artifactErr.message });
+        if (transitionErr) {
+          return res.status(500).json({
+            error: 'Failed to write status transition artifact',
+            details: transitionErr.message,
+          });
+        }
       }
     }
 
