@@ -11,8 +11,17 @@ import { supabase } from "@/lib/customSupabaseClient";
     totalReports: 0,
     activeReports: 0,
   });
+  const [jobSummary, setJobSummary] = useState({
+    queued: 0,
+    inProgress: 0,
+    published: 0,
+    failed: 0,
+  });
   const [recentReports, setRecentReports] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [queueMetrics, setQueueMetrics] = useState(null);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueError, setQueueError] = useState(null);
 
   // Admin Operations (manual queue runner)
   const [runLoading, setRunLoading] = useState(false);
@@ -65,6 +74,37 @@ import { supabase } from "@/lib/customSupabaseClient";
     }
   };
 
+  const fetchQueueMetrics = async () => {
+    setQueueLoading(true);
+    setQueueError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token || "";
+      const res = await fetch("/api/admin/queue-metrics", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load queue metrics.");
+      }
+
+      setQueueMetrics(data);
+    } catch (err) {
+      setQueueError(err?.message || "Failed to load queue metrics.");
+    } finally {
+      setQueueLoading(false);
+    }
+  };
+
     useEffect(() => {
         const fetchAdminData = async () => {
       setLoading(true);
@@ -87,12 +127,46 @@ import { supabase } from "@/lib/customSupabaseClient";
           .limit(5);
         const activeCount = (reports || []).filter((r) => r.status === "Processing").length;
 
+        const { count: queuedCount } = await supabase
+          .from("analysis_jobs")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "queued");
+
+        const { count: inProgressCount } = await supabase
+          .from("analysis_jobs")
+          .select("*", { count: "exact", head: true })
+          .in("status", [
+            "validating_inputs",
+            "extracting",
+            "underwriting",
+            "scoring",
+            "rendering",
+            "pdf_generating",
+            "publishing",
+          ]);
+
+        const { count: publishedCount } = await supabase
+          .from("analysis_jobs")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "published");
+
+        const { count: failedCount } = await supabase
+          .from("analysis_jobs")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "failed");
+
         setStats({
           totalUsers: userCount || 0,
           totalReports: reportCount || 0,
           activeReports: activeCount,
         });
         setRecentReports(reports || []);
+        setJobSummary({
+          queued: queuedCount || 0,
+          inProgress: inProgressCount || 0,
+          published: publishedCount || 0,
+          failed: failedCount || 0,
+        });
       } catch (err) {
         console.error("Error fetching admin data:", err);
       } finally {
@@ -101,6 +175,10 @@ import { supabase } from "@/lib/customSupabaseClient";
     };
 
     fetchAdminData();
+
+    fetchQueueMetrics();
+    const interval = setInterval(fetchQueueMetrics, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -221,6 +299,40 @@ import { supabase } from "@/lib/customSupabaseClient";
             </div>
           ) : (
             <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Queued
+                  </div>
+                  <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                    {jobSummary.queued}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    In Progress
+                  </div>
+                  <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                    {jobSummary.inProgress}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Published
+                  </div>
+                  <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                    {jobSummary.published}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Failed
+                  </div>
+                  <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                    {jobSummary.failed}
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
                 <motion.div
                   whileHover={{ scale: 1.03 }}
@@ -255,6 +367,102 @@ import { supabase } from "@/lib/customSupabaseClient";
                   </p>
                 </motion.div>
               </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-[#0F172A]">
+                    Queue Overview
+                  </h2>
+                  <button
+                    onClick={fetchQueueMetrics}
+                    className="flex items-center gap-2 text-[#1F8A8A] font-semibold hover:underline"
+                  >
+                    <RefreshCcw className="h-4 w-4" /> Refresh
+                  </button>
+                </div>
+
+                {queueLoading ? (
+                  <div className="text-sm text-slate-500">Loading queue metrics...</div>
+                ) : queueError ? (
+                  <div className="text-sm text-red-700">{queueError}</div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+                      {[
+                        ["Queued", "queued"],
+                        ["Extracting", "extracting"],
+                        ["Underwriting", "underwriting"],
+                        ["Scoring", "scoring"],
+                        ["Rendering", "rendering"],
+                        ["PDF Generating", "pdf_generating"],
+                        ["Publishing", "publishing"],
+                        ["Published", "published"],
+                        ["Failed", "failed"],
+                      ].map(([label, key]) => (
+                        <div key={key} className="rounded-md border border-slate-200 bg-slate-50 p-3 text-center">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                            {label}
+                          </div>
+                          <div className="mt-1 text-xl font-extrabold text-[#0F172A]">
+                            {queueMetrics?.counts_by_status?.[key] ?? 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="overflow-hidden border border-slate-200 rounded-lg">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="text-left text-[#0F172A] text-xs font-semibold bg-slate-50">
+                            <th className="p-3 border-b border-slate-200">Job ID</th>
+                            <th className="p-3 border-b border-slate-200">Property</th>
+                            <th className="p-3 border-b border-slate-200">Status</th>
+                            <th className="p-3 border-b border-slate-200">Created</th>
+                            <th className="p-3 border-b border-slate-200">Updated</th>
+                            <th className="p-3 border-b border-slate-200">User</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(queueMetrics?.recent_jobs || []).length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan="6"
+                                className="p-4 text-center text-sm text-slate-500"
+                              >
+                                No recent jobs found.
+                              </td>
+                            </tr>
+                          ) : (
+                            queueMetrics.recent_jobs.map((job) => (
+                              <tr key={job.id} className="border-b border-slate-100">
+                                <td className="p-3 text-xs text-slate-600">{job.id}</td>
+                                <td className="p-3 text-sm font-semibold text-[#0F172A]">
+                                  {job.property_name || "Untitled Property"}
+                                </td>
+                                <td className="p-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  {job.status}
+                                </td>
+                                <td className="p-3 text-xs text-slate-600">
+                                  {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
+                                </td>
+                                <td className="p-3 text-xs text-slate-600">
+                                  {job.updated_at ? new Date(job.updated_at).toLocaleString() : "—"}
+                                </td>
+                                <td className="p-3 text-xs text-slate-600">{job.user_id}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </motion.div>
 
               {/* RECENT REPORTS */}
               <motion.div

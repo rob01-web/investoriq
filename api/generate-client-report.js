@@ -16,6 +16,7 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+const IS_SAMPLE_REPORT = false;
 
 // ---------- Formatting Helpers ----------
 
@@ -522,8 +523,9 @@ const REQUIRED_SECTIONS = [
 
 REQUIRED_SECTIONS.forEach((key) => {
   if (!sections[key]) {
-    sections[key] =
-      '<p class="muted">Section intentionally omitted in sample report.</p>';
+    sections[key] = IS_SAMPLE_REPORT
+      ? '<p class="muted">Section intentionally omitted in sample report.</p>'
+      : "";
   }
 });
     
@@ -688,6 +690,12 @@ REQUIRED_SECTIONS.forEach((key) => {
       "{{FINAL_RECOMMENDATION}}",
       getSection("finalRecommendation")
     );
+
+    if (!IS_SAMPLE_REPORT) {
+      finalHtml = replaceAll(finalHtml, "Sample Report", "");
+      finalHtml = replaceAll(finalHtml, "Sample Output for Demonstration Only", "");
+      finalHtml = replaceAll(finalHtml, "Sample Output for Demonstration", "");
+    }
 
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [

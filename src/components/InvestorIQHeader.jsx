@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/SupabaseAuthContext";
 
 export default function InvestorIQHeader() {
   const { user, signOut } = useAuth();
+  const IS_SAMPLE_REPORT = false;
 
   // Scroll-based effects
   const { scrollY } = useScroll();
@@ -38,14 +39,16 @@ export default function InvestorIQHeader() {
 
         {/* NAVIGATION */}
         <nav className="flex items-center gap-6 text-sm font-semibold text-[#0F172A]">
-          <a
-            href="/reports/sample-report.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#1F8A8A] transition"
-          >
-            Sample Report
-          </a>
+          {IS_SAMPLE_REPORT && (
+            <a
+              href="/reports/sample-report.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#1F8A8A] transition"
+            >
+              Sample Report
+            </a>
+          )}
 
           {user ? (
             <button

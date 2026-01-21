@@ -1040,6 +1040,13 @@ if (verifiedCredits < 1) {
     <h2 className="text-xl font-bold text-[#0F172A] mb-6">
       In Progress
     </h2>
+    {inProgressJobs.some((job) => job.status === 'queued') && (
+      <div className="mb-4 text-sm font-medium text-[#334155]">
+        Reports are generated within 24 business hours.
+        <br />
+        Processing does not occur on weekends or holidays.
+      </div>
+    )}
 
     <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm divide-y">
       {inProgressJobs.map((job) => (

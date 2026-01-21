@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
+  const IS_SAMPLE_REPORT = false;
   
   return (
     <>
@@ -49,14 +50,16 @@ export default function LandingPage() {
               Analyze My Property
             </Button>
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-              onClick={() => window.location.href = "/sample-report"}
-            >
-              View Sample Report
-            </Button>
+            {IS_SAMPLE_REPORT && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
+                onClick={() => window.location.href = "/sample-report"}
+              >
+                View Sample Report
+              </Button>
+            )}
           </div>
 
           {/* HERO IMAGE */}

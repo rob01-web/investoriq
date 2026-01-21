@@ -37,6 +37,8 @@ const PALETTE = {
   red: "#DC2626",
 };
 
+const IS_SAMPLE_REPORT = false;
+
 const SPACING = {
   page: { l: 48, t: 60, r: 48, b: 60 },
   block: 12,
@@ -590,12 +592,16 @@ function coverPage(data) {
         ],
         margin: [0, 0, 0, 40],
       },
-      {
-        text: "Sample Report - For Demonstration Purposes Only",
-        alignment: "right",
-        fontSize: 8,
-        color: PALETTE.faintInk,
-      },
+      ...(IS_SAMPLE_REPORT
+        ? [
+            {
+              text: "Sample Report - For Demonstration Purposes Only",
+              alignment: "right",
+              fontSize: 8,
+              color: PALETTE.faintInk,
+            },
+          ]
+        : []),
     ],
   };
 }
