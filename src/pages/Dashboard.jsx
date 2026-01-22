@@ -734,8 +734,8 @@ if (verifiedCredits < 1) {
 <p className="text-[#334155] leading-relaxed font-medium">
   Upload <strong>PDFs, spreadsheets, or property photos.</strong>
   <br />
-  <span className="text-[#1F8A8A] font-semibold">The more you upload, the smarter your report.</span>{' '}
-  (10 MB max per file)
+  <span className="text-[#1F8A8A] font-semibold">Spreadsheets power structured financial metrics.</span>{' '}
+  PDFs, images, and documents are extracted for reference and provenance. Missing or degraded inputs are disclosed and never assumed. (10 MB max per file)
 </p>
                 <p className="text-[#334155] text-sm mt-2">
                   Works for both <strong>off-market</strong> and MLS properties.

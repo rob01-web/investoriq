@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
+import { analyzeTables } from '../_lib/textractClient.js';
+import { textractTablesToMatrix } from '../_lib/textractTablesToMatrix.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 
@@ -90,7 +92,12 @@ export default async function handler(req, res) {
     const nowIso = new Date().toISOString();
 
     for (const file of jobFiles || []) {
-      if (file.mime_type !== 'application/pdf') {
+      const mimeType = String(file.mime_type || '').toLowerCase();
+      const isPdf = mimeType === 'application/pdf';
+      const canTextract =
+        mimeType === 'application/pdf' || mimeType === 'image/png' || mimeType === 'image/jpeg';
+
+      if (!canTextract) {
         skippedCount += 1;
         results.push({
           file_id: file.id,
@@ -100,7 +107,9 @@ export default async function handler(req, res) {
         continue;
       }
 
-      pdfCount += 1;
+      if (isPdf) {
+        pdfCount += 1;
+      }
 
       try {
         const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
@@ -113,6 +122,94 @@ export default async function handler(req, res) {
 
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        try {
+          const textractResponse = await analyzeTables({ bytes: buffer, mimeType });
+          const { tables } = textractTablesToMatrix(textractResponse?.Blocks || []);
+          let maxRows = 0;
+          let maxCols = 0;
+          for (const table of tables) {
+            const rowCount = table.rows?.length || 0;
+            if (rowCount > maxRows) maxRows = rowCount;
+            for (const row of table.rows || []) {
+              if (row.length > maxCols) maxCols = row.length;
+            }
+          }
+
+          const tablesSummary = {
+            tableCount: tables.length,
+            maxRows,
+            maxCols,
+          };
+
+          const tablesBucket = 'system';
+          const tablesObjectPath = `analysis_jobs/${jobId}/document_tables_extracted/${file.id}/${safeTimestamp(
+            nowIso
+          )}.json`;
+
+          const { error: tablesUploadErr } = await supabaseAdmin.storage
+            .from(tablesBucket)
+            .upload(
+              tablesObjectPath,
+              JSON.stringify({ tables }),
+              { contentType: 'application/json', upsert: true }
+            );
+
+          if (tablesUploadErr) {
+            throw new Error(tablesUploadErr.message || 'Failed to upload tables JSON');
+          }
+
+          const { error: tablesArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 'document_tables_extracted',
+              bucket: tablesBucket,
+              object_path: tablesObjectPath,
+              payload: {
+                source_file_id: file.id,
+                source_mime: mimeType,
+                parser: 'aws_textract_tables',
+                tables_summary: tablesSummary,
+                timestamp: nowIso,
+              },
+            },
+          ]);
+          if (tablesArtifactErr) {
+            throw new Error(tablesArtifactErr.message || 'Failed to write tables artifact');
+          }
+        } catch (err) {
+          const errorMessage = err?.message || 'Unknown error';
+          const { error: textractEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 'worker_event',
+              bucket: 'internal',
+              object_path: `analysis_jobs/${jobId}/worker_event/textract_failed/${safeTimestamp(nowIso)}.json`,
+              payload: {
+                event: 'textract_failed',
+                source_file_id: file.id,
+                source_mime: mimeType,
+                error_message: errorMessage,
+                timestamp: nowIso,
+              },
+            },
+          ]);
+          if (textractEventErr) {
+            throw new Error(textractEventErr.message || 'Failed to write Textract error artifact');
+          }
+        }
+
+        if (!isPdf) {
+          results.push({
+            file_id: file.id,
+            original_filename: file.original_filename,
+            status: 'tables_extracted',
+          });
+          continue;
+        }
+
         const parsed = await pdfParse(buffer);
         const text = String(parsed?.text || '').trim();
         const excerpt = text.slice(0, 1200).trim();

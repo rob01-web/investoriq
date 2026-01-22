@@ -40,6 +40,118 @@ const labelRules = [
   { key: 'net_operating_income', labels: ['net operating income', 'noi'] },
 ];
 
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const numericFromCell = (value) => {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const isParenNegative = /^\s*\(.*\)\s*$/.test(text);
+  const cleaned = text.replace(/[(),$]/g, '').replace(/[^0-9.\-]/g, '');
+  if (!cleaned) return null;
+  let num = Number(cleaned);
+  if (!Number.isFinite(num)) return null;
+  if (isParenNegative && num > 0) {
+    num = -num;
+  }
+  return num;
+};
+
+const containsHeaderToken = (row, token) => {
+  if (!Array.isArray(row)) return false;
+  return row.some((cell) => normalizeText(cell).includes(token));
+};
+
+export function parseT12FromExtractedTables(tables) {
+  const monthTokens = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const periodTokens = ['ytd', 'trailing 12', 't-12'];
+  const metricTokens = ['noi', 'net operating income', 'total operating expenses', 'effective gross income'];
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headerHasToken = (rows, token, { prefix = false, word = false } = {}) =>
+    (rows || []).some((row) =>
+      Array.isArray(row) &&
+      row.some((cell) => {
+        const text = normalizeText(cell);
+        if (!text) return false;
+        if (prefix) {
+          return new RegExp(`\\b${escapeRegExp(token)}`, 'i').test(text);
+        }
+        if (word) {
+          return new RegExp(`\\b${escapeRegExp(token)}\\b`, 'i').test(text);
+        }
+        return text.includes(token);
+      })
+    );
+
+  const candidates = (Array.isArray(tables) ? tables : [])
+    .map((table) => {
+      const rows = Array.isArray(table?.rows) ? table.rows : [];
+      if (rows.length === 0) return null;
+      const headerRows = rows.slice(0, 2);
+      const hasPeriod =
+        monthTokens.some((token) => headerHasToken(headerRows, token, { prefix: true })) ||
+        periodTokens.some((token) => headerHasToken(headerRows, token));
+      const hasMetric = metricTokens.some((token) =>
+        headerHasToken(headerRows, token, { word: token === 'noi' })
+      );
+      if (!hasPeriod || !hasMetric) return null;
+
+      const score =
+        monthTokens.filter((token) => headerHasToken(headerRows, token, { prefix: true })).length +
+        periodTokens.filter((token) => headerHasToken(headerRows, token)).length +
+        metricTokens.filter((token) => headerHasToken(headerRows, token, { word: token === 'noi' })).length;
+      return { rows, score };
+    })
+    .filter(Boolean);
+
+  if (candidates.length === 0) {
+    throw new Error('No T12 table detected in extracted tables.');
+  }
+
+  const bestCandidate = candidates.reduce((best, current) =>
+    !best || current.score > best.score ? current : best
+  );
+  const rows = Array.isArray(bestCandidate?.rows) ? bestCandidate.rows : [];
+  const found = {
+    gross_potential_rent: null,
+    effective_gross_income: null,
+    total_operating_expenses: null,
+    net_operating_income: null,
+  };
+
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    for (let i = 0; i < row.length; i += 1) {
+      const cellText = normalizeText(row[i]);
+      if (!cellText) continue;
+      for (const rule of labelRules) {
+        if (found[rule.key] !== null) {
+          continue;
+        }
+        if (rule.labels.some((label) => cellText.includes(label))) {
+          for (let j = i + 1; j < row.length; j += 1) {
+            const value = numericFromCell(row[j]);
+            if (value !== null) {
+              found[rule.key] = value;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    file_id: null,
+    original_filename: null,
+    method: 'aws_textract_tables',
+    confidence: null,
+    gross_potential_rent: found.gross_potential_rent,
+    effective_gross_income: found.effective_gross_income,
+    total_operating_expenses: found.total_operating_expenses,
+    net_operating_income: found.net_operating_income,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
