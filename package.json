@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "vite",
     "generate-charts": "node scripts/generateCharts.js",
-    "prebuild": "npm run generate-charts",
     "build": "vite build",
     "preview": "vite preview --host --port 4173"
   },
