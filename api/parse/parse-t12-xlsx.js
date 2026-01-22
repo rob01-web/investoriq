@@ -145,10 +145,10 @@ export function parseT12FromExtractedTables(tables) {
     original_filename: null,
     method: 'aws_textract_tables',
     confidence: null,
-    gross_potential_rent: found.gross_potential_rent,
-    effective_gross_income: found.effective_gross_income,
-    total_operating_expenses: found.total_operating_expenses,
-    net_operating_income: found.net_operating_income,
+    gross_potential_rent: found.gross_potential_rent ?? null,
+    effective_gross_income: found.effective_gross_income ?? null,
+    total_operating_expenses: found.total_operating_expenses ?? null,
+    net_operating_income: found.net_operating_income ?? null,
   };
 }
 
@@ -228,7 +228,103 @@ export default async function handler(req, res) {
     for (const file of jobFiles || []) {
       const eligible = isSpreadsheetMime(file.mime_type) || isXlsxName(file.original_filename);
       if (!eligible) {
-        skippedCount += 1;
+        try {
+          const { data: tablesRows, error: tablesErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('id, bucket, object_path, payload, created_at')
+            .eq('job_id', jobId)
+            .eq('type', 'document_tables_extracted')
+            .or(`payload->>file_id.eq.${file.id},payload->>source_file_id.eq.${file.id}`)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (tablesErr) {
+            throw new Error(tablesErr.message || 'Failed to fetch tables artifact');
+          }
+
+          const tablesArtifact = tablesRows?.[0];
+          if (!tablesArtifact) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const tablesBucket = tablesArtifact.payload?.bucket || tablesArtifact.bucket || 'system';
+          const tablesObjectPath =
+            tablesArtifact.payload?.object_path || tablesArtifact.object_path || '';
+
+          if (!tablesObjectPath) {
+            throw new Error('Tables artifact is missing object_path');
+          }
+
+          const { data: tablesFile, error: tablesDownloadErr } = await supabaseAdmin.storage
+            .from(tablesBucket)
+            .download(tablesObjectPath);
+
+          if (tablesDownloadErr || !tablesFile) {
+            throw new Error(tablesDownloadErr?.message || 'Failed to download tables JSON');
+          }
+
+          const tablesBuffer = Buffer.from(await tablesFile.arrayBuffer());
+          const tablesJson = JSON.parse(tablesBuffer.toString('utf-8') || '{}');
+          const parsed = parseT12FromExtractedTables(tablesJson.tables || []);
+          const { file_id, original_filename, method, confidence, ...parsedFields } = parsed || {};
+
+          const payload = {
+            file_id: file.id,
+            original_filename: file.original_filename,
+            method: 'aws_textract_tables',
+            confidence: null,
+            ...parsedFields,
+          };
+
+          const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 't12_parsed',
+              bucket: 'system',
+              object_path: `analysis_jobs/${jobId}/t12/${file.id}.json`,
+              payload,
+            },
+          ]);
+
+          if (artifactErr) {
+            throw new Error(artifactErr.message || 'Failed to write t12 artifact');
+          }
+
+          await supabaseAdmin
+            .from('analysis_job_files')
+            .update({ parse_status: 'parsed', parse_error: null })
+            .eq('id', file.id);
+
+          parsedCount += 1;
+        } catch (err) {
+          const errorMessage = err?.message || 'Unknown error';
+
+          await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 'worker_event',
+              bucket: 'internal',
+              object_path: `analysis_jobs/${jobId}/worker_event/t12_textract_failed/${safeTimestamp(nowIso)}.json`,
+              payload: {
+                event: 't12_textract_failed',
+                file_id: file.id,
+                original_filename: file.original_filename,
+                error_message: errorMessage,
+                timestamp: nowIso,
+              },
+            },
+          ]);
+
+          await supabaseAdmin
+            .from('analysis_job_files')
+            .update({ parse_status: 'failed', parse_error: errorMessage })
+            .eq('id', file.id);
+
+          failedCount += 1;
+        }
         continue;
       }
 
