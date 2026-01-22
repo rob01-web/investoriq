@@ -2,7 +2,7 @@
 
 import dotenv from "dotenv";
 dotenv.config();
-import { ensureSentenceIntegrity } from "./lib/sentenceIntegrity.js";
+import { ensureSentenceIntegrity } from "../src/lib/sentenceIntegrity.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
