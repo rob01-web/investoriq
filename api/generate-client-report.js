@@ -88,7 +88,7 @@ function replaceAll(str, token, value) {
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
 }
 
-const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (document parsing not enabled)";
+const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -97,6 +97,112 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
+  if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
+  const rows = unitMix
+    .map((row) => {
+      const unitType = escapeHtml(row.unit_type || "");
+      const count = typeof row.count === "number" ? row.count : Number(row.count || 0);
+      const rent =
+        typeof row.current_rent === "number" ? formatValue(row.current_rent) : DATA_NOT_AVAILABLE;
+      return `<tr>
+            <td>${unitType || DATA_NOT_AVAILABLE}</td>
+            <td>${count || DATA_NOT_AVAILABLE}</td>
+            <td>${rent}</td>
+            <td>${DATA_NOT_AVAILABLE}</td>
+            <td>${DATA_NOT_AVAILABLE}</td>
+            <td>${DATA_NOT_AVAILABLE}</td>
+          </tr>`;
+    })
+    .join("");
+
+  const total = Number.isFinite(Number(totalUnits)) ? Number(totalUnits) : DATA_NOT_AVAILABLE;
+
+  const totalRow = `<tr>
+            <td><strong>Blended / Total</strong></td>
+            <td><strong>${total}</strong></td>
+            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
+            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
+            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
+            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
+          </tr>`;
+
+  return `${rows}${totalRow}`;
+}
+
+function injectUnitMixTable(html, rowsHtml) {
+  if (!rowsHtml) return html;
+  const regex =
+    /(<p class="subsection-title">Illustrative Unit Mix and Rent Lift<\/p>[\s\S]*?<table>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>)/;
+  if (!regex.test(html)) return html;
+  return html.replace(regex, `$1${rowsHtml}$3`);
+}
+
+function injectOccupancyNote(html, occupancy) {
+  if (occupancy === null || occupancy === undefined) return html;
+  const occupancyPercent = `${Math.round(Number(occupancy) * 100)}%`;
+  const note = `<p class="small" style="margin-top:8px;">
+        <strong>Reported occupancy (rent roll):</strong> ${occupancyPercent}
+      </p>`;
+  const regex =
+    /(Illustrative Unit Mix and Rent Lift<\/p>[\s\S]*?<\/table>\s*)<p class="small" style="margin-top:8px;">[\s\S]*?<\/p>/;
+  if (!regex.test(html)) return html;
+  return html.replace(regex, `$1${note}`);
+}
+
+function buildT12SummaryHtml(t12Payload, formatValue) {
+  if (!t12Payload) return "";
+  const rows = [
+    ["Gross Potential Rent", t12Payload.gross_potential_rent],
+    ["Effective Gross Income", t12Payload.effective_gross_income],
+    ["Total Operating Expenses", t12Payload.total_operating_expenses],
+    ["Net Operating Income", t12Payload.net_operating_income],
+  ];
+
+  const rowHtml = rows
+    .map(([label, value]) => {
+      const display = Number.isFinite(Number(value)) ? formatValue(value) : DATA_NOT_AVAILABLE;
+      return `<tr><td>${label}</td><td>${display}</td></tr>`;
+    })
+    .join("");
+
+  return `<table>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        ${rowHtml}
+      </table>`;
+}
+
+function buildT12KeyMetricRows(t12Payload, formatValue) {
+  if (!t12Payload) return "";
+  const rows = [
+    ["In-Place Gross Potential Rent", t12Payload.gross_potential_rent],
+    ["Effective Gross Income (TTM)", t12Payload.effective_gross_income],
+    ["Operating Expenses (TTM)", t12Payload.total_operating_expenses],
+    ["Net Operating Income (TTM)", t12Payload.net_operating_income],
+  ];
+
+  return rows
+    .map(([label, value]) => {
+      const display = Number.isFinite(Number(value)) ? formatValue(value) : DATA_NOT_AVAILABLE;
+      return `<tr>
+          <td>${label}</td>
+          <td>${display}</td>
+        </tr>`;
+    })
+    .join("");
+}
+
+function injectKeyMetricsRows(html, rowsHtml) {
+  if (!rowsHtml) return html;
+  const regex =
+    /(<p class="label">Key Metrics Snapshot \(Base Case\)<\/p>[\s\S]*?<table>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>)/;
+  if (!regex.test(html)) return html;
+  return html.replace(regex, `$1$2${rowsHtml}$3`);
 }
 
 // ---------- Dynamic Table Builders ----------
@@ -556,7 +662,31 @@ REQUIRED_SECTIONS.forEach((key) => {
     const getSection = (key) => sections[key] || "";
 
     let documentSourcesHtml = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
+    let rentRollPayload = null;
+    let t12Payload = null;
     if (jobId) {
+      const { data: rentRollArtifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "rent_roll_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      rentRollPayload = rentRollArtifact?.payload || null;
+
+      const { data: t12Artifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "t12_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      t12Payload = t12Artifact?.payload || null;
+
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
         .select("original_filename, created_at")
@@ -722,6 +852,17 @@ REQUIRED_SECTIONS.forEach((key) => {
       "{{FINAL_RECOMMENDATION}}",
       getSection("finalRecommendation")
     );
+
+    const unitMixRows = buildUnitMixRows(
+      rentRollPayload?.unit_mix,
+      rentRollPayload?.total_units,
+      formatCurrency
+    );
+    finalHtml = injectUnitMixTable(finalHtml, unitMixRows);
+    finalHtml = injectOccupancyNote(finalHtml, rentRollPayload?.occupancy);
+
+    const t12Rows = buildT12KeyMetricRows(t12Payload, formatCurrency);
+    finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
 
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
 
