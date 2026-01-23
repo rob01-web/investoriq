@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { sendEmailSES } from './_lib/email-ses';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -428,6 +429,65 @@ export default async function handler(req, res) {
                   details: workerEventErr.message,
                 });
               }
+
+              const { data: existingEmail } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .select('id')
+                .eq('job_id', job.id)
+                .eq('type', 'email_sent')
+                .eq('bucket', 'system')
+                .eq('payload->>email_type', 'missing_structured_financials')
+                .limit(1)
+                .maybeSingle();
+
+              if (!existingEmail?.id) {
+                try {
+                  const { data: userRes, error: userErr } =
+                    await supabaseAdmin.auth.admin.getUserById(job.user_id);
+
+                  if (userErr) {
+                    throw userErr;
+                  }
+
+                  const userEmail = userRes?.user?.email;
+                  if (!userEmail) {
+                    throw new Error('Missing user email');
+                  }
+
+                  await sendEmailSES({
+                    to: userEmail,
+                    subject: 'Action required: documents needed to continue your InvestorIQ report',
+                    text:
+                      'Your InvestorIQ report cannot proceed yet.\n\n' +
+                      'We could not identify structured financial documents required for underwriting.\n\n' +
+                      'Required:\n' +
+                      '- Rent Roll\n' +
+                      '- Operating Statement (T12 / Income Statement / P&L)\n\n' +
+                      'Please upload at least one of these documents to continue processing.\n\n' +
+                      'This report will remain paused until required documents are available.',
+                  });
+
+                  await supabaseAdmin.from('analysis_artifacts').insert([
+                    {
+                      job_id: job.id,
+                      user_id: job.user_id,
+                      type: 'email_sent',
+                      bucket: 'system',
+                      object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
+                        nowIso
+                      )}.json`,
+                      payload: {
+                        email_type: 'missing_structured_financials',
+                        job_id: job.id,
+                        user_id: job.user_id,
+                        timestamp: nowIso,
+                      },
+                    },
+                  ]);
+                } catch (err) {
+                  console.error('Failed to send missing_structured_financials email:', err?.message || err);
+                }
+              }
             }
             continue;
           }
@@ -823,6 +883,62 @@ export default async function handler(req, res) {
               error: 'Failed to write status transition artifact',
               details: completedTransitionErr.message,
             });
+          }
+
+          const { data: publishedEmail } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('id')
+            .eq('job_id', job.id)
+            .eq('type', 'email_sent')
+            .eq('bucket', 'system')
+            .eq('payload->>email_type', 'report_published')
+            .limit(1)
+            .maybeSingle();
+
+          if (!publishedEmail?.id) {
+            try {
+              const { data: userRes, error: userErr } =
+                await supabaseAdmin.auth.admin.getUserById(job.user_id);
+
+              if (userErr) {
+                throw userErr;
+              }
+
+              const userEmail = userRes?.user?.email;
+              if (!userEmail) {
+                throw new Error('Missing user email');
+              }
+
+              await sendEmailSES({
+                to: userEmail,
+                subject: 'Your InvestorIQ report is ready',
+                text:
+                  'Your InvestorIQ report has been completed and is now available in your dashboard.\n\n' +
+                  'You may download the report at any time by signing in to InvestorIQ.\n\n' +
+                  'If you have additional documents or wish to run another analysis,\n' +
+                  'you may start a new report from your dashboard.',
+              });
+
+              await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: job.id,
+                  user_id: job.user_id,
+                  type: 'email_sent',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${job.id}/email_sent/report_published/${safeTimestamp(
+                    nowIso
+                  )}.json`,
+                  payload: {
+                    email_type: 'report_published',
+                    job_id: job.id,
+                    user_id: job.user_id,
+                    timestamp: nowIso,
+                  },
+                },
+              ]);
+            } catch (err) {
+              console.error('Failed to send report_published email:', err?.message || err);
+            }
           }
         }
       }
