@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { sendEmailSES } from './_lib/email-ses';
+import { sendEmailSES } from './_lib/email-ses.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
