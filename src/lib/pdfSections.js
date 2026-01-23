@@ -297,27 +297,67 @@ function seedData() {
    =========================== */
 
 function mergeSeedWithInput(input = {}) {
-  const seed = seedData();
-  const out = {
-    ...seed,
-    ...input,
-    property: { ...seed.property, ...(input.property || {}) },
-    verdict: { ...seed.verdict, ...(input.verdict || {}) },
-    location: {
-      ...seed.location,
-      ...(input.location || {}),
-      metrics: {
-        ...(seed.location?.metrics || {}),
-        ...((input.location && input.location.metrics) || {}),
+  if (IS_SAMPLE_REPORT) {
+    const seed = seedData();
+    const out = {
+      ...seed,
+      ...input,
+      property: { ...seed.property, ...(input.property || {}) },
+      verdict: { ...seed.verdict, ...(input.verdict || {}) },
+      location: {
+        ...seed.location,
+        ...(input.location || {}),
+        metrics: {
+          ...(seed.location?.metrics || {}),
+          ...((input.location && input.location.metrics) || {}),
+        },
       },
+      risk: { ...seed.risk, ...(input.risk || {}) },
+      renovation: { ...seed.renovation, ...(input.renovation || {}) },
+      analystNotes: { ...seed.analystNotes, ...(input.analystNotes || {}) },
+    };
+    if (Array.isArray(input.cashflow)) out.cashflow = input.cashflow;
+    if (Array.isArray(input.scenarios)) out.scenarios = input.scenarios;
+    if (Array.isArray(input.strategies)) out.strategies = input.strategies;
+    return out;
+  }
+
+  const out = {
+    ...input,
+    logoBase64: input.logoBase64 ?? null,
+    generatedAt: input.generatedAt || new Date(),
+    property: { ...(input.property || {}) },
+    verdict: { ...(input.verdict || {}) },
+    location: {
+      ...(input.location || {}),
+      metrics: { ...((input.location && input.location.metrics) || {}) },
+      factors: Array.isArray(input.location?.factors) ? input.location.factors : [],
     },
-    risk: { ...seed.risk, ...(input.risk || {}) },
-    renovation: { ...seed.renovation, ...(input.renovation || {}) },
-    analystNotes: { ...seed.analystNotes, ...(input.analystNotes || {}) },
+    risk: {
+      ...(input.risk || {}),
+      matrix3x3: Array.isArray(input.risk?.matrix3x3) ? input.risk.matrix3x3 : [],
+      legend: Array.isArray(input.risk?.legend) ? input.risk.legend : [],
+      notes: Array.isArray(input.risk?.notes) ? input.risk.notes : [],
+      stressTests: Array.isArray(input.risk?.stressTests) ? input.risk.stressTests : [],
+    },
+    renovation: {
+      ...(input.renovation || {}),
+      budget: Array.isArray(input.renovation?.budget) ? input.renovation.budget : [],
+      conceptualNotes: Array.isArray(input.renovation?.conceptualNotes)
+        ? input.renovation.conceptualNotes
+        : [],
+    },
+    analystNotes: {
+      ...(input.analystNotes || {}),
+      highlights: Array.isArray(input.analystNotes?.highlights) ? input.analystNotes.highlights : [],
+      watchItems: Array.isArray(input.analystNotes?.watchItems) ? input.analystNotes.watchItems : [],
+      nextSteps: Array.isArray(input.analystNotes?.nextSteps) ? input.analystNotes.nextSteps : [],
+    },
+    cashflow: Array.isArray(input.cashflow) ? input.cashflow : [],
+    scenarios: Array.isArray(input.scenarios) ? input.scenarios : [],
+    strategies: Array.isArray(input.strategies) ? input.strategies : [],
   };
-  if (Array.isArray(input.cashflow)) out.cashflow = input.cashflow;
-  if (Array.isArray(input.scenarios)) out.scenarios = input.scenarios;
-  if (Array.isArray(input.strategies)) out.strategies = input.strategies;
+
   return out;
 }
 
