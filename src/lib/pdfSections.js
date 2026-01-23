@@ -81,7 +81,10 @@ function clamp01(x) {
 function capRate(noi, price) {
   const n = Number(noi);
   const p = Number(price);
-  return p > 0 ? n / p : 0;
+  if (!Number.isFinite(n) || !Number.isFinite(p) || p <= 0) {
+    return Number.NaN;
+  }
+  return n / p;
 }
 
 function dataNotAvailableBlock() {
@@ -416,7 +419,10 @@ function chip(text, color, bgColor) {
 }
 
 function scoreBand(score10) {
-  const s = Number(score10) || 0;
+  const s = Number(score10);
+  if (!Number.isFinite(s)) {
+    return null;
+  }
   let label = "Balanced";
   let color = PALETTE.ink;
 
@@ -694,13 +700,14 @@ function executiveSummaryPage(data) {
   const { property, verdict, cashflow, dscr } = data;
   const askingPriceValue = Number(property?.askingPrice);
   const noiValue = Number(property?.noi);
-  const cap = capRate(noiValue, askingPriceValue);
-  const hasCapRateInputs = Number.isFinite(noiValue) && Number.isFinite(askingPriceValue);
+  const hasCapRateInputs =
+    Number.isFinite(noiValue) && Number.isFinite(askingPriceValue) && askingPriceValue > 0;
   const marketCapValue = Number(property?.marketCapRate);
   const dscrValue = Number(dscr);
   const occupancyValue = Number(property?.occupancy);
   const hasMarketMetrics =
     Number.isFinite(marketCapValue) && Number.isFinite(dscrValue) && Number.isFinite(occupancyValue);
+  const cap = hasCapRateInputs ? capRate(noiValue, askingPriceValue) : null;
   const hasSummaryData = Boolean(property?.askingPrice || property?.noi || property?.units || dscr);
 
   if (!hasSummaryData) {
@@ -738,7 +745,7 @@ function executiveSummaryPage(data) {
                     ["Address", property?.address || ""],
                     ["Type", property?.type || ""],
                     ["Year Built", property?.yearBuilt ? String(property.yearBuilt) : "-"],
-                    ["Units", fmt.number(property?.units || 0, 0)],
+                    ["Units", fmt.number(property?.units, 0)],
                   ],
                 },
                 layout: "lightHorizontalLines",
@@ -878,8 +885,11 @@ function executiveSummaryPage(data) {
 function propertySnapshotPage(data) {
   const { property } = data;
   const askingPriceValue = Number(property?.askingPrice);
-  const cap = capRate(property?.noi, property?.askingPrice);
-  const hasCapRateInputs = Number.isFinite(askingPriceValue) && Number.isFinite(Number(property?.noi));
+  const hasCapRateInputs =
+    Number.isFinite(askingPriceValue) &&
+    askingPriceValue > 0 &&
+    Number.isFinite(Number(property?.noi));
+  const cap = hasCapRateInputs ? capRate(property?.noi, askingPriceValue) : null;
   const grossPotentialRentAnnualValue = Number(property?.grossPotentialRentAnnual);
   const noiValue = Number(property?.noi);
   const hasIncomeBlockInputs =
@@ -896,7 +906,9 @@ function propertySnapshotPage(data) {
   const avgRentCurrentValue = Number(property?.avgRentCurrent);
   const avgRentProFormaValue = Number(property?.avgRentProForma);
   const hasRentLiftInputs =
-    Number.isFinite(avgRentCurrentValue) && Number.isFinite(avgRentProFormaValue);
+    Number.isFinite(avgRentCurrentValue) &&
+    avgRentCurrentValue > 0 &&
+    Number.isFinite(avgRentProFormaValue);
   const hasSnapshotData = Boolean(property?.units || property?.avgRentCurrent || property?.noi);
 
   if (!hasSnapshotData) {
@@ -926,9 +938,9 @@ function propertySnapshotPage(data) {
                     ["Asset Name", property?.name || ""],
                     ["Address", property?.address || ""],
                     ["Year Built", property?.yearBuilt ? String(property.yearBuilt) : "-"],
-                    ["Building Size", `${fmt.number(property?.buildingSqFt || 0, 0)} sq ft`],
-                    ["Site Size", `${fmt.number(property?.lotSizeSqFt || 0, 0)} sq ft`],
-                    ["Total Units", fmt.number(property?.units || 0, 0)],
+                    ["Building Size", `${fmt.number(property?.buildingSqFt, 0)} sq ft`],
+                    ["Site Size", `${fmt.number(property?.lotSizeSqFt, 0)} sq ft`],
+                    ["Total Units", fmt.number(property?.units, 0)],
                   ],
                 },
                 layout: "lightHorizontalLines",
@@ -1019,7 +1031,9 @@ function propertySnapshotPage(data) {
 
 function marketInsightsPage(data) {
   const { location } = data;
-  const band = scoreBand(location?.score10 || 0);
+  const scoreValue = Number(location?.score10);
+  const hasScore = Number.isFinite(scoreValue);
+  const band = hasScore ? scoreBand(scoreValue) : null;
   const metrics = location?.metrics || {};
   const hasMetricValue = Object.values(metrics).some((value) => Number.isFinite(Number(value)));
   const hasMarketData = Boolean(
@@ -1062,8 +1076,11 @@ function marketInsightsPage(data) {
                 table: {
                   widths: ["35%", "65%"],
                   body: [
-                    ["Location Quality Score", `${fmt.number(location?.score10 || 0, 1)} / 10`],
-                    ["InvestorIQ View", band.label],
+                    [
+                      "Location Quality Score",
+                      hasScore ? `${fmt.number(scoreValue, 1)} / 10` : dataNotAvailableBlock(),
+                    ],
+                    ["InvestorIQ View", hasScore && band ? band.label : dataNotAvailableBlock()],
                   ],
                 },
                 layout: "lightHorizontalLines",
@@ -1102,10 +1119,10 @@ function marketInsightsPage(data) {
                 table: {
                   widths: ["70%", "30%"],
                   body: [
-                    ["Five year population growth", fmt.percent(location?.metrics?.population5Yr || 0)],
-                    ["Three year rent growth", fmt.percent(location?.metrics?.rentGrowth3Yr || 0)],
-                    ["Unemployment rate", fmt.percent(location?.metrics?.unemployment || 0)],
-                    ["New supply pipeline (units)", fmt.number(location?.metrics?.newSupplyPipelineUnits || 0, 0)],
+                    ["Five year population growth", fmt.percent(location?.metrics?.population5Yr)],
+                    ["Three year rent growth", fmt.percent(location?.metrics?.rentGrowth3Yr)],
+                    ["Unemployment rate", fmt.percent(location?.metrics?.unemployment)],
+                    ["New supply pipeline (units)", fmt.number(location?.metrics?.newSupplyPipelineUnits, 0)],
                   ],
                 },
                 layout: "lightHorizontalLines",
@@ -1296,7 +1313,7 @@ function riskMatrixPage(data) {
                     ...legend.map(([label, val]) => [
                       { text: label, style: "body" },
                       {
-                        text: `Approx intensity score ${fmt.number(val || 0, 1)}`,
+                        text: `Approx intensity score ${fmt.number(val, 1)}`,
                         style: "body",
                       },
                     ]),
@@ -1351,7 +1368,12 @@ function riskMatrixPage(data) {
 
 function renovationPlanPage(data) {
   const { renovation } = data;
-  const totalBudget = renovation.budget.reduce((sum, [, val]) => sum + Number(val || 0), 0);
+  const hasBudgetValues =
+    Array.isArray(renovation.budget) &&
+    renovation.budget.every(([, val]) => Number.isFinite(Number(val)));
+  const totalBudget = hasBudgetValues
+    ? renovation.budget.reduce((sum, [, val]) => sum + Number(val), 0)
+    : null;
   const hasRenovationData = Boolean(
     (Array.isArray(renovation?.budget) && renovation.budget.length > 0) ||
       renovation?.narrative ||
@@ -1396,7 +1418,7 @@ function renovationPlanPage(data) {
                     ]),
                     [
                       { text: "Total Budget", style: "tableHeader" },
-                      { text: fmt.money(totalBudget), style: "tableHeader" },
+                      hasBudgetValues ? { text: fmt.money(totalBudget), style: "tableHeader" } : dataNotAvailableBlock(),
                     ],
                   ],
                 },
