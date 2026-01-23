@@ -38,6 +38,7 @@ const PALETTE = {
 };
 
 const IS_SAMPLE_REPORT = false;
+const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
 
 const SPACING = {
   page: { l: 48, t: 60, r: 48, b: 60 },
@@ -81,6 +82,15 @@ function capRate(noi, price) {
   const n = Number(noi);
   const p = Number(price);
   return p > 0 ? n / p : 0;
+}
+
+function dataNotAvailableBlock() {
+  return {
+    text: DATA_NOT_AVAILABLE,
+    style: "body",
+    color: PALETTE.midInk,
+    margin: [0, 6, 0, 0],
+  };
 }
 
 /* ===========================
@@ -453,6 +463,21 @@ function qualitativeChip(text) {
 function coverPage(data) {
   const { property, verdict, logoBase64, generatedAt } = data;
   const band = scoreBand(verdict?.dealScore / 10);
+  const hasCoverData = Boolean(property?.name || property?.address || property?.type);
+
+  if (!hasCoverData) {
+    return {
+      stack: [
+        { text: "InvestorIQ", style: "brandTitle" },
+        {
+          text: "Institutional Grade Property IQ Report",
+          style: "coverSubtitle",
+          margin: [0, 4, 0, 16],
+        },
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -653,6 +678,17 @@ function coverPage(data) {
 function executiveSummaryPage(data) {
   const { property, verdict, cashflow, dscr } = data;
   const cap = capRate(property?.noi, property?.askingPrice);
+  const hasSummaryData = Boolean(property?.askingPrice || property?.noi || property?.units || dscr);
+
+  if (!hasSummaryData) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Executive Summary", "High level view of yield, risk, and strategy in one glance."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -811,6 +847,17 @@ function executiveSummaryPage(data) {
 function propertySnapshotPage(data) {
   const { property } = data;
   const cap = capRate(property?.noi, property?.askingPrice);
+  const hasSnapshotData = Boolean(property?.units || property?.avgRentCurrent || property?.noi);
+
+  if (!hasSnapshotData) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Property Snapshot", "Physical profile and income statement view."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -903,6 +950,24 @@ function propertySnapshotPage(data) {
 function marketInsightsPage(data) {
   const { location } = data;
   const band = scoreBand(location?.score10 || 0);
+  const metrics = location?.metrics || {};
+  const hasMetricValue = Object.values(metrics).some((value) => Number.isFinite(Number(value)));
+  const hasMarketData = Boolean(
+    location?.marketName ||
+      location?.summary ||
+      (Array.isArray(location?.factors) && location.factors.length > 0) ||
+      hasMetricValue
+  );
+
+  if (!hasMarketData) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Market Insights Snapshot", "Neighborhood quality, macro drivers, and qualitative signal."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -995,6 +1060,20 @@ function marketInsightsPage(data) {
 
 function scenarioAnalysisPage(data) {
   const { scenarios } = data;
+  const hasScenarios = Array.isArray(scenarios) && scenarios.length > 0;
+
+  if (!hasScenarios) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle(
+          "Scenario Analysis",
+          "Five path view from downside protection to upside potential over the hold period."
+        ),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -1052,6 +1131,21 @@ function riskMatrixPage(data) {
   const { risk } = data;
   const matrix = risk.matrix3x3 || [];
   const legend = risk.legend || [];
+  const hasRiskData = Boolean(
+    (Array.isArray(risk?.matrix3x3) && risk.matrix3x3.length > 0) ||
+      (Array.isArray(risk?.notes) && risk.notes.length > 0) ||
+      (Array.isArray(risk?.stressTests) && risk.stressTests.length > 0)
+  );
+
+  if (!hasRiskData) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Risk and Stress Testing", "Heat map of risk categories and modeled shocks."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   const heatBody = [["", "Low Impact", "Medium Impact", "High Impact"]];
   const likelihoodLabels = ["Low Likelihood", "Moderate Likelihood", "High Likelihood"];
@@ -1176,6 +1270,21 @@ function riskMatrixPage(data) {
 function renovationPlanPage(data) {
   const { renovation } = data;
   const totalBudget = renovation.budget.reduce((sum, [, val]) => sum + Number(val || 0), 0);
+  const hasRenovationData = Boolean(
+    (Array.isArray(renovation?.budget) && renovation.budget.length > 0) ||
+      renovation?.narrative ||
+      (Array.isArray(renovation?.conceptualNotes) && renovation.conceptualNotes.length > 0)
+  );
+
+  if (!hasRenovationData) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Renovation and Capital Plan", "Scope of work, capital allocation, and upgrade vision."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -1245,6 +1354,17 @@ function renovationPlanPage(data) {
 
 function strategyMatrixPage(data) {
   const { strategies } = data;
+  const hasStrategies = Array.isArray(strategies) && strategies.length > 0;
+
+  if (!hasStrategies) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("Investor Strategy Matrix", "Side by side view of viable paths for this asset."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
@@ -1280,6 +1400,21 @@ function strategyMatrixPage(data) {
 
 function analystCommentaryPage(data) {
   const { analystNotes } = data;
+  const hasNotes = Boolean(
+    (Array.isArray(analystNotes?.highlights) && analystNotes.highlights.length > 0) ||
+      (Array.isArray(analystNotes?.watchItems) && analystNotes.watchItems.length > 0) ||
+      (Array.isArray(analystNotes?.nextSteps) && analystNotes.nextSteps.length > 0)
+  );
+
+  if (!hasNotes) {
+    return {
+      stack: [
+        { text: "", pageBreak: "before" },
+        sectionTitle("InvestorIQ Analyst Commentary", "Framework-driven view for investment committees and partners."),
+        dataNotAvailableBlock(),
+      ],
+    };
+  }
 
   return {
     stack: [
