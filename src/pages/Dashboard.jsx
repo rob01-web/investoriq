@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [ackSubmitting, setAckSubmitting] = useState(false);
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
+  const [jobEvents, setJobEvents] = useState({});
 
   const fetchReports = async () => {
     if (!profile?.id) return;
@@ -43,33 +44,81 @@ export default function Dashboard() {
     }
   };
 
+  const fetchJobEvents = async (jobIds) => {
+    if (!jobIds || jobIds.length === 0) {
+      setJobEvents({});
+      return;
+    }
+
+    const eventTypes = [
+      'missing_structured_financials',
+      'textract_failed',
+      'rent_roll_fallback_failed',
+      't12_fallback_failed',
+    ];
+
+    const { data, error } = await supabase
+      .from('analysis_artifacts')
+      .select('id, job_id, payload, created_at')
+      .eq('type', 'worker_event')
+      .in('job_id', jobIds)
+      .in('payload->>event', eventTypes)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch job events:', error);
+      return;
+    }
+
+    const priority = {
+      missing_structured_financials: 0,
+      textract_failed: 1,
+      rent_roll_fallback_failed: 2,
+      t12_fallback_failed: 3,
+    };
+
+    const nextEvents = {};
+    for (const row of data || []) {
+      const eventName = row?.payload?.event;
+      if (!eventName) continue;
+      const current = nextEvents[row.job_id];
+      if (!current || priority[eventName] < priority[current.payload?.event]) {
+        nextEvents[row.job_id] = row;
+      }
+    }
+
+    setJobEvents(nextEvents);
+  };
+
   const fetchInProgressJobs = async () => {
-  if (!profile?.id) return;
+    if (!profile?.id) return;
 
-  const { data, error } = await supabase
-    .from('analysis_jobs')
-    .select('id, property_name, status, created_at')
-    .eq('user_id', profile.id)
-    .in('status', [
-      'queued',
-      'validating_inputs',
-      'extracting',
-      'underwriting',
-      'scoring',
-      'rendering',
-      'pdf_generating',
-      'publishing',
-    ])
-    .order('created_at', { ascending: false })
-    .limit(10);
+    const { data, error } = await supabase
+      .from('analysis_jobs')
+      .select('id, property_name, status, created_at')
+      .eq('user_id', profile.id)
+      .in('status', [
+        'queued',
+        'validating_inputs',
+        'extracting',
+        'underwriting',
+        'scoring',
+        'rendering',
+        'pdf_generating',
+        'publishing',
+      ])
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-  if (error) {
-    console.error('Failed to fetch in-progress jobs:', error);
-    return;
-  }
+    if (error) {
+      console.error('Failed to fetch in-progress jobs:', error);
+      return;
+    }
 
-  setInProgressJobs(data || []);
-};
+    const rows = data || [];
+    setInProgressJobs(rows);
+    await fetchJobEvents(rows.map((job) => job.id));
+  };
 
   useEffect(() => {
   const syncEverything = async () => {
@@ -695,6 +744,7 @@ if (verifiedCredits < 1) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-10"
+            id="upload-section"
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
               <div>
@@ -1049,25 +1099,69 @@ if (verifiedCredits < 1) {
     )}
 
     <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm divide-y">
-      {inProgressJobs.map((job) => (
-        <div
-          key={job.id}
-          className="flex items-center justify-between px-6 py-4"
-        >
-          <div>
-            <div className="text-sm font-semibold text-[#0F172A]">
-              {job.property_name || 'Untitled Property'}
-            </div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
-              Status: {job.status.replaceAll('_', ' ')}
-            </div>
-          </div>
+      {inProgressJobs.map((job) => {
+        const jobEvent = jobEvents[job.id];
+        const eventName = jobEvent?.payload?.event || '';
+        const errorMessage = jobEvent?.payload?.error_message || '';
+        const isActionRequired = eventName === 'missing_structured_financials';
+        const isWarning = !isActionRequired && Boolean(eventName);
 
-          <div className="text-sm font-semibold text-[#1F8A8A]">
-            Processing
+        return (
+          <div
+            key={job.id}
+            className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between"
+          >
+            <div className="flex-1">
+              {isActionRequired && (
+                <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#0F172A]">
+                  <div className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                    Action required
+                  </div>
+                  <div className="mt-1 text-sm text-slate-700">
+                    We could not extract a Rent Roll or Operating Statement (T12/P&L) from your uploaded documents.
+                    Please upload clearer files or spreadsheets.
+                  </div>
+                  {errorMessage ? (
+                    <div className="mt-2 text-xs text-slate-500">Log: {errorMessage}</div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
+                      setIsModalOpen(true);
+                    }}
+                    className="mt-3 inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d1326]"
+                  >
+                    Upload replacement documents
+                  </button>
+                </div>
+              )}
+
+              {isWarning && (
+                <div className="mb-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <div className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                    Document processing issue
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {errorMessage || 'We encountered an issue processing one of your documents.'}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-sm font-semibold text-[#0F172A]">
+                {job.property_name || 'Untitled Property'}
+              </div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
+                Status: {job.status.replaceAll('_', ' ')}
+              </div>
+            </div>
+
+            <div className="text-sm font-semibold text-[#1F8A8A]">
+              Processing
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   </div>
 )}

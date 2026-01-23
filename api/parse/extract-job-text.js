@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     const { data: jobFiles, error: filesErr } = await supabaseAdmin
       .from('analysis_job_files')
-      .select('id, job_id, user_id, bucket, object_path, original_filename, mime_type, created_at')
+      .select('id, job_id, user_id, bucket, object_path, original_filename, mime_type, created_at, doc_type')
       .eq('job_id', jobId)
       .order('uploaded_at', { ascending: true });
 
@@ -112,6 +112,7 @@ export default async function handler(req, res) {
       }
 
       try {
+        let tablesArtifactInfo = null;
         const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
           .from(file.bucket)
           .download(file.object_path);
@@ -178,6 +179,8 @@ export default async function handler(req, res) {
           if (tablesArtifactErr) {
             throw new Error(tablesArtifactErr.message || 'Failed to write tables artifact');
           }
+
+          tablesArtifactInfo = { bucket: tablesBucket, object_path: tablesObjectPath };
         } catch (err) {
           const errorMessage = err?.message || 'Unknown error';
           const { error: textractEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
@@ -198,6 +201,141 @@ export default async function handler(req, res) {
           ]);
           if (textractEventErr) {
             throw new Error(textractEventErr.message || 'Failed to write Textract error artifact');
+          }
+        }
+
+        if (tablesArtifactInfo) {
+          const baseUrl = (process.env.PUBLIC_SITE_URL || 'https://investoriq.tech').replace(/\/$/, '');
+          const adminHeader = process.env.ADMIN_RUN_KEY || '';
+          const fallbackHeaders = {
+            'Content-Type': 'application/json',
+            'x-admin-run-key': adminHeader,
+          };
+
+          if (file.doc_type === 'rent_roll') {
+            const { data: rentParsed } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', jobId)
+              .eq('type', 'rent_roll_parsed')
+              .eq('payload->>file_id', file.id)
+              .limit(1)
+              .maybeSingle();
+
+            if (!rentParsed?.id) {
+              try {
+                const rentRes = await fetch(`${baseUrl}/api/parse/parse-rent-roll-xlsx`, {
+                  method: 'POST',
+                  headers: fallbackHeaders,
+                  body: JSON.stringify({ jobId }),
+                });
+
+                if (!rentRes.ok) {
+                  throw new Error(`Rent roll fallback failed (${rentRes.status})`);
+                }
+
+                const rentParsedCheck = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('id')
+                  .eq('job_id', jobId)
+                  .eq('type', 'rent_roll_parsed')
+                  .eq('payload->>file_id', file.id)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!rentParsedCheck?.data?.id) {
+                  throw new Error('Rent roll fallback did not emit parsed artifact');
+                }
+              } catch (err) {
+                const errorMessage = err?.message || 'Rent roll fallback failed';
+                await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: jobId,
+                    user_id: file.user_id || null,
+                    type: 'worker_event',
+                    bucket: 'internal',
+                    object_path: `analysis_jobs/${jobId}/worker_event/rent_roll_fallback_failed/${safeTimestamp(
+                      nowIso
+                    )}.json`,
+                    payload: {
+                      event: 'rent_roll_fallback_failed',
+                      file_id: file.id,
+                      original_filename: file.original_filename,
+                      error_message: errorMessage,
+                      timestamp: nowIso,
+                    },
+                  },
+                ]);
+
+                await supabaseAdmin
+                  .from('analysis_job_files')
+                  .update({ parse_status: 'failed', parse_error: errorMessage })
+                  .eq('id', file.id);
+              }
+            }
+          }
+
+          if (file.doc_type === 't12') {
+            const { data: t12Parsed } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', jobId)
+              .eq('type', 't12_parsed')
+              .eq('payload->>file_id', file.id)
+              .limit(1)
+              .maybeSingle();
+
+            if (!t12Parsed?.id) {
+              try {
+                const t12Res = await fetch(`${baseUrl}/api/parse/parse-t12-xlsx`, {
+                  method: 'POST',
+                  headers: fallbackHeaders,
+                  body: JSON.stringify({ jobId }),
+                });
+
+                if (!t12Res.ok) {
+                  throw new Error(`T12 fallback failed (${t12Res.status})`);
+                }
+
+                const t12ParsedCheck = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('id')
+                  .eq('job_id', jobId)
+                  .eq('type', 't12_parsed')
+                  .eq('payload->>file_id', file.id)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!t12ParsedCheck?.data?.id) {
+                  throw new Error('T12 fallback did not emit parsed artifact');
+                }
+              } catch (err) {
+                const errorMessage = err?.message || 'T12 fallback failed';
+                await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: jobId,
+                    user_id: file.user_id || null,
+                    type: 'worker_event',
+                    bucket: 'internal',
+                    object_path: `analysis_jobs/${jobId}/worker_event/t12_fallback_failed/${safeTimestamp(
+                      nowIso
+                    )}.json`,
+                    payload: {
+                      event: 't12_fallback_failed',
+                      file_id: file.id,
+                      original_filename: file.original_filename,
+                      error_message: errorMessage,
+                      timestamp: nowIso,
+                    },
+                  },
+                ]);
+
+                await supabaseAdmin
+                  .from('analysis_job_files')
+                  .update({ parse_status: 'failed', parse_error: errorMessage })
+                  .eq('id', file.id);
+              }
+            }
           }
         }
 

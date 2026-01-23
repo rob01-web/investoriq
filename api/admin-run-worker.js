@@ -382,19 +382,75 @@ export default async function handler(req, res) {
       }
 
       if (extractingJobs && extractingJobs.length > 0) {
-        const extractingIds = extractingJobs.map((j) => j.id);
-        const { error: extractingUpdErr } = await supabaseAdmin
-          .from('analysis_jobs')
-          .update({
-            status: 'underwriting',
-          })
-          .in('id', extractingIds);
-
-        if (extractingUpdErr) {
-          return res.status(500).json({ error: 'Failed to advance extracting jobs', details: extractingUpdErr.message });
-        }
-
         for (const job of extractingJobs) {
+          const { data: structuredArtifacts, error: structuredErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('id, type')
+            .eq('job_id', job.id)
+            .in('type', ['rent_roll_parsed', 't12_parsed'])
+            .limit(1);
+
+          if (structuredErr) {
+            return res.status(500).json({
+              error: 'Failed to check structured financial artifacts',
+              details: structuredErr.message,
+            });
+          }
+
+          if (!structuredArtifacts || structuredArtifacts.length === 0) {
+            const { data: existingEvent } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', job.id)
+              .eq('type', 'worker_event')
+              .eq('payload->>event', 'missing_structured_financials')
+              .limit(1)
+              .maybeSingle();
+
+            if (!existingEvent?.id) {
+              const workerEventErr = await writeWorkerEventArtifact(
+                job.id,
+                job.user_id,
+                'missing_structured_financials',
+                {
+                  event: 'missing_structured_financials',
+                  code: 'NO_STRUCTURED_FINANCIALS',
+                  level: 'error',
+                  message:
+                    'No rent roll or T12 has been parsed yet. Job will remain in extracting until structured financials are available.',
+                  timestamp: nowIso,
+                }
+              );
+
+              if (workerEventErr) {
+                return res.status(500).json({
+                  error: 'Failed to write worker event artifact',
+                  details: workerEventErr.message,
+                });
+              }
+            }
+            continue;
+          }
+
+          const { data: extractingUpdate, error: extractingUpdErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({ status: 'underwriting' })
+            .eq('id', job.id)
+            .eq('status', 'extracting')
+            .select('id')
+            .maybeSingle();
+
+          if (extractingUpdErr) {
+            return res.status(500).json({
+              error: 'Failed to advance extracting job',
+              details: extractingUpdErr.message,
+            });
+          }
+
+          if (!extractingUpdate?.id) {
+            continue;
+          }
+
           transitions.push({
             job_id: job.id,
             from_status: 'extracting',
