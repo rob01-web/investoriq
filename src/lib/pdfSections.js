@@ -462,8 +462,12 @@ function qualitativeChip(text) {
 
 function coverPage(data) {
   const { property, verdict, logoBase64, generatedAt } = data;
-  const band = scoreBand(verdict?.dealScore / 10);
+  const dealScoreValue = Number(verdict?.dealScore);
+  const hasDealScore = Number.isFinite(dealScoreValue);
+  const band = hasDealScore ? scoreBand(dealScoreValue / 10) : null;
   const hasCoverData = Boolean(property?.name || property?.address || property?.type);
+  const hasVerdictMetrics =
+    Number.isFinite(Number(verdict?.targetIRR)) && Number.isFinite(Number(verdict?.equityMultipleBase));
 
   if (!hasCoverData) {
     return {
@@ -540,52 +544,63 @@ function coverPage(data) {
                 columns: [
                   {
                     width: "auto",
-                    stack: [
-                      {
-                        text: "Deal Score",
-                        style: "label",
-                      },
-                      {
-                        text: `${fmt.number(verdict?.dealScore || 0, 0)} / 100`,
-                        color: band.color,
-                        fontSize: 18,
-                        bold: true,
-                      },
-                      {
-                        text: band.label,
-                        fontSize: 8,
-                        color: band.color,
-                      },
-                    ],
+                    stack: hasDealScore
+                      ? [
+                          {
+                            text: "Deal Score",
+                            style: "label",
+                          },
+                          {
+                            text: `${fmt.number(dealScoreValue, 0)} / 100`,
+                            color: band.color,
+                            fontSize: 18,
+                            bold: true,
+                          },
+                          {
+                            text: band.label,
+                            fontSize: 8,
+                            color: band.color,
+                          },
+                        ]
+                      : [dataNotAvailableBlock()],
                     margin: [0, 10, 20, 0],
                   },
-                  {
-                    width: "auto",
-                    stack: [
-                      {
-                        text: "Target IRR",
-                        style: "label",
-                      },
-                      {
-                        text: fmt.percent(verdict?.targetIRR || 0.15, 1),
-                        style: "bigMetric",
-                      },
-                    ],
-                    margin: [0, 10, 20, 0],
-                  },
-                  {
-                    width: "auto",
-                    stack: [
-                      {
-                        text: "Equity Multiple",
-                        style: "label",
-                      },
-                      {
-                        text: fmt.number(verdict?.equityMultipleBase || 1.7, 2),
-                        style: "bigMetric",
-                      },
-                    ],
-                  },
+                  ...(hasVerdictMetrics
+                    ? [
+                        {
+                          width: "auto",
+                          stack: [
+                            {
+                              text: "Target IRR",
+                              style: "label",
+                            },
+                            {
+                              text: fmt.percent(verdict?.targetIRR, 1),
+                              style: "bigMetric",
+                            },
+                          ],
+                          margin: [0, 10, 20, 0],
+                        },
+                        {
+                          width: "auto",
+                          stack: [
+                            {
+                              text: "Equity Multiple",
+                              style: "label",
+                            },
+                            {
+                              text: fmt.number(verdict?.equityMultipleBase, 2),
+                              style: "bigMetric",
+                            },
+                          ],
+                        },
+                      ]
+                    : [
+                        {
+                          width: "auto",
+                          stack: [dataNotAvailableBlock()],
+                        },
+                      ]),
                 ],
                 margin: [0, 8, 0, 24],
               },
@@ -677,7 +692,15 @@ function coverPage(data) {
 
 function executiveSummaryPage(data) {
   const { property, verdict, cashflow, dscr } = data;
-  const cap = capRate(property?.noi, property?.askingPrice);
+  const askingPriceValue = Number(property?.askingPrice);
+  const noiValue = Number(property?.noi);
+  const cap = capRate(noiValue, askingPriceValue);
+  const hasCapRateInputs = Number.isFinite(noiValue) && Number.isFinite(askingPriceValue);
+  const marketCapValue = Number(property?.marketCapRate);
+  const dscrValue = Number(dscr);
+  const occupancyValue = Number(property?.occupancy);
+  const hasMarketMetrics =
+    Number.isFinite(marketCapValue) && Number.isFinite(dscrValue) && Number.isFinite(occupancyValue);
   const hasSummaryData = Boolean(property?.askingPrice || property?.noi || property?.units || dscr);
 
   if (!hasSummaryData) {
@@ -736,10 +759,14 @@ function executiveSummaryPage(data) {
                   body: [
                     ["Asking Price", fmt.money(property?.askingPrice)],
                     ["In Place NOI", fmt.money(property?.noi)],
-                    ["In Place Cap Rate", fmt.percent(cap)],
-                    ["Market Cap Rate", fmt.percent(property?.marketCapRate || 0)],
-                    ["DSCR (Year One)", fmt.ratio(dscr || 0)],
-                    ["Occupancy", fmt.percent(property?.occupancy || 0)],
+                    ["In Place Cap Rate", hasCapRateInputs ? fmt.percent(cap) : dataNotAvailableBlock()],
+                    ...(hasMarketMetrics
+                      ? [
+                          ["Market Cap Rate", fmt.percent(marketCapValue)],
+                          ["DSCR (Year One)", fmt.ratio(dscrValue)],
+                          ["Occupancy", fmt.percent(occupancyValue)],
+                        ]
+                      : [["", dataNotAvailableBlock()]]),
                   ],
                 },
                 layout: "lightHorizontalLines",
@@ -782,55 +809,59 @@ function executiveSummaryPage(data) {
             width: 180,
             stack: [
               { text: "Income Quality Gauge", style: "h2", margin: [0, 0, 0, 8] },
-              {
-                canvas: [
-                  {
-                    type: "rect",
-                    x: 0,
-                    y: 5,
-                    w: 160,
-                    h: 8,
-                    color: "#FEE2E2",
-                  },
-                  {
-                    type: "rect",
-                    x: 0,
-                    y: 5,
-                    w: 160 * 0.4,
-                    h: 8,
-                    color: "#FEF3C7",
-                  },
-                  {
-                    type: "rect",
-                    x: 0,
-                    y: 5,
-                    w: 160 * 0.75,
-                    h: 8,
-                    color: "#DCFCE7",
-                  },
-                  {
-                    type: "rect",
-                    x: 0,
-                    y: 5,
-                    w: 160 * clamp01((dscr - 1.0) / 0.6),
-                    h: 8,
-                    color: PALETTE.tealDim,
-                  },
-                ],
-                margin: [0, 6, 0, 4],
-              },
-              {
-                columns: [
-                  { text: "1.00x", fontSize: 7, color: PALETTE.faintInk },
-                  { text: "1.30x", fontSize: 7, color: PALETTE.faintInk, alignment: "center" },
-                  { text: "1.60x", fontSize: 7, color: PALETTE.faintInk, alignment: "right" },
-                ],
-                margin: [0, 0, 0, 6],
-              },
-              {
-                text: `DSCR models at ${fmt.ratio(dscr || 0)} in year one, which places this asset inside the preferred band for many senior lenders.`,
-                style: "finePrint",
-              },
+              ...(Number.isFinite(dscrValue)
+                ? [
+                    {
+                      canvas: [
+                        {
+                          type: "rect",
+                          x: 0,
+                          y: 5,
+                          w: 160,
+                          h: 8,
+                          color: "#FEE2E2",
+                        },
+                        {
+                          type: "rect",
+                          x: 0,
+                          y: 5,
+                          w: 160 * 0.4,
+                          h: 8,
+                          color: "#FEF3C7",
+                        },
+                        {
+                          type: "rect",
+                          x: 0,
+                          y: 5,
+                          w: 160 * 0.75,
+                          h: 8,
+                          color: "#DCFCE7",
+                        },
+                        {
+                          type: "rect",
+                          x: 0,
+                          y: 5,
+                          w: 160 * clamp01((dscrValue - 1.0) / 0.6),
+                          h: 8,
+                          color: PALETTE.tealDim,
+                        },
+                      ],
+                      margin: [0, 6, 0, 4],
+                    },
+                    {
+                      columns: [
+                        { text: "1.00x", fontSize: 7, color: PALETTE.faintInk },
+                        { text: "1.30x", fontSize: 7, color: PALETTE.faintInk, alignment: "center" },
+                        { text: "1.60x", fontSize: 7, color: PALETTE.faintInk, alignment: "right" },
+                      ],
+                      margin: [0, 0, 0, 6],
+                    },
+                    {
+                      text: `DSCR models at ${fmt.ratio(dscrValue)} in year one, which places this asset inside the preferred band for many senior lenders.`,
+                      style: "finePrint",
+                    },
+                  ]
+                : [dataNotAvailableBlock()]),
             ],
           },
         ],
@@ -846,7 +877,26 @@ function executiveSummaryPage(data) {
 
 function propertySnapshotPage(data) {
   const { property } = data;
+  const askingPriceValue = Number(property?.askingPrice);
   const cap = capRate(property?.noi, property?.askingPrice);
+  const hasCapRateInputs = Number.isFinite(askingPriceValue) && Number.isFinite(Number(property?.noi));
+  const grossPotentialRentAnnualValue = Number(property?.grossPotentialRentAnnual);
+  const noiValue = Number(property?.noi);
+  const hasIncomeBlockInputs =
+    Number.isFinite(noiValue) && Number.isFinite(grossPotentialRentAnnualValue);
+  const taxesAnnualValue = Number(property?.taxesAnnual);
+  const insuranceAnnualValue = Number(property?.insuranceAnnual);
+  const maintenanceAnnualValue = Number(property?.maintenanceAnnual);
+  const utilitiesAnnualValue = Number(property?.utilitiesAnnual);
+  const hasOperatingExpenses =
+    Number.isFinite(taxesAnnualValue) &&
+    Number.isFinite(insuranceAnnualValue) &&
+    Number.isFinite(maintenanceAnnualValue) &&
+    Number.isFinite(utilitiesAnnualValue);
+  const avgRentCurrentValue = Number(property?.avgRentCurrent);
+  const avgRentProFormaValue = Number(property?.avgRentProForma);
+  const hasRentLiftInputs =
+    Number.isFinite(avgRentCurrentValue) && Number.isFinite(avgRentProFormaValue);
   const hasSnapshotData = Boolean(property?.units || property?.avgRentCurrent || property?.noi);
 
   if (!hasSnapshotData) {
@@ -889,22 +939,33 @@ function propertySnapshotPage(data) {
             width: "*",
             stack: [
               { text: "Income and Expenses", style: "h2", margin: [0, 0, 0, 6] },
-              {
-                table: {
-                  widths: ["55%", "45%"],
-                  body: [
-                    ["Metric", "Annual"],
-                    ["Gross Potential Rent", fmt.money(property?.units * property?.avgRentCurrent * 12)],
-                    ["Other Income", fmt.money(18_000)],
-                    ["Vacancy and Credit", fmt.money(-26_000)],
-                    ["Effective Gross Income", fmt.money( property?.noi ? property.noi + 74_500 : 278_500 )],
-                    ["Operating Expenses", fmt.money( property?.taxesAnnual + property?.insuranceAnnual + property?.maintenanceAnnual + property?.utilitiesAnnual )],
-                    ["Net Operating Income", fmt.money(property?.noi)],
-                    ["Cap Rate on Asking Price", fmt.percent(cap)],
-                  ],
-                },
-                layout: "lightHorizontalLines",
-              },
+              ...(hasIncomeBlockInputs
+                ? [
+                    {
+                      table: {
+                        widths: ["55%", "45%"],
+                        body: [
+                          ["Metric", "Annual"],
+                          ["Gross Potential Rent", fmt.money(grossPotentialRentAnnualValue)],
+                          [
+                            "Operating Expenses",
+                            hasOperatingExpenses
+                              ? fmt.money(
+                                  taxesAnnualValue +
+                                    insuranceAnnualValue +
+                                    maintenanceAnnualValue +
+                                    utilitiesAnnualValue
+                                )
+                              : dataNotAvailableBlock(),
+                          ],
+                          ["Net Operating Income", fmt.money(property?.noi)],
+                          ["Cap Rate on Asking Price", hasCapRateInputs ? fmt.percent(cap) : dataNotAvailableBlock()],
+                        ],
+                      },
+                      layout: "lightHorizontalLines",
+                    },
+                  ]
+                : [dataNotAvailableBlock()]),
             ],
           },
         ],
@@ -921,20 +982,29 @@ function propertySnapshotPage(data) {
               { text: "Rent Lift Potential", style: "tableHeader", alignment: "left" },
               { text: "Occupancy", style: "tableHeader", alignment: "left" },
             ],
-            [
-              { text: fmt.money(property?.avgRentCurrent), style: "body" },
-              { text: fmt.money(property?.avgRentProForma), style: "body" },
-              {
-                text: `${fmt.percent(
-                  (property?.avgRentProForma || 0) / (property?.avgRentCurrent || 1) - 1
-                )}`,
-                style: "body",
-              },
-              {
-                text: fmt.percent(property?.occupancy || 0),
-                style: "body",
-              },
-            ],
+            ...(hasRentLiftInputs
+              ? [
+                  [
+                    { text: fmt.money(property?.avgRentCurrent), style: "body" },
+                    { text: fmt.money(property?.avgRentProForma), style: "body" },
+                    {
+                      text: `${fmt.percent(avgRentProFormaValue / avgRentCurrentValue - 1)}`,
+                      style: "body",
+                    },
+                    {
+                      text: fmt.percent(property?.occupancy),
+                      style: "body",
+                    },
+                  ],
+                ]
+              : [
+                  [
+                    { ...dataNotAvailableBlock(), colSpan: 4 },
+                    {},
+                    {},
+                    {},
+                  ],
+                ]),
           ],
         },
         layout: "lightHorizontalLines",
@@ -1061,8 +1131,20 @@ function marketInsightsPage(data) {
 function scenarioAnalysisPage(data) {
   const { scenarios } = data;
   const hasScenarios = Array.isArray(scenarios) && scenarios.length > 0;
+  const hasScenarioMetrics =
+    hasScenarios &&
+    scenarios.every((scenario) =>
+      [
+        scenario?.rentGrowth,
+        scenario?.vacancy,
+        scenario?.exitCap,
+        scenario?.irr,
+        scenario?.em,
+        scenario?.salePrice,
+      ].every((value) => Number.isFinite(Number(value)))
+    );
 
-  if (!hasScenarios) {
+  if (!hasScenarioMetrics) {
     return {
       stack: [
         { text: "", pageBreak: "before" },
@@ -1101,12 +1183,12 @@ function scenarioAnalysisPage(data) {
             ],
             ...scenarios.map((s) => [
               { text: s.name, style: "body" },
-              { text: fmt.percent(s.rentGrowth || 0), style: "body" },
-              { text: fmt.percent(s.vacancy || 0), style: "body" },
-              { text: fmt.percent(s.exitCap || 0), style: "body" },
-              { text: fmt.percent(s.irr || 0), style: "body" },
+              { text: fmt.percent(s.rentGrowth), style: "body" },
+              { text: fmt.percent(s.vacancy), style: "body" },
+              { text: fmt.percent(s.exitCap), style: "body" },
+              { text: fmt.percent(s.irr), style: "body" },
               {
-                text: `${fmt.number(s.em || 0, 2)}x on approx ${fmt.money(s.salePrice)}`,
+                text: `${fmt.number(s.em, 2)}x on approx ${fmt.money(s.salePrice)}`,
                 style: "body",
               },
             ]),
