@@ -386,6 +386,18 @@ export default async function handler(req, res) {
 
       if (extractingJobs && extractingJobs.length > 0) {
         for (const job of extractingJobs) {
+          const { data: jobFiles, error: jobFilesErr } = await supabaseAdmin
+            .from('analysis_job_files')
+            .select('doc_type, original_filename, object_path, mime_type, parse_status, parse_error')
+            .eq('job_id', job.id);
+
+          if (jobFilesErr) {
+            return res.status(500).json({
+              error: 'Failed to fetch job files',
+              details: jobFilesErr.message,
+            });
+          }
+
           const { data: structuredArtifacts, error: structuredErr } = await supabaseAdmin
             .from('analysis_artifacts')
             .select('id, type')
@@ -401,6 +413,134 @@ export default async function handler(req, res) {
           }
 
           if (!structuredArtifacts || structuredArtifacts.length === 0) {
+            const keywordHit = (value) => {
+              const text = String(value || '').toLowerCase();
+              if (!text) return false;
+              return [
+                'rent roll',
+                'rentroll',
+                'rent_roll',
+                't12',
+                't-12',
+                'operating statement',
+                'op statement',
+                'income statement',
+                'p&l',
+                'p and l',
+                'profit',
+                'loss',
+              ].some((keyword) => text.includes(keyword));
+            };
+
+            const hasStructuredFinancialDoc = (jobFiles || []).some((file) => {
+              const docType = String(file.doc_type || '').toLowerCase();
+              if (
+                ['rent_roll', 't12', 'operating_statement', 'income_statement', 'p_and_l', 'profit_and_loss'].includes(
+                  docType
+                )
+              ) {
+                return true;
+              }
+              if (keywordHit(file.original_filename) || keywordHit(file.object_path)) {
+                return true;
+              }
+              const mime = String(file.mime_type || '').toLowerCase();
+              return mime.includes('csv') || mime.includes('spreadsheet') || mime.includes('excel');
+            });
+
+            if (hasStructuredFinancialDoc) {
+              const relevantFiles = (jobFiles || []).filter((file) => {
+                const docType = String(file.doc_type || '').toLowerCase();
+                if (
+                  ['rent_roll', 't12', 'operating_statement', 'income_statement', 'p_and_l', 'profit_and_loss'].includes(
+                    docType
+                  )
+                ) {
+                  return true;
+                }
+                if (keywordHit(file.original_filename) || keywordHit(file.object_path)) {
+                  return true;
+                }
+                const mime = String(file.mime_type || '').toLowerCase();
+                return mime.includes('csv') || mime.includes('spreadsheet') || mime.includes('excel');
+              });
+
+              const anyPending = relevantFiles.some(
+                (file) => String(file.parse_status || '').toLowerCase() === 'pending'
+              );
+              const anyFailed = relevantFiles.some((file) => {
+                const status = String(file.parse_status || '').toLowerCase();
+                return status === 'failed' ||
+                  status === 'error' ||
+                  status === 'parse_failed' ||
+                  Boolean(file.parse_error);
+              });
+
+              if (anyPending && !anyFailed) {
+                continue;
+              }
+
+              const failUpdate = { status: 'failed' };
+              if (supportsFailedAt) {
+                failUpdate.failed_at = nowIso;
+              }
+
+              const { error: failErr } = await supabaseAdmin
+                .from('analysis_jobs')
+                .update(failUpdate)
+                .eq('id', job.id)
+                .eq('status', 'extracting');
+
+              if (failErr) {
+                return res.status(500).json({
+                  error: 'Failed to mark job failed',
+                  details: failErr.message,
+                });
+              }
+
+              if (!failedJobIds.includes(job.id)) {
+                failedJobIds.push(job.id);
+              }
+
+              const { data: existingParseFail } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .select('id')
+                .eq('job_id', job.id)
+                .eq('type', 'worker_event')
+                .eq('payload->>event', 'structured_financials_parse_failed')
+                .limit(1)
+                .maybeSingle();
+
+              if (!existingParseFail?.id) {
+                const parseFailErr = await writeWorkerEventArtifact(
+                  job.id,
+                  job.user_id,
+                  'structured_financials_parse_failed',
+                  {
+                    event: 'structured_financials_parse_failed',
+                    message: 'Structured financial documents were found but no parsed artifacts were produced.',
+                    evidence: (jobFiles || []).map((file) => ({
+                      doc_type: file.doc_type || null,
+                      original_filename: file.original_filename || null,
+                      object_path: file.object_path || null,
+                      mime_type: file.mime_type || null,
+                      parse_status: file.parse_status || null,
+                      parse_error: file.parse_error || null,
+                    })),
+                    timestamp: nowIso,
+                  }
+                );
+
+                if (parseFailErr) {
+                  return res.status(500).json({
+                    error: 'Failed to write structured_financials_parse_failed artifact',
+                    details: parseFailErr.message,
+                  });
+                }
+              }
+              continue;
+            }
+
             const { error: needsDocsErr } = await supabaseAdmin
               .from('analysis_jobs')
               .update({ status: 'needs_documents' })
