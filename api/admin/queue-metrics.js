@@ -53,6 +53,7 @@ export default async function handler(req, res) {
     const statuses = [
       'queued',
       'extracting',
+      'needs_documents',
       'underwriting',
       'scoring',
       'rendering',

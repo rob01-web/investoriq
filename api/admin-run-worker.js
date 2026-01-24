@@ -312,6 +312,8 @@ export default async function handler(req, res) {
     }
 
     const transitions = [];
+    const blockedJobIds = [];
+    const failedJobIds = [];
     let passesRun = 0;
     const maxPasses = 10;
     const maxSeconds = 20;
@@ -399,6 +401,40 @@ export default async function handler(req, res) {
           }
 
           if (!structuredArtifacts || structuredArtifacts.length === 0) {
+            const { error: needsDocsErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update({ status: 'needs_documents', updated_at: nowIso })
+              .eq('id', job.id)
+              .eq('status', 'extracting');
+
+            if (needsDocsErr) {
+              return res.status(500).json({
+                error: 'Failed to mark job needs_documents',
+                details: needsDocsErr.message,
+              });
+            }
+
+            if (!blockedJobIds.includes(job.id)) {
+              blockedJobIds.push(job.id);
+            }
+
+            const { data: detectedRows, error: detectedErr } = await supabaseAdmin
+              .from('analysis_job_files')
+              .select('doc_type')
+              .eq('job_id', job.id)
+              .not('doc_type', 'is', null);
+
+            if (detectedErr) {
+              return res.status(500).json({
+                error: 'Failed to detect document types',
+                details: detectedErr.message,
+              });
+            }
+
+            const detected = Array.from(
+              new Set((detectedRows || []).map((row) => row.doc_type).filter(Boolean))
+            );
+
             const { data: existingEvent } = await supabaseAdmin
               .from('analysis_artifacts')
               .select('id')
@@ -418,7 +454,9 @@ export default async function handler(req, res) {
                   code: 'NO_STRUCTURED_FINANCIALS',
                   level: 'error',
                   message:
-                    'No rent roll or T12 has been parsed yet. Job will remain in extracting until structured financials are available.',
+                    'No rent roll or T12 has been parsed yet. Job will remain in needs_documents until structured financials are available.',
+                  missing: ['rent_roll', 't12_or_operating_statement'],
+                  detected,
                   timestamp: nowIso,
                 }
               );
@@ -728,6 +766,9 @@ export default async function handler(req, res) {
               to_status: 'failed',
             });
             passTransitions += 1;
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
 
             const failedTransitionErr = await writeStatusTransitionArtifact(
               job.id,
@@ -848,6 +889,9 @@ export default async function handler(req, res) {
               to_status: 'failed',
             });
             passTransitions += 1;
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
             continue;
           }
 
@@ -950,12 +994,22 @@ export default async function handler(req, res) {
       }
     }
 
+    for (const job of timedOutJobs) {
+      if (!failedJobIds.includes(job.id)) {
+        failedJobIds.push(job.id);
+      }
+    }
+
     return res.status(200).json({
       ok: true,
-      advanced_count: transitions.length,
-      timeout_failed_count: timedOutJobs.length,
+      advancedCount: transitions.length,
+      blockedNeedsDocumentsCount: blockedJobIds.length,
+      failedCount: failedJobIds.length,
+      advancedJobIds: transitions.map((t) => t.job_id),
+      blockedJobIds,
+      failedJobIds,
       transitions,
-      passes_run: passesRun,
+      passesRun: passesRun,
     });
   } catch (err) {
     console.error('admin-run-worker error:', err);

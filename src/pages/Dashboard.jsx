@@ -97,16 +97,17 @@ export default function Dashboard() {
       .from('analysis_jobs')
       .select('id, property_name, status, created_at')
       .eq('user_id', profile.id)
-      .in('status', [
-        'queued',
-        'validating_inputs',
-        'extracting',
-        'underwriting',
-        'scoring',
-        'rendering',
-        'pdf_generating',
-        'publishing',
-      ])
+    .in('status', [
+      'queued',
+      'validating_inputs',
+      'extracting',
+      'needs_documents',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ])
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -136,6 +137,7 @@ export default function Dashboard() {
           'queued',
           'validating_inputs',
           'extracting',
+          'needs_documents',
           'underwriting',
           'scoring',
           'rendering',
@@ -496,7 +498,7 @@ if (!profile?.id || !effectiveJobId) {
 
 const bucket = 'staged_uploads';
 
-for (const file of files) {
+  for (const file of files) {
   // Prevent path injection
   const safeName = String(file.name || 'file').replaceAll('/', '_');
   const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
@@ -540,6 +542,26 @@ for (const file of files) {
       });
       return;
     }
+  }
+
+  const { error: requeueErr } = await supabase
+    .from('analysis_jobs')
+    .update({ status: 'queued' })
+    .eq('id', effectiveJobId)
+    .in('status', ['needs_documents', 'extracting']);
+
+  if (requeueErr) {
+    console.error('Failed to requeue job after upload:', requeueErr);
+    toast({
+      title: 'Uploads received',
+      description: 'We could not resume processing yet. Please try again shortly.',
+      variant: 'destructive',
+    });
+  } else {
+    toast({
+      title: 'Uploads received',
+      description: 'Processing resumed.',
+    });
   }
 
   // Append new files instead of overwriting existing ones
