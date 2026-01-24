@@ -453,7 +453,7 @@ export default async function handler(req, res) {
                   event: 'missing_structured_financials',
                   code: 'NO_STRUCTURED_FINANCIALS',
                   level: 'error',
-                  message:
+                  error_message:
                     'No rent roll or T12 has been parsed yet. Job will remain in needs_documents until structured financials are available.',
                   missing: ['rent_roll', 't12_or_operating_statement'],
                   detected,

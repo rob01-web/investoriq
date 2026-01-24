@@ -25,6 +25,19 @@ export default function Dashboard() {
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [jobEvents, setJobEvents] = useState({});
+  const hasBlockingJob = inProgressJobs.some((job) =>
+    [
+      'queued',
+      'validating_inputs',
+      'needs_documents',
+      'extracting',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ].includes(job.status)
+  );
 
   const fetchReports = async () => {
     if (!profile?.id) return;
@@ -554,7 +567,7 @@ const bucket = 'staged_uploads';
     console.error('Failed to requeue job after upload:', requeueErr);
     toast({
       title: 'Uploads received',
-      description: 'We could not resume processing yet. Please try again shortly.',
+      description: 'Uploads received, but processing could not resume yet.',
       variant: 'destructive',
     });
   } else {
@@ -1043,16 +1056,18 @@ if (verifiedCredits < 1) {
 
             {/* ACTION BUTTON */}
                         <div className="flex flex-col items-center mt-8">
-              <Button
+            <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!propertyName.trim() || uploadedFiles.length === 0 || loading || !acknowledged}
+                disabled={!propertyName.trim() || uploadedFiles.length === 0 || loading || !acknowledged || hasBlockingJob}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing...
                   </>
+                ) : hasBlockingJob ? (
+                  'Report In Progress'
                 ) : (
                   'Generate IQ Report'
                 )}
@@ -1073,6 +1088,12 @@ if (verifiedCredits < 1) {
               {propertyName.trim() && uploadedFiles.length > 0 && !acknowledged && (
                 <div className="mt-2 text-xs font-semibold text-red-700">
                   Acknowledge the disclosures to generate a report.
+                </div>
+              )}
+              {hasBlockingJob && (
+                <div className="mt-2 text-xs font-semibold text-slate-600">
+                  A report is already in progress. If Action Required appears, upload replacement documents and
+                  processing will resume automatically.
                 </div>
               )}
             </div>
