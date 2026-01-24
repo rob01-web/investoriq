@@ -403,7 +403,7 @@ export default async function handler(req, res) {
           if (!structuredArtifacts || structuredArtifacts.length === 0) {
             const { error: needsDocsErr } = await supabaseAdmin
               .from('analysis_jobs')
-              .update({ status: 'needs_documents', updated_at: nowIso })
+              .update({ status: 'needs_documents' })
               .eq('id', job.id)
               .eq('status', 'extracting');
 

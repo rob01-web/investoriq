@@ -423,7 +423,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                             <th className="p-3 border-b border-slate-200">Property</th>
                             <th className="p-3 border-b border-slate-200">Status</th>
                             <th className="p-3 border-b border-slate-200">Created</th>
-                            <th className="p-3 border-b border-slate-200">Updated</th>
+                            <th className="p-3 border-b border-slate-200">Started</th>
                             <th className="p-3 border-b border-slate-200">User</th>
                           </tr>
                         </thead>
@@ -451,7 +451,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                                   {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
                                 </td>
                                 <td className="p-3 text-xs text-slate-600">
-                                  {job.updated_at ? new Date(job.updated_at).toLocaleString() : "—"}
+                                  {(job.started_at || job.created_at) ? new Date(job.started_at || job.created_at).toLocaleString() : "-"}
                                 </td>
                                 <td className="p-3 text-xs text-slate-600">{job.user_id}</td>
                               </tr>

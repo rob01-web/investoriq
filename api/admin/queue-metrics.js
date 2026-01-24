@@ -90,22 +90,22 @@ export default async function handler(req, res) {
 
     const { data: latestFailed, error: latestFailedErr } = await supabaseAdmin
       .from('analysis_jobs')
-      .select('updated_at')
+      .select('created_at')
       .eq('status', 'failed')
-      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     const { data: recentJobs, error: recentJobsErr } = await supabaseAdmin
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at, updated_at, user_id')
+      .select('id, property_name, status, created_at, started_at, user_id')
       .order('created_at', { ascending: false })
       .limit(10);
 
     return res.status(200).json({
       counts_by_status: countsByStatus,
       oldest_queued_at: oldestQueuedErr ? null : oldestQueued?.created_at || null,
-      latest_failed_at: latestFailedErr ? null : latestFailed?.updated_at || null,
+      latest_failed_at: latestFailedErr ? null : latestFailed?.created_at || null,
       recent_jobs: recentJobsErr ? [] : recentJobs || [],
     });
   } catch (err) {
