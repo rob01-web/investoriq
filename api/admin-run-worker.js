@@ -502,6 +502,23 @@ export default async function handler(req, res) {
                 failedJobIds.push(job.id);
               }
 
+              const transitionErr = await writeStatusTransitionArtifact(
+                job.id,
+                'extracting',
+                'failed',
+                {
+                  user_id: job.user_id,
+                  error: 'Structured financial documents present but parsing did not produce parsed artifacts',
+                }
+              );
+
+              if (transitionErr) {
+                return res.status(500).json({
+                  error: 'Failed to write extracting->failed status transition artifact',
+                  details: transitionErr.message,
+                });
+              }
+
               const { data: existingParseFail } = await supabaseAdmin
                 .from('analysis_artifacts')
                 .select('id')
