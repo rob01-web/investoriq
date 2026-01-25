@@ -509,12 +509,38 @@ if (!profile?.id || !effectiveJobId) {
   return;
 }
 
-const bucket = 'staged_uploads';
+  const bucket = 'staged_uploads';
 
   for (const file of files) {
   // Prevent path injection
   const safeName = String(file.name || 'file').replaceAll('/', '_');
   const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
+
+  const inferDocType = (name) => {
+    const text = String(name || '').toLowerCase();
+    if (
+      text.includes('rent roll') ||
+      text.includes('rentroll') ||
+      text.includes('rent_roll')
+    ) {
+      return 'rent_roll';
+    }
+    if (
+      text.includes('t12') ||
+      text.includes('t-12') ||
+      text.includes('operating statement') ||
+      text.includes('income statement') ||
+      text.includes('p&l') ||
+      text.includes('p and l') ||
+      text.includes('profit') ||
+      text.includes('loss')
+    ) {
+      return 't12';
+    }
+    return null;
+  };
+
+  const inferredDocType = inferDocType(safeName);
 
     const { error: uploadErr } = await supabase.storage
   .from(bucket)
@@ -544,6 +570,8 @@ const bucket = 'staged_uploads';
         original_filename: safeName,
         mime_type: file.type || 'application/octet-stream',
         bytes: file.size,
+        doc_type: inferredDocType,
+        parse_status: 'pending',
       });
 
     if (rowErr) {
@@ -1092,7 +1120,7 @@ if (verifiedCredits < 1) {
               )}
               {hasBlockingJob && (
                 <div className="mt-2 text-xs font-semibold text-slate-600">
-                  A report is already in progress. If Action Required appears, upload replacement documents and
+                  A report is already in progress. If Action Required appears, upload required documents and
                   processing will resume automatically.
                 </div>
               )}
@@ -1161,9 +1189,9 @@ if (verifiedCredits < 1) {
                     Action required
                   </div>
                   <div className="mt-1 text-sm text-slate-700">
-                    We could not extract a Rent Roll or Operating Statement (T12/P&L) from your uploaded documents.
-                    Please upload clearer files or spreadsheets.
-                  </div>
+  A Rent Roll and an Operating Statement (T12/P&amp;L) are required to complete underwriting. We did not receive a
+  usable version for this job. Please upload a Rent Roll and/or T12 (spreadsheet preferred).
+</div>
                   {errorMessage ? (
                     <div className="mt-2 text-xs text-slate-500">Log: {errorMessage}</div>
                   ) : null}
@@ -1175,7 +1203,7 @@ if (verifiedCredits < 1) {
                     }}
                     className="mt-3 inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d1326]"
                   >
-                    Upload replacement documents
+                    Upload required documents
                   </button>
                 </div>
               )}

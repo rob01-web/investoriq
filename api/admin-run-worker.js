@@ -105,6 +105,20 @@ export default async function handler(req, res) {
       return error;
     };
 
+    const hasWorkerEvent = async (jobId, eventName) => {
+      const { data, error } = await supabaseAdmin
+        .from('analysis_artifacts')
+        .select('id')
+        .eq('job_id', jobId)
+        .eq('type', 'worker_event')
+        .eq('payload->>event', eventName)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return { error };
+      return { exists: !!data?.id };
+    };
+
     const hasCreditConsumed = async (jobId) => {
       const { data, error } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -398,6 +412,26 @@ export default async function handler(req, res) {
             });
           }
 
+          const startedCheck = await hasWorkerEvent(job.id, 'extracting_started');
+          if (startedCheck?.error) {
+            return res.status(500).json({
+              error: 'Failed to check extracting_started event',
+              details: startedCheck.error.message,
+            });
+          }
+          if (!startedCheck.exists) {
+            const startedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_started', {
+              event: 'extracting_started',
+              timestamp: nowIso,
+            });
+            if (startedErr) {
+              return res.status(500).json({
+                error: 'Failed to write extracting_started event',
+                details: startedErr.message,
+              });
+            }
+          }
+
           const { data: structuredArtifacts, error: structuredErr } = await supabaseAdmin
             .from('analysis_artifacts')
             .select('id, type')
@@ -685,6 +719,26 @@ export default async function handler(req, res) {
               }
             }
             continue;
+          }
+
+          const completedCheck = await hasWorkerEvent(job.id, 'extracting_completed');
+          if (completedCheck?.error) {
+            return res.status(500).json({
+              error: 'Failed to check extracting_completed event',
+              details: completedCheck.error.message,
+            });
+          }
+          if (!completedCheck.exists) {
+            const completedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_completed', {
+              event: 'extracting_completed',
+              timestamp: nowIso,
+            });
+            if (completedErr) {
+              return res.status(500).json({
+                error: 'Failed to write extracting_completed event',
+                details: completedErr.message,
+              });
+            }
           }
 
           const { data: extractingUpdate, error: extractingUpdErr } = await supabaseAdmin
