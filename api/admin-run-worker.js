@@ -511,6 +511,66 @@ export default async function handler(req, res) {
               });
 
               if (anyPending && !anyFailed) {
+                const hasPendingRentRoll = relevantFiles.some((file) => {
+                  const dt = String(file.doc_type || '').toLowerCase();
+                  const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
+                  if (!isPending) return false;
+                  if (dt === 'rent_roll') return true;
+                  if (!dt && (keywordHit(file.original_filename) || keywordHit(file.object_path))) {
+                    const text = `${file.original_filename || ''} ${file.object_path || ''}`.toLowerCase();
+                    return text.includes('rent roll') || text.includes('rentroll') || text.includes('rent_roll');
+                  }
+                  return false;
+                });
+                const hasPendingT12 = relevantFiles.some((file) => {
+                  const dt = String(file.doc_type || '').toLowerCase();
+                  const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
+                  if (!isPending) return false;
+                  if (dt === 't12') return true;
+                  if (!dt && (keywordHit(file.original_filename) || keywordHit(file.object_path))) {
+                    const text = `${file.original_filename || ''} ${file.object_path || ''}`.toLowerCase();
+                    return (
+                      text.includes('t12') ||
+                      text.includes('t-12') ||
+                      text.includes('operating statement') ||
+                      text.includes('income statement') ||
+                      text.includes('p&l') ||
+                      text.includes('p and l') ||
+                      text.includes('profit') ||
+                      text.includes('loss')
+                    );
+                  }
+                  return false;
+                });
+
+                const parserHeaders = { 'Content-Type': 'application/json' };
+                const forwardedKey = req.headers['x-admin-run-key'];
+                parserHeaders['x-admin-run-key'] = Array.isArray(forwardedKey)
+                  ? forwardedKey[0]
+                  : forwardedKey || process.env.ADMIN_RUN_KEY || '';
+
+                if (hasPendingRentRoll) {
+                  const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-rent-roll-xlsx`, {
+                    method: 'POST',
+                    headers: parserHeaders,
+                    body: JSON.stringify({ jobId: job.id }),
+                  });
+                  if (!rentRollRes.ok) {
+                    console.error('parse-rent-roll-xlsx failed:', rentRollRes.status);
+                  }
+                }
+
+                if (hasPendingT12) {
+                  const t12Res = await fetch(`${baseUrl}/api/parse/parse-t12-xlsx`, {
+                    method: 'POST',
+                    headers: parserHeaders,
+                    body: JSON.stringify({ jobId: job.id }),
+                  });
+                  if (!t12Res.ok) {
+                    console.error('parse-t12-xlsx failed:', t12Res.status);
+                  }
+                }
+
                 continue;
               }
 
