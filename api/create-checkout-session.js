@@ -82,9 +82,8 @@ export default async function handler(req, res) {
       cancel_url: finalCancelUrl,
       metadata: {
         // 🔒 webhook should trust THIS canonical value
-        productType: normalizedProductType || "",
         userId: userId || "",
-        userEmail: userEmail || "",
+        productType: normalizedProductType || "",
       },
     });
 
