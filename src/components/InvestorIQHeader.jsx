@@ -62,6 +62,10 @@ export default function InvestorIQHeader() {
             </button>
           ) : (
             <>
+              <a href="/pricing" className="hover:text-[#1F8A8A] transition">
+                Pricing
+              </a>
+
               <a href="/login" className="hover:text-[#1F8A8A] transition">
                 Log In
               </a>

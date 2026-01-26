@@ -9,42 +9,29 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 const tiers = [
   {
     title: 'Single Report',
-    price: '$699',
-    cadence: 'one-time',
+    price: '$499',
+    cadence: '',
     productType: 'single',
-    description: 'Access InvestorIQ once — no subscription required.',
+    description: 'One report credit for a single underwriting package.',
     features: [
       '1 InvestorIQ underwriting report credit',
       'Institutional-grade PDF analysis',
-      'Fast turnaround',
-      'Automatic credit restoration if generation fails',
+      'Credits valid for 60 days',
+      'Failed reports do not consume credits',
     ],
   },
   {
-    title: 'Professional Subscription',
-    price: '$599',
-    cadence: '/month',
-    productType: 'monthly_1',
+    title: '3-Report Pack',
+    price: '$1,197',
+    cadence: '',
+    productType: 'pack_3',
     highlight: true,
-    description: 'Ideal for consistent deal flow — 1 report credit per month.',
+    description: 'Three report credits for active underwriting.',
     features: [
-      '1 underwriting report credit per month',
+      '3 underwriting report credits',
       'Institutional-grade analysis',
-      'Cancel anytime',
-      'Unused credits roll over for 60 days',
-    ],
-  },
-  {
-    title: 'Institutional Subscription',
-    price: '$1,497',
-    cadence: '/month',
-    productType: 'monthly_3',
-    description: 'For active investors underwriting multiple opportunities.',
-    features: [
-      '3 underwriting report credits per month',
-      'Institutional-grade analysis',
-      'Priority processing',
-      'Unused credits roll over for 60 days',
+      'Credits valid for 60 days',
+      'Failed reports do not consume credits',
     ],
   },
 ];
@@ -93,7 +80,7 @@ function PricingTile({ tier, onCheckout, loadingKey }) {
         disabled={isLoading}
         className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {isLoading ? 'Redirecting…' : 'Get Started'}
+        {isLoading ? 'Redirecting…' : 'Purchase credits'}
       </button>
     </div>
   );
@@ -146,12 +133,15 @@ export default function PricingPage() {
         <title>Pricing — InvestorIQ</title>
         <meta
           name="description"
-          content="Institutional pricing for real estate underwriting reports. Choose single purchase or subscription access."
+          content="Institutional pricing for real estate underwriting reports. Purchase report credits."
         />
       </Helmet>
 
       <div className="min-h-screen bg-slate-50 py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
+          <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: PALETTE.teal }}>
+            Early Access Pricing
+          </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Simple, Transparent Pricing
           </h1>
@@ -161,8 +151,9 @@ export default function PricingPage() {
   </a>
 </p>
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
-  All prices are in USD. Report credits are non-refundable once report generation begins. In the
-  event of a verified technical error, a replacement credit may be issued to allow regeneration.
+  Each credit generates one full institutional underwriting report.
+  <span className="block">Credits are valid for 60 days from purchase.</span>
+  <span className="block">Failed reports do not consume credits.</span>
 </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -173,7 +164,7 @@ export default function PricingPage() {
 
           <p className="text-sm text-[#334155] mt-10">
             <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>
-              Volume pricing available for select institutional investors.
+              Custom / Institutional underwriting available.
             </span>
           </p>
         </div>
