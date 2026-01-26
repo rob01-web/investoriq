@@ -8,6 +8,7 @@ export default function CheckoutSuccess() {
   const { profile, fetchProfile } = useAuth();
 
   const [status, setStatus] = useState('loading'); // loading | ok | error
+  const [productType, setProductType] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -35,6 +36,11 @@ export default function CheckoutSuccess() {
           return;
         }
 
+        const localProductType = String(data?.metadata?.productType || '');
+        if (isMounted) {
+          setProductType(localProductType);
+        }
+
         // Refresh profile credits. Webhook may take a moment.
         // We do not depend on the local "profile" snapshot inside this effect.
         if (profile?.id) {
@@ -47,10 +53,11 @@ export default function CheckoutSuccess() {
         if (!isMounted) return;
 
         setStatus('ok');
-toast({
-  title: 'Payment received',
-  description: 'Your report credit has been added.',
-});
+        const creditCount = localProductType === 'pack_3' ? 3 : 1;
+        toast({
+          title: 'Payment received',
+          description: `${creditCount} report credit${creditCount === 1 ? '' : 's'} has been added.`,
+        });
 
 setTimeout(() => {
   window.location.href = '/dashboard';
@@ -70,6 +77,8 @@ setTimeout(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const creditCount = productType === 'pack_3' ? 3 : 1;
+
   return (
     <div className="min-h-screen bg-white p-6 sm:p-10">
       <div className="mx-auto max-w-2xl">
@@ -87,7 +96,8 @@ setTimeout(() => {
             <>
               <div className="text-lg font-semibold text-[#0F172A]">Payment received</div>
               <div className="mt-2 text-sm text-[#334155]">
-                1 report credit added. You can upload documents to generate your report.
+                {creditCount} report credit{creditCount === 1 ? '' : 's'}{' '}
+                {creditCount === 1 ? 'has' : 'have'} been added to your account.
               </div>
 
               <div className="mt-6">
