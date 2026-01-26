@@ -12,7 +12,7 @@ const tiers = [
     price: '$499',
     cadence: '',
     productType: 'single',
-    description: 'One report credit for a single underwriting package.',
+    description: 'One underwriting report credit.',
     features: [
       '1 InvestorIQ underwriting report credit',
       'Institutional-grade PDF analysis',
@@ -26,7 +26,7 @@ const tiers = [
     cadence: '',
     productType: 'pack_3',
     highlight: true,
-    description: 'Three report credits for active underwriting.',
+    description: 'Three underwriting report credits.',
     features: [
       '3 underwriting report credits',
       'Institutional-grade analysis',
@@ -156,7 +156,7 @@ export default function PricingPage() {
   <span className="block">Failed reports do not consume credits.</span>
 </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {tiers.map((t) => (
               <PricingTile key={t.title} tier={t} onCheckout={handleCheckout} loadingKey={loadingKey} />
             ))}
