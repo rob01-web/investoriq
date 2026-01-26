@@ -36,7 +36,7 @@ const tiers = [
   },
 ];
 
-function PricingTile({ tier, onCheckout, loadingKey }) {
+function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
   const isLoading = loadingKey === tier.productType;
 
   return (
@@ -80,7 +80,11 @@ function PricingTile({ tier, onCheckout, loadingKey }) {
         disabled={isLoading}
         className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {isLoading ? 'Redirecting…' : 'Purchase credits'}
+        {isLoading
+          ? 'Redirecting…'
+          : isAuthenticated
+          ? 'Purchase credits'
+          : 'Sign in to purchase credits'}
       </button>
     </div>
   );
@@ -158,7 +162,13 @@ export default function PricingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {tiers.map((t) => (
-              <PricingTile key={t.title} tier={t} onCheckout={handleCheckout} loadingKey={loadingKey} />
+              <PricingTile
+                key={t.title}
+                tier={t}
+                onCheckout={handleCheckout}
+                loadingKey={loadingKey}
+                isAuthenticated={Boolean(user)}
+              />
             ))}
           </div>
 
