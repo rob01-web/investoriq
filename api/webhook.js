@@ -97,10 +97,6 @@ export default async function handler(req, res) {
     .insert([
       {
         id: eventId,
-        type: event.type,
-        user_id: userId,
-        session_id: sessionId,
-        product_type: productType,
       },
     ]);
 
