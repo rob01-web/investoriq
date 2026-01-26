@@ -21,6 +21,10 @@ const isSpreadsheetMime = (mime) => String(mime || '').toLowerCase().includes('s
 
 const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
 
+const isCsvName = (name) => String(name || '').toLowerCase().endsWith('.csv');
+
+const isCsvMime = (mime) => String(mime || '').toLowerCase().includes('csv');
+
 const extractNumericRight = (row, startIndex) => {
   for (let i = startIndex + 1; i < row.length; i += 1) {
     const raw = String(row[i] ?? '').replace(/[^0-9.\-]/g, '');
@@ -226,7 +230,11 @@ export default async function handler(req, res) {
     const nowIso = new Date().toISOString();
 
     for (const file of jobFiles || []) {
-      const eligible = isSpreadsheetMime(file.mime_type) || isXlsxName(file.original_filename);
+      const eligible =
+        isSpreadsheetMime(file.mime_type) ||
+        isXlsxName(file.original_filename) ||
+        isCsvMime(file.mime_type) ||
+        isCsvName(file.original_filename);
       if (!eligible) {
         try {
           const { data: tablesRows, error: tablesErr } = await supabaseAdmin
@@ -339,7 +347,10 @@ export default async function handler(req, res) {
 
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const isCsv = isCsvMime(file.mime_type) || isCsvName(file.original_filename);
+        const workbook = isCsv
+          ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
+          : XLSX.read(buffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames?.[0];
         if (!firstSheetName) {
           throw new Error('No worksheet found');
@@ -374,7 +385,7 @@ export default async function handler(req, res) {
         const payload = {
           file_id: file.id,
           original_filename: file.original_filename,
-          method: 'xlsx',
+          method: isCsv ? 'csv' : 'xlsx',
           confidence: 0.9,
           ...found,
         };

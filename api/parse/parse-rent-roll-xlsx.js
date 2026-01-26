@@ -21,6 +21,10 @@ const isSpreadsheetMime = (mime) => String(mime || '').toLowerCase().includes('s
 
 const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
 
+const isCsvName = (name) => String(name || '').toLowerCase().endsWith('.csv');
+
+const isCsvMime = (mime) => String(mime || '').toLowerCase().includes('csv');
+
 const hasAnyValue = (row) => row.some((cell) => String(cell || '').trim() !== '');
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
@@ -140,7 +144,11 @@ export default async function handler(req, res) {
     const nowIso = new Date().toISOString();
 
     for (const file of jobFiles || []) {
-      const eligible = isSpreadsheetMime(file.mime_type) || isXlsxName(file.original_filename);
+      const eligible =
+        isSpreadsheetMime(file.mime_type) ||
+        isXlsxName(file.original_filename) ||
+        isCsvMime(file.mime_type) ||
+        isCsvName(file.original_filename);
       if (!eligible) {
         skippedCount += 1;
         continue;
@@ -157,7 +165,10 @@ export default async function handler(req, res) {
 
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const isCsv = isCsvMime(file.mime_type) || isCsvName(file.original_filename);
+        const workbook = isCsv
+          ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
+          : XLSX.read(buffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames?.[0];
         if (!firstSheetName) {
           throw new Error('No worksheet found');
