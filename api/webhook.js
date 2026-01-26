@@ -19,11 +19,15 @@ const supabaseAdmin = createClient(
 
 function creditsForProductType(productType) {
   // Keep your current mappings, add safe aliases for the 3-report plan.
+  if (productType === "single") return 1;
+  if (productType === "pack_3") return 3;
   if (productType === "singleReport") return 1;
   if (productType === "monthlyPro") return 1; // 1 report / month
   if (productType === "monthly3Reports") return 3; // 3 reports / month (safe alias)
   if (productType === "monthly3") return 3; // safe alias
   if (productType === "addOn") return 1; // adjust later for quantity if you add it
+  if (productType === "addon_3") return 3;
+  if (productType === "monthly_3") return 3;
   return 0;
 }
 
