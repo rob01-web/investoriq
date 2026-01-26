@@ -436,8 +436,7 @@ export default async function handler(req, res) {
             .from('analysis_artifacts')
             .select('id, type')
             .eq('job_id', job.id)
-            .in('type', ['rent_roll_parsed', 't12_parsed'])
-            .limit(1);
+            .in('type', ['rent_roll_parsed', 't12_parsed']);
 
           if (structuredErr) {
             return res.status(500).json({
@@ -446,7 +445,10 @@ export default async function handler(req, res) {
             });
           }
 
-          if (!structuredArtifacts || structuredArtifacts.length === 0) {
+          const hasRentRollParsed = (structuredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
+          const hasT12Parsed = (structuredArtifacts || []).some((artifact) => artifact.type === 't12_parsed');
+
+          if (!hasRentRollParsed || !hasT12Parsed) {
             const keywordHit = (value) => {
               const text = String(value || '').toLowerCase();
               if (!text) return false;
@@ -571,6 +573,7 @@ export default async function handler(req, res) {
                   }
                 }
 
+                passTransitions += 1;
                 continue;
               }
 

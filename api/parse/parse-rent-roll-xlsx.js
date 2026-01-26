@@ -282,6 +282,29 @@ export default async function handler(req, res) {
           .update({ parse_status: 'parsed', parse_error: null })
           .eq('id', file.id);
 
+        const { error: parsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+          {
+            job_id: jobId,
+            user_id: file.user_id || null,
+            type: 'worker_event',
+            bucket: 'internal',
+            object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+              nowIso
+            )}.json`,
+            payload: {
+              event: 'parser_completed',
+              parser: 'rent_roll',
+              result: 'parsed',
+              job_id: jobId,
+              timestamp: nowIso,
+            },
+          },
+        ]);
+
+        if (parsedEventErr) {
+          console.error('Failed to write parser_completed event:', parsedEventErr.message);
+        }
+
         parsedCount += 1;
       } catch (err) {
         const errorMessage = err?.message || 'Unknown error';
@@ -305,6 +328,29 @@ export default async function handler(req, res) {
           .from('analysis_job_files')
           .update({ parse_status: 'failed', parse_error: errorMessage })
           .eq('id', file.id);
+
+        const { error: failedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+          {
+            job_id: jobId,
+            user_id: file.user_id || null,
+            type: 'worker_event',
+            bucket: 'internal',
+            object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+              nowIso
+            )}.json`,
+            payload: {
+              event: 'parser_completed',
+              parser: 'rent_roll',
+              result: 'failed',
+              job_id: jobId,
+              timestamp: nowIso,
+            },
+          },
+        ]);
+
+        if (failedEventErr) {
+          console.error('Failed to write parser_completed event:', failedEventErr.message);
+        }
 
         failedCount += 1;
       }
