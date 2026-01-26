@@ -237,7 +237,7 @@ const credits = Number(profile?.report_credits ?? 0);
 
   const startCheckout = async () => {
   try {
-    if (!profile?.id || !profile?.email) {
+    if (!profile?.id) {
       toast({
         title: 'Please sign in',
         description: 'You must be signed in to purchase credits.',
