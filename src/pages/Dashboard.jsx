@@ -781,17 +781,7 @@ if (verifiedCredits < 1) {
                 <button
   type="button"
   onClick={() => {
-    if (!acknowledged) {
-      toast({
-        title: 'Acknowledgement required',
-        description:
-          'Please acknowledge the document-based limitations before purchasing credits.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    startCheckout();
+    window.location.href = '/pricing';
   }}
   className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
 >
