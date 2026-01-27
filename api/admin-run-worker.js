@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
     const adminRunKey = process.env.ADMIN_RUN_KEY || '';
+    const cronSecret = process.env.CRON_SECRET || '';
 
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
       return res.status(500).json({
@@ -18,30 +19,38 @@ export default async function handler(req, res) {
       });
     }
 
-    const headerKey = req.headers['x-admin-run-key'];
-    const hasAdminKey = adminRunKey && headerKey === adminRunKey;
+    const cronHeader = req.headers['x-cron-secret'];
+    const cronQuery = req.query?.secret;
+    const hasCronSecret =
+      cronSecret &&
+      (String(cronHeader || '') === cronSecret || String(cronQuery || '') === cronSecret);
 
-    if (!hasAdminKey) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+    if (!hasCronSecret) {
+      const headerKey = req.headers['x-admin-run-key'];
+      const hasAdminKey = adminRunKey && headerKey === adminRunKey;
 
-      if (!token) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+      if (!hasAdminKey) {
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
 
-      const supabaseAuth = createClient(supabaseUrl, anonKey, {
-        auth: { persistSession: false },
-      });
+        if (!token) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
 
-      const { data: userRes, error: userErr } = await supabaseAuth.auth.getUser(token);
+        const supabaseAuth = createClient(supabaseUrl, anonKey, {
+          auth: { persistSession: false },
+        });
 
-      if (userErr || !userRes?.user) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+        const { data: userRes, error: userErr } = await supabaseAuth.auth.getUser(token);
 
-      const adminEmail = 'hello@investoriq.tech';
-      if ((userRes.user.email || '').toLowerCase() !== adminEmail) {
-        return res.status(403).json({ error: 'Forbidden' });
+        if (userErr || !userRes?.user) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const adminEmail = 'hello@investoriq.tech';
+        if ((userRes.user.email || '').toLowerCase() !== adminEmail) {
+          return res.status(403).json({ error: 'Forbidden' });
+        }
       }
     }
 
@@ -53,6 +62,7 @@ export default async function handler(req, res) {
 
     const now = new Date();
     let nowIso = now.toISOString();
+    const jobLimit = Math.max(1, Number(req.headers['x-job-limit'] || req.query?.limit || 10));
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
       'queued',
@@ -344,7 +354,7 @@ export default async function handler(req, res) {
         .select('id, user_id, status, started_at')
         .eq('status', 'queued')
         .order('created_at', { ascending: true })
-        .limit(10);
+        .limit(jobLimit);
 
       if (queuedErr) {
         return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
@@ -355,7 +365,7 @@ export default async function handler(req, res) {
         .select('id, user_id, status, started_at')
         .eq('status', 'extracting')
         .order('created_at', { ascending: true })
-        .limit(10);
+        .limit(jobLimit);
 
       if (extractingErr) {
         return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
@@ -850,7 +860,7 @@ export default async function handler(req, res) {
         .select('id, user_id, status, started_at')
         .eq('status', 'underwriting')
         .order('created_at', { ascending: true })
-        .limit(10);
+        .limit(jobLimit);
 
       if (underwritingErr) {
         return res.status(500).json({ error: 'Failed to fetch underwriting jobs', details: underwritingErr.message });
@@ -895,7 +905,7 @@ export default async function handler(req, res) {
         .select('id, user_id, status, created_at, property_name')
         .eq('status', 'scoring')
         .order('created_at', { ascending: true })
-        .limit(5);
+        .limit(Math.min(jobLimit, 5));
 
       if (scoringErr) {
         return res.status(500).json({ error: 'Failed to fetch scoring jobs', details: scoringErr.message });
