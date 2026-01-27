@@ -101,6 +101,7 @@ export default async function handler(req, res) {
     };
 
     const writeWorkerEventArtifact = async (jobId, userId, eventName, payload) => {
+      const finalPayload = { ...(payload || {}), event: eventName };
       const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
         {
           job_id: jobId,
@@ -108,7 +109,7 @@ export default async function handler(req, res) {
           type: 'worker_event',
           bucket: 'internal',
           object_path: `analysis_jobs/${jobId}/worker_event/${eventName}/${safeTimestamp(nowIso)}.json`,
-          payload: payload || {},
+          payload: finalPayload,
         },
       ]);
 
@@ -192,7 +193,6 @@ export default async function handler(req, res) {
         }
 
         const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'credit_failed', {
-          event: 'credit_failed',
           reason: 'Insufficient credits',
           credits_available: currentCredits,
           timestamp: nowIso,
@@ -372,20 +372,25 @@ export default async function handler(req, res) {
       }
 
       if (queuedJobs && queuedJobs.length > 0) {
-        const queuedIds = queuedJobs.map((j) => j.id);
-        const { error: queuedUpdErr } = await supabaseAdmin
-          .from('analysis_jobs')
-          .update({
-            status: 'extracting',
-            started_at: nowIso,
-          })
-          .in('id', queuedIds);
-
-        if (queuedUpdErr) {
-          return res.status(500).json({ error: 'Failed to advance queued jobs', details: queuedUpdErr.message });
-        }
-
         for (const job of queuedJobs) {
+          const { data: claimed, error: claimErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({
+              status: 'extracting',
+              started_at: nowIso,
+            })
+            .eq('id', job.id)
+            .eq('status', 'queued')
+            .select('id, user_id, status');
+
+          if (claimErr) {
+            return res.status(500).json({ error: 'Failed to advance queued jobs', details: claimErr.message });
+          }
+
+          if (!claimed || claimed.length === 0) {
+            continue;
+          }
+
           transitions.push({
             job_id: job.id,
             from_status: 'queued',
@@ -431,7 +436,6 @@ export default async function handler(req, res) {
           }
           if (!startedCheck.exists) {
             const startedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_started', {
-              event: 'extracting_started',
               timestamp: nowIso,
             });
             if (startedErr) {
@@ -641,7 +645,6 @@ export default async function handler(req, res) {
                   job.user_id,
                   'structured_financials_parse_failed',
                   {
-                    event: 'structured_financials_parse_failed',
                     message: 'Structured financial documents were found but no parsed artifacts were produced.',
                     evidence: (jobFiles || []).map((file) => ({
                       doc_type: file.doc_type || null,
@@ -714,7 +717,6 @@ export default async function handler(req, res) {
                 job.user_id,
                 'missing_structured_financials',
                 {
-                  event: 'missing_structured_financials',
                   code: 'NO_STRUCTURED_FINANCIALS',
                   level: 'error',
                   error_message:
@@ -803,7 +805,6 @@ export default async function handler(req, res) {
           }
           if (!completedCheck.exists) {
             const completedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_completed', {
-              event: 'extracting_completed',
               timestamp: nowIso,
             });
             if (completedErr) {
@@ -867,17 +868,22 @@ export default async function handler(req, res) {
       }
 
       if (underwritingJobs && underwritingJobs.length > 0) {
-        const underwritingIds = underwritingJobs.map((j) => j.id);
-        const { error: underwritingUpdErr } = await supabaseAdmin
-          .from('analysis_jobs')
-          .update({ status: 'scoring' })
-          .in('id', underwritingIds);
-
-        if (underwritingUpdErr) {
-          return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
-        }
-
         for (const job of underwritingJobs) {
+          const { data: underwritingClaim, error: underwritingUpdErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .update({ status: 'scoring' })
+            .eq('id', job.id)
+            .eq('status', 'underwriting')
+            .select('id');
+
+          if (underwritingUpdErr) {
+            return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
+          }
+
+          if (!underwritingClaim || underwritingClaim.length === 0) {
+            continue;
+          }
+
           transitions.push({
             job_id: job.id,
             from_status: 'underwriting',
@@ -1069,7 +1075,6 @@ export default async function handler(req, res) {
             }
 
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
-              event: 'report_generation_failed',
               error: generatorError,
               timestamp: nowIso,
               ...(generatorFailurePayload || {}),
@@ -1086,7 +1091,6 @@ export default async function handler(req, res) {
           }
 
           const reportEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation', {
-            event: 'report_generation',
             source: generatorSource,
             report_id: reportId,
             storage_path: storagePath,
