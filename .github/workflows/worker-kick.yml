@@ -1,0 +1,18 @@
+name: InvestorIQ Worker Kick
+
+on:
+  schedule:
+    - cron: "* * * * *"   # every minute
+  workflow_dispatch: {}   # lets you run it manually too
+
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call InvestorIQ worker
+        run: |
+          curl -sS -X POST "https://investoriq.tech/api/admin-run-worker" \
+            -H "x-cron-secret: ${{ secrets.INVESTORIQ_CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --data "{}"
