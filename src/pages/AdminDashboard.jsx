@@ -16,12 +16,14 @@ import { supabase } from "@/lib/customSupabaseClient";
     inProgress: 0,
     published: 0,
     failed: 0,
+    needsDocuments: 0,
   });
   const [recentReports, setRecentReports] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [queueMetrics, setQueueMetrics] = useState(null);
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState(null);
+  const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
 
   // Admin Operations (manual queue runner)
   const [runLoading, setRunLoading] = useState(false);
@@ -98,6 +100,7 @@ import { supabase } from "@/lib/customSupabaseClient";
       }
 
       setQueueMetrics(data);
+      setLastQueueMetricsAt(new Date());
     } catch (err) {
       setQueueError(err?.message || "Failed to load queue metrics.");
     } finally {
@@ -155,6 +158,11 @@ import { supabase } from "@/lib/customSupabaseClient";
           .select("*", { count: "exact", head: true })
           .eq("status", "failed");
 
+        const { count: needsDocumentsCount } = await supabase
+          .from("analysis_jobs")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "needs_documents");
+
         setStats({
           totalUsers: userCount || 0,
           totalReports: reportCount || 0,
@@ -166,6 +174,7 @@ import { supabase } from "@/lib/customSupabaseClient";
           inProgress: inProgressCount || 0,
           published: publishedCount || 0,
           failed: failedCount || 0,
+          needsDocuments: needsDocumentsCount || 0,
         });
       } catch (err) {
         console.error("Error fetching admin data:", err);
@@ -227,31 +236,10 @@ import { supabase } from "@/lib/customSupabaseClient";
                       Operations
                     </div>
                     <div className="text-sm font-medium text-[#334155]">
-                      Manual queue processing for early access operations.
+                      Queue processing runs automatically.
                     </div>
                   </div>
                 </div>
-              </div>
-
-                            <div className="mt-5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={runQueueNow}
-                  disabled={runLoading}
-                  className="inline-flex items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
-                >
-                  {runLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Processing.
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle className="mr-2 h-5 w-5" />
-                      Process Queue Now
-                    </>
-                  )}
-                </button>
               </div>
 
               {runResult && (
@@ -299,7 +287,7 @@ import { supabase } from "@/lib/customSupabaseClient";
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
                 <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     Queued
@@ -314,6 +302,14 @@ import { supabase } from "@/lib/customSupabaseClient";
                   </div>
                   <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
                     {jobSummary.inProgress}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Needs Documents
+                  </div>
+                  <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                    {jobSummary.needsDocuments}
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
@@ -356,23 +352,119 @@ import { supabase } from "@/lib/customSupabaseClient";
                   </p>
                 </motion.div>
 
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  className="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 text-center"
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                className="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 text-center"
+              >
+                <BarChart3 className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
+                <h3 className="text-xl font-bold text-[#0F172A] mb-1">Active Reports</h3>
+                <p className="text-4xl font-extrabold text-[#0F172A]">
+                  {stats.activeReports}
+                </p>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#0F172A]">Pipeline Health</h2>
+                  <div className="text-sm font-medium text-[#334155]">
+                    Queue processing runs automatically (GitHub Actions, every 1 minute).
+                  </div>
+                </div>
+                <button
+                  onClick={fetchQueueMetrics}
+                  className="flex items-center gap-2 text-[#1F8A8A] font-semibold hover:underline"
                 >
-                  <BarChart3 className="h-10 w-10 text-[#1F8A8A] mx-auto mb-3" />
-                  <h3 className="text-xl font-bold text-[#0F172A] mb-1">Active Reports</h3>
-                  <p className="text-4xl font-extrabold text-[#0F172A]">
-                    {stats.activeReports}
-                  </p>
-                </motion.div>
+                  <RefreshCcw className="h-4 w-4" /> Refresh
+                </button>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-4">
+                Last refresh: {lastQueueMetricsAt ? lastQueueMetricsAt.toLocaleString() : "-"}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                {(() => {
+                  const counts = queueMetrics?.counts_by_status || {};
+                  const inProgressCount = [
+                    "validating_inputs",
+                    "extracting",
+                    "underwriting",
+                    "scoring",
+                    "rendering",
+                    "pdf_generating",
+                    "publishing",
+                  ].reduce((sum, key) => sum + (counts[key] || 0), 0);
+                  const queuedCount = counts.queued || 0;
+                  const blockedCount = counts.needs_documents || 0;
+                  const failedCount = counts.failed || 0;
+
+                  return (
+                    <>
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                          Queued
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                          {queuedCount}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                          In Progress
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                          {inProgressCount}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                          Blocked (Needs Documents)
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                          {blockedCount}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                          Failed
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-[#0F172A]">
+                          {failedCount}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="text-sm font-medium text-[#334155]">
+                {(() => {
+                  const counts = queueMetrics?.counts_by_status || {};
+                  const blockedCount = counts.needs_documents || 0;
+                  const failedCount = counts.failed || 0;
+                  if (failedCount > 0) {
+                    return "Failures detected. Review job events.";
+                  }
+                  if (blockedCount > 0) {
+                    return "Jobs are waiting on required documents.";
+                  }
+                  return "Pipeline healthy.";
+                })()}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
               >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-[#0F172A]">
@@ -398,6 +490,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                         ["Extracting", "extracting"],
                         ["Underwriting", "underwriting"],
                         ["Scoring", "scoring"],
+                        ["Needs Documents", "needs_documents"],
                         ["Rendering", "rendering"],
                         ["PDF Generating", "pdf_generating"],
                         ["Publishing", "publishing"],
