@@ -1153,7 +1153,7 @@ if (verifiedCredits < 1) {
     </h2>
     {inProgressJobs.some((job) => job.status === 'queued') && (
       <div className="mb-4 text-sm font-medium text-[#334155]">
-        Scheduled for processing. Processing typically begins within 1–2 minutes.
+        Scheduled for processing. Queue processing runs automatically every few minutes.
       </div>
     )}
 
@@ -1161,8 +1161,7 @@ if (verifiedCredits < 1) {
       ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(job.status)
     ) && (
       <div className="mb-4 text-sm font-medium text-[#334155]">
-        Report generation is in progress. Reports are typically delivered within 24 hours, depending on document
-        complexity and queue volume.
+        Report generation is in progress. Processing can take up to 24 hours depending on document complexity.
       </div>
     )}
 

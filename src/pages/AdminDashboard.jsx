@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Helmet } from "react-helmet";
-import { FileText, Loader2, Users, BarChart3, RefreshCcw, Shield, PlayCircle } from "lucide-react";
+import { FileText, Loader2, Users, BarChart3, RefreshCcw, Shield } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
 
   export default function AdminDashboard() {
@@ -25,56 +25,6 @@ import { supabase } from "@/lib/customSupabaseClient";
   const [queueError, setQueueError] = useState(null);
   const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
 
-  // Admin Operations (manual queue runner)
-  const [runLoading, setRunLoading] = useState(false);
-  const [runResult, setRunResult] = useState(null);
-
-  const runQueueNow = async () => {
-    
-    setRunLoading(true);
-    setRunResult(null);
-
-    try {
-            const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const accessToken = session?.access_token || "";
-
-      const res = await fetch("/api/admin-run-worker", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setRunResult({
-          ok: false,
-          message: data?.error || "Admin run failed.",
-          details: data?.details || null,
-        });
-        return;
-      }
-
-      setRunResult({
-        ok: true,
-        message: `Queue processed. Jobs advanced: ${data?.processed ?? 0}.`,
-        transitions: Array.isArray(data?.transitions) ? data.transitions : [],
-      });
-    } catch (err) {
-      setRunResult({
-        ok: false,
-        message: "Admin run failed due to a network or server error.",
-      });
-    } finally {
-      setRunLoading(false);
-    }
-  };
 
   const fetchQueueMetrics = async () => {
     setQueueLoading(true);
@@ -236,47 +186,12 @@ import { supabase } from "@/lib/customSupabaseClient";
                       Operations
                     </div>
                     <div className="text-sm font-medium text-[#334155]">
-                      Queue processing runs automatically.
+                      Queue processing runs automatically every few minutes.
                     </div>
                   </div>
                 </div>
               </div>
 
-              {runResult && (
-                <div
-                  className={`mt-5 rounded-lg border p-4 text-sm font-medium ${
-                    runResult.ok
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                      : "border-red-200 bg-red-50 text-red-900"
-                  }`}
-                >
-                  <div>{runResult.message}</div>
-                  {runResult.details && (
-                    <div className="mt-2 text-xs opacity-80">
-                      Details: {runResult.details}
-                    </div>
-                  )}
-                  {runResult.ok &&
-                    runResult.transitions &&
-                    runResult.transitions.length > 0 && (
-                      <div className="mt-3 text-xs">
-                        <div className="mb-2 font-semibold uppercase tracking-[0.18em] text-[10px]">
-                          Advanced Jobs
-                        </div>
-                        <div className="space-y-1 text-emerald-900/80">
-                          {runResult.transitions.slice(0, 6).map((transition) => (
-                            <div key={`${transition.job_id}-${transition.to_status}`}>
-                              {transition.job_id} {transition.from_status} {"->"} {transition.to_status}
-                            </div>
-                          ))}
-                          {runResult.transitions.length > 6 && (
-                            <div>and {runResult.transitions.length - 6} more</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -374,7 +289,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                 <div>
                   <h2 className="text-2xl font-bold text-[#0F172A]">Pipeline Health</h2>
                   <div className="text-sm font-medium text-[#334155]">
-                    Queue processing runs automatically (GitHub Actions, every 1 minute).
+                    Queue processing runs automatically every few minutes.
                   </div>
                 </div>
                 <button

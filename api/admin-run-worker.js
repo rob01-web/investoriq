@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 
     const now = new Date();
     let nowIso = now.toISOString();
-    const jobLimit = Math.max(1, Number(req.headers['x-job-limit'] || req.query?.limit || 10));
+    const jobLimit = Math.max(1, Number(req.headers['x-job-limit'] || req.query?.limit || 25));
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
       'queued',
@@ -463,100 +463,31 @@ export default async function handler(req, res) {
           const hasT12Parsed = (structuredArtifacts || []).some((artifact) => artifact.type === 't12_parsed');
 
           if (!hasRentRollParsed || !hasT12Parsed) {
-            const keywordHit = (value) => {
-              const text = String(value || '').toLowerCase();
-              if (!text) return false;
-              return [
-                'rent roll',
-                'rentroll',
-                'rent_roll',
-                't12',
-                't-12',
-                'operating statement',
-                'op statement',
-                'income statement',
-                'p&l',
-                'p and l',
-                'profit',
-                'loss',
-              ].some((keyword) => text.includes(keyword));
-            };
-
             const hasStructuredFinancialDoc = (jobFiles || []).some((file) => {
               const docType = String(file.doc_type || '').toLowerCase();
-              if (
-                ['rent_roll', 't12', 'operating_statement', 'income_statement', 'p_and_l', 'profit_and_loss'].includes(
-                  docType
-                )
-              ) {
-                return true;
-              }
-              if (keywordHit(file.original_filename) || keywordHit(file.object_path)) {
-                return true;
-              }
-              const mime = String(file.mime_type || '').toLowerCase();
-              return mime.includes('csv') || mime.includes('spreadsheet') || mime.includes('excel');
+              return docType === 'rent_roll' || docType === 't12';
             });
 
             if (hasStructuredFinancialDoc) {
               const relevantFiles = (jobFiles || []).filter((file) => {
                 const docType = String(file.doc_type || '').toLowerCase();
-                if (
-                  ['rent_roll', 't12', 'operating_statement', 'income_statement', 'p_and_l', 'profit_and_loss'].includes(
-                    docType
-                  )
-                ) {
-                  return true;
-                }
-                if (keywordHit(file.original_filename) || keywordHit(file.object_path)) {
-                  return true;
-                }
-                const mime = String(file.mime_type || '').toLowerCase();
-                return mime.includes('csv') || mime.includes('spreadsheet') || mime.includes('excel');
+                return docType === 'rent_roll' || docType === 't12';
               });
 
               const anyPending = relevantFiles.some(
                 (file) => String(file.parse_status || '').toLowerCase() === 'pending'
               );
-              const anyFailed = relevantFiles.some((file) => {
-                const status = String(file.parse_status || '').toLowerCase();
-                return status === 'failed' ||
-                  status === 'error' ||
-                  status === 'parse_failed' ||
-                  Boolean(file.parse_error);
-              });
 
-              if (anyPending && !anyFailed) {
+              if (anyPending) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  if (!isPending) return false;
-                  if (dt === 'rent_roll') return true;
-                  if (!dt && (keywordHit(file.original_filename) || keywordHit(file.object_path))) {
-                    const text = `${file.original_filename || ''} ${file.object_path || ''}`.toLowerCase();
-                    return text.includes('rent roll') || text.includes('rentroll') || text.includes('rent_roll');
-                  }
-                  return false;
+                  return isPending && dt === 'rent_roll';
                 });
                 const hasPendingT12 = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  if (!isPending) return false;
-                  if (dt === 't12') return true;
-                  if (!dt && (keywordHit(file.original_filename) || keywordHit(file.object_path))) {
-                    const text = `${file.original_filename || ''} ${file.object_path || ''}`.toLowerCase();
-                    return (
-                      text.includes('t12') ||
-                      text.includes('t-12') ||
-                      text.includes('operating statement') ||
-                      text.includes('income statement') ||
-                      text.includes('p&l') ||
-                      text.includes('p and l') ||
-                      text.includes('profit') ||
-                      text.includes('loss')
-                    );
-                  }
-                  return false;
+                  return isPending && dt === 't12';
                 });
 
                 const parserHeaders = { 'Content-Type': 'application/json' };
@@ -590,82 +521,6 @@ export default async function handler(req, res) {
                 passTransitions += 1;
                 continue;
               }
-
-              const failUpdate = { status: 'failed' };
-              if (supportsFailedAt) {
-                failUpdate.failed_at = nowIso;
-              }
-
-              const { error: failErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .update(failUpdate)
-                .eq('id', job.id)
-                .eq('status', 'extracting');
-
-              if (failErr) {
-                return res.status(500).json({
-                  error: 'Failed to mark job failed',
-                  details: failErr.message,
-                });
-              }
-
-              if (!failedJobIds.includes(job.id)) {
-                failedJobIds.push(job.id);
-              }
-
-              const transitionErr = await writeStatusTransitionArtifact(
-                job.id,
-                'extracting',
-                'failed',
-                {
-                  user_id: job.user_id,
-                  error: 'Structured financial documents present but parsing did not produce parsed artifacts',
-                }
-              );
-
-              if (transitionErr) {
-                return res.status(500).json({
-                  error: 'Failed to write extracting->failed status transition artifact',
-                  details: transitionErr.message,
-                });
-              }
-
-              const { data: existingParseFail } = await supabaseAdmin
-                .from('analysis_artifacts')
-                .select('id')
-                .eq('job_id', job.id)
-                .eq('type', 'worker_event')
-                .eq('payload->>event', 'structured_financials_parse_failed')
-                .limit(1)
-                .maybeSingle();
-
-              if (!existingParseFail?.id) {
-                const parseFailErr = await writeWorkerEventArtifact(
-                  job.id,
-                  job.user_id,
-                  'structured_financials_parse_failed',
-                  {
-                    message: 'Structured financial documents were found but no parsed artifacts were produced.',
-                    evidence: (jobFiles || []).map((file) => ({
-                      doc_type: file.doc_type || null,
-                      original_filename: file.original_filename || null,
-                      object_path: file.object_path || null,
-                      mime_type: file.mime_type || null,
-                      parse_status: file.parse_status || null,
-                      parse_error: file.parse_error || null,
-                    })),
-                    timestamp: nowIso,
-                  }
-                );
-
-                if (parseFailErr) {
-                  return res.status(500).json({
-                    error: 'Failed to write structured_financials_parse_failed artifact',
-                    details: parseFailErr.message,
-                  });
-                }
-              }
-              continue;
             }
 
             const { error: needsDocsErr } = await supabaseAdmin
@@ -758,16 +613,31 @@ export default async function handler(req, res) {
                     throw new Error('Missing user email');
                   }
 
+                  const { data: profileRow, error: profileErr } = await supabaseAdmin
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', job.user_id)
+                    .maybeSingle();
+
+                  if (profileErr) {
+                    throw profileErr;
+                  }
+
+                  const fullName = String(profileRow?.full_name || '').trim();
+                  const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
+
                   await sendEmailSES({
                     to: userEmail,
                     subject: 'Action required: documents needed to continue your InvestorIQ report',
                     text:
+                      `Hello ${firstName},\n\n` +
                       'Your InvestorIQ report cannot proceed yet.\n\n' +
                       'We could not identify structured financial documents required for underwriting.\n\n' +
                       'Required:\n' +
                       '- Rent Roll\n' +
-                      '- Operating Statement (T12 / Income Statement / P&L)\n\n' +
-                      'Please upload at least one of these documents to continue processing.\n\n' +
+                      '- T12 (Operating Statement)\n\n' +
+                      'Please log in to your InvestorIQ dashboard\n' +
+                      'and upload the required documents to continue processing.\n\n' +
                       'This report will remain paused until required documents are available.',
                   });
 

@@ -532,13 +532,11 @@ function coverPage(data) {
                     width: "auto",
                     stack: [
                       {
-                        text: verdict?.label || "ANALYST VIEW",
+                        text: verdict?.label || DATA_NOT_AVAILABLE,
                         style: "coverVerdict",
                       },
                       {
-                        text:
-                          verdict?.rationale ||
-                          "InvestorIQ's document-based underwriting framework has synthesized market, risk, and cash flow drivers to surface a clear investment view.",
+                        text: verdict?.rationale || DATA_NOT_AVAILABLE,
                         style: "body",
                         margin: [0, 4, 0, 10],
                       },
@@ -611,9 +609,7 @@ function coverPage(data) {
                 margin: [0, 8, 0, 24],
               },
               {
-                text:
-                  verdict?.strategyHeadline ||
-                  "Acquire, optimize, and hold with disciplined risk management and institutional underwriting.",
+                text: verdict?.strategyHeadline || DATA_NOT_AVAILABLE,
                 style: "body",
                 color: PALETTE.midInk,
                 margin: [0, 0, 0, 16],
