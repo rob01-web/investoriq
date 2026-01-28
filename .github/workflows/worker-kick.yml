@@ -2,8 +2,12 @@ name: InvestorIQ Worker Kick
 
 on:
   schedule:
-    - cron: "* * * * *"   # every minute
+    - cron: "*/5 * * * *"   # every 5 minutes
   workflow_dispatch: {}   # lets you run it manually too
+
+concurrency:
+  group: worker-kick
+  cancel-in-progress: true
 
 jobs:
   kick:

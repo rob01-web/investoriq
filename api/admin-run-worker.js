@@ -130,6 +130,41 @@ export default async function handler(req, res) {
       return { exists: !!data?.id };
     };
 
+    const recordJobFailure = async (job, stage, err) => {
+      const safeMessage =
+        `Processing failed during ${stage}. ` +
+        'Please log in to your InvestorIQ dashboard to upload replacement documents or try again.';
+      const update = { status: 'failed' };
+      if (supportsFailedAt) {
+        update.failed_at = nowIso;
+      }
+      if (supportsErrorCode) {
+        update.error_code = stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR';
+      }
+      if (supportsErrorMessage) {
+        update.error_message = safeMessage;
+      }
+
+      await supabaseAdmin.from('analysis_jobs').update(update).eq('id', job.id);
+
+      await supabaseAdmin.from('analysis_artifacts').insert([
+        {
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'worker_event',
+          bucket: 'internal',
+          object_path: `analysis_jobs/${job.id}/worker_event/job_failed/${safeTimestamp(nowIso)}.json`,
+          payload: {
+            event: 'job_failed',
+            stage,
+            message: safeMessage,
+            stack: String(err?.stack || err?.message || err || ''),
+            timestamp: nowIso,
+          },
+        },
+      ]);
+    };
+
     const hasCreditConsumed = async (jobId) => {
       const { data, error } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -251,9 +286,13 @@ export default async function handler(req, res) {
 
     let supportsCompletedAt = false;
     let supportsFailedAt = false;
+    let supportsErrorCode = false;
+    let supportsErrorMessage = false;
     try {
       supportsCompletedAt = await canUseColumn('completed_at');
       supportsFailedAt = await canUseColumn('failed_at');
+      supportsErrorCode = await canUseColumn('error_code');
+      supportsErrorMessage = await canUseColumn('error_message');
     } catch (err) {
       return res.status(500).json({
         error: 'Failed to detect analysis_jobs columns',
@@ -282,10 +321,17 @@ export default async function handler(req, res) {
     });
 
     if (timedOutJobs.length > 0) {
-        const timedOutIds = timedOutJobs.map((job) => job.id);
+      const timedOutIds = timedOutJobs.map((job) => job.id);
       const timeoutUpdate = { status: 'failed' };
       if (supportsFailedAt) {
         timeoutUpdate.failed_at = nowIso;
+      }
+      if (supportsErrorCode) {
+        timeoutUpdate.error_code = 'TIMEOUT';
+      }
+      if (supportsErrorMessage) {
+        timeoutUpdate.error_message =
+          'Processing timed out. Please log in to your InvestorIQ dashboard to retry or upload replacement documents.';
       }
       const { error: failErr } = await supabaseAdmin
         .from('analysis_jobs')
@@ -373,76 +419,73 @@ export default async function handler(req, res) {
 
       if (queuedJobs && queuedJobs.length > 0) {
         for (const job of queuedJobs) {
-          const { data: claimed, error: claimErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({
-              status: 'extracting',
-              started_at: nowIso,
-            })
-            .eq('id', job.id)
-            .eq('status', 'queued')
-            .select('id, user_id, status');
+          try {
+            const { data: claimed, error: claimErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update({
+                status: 'extracting',
+                started_at: nowIso,
+              })
+              .eq('id', job.id)
+              .eq('status', 'queued')
+              .select('id, user_id, status');
 
-          if (claimErr) {
-            return res.status(500).json({ error: 'Failed to advance queued jobs', details: claimErr.message });
-          }
+            if (claimErr) {
+              throw new Error(`Failed to advance queued jobs: ${claimErr.message}`);
+            }
 
-          if (!claimed || claimed.length === 0) {
-            continue;
-          }
+            if (!claimed || claimed.length === 0) {
+              continue;
+            }
 
-          transitions.push({
-            job_id: job.id,
-            from_status: 'queued',
-            to_status: 'extracting',
-          });
-          passTransitions += 1;
-          const transitionErr = await writeStatusTransitionArtifact(
-            job.id,
-            'queued',
-            'extracting',
-            { user_id: job.user_id }
-          );
-
-          if (transitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: transitionErr.message,
+            transitions.push({
+              job_id: job.id,
+              from_status: 'queued',
+              to_status: 'extracting',
             });
+            passTransitions += 1;
+            const transitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'queued',
+              'extracting',
+              { user_id: job.user_id }
+            );
+
+            if (transitionErr) {
+              throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
+            }
+          } catch (err) {
+            await recordJobFailure(job, 'queued', err);
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
+            continue;
           }
         }
       }
 
       if (extractingJobs && extractingJobs.length > 0) {
         for (const job of extractingJobs) {
+          try {
           const { data: jobFiles, error: jobFilesErr } = await supabaseAdmin
             .from('analysis_job_files')
             .select('doc_type, original_filename, object_path, mime_type, parse_status, parse_error')
             .eq('job_id', job.id);
 
           if (jobFilesErr) {
-            return res.status(500).json({
-              error: 'Failed to fetch job files',
-              details: jobFilesErr.message,
-            });
+            throw new Error(`Failed to fetch job files: ${jobFilesErr.message}`);
           }
 
           const startedCheck = await hasWorkerEvent(job.id, 'extracting_started');
           if (startedCheck?.error) {
-            return res.status(500).json({
-              error: 'Failed to check extracting_started event',
-              details: startedCheck.error.message,
-            });
+            throw new Error(`Failed to check extracting_started event: ${startedCheck.error.message}`);
           }
           if (!startedCheck.exists) {
             const startedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_started', {
               timestamp: nowIso,
             });
             if (startedErr) {
-              return res.status(500).json({
-                error: 'Failed to write extracting_started event',
-                details: startedErr.message,
-              });
+              throw new Error(`Failed to write extracting_started event: ${startedErr.message}`);
             }
           }
 
@@ -453,10 +496,7 @@ export default async function handler(req, res) {
             .in('type', ['rent_roll_parsed', 't12_parsed']);
 
           if (structuredErr) {
-            return res.status(500).json({
-              error: 'Failed to check structured financial artifacts',
-              details: structuredErr.message,
-            });
+            throw new Error(`Failed to check structured financial artifacts: ${structuredErr.message}`);
           }
 
           const hasRentRollParsed = (structuredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
@@ -530,10 +570,7 @@ export default async function handler(req, res) {
               .eq('status', 'extracting');
 
             if (needsDocsErr) {
-              return res.status(500).json({
-                error: 'Failed to mark job needs_documents',
-                details: needsDocsErr.message,
-              });
+              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
             }
 
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
@@ -544,10 +581,9 @@ export default async function handler(req, res) {
             );
 
             if (needsDocsTransitionErr) {
-              return res.status(500).json({
-                error: 'Failed to write extracting->needs_documents status transition artifact',
-                details: needsDocsTransitionErr.message,
-              });
+              throw new Error(
+                `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+              );
             }
 
             if (!blockedJobIds.includes(job.id)) {
@@ -561,10 +597,7 @@ export default async function handler(req, res) {
               .not('doc_type', 'is', null);
 
             if (detectedErr) {
-              return res.status(500).json({
-                error: 'Failed to detect document types',
-                details: detectedErr.message,
-              });
+              throw new Error(`Failed to detect document types: ${detectedErr.message}`);
             }
 
             const detected = Array.from(
@@ -597,10 +630,7 @@ export default async function handler(req, res) {
               );
 
               if (workerEventErr) {
-                return res.status(500).json({
-                  error: 'Failed to write worker event artifact',
-                  details: workerEventErr.message,
-                });
+                throw new Error(`Failed to write worker event artifact: ${workerEventErr.message}`);
               }
 
               const { data: existingEmail } = await supabaseAdmin
@@ -682,20 +712,14 @@ export default async function handler(req, res) {
 
           const completedCheck = await hasWorkerEvent(job.id, 'extracting_completed');
           if (completedCheck?.error) {
-            return res.status(500).json({
-              error: 'Failed to check extracting_completed event',
-              details: completedCheck.error.message,
-            });
+            throw new Error(`Failed to check extracting_completed event: ${completedCheck.error.message}`);
           }
           if (!completedCheck.exists) {
             const completedErr = await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_completed', {
               timestamp: nowIso,
             });
             if (completedErr) {
-              return res.status(500).json({
-                error: 'Failed to write extracting_completed event',
-                details: completedErr.message,
-              });
+              throw new Error(`Failed to write extracting_completed event: ${completedErr.message}`);
             }
           }
 
@@ -708,10 +732,7 @@ export default async function handler(req, res) {
             .maybeSingle();
 
           if (extractingUpdErr) {
-            return res.status(500).json({
-              error: 'Failed to advance extracting job',
-              details: extractingUpdErr.message,
-            });
+            throw new Error(`Failed to advance extracting job: ${extractingUpdErr.message}`);
           }
 
           if (!extractingUpdate?.id) {
@@ -732,10 +753,14 @@ export default async function handler(req, res) {
           );
 
           if (transitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: transitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
+          }
+          } catch (err) {
+            await recordJobFailure(job, 'extracting', err);
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
+            continue;
           }
         }
       }
@@ -753,6 +778,7 @@ export default async function handler(req, res) {
 
       if (underwritingJobs && underwritingJobs.length > 0) {
         for (const job of underwritingJobs) {
+          try {
           const { data: underwritingClaim, error: underwritingUpdErr } = await supabaseAdmin
             .from('analysis_jobs')
             .update({ status: 'scoring' })
@@ -761,7 +787,7 @@ export default async function handler(req, res) {
             .select('id');
 
           if (underwritingUpdErr) {
-            return res.status(500).json({ error: 'Failed to advance underwriting jobs', details: underwritingUpdErr.message });
+            throw new Error(`Failed to advance underwriting jobs: ${underwritingUpdErr.message}`);
           }
 
           if (!underwritingClaim || underwritingClaim.length === 0) {
@@ -782,10 +808,14 @@ export default async function handler(req, res) {
           );
 
           if (transitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: transitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
+          }
+          } catch (err) {
+            await recordJobFailure(job, 'underwriting', err);
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
+            continue;
           }
         }
       }
@@ -803,6 +833,7 @@ export default async function handler(req, res) {
 
       if (scoringJobs && scoringJobs.length > 0) {
         for (const job of scoringJobs) {
+          try {
           const { data: renderingUpdate, error: renderingErr } = await supabaseAdmin
             .from('analysis_jobs')
             .update({ status: 'rendering' })
@@ -812,7 +843,7 @@ export default async function handler(req, res) {
             .maybeSingle();
 
           if (renderingErr) {
-            return res.status(500).json({ error: 'Failed to advance scoring job', details: renderingErr.message });
+            throw new Error(`Failed to advance scoring job: ${renderingErr.message}`);
           }
 
           if (!renderingUpdate?.id) {
@@ -833,10 +864,7 @@ export default async function handler(req, res) {
           );
 
           if (scoringTransitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: scoringTransitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${scoringTransitionErr.message}`);
           }
 
           const { data: requiredArtifacts, error: requiredErr } = await supabaseAdmin
@@ -846,10 +874,7 @@ export default async function handler(req, res) {
             .in('type', ['rent_roll_parsed', 't12_parsed']);
 
           if (requiredErr) {
-            return res.status(500).json({
-              error: 'Failed to check required document artifacts',
-              details: requiredErr.message,
-            });
+            throw new Error(`Failed to check required document artifacts: ${requiredErr.message}`);
           }
 
           const hasRentRoll = (requiredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
@@ -867,10 +892,7 @@ export default async function handler(req, res) {
               .eq('status', 'rendering');
 
             if (needsDocsErr) {
-              return res.status(500).json({
-                error: 'Failed to mark job needs_documents',
-                details: needsDocsErr.message,
-              });
+              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
             }
 
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
@@ -881,10 +903,9 @@ export default async function handler(req, res) {
             );
 
             if (needsDocsTransitionErr) {
-              return res.status(500).json({
-                error: 'Failed to write rendering->needs_documents status transition artifact',
-                details: needsDocsTransitionErr.message,
-              });
+              throw new Error(
+                `Failed to write rendering->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+              );
             }
 
             if (!blockedJobIds.includes(job.id)) {
@@ -918,10 +939,9 @@ export default async function handler(req, res) {
                 ]);
 
               if (missingArtifactErr) {
-                return res.status(500).json({
-                  error: 'Failed to write missing_required_documents artifact',
-                  details: missingArtifactErr.message,
-                });
+                throw new Error(
+                  `Failed to write missing_required_documents artifact: ${missingArtifactErr.message}`
+                );
               }
             }
 
@@ -1031,7 +1051,7 @@ export default async function handler(req, res) {
               .limit(1);
 
             if (reportErr) {
-              return res.status(500).json({ error: 'Failed to check existing reports', details: reportErr.message });
+              throw new Error(`Failed to check existing reports: ${reportErr.message}`);
             }
 
             if (existingReports && existingReports.length > 0 && existingReports[0].storage_path) {
@@ -1094,7 +1114,7 @@ export default async function handler(req, res) {
               .eq('id', job.id);
 
             if (failErr) {
-              return res.status(500).json({ error: 'Failed to mark scoring job failed', details: failErr.message });
+              throw new Error(`Failed to mark scoring job failed: ${failErr.message}`);
             }
 
             transitions.push({
@@ -1115,10 +1135,9 @@ export default async function handler(req, res) {
             );
 
             if (failedTransitionErr) {
-              return res.status(500).json({
-                error: 'Failed to write failed status transition artifact',
-                details: failedTransitionErr.message,
-              });
+              throw new Error(
+                `Failed to write failed status transition artifact: ${failedTransitionErr.message}`
+              );
             }
 
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
@@ -1128,10 +1147,9 @@ export default async function handler(req, res) {
             });
 
             if (workerEventErr) {
-              return res.status(500).json({
-                error: 'Failed to write report generation failure artifact',
-                details: workerEventErr.message,
-              });
+              throw new Error(
+                `Failed to write report generation failure artifact: ${workerEventErr.message}`
+              );
             }
 
             continue;
@@ -1145,10 +1163,7 @@ export default async function handler(req, res) {
           });
 
           if (reportEventErr) {
-            return res.status(500).json({
-              error: 'Failed to write report generation artifact',
-              details: reportEventErr.message,
-            });
+            throw new Error(`Failed to write report generation artifact: ${reportEventErr.message}`);
           }
 
           const { error: pdfGenErr } = await supabaseAdmin
@@ -1157,7 +1172,7 @@ export default async function handler(req, res) {
             .eq('id', job.id);
 
           if (pdfGenErr) {
-            return res.status(500).json({ error: 'Failed to advance job to pdf_generating', details: pdfGenErr.message });
+            throw new Error(`Failed to advance job to pdf_generating: ${pdfGenErr.message}`);
           }
 
           transitions.push({
@@ -1174,10 +1189,7 @@ export default async function handler(req, res) {
           );
 
           if (pdfTransitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: pdfTransitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${pdfTransitionErr.message}`);
           }
 
           const { error: publishingErr } = await supabaseAdmin
@@ -1186,7 +1198,7 @@ export default async function handler(req, res) {
             .eq('id', job.id);
 
           if (publishingErr) {
-            return res.status(500).json({ error: 'Failed to advance job to publishing', details: publishingErr.message });
+            throw new Error(`Failed to advance job to publishing: ${publishingErr.message}`);
           }
 
           transitions.push({
@@ -1203,18 +1215,14 @@ export default async function handler(req, res) {
           );
 
           if (publishingTransitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: publishingTransitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${publishingTransitionErr.message}`);
           }
 
           const creditResult = await consumeCreditOnce(job);
           if (creditResult?.error) {
-            return res.status(500).json({
-              error: 'Failed to consume credits',
-              details: creditResult.error.message || String(creditResult.error),
-            });
+            throw new Error(
+              `Failed to consume credits: ${creditResult.error.message || String(creditResult.error)}`
+            );
           }
 
           if (creditResult?.failed) {
@@ -1241,7 +1249,7 @@ export default async function handler(req, res) {
             .eq('id', job.id);
 
           if (completedErr) {
-            return res.status(500).json({ error: 'Failed to mark job published', details: completedErr.message });
+            throw new Error(`Failed to mark job published: ${completedErr.message}`);
           }
 
           transitions.push({
@@ -1258,10 +1266,7 @@ export default async function handler(req, res) {
           );
 
           if (completedTransitionErr) {
-            return res.status(500).json({
-              error: 'Failed to write status transition artifact',
-              details: completedTransitionErr.message,
-            });
+            throw new Error(`Failed to write status transition artifact: ${completedTransitionErr.message}`);
           }
 
           const { data: publishedEmail } = await supabaseAdmin
@@ -1333,6 +1338,13 @@ export default async function handler(req, res) {
             } catch (err) {
               console.error('Failed to send report_published email:', err?.message || err);
             }
+          }
+          } catch (err) {
+            await recordJobFailure(job, 'rendering', err);
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
+            }
+            continue;
           }
         }
       }

@@ -15,7 +15,6 @@ export default function Dashboard() {
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -25,11 +24,11 @@ export default function Dashboard() {
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [jobEvents, setJobEvents] = useState({});
+  const [latestFailedJob, setLatestFailedJob] = useState(null);
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
       'validating_inputs',
-      'needs_documents',
       'extracting',
       'underwriting',
       'scoring',
@@ -65,6 +64,7 @@ export default function Dashboard() {
 
     const eventTypes = [
       'missing_structured_financials',
+      'missing_required_documents',
       'textract_failed',
       'rent_roll_fallback_failed',
       't12_fallback_failed',
@@ -84,10 +84,11 @@ export default function Dashboard() {
     }
 
     const priority = {
-      missing_structured_financials: 0,
-      textract_failed: 1,
-      rent_roll_fallback_failed: 2,
-      t12_fallback_failed: 3,
+      missing_required_documents: 0,
+      missing_structured_financials: 1,
+      textract_failed: 2,
+      rent_roll_fallback_failed: 3,
+      t12_fallback_failed: 4,
     };
 
     const nextEvents = {};
@@ -134,11 +135,32 @@ export default function Dashboard() {
     await fetchJobEvents(rows.map((job) => job.id));
   };
 
+  const fetchLatestFailedJob = async () => {
+    if (!profile?.id) return;
+
+    const { data, error } = await supabase
+      .from('analysis_jobs')
+      .select('id, property_name, status, created_at, error_message')
+      .eq('user_id', profile.id)
+      .eq('status', 'failed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Failed to fetch failed job:', error);
+      return;
+    }
+
+    setLatestFailedJob(data || null);
+  };
+
   useEffect(() => {
   const syncEverything = async () => {
     await fetchProfile(profile.id);
     await fetchReports();
     await fetchInProgressJobs();
+    await fetchLatestFailedJob();
 
         // Reuse the most recent in-progress job (supports walk-away / return later)
     if (!jobId) {
@@ -205,6 +227,7 @@ export default function Dashboard() {
           // Whenever a job changes status in the DB, refresh the UI list
           fetchInProgressJobs();
           fetchReports();
+          fetchLatestFailedJob();
         }
       )
       .subscribe();
@@ -223,6 +246,10 @@ const POLICY_KEY = 'analysis_disclosures';
 const POLICY_VERSION = 'v2026-01-14';
 
 const credits = Number(profile?.report_credits ?? 0);
+const rentRollFiles = uploadedFiles.filter((item) => item.docType === 'rent_roll');
+const t12Files = uploadedFiles.filter((item) => item.docType === 't12');
+const otherFiles = uploadedFiles.filter((item) => item.docType === 'other');
+const hasRequiredUploads = rentRollFiles.length > 0 && t12Files.length > 0;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -356,7 +383,7 @@ const credits = Number(profile?.report_credits ?? 0);
     await fetchProfile(profile.id);
   };
 
-    const handleUpload = async (e) => {
+    const handleUpload = async (e, slotDocType) => {
     const files = Array.from(e.target.files || []);
 
   // allow selecting the same file again later
@@ -466,6 +493,15 @@ const credits = Number(profile?.report_credits ?? 0);
     return;
   }
 
+  if (!slotDocType) {
+    toast({
+      title: 'Upload blocked',
+      description: 'Select a document slot before uploading files.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
     // Use a local job id to avoid React state timing issues
 let effectiveJobId = jobId;
 
@@ -516,32 +552,6 @@ if (!profile?.id || !effectiveJobId) {
   const safeName = String(file.name || 'file').replaceAll('/', '_');
   const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
 
-  const inferDocType = (name) => {
-    const text = String(name || '').toLowerCase();
-    if (
-      text.includes('rent roll') ||
-      text.includes('rentroll') ||
-      text.includes('rent_roll')
-    ) {
-      return 'rent_roll';
-    }
-    if (
-      text.includes('t12') ||
-      text.includes('t-12') ||
-      text.includes('operating statement') ||
-      text.includes('income statement') ||
-      text.includes('p&l') ||
-      text.includes('p and l') ||
-      text.includes('profit') ||
-      text.includes('loss')
-    ) {
-      return 't12';
-    }
-    return null;
-  };
-
-  const inferredDocType = inferDocType(safeName);
-
     const { error: uploadErr } = await supabase.storage
   .from(bucket)
   .upload(objectPath, file, {
@@ -570,7 +580,7 @@ if (!profile?.id || !effectiveJobId) {
         original_filename: safeName,
         mime_type: file.type || 'application/octet-stream',
         bytes: file.size,
-        doc_type: inferredDocType,
+        doc_type: slotDocType,
         parse_status: 'pending',
       });
 
@@ -607,13 +617,13 @@ if (!profile?.id || !effectiveJobId) {
 
   // Append new files instead of overwriting existing ones
   setUploadedFiles((prev) => {
-
-    const combined = [...prev, ...files];
+    const nextEntries = files.map((file) => ({ file, docType: slotDocType }));
+    const combined = [...prev, ...nextEntries];
 
     // Prevent accidental duplicates (same name + size)
     const seen = new Set();
     return combined.filter((f) => {
-      const key = `${f.name}__${f.size}`;
+      const key = `${f.file?.name}__${f.file?.size}__${f.docType}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -633,10 +643,10 @@ if (!profile?.id || !effectiveJobId) {
       return;
     }
 
-    if (uploadedFiles.length === 0) {
+    if (!hasRequiredUploads) {
       toast({
         title: 'Document Required',
-        description: 'Please upload your OM or Rent Roll to begin institutional underwriting.',
+        description: 'Rent Roll and T12/Operating Statement are required to start underwriting.',
         variant: 'destructive',
       });
       return;
@@ -679,7 +689,7 @@ if (verifiedCredits < 1) {
       if (!jobId) {
         toast({
           title: 'Analysis not initialized',
-          description: 'Please upload at least one document before generating.',
+          description: 'Rent Roll and T12/Operating Statement are required to start underwriting.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -845,165 +855,302 @@ if (verifiedCredits < 1) {
                 </p>
               </div>
 
-              <div className="relative flex flex-col items-end gap-3">
-                <button
-  type="button"
-  disabled={!propertyName.trim()}
-  onClick={async () => {
-
-    if (!profile || credits <= 0) {
-      window.location.href = '/pricing';
-      return;
-    }
-
-    if (!propertyName.trim()) {
-      toast({
-        title: 'Property name required',
-        description: 'Enter a property name before uploading documents.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!acknowledged) {
-      toast({
-        title: 'Acknowledgement required',
-        description:
-          'Please acknowledge the document-based limitations before uploading files.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsModalOpen(true);
-  }}
-    className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold
-    ${
-      propertyName.trim()
-        ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
-        : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
-    }`}
->
-                  <UploadCloud className="mr-2 h-5 w-5" />
-                  Add file(s)
-                </button>
-                  {!propertyName.trim() && (
-                  <div className="mt-2 text-xs font-semibold text-slate-600">
+              <div className="w-full">
+                {!propertyName.trim() && (
+                  <div className="mb-2 text-xs font-semibold text-slate-600">
                     Enter a property name to enable uploads.
                   </div>
                 )}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
+                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
+                    <button
+                      type="button"
+                      disabled={!propertyName.trim()}
+                      onClick={async () => {
+                        if (!profile || credits <= 0) {
+                          window.location.href = '/pricing';
+                          return;
+                        }
 
-                {isModalOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsModalOpen(false)}
-                      aria-hidden="true"
-                    />
+                        if (!propertyName.trim()) {
+                          toast({
+                            title: 'Property name required',
+                            description: 'Enter a property name before uploading documents.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
 
-                    <div
-                      className="absolute right-0 top-full z-50 mt-2 w-[320px] rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-                      onClick={(e) => e.stopPropagation()}
-                      role="dialog"
-                      aria-label="Insert file"
+                        if (!acknowledged) {
+                          toast({
+                            title: 'Acknowledgement required',
+                            description:
+                              'Please acknowledge the document-based limitations before uploading files.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        document.getElementById('rentRollInput')?.click();
+                      }}
+                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                        ${
+                          propertyName.trim()
+                            ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                            : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
                     >
-                      <div className="text-sm font-semibold text-[#0F172A]">Insert file</div>
-                      <div className="mt-2 grid gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsModalOpen(false);
-                            document.getElementById('fileInput')?.click();
-                          }}
-                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
-                        >
-                          Upload files
-                          <div className="text-xs font-normal text-slate-500">
-                            PDFs, spreadsheets, or images
+                      <UploadCloud className="h-4 w-4" />
+                      Upload Rent Roll
+                    </button>
+                    <div className="mt-3 space-y-2">
+                      {rentRollFiles.length === 0 ? (
+                        <div className="text-xs text-slate-500">No files uploaded.</div>
+                      ) : (
+                        rentRollFiles.map((entry, index) => (
+                          <div
+                            key={`${entry.file.name}-${index}`}
+                            className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-semibold text-[#0F172A]">
+                                {entry.file.name}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                {entry.file.size < 1024 * 1024
+                                  ? `${(entry.file.size / 1024).toFixed(2)} KB`
+                                  : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadedFiles((prev) =>
+                                  prev.filter(
+                                    (item) =>
+                                      !(
+                                        item.docType === 'rent_roll' &&
+                                        item.file?.name === entry.file.name &&
+                                        item.file?.size === entry.file.size
+                                      )
+                                  )
+                                )
+                              }
+                              className="text-xs font-bold text-red-700 hover:text-red-900"
+                            >
+                              ×
+                            </button>
                           </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsModalOpen(false);
-                            document.getElementById('cameraInput')?.click();
-                          }}
-                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
-                        >
-                          Camera
-                          <div className="text-xs font-normal text-slate-500">
-                            Take photos of documents
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setIsModalOpen(false)}
-                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                        ))
+                      )}
                     </div>
-                  </>
-                )}
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
+                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">
+                      T12 (Operating Statement)
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!propertyName.trim()}
+                      onClick={async () => {
+                        if (!profile || credits <= 0) {
+                          window.location.href = '/pricing';
+                          return;
+                        }
+
+                        if (!propertyName.trim()) {
+                          toast({
+                            title: 'Property name required',
+                            description: 'Enter a property name before uploading documents.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        if (!acknowledged) {
+                          toast({
+                            title: 'Acknowledgement required',
+                            description:
+                              'Please acknowledge the document-based limitations before uploading files.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        document.getElementById('t12Input')?.click();
+                      }}
+                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                        ${
+                          propertyName.trim()
+                            ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                            : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      Upload T12
+                    </button>
+                    <div className="mt-3 space-y-2">
+                      {t12Files.length === 0 ? (
+                        <div className="text-xs text-slate-500">No files uploaded.</div>
+                      ) : (
+                        t12Files.map((entry, index) => (
+                          <div
+                            key={`${entry.file.name}-${index}`}
+                            className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-semibold text-[#0F172A]">
+                                {entry.file.name}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                {entry.file.size < 1024 * 1024
+                                  ? `${(entry.file.size / 1024).toFixed(2)} KB`
+                                  : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadedFiles((prev) =>
+                                  prev.filter(
+                                    (item) =>
+                                      !(
+                                        item.docType === 't12' &&
+                                        item.file?.name === entry.file.name &&
+                                        item.file?.size === entry.file.size
+                                      )
+                                  )
+                                )
+                              }
+                              className="text-xs font-bold text-red-700 hover:text-red-900"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Optional</div>
+                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">Other / Supporting</div>
+                    <button
+                      type="button"
+                      disabled={!propertyName.trim()}
+                      onClick={async () => {
+                        if (!profile || credits <= 0) {
+                          window.location.href = '/pricing';
+                          return;
+                        }
+
+                        if (!propertyName.trim()) {
+                          toast({
+                            title: 'Property name required',
+                            description: 'Enter a property name before uploading documents.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        if (!acknowledged) {
+                          toast({
+                            title: 'Acknowledgement required',
+                            description:
+                              'Please acknowledge the document-based limitations before uploading files.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        document.getElementById('otherDocsInput')?.click();
+                      }}
+                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                        ${
+                          propertyName.trim()
+                            ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                            : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      Upload Supporting
+                    </button>
+                    <div className="mt-3 space-y-2">
+                      {otherFiles.length === 0 ? (
+                        <div className="text-xs text-slate-500">No files uploaded.</div>
+                      ) : (
+                        otherFiles.map((entry, index) => (
+                          <div
+                            key={`${entry.file.name}-${index}`}
+                            className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-semibold text-[#0F172A]">
+                                {entry.file.name}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                {entry.file.size < 1024 * 1024
+                                  ? `${(entry.file.size / 1024).toFixed(2)} KB`
+                                  : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadedFiles((prev) =>
+                                  prev.filter(
+                                    (item) =>
+                                      !(
+                                        item.docType === 'other' &&
+                                        item.file?.name === entry.file.name &&
+                                        item.file?.size === entry.file.size
+                                      )
+                                  )
+                                )
+                              }
+                              className="text-xs font-bold text-red-700 hover:text-red-900"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             <input
-  id="fileInput"
-  type="file"
-  multiple
-  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-  onChange={handleUpload}
-  className="hidden"
-/>
-
-            <input
-              id="cameraInput"
+              id="rentRollInput"
               type="file"
-              accept="image/*"
-              capture="environment"
               multiple
-              onChange={handleUpload}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 'rent_roll')}
               className="hidden"
             />
 
-            {/* STAGED DOCUMENTS */}
-            {uploadedFiles.length > 0 && (
-              <div className="mt-8 border-t border-slate-100 pt-6">
-                <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-[0.2em] mb-4">
-                  Staged Documents ({uploadedFiles.length})
-                </h4>
-                <div className="space-y-2">
-                  {uploadedFiles.map((file, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-3 rounded-lg"
-                    >
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-semibold text-[#0F172A] truncate">
-  {file.name}
-</span>
-<span className="text-[10px] text-slate-500 font-bold uppercase">
-  {file.size < 1024 * 1024 
-    ? `${(file.size / 1024).toFixed(2)} KB` 
-    : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
-</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
-                        className="text-[10px] font-bold text-red-700 hover:text-red-900 uppercase tracking-widest ml-4 shrink-0"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <input
+              id="t12Input"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 't12')}
+              className="hidden"
+            />
+
+            <input
+              id="otherDocsInput"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 'other')}
+              className="hidden"
+            />
 
             {/* DISCLAIMER */}
             <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
@@ -1077,7 +1224,7 @@ if (verifiedCredits < 1) {
             <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!propertyName.trim() || uploadedFiles.length === 0 || loading || !acknowledged || hasBlockingJob}
+                disabled={!propertyName.trim() || !hasRequiredUploads || loading || !acknowledged || hasBlockingJob}
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
@@ -1097,13 +1244,13 @@ if (verifiedCredits < 1) {
                 </div>
               )}
 
-              {propertyName.trim() && uploadedFiles.length === 0 && (
+              {propertyName.trim() && !hasRequiredUploads && (
                 <div className="mt-2 text-xs font-semibold text-red-700">
-                  Upload at least one document to generate a report.
+                  Rent Roll and T12/Operating Statement are required to start underwriting.
                 </div>
               )}
 
-              {propertyName.trim() && uploadedFiles.length > 0 && !acknowledged && (
+              {propertyName.trim() && hasRequiredUploads && !acknowledged && (
                 <div className="mt-2 text-xs font-semibold text-red-700">
                   Acknowledge the disclosures to generate a report.
                 </div>
@@ -1170,7 +1317,7 @@ if (verifiedCredits < 1) {
         const jobEvent = jobEvents[job.id];
         const eventName = jobEvent?.payload?.event || '';
         const errorMessage = jobEvent?.payload?.error_message || '';
-        const isActionRequired = eventName === 'missing_structured_financials';
+        const isActionRequired = eventName === 'missing_required_documents';
         const isWarning = !isActionRequired && Boolean(eventName);
 
         return (
@@ -1195,7 +1342,7 @@ if (verifiedCredits < 1) {
                     type="button"
                     onClick={() => {
                       document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
-                      setIsModalOpen(true);
+                      document.getElementById('rentRollInput')?.click();
                     }}
                     className="mt-3 inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0d1326]"
                   >
@@ -1232,6 +1379,18 @@ if (verifiedCredits < 1) {
     </div>
   </div>
 )}
+
+          {latestFailedJob?.id && (
+            <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-6 text-[#0F172A]">
+              <div className="text-sm font-bold uppercase tracking-wide text-red-700">
+                Report failed
+              </div>
+              <div className="mt-2 text-sm text-red-800">
+                {latestFailedJob.error_message ||
+                  'Processing failed. Please log in to your InvestorIQ dashboard.'}
+              </div>
+            </div>
+          )}
 
           {/* RECENT REPORTS TABLE */}
           <div className="mt-12 mb-20">
