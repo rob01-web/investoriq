@@ -797,9 +797,7 @@ const REQUIRED_SECTIONS = [
 
 REQUIRED_SECTIONS.forEach((key) => {
   if (!sections[key]) {
-    sections[key] = IS_SAMPLE_REPORT
-      ? '<p class="muted">Section intentionally omitted in sample report.</p>'
-      : "";
+    sections[key] = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
   }
 });
     
@@ -865,7 +863,7 @@ REQUIRED_SECTIONS.forEach((key) => {
     }
 
     // 2. Load the HTML template (SACRED MASTER COPY)
-    const templatePath = path.join(__dirname, "html", "sample-report.html");
+    const templatePath = path.join(__dirname, "report-template.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
 
     // 3. Inject property identity
@@ -883,37 +881,37 @@ REQUIRED_SECTIONS.forEach((key) => {
     finalHtml = replaceAll(
       finalHtml,
       "{{PURCHASE_PRICE}}",
-      formatCurrency(financials.purchasePrice)
+      formatCurrency(financials.purchasePrice) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{TOTAL_PROJECT_COST}}",
-      formatCurrency(financials.totalProjectCost)
+      formatCurrency(financials.totalProjectCost) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{EQUITY_REQUIRED}}",
-      formatCurrency(financials.equityRequired)
+      formatCurrency(financials.equityRequired) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{CAP_RATE_ON_COST}}",
-      formatPercent(financials.capRateOnCost)
+      formatPercent(financials.capRateOnCost) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{LEVERED_IRR}}",
-      formatPercent(financials.leveredIrr)
+      formatPercent(financials.leveredIrr) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{EQUITY_MULTIPLE}}",
-      formatMultiple(financials.equityMultiple, 2)
+      formatMultiple(financials.equityMultiple, 2) || DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{YEAR1_COC}}",
-      formatPercent(financials.year1CoC)
+      formatPercent(financials.year1CoC) || DATA_NOT_AVAILABLE
     );
 
     // 5. Inject dynamic tables (fall back to blank if not provided)

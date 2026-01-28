@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InvestorIQ Report - {{PROPERTY_NAME}} ({{CITY}}, {{PROVINCE}})</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: Letter; margin: 36px 36px 48px 36px; }
+    :root {
+      --navy: #0F172A;
+      --teal: #1F8A8A;
+      --gold: #D4AF37;
+      --bg-soft: #F3F4F6;
+      --border-soft: #E5E7EB;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: var(--navy);
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .report-container { width: 100%; padding: 24px 32px 72px 32px; }
+    h1, h2, h3, h4 { font-family: "Merriweather", "Times New Roman", serif; margin: 0; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 22px; margin-bottom: 6px; }
+    h3 { font-size: 16px; margin-bottom: 4px; }
+    p { margin: 4px 0 8px 0; }
+    .tagline { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #9CA3AF; }
+    .section { margin-top: 18px; padding: 18px 0; background: #ffffff; }
+    .section-header { border-bottom: 2px solid var(--gold); padding-bottom: 6px; margin-bottom: 14px; }
+    .section-number { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--teal); margin-bottom: 4px; }
+    .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
+    .grid-2-balanced { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .card { background: var(--bg-soft); border-radius: 8px; border: 1px solid var(--border-soft); padding: 12px 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    th, td { border: 1px solid var(--border-soft); padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #F9FAFB; font-weight: 600; }
+    tr:nth-child(even) td { background: #F9FAFB; }
+    .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #6B7280; }
+    .subsection-title { font-size: 13px; font-weight: 600; margin-top: 12px; }
+    .small { font-size: 11px; color: #6B7280; }
+    .muted { color: #6B7280; }
+    .no-break { page-break-inside: avoid; }
+    .chart { width: 100%; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">0.0 Report Overview</div>
+        <h1>{{PROPERTY_NAME}}</h1>
+        <p class="small">{{CITY}}, {{PROVINCE}} {{PROPERTY_SUBMARKET}}</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">0.5 Document Sources</div>
+        <h2>Document Sources</h2>
+      </div>
+      {{DOCUMENT_SOURCES}}
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">1.0 Executive Summary</div>
+        <h2>Executive Summary</h2>
+      </div>
+      <div class="grid-2">
+        <div>
+          {{EXEC_SUMMARY}}
+        </div>
+        <div class="card no-break">
+          <p class="label">Key Metrics Snapshot (Base Case)</p>
+          <table>
+            <tbody>
+              <tr>
+                <td>Purchase Price</td>
+                <td>{{PURCHASE_PRICE}}</td>
+              </tr>
+              <tr>
+                <td>Total Project Cost (Incl. CapEx)</td>
+                <td>{{TOTAL_PROJECT_COST}}</td>
+              </tr>
+              <tr>
+                <td>Equity Required (35% of Total Cost)</td>
+                <td>{{EQUITY_REQUIRED}}</td>
+              </tr>
+              <tr>
+                <td>Stabilized Cap Rate on Cost</td>
+                <td>{{CAP_RATE_ON_COST}}</td>
+              </tr>
+              <tr>
+                <td>5-Year Levered IRR (Base Case)</td>
+                <td>{{LEVERED_IRR}}</td>
+              </tr>
+              <tr>
+                <td>Equity Multiple (Base Case)</td>
+                <td>{{EQUITY_MULTIPLE}}</td>
+              </tr>
+              <tr>
+                <td>Year 1 Cash-on-Cash</td>
+                <td>{{YEAR1_COC}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2.0 Unit Mix</div>
+        <h2>Unit Mix Summary</h2>
+      </div>
+      {{UNIT_MIX_TABLE}}
+      <p class="subsection-title">Illustrative Unit Mix and Rent Lift</p>
+      <table>
+        <tbody>
+          <tr>
+            <td>DATA NOT AVAILABLE (not present in uploaded documents)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:8px;">DATA NOT AVAILABLE (not present in uploaded documents)</p>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3.0 Renovation Plan</div>
+        <h2>Renovation Plan</h2>
+      </div>
+      {{RENOVATION_TABLE}}
+      {{RENOVATION_NARRATIVE}}
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4.0 Cash Flow & Scenario Analysis</div>
+        <h2>Scenario Analysis</h2>
+      </div>
+      {{SCENARIO_TABLE}}
+      {{RETURN_SUMMARY_TABLE}}
+      <img class="chart" src="{{IRR_SCENARIO_CHART_URL}}" alt="IRR Scenario Analysis" />
+      {{CASH_FLOW_PROJECTIONS}}
+      <img class="chart" src="{{CASHFLOW_CHART_URL}}" alt="Cash Flow Projection" />
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5.0 Market & Risk</div>
+        <h2>Market Overview</h2>
+      </div>
+      {{NEIGHBORHOOD_ANALYSIS}}
+      {{RISK_ASSESSMENT}}
+      <img class="chart" src="{{RISK_RADAR_CHART_URL}}" alt="Risk Radar" />
+      <img class="chart" src="{{BREAKEVEN_CHART_URL}}" alt="Break-Even Occupancy" />
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">6.0 Capital Plan</div>
+        <h2>Capital Plan</h2>
+      </div>
+      {{CAPITAL_PLAN_TABLE}}
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">7.0 Deal Score & Comps</div>
+        <h2>Deal Score Summary</h2>
+      </div>
+      {{DEAL_SCORE_TABLE}}
+      <img class="chart" src="{{DEAL_SCORE_RADAR_CHART_URL}}" alt="Deal Score Radar" />
+      <img class="chart" src="{{DEAL_SCORE_BAR_CHART_URL}}" alt="Deal Score Breakdown" />
+      {{DEAL_SCORE_SUMMARY}}
+      {{DEAL_SCORE_INTERPRETATION}}
+      {{COMPARABLES_TABLE}}
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">8.0 Debt & DCF</div>
+        <h2>Debt Structure and DCF</h2>
+      </div>
+      {{DEBT_STRUCTURE}}
+      {{ADVANCED_MODELING_INTRO}}
+      {{DCF_INTERPRETATION}}
+      <img class="chart" src="{{NOI_WATERFALL_CHART_URL}}" alt="NOI Waterfall" />
+      <img class="chart" src="{{EXPENSE_RATIO_CHART_URL}}" alt="Expense Ratio" />
+      <img class="chart" src="{{EQUITY_COMPONENTS_CHART_URL}}" alt="Equity Components" />
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">9.0 Conclusion</div>
+        <h2>Final Recommendation</h2>
+      </div>
+      {{FINAL_RECOMMENDATION}}
+    </div>
+  </div>
+</body>
+</html>
