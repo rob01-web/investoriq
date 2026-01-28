@@ -1,0 +1,10 @@
+// 8. TEMP: Skip sentence integrity to avoid corrupting HTML
+const safeHtml = finalHtml;
+const warnings = [];
+
+    if (warnings.length > 0) {
+      console.warn("⚠️ Sentence Integrity Warnings:");
+      warnings.forEach((w) => console.warn(" - " + w));
+    }
+
+    
