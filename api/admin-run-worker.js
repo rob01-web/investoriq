@@ -536,6 +536,20 @@ export default async function handler(req, res) {
               });
             }
 
+            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'extracting',
+              'needs_documents',
+              { user_id: job.user_id }
+            );
+
+            if (needsDocsTransitionErr) {
+              return res.status(500).json({
+                error: 'Failed to write extracting->needs_documents status transition artifact',
+                details: needsDocsTransitionErr.message,
+              });
+            }
+
             if (!blockedJobIds.includes(job.id)) {
               blockedJobIds.push(job.id);
             }
@@ -825,6 +839,169 @@ export default async function handler(req, res) {
             });
           }
 
+          const { data: requiredArtifacts, error: requiredErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('id, type')
+            .eq('job_id', job.id)
+            .in('type', ['rent_roll_parsed', 't12_parsed']);
+
+          if (requiredErr) {
+            return res.status(500).json({
+              error: 'Failed to check required document artifacts',
+              details: requiredErr.message,
+            });
+          }
+
+          const hasRentRoll = (requiredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
+          const hasT12 = (requiredArtifacts || []).some((artifact) => artifact.type === 't12_parsed');
+
+          if (!hasRentRoll || !hasT12) {
+            const missing = [];
+            if (!hasRentRoll) missing.push('rent_roll');
+            if (!hasT12) missing.push('t12');
+
+            const { error: needsDocsErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update({ status: 'needs_documents' })
+              .eq('id', job.id)
+              .eq('status', 'rendering');
+
+            if (needsDocsErr) {
+              return res.status(500).json({
+                error: 'Failed to mark job needs_documents',
+                details: needsDocsErr.message,
+              });
+            }
+
+            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'rendering',
+              'needs_documents',
+              { user_id: job.user_id }
+            );
+
+            if (needsDocsTransitionErr) {
+              return res.status(500).json({
+                error: 'Failed to write rendering->needs_documents status transition artifact',
+                details: needsDocsTransitionErr.message,
+              });
+            }
+
+            if (!blockedJobIds.includes(job.id)) {
+              blockedJobIds.push(job.id);
+            }
+
+            const { data: existingMissingDoc } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', job.id)
+              .eq('type', 'missing_required_documents')
+              .limit(1)
+              .maybeSingle();
+
+            if (!existingMissingDoc?.id) {
+              const { error: missingArtifactErr } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .insert([
+                  {
+                    job_id: job.id,
+                    user_id: job.user_id,
+                    type: 'missing_required_documents',
+                    bucket: 'system',
+                    object_path: `analysis_jobs/${job.id}/missing_required_documents/${safeTimestamp(nowIso)}.json`,
+                    payload: {
+                      missing,
+                      timestamp: nowIso,
+                      job_id: job.id,
+                    },
+                  },
+                ]);
+
+              if (missingArtifactErr) {
+                return res.status(500).json({
+                  error: 'Failed to write missing_required_documents artifact',
+                  details: missingArtifactErr.message,
+                });
+              }
+            }
+
+            const { data: existingEmail } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', job.id)
+              .eq('type', 'email_sent')
+              .eq('bucket', 'system')
+              .eq('payload->>email_type', 'missing_structured_financials')
+              .limit(1)
+              .maybeSingle();
+
+            if (!existingEmail?.id) {
+              try {
+                const { data: userRes, error: userErr } =
+                  await supabaseAdmin.auth.admin.getUserById(job.user_id);
+
+                if (userErr) {
+                  throw userErr;
+                }
+
+                const userEmail = userRes?.user?.email;
+                if (!userEmail) {
+                  throw new Error('Missing user email');
+                }
+
+                const { data: profileRow, error: profileErr } = await supabaseAdmin
+                  .from('profiles')
+                  .select('full_name')
+                  .eq('id', job.user_id)
+                  .maybeSingle();
+
+                if (profileErr) {
+                  throw profileErr;
+                }
+
+                const fullName = String(profileRow?.full_name || '').trim();
+                const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
+
+                await sendEmailSES({
+                  to: userEmail,
+                  subject: 'Action required: documents needed to continue your InvestorIQ report',
+                  text:
+                    `Hello ${firstName},\n\n` +
+                    'Your InvestorIQ report cannot proceed yet.\n\n' +
+                    'We could not identify structured financial documents required for underwriting.\n\n' +
+                    'Required:\n' +
+                    '- Rent Roll\n' +
+                    '- T12 (Operating Statement)\n\n' +
+                    'Please log in to your InvestorIQ dashboard\n' +
+                    'and upload the required documents to continue processing.\n\n' +
+                    'This report will remain paused until required documents are available.',
+                });
+
+                await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: job.id,
+                    user_id: job.user_id,
+                    type: 'email_sent',
+                    bucket: 'system',
+                    object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
+                      nowIso
+                    )}.json`,
+                    payload: {
+                      email_type: 'missing_structured_financials',
+                      job_id: job.id,
+                      user_id: job.user_id,
+                      timestamp: nowIso,
+                    },
+                  },
+                ]);
+              } catch (err) {
+                console.error('Failed to send missing_structured_financials email:', err?.message || err);
+              }
+            }
+
+            continue;
+          }
+
           let reportId = null;
           let storagePath = null;
           let generatorSource = 'generate-client-report';
@@ -1111,12 +1288,27 @@ export default async function handler(req, res) {
                 throw new Error('Missing user email');
               }
 
+              const { data: profileRow, error: profileErr } = await supabaseAdmin
+                .from('profiles')
+                .select('full_name')
+                .eq('id', job.user_id)
+                .maybeSingle();
+
+              if (profileErr) {
+                throw profileErr;
+              }
+
+              const fullName = String(profileRow?.full_name || '').trim();
+              const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
+
               await sendEmailSES({
                 to: userEmail,
                 subject: 'Your InvestorIQ report is ready',
                 text:
+                  `Hello ${firstName},\n\n` +
                   'Your InvestorIQ report has been completed and is now available in your dashboard.\n\n' +
-                  'You may download the report at any time by signing in to InvestorIQ.\n\n' +
+                  'Please log in to your InvestorIQ dashboard\n' +
+                  'to review and download your report.\n\n' +
                   'If you have additional documents or wish to run another analysis,\n' +
                   'you may start a new report from your dashboard.',
               });
