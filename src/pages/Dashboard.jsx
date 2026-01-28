@@ -753,8 +753,8 @@ if (verifiedCredits < 1) {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-white p-4 sm:p-8 flex flex-col">
-        <div className="max-w-5xl mx-auto flex-grow">
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-8 flex flex-col">
+        <div className="max-w-6xl w-full mx-auto flex-grow">
           {/* HEADER */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -773,30 +773,27 @@ if (verifiedCredits < 1) {
             </div>
 
             <div className="text-right mt-4 sm:mt-0">
-              <div className="font-bold text-lg text-[#0F172A]">Report Credits</div>
-              <div className="text-4xl font-extrabold text-[#0F172A]">{profile ? credits : '...'}</div>
-
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Report Credits
+                </div>
+                <div className="mt-2 text-3xl font-extrabold text-[#0F172A]">
+                  {profile ? credits : '...'}
+                </div>
                 {credits === 0 && (
-                  <>
-                    <p className="text-sm font-semibold text-slate-900">You have 0 report credits.</p>
-                    <p className="mt-1 text-sm text-[#334155]">
-                      Buy 1 credit to unlock uploads and generate your report.
-                      <span className="ml-2 font-semibold text-slate-900">Promo code:</span>{' '}
-                      <span className="font-mono text-slate-900">INVESTORIQ</span>
-                    </p>
-                  </>
+                  <p className="mt-2 text-sm text-[#334155]">
+                    Buy credits to unlock uploads and generate your report.
+                  </p>
                 )}
-
                 <button
-  type="button"
-  onClick={() => {
-    window.location.href = '/pricing';
-  }}
-  className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] hover:bg-slate-50"
->
-  Buy Credits
-</button>
+                  type="button"
+                  onClick={() => {
+                    window.location.href = '/pricing';
+                  }}
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
+                >
+                  Buy Credits
+                </button>
               </div>
             </div>
           </motion.div>
@@ -845,10 +842,9 @@ if (verifiedCredits < 1) {
 </div>
 
 <p className="text-[#334155] leading-relaxed font-medium">
-  Upload <strong>PDFs, spreadsheets, or property photos.</strong>
-  <br />
+  Upload <strong>PDFs, spreadsheets, or property photos.</strong>{' '}
   <span className="text-[#1F8A8A] font-semibold">Spreadsheets power structured financial metrics.</span>{' '}
-  PDFs, images, and documents are extracted for reference and provenance. Missing or degraded inputs are disclosed and never assumed. (10 MB max per file)
+  Other documents are extracted for reference. (10 MB max per file)
 </p>
                 <p className="text-[#334155] text-sm mt-2">
                   Works for both <strong>off-market</strong> and MLS properties.
@@ -862,7 +858,7 @@ if (verifiedCredits < 1) {
                   </div>
                 )}
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
                     <button
@@ -895,7 +891,7 @@ if (verifiedCredits < 1) {
 
                         document.getElementById('rentRollInput')?.click();
                       }}
-                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                      className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
                           propertyName.trim()
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
@@ -948,7 +944,7 @@ if (verifiedCredits < 1) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">
                       T12 (Operating Statement)
@@ -983,7 +979,7 @@ if (verifiedCredits < 1) {
 
                         document.getElementById('t12Input')?.click();
                       }}
-                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                      className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
                           propertyName.trim()
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
@@ -1036,7 +1032,7 @@ if (verifiedCredits < 1) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Optional</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">Other / Supporting</div>
                     <button
@@ -1069,7 +1065,7 @@ if (verifiedCredits < 1) {
 
                         document.getElementById('otherDocsInput')?.click();
                       }}
-                      className={`mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                      className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
                           propertyName.trim()
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
@@ -1381,13 +1377,15 @@ if (verifiedCredits < 1) {
 )}
 
           {latestFailedJob?.id && (
-            <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-6 text-[#0F172A]">
-              <div className="text-sm font-bold uppercase tracking-wide text-red-700">
-                Report failed
-              </div>
-              <div className="mt-2 text-sm text-red-800">
-                {latestFailedJob.error_message ||
-                  'Processing failed. Please log in to your InvestorIQ dashboard.'}
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 text-red-600" />
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide text-red-700">
+                  Report failed
+                </div>
+                <div className="mt-1">
+                  Please log in to your InvestorIQ dashboard.
+                </div>
               </div>
             </div>
           )}
