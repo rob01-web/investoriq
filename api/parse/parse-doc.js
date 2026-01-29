@@ -393,16 +393,75 @@ export default async function handler(req, res) {
           const headerRow = rows[0] || [];
           const normalizedHeaders = headerRow.map(normalizeHeader);
 
-          const unitTypeHeaders = ['unit', 'unit type', 'type'];
-          const rentHeaders = ['rent', 'current rent'];
-          const occupancyHeaders = ['occupied', 'status', 'lease status'];
+          let unitTypeIdx = -1;
+          let rentIdx = -1;
+          let occupancyIdx = -1;
+          let bedsIdx = -1;
+          let bathsIdx = -1;
+          let sqftIdx = -1;
+          let marketRentIdx = -1;
+          let unitIdx = -1;
+          let statusIdx = -1;
+          let units = [];
+          let columnMap = null;
+          let parseWarnings = [];
 
-          const findHeaderIndex = (candidates) =>
-            normalizedHeaders.findIndex((header) => candidates.includes(header));
+          if (isCsv) {
+            const findCsvColumnIndex = (headers, synonyms) => {
+              const tokens = synonyms.map((token) => normalizeHeader(token));
+              for (let i = 0; i < headers.length; i += 1) {
+                const header = headers[i];
+                if (!header) continue;
+                for (const token of tokens) {
+                  if (header === token || header.includes(token)) {
+                    return i;
+                  }
+                }
+              }
+              return -1;
+            };
 
-          const unitTypeIdx = findHeaderIndex(unitTypeHeaders);
-          const rentIdx = findHeaderIndex(rentHeaders);
-          const occupancyIdx = findHeaderIndex(occupancyHeaders);
+            const headerLabels = headerRow.map((cell) => String(cell || '').trim());
+            const unitSynonyms = ['unit', 'unit number', 'unit #', 'apt', 'apartment', 'suite', 'unit id'];
+            const bedsSynonyms = ['beds', 'bed', 'bedrooms', 'br'];
+            const bathsSynonyms = ['baths', 'bath', 'bathrooms', 'ba'];
+            const sqftSynonyms = ['sqft', 'sq ft', 'square feet', 'sf'];
+            const inPlaceRentSynonyms = ['rent', 'in place rent', 'in-place rent', 'current rent', 'in_place_rent'];
+            const marketRentSynonyms = ['market rent', 'market', 'market_rent'];
+            const statusSynonyms = ['status', 'occupied', 'occupancy', 'lease status'];
+
+            unitIdx = findCsvColumnIndex(normalizedHeaders, unitSynonyms);
+            bedsIdx = findCsvColumnIndex(normalizedHeaders, bedsSynonyms);
+            bathsIdx = findCsvColumnIndex(normalizedHeaders, bathsSynonyms);
+            sqftIdx = findCsvColumnIndex(normalizedHeaders, sqftSynonyms);
+            rentIdx = findCsvColumnIndex(normalizedHeaders, inPlaceRentSynonyms);
+            marketRentIdx = findCsvColumnIndex(normalizedHeaders, marketRentSynonyms);
+            statusIdx = findCsvColumnIndex(normalizedHeaders, statusSynonyms);
+
+            columnMap = {
+              unit: unitIdx !== -1 ? headerLabels[unitIdx] : null,
+              beds: bedsIdx !== -1 ? headerLabels[bedsIdx] : null,
+              baths: bathsIdx !== -1 ? headerLabels[bathsIdx] : null,
+              sqft: sqftIdx !== -1 ? headerLabels[sqftIdx] : null,
+              in_place_rent: rentIdx !== -1 ? headerLabels[rentIdx] : null,
+              market_rent: marketRentIdx !== -1 ? headerLabels[marketRentIdx] : null,
+              status: statusIdx !== -1 ? headerLabels[statusIdx] : null,
+            };
+
+            const requiredFields = ['unit', 'in_place_rent'];
+            parseWarnings = requiredFields.filter((field) => !columnMap?.[field]).map((field) => `missing_${field}`);
+          } else {
+            const unitTypeHeaders = ['unit', 'unit type', 'type'];
+            const rentHeaders = ['rent', 'current rent'];
+            const occupancyHeaders = ['occupied', 'status', 'lease status'];
+
+            const findHeaderIndex = (candidates) =>
+              normalizedHeaders.findIndex((header) => candidates.includes(header));
+
+            unitTypeIdx = findHeaderIndex(unitTypeHeaders);
+            rentIdx = findHeaderIndex(rentHeaders);
+            occupancyIdx = findHeaderIndex(occupancyHeaders);
+          }
 
           const dataRows = rows.slice(1).filter(hasAnyValue);
           const totalUnits = dataRows.length;
@@ -410,22 +469,68 @@ export default async function handler(req, res) {
           const unitMixMap = {};
           const rentValuesByType = {};
           for (const row of dataRows) {
-            if (unitTypeIdx === -1) {
-              break;
-            }
-            const unitType = String(row[unitTypeIdx] || '').trim();
-            if (!unitType) {
-              continue;
-            }
-            unitMixMap[unitType] = (unitMixMap[unitType] || 0) + 1;
-            if (rentIdx !== -1) {
-              const rawRent = String(row[rentIdx] || '').replace(/[^0-9.\-]/g, '');
-              const rentValue = Number(rawRent);
-              if (Number.isFinite(rentValue)) {
-                if (!rentValuesByType[unitType]) {
-                  rentValuesByType[unitType] = [];
+            if (isCsv) {
+              const rawUnit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
+              const rawBeds = bedsIdx !== -1 ? String(row[bedsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
+              const rawBaths = bathsIdx !== -1 ? String(row[bathsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
+              const rawSqft = sqftIdx !== -1 ? String(row[sqftIdx] || '').replace(/[^0-9.\-]/g, '') : '';
+              const rawRent = rentIdx !== -1 ? String(row[rentIdx] || '').replace(/[^0-9.\-]/g, '') : '';
+              const rawMarketRent =
+                marketRentIdx !== -1 ? String(row[marketRentIdx] || '').replace(/[^0-9.\-]/g, '') : '';
+              const rawStatus = statusIdx !== -1 ? String(row[statusIdx] || '').trim() : '';
+
+              const beds = rawBeds ? Number(rawBeds) : null;
+              const baths = rawBaths ? Number(rawBaths) : null;
+              const sqft = rawSqft ? Number(rawSqft) : null;
+              const inPlaceRent = rawRent ? Number(rawRent) : null;
+              const marketRent = rawMarketRent ? Number(rawMarketRent) : null;
+
+              units.push({
+                unit: rawUnit || null,
+                beds: Number.isFinite(beds) ? beds : null,
+                baths: Number.isFinite(baths) ? baths : null,
+                sqft: Number.isFinite(sqft) ? sqft : null,
+                in_place_rent: Number.isFinite(inPlaceRent) ? inPlaceRent : null,
+                market_rent: Number.isFinite(marketRent) ? marketRent : null,
+                status: rawStatus || null,
+              });
+
+              let unitTypeValue = null;
+              if (Number.isFinite(beds)) {
+                if (Number.isFinite(baths)) {
+                  unitTypeValue = `${beds} Bed / ${baths} Bath`;
+                } else {
+                  unitTypeValue = `${beds} Bed`;
                 }
-                rentValuesByType[unitType].push(rentValue);
+              }
+
+              if (unitTypeValue) {
+                unitMixMap[unitTypeValue] = (unitMixMap[unitTypeValue] || 0) + 1;
+                if (Number.isFinite(inPlaceRent)) {
+                  if (!rentValuesByType[unitTypeValue]) {
+                    rentValuesByType[unitTypeValue] = [];
+                  }
+                  rentValuesByType[unitTypeValue].push(inPlaceRent);
+                }
+              }
+            } else {
+              if (unitTypeIdx === -1) {
+                break;
+              }
+              const unitType = String(row[unitTypeIdx] || '').trim();
+              if (!unitType) {
+                continue;
+              }
+              unitMixMap[unitType] = (unitMixMap[unitType] || 0) + 1;
+              if (rentIdx !== -1) {
+                const rawRent = String(row[rentIdx] || '').replace(/[^0-9.\-]/g, '');
+                const rentValue = Number(rawRent);
+                if (Number.isFinite(rentValue)) {
+                  if (!rentValuesByType[unitType]) {
+                    rentValuesByType[unitType] = [];
+                  }
+                  rentValuesByType[unitType].push(rentValue);
+                }
               }
             }
           }
@@ -443,7 +548,7 @@ export default async function handler(req, res) {
           });
 
           let occupancy = null;
-          if (occupancyIdx !== -1) {
+          if (!isCsv && occupancyIdx !== -1) {
             let occupiedCount = 0;
             let vacantCount = 0;
             let invalidValue = false;
@@ -463,6 +568,21 @@ export default async function handler(req, res) {
               occupancy = occupiedCount / totalUnits;
             }
           }
+          if (isCsv && statusIdx !== -1) {
+            let occupiedCount = 0;
+            for (const row of units) {
+              const raw = String(row.status || '').trim().toLowerCase();
+              if (!raw) continue;
+              if (raw.includes('occup')) {
+                occupiedCount += 1;
+              } else if (raw.includes('vacant')) {
+                continue;
+              }
+            }
+            if (totalUnits > 0) {
+              occupancy = occupiedCount / totalUnits;
+            }
+          }
 
           const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
             {
@@ -479,6 +599,7 @@ export default async function handler(req, res) {
                 total_units: totalUnits,
                 unit_mix: unitMix,
                 occupancy,
+                ...(isCsv ? { units, column_map: columnMap, parse_warnings: parseWarnings } : {}),
               },
             },
           ]);
