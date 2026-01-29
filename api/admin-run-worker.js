@@ -469,7 +469,7 @@ export default async function handler(req, res) {
           try {
           const { data: jobFiles, error: jobFilesErr } = await supabaseAdmin
             .from('analysis_job_files')
-            .select('doc_type, original_filename, object_path, mime_type, parse_status, parse_error')
+            .select('id, doc_type, original_filename, object_path, mime_type, parse_status, parse_error')
             .eq('job_id', job.id);
 
           if (jobFilesErr) {
@@ -514,6 +514,199 @@ export default async function handler(req, res) {
                 return docType === 'rent_roll' || docType === 't12';
               });
 
+              const isStructuredSpreadsheet = (file) => {
+                const name = String(file.original_filename || file.object_path || '').toLowerCase();
+                const ext = name.includes('.') ? name.split('.').pop() : '';
+                const mime = String(file.mime_type || '').toLowerCase();
+                if (['xlsx', 'xls', 'csv'].includes(ext)) {
+                  return true;
+                }
+                if (
+                  mime.includes('spreadsheetml') ||
+                  mime.includes('ms-excel') ||
+                  mime.includes('text/csv')
+                ) {
+                  return true;
+                }
+                return false;
+              };
+
+              const hasStructuredRentRoll = relevantFiles.some(
+                (file) => String(file.doc_type || '').toLowerCase() === 'rent_roll' && isStructuredSpreadsheet(file)
+              );
+              const hasStructuredT12 = relevantFiles.some(
+                (file) => String(file.doc_type || '').toLowerCase() === 't12' && isStructuredSpreadsheet(file)
+              );
+
+              if (!hasStructuredRentRoll || !hasStructuredT12) {
+                const missingStructured = [];
+                if (!hasStructuredRentRoll) missingStructured.push('rent_roll');
+                if (!hasStructuredT12) missingStructured.push('t12');
+
+                const nonStructuredIds = relevantFiles
+                  .filter((file) => {
+                    const docType = String(file.doc_type || '').toLowerCase();
+                    return !isStructuredSpreadsheet(file) && missingStructured.includes(docType);
+                  })
+                  .map((file) => file.id)
+                  .filter(Boolean);
+
+                if (nonStructuredIds.length > 0) {
+                  const { error: nonStructuredErr } = await supabaseAdmin
+                    .from('analysis_job_files')
+                    .update({
+                      parse_status: 'failed',
+                      parse_error: 'unsupported_file_type_for_structured_parsing',
+                    })
+                    .in('id', nonStructuredIds);
+
+                  if (nonStructuredErr) {
+                    console.error('Failed to mark non-spreadsheet files as failed:', nonStructuredErr.message);
+                  }
+                }
+
+                const needsDocsUpdate = { status: 'needs_documents' };
+                if (supportsErrorCode) {
+                  needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIALS';
+                }
+                if (supportsErrorMessage) {
+                  needsDocsUpdate.error_message =
+                    'A spreadsheet version of your Rent Roll and T12/Operating Statement is required to complete underwriting. Please upload XLSX or CSV.';
+                }
+
+                const { error: needsDocsErr } = await supabaseAdmin
+                  .from('analysis_jobs')
+                  .update(needsDocsUpdate)
+                  .eq('id', job.id)
+                  .eq('status', 'extracting');
+
+                if (needsDocsErr) {
+                  throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+                }
+
+                const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+                  job.id,
+                  'extracting',
+                  'needs_documents',
+                  { user_id: job.user_id }
+                );
+
+                if (needsDocsTransitionErr) {
+                  throw new Error(
+                    `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+                  );
+                }
+
+                if (!blockedJobIds.includes(job.id)) {
+                  blockedJobIds.push(job.id);
+                }
+
+                const { data: existingEvent } = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('id')
+                  .eq('job_id', job.id)
+                  .eq('type', 'worker_event')
+                  .eq('payload->>event', 'missing_structured_financials')
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!existingEvent?.id) {
+                  const workerEventErr = await writeWorkerEventArtifact(
+                    job.id,
+                    job.user_id,
+                    'missing_structured_financials',
+                    {
+                      code: 'MISSING_STRUCTURED_FINANCIALS',
+                      level: 'error',
+                      error_message:
+                        'A spreadsheet version of your Rent Roll and T12/Operating Statement is required to complete underwriting. Please upload XLSX or CSV.',
+                      missing: missingStructured,
+                      timestamp: nowIso,
+                    }
+                  );
+
+                  if (workerEventErr) {
+                    throw new Error(`Failed to write worker event artifact: ${workerEventErr.message}`);
+                  }
+
+                  const { data: existingEmail } = await supabaseAdmin
+                    .from('analysis_artifacts')
+                    .select('id')
+                    .eq('job_id', job.id)
+                    .eq('type', 'email_sent')
+                    .eq('bucket', 'system')
+                    .eq('payload->>email_type', 'missing_structured_financials')
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (!existingEmail?.id) {
+                    try {
+                      const { data: userRes, error: userErr } =
+                        await supabaseAdmin.auth.admin.getUserById(job.user_id);
+
+                      if (userErr) {
+                        throw userErr;
+                      }
+
+                      const userEmail = userRes?.user?.email;
+                      if (!userEmail) {
+                        throw new Error('Missing user email');
+                      }
+
+                      const { data: profileRow, error: profileErr } = await supabaseAdmin
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('id', job.user_id)
+                        .maybeSingle();
+
+                      if (profileErr) {
+                        throw profileErr;
+                      }
+
+                      const fullName = String(profileRow?.full_name || '').trim();
+                      const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
+
+                      await sendEmailSES({
+                        to: userEmail,
+                        subject: 'Action required: documents needed to continue your InvestorIQ report',
+                        text:
+                          `Hello ${firstName},\n\n` +
+                          'Your InvestorIQ report cannot proceed yet.\n\n' +
+                          'We could not identify structured financial documents required for underwriting.\n\n' +
+                          'Required:\n' +
+                          '- Rent Roll\n' +
+                          '- T12 (Operating Statement)\n\n' +
+                          'Please log in to your InvestorIQ dashboard\n' +
+                          'and upload the required documents to continue processing.\n\n' +
+                          'This report will remain paused until required documents are available.',
+                      });
+
+                      await supabaseAdmin.from('analysis_artifacts').insert([
+                        {
+                          job_id: job.id,
+                          user_id: job.user_id,
+                          type: 'email_sent',
+                          bucket: 'system',
+                          object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
+                            nowIso
+                          )}.json`,
+                          payload: {
+                            email_type: 'missing_structured_financials',
+                            job_id: job.id,
+                            user_id: job.user_id,
+                            timestamp: nowIso,
+                          },
+                        },
+                      ]);
+                    } catch (err) {
+                      console.error('Failed to send missing_structured_financials email:', err?.message || err);
+                    }
+                  }
+                }
+
+                continue;
+              }
+
               const anyPending = relevantFiles.some(
                 (file) => String(file.parse_status || '').toLowerCase() === 'pending'
               );
@@ -522,12 +715,12 @@ export default async function handler(req, res) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  return isPending && dt === 'rent_roll';
+                  return isPending && dt === 'rent_roll' && isStructuredSpreadsheet(file);
                 });
                 const hasPendingT12 = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  return isPending && dt === 't12';
+                  return isPending && dt === 't12' && isStructuredSpreadsheet(file);
                 });
 
                 const parserHeaders = { 'Content-Type': 'application/json' };
