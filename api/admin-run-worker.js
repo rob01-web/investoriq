@@ -489,6 +489,65 @@ export default async function handler(req, res) {
             }
           }
 
+          const parserHeaders = { 'Content-Type': 'application/json' };
+          const forwardedKey = req.headers['x-admin-run-key'];
+          parserHeaders['x-admin-run-key'] = Array.isArray(forwardedKey)
+            ? forwardedKey[0]
+            : forwardedKey || process.env.ADMIN_RUN_KEY || '';
+
+          const otherPendingFiles = (jobFiles || []).filter((file) => {
+            const docType = String(file.doc_type || '').toLowerCase();
+            const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
+            return docType === 'other' && isPending;
+          });
+
+          if (otherPendingFiles.length > 0) {
+            for (const file of otherPendingFiles) {
+              try {
+                const supportingRes = await fetch(`${baseUrl}/api/parse/parse-supporting-doc`, {
+                  method: 'POST',
+                  headers: parserHeaders,
+                  body: JSON.stringify({ job_id: job.id, file_id: file.id }),
+                });
+                if (!supportingRes.ok) {
+                  const workerEventErr = await writeWorkerEventArtifact(
+                    job.id,
+                    job.user_id,
+                    'supporting_doc_parse_failed',
+                    {
+                      file_id: file.id,
+                      status: supportingRes.status,
+                      timestamp: nowIso,
+                    }
+                  );
+                  if (workerEventErr) {
+                    console.error(
+                      'Failed to write supporting_doc_parse_failed event:',
+                      workerEventErr.message
+                    );
+                  }
+                }
+              } catch (err) {
+                const workerEventErr = await writeWorkerEventArtifact(
+                  job.id,
+                  job.user_id,
+                  'supporting_doc_parse_failed',
+                  {
+                    file_id: file.id,
+                    error_message: err?.message || String(err),
+                    timestamp: nowIso,
+                  }
+                );
+                if (workerEventErr) {
+                  console.error(
+                    'Failed to write supporting_doc_parse_failed event:',
+                    workerEventErr.message
+                  );
+                }
+              }
+            }
+          }
+
           const { data: structuredArtifacts, error: structuredErr } = await supabaseAdmin
             .from('analysis_artifacts')
             .select('id, type')
@@ -722,12 +781,6 @@ export default async function handler(req, res) {
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
                   return isPending && dt === 't12' && isStructuredSpreadsheet(file);
                 });
-
-                const parserHeaders = { 'Content-Type': 'application/json' };
-                const forwardedKey = req.headers['x-admin-run-key'];
-                parserHeaders['x-admin-run-key'] = Array.isArray(forwardedKey)
-                  ? forwardedKey[0]
-                  : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
                 if (hasPendingRentRoll) {
                   const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-rent-roll-xlsx`, {
