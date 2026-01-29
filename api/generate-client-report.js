@@ -950,6 +950,12 @@ REQUIRED_SECTIONS.forEach((key) => {
     }
 
 // 9. Send to DocRaptor (STILL IN TEST MODE)
+const htmlString =
+  typeof safeHtml === "string"
+    ? safeHtml
+    : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
+      ? safeHtml.html
+      : String(safeHtml || "");
 let pdfResponse;
 
 try {
@@ -957,7 +963,7 @@ try {
     "https://docraptor.com/docs",
     {
       test: true, // keep true until you're ready to burn real (non-watermark) credits
-      document_content: safeHtml,
+      document_content: htmlString,
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",
     },
