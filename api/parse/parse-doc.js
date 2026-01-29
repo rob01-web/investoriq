@@ -745,33 +745,174 @@ export default async function handler(req, res) {
             throw new Error('Worksheet is empty');
           }
 
-          const found = {};
-          for (const row of rows) {
-            if (!Array.isArray(row)) continue;
-            for (let i = 0; i < row.length; i += 1) {
-              const cellText = normalizeCell(row[i]);
-              if (!cellText) continue;
-              for (const rule of labelRules) {
-                if (found[rule.key] !== undefined) {
-                  continue;
+          let payload = null;
+
+          if (isCsv) {
+            const headerRow = rows[0] || [];
+            const normalizedHeaders = headerRow.map(normalizeHeader);
+            const findCsvColumnIndex = (headers, synonyms) => {
+              const tokens = synonyms.map((token) => normalizeHeader(token));
+              for (let i = 0; i < headers.length; i += 1) {
+                const header = headers[i] || '';
+                for (const token of tokens) {
+                  if (header.includes(token)) return i;
                 }
-                if (rule.labels.includes(cellText)) {
-                  const value = extractNumericRight(row, i);
-                  if (value !== null) {
-                    found[rule.key] = value;
+              }
+              return -1;
+            };
+
+            const gprSynonyms = [
+              'gross potential rent',
+              'gpr',
+              'gross potential',
+              'potential rent',
+              'gross potential income',
+            ];
+            const egiSynonyms = ['effective gross income', 'egi', 'effective gross', 'effective income'];
+            const opexSynonyms = ['total operating expenses', 'operating expenses', 'total expenses', 'opex'];
+            const noiSynonyms = ['net operating income', 'noi', 'net operating', 'net op income'];
+
+            const gprIdx = findCsvColumnIndex(normalizedHeaders, gprSynonyms);
+            const egiIdx = findCsvColumnIndex(normalizedHeaders, egiSynonyms);
+            const opexIdx = findCsvColumnIndex(normalizedHeaders, opexSynonyms);
+            const noiIdx = findCsvColumnIndex(normalizedHeaders, noiSynonyms);
+
+            const sumColumn = (idx) => {
+              if (idx === -1) return null;
+              let total = 0;
+              let count = 0;
+              for (let r = 1; r < rows.length; r += 1) {
+                const row = rows[r];
+                if (!Array.isArray(row)) continue;
+                const value = numericFromCell(row[idx]);
+                if (!Number.isFinite(value)) continue;
+                total += value;
+                count += 1;
+              }
+              return count > 0 ? total : null;
+            };
+
+            let gross_potential_rent = sumColumn(gprIdx);
+            let effective_gross_income = sumColumn(egiIdx);
+            let total_operating_expenses = sumColumn(opexIdx);
+            let net_operating_income = sumColumn(noiIdx);
+
+            const column_map = {
+              gross_potential_rent: gprIdx >= 0 ? headerRow[gprIdx] : null,
+              effective_gross_income: egiIdx >= 0 ? headerRow[egiIdx] : null,
+              total_operating_expenses: opexIdx >= 0 ? headerRow[opexIdx] : null,
+              net_operating_income: noiIdx >= 0 ? headerRow[noiIdx] : null,
+            };
+
+            if (
+              (gross_potential_rent === null ||
+                effective_gross_income === null ||
+                total_operating_expenses === null ||
+                net_operating_income === null) &&
+              rows.length > 1
+            ) {
+              const labelCol = 0;
+              const rulesByKey = labelRules.reduce((acc, rule) => {
+                acc[rule.key] = rule.labels;
+                return acc;
+              }, {});
+              const sumRow = (row) => {
+                let total = 0;
+                let count = 0;
+                for (let i = 1; i < row.length; i += 1) {
+                  const value = numericFromCell(row[i]);
+                  if (!Number.isFinite(value)) continue;
+                  total += value;
+                  count += 1;
+                }
+                return count > 0 ? total : null;
+              };
+
+              const applyRowMatch = (key, row) => sumRow(row);
+
+              for (const row of rows.slice(1)) {
+                if (!Array.isArray(row)) continue;
+                const labelText = normalizeText(row[labelCol]);
+                if (!labelText) continue;
+                for (const [key, synonyms] of Object.entries(rulesByKey)) {
+                  if (
+                    (key === 'gross_potential_rent' && gross_potential_rent !== null) ||
+                    (key === 'effective_gross_income' && effective_gross_income !== null) ||
+                    (key === 'total_operating_expenses' && total_operating_expenses !== null) ||
+                    (key === 'net_operating_income' && net_operating_income !== null)
+                  ) {
+                    continue;
+                  }
+                  const matched = synonyms.some((label) =>
+                    labelText.includes(normalizeText(label))
+                  );
+                  if (!matched) continue;
+                  const rowValue = applyRowMatch(key, row);
+                  if (rowValue === null) continue;
+                  if (key === 'gross_potential_rent') {
+                    gross_potential_rent = rowValue;
+                    column_map.gross_potential_rent = row[labelCol];
+                  } else if (key === 'effective_gross_income') {
+                    effective_gross_income = rowValue;
+                    column_map.effective_gross_income = row[labelCol];
+                  } else if (key === 'total_operating_expenses') {
+                    total_operating_expenses = rowValue;
+                    column_map.total_operating_expenses = row[labelCol];
+                  } else if (key === 'net_operating_income') {
+                    net_operating_income = rowValue;
+                    column_map.net_operating_income = row[labelCol];
                   }
                 }
               }
             }
-          }
 
-          const payload = {
-            file_id: file.id,
-            original_filename: file.original_filename,
-            method: isCsv ? 'csv' : 'xlsx',
-            confidence: 0.9,
-            ...found,
-          };
+            const parse_warnings = [];
+            if (gross_potential_rent === null) parse_warnings.push('missing_gross_potential_rent');
+            if (effective_gross_income === null) parse_warnings.push('missing_effective_gross_income');
+            if (total_operating_expenses === null) parse_warnings.push('missing_total_operating_expenses');
+            if (net_operating_income === null) parse_warnings.push('missing_net_operating_income');
+
+            payload = {
+              file_id: file.id,
+              original_filename: file.original_filename,
+              method: 'csv',
+              confidence: 0.9,
+              gross_potential_rent,
+              effective_gross_income,
+              total_operating_expenses,
+              net_operating_income,
+              column_map,
+              parse_warnings,
+            };
+          } else {
+            const found = {};
+            for (const row of rows) {
+              if (!Array.isArray(row)) continue;
+              for (let i = 0; i < row.length; i += 1) {
+                const cellText = normalizeCell(row[i]);
+                if (!cellText) continue;
+                for (const rule of labelRules) {
+                  if (found[rule.key] !== undefined) {
+                    continue;
+                  }
+                  if (rule.labels.includes(cellText)) {
+                    const value = extractNumericRight(row, i);
+                    if (value !== null) {
+                      found[rule.key] = value;
+                    }
+                  }
+                }
+              }
+            }
+
+            payload = {
+              file_id: file.id,
+              original_filename: file.original_filename,
+              method: 'xlsx',
+              confidence: 0.9,
+              ...found,
+            };
+          }
 
           const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
             {

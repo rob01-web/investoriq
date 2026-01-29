@@ -93,6 +93,15 @@ function replaceAll(str, token, value) {
 
 const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
 
+const coerceNumber = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const cleaned = raw.replace(/[$,]/g, "").replace(/[^0-9.\-]/g, "");
+  if (!cleaned) return null;
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? num : null;
+};
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -145,7 +154,10 @@ function injectUnitMixTable(html, rowsHtml) {
 
 function injectOccupancyNote(html, occupancy) {
   if (occupancy === null || occupancy === undefined) return html;
-  const occupancyPercent = `${Math.round(Number(occupancy) * 100)}%`;
+  const occupancyPercent =
+    typeof occupancy === "string"
+      ? occupancy
+      : `${Math.round(Number(occupancy) * 100)}%`;
   const note = `<p class="small" style="margin-top:8px;">
         <strong>Reported occupancy (rent roll):</strong> ${occupancyPercent}
       </p>`;
@@ -735,6 +747,136 @@ REQUIRED_SECTIONS.forEach((key) => {
       }
     }
 
+    let computedRentRoll = null;
+    const rentRollUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : null;
+    if (rentRollUnits && rentRollUnits.length > 0) {
+      const totalUnits = rentRollUnits.length;
+      let occupiedUnits = 0;
+      let vacantUnits = 0;
+      const inPlaceRents = [];
+      const marketRents = [];
+      const unitMixMap = {};
+      const rentByBeds = {};
+      const marketRentByBeds = {};
+      const sqftByBeds = {};
+
+      for (const unit of rentRollUnits) {
+        const statusText = String(unit?.status || "").toLowerCase();
+        if (statusText.includes("occup")) {
+          occupiedUnits += 1;
+        } else if (statusText.includes("vacant")) {
+          vacantUnits += 1;
+        }
+
+        const beds = coerceNumber(unit?.beds);
+        const inPlaceRent = coerceNumber(unit?.in_place_rent);
+        const marketRent = coerceNumber(unit?.market_rent);
+        const sqft = coerceNumber(unit?.sqft);
+
+        if (Number.isFinite(inPlaceRent)) {
+          inPlaceRents.push(inPlaceRent);
+        }
+        if (Number.isFinite(marketRent)) {
+          marketRents.push(marketRent);
+        }
+
+        if (Number.isFinite(beds)) {
+          const bedKey = String(beds);
+          unitMixMap[bedKey] = (unitMixMap[bedKey] || 0) + 1;
+          if (Number.isFinite(inPlaceRent)) {
+            if (!rentByBeds[bedKey]) {
+              rentByBeds[bedKey] = [];
+            }
+            rentByBeds[bedKey].push(inPlaceRent);
+          }
+          if (Number.isFinite(marketRent)) {
+            if (!marketRentByBeds[bedKey]) {
+              marketRentByBeds[bedKey] = [];
+            }
+            marketRentByBeds[bedKey].push(marketRent);
+          }
+          if (Number.isFinite(sqft)) {
+            if (!sqftByBeds[bedKey]) {
+              sqftByBeds[bedKey] = [];
+            }
+            sqftByBeds[bedKey].push(sqft);
+          }
+        }
+      }
+
+      const occupancy =
+        totalUnits > 0 && (occupiedUnits + vacantUnits > 0)
+          ? occupiedUnits / totalUnits
+          : null;
+
+      const avgInPlaceRent =
+        inPlaceRents.length > 0
+          ? inPlaceRents.reduce((sum, value) => sum + value, 0) / inPlaceRents.length
+          : null;
+      const avgMarketRent =
+        marketRents.length > 0
+          ? marketRents.reduce((sum, value) => sum + value, 0) / marketRents.length
+          : null;
+      const totalInPlaceMonthly =
+        inPlaceRents.length > 0 ? inPlaceRents.reduce((sum, value) => sum + value, 0) : null;
+      const totalMarketMonthly =
+        marketRents.length > 0 ? marketRents.reduce((sum, value) => sum + value, 0) : null;
+      const totalInPlaceAnnual =
+        totalInPlaceMonthly !== null ? totalInPlaceMonthly * 12 : null;
+      const totalMarketAnnual =
+        totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
+
+      const unitMix = Object.entries(unitMixMap).map(([bedKey, count]) => {
+        const inPlaceValues = rentByBeds[bedKey] || [];
+        const marketValues = marketRentByBeds[bedKey] || [];
+        const sqftValues = sqftByBeds[bedKey] || [];
+        const avgInPlaceRent =
+          inPlaceValues.length > 0
+            ? inPlaceValues.reduce((sum, value) => sum + value, 0) / inPlaceValues.length
+            : null;
+        const avgMarketRent =
+          marketValues.length > 0
+            ? marketValues.reduce((sum, value) => sum + value, 0) / marketValues.length
+            : null;
+        const avgSqft =
+          sqftValues.length > 0
+            ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
+            : null;
+        return {
+          unit_type: `${bedKey} Bed`,
+          count,
+          current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
+          market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
+          avg_sqft: Number.isFinite(avgSqft) ? Math.round(avgSqft) : null,
+        };
+      });
+
+      computedRentRoll = {
+        total_units: totalUnits,
+        occupied_units: occupiedUnits,
+        vacant_units: vacantUnits,
+        occupancy,
+        avg_in_place_rent: avgInPlaceRent ?? DATA_NOT_AVAILABLE,
+        avg_market_rent: avgMarketRent ?? DATA_NOT_AVAILABLE,
+        total_in_place_monthly: totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
+        total_market_monthly: totalMarketMonthly ?? DATA_NOT_AVAILABLE,
+        total_in_place_annual: totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
+        total_market_annual: totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        unit_mix: unitMix,
+      };
+    }
+
+    const rentRollUnitMixRows =
+      computedRentRoll?.unit_mix && computedRentRoll.unit_mix.length > 0
+        ? computedRentRoll.unit_mix.map((row) => ({
+            type: row.unit_type,
+            count: row.count,
+            avgSqft: row.avg_sqft,
+            currentRent: row.current_rent,
+            targetRent: row.market_rent,
+          }))
+        : null;
+
     // 2. Load the HTML template (SACRED MASTER COPY)
     const templatePath = path.join(__dirname, "report-template.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
@@ -791,7 +933,7 @@ REQUIRED_SECTIONS.forEach((key) => {
     finalHtml = replaceAll(
       finalHtml,
       "{{UNIT_MIX_TABLE}}",
-      buildUnitMixTable(tables.unitMix || [])
+      buildUnitMixTable(rentRollUnitMixRows || tables.unitMix || [])
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -875,12 +1017,16 @@ REQUIRED_SECTIONS.forEach((key) => {
     );
 
     const unitMixRows = buildUnitMixRows(
-      rentRollPayload?.unit_mix,
-      rentRollPayload?.total_units,
+      computedRentRoll?.unit_mix || rentRollPayload?.unit_mix,
+      computedRentRoll?.total_units ?? rentRollPayload?.total_units,
       formatCurrency
     );
     finalHtml = injectUnitMixTable(finalHtml, unitMixRows);
-    finalHtml = injectOccupancyNote(finalHtml, rentRollPayload?.occupancy);
+    const occupancyValue =
+      computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
+        ? DATA_NOT_AVAILABLE
+        : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
+    finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
 
     const t12Rows = buildT12KeyMetricRows(t12Payload, formatCurrency);
     finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
