@@ -504,10 +504,10 @@ export default async function handler(req, res) {
           if (otherPendingFiles.length > 0) {
             for (const file of otherPendingFiles) {
               try {
-                const supportingRes = await fetch(`${baseUrl}/api/parse/parse-supporting-doc`, {
+                const supportingRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                   method: 'POST',
                   headers: parserHeaders,
-                  body: JSON.stringify({ job_id: job.id, file_id: file.id }),
+                  body: JSON.stringify({ job_id: job.id, file_id: file.id, doc_type: file.doc_type }),
                 });
                 if (!supportingRes.ok) {
                   const workerEventErr = await writeWorkerEventArtifact(
@@ -783,24 +783,44 @@ export default async function handler(req, res) {
                 });
 
                 if (hasPendingRentRoll) {
-                  const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-rent-roll-xlsx`, {
-                    method: 'POST',
-                    headers: parserHeaders,
-                    body: JSON.stringify({ jobId: job.id }),
-                  });
-                  if (!rentRollRes.ok) {
-                    console.error('parse-rent-roll-xlsx failed:', rentRollRes.status);
+                  for (const pendingFile of relevantFiles.filter((item) => {
+                    const dt = String(item.doc_type || '').toLowerCase();
+                    const isPending = String(item.parse_status || '').toLowerCase() === 'pending';
+                    return dt === 'rent_roll' && isPending && isStructuredSpreadsheet(item);
+                  })) {
+                    const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                      method: 'POST',
+                      headers: parserHeaders,
+                      body: JSON.stringify({
+                        job_id: job.id,
+                        file_id: pendingFile.id,
+                        doc_type: pendingFile.doc_type,
+                      }),
+                    });
+                    if (!rentRollRes.ok) {
+                      console.error('parse-doc failed (rent_roll):', rentRollRes.status);
+                    }
                   }
                 }
 
                 if (hasPendingT12) {
-                  const t12Res = await fetch(`${baseUrl}/api/parse/parse-t12-xlsx`, {
-                    method: 'POST',
-                    headers: parserHeaders,
-                    body: JSON.stringify({ jobId: job.id }),
-                  });
-                  if (!t12Res.ok) {
-                    console.error('parse-t12-xlsx failed:', t12Res.status);
+                  for (const pendingFile of relevantFiles.filter((item) => {
+                    const dt = String(item.doc_type || '').toLowerCase();
+                    const isPending = String(item.parse_status || '').toLowerCase() === 'pending';
+                    return dt === 't12' && isPending && isStructuredSpreadsheet(item);
+                  })) {
+                    const t12Res = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                      method: 'POST',
+                      headers: parserHeaders,
+                      body: JSON.stringify({
+                        job_id: job.id,
+                        file_id: pendingFile.id,
+                        doc_type: pendingFile.doc_type,
+                      }),
+                    });
+                    if (!t12Res.ok) {
+                      console.error('parse-doc failed (t12):', t12Res.status);
+                    }
                   }
                 }
 
