@@ -1374,6 +1374,12 @@ export default async function handler(req, res) {
             if (supportsFailedAt) {
               failUpdate.failed_at = nowIso;
             }
+            if (supportsErrorCode) {
+              failUpdate.error_code = 'REPORT_GENERATION_FAILED';
+            }
+            if (supportsErrorMessage) {
+              failUpdate.error_message = generatorError;
+            }
             const { error: failErr } = await supabaseAdmin
               .from('analysis_jobs')
               .update(failUpdate)

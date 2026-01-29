@@ -1384,7 +1384,8 @@ if (verifiedCredits < 1) {
                   Report failed
                 </div>
                 <div className="mt-1">
-                  Please log in to your InvestorIQ dashboard.
+                  {latestFailedJob.error_message ||
+                    'Report failed. Please review and try again.'}
                 </div>
               </div>
             </div>
