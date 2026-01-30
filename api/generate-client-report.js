@@ -112,6 +112,18 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function hasMeaningfulNarrative(html) {
+  if (!html || typeof html !== "string") return false;
+  if (html.includes(DATA_NOT_AVAILABLE)) return false;
+  if (!html.replace(/<[^>]*>/g, "").trim()) return false;
+  return true;
+}
+
+function stripMarkedSection(html, key) {
+  const re = new RegExp(`<!--BEGIN:${key}-->[\\s\\S]*?<!--END:${key}-->`, "g");
+  return html.replace(re, "");
+}
+
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
   const rows = unitMix
@@ -681,13 +693,9 @@ export default async function handler(req, res) {
     const financials = body.financials || {};
 
     const getSection = (key) => sections[key] || "";
-    const getNarrativeSection = (key) => {
+    const getNarrativeHtml = (key) => {
       const html = sections?.[key] || "";
-      if (!html) return `<p class="muted">${SECTION_OMITTED}</p>`;
-      if (typeof html === "string" && html.includes(DATA_NOT_AVAILABLE)) {
-        return `<p class="muted">${SECTION_OMITTED}</p>`;
-      }
-      return html;
+      return typeof html === "string" ? html : "";
     };
 
     let documentSourcesHtml = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
@@ -959,50 +967,50 @@ export default async function handler(req, res) {
     finalHtml = applyChartPlaceholders(finalHtml, charts);
 
     // 7. Inject ALL narrative sections (12)
-    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", getNarrativeSection("execSummary"));
+    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", getNarrativeHtml("execSummary"));
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
-      getNarrativeSection("unitValueAdd")
+      getNarrativeHtml("unitValueAdd")
     );
     finalHtml = finalHtml.replace(
       "{{CASH_FLOW_PROJECTIONS}}",
-      getNarrativeSection("cashFlowProjections")
+      getNarrativeHtml("cashFlowProjections")
     );
     finalHtml = finalHtml.replace(
       "{{NEIGHBORHOOD_ANALYSIS}}",
-      getNarrativeSection("neighborhoodAnalysis")
+      getNarrativeHtml("neighborhoodAnalysis")
     );
     finalHtml = finalHtml.replace(
       "{{RISK_ASSESSMENT}}",
-      getNarrativeSection("riskAssessment")
+      getNarrativeHtml("riskAssessment")
     );
     finalHtml = finalHtml.replace(
       "{{RENOVATION_NARRATIVE}}",
-      getNarrativeSection("renovationNarrative")
+      getNarrativeHtml("renovationNarrative")
     );
     finalHtml = finalHtml.replace(
       "{{DEBT_STRUCTURE}}",
-      getNarrativeSection("debtStructure")
+      getNarrativeHtml("debtStructure")
     );
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_SUMMARY}}",
-      getNarrativeSection("dealScoreSummary")
+      getNarrativeHtml("dealScoreSummary")
     );
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_INTERPRETATION}}",
-      getNarrativeSection("dealScoreInterpretation")
+      getNarrativeHtml("dealScoreInterpretation")
     );
     finalHtml = finalHtml.replace(
       "{{ADVANCED_MODELING_INTRO}}",
-      getNarrativeSection("advancedModelingIntro")
+      getNarrativeHtml("advancedModelingIntro")
     );
     finalHtml = finalHtml.replace(
       "{{DCF_INTERPRETATION}}",
-      getNarrativeSection("dcfInterpretation")
+      getNarrativeHtml("dcfInterpretation")
     );
     finalHtml = finalHtml.replace(
       "{{FINAL_RECOMMENDATION}}",
-      getNarrativeSection("finalRecommendation")
+      getNarrativeHtml("finalRecommendation")
     );
 
     const unitMixRows = buildUnitMixRows(
@@ -1021,6 +1029,61 @@ export default async function handler(req, res) {
     finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
 
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
+
+    const showExec = hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
+    if (!showExec) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
+    }
+    const showUnitValueAdd = hasMeaningfulNarrative(getNarrativeHtml("unitValueAdd"));
+    if (!showUnitValueAdd) {
+      finalHtml = stripMarkedSection(finalHtml, "UNIT_VALUE_ADD");
+    }
+    const showCashFlow = hasMeaningfulNarrative(getNarrativeHtml("cashFlowProjections"));
+    if (!showCashFlow) {
+      finalHtml = stripMarkedSection(finalHtml, "CASH_FLOW_PROJECTIONS");
+    }
+    const showNeighborhood = hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis"));
+    if (!showNeighborhood) {
+      finalHtml = stripMarkedSection(finalHtml, "NEIGHBORHOOD_ANALYSIS");
+    }
+    const showRisk = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showRisk) {
+      finalHtml = stripMarkedSection(finalHtml, "RISK_ASSESSMENT");
+    }
+    const showRenovation = hasMeaningfulNarrative(getNarrativeHtml("renovationNarrative"));
+    if (!showRenovation) {
+      finalHtml = stripMarkedSection(finalHtml, "RENOVATION_NARRATIVE");
+    }
+    const showDebt = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    if (!showDebt) {
+      finalHtml = stripMarkedSection(finalHtml, "DEBT_STRUCTURE");
+    }
+    const showDealScoreSummary = hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary"));
+    if (!showDealScoreSummary) {
+      finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_SUMMARY");
+    }
+    const showDealScoreInterpretation = hasMeaningfulNarrative(
+      getNarrativeHtml("dealScoreInterpretation")
+    );
+    if (!showDealScoreInterpretation) {
+      finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_INTERPRETATION");
+    }
+    const showAdvancedModeling = hasMeaningfulNarrative(
+      getNarrativeHtml("advancedModelingIntro")
+    );
+    if (!showAdvancedModeling) {
+      finalHtml = stripMarkedSection(finalHtml, "ADVANCED_MODELING_INTRO");
+    }
+    const showDcf = hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
+    if (!showDcf) {
+      finalHtml = stripMarkedSection(finalHtml, "DCF_INTERPRETATION");
+    }
+    const showFinalRecommendation = hasMeaningfulNarrative(
+      getNarrativeHtml("finalRecommendation")
+    );
+    if (!showFinalRecommendation) {
+      finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
+    }
 
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
