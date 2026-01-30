@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
+import AnalysisScopePreview from '../components/AnalysisScopePreview';
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
+  const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -237,6 +239,15 @@ export default function Dashboard() {
     };
   }, [profile?.id]);
 
+  useEffect(() => {
+    setScopeConfirmed(false);
+  }, [
+    `${uploadedFiles
+      .map((file) => file.docType)
+      .sort()
+      .join('|')}::${uploadedFiles.length}`,
+  ]);
+
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
 };
@@ -250,6 +261,22 @@ const rentRollFiles = uploadedFiles.filter((item) => item.docType === 'rent_roll
 const t12Files = uploadedFiles.filter((item) => item.docType === 't12');
 const otherFiles = uploadedFiles.filter((item) => item.docType === 'other');
 const hasRequiredUploads = rentRollFiles.length > 0 && t12Files.length > 0;
+const hasRentRoll = rentRollFiles.length > 0;
+const hasT12 = t12Files.length > 0;
+const hasPurchase = uploadedFiles.some((item) =>
+  ['purchase_agreement', 'loi', 'offering_memorandum'].includes(item.docType)
+);
+const hasCapex = uploadedFiles.some((item) =>
+  ['capex_budget', 'renovation_scope', 'contractor_bid'].includes(item.docType)
+);
+const hasDebt = uploadedFiles.some((item) =>
+  ['debt_term_sheet', 'lender_quote'].includes(item.docType)
+);
+const hasMarket = uploadedFiles.some((item) =>
+  ['market_study', 'broker_package', 'appraisal', 'engineering_report', 'environmental_report'].includes(
+    item.docType
+  )
+);
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -1215,12 +1242,43 @@ if (verifiedCredits < 1) {
               </label>
             </div>
 
+            <AnalysisScopePreview
+              hasRentRoll={hasRentRoll}
+              hasT12={hasT12}
+              hasPurchase={hasPurchase}
+              hasCapex={hasCapex}
+              hasDebt={hasDebt}
+              hasMarket={hasMarket}
+              rentRollCoverage={null}
+            />
+
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={scopeConfirmed}
+                onChange={(event) => setScopeConfirmed(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0F172A]"
+              />
+              <span>
+                I understand that this analysis will include only the sections supported by the documents I have uploaded.
+                One credit underwrites one property. I may upload additional documents later to deepen the analysis at no
+                additional cost.
+              </span>
+            </div>
+
             {/* ACTION BUTTON */}
                         <div className="flex flex-col items-center mt-8">
             <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!propertyName.trim() || !hasRequiredUploads || loading || !acknowledged || hasBlockingJob}
+                disabled={
+                  !propertyName.trim() ||
+                  !hasRequiredUploads ||
+                  loading ||
+                  !acknowledged ||
+                  hasBlockingJob ||
+                  !scopeConfirmed
+                }
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
                 {loading ? (
