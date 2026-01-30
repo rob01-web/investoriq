@@ -698,7 +698,7 @@ export default async function handler(req, res) {
       return typeof html === "string" ? html : "";
     };
 
-    let documentSourcesHtml = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
+    let documentSourcesHtml = "";
     let rentRollPayload = null;
     let t12Payload = null;
     if (jobId) {
@@ -737,7 +737,7 @@ export default async function handler(req, res) {
             const createdAt = row.created_at
               ? new Date(row.created_at).toLocaleString()
               : "Unknown date";
-            return `<li>${name} — ${escapeHtml(createdAt)}</li>`;
+            return `<li>${name} &mdash; ${escapeHtml(createdAt)}</li>`;
           })
           .join("");
         documentSourcesHtml = `<ul>${items}</ul>`;
@@ -1028,6 +1028,12 @@ export default async function handler(req, res) {
     const t12Rows = buildT12KeyMetricRows(t12Payload, formatCurrency);
     finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
 
+    if (!documentSourcesHtml) {
+      finalHtml = finalHtml.replace(
+        /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES\}\}[\s\S]*?<\/div>\s*/m,
+        ""
+      );
+    }
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
 
     const showExec = hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
@@ -1249,3 +1255,9 @@ try {
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   }
 }
+
+
+
+
+
+
