@@ -24,10 +24,13 @@ const AnalysisScopePreview = ({
       </span>
     );
 
-  const showCoverageWarning =
-    rentRollCoverage &&
-    Number.isFinite(rentRollCoverage.percent) &&
-    rentRollCoverage.percent < 70;
+  const hasProvidedUnits =
+    rentRollCoverage && Number.isFinite(rentRollCoverage.provided);
+  const hasTotalUnits =
+    rentRollCoverage && Number.isFinite(rentRollCoverage.total);
+  const hasPercent =
+    rentRollCoverage && Number.isFinite(rentRollCoverage.percent);
+  const showCoverageWarning = hasPercent && rentRollCoverage.percent < 70;
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
@@ -42,11 +45,20 @@ const AnalysisScopePreview = ({
         </div>
       </div>
 
-      {showCoverageWarning && (
+      {hasProvidedUnits && (
         <div className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{" "}
-          units ({Math.round(rentRollCoverage.percent)}%). Analysis reflects only the
-          units provided.
+          {hasPercent && hasTotalUnits ? (
+            <>
+              Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
+              units ({Math.round(rentRollCoverage.percent)}%).
+              {showCoverageWarning ? ' Analysis reflects only the units provided.' : ''}
+            </>
+          ) : (
+            <>
+              Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
+              provided in uploaded documents.
+            </>
+          )}
         </div>
       )}
 

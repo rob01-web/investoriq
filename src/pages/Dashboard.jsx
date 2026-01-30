@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
+  const [rentRollCoverage, setRentRollCoverage] = useState(null);
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -157,6 +158,50 @@ export default function Dashboard() {
     setLatestFailedJob(data || null);
   };
 
+  const fetchRentRollCoverage = async (targetJobId) => {
+    if (!targetJobId) return;
+
+    const { data, error } = await supabase
+      .from('analysis_artifacts')
+      .select('payload, created_at')
+      .eq('job_id', targetJobId)
+      .eq('type', 'rent_roll_parsed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data?.payload) {
+      setRentRollCoverage(null);
+      return;
+    }
+
+    const payload = data.payload || {};
+    let provided = null;
+    if (Array.isArray(payload.units)) {
+      provided = payload.units.length;
+    } else if (typeof payload.unit_count === 'number') {
+      provided = payload.unit_count;
+    } else if (typeof payload.total_units_provided === 'number') {
+      provided = payload.total_units_provided;
+    }
+
+    let total = null;
+    if (typeof payload.total_units === 'number') {
+      total = payload.total_units;
+    } else if (typeof payload.totalUnits === 'number') {
+      total = payload.totalUnits;
+    } else if (typeof payload.property_total_units === 'number') {
+      total = payload.property_total_units;
+    }
+
+    const percent =
+      provided != null && total != null && total > 0
+        ? Math.round((provided / total) * 100)
+        : null;
+
+    setRentRollCoverage({ provided, total, percent });
+  };
+
   useEffect(() => {
   const syncEverything = async () => {
     await fetchProfile(profile.id);
@@ -210,6 +255,14 @@ export default function Dashboard() {
       };
     }
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!jobId) {
+      setRentRollCoverage(null);
+      return;
+    }
+    fetchRentRollCoverage(jobId);
+  }, [jobId]);
 
   // REAL-TIME LISTENER: Watch for status changes (Queued -> Underwriting -> Success)
   useEffect(() => {
@@ -1249,7 +1302,7 @@ if (verifiedCredits < 1) {
               hasCapex={hasCapex}
               hasDebt={hasDebt}
               hasMarket={hasMarket}
-              rentRollCoverage={null}
+              rentRollCoverage={rentRollCoverage}
             />
 
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
