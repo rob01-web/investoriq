@@ -92,6 +92,7 @@ function replaceAll(str, token, value) {
 }
 
 const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
+const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
 
 const coerceNumber = (value) => {
   const raw = String(value ?? "").trim();
@@ -665,26 +666,6 @@ export default async function handler(req, res) {
     // ------------------------------------------------------------------
 // Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
 // ------------------------------------------------------------------
-const REQUIRED_SECTIONS = [
-  "execSummary",
-  "unitValueAdd",
-  "cashFlowProjections",
-  "neighborhoodAnalysis",
-  "riskAssessment",
-  "renovationNarrative",
-  "debtStructure",
-  "dealScoreSummary",
-  "dealScoreInterpretation",
-  "advancedModelingIntro",
-  "dcfInterpretation",
-  "finalRecommendation",
-];
-
-REQUIRED_SECTIONS.forEach((key) => {
-  if (!sections[key]) {
-    sections[key] = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
-  }
-});
     
     const tables = body.tables || {};
     const charts = body.charts || {};
@@ -700,6 +681,14 @@ REQUIRED_SECTIONS.forEach((key) => {
     const financials = body.financials || {};
 
     const getSection = (key) => sections[key] || "";
+    const getNarrativeSection = (key) => {
+      const html = sections?.[key] || "";
+      if (!html) return `<p class="muted">${SECTION_OMITTED}</p>`;
+      if (typeof html === "string" && html.includes(DATA_NOT_AVAILABLE)) {
+        return `<p class="muted">${SECTION_OMITTED}</p>`;
+      }
+      return html;
+    };
 
     let documentSourcesHtml = `<p class="muted">${DATA_NOT_AVAILABLE}</p>`;
     let rentRollPayload = null;
@@ -970,50 +959,50 @@ REQUIRED_SECTIONS.forEach((key) => {
     finalHtml = applyChartPlaceholders(finalHtml, charts);
 
     // 7. Inject ALL narrative sections (12)
-    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", getSection("execSummary"));
+    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", getNarrativeSection("execSummary"));
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
-      getSection("unitValueAdd")
+      getNarrativeSection("unitValueAdd")
     );
     finalHtml = finalHtml.replace(
       "{{CASH_FLOW_PROJECTIONS}}",
-      getSection("cashFlowProjections")
+      getNarrativeSection("cashFlowProjections")
     );
     finalHtml = finalHtml.replace(
       "{{NEIGHBORHOOD_ANALYSIS}}",
-      getSection("neighborhoodAnalysis")
+      getNarrativeSection("neighborhoodAnalysis")
     );
     finalHtml = finalHtml.replace(
       "{{RISK_ASSESSMENT}}",
-      getSection("riskAssessment")
+      getNarrativeSection("riskAssessment")
     );
     finalHtml = finalHtml.replace(
       "{{RENOVATION_NARRATIVE}}",
-      getSection("renovationNarrative")
+      getNarrativeSection("renovationNarrative")
     );
     finalHtml = finalHtml.replace(
       "{{DEBT_STRUCTURE}}",
-      getSection("debtStructure")
+      getNarrativeSection("debtStructure")
     );
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_SUMMARY}}",
-      getSection("dealScoreSummary")
+      getNarrativeSection("dealScoreSummary")
     );
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_INTERPRETATION}}",
-      getSection("dealScoreInterpretation")
+      getNarrativeSection("dealScoreInterpretation")
     );
     finalHtml = finalHtml.replace(
       "{{ADVANCED_MODELING_INTRO}}",
-      getSection("advancedModelingIntro")
+      getNarrativeSection("advancedModelingIntro")
     );
     finalHtml = finalHtml.replace(
       "{{DCF_INTERPRETATION}}",
-      getSection("dcfInterpretation")
+      getNarrativeSection("dcfInterpretation")
     );
     finalHtml = finalHtml.replace(
       "{{FINAL_RECOMMENDATION}}",
-      getSection("finalRecommendation")
+      getNarrativeSection("finalRecommendation")
     );
 
     const unitMixRows = buildUnitMixRows(
