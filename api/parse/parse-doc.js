@@ -423,6 +423,7 @@ export default async function handler(req, res) {
 
             const headerLabels = headerRow.map((cell) => String(cell || '').trim());
             const unitSynonyms = ['unit', 'unit number', 'unit #', 'apt', 'apartment', 'suite', 'unit id'];
+            const unitTypeSynonyms = ['unit type', 'type', 'layout', 'floor plan', 'plan'];
             const bedsSynonyms = ['beds', 'bed', 'bedrooms', 'br'];
             const bathsSynonyms = ['baths', 'bath', 'bathrooms', 'ba'];
             const sqftSynonyms = ['sqft', 'sq ft', 'square feet', 'sf'];
@@ -431,6 +432,7 @@ export default async function handler(req, res) {
             const statusSynonyms = ['status', 'occupied', 'occupancy', 'lease status'];
 
             unitIdx = findCsvColumnIndex(normalizedHeaders, unitSynonyms);
+            unitTypeIdx = findCsvColumnIndex(normalizedHeaders, unitTypeSynonyms);
             bedsIdx = findCsvColumnIndex(normalizedHeaders, bedsSynonyms);
             bathsIdx = findCsvColumnIndex(normalizedHeaders, bathsSynonyms);
             sqftIdx = findCsvColumnIndex(normalizedHeaders, sqftSynonyms);
@@ -440,6 +442,7 @@ export default async function handler(req, res) {
 
             columnMap = {
               unit: unitIdx !== -1 ? headerLabels[unitIdx] : null,
+              unit_type: unitTypeIdx !== -1 ? headerLabels[unitTypeIdx] : null,
               beds: bedsIdx !== -1 ? headerLabels[bedsIdx] : null,
               baths: bathsIdx !== -1 ? headerLabels[bathsIdx] : null,
               sqft: sqftIdx !== -1 ? headerLabels[sqftIdx] : null,
@@ -471,6 +474,8 @@ export default async function handler(req, res) {
           for (const row of dataRows) {
             if (isCsv) {
               const rawUnit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
+              const rawUnitType = unitTypeIdx !== -1 ? String(row[unitTypeIdx] || '').trim() : '';
+              const normUnitType = rawUnitType.toLowerCase();
               const rawBeds = bedsIdx !== -1 ? String(row[bedsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
               const rawBaths = bathsIdx !== -1 ? String(row[bathsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
               const rawSqft = sqftIdx !== -1 ? String(row[sqftIdx] || '').replace(/[^0-9.\-]/g, '') : '';
@@ -479,14 +484,18 @@ export default async function handler(req, res) {
                 marketRentIdx !== -1 ? String(row[marketRentIdx] || '').replace(/[^0-9.\-]/g, '') : '';
               const rawStatus = statusIdx !== -1 ? String(row[statusIdx] || '').trim() : '';
 
-              const beds = rawBeds ? Number(rawBeds) : null;
+              let beds = rawBeds ? Number(rawBeds) : null;
               const baths = rawBaths ? Number(rawBaths) : null;
               const sqft = rawSqft ? Number(rawSqft) : null;
               const inPlaceRent = rawRent ? Number(rawRent) : null;
               const marketRent = rawMarketRent ? Number(rawMarketRent) : null;
+              if (!Number.isFinite(beds) && (normUnitType.includes('studio') || normUnitType.includes('bachelor'))) {
+                beds = 0;
+              }
 
               units.push({
                 unit: rawUnit || null,
+                unit_type: rawUnitType || null,
                 beds: Number.isFinite(beds) ? beds : null,
                 baths: Number.isFinite(baths) ? baths : null,
                 sqft: Number.isFinite(sqft) ? sqft : null,
@@ -496,7 +505,9 @@ export default async function handler(req, res) {
               });
 
               let unitTypeValue = null;
-              if (Number.isFinite(beds)) {
+              if (Number.isFinite(beds) && beds === 0 && (normUnitType.includes('studio') || normUnitType.includes('bachelor'))) {
+                unitTypeValue = 'Studio';
+              } else if (Number.isFinite(beds)) {
                 if (Number.isFinite(baths)) {
                   unitTypeValue = `${beds} Bed / ${baths} Bath`;
                 } else {
