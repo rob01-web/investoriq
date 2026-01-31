@@ -120,7 +120,20 @@ function hasMeaningfulNarrative(html) {
 }
 
 function stripMarkedSection(html, key) {
-  const re = new RegExp(`<!--BEGIN:${key}-->[\\s\\S]*?<!--END:${key}-->`, "g");
+  const token = String(key || "");
+  if (!token) return html;
+  const begin = `<!-- BEGIN ${token} -->`;
+  const end = `<!-- END ${token} -->`;
+  if (!html.includes(begin)) return html;
+  if (!html.includes(end)) {
+    console.warn(`Section marker missing END for ${token}`);
+    return html;
+  }
+  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(
+    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
+    "g"
+  );
   return html.replace(re, "");
 }
 
@@ -1174,6 +1187,76 @@ const htmlString =
     : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
       ? safeHtml.html
       : String(safeHtml || "");
+const htmlLength = htmlString.length;
+const hasClosingHtml = htmlString.includes("</html>");
+const hasFinalRecommendation = htmlString.includes("Final Recommendation");
+const hasSectionTwelve = htmlString.includes("12.0");
+
+const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
+try {
+  const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: userId || null,
+      type: "worker_event",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/report_html_integrity/${integrityTimestamp}.json`,
+      payload: {
+        event: "report_html_integrity",
+        html_length: htmlLength,
+        has_closing_html: hasClosingHtml,
+        has_final_recommendation: hasFinalRecommendation,
+        has_section_12: hasSectionTwelve,
+        timestamp: new Date().toISOString(),
+      },
+    },
+  ]);
+  if (integrityErr) {
+    console.error("Failed to write report_html_integrity event:", integrityErr);
+  }
+} catch (err) {
+  console.error("Failed to log report_html_integrity:", err);
+}
+
+if (!hasClosingHtml) {
+  const truncatedTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: userId || null,
+        type: "report_html_truncated",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/report_html_truncated/${truncatedTimestamp}.json`,
+        payload: {
+          error: "report_html_truncated",
+          html_length: htmlLength,
+          has_closing_html: hasClosingHtml,
+          has_final_recommendation: hasFinalRecommendation,
+          has_section_12: hasSectionTwelve,
+          html: htmlString,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (err) {
+    console.error("Failed to write report_html_truncated artifact:", err);
+  }
+
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "REPORT_HTML_TRUNCATED",
+        error_message: "report_html_truncated",
+      })
+      .eq("id", jobId);
+  }
+
+  return res.status(500).json({ error: "report_html_truncated" });
+}
 let pdfResponse;
 
 try {
