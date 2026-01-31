@@ -137,6 +137,16 @@ function stripMarkedSection(html, key) {
   return html.replace(re, "");
 }
 
+function stripChartBlockByAlt(html, altText) {
+  if (!altText) return html;
+  const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(
+    `<div class=\"chart-block[\\s\\S]*?<img[^>]*(alt=\"${escapedAlt}\"[^>]*src=\"\"|src=\"\"[^>]*alt=\"${escapedAlt}\")[^>]*>[\\s\\S]*?<\\/div>`,
+    "g"
+  );
+  return html.replace(re, "");
+}
+
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
   const rows = unitMix
@@ -1057,11 +1067,11 @@ export default async function handler(req, res) {
 
     if (!documentSourcesHtml) {
       finalHtml = finalHtml.replace(
-        /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES\}\}[\s\S]*?<\/div>\s*/m,
+        /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES_TABLE\}\}[\s\S]*?<\/div>\s*/m,
         ""
       );
     }
-    finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES}}", documentSourcesHtml);
+    finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesHtml);
 
     const showExec = hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
     if (!showExec) {
@@ -1117,6 +1127,109 @@ export default async function handler(req, res) {
     if (!showFinalRecommendation) {
       finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
     }
+
+    const hasRentRollUnitMix =
+      (Array.isArray(rentRollUnits) && rentRollUnits.length > 0) ||
+      (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0);
+    const hasRentRollRents =
+      (Array.isArray(rentRollUnits) &&
+        rentRollUnits.some(
+          (unit) =>
+            Number.isFinite(coerceNumber(unit?.in_place_rent)) &&
+            Number.isFinite(coerceNumber(unit?.market_rent))
+        )) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some(
+          (row) =>
+            Number.isFinite(Number(row?.current_rent)) &&
+            Number.isFinite(Number(row?.market_rent))
+        ));
+    const hasRentRollData = hasRentRollUnitMix && hasRentRollRents;
+    const hasT12Data = [
+      "gross_potential_rent",
+      "effective_gross_income",
+      "total_operating_expenses",
+      "net_operating_income",
+    ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
+
+    const showSection2 = hasRentRollData;
+    if (!showSection2) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
+    }
+
+    const showSection2Roi =
+      Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
+    if (!showSection2Roi) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
+    }
+
+    const showSection3 =
+      hasRentRollData &&
+      hasT12Data &&
+      Array.isArray(tables.scenarios) &&
+      tables.scenarios.length > 0;
+    if (!showSection3) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+    }
+
+    const showSection4 =
+      hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis")) ||
+      hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showSection4) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+    }
+
+    const showSection5 = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showSection5) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+    }
+
+    const showSection6 =
+      Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
+    if (!showSection6) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+    }
+
+    const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    if (!showSection7) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+    }
+
+    const showSection8 =
+      (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
+      hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
+      hasMeaningfulNarrative(getNarrativeHtml("dealScoreInterpretation"));
+    if (!showSection8) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+    }
+
+    const showSection9 =
+      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) ||
+      hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
+    if (!showSection9) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+    }
+
+    const showSection10 =
+      (Array.isArray(tables.comps) && tables.comps.length > 0) ||
+      hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro"));
+    if (!showSection10) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+    }
+
+    const showSection11 = hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation"));
+    if (!showSection11) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    }
+
+    finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "IRR by Scenario");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Risk Factor Radar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Break-Even Occupancy Analysis");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Radar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Factor Breakdown Bar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Equity Return Components");
 
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
@@ -1261,7 +1374,7 @@ if (!hasClosingHtml) {
 }
 
 const templateLength = typeof htmlTemplate === "string" ? htmlTemplate.length : null;
-if (htmlLength < 20000 || !hasSectionTwelve || !hasFinalRecommendation) {
+if (!hasSectionTwelve) {
   const incompleteTimestamp = new Date().toISOString().replace(/:/g, "-");
   try {
     await supabase.from("analysis_artifacts").insert([
@@ -1279,7 +1392,6 @@ if (htmlLength < 20000 || !hasSectionTwelve || !hasFinalRecommendation) {
           first_500: htmlString.slice(0, 500),
           last_500: htmlString.slice(-500),
           has_section_12: hasSectionTwelve,
-          has_final_recommendations: hasFinalRecommendation,
           has_closing_html: hasClosingHtml,
           timestamp: new Date().toISOString(),
         },
