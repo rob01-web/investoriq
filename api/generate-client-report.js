@@ -902,7 +902,7 @@ export default async function handler(req, res) {
         : null;
 
     // 2. Load the HTML template (SACRED MASTER COPY)
-    const templatePath = path.join(__dirname, "report-template.html");
+    const templatePath = path.join(__dirname, "report-template-runtime.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
 
     // 3. Inject property identity
@@ -1189,8 +1189,10 @@ const htmlString =
       : String(safeHtml || "");
 const htmlLength = htmlString.length;
 const hasClosingHtml = htmlString.includes("</html>");
-const hasFinalRecommendation = htmlString.includes("Final Recommendation");
-const hasSectionTwelve = htmlString.includes("12.0");
+const hasFinalRecommendation =
+  htmlString.includes("11.0") && htmlString.includes("Final Recommendations");
+const hasSectionTwelve =
+  htmlString.includes("12.0") && htmlString.includes("Methodology & Data Transparency");
 
 const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
 try {
@@ -1256,6 +1258,50 @@ if (!hasClosingHtml) {
   }
 
   return res.status(500).json({ error: "report_html_truncated" });
+}
+
+const templateLength = typeof htmlTemplate === "string" ? htmlTemplate.length : null;
+if (htmlLength < 20000 || !hasSectionTwelve || !hasFinalRecommendation) {
+  const incompleteTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: userId || null,
+        type: "report_html_incomplete",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/report_html_incomplete/${incompleteTimestamp}.json`,
+        payload: {
+          error: "report_html_incomplete",
+          template_path: templatePath,
+          template_length: templateLength,
+          final_length: htmlLength,
+          first_500: htmlString.slice(0, 500),
+          last_500: htmlString.slice(-500),
+          has_section_12: hasSectionTwelve,
+          has_final_recommendations: hasFinalRecommendation,
+          has_closing_html: hasClosingHtml,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (err) {
+    console.error("Failed to write report_html_incomplete artifact:", err);
+  }
+
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "REPORT_HTML_INCOMPLETE",
+        error_message: "report_html_incomplete",
+      })
+      .eq("id", jobId);
+  }
+
+  return res.status(500).json({ error: "report_html_incomplete" });
 }
 let pdfResponse;
 
