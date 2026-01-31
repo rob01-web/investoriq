@@ -129,29 +129,40 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   const rows = unitMix
     .map((row) => {
       const unitType = escapeHtml(row.unit_type || "");
-      const count = typeof row.count === "number" ? row.count : Number(row.count || 0);
-      const rent =
-        typeof row.current_rent === "number" ? formatValue(row.current_rent) : DATA_NOT_AVAILABLE;
+      const count = Number.isFinite(Number(row.count)) ? String(Number(row.count)) : "";
+      const avgSqft = Number.isFinite(Number(row.avg_sqft))
+        ? String(Math.round(Number(row.avg_sqft)))
+        : "";
+      const currentRent = Number.isFinite(Number(row.current_rent))
+        ? formatValue(row.current_rent)
+        : "";
+      const marketRent = Number.isFinite(Number(row.market_rent))
+        ? formatValue(row.market_rent)
+        : "";
+      const plannedLift =
+        Number.isFinite(Number(row.current_rent)) && Number.isFinite(Number(row.market_rent))
+          ? formatValue(Number(row.market_rent) - Number(row.current_rent))
+          : "";
       return `<tr>
-            <td>${unitType || DATA_NOT_AVAILABLE}</td>
-            <td>${count || DATA_NOT_AVAILABLE}</td>
-            <td>${rent}</td>
-            <td>${DATA_NOT_AVAILABLE}</td>
-            <td>${DATA_NOT_AVAILABLE}</td>
-            <td>${DATA_NOT_AVAILABLE}</td>
+            <td>${unitType}</td>
+            <td>${count}</td>
+            <td>${avgSqft}</td>
+            <td>${currentRent}</td>
+            <td>${marketRent}</td>
+            <td>${plannedLift}</td>
           </tr>`;
     })
     .join("");
 
-  const total = Number.isFinite(Number(totalUnits)) ? Number(totalUnits) : DATA_NOT_AVAILABLE;
+  const total = Number.isFinite(Number(totalUnits)) ? String(Number(totalUnits)) : "";
 
   const totalRow = `<tr>
             <td><strong>Blended / Total</strong></td>
             <td><strong>${total}</strong></td>
-            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
-            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
-            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
-            <td><strong>${DATA_NOT_AVAILABLE}</strong></td>
+            <td><strong></strong></td>
+            <td><strong></strong></td>
+            <td><strong></strong></td>
+            <td><strong></strong></td>
           </tr>`;
 
   return `${rows}${totalRow}`;
@@ -191,10 +202,13 @@ function buildT12SummaryHtml(t12Payload, formatValue) {
 
   const rowHtml = rows
     .map(([label, value]) => {
-      const display = Number.isFinite(Number(value)) ? formatValue(value) : DATA_NOT_AVAILABLE;
+      const display = Number.isFinite(Number(value)) ? formatValue(value) : "";
       return `<tr><td>${label}</td><td>${display}</td></tr>`;
     })
     .join("");
+
+  const hasAny = rows.some(([, value]) => Number.isFinite(Number(value)));
+  if (!hasAny) return "";
 
   return `<table>
         <tr>
@@ -216,7 +230,7 @@ function buildT12KeyMetricRows(t12Payload, formatValue) {
 
   return rows
     .map(([label, value]) => {
-      const display = Number.isFinite(Number(value)) ? formatValue(value) : DATA_NOT_AVAILABLE;
+      const display = Number.isFinite(Number(value)) ? formatValue(value) : "";
       return `<tr>
           <td>${label}</td>
           <td>${display}</td>
