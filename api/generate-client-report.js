@@ -1195,6 +1195,12 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
 
+    const showSection7Tables =
+      Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0;
+    if (!showSection7Tables) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
+    }
+
     const showSection8 =
       (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
       hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
@@ -1208,6 +1214,12 @@ export default async function handler(req, res) {
       hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+    }
+
+    const showSection9Table =
+      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
+    if (!showSection9Table) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
     }
 
     const showSection10 =
