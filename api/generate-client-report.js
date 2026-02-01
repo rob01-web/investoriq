@@ -1179,9 +1179,22 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
     }
 
+    const showSection4Table = hasMeaningfulNarrative(
+      getNarrativeHtml("neighborhoodAnalysis")
+    );
+    if (!showSection4Table) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
+    }
+
     const showSection5 = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!showSection5) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+    }
+
+    const showSection5Matrix =
+      Array.isArray(tables.riskMatrix) && tables.riskMatrix.length > 0;
+    if (!showSection5Matrix) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
 
     const showSection6 =
