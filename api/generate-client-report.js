@@ -679,6 +679,7 @@ export default async function handler(req, res) {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
     const { userId, property_name, jobId } = body;
+    const reportTier = Number(job?.report_tier || payload?.report_tier || 1);
     const nowIso = new Date().toISOString();
     const promptInstructions = [
       INVESTORIQ_MASTER_PROMPT_V71,
@@ -962,6 +963,21 @@ export default async function handler(req, res) {
       "{{YEAR1_COC}}",
       formatPercent(financials.year1CoC) || DATA_NOT_AVAILABLE
     );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{ESTIMATES_DISCLOSURE}}",
+      "InvestorIQ estimates are derived from uploaded documents and standardized underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred."
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{METHODOLOGY_NOTES}}",
+      "Metrics and tables reflect document-backed inputs and deterministic calculations. No manual adjustments or external assumptions are introduced when source data is incomplete."
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{LIMITATIONS_NOTES}}",
+      "This report is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
+    );
 
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
@@ -1055,7 +1071,7 @@ export default async function handler(req, res) {
       computedRentRoll?.total_units ?? rentRollPayload?.total_units,
       formatCurrency
     );
-    finalHtml = injectUnitMixTable(finalHtml, unitMixRows);
+    finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
     const occupancyValue =
       computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
         ? DATA_NOT_AVAILABLE
@@ -1247,6 +1263,35 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
 
+    if (reportTier === 1) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11");
+    } else if (reportTier === 2) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11");
+    }
+
+    const allowCharts = reportTier >= 3;
+    if (!allowCharts) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RISK_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_BREAKEVEN");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_BAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EXPENSE_RATIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EQUITY_COMPONENTS");
+    }
+
     finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "IRR by Scenario");
     finalHtml = stripChartBlockByAlt(finalHtml, "Risk Factor Radar Chart");
@@ -1347,6 +1392,7 @@ try {
         has_closing_html: hasClosingHtml,
         has_final_recommendation: hasFinalRecommendation,
         has_section_12: hasSectionTwelve,
+        report_tier: reportTier,
         timestamp: new Date().toISOString(),
       },
     },

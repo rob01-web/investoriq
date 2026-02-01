@@ -447,6 +447,7 @@ ul, ol {
   <div class="report-container">
 
     <!-- 1.0 Executive Summary -->
+<!-- BEGIN SECTION_0_5 -->
 <section class="section no-break">
   <div class="header-strip">
     <div class="header-top">
@@ -569,9 +570,11 @@ ul, ol {
 </div>
 
 </section>
+<!-- END SECTION_0_5 -->
 
     <!-- BEGIN SECTION_2_UNIT_VALUE_ADD -->
 <!-- 2.0 Unit-Level Value Add Analysis -->
+<!-- BEGIN SECTION_2 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">2.0 Unit-Level Value Add Analysis</div>
@@ -623,7 +626,7 @@ ul, ol {
             <th>Monthly Lift</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>{{UNIT_MIX_ROWS}}</tbody>
 </table>
 
       <!-- BEGIN SECTION_2_RENOVATION_ROI -->
@@ -687,9 +690,17 @@ ul, ol {
         </tbody>
       </table>
 
-      <div class="chart-block chart-large no-break" style="margin-top:18px;">
+      <!-- BEGIN SECTION_CHART_RENOVATION -->
+<!-- BEGIN SECTION_CHART_RISK_RADAR -->
+<!-- BEGIN SECTION_CHART_BREAKEVEN -->
+<!-- BEGIN SECTION_CHART_DEAL_SCORE_RADAR -->
+<!-- BEGIN SECTION_CHART_DEAL_SCORE_BAR -->
+<!-- BEGIN SECTION_CHART_EXPENSE_RATIO -->
+<!-- BEGIN SECTION_CHART_EQUITY_COMPONENTS -->
+<div class="chart-block chart-large no-break" style="margin-top:18px;">
         <img src="{{RENOVATION_CHART_URL}}" alt="Renovation ROI and Rent Lift Chart" />
       </div>
+<!-- END SECTION_CHART_RENOVATION -->
 
       <p class="small" style="margin-top:12px;">
         On a consolidated basis, the renovation program averages approximately $16,500 per fully
@@ -711,11 +722,13 @@ ul, ol {
   <!-- END UNIT_VALUE_ADD -->
 
   </section>
+<!-- END SECTION_2 -->
 <!-- END SECTION_2_UNIT_VALUE_ADD -->
 
 
     <!-- BEGIN SECTION_3_SCENARIO -->
 <!-- 3.0 Scenario Analysis & Five-Year Outlook -->
+<!-- BEGIN SECTION_3 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">3.0 Scenario Analysis &amp; Five-Year Outlook</div>
@@ -772,11 +785,13 @@ ul, ol {
 <!-- END CASH_FLOW_PROJECTIONS -->
 
   </section>
+<!-- END SECTION_3 -->
 <!-- END SECTION_3_SCENARIO -->
 
 
 <!-- BEGIN SECTION_4_NEIGHBORHOOD -->
 <!-- 4.0 Neighborhood Fundamentals -->
+<!-- BEGIN SECTION_4 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">4.0 Neighborhood Fundamentals</div>
@@ -835,11 +850,13 @@ ul, ol {
 
 
   </section>
+<!-- END SECTION_4 -->
 <!-- END SECTION_4_NEIGHBORHOOD -->
 
 
     <!-- BEGIN SECTION_5_RISK -->
 <!-- 5.0 Risk Scoring & Sensitivities -->
+<!-- BEGIN SECTION_5 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">5.0 Risk Scoring &amp; Sensitivities</div>
@@ -859,6 +876,7 @@ ul, ol {
       alt="Risk Factor Radar Chart"
     />
   </div>
+<!-- END SECTION_CHART_RISK_RADAR -->
 <!-- BEGIN SECTION_5_RISK_MATRIX -->
 
 
@@ -916,11 +934,13 @@ ul, ol {
 
 
   </section>
+<!-- END SECTION_5 -->
 <!-- END SECTION_5_RISK -->
 
 
     <!-- BEGIN SECTION_6_RENOVATION -->
 <!-- 6.0 Renovation Strategy & Capital Plan -->
+<!-- BEGIN SECTION_6 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">6.0 Renovation Strategy &amp; Capital Plan</div>
@@ -1048,11 +1068,13 @@ ul, ol {
 </p>
 
   </section>
+<!-- END SECTION_6 -->
 <!-- END SECTION_6_RENOVATION -->
 
 
     <!-- BEGIN SECTION_7_DEBT -->
 <!-- 7.0 Debt Structure & Financing -->
+<!-- BEGIN SECTION_7 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">7.0 Debt Structure &amp; Financing</div>
@@ -1118,6 +1140,7 @@ ul, ol {
           alt="Break-Even Occupancy Analysis"
         />
       </div>
+<!-- END SECTION_CHART_BREAKEVEN -->
 
       <p class="small" style="margin-top:16px;">
         <strong>InvestorIQ Estimate:</strong> Under the Base Case, the asset remains comfortably above break-even occupancy and DSCR thresholds. In downside scenarios, DSCR approaches lender minimums but does not fall materially below break-even, reinforcing the importance of conservative leverage and disciplined operating management.
@@ -1182,11 +1205,13 @@ ul, ol {
 <!-- END SECTION_7_DEBT_TABLES -->
 
 </section>
+<!-- END SECTION_7 -->
 <!-- END SECTION_7_DEBT -->
 
 
 <!-- BEGIN SECTION_8_DEAL_SCORE -->
 <!-- 8.0 Deal Scorecard & Radar -->
+<!-- BEGIN SECTION_8 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">8.0 Deal Scorecard &amp; Radar</div>
@@ -1207,6 +1232,7 @@ ul, ol {
       alt="InvestorIQ Deal Score Radar Chart"
     />
   </div>
+<!-- END SECTION_CHART_DEAL_SCORE_RADAR -->
 
   <!-- FACTOR LEVEL SCORES TABLE -->
   <div class="no-break" style="margin-top:18px;">
@@ -1222,6 +1248,7 @@ ul, ol {
       alt="Deal Score Factor Breakdown Bar Chart"
     />
   </div>
+<!-- END SECTION_CHART_DEAL_SCORE_BAR -->
 
   <!-- INTERPRETATION -->
   <p class="subsection-title" style="margin-top:16px;">Interpretation</p>
@@ -1232,11 +1259,13 @@ ul, ol {
     </p>
   </div>
 </section>
+<!-- END SECTION_8 -->
 <!-- END SECTION_8_DEAL_SCORE -->
 
 
 <!-- BEGIN SECTION_9_DCF -->
 <!-- 9.0 Discounted Cash Flow (DCF) -->
+<!-- BEGIN SECTION_9 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">9.0 Discounted Cash Flow (DCF)</div>
@@ -1295,11 +1324,13 @@ ul, ol {
     <!-- END DCF_INTERPRETATION -->
 
 </section>
+<!-- END SECTION_9 -->
 <!-- END SECTION_9_DCF -->
 
 
 <!-- BEGIN SECTION_10_ADV_MODEL -->
 <!-- 10.0 Advanced Financial Modeling -->
+<!-- BEGIN SECTION_10 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">10.0 Advanced Financial Modeling</div>
@@ -1330,6 +1361,7 @@ ul, ol {
       alt="Operating Expense Ratio Chart"
     />
   </div>
+<!-- END SECTION_CHART_EXPENSE_RATIO -->
 
   <p>
     The projected stabilized operating expense ratio of approximately 47 percent is broadly
@@ -1385,6 +1417,7 @@ ul, ol {
   <div class="chart-block chart-large no-break" style="margin-top:22px;">
     <img src="{{EQUITY_COMPONENTS_CHART_URL}}" alt="Equity Return Components" />
   </div>
+<!-- END SECTION_CHART_EQUITY_COMPONENTS -->
 
   <!-- DCF Interpretation -->
   <p style="margin-top:14px;">
@@ -1396,11 +1429,13 @@ ul, ol {
   </p>
 
   </section>
+<!-- END SECTION_10 -->
 <!-- END SECTION_10_ADV_MODEL -->
 
 
 <!-- BEGIN SECTION_11_FINAL_RECS -->
 <!-- 11.0 Final Recommendations -->
+<!-- BEGIN SECTION_11 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">11.0 Final Recommendations</div>
@@ -1413,10 +1448,12 @@ ul, ol {
   </p>
 <!-- END FINAL_RECOMMENDATIONS -->
 </section>
+<!-- END SECTION_11 -->
 <!-- END SECTION_11_FINAL_RECS -->
 
 
 <!-- 12.0 Methodology & Data Transparency -->
+<!-- BEGIN SECTION_12 -->
 <section class="section page-break">
   <div class="section-header">
     <div class="section-number">12.0 Methodology &amp; Data Transparency</div>
@@ -1438,6 +1475,7 @@ ul, ol {
   <p>{{LIMITATIONS_NOTES}}</p>
 
   </section>
+<!-- END SECTION_12 -->
 <!-- GLOBAL REPORT FOOTER (LOCKED) -->
 <div class="report-footer">
   <div class="report-footer-inner">
