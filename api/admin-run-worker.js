@@ -1359,7 +1359,14 @@ export default async function handler(req, res) {
                   has_admin_key: Boolean(headers['x-admin-run-key']),
                   target_url: fetchUrl,
                 };
-                generatorError = `Report generation failed (${reportRes.status})`;
+                if (
+                  reportRes.status === 409 &&
+                  rawText.includes('REVISION_LIMIT_REACHED')
+                ) {
+                  generatorError = 'Revision limit reached for this job.';
+                } else {
+                  generatorError = `Report generation failed (${reportRes.status})`;
+                }
               } else {
                 const reportData = await reportRes.json().catch(() => ({}));
                 if (!reportData?.reportId) {

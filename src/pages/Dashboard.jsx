@@ -113,7 +113,7 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at')
+      .select('id, property_name, status, created_at, runs_limit, runs_used, runs_inflight')
       .eq('user_id', profile.id)
     .in('status', [
       'queued',
@@ -214,7 +214,7 @@ export default function Dashboard() {
     if (!jobId) {
       const { data: existingJob, error } = await supabase
         .from('analysis_jobs')
-        .select('id, status, created_at, property_name')
+        .select('id, status, created_at, property_name, runs_limit, runs_used, runs_inflight')
         .eq('user_id', profile.id)
         .in('status', [
           'queued',
@@ -331,6 +331,12 @@ const hasMarket = uploadedFiles.some((item) =>
     item.docType
   )
 );
+const activeJobForRuns = inProgressJobs[0] || latestFailedJob || null;
+const runsLimitValue = Number(activeJobForRuns?.runs_limit ?? 0);
+const runsUsedValue = Number(activeJobForRuns?.runs_used ?? 0);
+const runsInflightValue = Number(activeJobForRuns?.runs_inflight ?? 0);
+const remainingTotal = Math.max(0, runsLimitValue - runsUsedValue - runsInflightValue);
+const regenDisabled = activeJobForRuns ? remainingTotal <= 0 : false;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -1362,7 +1368,8 @@ if (verifiedCredits < 1) {
                   loading ||
                   !acknowledged ||
                   hasBlockingJob ||
-                  !scopeConfirmed
+                  !scopeConfirmed ||
+                  regenDisabled
                 }
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
@@ -1373,9 +1380,12 @@ if (verifiedCredits < 1) {
                 ) : hasBlockingJob ? (
                   'Report In Progress'
                 ) : (
-                  'Generate IQ Report'
+                  runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'
                 )}
               </Button>
+              <div className="mt-2 text-xs font-semibold text-slate-600">
+                {regenDisabled ? 'Revision limit reached' : `Remaining runs: ${remainingTotal}`}
+              </div>
 
               {!propertyName.trim() && (
                 <div className="mt-2 text-xs font-semibold text-red-700">
@@ -1506,6 +1516,16 @@ if (verifiedCredits < 1) {
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
                 Status: {job.status.replaceAll('_', ' ')}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Revision {Math.max(0, Number(job.runs_used ?? 0) - 1)} of{' '}
+                {Math.max(0, Number(job.runs_limit ?? 0) - 1)}
+                {Number.isFinite(Number(job.runs_used)) &&
+                Number.isFinite(Number(job.runs_limit)) ? (
+                  <span className="ml-2 text-slate-400">
+                    Runs used: {Number(job.runs_used)} / {Number(job.runs_limit)}
+                  </span>
+                ) : null}
               </div>
             </div>
 
