@@ -679,7 +679,7 @@ export default async function handler(req, res) {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
     const { userId, property_name, jobId } = body;
-    const reportTier = Number(job?.report_tier || payload?.report_tier || 1);
+    const reportTier = Number(body?.report_tier || 1);
     const nowIso = new Date().toISOString();
     const promptInstructions = [
       INVESTORIQ_MASTER_PROMPT_V71,
