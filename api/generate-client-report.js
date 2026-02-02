@@ -680,7 +680,18 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const { userId, property_name, jobId } = body;
     const allowedReportTypes = ["screening", "underwriting", "ic"];
-    const rawReportType = (body?.report_type || "screening").toLowerCase();
+    let jobReportType = null;
+    if (jobId) {
+      const { data: jobRow } = await supabase
+        .from("analysis_jobs")
+        .select("report_type")
+        .eq("id", jobId)
+        .maybeSingle();
+      jobReportType = jobRow?.report_type || null;
+    }
+    const rawReportType = String(
+      body?.report_type || jobReportType || "screening"
+    ).toLowerCase();
     const reportType = allowedReportTypes.includes(rawReportType)
       ? rawReportType
       : "screening";
@@ -1278,14 +1289,14 @@ export default async function handler(req, res) {
     }
 
     if (reportTier === 1) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_5");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_6");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_7");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_8");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_9");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_10");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_11");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
 
     const allowCharts = reportTier >= 3;

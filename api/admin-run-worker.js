@@ -430,9 +430,6 @@ export default async function handler(req, res) {
               status: 'extracting',
               started_at: nowIso,
             };
-            if (supportsReportType) {
-              claimUpdate.report_type = reportType;
-            }
             const { data: claimed, error: claimErr } = await supabaseAdmin
               .from('analysis_jobs')
               .update(claimUpdate)
