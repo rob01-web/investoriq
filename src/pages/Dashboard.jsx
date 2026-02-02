@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
-  const [reportType, setReportType] = useState('screening');
+  const [selectedReportType, setSelectedReportType] = useState('screening');
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -429,10 +429,10 @@ const hasMarket = uploadedFiles.some((item) =>
 
     // Create a job the moment the user begins uploading (async underwriting anchor)
     if (!jobId) {
-      const allowedReportTypes = ['screening', 'underwriting', 'ic'];
-      const rawReportType = String(reportType || '').toLowerCase();
-      const normalizedReportType = allowedReportTypes.includes(rawReportType)
-        ? rawReportType
+      const reportType = (selectedReportType || '').toLowerCase();
+      const allowedReportTypes = ['screening', 'underwriting'];
+      const normalizedReportType = allowedReportTypes.includes(reportType)
+        ? reportType
         : 'screening';
       const { data, error } = await supabase
         .from('analysis_jobs')
@@ -1311,6 +1311,31 @@ if (verifiedCredits < 1) {
               hasMarket={hasMarket}
               rentRollCoverage={rentRollCoverage}
             />
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => setSelectedReportType('screening')}
+                className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                  selectedReportType === 'screening'
+                    ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                    : 'border-slate-200 bg-white text-[#0F172A]'
+                }`}
+              >
+                Screening Report
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setSelectedReportType('underwriting')}
+                className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                  selectedReportType === 'underwriting'
+                    ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                    : 'border-slate-200 bg-white text-[#0F172A]'
+                }`}
+              >
+                Underwriting Report
+              </Button>
+            </div>
 
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               <input
