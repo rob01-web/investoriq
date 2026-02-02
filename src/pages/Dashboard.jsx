@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
+  const [reportType, setReportType] = useState('screening');
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -428,6 +429,11 @@ const hasMarket = uploadedFiles.some((item) =>
 
     // Create a job the moment the user begins uploading (async underwriting anchor)
     if (!jobId) {
+      const allowedReportTypes = ['screening', 'underwriting', 'ic'];
+      const rawReportType = String(reportType || '').toLowerCase();
+      const normalizedReportType = allowedReportTypes.includes(rawReportType)
+        ? rawReportType
+        : 'screening';
       const { data, error } = await supabase
         .from('analysis_jobs')
         .insert({
@@ -438,6 +444,7 @@ const hasMarket = uploadedFiles.some((item) =>
           parser_version: 'v1',
           template_version: 'v2026-01-14',
           scoring_version: 'v1',
+          report_type: normalizedReportType,
         })
         .select('id')
         .single();

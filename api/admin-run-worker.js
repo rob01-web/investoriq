@@ -284,10 +284,6 @@ export default async function handler(req, res) {
       throw error;
     };
 
-    const allowedReportTypes = ['screening', 'underwriting', 'ic'];
-    const rawReportType = String(req.body?.report_type || req.query?.report_type || '').toLowerCase();
-    const reportType = allowedReportTypes.includes(rawReportType) ? rawReportType : 'screening';
-
     let supportsCompletedAt = false;
     let supportsFailedAt = false;
     let supportsErrorCode = false;
