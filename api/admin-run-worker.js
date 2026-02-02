@@ -284,15 +284,21 @@ export default async function handler(req, res) {
       throw error;
     };
 
+    const allowedReportTypes = ['screening', 'underwriting', 'ic'];
+    const rawReportType = String(req.body?.report_type || req.query?.report_type || '').toLowerCase();
+    const reportType = allowedReportTypes.includes(rawReportType) ? rawReportType : 'screening';
+
     let supportsCompletedAt = false;
     let supportsFailedAt = false;
     let supportsErrorCode = false;
     let supportsErrorMessage = false;
+    let supportsReportType = false;
     try {
       supportsCompletedAt = await canUseColumn('completed_at');
       supportsFailedAt = await canUseColumn('failed_at');
       supportsErrorCode = await canUseColumn('error_code');
       supportsErrorMessage = await canUseColumn('error_message');
+      supportsReportType = await canUseColumn('report_type');
     } catch (err) {
       return res.status(500).json({
         error: 'Failed to detect analysis_jobs columns',
@@ -420,12 +426,16 @@ export default async function handler(req, res) {
       if (queuedJobs && queuedJobs.length > 0) {
         for (const job of queuedJobs) {
           try {
+            const claimUpdate = {
+              status: 'extracting',
+              started_at: nowIso,
+            };
+            if (supportsReportType) {
+              claimUpdate.report_type = reportType;
+            }
             const { data: claimed, error: claimErr } = await supabaseAdmin
               .from('analysis_jobs')
-              .update({
-                status: 'extracting',
-                started_at: nowIso,
-              })
+              .update(claimUpdate)
               .eq('id', job.id)
               .eq('status', 'queued')
               .select('id, user_id, status');

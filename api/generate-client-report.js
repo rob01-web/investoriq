@@ -679,7 +679,14 @@ export default async function handler(req, res) {
     // 1. Parse input JSON (structured)
     const body = req.body || {};
     const { userId, property_name, jobId } = body;
-    const reportTier = Number(body?.report_tier || 1);
+    const allowedReportTypes = ["screening", "underwriting", "ic"];
+    const rawReportType = (body?.report_type || "screening").toLowerCase();
+    const reportType = allowedReportTypes.includes(rawReportType)
+      ? rawReportType
+      : "screening";
+    const reportTier =
+      reportType === "underwriting" ? 2 : reportType === "ic" ? 3 : 1;
+    const allowAssumptions = reportTier >= 2;
     const nowIso = new Date().toISOString();
     const promptInstructions = [
       INVESTORIQ_MASTER_PROMPT_V71,
@@ -978,6 +985,13 @@ export default async function handler(req, res) {
       "{{LIMITATIONS_NOTES}}",
       "This report is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
     );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{ASSUMPTIONS_DISCLOSURE}}",
+      allowAssumptions
+        ? "Assumptions in this report are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
+        : "This report contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
+    );
 
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
@@ -1272,13 +1286,6 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11");
-    } else if (reportTier === 2) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_6");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_7");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_8");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_9");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_10");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_11");
     }
 
     const allowCharts = reportTier >= 3;
@@ -1290,6 +1297,9 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_BAR");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EXPENSE_RATIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EQUITY_COMPONENTS");
+    }
+    if (!allowAssumptions) {
+      finalHtml = stripMarkedSection(finalHtml, "ASSUMPTIONS_ONLY");
     }
 
     finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
@@ -1393,6 +1403,8 @@ try {
         has_final_recommendation: hasFinalRecommendation,
         has_section_12: hasSectionTwelve,
         report_tier: reportTier,
+        report_type: reportType,
+        allow_assumptions: allowAssumptions,
         timestamp: new Date().toISOString(),
       },
     },
