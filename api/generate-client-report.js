@@ -654,6 +654,9 @@ function applyChartPlaceholders(html, charts = {}) {
 // ---------- Main Handler ----------
 
 export default async function handler(req, res) {
+  let slotClaimed = false;
+  let slotJobId = null;
+  let generationSucceeded = false;
   try {
     const adminRunKey = (process.env.ADMIN_RUN_KEY || "").trim();
     let headerKey = req.headers["x-admin-run-key"];
@@ -681,13 +684,18 @@ export default async function handler(req, res) {
     const { userId, property_name, jobId } = body;
     const allowedReportTypes = ["screening", "underwriting", "ic"];
     let jobReportType = null;
+    let jobUserId = null;
     if (jobId) {
       const { data: jobRow } = await supabase
         .from("analysis_jobs")
-        .select("report_type")
+        .select("report_type, user_id")
         .eq("id", jobId)
         .maybeSingle();
       jobReportType = jobRow?.report_type || null;
+      jobUserId = jobRow?.user_id || null;
+      if (jobUserId && userId && jobUserId !== userId) {
+        return res.status(403).json({ error: "Job ownership mismatch" });
+      }
     }
     const rawReportType = String(
       body?.report_type || jobReportType || "screening"
@@ -698,6 +706,22 @@ export default async function handler(req, res) {
     const reportTier =
       reportType === "underwriting" ? 2 : reportType === "ic" ? 3 : 1;
     const allowAssumptions = reportTier >= 2;
+    if (jobId) {
+      const { data: claimData, error: claimErr } = await supabase.rpc(
+        "claim_generation_slot",
+        { p_job_id: jobId, p_user_id: userId }
+      );
+      if (claimErr) {
+        return res
+          .status(500)
+          .json({ error: "Failed to claim generation slot" });
+      }
+      if (!claimData?.allowed) {
+        return res.status(409).json({ code: "REVISION_LIMIT_REACHED" });
+      }
+      slotClaimed = true;
+      slotJobId = jobId;
+    }
     const nowIso = new Date().toISOString();
     const promptInstructions = [
       INVESTORIQ_MASTER_PROMPT_V71,
@@ -1593,6 +1617,7 @@ try {
     }
 
     // 14. Return JSON with the report URL and report_id
+    generationSucceeded = true;
     res.status(200).json({
       success: true,
       reportId,
@@ -1602,6 +1627,21 @@ try {
   } catch (err) {
     console.error("❌ Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
+  } finally {
+    if (slotClaimed && slotJobId) {
+      try {
+        await supabase.rpc("finalize_generation_slot", {
+          p_job_id: slotJobId,
+          p_user_id: userId,
+          p_success: generationSucceeded,
+        });
+      } catch (finalizeErr) {
+        console.error(
+          "Failed to finalize generation slot:",
+          finalizeErr?.message || finalizeErr
+        );
+      }
+    }
   }
 }
 
