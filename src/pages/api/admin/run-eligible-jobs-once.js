@@ -22,14 +22,130 @@ export default async function handler(req, res) {
       return res.status(403).json({ ok: false, error: 'Forbidden' });
     }
 
-    // TODO: Replace with existing admin check pattern if present in this repo.
-    // For now, fail closed if we cannot verify admin status.
-    const isAdmin = false;
+    const emailAllowlistRaw = process.env.ADMIN_EMAIL_ALLOWLIST || '';
+    const userIdAllowlistRaw = process.env.ADMIN_USER_ID_ALLOWLIST || '';
+    const allowedEmails = emailAllowlistRaw
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    const allowedUserIds = userIdAllowlistRaw
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (!allowedEmails.length && !allowedUserIds.length) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    const user = authData.user;
+    const isAdmin =
+      (user?.id && allowedUserIds.includes(user.id)) ||
+      (user?.email && allowedEmails.includes(user.email.toLowerCase()));
     if (!isAdmin) {
       return res.status(403).json({ ok: false, error: 'Forbidden' });
     }
 
-    return res.json({ ok: true, message: 'Admin run endpoint ready' });
+    const dryRun = req.body?.dry_run !== false;
+
+    const { data: jobRows, error: jobsErr } = await supabase
+      .from('analysis_jobs')
+      .select('id, user_id, status, runs_limit, runs_used, runs_inflight, updated_at')
+      .in('status', ['queued', 'failed'])
+      .order('updated_at', { ascending: true })
+      .limit(25);
+
+    if (jobsErr) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    const eligibleJobs = (jobRows || []).filter((job) => {
+      const runsLimitOk = typeof job.runs_limit === 'number';
+      const runsUsedOk = typeof job.runs_used === 'number';
+      const runsInflightOk = typeof job.runs_inflight === 'number';
+      if (!runsLimitOk || !runsUsedOk || !runsInflightOk) return false;
+      if (job.runs_inflight !== 0) return false;
+      return job.runs_used + job.runs_inflight < job.runs_limit;
+    });
+
+    if (dryRun) {
+      return res.json({
+        ok: true,
+        fetched: (jobRows || []).length,
+        eligible: eligibleJobs.length,
+        jobs: eligibleJobs,
+      });
+    }
+
+    const expectedAdminKey = process.env.ADMIN_RUN_KEY || '';
+    const providedAdminKey = req.headers['x-admin-run-key'] || '';
+    if (!expectedAdminKey || expectedAdminKey !== providedAdminKey) {
+      return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    }
+
+    const claimedJobs = [];
+    for (const job of eligibleJobs) {
+      try {
+        const { data: claimData, error: claimErr } = await supabase.rpc(
+          'claim_generation_slot',
+          { p_job_id: job.id, p_user_id: job.user_id }
+        );
+        const claimed = claimData === true || claimData?.allowed === true;
+        if (!claimErr && claimed) {
+          claimedJobs.push(job.id);
+        }
+      } catch (err) {
+        // fail closed per job
+      }
+    }
+
+    const transitionedJobIds = [];
+    const failedJobIds = [];
+    for (const jobId of claimedJobs) {
+      const jobRow = eligibleJobs.find((job) => job.id === jobId);
+      const fromStatus = jobRow?.status || null;
+      const { error: logErr } = await supabase.from('analysis_job_events').insert([
+        {
+          job_id: jobId,
+          actor: 'admin',
+          event_type: 'admin_run_once',
+          from_status: fromStatus,
+          to_status: 'validating_inputs',
+          created_at: new Date().toISOString(),
+          meta: { route: '/api/admin/run-eligible-jobs-once' },
+        },
+      ]);
+
+      if (logErr) {
+        failedJobIds.push(jobId);
+        continue;
+      }
+
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from('analysis_jobs')
+        .update({ status: 'validating_inputs', last_error: null })
+        .in('status', ['queued', 'failed'])
+        .eq('id', jobId)
+        .select('id');
+
+      if (updateErr || !updatedRows || updatedRows.length === 0) {
+        failedJobIds.push(jobId);
+        continue;
+      }
+
+      transitionedJobIds.push(jobId);
+    }
+
+    return res.json({
+      ok: true,
+      fetched: (jobRows || []).length,
+      eligible: eligibleJobs.length,
+      claimed: claimedJobs.length,
+      claimed_job_ids: claimedJobs,
+      transitioned: transitionedJobIds.length,
+      transitioned_job_ids: transitionedJobIds,
+      failed_job_ids: failedJobIds,
+      jobs: eligibleJobs,
+    });
   } catch (err) {
     console.error('Admin run endpoint error:', err);
     return res.status(403).json({ ok: false, error: 'Forbidden' });
