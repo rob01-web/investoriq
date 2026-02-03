@@ -24,13 +24,17 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const authHeader = req.headers.authorization || '';
-    if (!authHeader) {
+    const headerToken = authHeader.replace('Bearer ', '').trim();
+    const fallbackToken =
+      typeof req.headers['x-admin-run-key'] === 'string'
+        ? req.headers['x-admin-run-key'].trim()
+        : '';
+    const token = headerToken || fallbackToken;
+    if (!token) {
       return res
         .status(403)
         .json({ ok: false, error: 'FORBIDDEN_NO_AUTH_HEADER' });
     }
-
-    const token = authHeader.replace('Bearer ', '').trim();
     if (!token) {
       return res
         .status(403)
@@ -40,7 +44,16 @@ export default async function handler(req, res) {
     if (authErr || !authData?.user) {
       return res
         .status(403)
-        .json({ ok: false, error: 'FORBIDDEN_INVALID_TOKEN' });
+        .json({
+          ok: false,
+          error: 'FORBIDDEN_INVALID_TOKEN',
+          received_len: token?.length ?? 0,
+          expected_len: (process.env.ADMIN_RUN_KEY || '').length,
+          expected_present: Boolean(process.env.ADMIN_RUN_KEY),
+          auth_header_present: Boolean(
+            req.headers.authorization || req.headers['x-admin-run-key']
+          ),
+        });
     }
 
     const emailAllowlistRaw = process.env.ADMIN_EMAIL_ALLOWLIST || '';
