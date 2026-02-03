@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
@@ -23,7 +25,6 @@ export default async function handler(req, res) {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const crypto = require('crypto');
     const authHeader = req.headers.authorization || '';
     const headerToken = authHeader.replace('Bearer ', '').trim();
     const fallbackToken =
