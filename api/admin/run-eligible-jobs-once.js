@@ -81,7 +81,14 @@ export default async function handler(req, res) {
       .limit(25);
 
     if (jobsErr) {
-      return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
+      return res.status(500).json({
+        ok: false,
+        error: 'SERVER_QUERY_FAILED',
+        code: jobsErr.code ?? null,
+        message: jobsErr.message ?? null,
+        details: jobsErr.details ?? null,
+        hint: jobsErr.hint ?? null,
+      });
     }
 
     const eligibleJobs = (jobRows || []).filter((job) => {
