@@ -42,51 +42,33 @@ export default async function handler(req, res) {
         .status(403)
         .json({ ok: false, error: 'FORBIDDEN_EMPTY_BEARER' });
     }
-    const { data: authData, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !authData?.user) {
-      const hashPrefix = (value) =>
-        crypto.createHash('sha256').update(value || '').digest('hex').slice(0, 8);
-      return res
-        .status(403)
-        .json({
-          ok: false,
-          error: 'FORBIDDEN_INVALID_TOKEN',
-          received_len: token?.length ?? 0,
-          expected_len: (process.env.ADMIN_RUN_KEY || '').length,
-          expected_present: Boolean(process.env.ADMIN_RUN_KEY),
-          auth_header_present: Boolean(
-            req.headers.authorization || req.headers['x-admin-run-key']
-          ),
-          received_sha8: hashPrefix(token),
-          expected_sha8: hashPrefix(process.env.ADMIN_RUN_KEY || ''),
-        });
+    const expectedKey = process.env.ADMIN_RUN_KEY || '';
+    if (!expectedKey) {
+      return res.status(500).json({
+        ok: false,
+        error: 'SERVER_MISCONFIGURED',
+        missing: ['ADMIN_RUN_KEY'],
+      });
     }
-
-    const emailAllowlistRaw = process.env.ADMIN_EMAIL_ALLOWLIST || '';
-    const userIdAllowlistRaw = process.env.ADMIN_USER_ID_ALLOWLIST || '';
-    const allowedEmails = emailAllowlistRaw
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
-    const allowedUserIds = userIdAllowlistRaw
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean);
-
-    if (!allowedEmails.length && !allowedUserIds.length) {
-      return res
-        .status(403)
-        .json({ ok: false, error: 'FORBIDDEN_ALLOWLIST_EMPTY' });
-    }
-
-    const user = authData.user;
-    const isAdmin =
-      (user?.id && allowedUserIds.includes(user.id)) ||
-      (user?.email && allowedEmails.includes(user.email.toLowerCase()));
-    if (!isAdmin) {
-      return res
-        .status(403)
-        .json({ ok: false, error: 'FORBIDDEN_NOT_ALLOWLISTED' });
+    const hashPrefix = (value) =>
+      crypto.createHash('sha256').update(value || '').digest('hex').slice(0, 8);
+    const sameLength = Buffer.byteLength(token) === Buffer.byteLength(expectedKey);
+    const matches =
+      sameLength &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expectedKey));
+    if (!matches) {
+      return res.status(403).json({
+        ok: false,
+        error: 'FORBIDDEN_INVALID_TOKEN',
+        received_len: token?.length ?? 0,
+        expected_len: expectedKey.length,
+        expected_present: Boolean(expectedKey),
+        auth_header_present: Boolean(
+          req.headers.authorization || req.headers['x-admin-run-key']
+        ),
+        received_sha8: hashPrefix(token),
+        expected_sha8: hashPrefix(expectedKey),
+      });
     }
 
     const dryRun = req.body?.dry_run !== false;
