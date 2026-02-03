@@ -144,7 +144,9 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at, error_message, error_code')
+      .select(
+        'id, property_name, status, created_at, error_message, error_code, runs_limit, runs_used, runs_inflight'
+      )
       .eq('user_id', profile.id)
       .eq('status', 'failed')
       .order('created_at', { ascending: false })
@@ -331,12 +333,37 @@ const hasMarket = uploadedFiles.some((item) =>
     item.docType
   )
 );
-const activeJobForRuns = inProgressJobs[0] || latestFailedJob || null;
+const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
+const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
+const activeJobForRuns =
+  jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
+const hasRunsData = !!(
+  activeJobForRuns &&
+  activeJobForRuns.id === jobId &&
+  typeof activeJobForRuns.runs_limit === 'number' &&
+  typeof activeJobForRuns.runs_used === 'number' &&
+  typeof activeJobForRuns.runs_inflight === 'number'
+);
 const runsLimitValue = Number(activeJobForRuns?.runs_limit ?? 0);
 const runsUsedValue = Number(activeJobForRuns?.runs_used ?? 0);
 const runsInflightValue = Number(activeJobForRuns?.runs_inflight ?? 0);
 const remainingTotal = Math.max(0, runsLimitValue - runsUsedValue - runsInflightValue);
-const regenDisabled = activeJobForRuns ? remainingTotal <= 0 : false;
+const statusBlocksRegen = activeJobForRuns
+  ? [
+      'queued',
+      'validating_inputs',
+      'extracting',
+      'needs_documents',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ].includes(activeJobForRuns.status)
+  : false;
+const regenDisabled = activeJobForRuns
+  ? remainingTotal <= 0 || statusBlocksRegen
+  : false;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -745,6 +772,49 @@ if (!profile?.id || !effectiveJobId) {
       return;
     }
 
+    if (!jobId) {
+      toast({
+        title: 'Cannot generate report',
+        description: 'Job is not ready yet. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!hasRunsData) {
+      toast({
+        title: 'Cannot generate report',
+        description: 'Generations: DATA NOT AVAILABLE. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      await Promise.all([
+        fetchInProgressJobs(),
+        fetchReports(),
+        fetchLatestFailedJob(),
+      ]);
+      return;
+    }
+    if (remainingTotal <= 0) {
+      toast({
+        title: 'Revision limit reached',
+        description: 'You?ve used all available revisions for this report.',
+        variant: 'destructive',
+      });
+      await Promise.all([
+        fetchInProgressJobs(),
+        fetchReports(),
+        fetchLatestFailedJob(),
+      ]);
+      return;
+    }
+    if (statusBlocksRegen) {
+      toast({
+        title: 'Report is already processing',
+        description: 'Please wait for the current run to finish.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // ELITE UX: Trigger the "Working" state immediately
     setLoading(true); 
     
@@ -779,16 +849,6 @@ if (verifiedCredits < 1) {
 }
 
     try {
-      if (!jobId) {
-        toast({
-          title: 'Analysis not initialized',
-          description: 'Rent Roll and T12/Operating Statement are required to start underwriting.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
       // ELITE SYNC: This final update pushes the actual name and triggers the backend credit deduction
       const { error: statusErr } = await supabase
         .from('analysis_jobs')
@@ -826,11 +886,24 @@ if (verifiedCredits < 1) {
 
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
-      toast({
-        title: 'Unable to queue report',
-        description: error.message || 'An error occurred while starting the underwriting run.',
-        variant: 'destructive',
-      });
+      if (error?.status === 409 && error?.code === 'REVISION_LIMIT_REACHED') {
+        toast({
+          title: 'Revision limit reached',
+          description: 'You’ve used all available revisions for this report.',
+          variant: 'destructive',
+        });
+        await Promise.all([
+          fetchInProgressJobs(),
+          fetchReports(),
+          fetchLatestFailedJob(),
+        ]);
+      } else {
+        toast({
+          title: 'Unable to queue report',
+          description: error.message || 'An error occurred while starting the underwriting run.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -1369,7 +1442,9 @@ if (verifiedCredits < 1) {
                   !acknowledged ||
                   hasBlockingJob ||
                   !scopeConfirmed ||
-                  regenDisabled
+                  regenDisabled ||
+                  !jobId ||
+                  !hasRunsData
                 }
                 className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               >
@@ -1384,7 +1459,14 @@ if (verifiedCredits < 1) {
                 )}
               </Button>
               <div className="mt-2 text-xs font-semibold text-slate-600">
-                {regenDisabled ? 'Revision limit reached' : `Remaining runs: ${remainingTotal}`}
+                {regenDisabled
+                  ? 'You’ve used all available revisions for this report'
+                  : `Remaining runs: ${remainingTotal}`}
+                <span className="ml-2 text-slate-400">
+                  {hasRunsData
+                    ? `Generations ${Math.max(0, runsUsedValue + runsInflightValue)} of ${Math.max(0, runsLimitValue)}`
+                    : 'Generations: DATA NOT AVAILABLE'}
+                </span>
               </div>
 
               {!propertyName.trim() && (
