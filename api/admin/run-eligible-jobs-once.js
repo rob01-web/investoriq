@@ -75,9 +75,9 @@ export default async function handler(req, res) {
 
     const { data: jobRows, error: jobsErr } = await supabase
       .from('analysis_jobs')
-      .select('id, user_id, status, runs_limit, runs_used, runs_inflight, updated_at')
+      .select('id, user_id, status, runs_limit, runs_used, runs_inflight, created_at')
       .in('status', ['queued', 'failed'])
-      .order('updated_at', { ascending: true })
+      .order('created_at', { ascending: true })
       .limit(25);
 
     if (jobsErr) {
