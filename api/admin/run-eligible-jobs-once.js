@@ -66,8 +66,6 @@ export default async function handler(req, res) {
         auth_header_present: Boolean(
           req.headers.authorization || req.headers['x-admin-run-key']
         ),
-        received_sha8: hashPrefix(token),
-        expected_sha8: hashPrefix(expectedKey),
       });
     }
 
@@ -81,14 +79,7 @@ export default async function handler(req, res) {
       .limit(25);
 
     if (jobsErr) {
-      return res.status(500).json({
-        ok: false,
-        error: 'SERVER_QUERY_FAILED',
-        code: jobsErr.code ?? null,
-        message: jobsErr.message ?? null,
-        details: jobsErr.details ?? null,
-        hint: jobsErr.hint ?? null,
-      });
+      return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
     }
 
     const eligibleJobs = (jobRows || []).filter((job) => {
