@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const crypto = require('crypto');
     const authHeader = req.headers.authorization || '';
     const headerToken = authHeader.replace('Bearer ', '').trim();
     const fallbackToken =
@@ -42,6 +43,8 @@ export default async function handler(req, res) {
     }
     const { data: authData, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !authData?.user) {
+      const hashPrefix = (value) =>
+        crypto.createHash('sha256').update(value || '').digest('hex').slice(0, 8);
       return res
         .status(403)
         .json({
@@ -53,6 +56,8 @@ export default async function handler(req, res) {
           auth_header_present: Boolean(
             req.headers.authorization || req.headers['x-admin-run-key']
           ),
+          received_sha8: hashPrefix(token),
+          expected_sha8: hashPrefix(process.env.ADMIN_RUN_KEY || ''),
         });
     }
 
