@@ -25,13 +25,22 @@ export default async function handler(req, res) {
 
     const authHeader = req.headers.authorization || '';
     if (!authHeader) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_NO_AUTH_HEADER' });
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_EMPTY_BEARER' });
+    }
     const { data: authData, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !authData?.user) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_INVALID_TOKEN' });
     }
 
     const emailAllowlistRaw = process.env.ADMIN_EMAIL_ALLOWLIST || '';
@@ -46,7 +55,9 @@ export default async function handler(req, res) {
       .filter(Boolean);
 
     if (!allowedEmails.length && !allowedUserIds.length) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_ALLOWLIST_EMPTY' });
     }
 
     const user = authData.user;
@@ -54,7 +65,9 @@ export default async function handler(req, res) {
       (user?.id && allowedUserIds.includes(user.id)) ||
       (user?.email && allowedEmails.includes(user.email.toLowerCase()));
     if (!isAdmin) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_NOT_ALLOWLISTED' });
     }
 
     const dryRun = req.body?.dry_run !== false;
@@ -67,7 +80,7 @@ export default async function handler(req, res) {
       .limit(25);
 
     if (jobsErr) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
+      return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
     }
 
     const eligibleJobs = (jobRows || []).filter((job) => {
@@ -91,7 +104,9 @@ export default async function handler(req, res) {
     const expectedAdminKey = process.env.ADMIN_RUN_KEY || '';
     const providedAdminKey = req.headers['x-admin-run-key'] || '';
     if (!expectedAdminKey || expectedAdminKey !== providedAdminKey) {
-      return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+      return res
+        .status(403)
+        .json({ ok: false, error: 'FORBIDDEN_ADMIN_RUN_KEY' });
     }
 
     const claimedJobs = [];
@@ -160,6 +175,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('Admin run endpoint error:', err);
-    return res.status(403).json({ ok: false, error: 'Forbidden' });
+    return res.status(500).json({ ok: false, error: 'SERVER_EXCEPTION' });
   }
 }
