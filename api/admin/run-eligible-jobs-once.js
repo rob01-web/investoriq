@@ -100,14 +100,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const expectedAdminKey = process.env.ADMIN_RUN_KEY || '';
-    const providedAdminKey = req.headers['x-admin-run-key'] || '';
-    if (!expectedAdminKey || expectedAdminKey !== providedAdminKey) {
-      return res
-        .status(403)
-        .json({ ok: false, error: 'FORBIDDEN_ADMIN_RUN_KEY' });
-    }
-
     const claimedJobs = [];
     for (const job of eligibleJobs) {
       try {
