@@ -148,18 +148,22 @@ export default async function handler(req, res) {
       }
 
       const { data: updatedRows, error: updateErr } = await supabase
-        .from('analysis_jobs')
-        .update({ status: 'validating_inputs', last_error: null })
-        .in('status', ['queued', 'failed'])
-        .eq('id', jobId)
-        .select('id');
+  .from('analysis_jobs')
+  .update({ status: 'validating_inputs', last_error: null })
+  .in('status', ['queued', 'failed'])
+  .eq('id', jobId)
+  .select('id');
 
-      if (updateErr || !updatedRows || updatedRows.length === 0) {
-        failedJobIds.push(jobId);
-        continue;
-      }
+if (updateErr || !updatedRows || updatedRows.length === 0) {
+  console.error('ADMIN_RUN_ONCE_UPDATE_FAILED', {
+    jobId,
+    error: updateErr?.message ?? 'NO_ROWS_UPDATED',
+  });
+  failedJobIds.push(jobId);
+  continue;
+}
 
-      transitionedJobIds.push(jobId);
+transitionedJobIds.push(jobId);
     }
 
     return res.json({
