@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Call InvestorIQ worker
         run: |
-          curl -sS -X POST "https://investoriq.tech/api/admin-run-worker" \
-            -H "x-cron-secret: ${{ secrets.INVESTORIQ_CRON_SECRET }}" \
+          curl -sS -X POST "https://investoriq.tech/api/admin/run-eligible-jobs-once" \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_RUN_KEY }}" \
             -H "Content-Type: application/json" \
             --data "{}"
