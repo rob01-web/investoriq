@@ -464,9 +464,10 @@ const regenDisabled = activeJobForRuns
     if (!jobId) {
       const reportType = (selectedReportType || '').toLowerCase();
       const allowedReportTypes = ['screening', 'underwriting'];
-      const normalizedReportType = allowedReportTypes.includes(reportType)
-        ? reportType
-        : 'screening';
+      if (!allowedReportTypes.includes(reportType)) {
+        return;
+      }
+      const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
       const { data, error } = await supabase
         .from('analysis_jobs')
         .insert({
@@ -477,7 +478,9 @@ const regenDisabled = activeJobForRuns
           parser_version: 'v1',
           template_version: 'v2026-01-14',
           scoring_version: 'v1',
-          report_type: normalizedReportType,
+          report_type: reportType,
+          revisions_limit: revisionsLimit,
+          revisions_used: 0,
         })
         .select('id')
         .single();
@@ -849,6 +852,67 @@ if (verifiedCredits < 1) {
 }
 
     try {
+      if (runsUsedValue > 0) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) {
+          toast({
+            title: 'Failed to request revision',
+            description: 'Please try again.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        const revisionRes = await fetch('/api/jobs/request-revision', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ job_id: jobId }),
+        });
+
+        const revisionData = await revisionRes.json().catch(() => ({}));
+        if (revisionRes.ok && revisionData?.ok) {
+          toast({
+            title: 'Revision requested',
+            description: 'Your revision request has been queued.',
+          });
+          await Promise.all([
+            fetchInProgressJobs(),
+            fetchReports(),
+            fetchLatestFailedJob(),
+          ]);
+          setLoading(false);
+          return;
+        }
+
+        if (revisionData?.code === 'REVISION_LIMIT_REACHED') {
+          toast({
+            title: 'Revision limit reached',
+            description: 'You’ve used all available revisions for this job.',
+            variant: 'destructive',
+          });
+          await Promise.all([
+            fetchInProgressJobs(),
+            fetchReports(),
+            fetchLatestFailedJob(),
+          ]);
+          setLoading(false);
+          return;
+        }
+
+        toast({
+          title: 'Failed to request revision',
+          description: 'Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       // ELITE SYNC: This final update pushes the actual name and triggers the backend credit deduction
       const { error: statusErr } = await supabase
         .from('analysis_jobs')
