@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
-import { analyzeTables } from '../_lib/textractClient.js';
-import { textractTablesToMatrix } from '../_lib/textractTablesToMatrix.js';
+import { analyzeTables } from '../../lib/textractClient.js';
+import { textractTablesToMatrix } from '../../lib/textractTablesToMatrix.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 

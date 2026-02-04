@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import XLSX from 'xlsx';
-import { analyzeTables } from '../_lib/textractClient.js';
+import { analyzeTables } from '../../lib/textractClient.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 

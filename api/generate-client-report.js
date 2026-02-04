@@ -8,7 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
-import { INVESTORIQ_MASTER_PROMPT_V71 } from "./_prompts/investoriqMasterPromptV71.js";
+import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
 
 
 
