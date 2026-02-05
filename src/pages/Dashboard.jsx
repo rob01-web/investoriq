@@ -260,6 +260,26 @@ export default function Dashboard() {
   }, [profile?.id]);
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const checkout = url.searchParams.get('checkout');
+    if (checkout === 'success') {
+      toast({
+        title: 'Payment received',
+        description: 'Report entitlement added.',
+      });
+    } else if (checkout === 'cancelled') {
+      toast({
+        title: 'Payment cancelled',
+        description: 'Payment cancelled.',
+      });
+    }
+    if (checkout) {
+      url.searchParams.delete('checkout');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, []);
+
+  useEffect(() => {
     if (!jobId) {
       setRentRollCoverage(null);
       return;

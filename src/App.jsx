@@ -13,7 +13,6 @@ import AdminDashboard from '@/pages/AdminDashboard';
 import LoginPage from '@/pages/Login';
 import SignUpPage from '@/pages/SignUp';
 import SampleReport from '@/pages/SampleReport';
-import CheckoutSuccess from '@/pages/CheckoutSuccess';
 
 // ✅ ADD THIS
 import PricingPage from '@/pages/Pricing';
@@ -393,16 +392,6 @@ export default function App() {
         element={
           <MainLayout>
             <PricingPage />
-          </MainLayout>
-        }
-      />
-
-      {/* CHECKOUT SUCCESS */}
-      <Route
-        path="/checkout/success"
-        element={
-          <MainLayout>
-            <CheckoutSuccess />
           </MainLayout>
         }
       />

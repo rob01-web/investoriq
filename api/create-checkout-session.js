@@ -58,12 +58,8 @@ export default async function handler(req, res) {
 
     const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
 
-    const finalSuccessUrl =
-      typeof successUrl === "string" && successUrl.length > 0
-        ? successUrl
-        : `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-
-    const finalCancelUrl = `${baseUrl}/dashboard?canceled=1`;
+    const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success`;
+    const finalCancelUrl = `${baseUrl}/dashboard?checkout=cancelled`;
 
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,
