@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -49,6 +49,25 @@ export default async function handler(req, res) {
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
+
+    if (req.method === 'POST') {
+      const { issue_id, status } = req.body || {};
+      const allowedStatuses = ['open', 'reviewing', 'resolved'];
+      if (!issue_id || !allowedStatuses.includes(status)) {
+        return res.status(400).json({ ok: false });
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('report_issues')
+        .update({ status })
+        .eq('id', issue_id);
+
+      if (updateErr) {
+        return res.status(500).json({ ok: false });
+      }
+
+      return res.status(200).json({ ok: true });
+    }
 
     const statuses = [
       'queued',
@@ -108,12 +127,27 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(50);
 
+    const issuesWithUrls = await Promise.all(
+      (issuesRows || []).map(async (issue) => {
+        if (!issue?.attachment_path) {
+          return { ...issue, attachment_url: null };
+        }
+        const { data: signed, error: signedErr } = await supabaseAdmin.storage
+          .from('report-issues')
+          .createSignedUrl(issue.attachment_path, 3600);
+        return {
+          ...issue,
+          attachment_url: signedErr ? null : signed?.signedUrl || null,
+        };
+      })
+    );
+
     return res.status(200).json({
       counts_by_status: countsByStatus,
       oldest_queued_at: oldestQueuedErr ? null : oldestQueued?.created_at || null,
       latest_failed_at: latestFailedErr ? null : latestFailed?.created_at || null,
       recent_jobs: recentJobsErr ? [] : recentJobs || [],
-      issues: issuesErr ? [] : issuesRows || [],
+      issues: issuesErr ? [] : issuesWithUrls || [],
       issues_error: Boolean(issuesErr),
     });
   } catch (err) {

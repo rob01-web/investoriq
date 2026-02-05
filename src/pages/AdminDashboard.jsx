@@ -3,8 +3,10 @@ import { motion } from "framer-motion";
 import { Helmet } from "react-helmet";
 import { FileText, Loader2, Users, BarChart3, RefreshCcw, Shield } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
+import { useToast } from "@/components/ui/use-toast";
 
   export default function AdminDashboard() {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -24,6 +26,7 @@ import { supabase } from "@/lib/customSupabaseClient";
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState(null);
   const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
+  const [issueUpdating, setIssueUpdating] = useState({});
 
 
   const fetchQueueMetrics = async () => {
@@ -400,6 +403,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                         <th className="p-3 border-b border-slate-200">User ID</th>
                         <th className="p-3 border-b border-slate-200">Message</th>
                         <th className="p-3 border-b border-slate-200">Attachment</th>
+                        <th className="p-3 border-b border-slate-200 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -407,6 +411,7 @@ import { supabase } from "@/lib/customSupabaseClient";
                         const message = issue?.message || "";
                         const truncated =
                           message.length > 120 ? `${message.slice(0, 120)}…` : message;
+                        const isUpdating = Boolean(issueUpdating[issue.id]);
                         return (
                           <tr key={issue.id} className="border-b border-slate-100">
                             <td className="p-3 text-xs text-slate-600">
@@ -419,7 +424,100 @@ import { supabase } from "@/lib/customSupabaseClient";
                             <td className="p-3 text-xs text-slate-600">{issue.user_id || "-"}</td>
                             <td className="p-3 text-xs text-slate-600">{truncated}</td>
                             <td className="p-3 text-xs text-slate-600">
-                              {issue.attachment_path || "-"}
+                              {issue.attachment_url ? (
+                                <a
+                                  href={issue.attachment_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[#1F8A8A] font-semibold hover:underline"
+                                >
+                                  View attachment
+                                </a>
+                              ) : issue.attachment_path ? (
+                                "DATA NOT AVAILABLE"
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="p-3 text-right text-xs text-slate-600">
+                              <div className="flex justify-end gap-2">
+                                {issue.status !== "reviewing" && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={async () => {
+                                      try {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
+                                        const {
+                                          data: { session },
+                                        } = await supabase.auth.getSession();
+                                        const accessToken = session?.access_token || "";
+                                        const res = await fetch("/api/admin/queue-metrics", {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${accessToken}`,
+                                          },
+                                          body: JSON.stringify({
+                                            issue_id: issue.id,
+                                            status: "reviewing",
+                                          }),
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok || !data?.ok) {
+                                          throw new Error("Update failed");
+                                        }
+                                        toast({ title: "Updated" });
+                                        await fetchQueueMetrics();
+                                      } catch (err) {
+                                        toast({ title: "Update failed", variant: "destructive" });
+                                      } finally {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
+                                      }
+                                    }}
+                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  >
+                                    Mark reviewing
+                                  </button>
+                                )}
+                                {issue.status !== "resolved" && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={async () => {
+                                      try {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
+                                        const {
+                                          data: { session },
+                                        } = await supabase.auth.getSession();
+                                        const accessToken = session?.access_token || "";
+                                        const res = await fetch("/api/admin/queue-metrics", {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${accessToken}`,
+                                          },
+                                          body: JSON.stringify({
+                                            issue_id: issue.id,
+                                            status: "resolved",
+                                          }),
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok || !data?.ok) {
+                                          throw new Error("Update failed");
+                                        }
+                                        toast({ title: "Updated" });
+                                        await fetchQueueMetrics();
+                                      } catch (err) {
+                                        toast({ title: "Update failed", variant: "destructive" });
+                                      } finally {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
+                                      }
+                                    }}
+                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  >
+                                    Mark resolved
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
