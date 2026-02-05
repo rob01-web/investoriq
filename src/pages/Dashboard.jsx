@@ -29,6 +29,11 @@ export default function Dashboard() {
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState('screening');
+  const [entitlements, setEntitlements] = useState({
+    screening: null,
+    underwriting: null,
+    error: false,
+  });
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -139,6 +144,25 @@ export default function Dashboard() {
     await fetchJobEvents(rows.map((job) => job.id));
   };
 
+  const fetchEntitlements = async () => {
+    if (!profile?.id) return;
+    const { data, error } = await supabase
+      .from('report_purchases')
+      .select('id, product_type')
+      .eq('user_id', profile.id)
+      .is('consumed_at', null);
+
+    if (error) {
+      console.error('Failed to fetch entitlements:', error);
+      setEntitlements({ screening: null, underwriting: null, error: true });
+      return;
+    }
+
+    const screeningCount = (data || []).filter((row) => row.product_type === 'screening').length;
+    const underwritingCount = (data || []).filter((row) => row.product_type === 'underwriting').length;
+    setEntitlements({ screening: screeningCount, underwriting: underwritingCount, error: false });
+  };
+
   const fetchLatestFailedJob = async () => {
     if (!profile?.id) return;
 
@@ -211,6 +235,7 @@ export default function Dashboard() {
     await fetchReports();
     await fetchInProgressJobs();
     await fetchLatestFailedJob();
+    await fetchEntitlements();
 
         // Reuse the most recent in-progress job (supports walk-away / return later)
     if (!jobId) {
@@ -1076,6 +1101,22 @@ if (verifiedCredits < 1) {
               </div>
             </div>
           </motion.div>
+
+          <div className="mb-10">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="text-sm font-semibold text-[#0F172A] mb-2">Your available reports</div>
+              <div className="text-sm text-[#334155] space-y-1">
+                <div>
+                  Screening Report:{' '}
+                  {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.screening ?? 0}`}
+                </div>
+                <div>
+                  Underwriting Report:{' '}
+                  {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.underwriting ?? 0}`}
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* UPLOAD SECTION */}
           <motion.div
