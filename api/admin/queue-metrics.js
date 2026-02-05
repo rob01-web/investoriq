@@ -102,11 +102,19 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(10);
 
+    const { data: issuesRows, error: issuesErr } = await supabaseAdmin
+      .from('report_issues')
+      .select('id, user_id, job_id, artifact_id, message, attachment_path, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
     return res.status(200).json({
       counts_by_status: countsByStatus,
       oldest_queued_at: oldestQueuedErr ? null : oldestQueued?.created_at || null,
       latest_failed_at: latestFailedErr ? null : latestFailed?.created_at || null,
       recent_jobs: recentJobsErr ? [] : recentJobs || [],
+      issues: issuesErr ? [] : issuesRows || [],
+      issues_error: Boolean(issuesErr),
     });
   } catch (err) {
     console.error('queue-metrics error:', err);

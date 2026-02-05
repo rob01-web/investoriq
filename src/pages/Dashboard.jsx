@@ -29,6 +29,11 @@ export default function Dashboard() {
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState('screening');
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [issueMessage, setIssueMessage] = useState('');
+  const [issueFile, setIssueFile] = useState(null);
+  const [issueSubmitting, setIssueSubmitting] = useState(false);
+  const [issueReport, setIssueReport] = useState(null);
   const [entitlements, setEntitlements] = useState({
     screening: null,
     underwriting: null,
@@ -1878,6 +1883,17 @@ if (verifiedCredits < 1) {
                             Download
                           </button>
                           <button
+                            onClick={() => {
+                              setIssueReport(report);
+                              setIssueMessage('');
+                              setIssueFile(null);
+                              setIssueModalOpen(true);
+                            }}
+                            className="text-[#0F172A] hover:text-[#1F8A8A] font-bold mr-4"
+                          >
+                            Report an issue
+                          </button>
+                          <button
                             onClick={async () => {
                               if (
                                 confirm(
@@ -1925,6 +1941,143 @@ if (verifiedCredits < 1) {
             </p>
             <div className="mt-6 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
               <div className="bg-[#1F8A8A] h-full animate-progress" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {issueModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="text-lg font-semibold text-[#0F172A]">Report an issue</div>
+            <div className="mt-2 text-sm text-[#334155]">
+              Provide a brief description and an optional attachment.
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+                What went wrong?
+              </label>
+              <textarea
+                value={issueMessage}
+                onChange={(e) => setIssueMessage(e.target.value)}
+                maxLength={1000}
+                className="w-full min-h-[120px] rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
+                placeholder="Describe the issue you encountered."
+              />
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-[#0F172A] mb-2">
+                Attachment (optional)
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={(e) => setIssueFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-slate-600"
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (issueSubmitting) return;
+                  setIssueModalOpen(false);
+                  setIssueMessage('');
+                  setIssueFile(null);
+                  setIssueReport(null);
+                }}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={issueSubmitting}
+                onClick={async () => {
+                  const trimmed = issueMessage.trim();
+                  if (!trimmed) {
+                    toast({
+                      title: 'Message required',
+                      description: 'Please describe the issue before submitting.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (!profile?.id || !issueReport) {
+                    toast({
+                      title: 'Submission failed',
+                      description: 'Please refresh and try again.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+
+                  setIssueSubmitting(true);
+                  try {
+                    let attachmentPath = null;
+                    if (issueFile) {
+                      const uploadPath = `${user.id}/${issueReport.job_id}/${Date.now()}-${issueFile.name}`;
+                      const { error: uploadErr } = await supabase.storage
+                        .from('report-issues')
+                        .upload(uploadPath, issueFile, { upsert: false });
+                      if (uploadErr) {
+                        toast({
+                          title: 'Submission failed',
+                          description: uploadErr.message || 'Attachment upload failed.',
+                          variant: 'destructive',
+                        });
+                        setIssueSubmitting(false);
+                        return;
+                      }
+                      attachmentPath = uploadPath;
+                    }
+
+                    const { error: insertErr } = await supabase
+                      .from('report_issues')
+                      .insert({
+                        user_id: profile.id,
+                        job_id: issueReport.job_id || issueReport.jobId || null,
+                        artifact_id: issueReport.artifact_id || null,
+                        message: trimmed,
+                        attachment_path: attachmentPath,
+                        status: 'open',
+                      });
+
+                    if (insertErr) {
+                      toast({
+                        title: 'Submission failed',
+                        description: insertErr.message || 'Unable to submit issue.',
+                        variant: 'destructive',
+                      });
+                      setIssueSubmitting(false);
+                      return;
+                    }
+
+                    toast({
+                      title: 'Issue submitted',
+                      description: 'We received your message and will review it.',
+                    });
+                    setIssueModalOpen(false);
+                    setIssueMessage('');
+                    setIssueFile(null);
+                    setIssueReport(null);
+                  } catch (err) {
+                    toast({
+                      title: 'Submission failed',
+                      description: err?.message || 'Unable to submit issue.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setIssueSubmitting(false);
+                  }
+                }}
+                className="rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
+              >
+                {issueSubmitting ? 'Submitting…' : 'Submit'}
+              </button>
             </div>
           </div>
         </div>
