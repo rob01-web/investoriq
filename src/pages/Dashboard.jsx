@@ -1106,6 +1106,9 @@ if (verifiedCredits < 1) {
               </div>
             </div>
           </motion.div>
+          <div className="mb-6 text-xs text-slate-600">
+            Reports are property-specific and non-refundable once generation begins.
+          </div>
 
           <div className="mb-10">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1617,6 +1620,9 @@ if (verifiedCredits < 1) {
                   runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'
                 )}
               </Button>
+              <div className="mt-2 text-xs text-slate-600">
+                Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
+              </div>
               <div className="mt-2 text-xs font-semibold text-slate-600">
                 {regenDisabled
                   ? 'You’ve used all available revisions for this report'
@@ -1980,6 +1986,9 @@ if (verifiedCredits < 1) {
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3">
+              <div className="mr-auto text-xs text-slate-600">
+                Use this option for system or processing issues. InvestorIQ does not revise reports based on missing or unsuitable source documents.
+              </div>
               <button
                 type="button"
                 onClick={() => {
