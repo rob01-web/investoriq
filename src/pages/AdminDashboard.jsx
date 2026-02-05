@@ -380,6 +380,61 @@ import { supabase } from "@/lib/customSupabaseClient";
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-[#0F172A]">Issue Inbox</h2>
+              </div>
+
+              {queueMetrics?.issues_error ? (
+                <div className="text-sm text-slate-500">DATA NOT AVAILABLE</div>
+              ) : (queueMetrics?.issues || []).length === 0 ? (
+                <div className="text-sm text-slate-500">No issues reported.</div>
+              ) : (
+                <div className="overflow-hidden border border-slate-200 rounded-lg">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="text-left text-[#0F172A] text-xs font-semibold bg-slate-50">
+                        <th className="p-3 border-b border-slate-200">Created</th>
+                        <th className="p-3 border-b border-slate-200">Status</th>
+                        <th className="p-3 border-b border-slate-200">Job ID</th>
+                        <th className="p-3 border-b border-slate-200">User ID</th>
+                        <th className="p-3 border-b border-slate-200">Message</th>
+                        <th className="p-3 border-b border-slate-200">Attachment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {queueMetrics.issues.map((issue) => {
+                        const message = issue?.message || "";
+                        const truncated =
+                          message.length > 120 ? `${message.slice(0, 120)}…` : message;
+                        return (
+                          <tr key={issue.id} className="border-b border-slate-100">
+                            <td className="p-3 text-xs text-slate-600">
+                              {issue.created_at ? new Date(issue.created_at).toLocaleString() : "-"}
+                            </td>
+                            <td className="p-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              {issue.status || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">{issue.job_id || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">{issue.user_id || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">{truncated}</td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {issue.attachment_path || "-"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
               >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-[#0F172A]">
