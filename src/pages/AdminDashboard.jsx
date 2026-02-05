@@ -412,6 +412,8 @@ import { useToast } from "@/components/ui/use-toast";
                         const truncated =
                           message.length > 120 ? `${message.slice(0, 120)}…` : message;
                         const isUpdating = Boolean(issueUpdating[issue.id]);
+                        const regenKey = `regen-${issue.id}`;
+                        const isRegenerating = Boolean(issueUpdating[regenKey]);
                         return (
                           <tr key={issue.id} className="border-b border-slate-100">
                             <td className="p-3 text-xs text-slate-600">
@@ -517,6 +519,56 @@ import { useToast } from "@/components/ui/use-toast";
                                     Mark resolved
                                   </button>
                                 )}
+                                <button
+                                  disabled={isRegenerating || !issue.job_id}
+                                  onClick={async () => {
+                                    if (!issue.job_id) return;
+                                    try {
+                                      setIssueUpdating((prev) => ({
+                                        ...prev,
+                                        [regenKey]: true,
+                                      }));
+                                      const {
+                                        data: { session },
+                                      } = await supabase.auth.getSession();
+                                      const accessToken = session?.access_token || "";
+                                      const res = await fetch("/api/admin/run-eligible-jobs-once", {
+                                        method: "POST",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                          Authorization: `Bearer ${accessToken}`,
+                                        },
+                                        body: JSON.stringify({
+                                          job_id: issue.job_id,
+                                        }),
+                                      });
+                                      const data = await res.json().catch(() => ({}));
+                                      if (!res.ok || !data?.ok) {
+                                        throw new Error("Regeneration failed");
+                                      }
+                                      toast({
+                                        title: "Regeneration started",
+                                        description: "Job queued for regeneration.",
+                                      });
+                                      await fetchQueueMetrics();
+                                    } catch (err) {
+                                      toast({
+                                        title: "Regeneration failed",
+                                        description: "Unable to start regeneration.",
+                                        variant: "destructive",
+                                      });
+                                    } finally {
+                                      setIssueUpdating((prev) => ({
+                                        ...prev,
+                                        [regenKey]: false,
+                                      }));
+                                    }
+                                  }}
+                                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  title={!issue.job_id ? "No job id" : undefined}
+                                >
+                                  Regenerate
+                                </button>
                               </div>
                             </td>
                           </tr>

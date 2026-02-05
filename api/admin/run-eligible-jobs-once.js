@@ -70,6 +70,50 @@ export default async function handler(req, res) {
     }
 
     const dryRun = req.body?.dry_run !== false;
+    const forceJobId = req.body?.job_id;
+    if (forceJobId !== undefined) {
+      if (typeof forceJobId !== 'string' || !forceJobId.trim()) {
+        return res.status(400).json({ ok: false });
+      }
+
+      const { data: forcedJob, error: forcedErr } = await supabase
+        .from('analysis_jobs')
+        .select('id, user_id, status')
+        .eq('id', forceJobId)
+        .maybeSingle();
+
+      if (forcedErr || !forcedJob?.id) {
+        return res.status(404).json({ ok: false });
+      }
+
+      const { error: logErr } = await supabase.from('analysis_job_events').insert([
+        {
+          job_id: forceJobId,
+          actor: 'admin',
+          event_type: 'admin_run_once',
+          from_status: forcedJob.status || null,
+          to_status: 'queued',
+          created_at: new Date().toISOString(),
+          meta: { route: '/api/admin/run-eligible-jobs-once' },
+        },
+      ]);
+
+      if (logErr) {
+        return res.status(500).json({ ok: false });
+      }
+
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from('analysis_jobs')
+        .update({ status: 'queued', last_error: null })
+        .eq('id', forceJobId)
+        .select('id');
+
+      if (updateErr || !updatedRows || updatedRows.length === 0) {
+        return res.status(500).json({ ok: false });
+      }
+
+      return res.json({ ok: true, forced_job_id: forceJobId });
+    }
 
     const { data: jobRows, error: jobsErr } = await supabase
       .from('analysis_jobs')
