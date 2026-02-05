@@ -97,6 +97,24 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
+  const { error: purchaseErr } = await supabaseAdmin
+    .from("report_purchases")
+    .insert([
+      {
+        user_id: userId,
+        product_type: productType,
+        stripe_session_id: sessionId || null,
+      },
+    ]);
+
+  if (purchaseErr) {
+    const msg = String(purchaseErr.message || "").toLowerCase();
+    if (!msg.includes("duplicate") && !msg.includes("unique") && !msg.includes("already exists")) {
+      console.error("Failed to record report purchase:", purchaseErr);
+      return res.status(500).json({ error: "Report purchase insert failed" });
+    }
+  }
+
   const { error: eventErr } = await supabaseAdmin
     .from("analysis_job_events")
     .insert([

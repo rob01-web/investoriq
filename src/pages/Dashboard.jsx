@@ -467,6 +467,23 @@ const regenDisabled = activeJobForRuns
       if (!allowedReportTypes.includes(reportType)) {
         return;
       }
+      const { data: purchaseRow, error: purchaseErr } = await supabase
+        .from('report_purchases')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('product_type', reportType)
+        .is('consumed_at', null)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (purchaseErr || !purchaseRow?.id) {
+        toast({
+          title: 'Purchase required',
+          description: 'No unused purchase found for this report type.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
       const { data, error } = await supabase
         .from('analysis_jobs')
@@ -490,6 +507,26 @@ const regenDisabled = activeJobForRuns
         toast({
           title: 'Unable to start analysis job',
           description: 'We could not initialize your underwriting run. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: consumeRow, error: consumeErr } = await supabase
+        .from('report_purchases')
+        .update({
+          consumed_at: new Date().toISOString(),
+          job_id: data.id,
+        })
+        .eq('id', purchaseRow.id)
+        .is('consumed_at', null)
+        .select('id')
+        .maybeSingle();
+      if (consumeErr || !consumeRow?.id) {
+        await supabase.from('analysis_jobs').delete().eq('id', data.id);
+        toast({
+          title: 'Unable to start analysis job',
+          description: 'We could not reserve your purchase. Please try again.',
           variant: 'destructive',
         });
         return;
