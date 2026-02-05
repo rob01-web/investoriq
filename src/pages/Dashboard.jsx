@@ -381,7 +381,7 @@ const regenDisabled = activeJobForRuns
     if (!profile?.id) {
       toast({
         title: 'Please sign in',
-        description: 'You must be signed in to purchase credits.',
+        description: 'You must be signed in to purchase a report.',
         variant: 'destructive',
       });
       return;
@@ -832,7 +832,7 @@ if (creditsErr) {
   console.error('Failed to verify credits:', creditsErr);
   setLoading(false);
   toast({
-    title: 'Unable to verify credits',
+    title: 'Unable to verify purchase',
     description: 'Please refresh and try again.',
     variant: 'destructive',
   });
@@ -844,8 +844,8 @@ const verifiedCredits = Number(creditsRow?.report_credits ?? 0);
 if (verifiedCredits < 1) {
   setLoading(false);
   toast({
-    title: 'Insufficient Credits',
-    description: 'Your balance is 0. Please ensure your purchase has processed.',
+    title: 'Purchase required',
+    description: 'No purchase detected. Please ensure your payment has processed.',
     variant: 'destructive',
   });
   return;
@@ -1005,16 +1005,8 @@ if (verifiedCredits < 1) {
             <div className="text-right mt-4 sm:mt-0">
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Report Credits
+                  Purchase Report
                 </div>
-                <div className="mt-2 text-3xl font-extrabold text-[#0F172A]">
-                  {profile ? credits : '...'}
-                </div>
-                {credits === 0 && (
-                  <p className="mt-2 text-sm text-[#334155]">
-                    Buy credits to unlock uploads and generate your report.
-                  </p>
-                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1022,7 +1014,7 @@ if (verifiedCredits < 1) {
                   }}
                   className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
                 >
-                  Buy Credits
+                  Purchase report
                 </button>
               </div>
             </div>
@@ -1489,7 +1481,7 @@ if (verifiedCredits < 1) {
               />
               <span>
                 I understand that this analysis will include only the sections supported by the documents I have uploaded.
-                One credit underwrites one property. I may upload additional documents later to deepen the analysis at no
+                One report underwrites one property. I may upload additional documents later to deepen the analysis at no
                 additional cost.
               </span>
             </div>

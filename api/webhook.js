@@ -17,20 +17,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-function creditsForProductType(productType) {
-  // Keep your current mappings, add safe aliases for the 3-report plan.
-  if (productType === "single") return 1;
-  if (productType === "pack_3") return 3;
-  if (productType === "singleReport") return 1;
-  if (productType === "monthlyPro") return 1; // 1 report / month
-  if (productType === "monthly3Reports") return 3; // 3 reports / month (safe alias)
-  if (productType === "monthly3") return 3; // safe alias
-  if (productType === "addOn") return 1; // adjust later for quantity if you add it
-  if (productType === "addon_3") return 3;
-  if (productType === "monthly_3") return 3;
-  return 0;
-}
-
 async function getRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -76,16 +62,13 @@ export default async function handler(req, res) {
   const productType = session?.metadata?.productType;
 
   if (!userId || !productType) {
-    console.warn("⚠️ Missing metadata userId/productType", { userId, productType });
-    // Ignore: we can't safely credit without metadata
-    return res.status(200).json({ received: true });
+    console.warn("Missing metadata userId/productType", { userId, productType });
+    return res.status(400).json({ error: "Missing metadata userId/productType" });
   }
 
-  const creditsToAdd = creditsForProductType(productType);
-  if (!creditsToAdd) {
-    console.warn("⚠️ Unknown productType:", productType);
-    // Ignore: we don't want to credit unknown product types
-    return res.status(200).json({ received: true });
+  if (productType !== "screening" && productType !== "underwriting") {
+    console.warn("Unknown productType:", productType);
+    return res.status(400).json({ error: "Invalid productType" });
   }
 
   const eventId = event.id;
@@ -114,18 +97,32 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
-  // ✅ Atomic credit increment via RPC (race-condition proof)
-  const { error: rpcErr } = await supabaseAdmin.rpc("add_report_credits", {
-    p_user_id: userId,
-    p_add: creditsToAdd,
-  });
+  const { error: eventErr } = await supabaseAdmin
+    .from("analysis_job_events")
+    .insert([
+      {
+        job_id: null,
+        actor: "stripe",
+        event_type: "purchase_completed",
+        from_status: null,
+        to_status: null,
+        created_at: new Date().toISOString(),
+        meta: {
+          user_id: userId,
+          product_type: productType,
+          stripe_session_id: sessionId || null,
+          stripe_event_id: eventId,
+        },
+      },
+    ]);
 
-  if (rpcErr) {
-    console.error("❌ Failed to increment credits (rpc):", rpcErr);
-    // 500 => Stripe retries (safe because idempotency is now strong)
-    return res.status(500).json({ error: "Credit update failed" });
+  if (eventErr) {
+    console.error("Failed to record purchase event:", eventErr);
+    return res.status(500).json({ error: "Purchase event insert failed" });
   }
 
-  console.log(`✅ Added ${creditsToAdd} credit(s) to userId=${userId} (${productType})`);
+  console.log("Recorded purchase for userId=" + userId + " (" + productType + ")");
   return res.status(200).json({ received: true });
 }
+
+

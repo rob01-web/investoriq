@@ -8,30 +8,30 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const tiers = [
   {
-    title: 'Single Report',
-    price: '$499',
+    title: 'Screening Report',
+    price: '$249',
     cadence: '',
-    productType: 'single',
-    description: 'One underwriting report credit.',
+    productType: 'screening',
+    description: 'Formal, lightweight institutional snapshot.',
     features: [
-      '1 InvestorIQ underwriting report credit',
-      'Institutional-grade PDF analysis',
-      'Credits valid for 60 days',
-      'Failed reports do not consume credits',
+      'Based strictly on T12 + Rent Roll',
+      'Formal, lightweight institutional snapshot',
+      'No assumptions, no invented data',
+      'Revisions: 2 total',
     ],
   },
   {
-    title: '3-Report Pack',
-    price: '$1,197',
+    title: 'Underwriting Report',
+    price: '$699',
     cadence: '',
-    productType: 'pack_3',
+    productType: 'underwriting',
     highlight: true,
-    description: 'Three underwriting report credits.',
+    description: 'Full institutional underwriting artifact.',
     features: [
-      '3 underwriting report credits',
-      'Institutional-grade analysis',
-      'Credits valid for 60 days',
-      'Failed reports do not consume credits',
+      'Based on T12 + Rent Roll + optional supporting documents',
+      'Full institutional underwriting artifact',
+      'No assumptions, no invented data',
+      'Revisions: 3 total',
     ],
   },
 ];
@@ -63,7 +63,13 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
         {tier.price}
         <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
       </p>
-      <p className="text-[#334155] mb-6 text-center font-semibold">{tier.description}</p>
+      <p className="text-[#334155] mb-2 text-center font-semibold">{tier.description}</p>
+      <a
+        href={tier.productType === 'screening' ? '/samples/screening-sample.pdf' : '/samples/underwriting-sample.pdf'}
+        className="text-sm text-[#334155] text-center mb-6 hover:underline"
+      >
+        View sample PDF
+      </a>
 
       <ul className="space-y-3 mb-8">
         {tier.features.map((feature, i) => (
@@ -83,8 +89,8 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
         {isLoading
           ? 'Redirecting…'
           : isAuthenticated
-          ? 'Purchase credits'
-          : 'Sign in to purchase credits'}
+          ? 'Purchase report'
+          : 'Sign in to purchase'}
       </button>
     </div>
   );
@@ -137,7 +143,7 @@ export default function PricingPage() {
         <title>Pricing — InvestorIQ</title>
         <meta
           name="description"
-          content="Institutional pricing for real estate underwriting reports. Purchase report credits."
+          content="Flat-fee institutional reports with transparent scope. Screening and underwriting options."
         />
       </Helmet>
 
@@ -155,9 +161,9 @@ export default function PricingPage() {
   </a>
 </p>
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
-  Each credit generates one full institutional underwriting report.
-  <span className="block">Credits are valid for 60 days from purchase.</span>
-  <span className="block">Failed reports do not consume credits.</span>
+  Two report types are available: Screening and Underwriting.
+  <span className="block">All outputs are deterministic and document-based, with no assumptions; missing inputs are shown as DATA NOT AVAILABLE.</span>
+  <span className="block">Revisions: Screening includes 2 total; Underwriting includes 3 total.</span>
 </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -174,7 +180,7 @@ export default function PricingPage() {
 
           <p className="text-sm text-[#334155] mt-10">
             <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>
-              Custom / Institutional underwriting available.
+              Need institutional support for portfolio or fund-level diligence? Contact us.
             </span>
           </p>
         </div>
@@ -182,3 +188,4 @@ export default function PricingPage() {
     </>
   );
 }
+

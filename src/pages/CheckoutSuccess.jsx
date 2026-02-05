@@ -41,7 +41,7 @@ export default function CheckoutSuccess() {
           setProductType(localProductType);
         }
 
-        // Refresh profile credits. Webhook may take a moment.
+        // Refresh profile. Webhook may take a moment.
         // We do not depend on the local "profile" snapshot inside this effect.
         if (profile?.id) {
           for (let i = 0; i < 8; i++) {
@@ -53,10 +53,15 @@ export default function CheckoutSuccess() {
         if (!isMounted) return;
 
         setStatus('ok');
-        const creditCount = localProductType === 'pack_3' ? 3 : 1;
+        const purchaseLabel =
+          localProductType === 'underwriting'
+            ? 'Underwriting Report'
+            : localProductType === 'screening'
+            ? 'Screening Report'
+            : 'Report';
         toast({
           title: 'Payment received',
-          description: `${creditCount} report credit${creditCount === 1 ? '' : 's'} has been added.`,
+          description: `${purchaseLabel} purchased.`,
         });
 
 setTimeout(() => {
@@ -77,7 +82,12 @@ setTimeout(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const creditCount = productType === 'pack_3' ? 3 : 1;
+  const purchaseLabel =
+    productType === 'underwriting'
+      ? 'Underwriting Report'
+      : productType === 'screening'
+      ? 'Screening Report'
+      : 'Report';
 
   return (
     <div className="min-h-screen bg-white p-6 sm:p-10">
@@ -96,8 +106,7 @@ setTimeout(() => {
             <>
               <div className="text-lg font-semibold text-[#0F172A]">Payment received</div>
               <div className="mt-2 text-sm text-[#334155]">
-                {creditCount} report credit{creditCount === 1 ? '' : 's'}{' '}
-                {creditCount === 1 ? 'has' : 'have'} been added to your account.
+                {purchaseLabel} purchased.
               </div>
 
               <div className="mt-6">
@@ -117,7 +126,7 @@ setTimeout(() => {
               <div className="text-lg font-semibold text-[#0F172A]">Checkout complete</div>
               <div className="mt-2 text-sm text-[#334155]">
                 We could not confirm payment details on this page. If payment was completed, your
-                credits will appear shortly.
+                report purchase will appear shortly.
               </div>
 
               <div className="mt-6">

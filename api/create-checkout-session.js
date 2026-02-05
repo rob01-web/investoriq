@@ -6,38 +6,29 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 // Canonical productType contract (LOCKED):
-// single, pack_3
+// screening, underwriting
 function normalizeProductType({ productType, planKey }) {
   const raw = productType || planKey || "";
   if (!raw) return "";
 
   const map = {
     // Canonical
-    single: "single",
-    pack_3: "pack_3",
-
-    // Legacy (back-compat)
-    singleReport: "single",
-    addon_3: "pack_3",
-    monthly_3: "pack_3",
-
-    // Legacy planKey style
-    // (old: planKey === "single" -> "singleReport")
-    // now we lock it to canonical "single"
+    screening: "screening",
+    underwriting: "underwriting",
   };
 
   return map[raw] || "";
 }
 
 const PRICE_CONFIG = {
-  single: { priceId: process.env.STRIPE_PRICE_SINGLE, mode: "payment" },
-  pack_3: { priceId: process.env.STRIPE_PRICE_PACK_3, mode: "payment" },
+  screening: { priceId: process.env.STRIPE_PRICE_SCREENING, mode: "payment" },
+  underwriting: { priceId: process.env.STRIPE_PRICE_UNDERWRITING, mode: "payment" },
 };
 
 function requiredEnvFor(productType) {
   switch (productType) {
-    case "single": return "STRIPE_PRICE_SINGLE";
-    case "pack_3": return "STRIPE_PRICE_PACK_3";
+    case "screening": return "STRIPE_PRICE_SCREENING";
+    case "underwriting": return "STRIPE_PRICE_UNDERWRITING";
     default: return "UNKNOWN";
   }
 }

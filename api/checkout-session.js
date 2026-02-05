@@ -22,6 +22,7 @@ export default async function handler(req, res) {
       status: session.status,
       payment_status: session.payment_status,
       metadata: session.metadata || {},
+      productType: session?.metadata?.productType || null,
     });
   } catch (err) {
     console.error("checkout-session error:", err);
