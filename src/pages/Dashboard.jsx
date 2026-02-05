@@ -247,8 +247,8 @@ export default function Dashboard() {
   if (profile?.id) {
     syncEverything();
       
-      // ELITE PERFORMANCE: Automatically check for newly purchased credits every 2 seconds
-      // This ensures if they just came from checkout, the credit appears without a refresh.
+      // ELITE PERFORMANCE: Automatically check for newly purchased entitlements every 2 seconds
+      // This ensures if they just came from checkout, the entitlement appears without a refresh.
       const fastInterval = setInterval(() => fetchProfile(profile.id), 2000);
       const timeout = setTimeout(() => clearInterval(fastInterval), 10000);
 
@@ -270,7 +270,7 @@ export default function Dashboard() {
     } else if (checkout === 'cancelled') {
       toast({
         title: 'Payment cancelled',
-        description: 'Payment cancelled.',
+        description: 'No charge was made.',
       });
     }
     if (checkout) {
