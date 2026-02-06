@@ -399,6 +399,8 @@ const runsLimitValue = Number(activeJobForRuns?.runs_limit ?? 0);
 const runsUsedValue = Number(activeJobForRuns?.runs_used ?? 0);
 const runsInflightValue = Number(activeJobForRuns?.runs_inflight ?? 0);
 const remainingTotal = Math.max(0, runsLimitValue - runsUsedValue - runsInflightValue);
+const step2Locked = !propertyName.trim();
+const step3Locked = !jobId || !hasRunsData || regenDisabled || !scopeConfirmed;
 const statusBlocksRegen = activeJobForRuns
   ? [
       'queued',
@@ -1066,14 +1068,17 @@ if (!profile?.id || !effectiveJobId) {
           </div>
           <div className="mb-6 text-xs text-slate-600">
             <div className="font-semibold text-[#0F172A]">Workflow</div>
-            <div>Step 1: Report type and availability</div>
-            <div>Step 2: Property and documents</div>
-            <div>Step 3: Generate report</div>
+            <div className="mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+              <div>Step 1: Report type and availability</div>
+              <div>Step 2: Property and documents</div>
+              <div>Step 3: Generate report</div>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4">
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
+              <div className="text-base font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
+              <div className="mt-1 text-xs text-slate-500">Select report type and confirm availability.</div>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -1124,8 +1129,18 @@ if (!profile?.id || !effectiveJobId) {
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-semibold text-[#0F172A]">Step 2: Property and documents</div>
+            <div
+              className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-opacity ${
+                step2Locked ? 'opacity-60' : 'opacity-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold text-[#0F172A]">Step 2: Property and documents</div>
+                {step2Locked ? (
+                  <div className="text-xs text-slate-500">Locked</div>
+                ) : null}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">Add property details and upload documents.</div>
               <div className="mt-4">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1613,52 +1628,46 @@ if (!profile?.id || !effectiveJobId) {
                       </ul>
                     </div>
 
-                    <div className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">
-                          Deal Underwriting
-                        </h4>
-                        {hasRentRoll && hasT12 && hasPurchase && hasCapex && hasDebt && (
-                          <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
-                            INCLUDED
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Requires: Operating Snapshot + Purchase, Capex, Debt
-                      </p>
-                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                        <li>Underwriting inputs for price, capex, and debt</li>
-                        <li>Base-case return summary</li>
-                        <li>Scenario highlights from provided inputs</li>
-                      </ul>
-                    </div>
+                    {selectedReportType === 'underwriting' && (
+                      <>
+                        <div className="border border-slate-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-semibold text-slate-900">
+                              Deal Underwriting
+                            </h4>
+                            {hasRentRoll && hasT12 && hasPurchase && hasCapex && hasDebt && (
+                              <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                                INCLUDED
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Requires: Operating Snapshot + Purchase, Capex, Debt
+                          </p>
+                          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                            <li>Underwriting inputs for price, capex, and debt</li>
+                            <li>Base-case return summary</li>
+                            <li>Scenario highlights from provided inputs</li>
+                          </ul>
+                        </div>
 
-                    <div className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">
-                          IC-Ready Investment Memo
-                        </h4>
-                        {hasRentRoll &&
-                          hasT12 &&
-                          hasPurchase &&
-                          hasCapex &&
-                          hasDebt &&
-                          hasMarket && (
-                            <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
-                              INCLUDED
-                            </span>
-                          )}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Requires: Deal Underwriting + Market Data
-                      </p>
-                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                        <li>Market positioning and location summary</li>
-                        <li>Risk and sensitivity highlights</li>
-                        <li>Institutional report formatting</li>
-                      </ul>
-                    </div>
+                        <div className="border border-slate-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-semibold text-slate-900">
+                              IC Report (Coming later)
+                            </h4>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Not available in V1. Coming later.
+                          </p>
+                          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                            <li>Market positioning and location summary</li>
+                            <li>Risk and sensitivity highlights</li>
+                            <li>Institutional report formatting</li>
+                          </ul>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -1682,8 +1691,18 @@ if (!profile?.id || !effectiveJobId) {
                 </motion.div>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm font-semibold text-[#0F172A]">Step 3: Generate report</div>
+            <div
+              className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-opacity ${
+                step3Locked ? 'opacity-60' : 'opacity-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold text-[#0F172A]">Step 3: Generate report</div>
+                {step3Locked ? (
+                  <div className="text-xs text-slate-500">Locked</div>
+                ) : null}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">Generate your report. Missing sections render as DATA NOT AVAILABLE.</div>
               <div className="mt-4">
                 <button
                   type="button"
@@ -1697,7 +1716,7 @@ if (!profile?.id || !effectiveJobId) {
                 >
                   {loading ? 'Working…' : runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'}
                 </button>
-                <div className="mt-2 text-xs text-slate-600">
+                <div className="mt-3 text-xs leading-relaxed text-slate-500">
                   Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
                 </div>
                 {hasRunsData ? (
