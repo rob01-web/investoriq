@@ -364,7 +364,6 @@ export default function Dashboard() {
 const POLICY_KEY = 'analysis_disclosures';
 const POLICY_VERSION = 'v2026-01-14';
 
-const credits = Number(profile?.report_credits ?? 0);
 const rentRollFiles = uploadedFiles.filter((item) => item.docType === 'rent_roll');
 const t12Files = uploadedFiles.filter((item) => item.docType === 't12');
 const otherFiles = uploadedFiles.filter((item) => item.docType === 'other');
@@ -909,36 +908,6 @@ if (!profile?.id || !effectiveJobId) {
 
     // ELITE UX: Trigger the "Working" state immediately
     setLoading(true); 
-    
-    // Deterministic credit check (do NOT rely on React state here)
-const { data: creditsRow, error: creditsErr } = await supabase
-  .from('profiles')
-  .select('report_credits')
-  .eq('id', profile.id)
-  .maybeSingle();
-
-if (creditsErr) {
-  console.error('Failed to verify credits:', creditsErr);
-  setLoading(false);
-  toast({
-    title: 'Unable to verify purchase',
-    description: 'Please refresh and try again.',
-    variant: 'destructive',
-  });
-  return;
-}
-
-const verifiedCredits = Number(creditsRow?.report_credits ?? 0);
-
-if (verifiedCredits < 1) {
-  setLoading(false);
-  toast({
-    title: 'Purchase required',
-    description: 'No purchase detected. Please ensure your payment has processed.',
-    variant: 'destructive',
-  });
-  return;
-}
 
     try {
       if (runsUsedValue > 0) {
@@ -1002,7 +971,7 @@ if (verifiedCredits < 1) {
         return;
       }
 
-      // ELITE SYNC: This final update pushes the actual name and triggers the backend credit deduction
+      // Final update before status transition
       const { error: statusErr } = await supabase
         .from('analysis_jobs')
         .update({
@@ -1030,7 +999,7 @@ if (verifiedCredits < 1) {
         description: 'Your underwriting report has started. You may safely close this page and return later.',
       });
 
-      // REFRESH DATA: This forces the name to update AND the credit to drop from 4 to 3
+      // Refresh data to reflect updated job status
       await Promise.all([
         fetchInProgressJobs(),
         fetchReports(),
@@ -1224,7 +1193,7 @@ if (verifiedCredits < 1) {
                       type="button"
                       disabled={!propertyName.trim()}
                       onClick={async () => {
-                        if (!profile || credits <= 0) {
+                        if (!profile) {
                           window.location.href = '/pricing';
                           return;
                         }
@@ -1312,7 +1281,7 @@ if (verifiedCredits < 1) {
                       type="button"
                       disabled={!propertyName.trim()}
                       onClick={async () => {
-                        if (!profile || credits <= 0) {
+                        if (!profile) {
                           window.location.href = '/pricing';
                           return;
                         }
@@ -1398,7 +1367,7 @@ if (verifiedCredits < 1) {
                       type="button"
                       disabled={!propertyName.trim()}
                       onClick={async () => {
-                        if (!profile || credits <= 0) {
+                        if (!profile) {
                           window.location.href = '/pricing';
                           return;
                         }

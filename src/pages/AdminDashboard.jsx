@@ -27,22 +27,24 @@ import { useToast } from "@/components/ui/use-toast";
   const [queueError, setQueueError] = useState(null);
   const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
   const [issueUpdating, setIssueUpdating] = useState({});
+  const [adminRunKey, setAdminRunKey] = useState(
+    () => (typeof window !== "undefined" ? localStorage.getItem("ADMIN_RUN_KEY") || "" : "")
+  );
 
 
   const fetchQueueMetrics = async () => {
+    if (!adminRunKey?.trim()) {
+      setQueueError("Admin Run Key required.");
+      return;
+    }
     setQueueLoading(true);
     setQueueError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const accessToken = session?.access_token || "";
       const res = await fetch("/api/admin/queue-metrics", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${adminRunKey}`,
         },
       });
 
@@ -163,11 +165,31 @@ import { useToast } from "@/components/ui/use-toast";
           {/* HEADER */}
           <div className="text-center mb-10">
             <h1 className="text-4xl font-extrabold text-[#0F172A] mb-2">
-              Admin <span className="text-[#1F8A8A]">Control Panel</span>
+              Admin <span className="text-[#1F8A8A]">Console</span>
             </h1>
             <p className="text-[#334155] text-lg font-medium">
-              Monitor InvestorIQ usage, reports, and user activity in real time.
+              Operational metrics, queue health, and issue triage.
             </p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Admin Run Key
+              </label>
+              <input
+                type="password"
+                value={adminRunKey}
+                onChange={(event) => setAdminRunKey(event.target.value)}
+                onBlur={(event) =>
+                  localStorage.setItem("ADMIN_RUN_KEY", event.target.value || "")
+                }
+                className="w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
+                placeholder="Enter admin key"
+              />
+              {!adminRunKey.trim() ? (
+                <div className="text-xs text-red-700">
+                  Admin Run Key required to access admin endpoints.
+                </div>
+              ) : null}
+            </div>
             <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
           </div>
 
@@ -290,7 +312,7 @@ import { useToast } from "@/components/ui/use-toast";
             >
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-[#0F172A]">Pipeline Health</h2>
+                  <h2 className="text-2xl font-bold text-[#0F172A]">Queue health</h2>
                   <div className="text-sm font-medium text-[#334155]">
                     Queue processing runs automatically every few minutes.
                   </div>
@@ -378,207 +400,7 @@ import { useToast } from "@/components/ui/use-toast";
               </div>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-[#0F172A]">Issue Inbox</h2>
-              </div>
-
-              {queueMetrics?.issues_error ? (
-                <div className="text-sm text-slate-500">DATA NOT AVAILABLE</div>
-              ) : (queueMetrics?.issues || []).length === 0 ? (
-                <div className="text-sm text-slate-500">No issues reported.</div>
-              ) : (
-                <div className="overflow-hidden border border-slate-200 rounded-lg">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="text-left text-[#0F172A] text-xs font-semibold bg-slate-50">
-                        <th className="p-3 border-b border-slate-200">Created</th>
-                        <th className="p-3 border-b border-slate-200">Status</th>
-                        <th className="p-3 border-b border-slate-200">Job ID</th>
-                        <th className="p-3 border-b border-slate-200">User ID</th>
-                        <th className="p-3 border-b border-slate-200">Message</th>
-                        <th className="p-3 border-b border-slate-200">Attachment</th>
-                        <th className="p-3 border-b border-slate-200 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queueMetrics.issues.map((issue) => {
-                        const message = issue?.message || "";
-                        const truncated =
-                          message.length > 120 ? `${message.slice(0, 120)}…` : message;
-                        const isUpdating = Boolean(issueUpdating[issue.id]);
-                        const regenKey = `regen-${issue.id}`;
-                        const isRegenerating = Boolean(issueUpdating[regenKey]);
-                        return (
-                          <tr key={issue.id} className="border-b border-slate-100">
-                            <td className="p-3 text-xs text-slate-600">
-                              {issue.created_at ? new Date(issue.created_at).toLocaleString() : "-"}
-                            </td>
-                            <td className="p-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                              {issue.status || "-"}
-                            </td>
-                            <td className="p-3 text-xs text-slate-600">{issue.job_id || "-"}</td>
-                            <td className="p-3 text-xs text-slate-600">{issue.user_id || "-"}</td>
-                            <td className="p-3 text-xs text-slate-600">{truncated}</td>
-                            <td className="p-3 text-xs text-slate-600">
-                              {issue.attachment_url ? (
-                                <a
-                                  href={issue.attachment_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#1F8A8A] font-semibold hover:underline"
-                                >
-                                  View attachment
-                                </a>
-                              ) : issue.attachment_path ? (
-                                "DATA NOT AVAILABLE"
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td className="p-3 text-right text-xs text-slate-600">
-                              <div className="flex justify-end gap-2">
-                                {issue.status !== "reviewing" && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={async () => {
-                                      try {
-                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
-                                        const {
-                                          data: { session },
-                                        } = await supabase.auth.getSession();
-                                        const accessToken = session?.access_token || "";
-                                        const res = await fetch("/api/admin/queue-metrics", {
-                                          method: "POST",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                            Authorization: `Bearer ${accessToken}`,
-                                          },
-                                          body: JSON.stringify({
-                                            issue_id: issue.id,
-                                            status: "reviewing",
-                                          }),
-                                        });
-                                        const data = await res.json().catch(() => ({}));
-                                        if (!res.ok || !data?.ok) {
-                                          throw new Error("Update failed");
-                                        }
-                                        toast({ title: "Updated" });
-                                        await fetchQueueMetrics();
-                                      } catch (err) {
-                                        toast({ title: "Update failed", variant: "destructive" });
-                                      } finally {
-                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
-                                      }
-                                    }}
-                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                                  >
-                                    Mark reviewing
-                                  </button>
-                                )}
-                                {issue.status !== "resolved" && (
-                                  <button
-                                    disabled={isUpdating}
-                                    onClick={async () => {
-                                      try {
-                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
-                                        const {
-                                          data: { session },
-                                        } = await supabase.auth.getSession();
-                                        const accessToken = session?.access_token || "";
-                                        const res = await fetch("/api/admin/queue-metrics", {
-                                          method: "POST",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                            Authorization: `Bearer ${accessToken}`,
-                                          },
-                                          body: JSON.stringify({
-                                            issue_id: issue.id,
-                                            status: "resolved",
-                                          }),
-                                        });
-                                        const data = await res.json().catch(() => ({}));
-                                        if (!res.ok || !data?.ok) {
-                                          throw new Error("Update failed");
-                                        }
-                                        toast({ title: "Updated" });
-                                        await fetchQueueMetrics();
-                                      } catch (err) {
-                                        toast({ title: "Update failed", variant: "destructive" });
-                                      } finally {
-                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
-                                      }
-                                    }}
-                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                                  >
-                                    Mark resolved
-                                  </button>
-                                )}
-                                <button
-                                  disabled={isRegenerating || !issue.job_id}
-                                  onClick={async () => {
-                                    if (!issue.job_id) return;
-                                    try {
-                                      setIssueUpdating((prev) => ({
-                                        ...prev,
-                                        [regenKey]: true,
-                                      }));
-                                      const {
-                                        data: { session },
-                                      } = await supabase.auth.getSession();
-                                      const accessToken = session?.access_token || "";
-                                      const res = await fetch("/api/admin/run-eligible-jobs-once", {
-                                        method: "POST",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                          Authorization: `Bearer ${accessToken}`,
-                                        },
-                                        body: JSON.stringify({
-                                          job_id: issue.job_id,
-                                        }),
-                                      });
-                                      const data = await res.json().catch(() => ({}));
-                                      if (!res.ok || !data?.ok) {
-                                        throw new Error("Regeneration failed");
-                                      }
-                                      toast({
-                                        title: "Regeneration started",
-                                        description: "Job queued for regeneration.",
-                                      });
-                                      await fetchQueueMetrics();
-                                    } catch (err) {
-                                      toast({
-                                        title: "Regeneration failed",
-                                        description: "Unable to start regeneration.",
-                                        variant: "destructive",
-                                      });
-                                    } finally {
-                                      setIssueUpdating((prev) => ({
-                                        ...prev,
-                                        [regenKey]: false,
-                                      }));
-                                    }
-                                  }}
-                                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                                  title={!issue.job_id ? "No job id" : undefined}
-                                >
-                                  Regenerate
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </motion.div>
+            
 
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -587,9 +409,7 @@ import { useToast } from "@/components/ui/use-toast";
               className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
               >
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-[#0F172A]">
-                    Queue Overview
-                  </h2>
+                  <h2 className="text-2xl font-bold text-[#0F172A]">Queue overview</h2>
                   <button
                     onClick={fetchQueueMetrics}
                     className="flex items-center gap-2 text-[#1F8A8A] font-semibold hover:underline"
@@ -676,6 +496,210 @@ import { useToast } from "@/components/ui/use-toast";
                   </>
                 )}
               </motion.div>
+<motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white rounded-lg shadow-sm p-8 border border-slate-200 mb-12"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-[#0F172A]">Issue Inbox</h2>
+              </div>
+
+              {queueMetrics?.issues_error ? (
+                <div className="text-sm text-slate-500">DATA NOT AVAILABLE</div>
+              ) : (queueMetrics?.issues || []).length === 0 ? (
+                <div className="text-sm text-slate-500">No issues reported.</div>
+              ) : (
+                <div className="overflow-hidden border border-slate-200 rounded-lg">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="text-left text-[#0F172A] text-xs font-semibold bg-slate-50">
+                        <th className="p-3 border-b border-slate-200">Created</th>
+                        <th className="p-3 border-b border-slate-200">Status</th>
+                        <th className="p-3 border-b border-slate-200">Job ID</th>
+                        <th className="p-3 border-b border-slate-200">User ID</th>
+                        <th className="p-3 border-b border-slate-200">Message</th>
+                        <th className="p-3 border-b border-slate-200">Attachment</th>
+                        <th className="p-3 border-b border-slate-200 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {queueMetrics.issues.map((issue) => {
+                        const message = issue?.message || "";
+                        const truncated =
+                          message.length > 120 ? `${message.slice(0, 120)}…` : message;
+                        const isUpdating = Boolean(issueUpdating[issue.id]);
+                        const regenKey = `regen-${issue.id}`;
+                        const isRegenerating = Boolean(issueUpdating[regenKey]);
+                        return (
+                          <tr key={issue.id} className="border-b border-slate-100">
+                            <td className="p-3 text-xs text-slate-600">
+                              {issue.created_at ? new Date(issue.created_at).toLocaleString() : "-"}
+                            </td>
+                            <td className="p-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              {issue.status || "-"}
+                            </td>
+                            <td className="p-3 text-xs text-slate-600">{issue.job_id || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">{issue.user_id || "-"}</td>
+                            <td className="p-3 text-xs text-slate-600">{truncated}</td>
+                            <td className="p-3 text-xs text-slate-600">
+                              {issue.attachment_url ? (
+                                <a
+                                  href={issue.attachment_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[#1F8A8A] font-semibold hover:underline"
+                                >
+                                  View attachment
+                                </a>
+                              ) : issue.attachment_path ? (
+                                "DATA NOT AVAILABLE"
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="p-3 text-right text-xs text-slate-600">
+                              <div className="flex justify-end gap-2">
+                                {issue.status !== "reviewing" && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={async () => {
+                                      if (!adminRunKey?.trim()) {
+                                        toast({ title: "Admin Run Key required", variant: "destructive" });
+                                        return;
+                                      }
+                                      try {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
+                                        const res = await fetch("/api/admin/queue-metrics", {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${adminRunKey}`,
+                                          },
+                                          body: JSON.stringify({
+                                            issue_id: issue.id,
+                                            status: "reviewing",
+                                          }),
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok || !data?.ok) {
+                                          throw new Error("Update failed");
+                                        }
+                                        toast({ title: "Updated" });
+                                        await fetchQueueMetrics();
+                                      } catch (err) {
+                                        toast({ title: "Update failed", variant: "destructive" });
+                                      } finally {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
+                                      }
+                                    }}
+                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  >
+                                    Mark reviewing
+                                  </button>
+                                )}
+                                {issue.status !== "resolved" && (
+                                  <button
+                                    disabled={isUpdating}
+                                    onClick={async () => {
+                                      if (!adminRunKey?.trim()) {
+                                        toast({ title: "Admin Run Key required", variant: "destructive" });
+                                        return;
+                                      }
+                                      try {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: true }));
+                                        const res = await fetch("/api/admin/queue-metrics", {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${adminRunKey}`,
+                                          },
+                                          body: JSON.stringify({
+                                            issue_id: issue.id,
+                                            status: "resolved",
+                                          }),
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok || !data?.ok) {
+                                          throw new Error("Update failed");
+                                        }
+                                        toast({ title: "Updated" });
+                                        await fetchQueueMetrics();
+                                      } catch (err) {
+                                        toast({ title: "Update failed", variant: "destructive" });
+                                      } finally {
+                                        setIssueUpdating((prev) => ({ ...prev, [issue.id]: false }));
+                                      }
+                                    }}
+                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  >
+                                    Mark resolved
+                                  </button>
+                                )}
+                                <button
+                                  disabled={isRegenerating || !issue.job_id}
+                                  onClick={async () => {
+                                    if (!issue.job_id) return;
+                                    if (!adminRunKey?.trim()) {
+                                      toast({ title: "Admin Run Key required", variant: "destructive" });
+                                      return;
+                                    }
+                                    try {
+                                      setIssueUpdating((prev) => ({
+                                        ...prev,
+                                        [regenKey]: true,
+                                      }));
+                                      const res = await fetch("/api/admin/run-eligible-jobs-once", {
+                                        method: "POST",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                          Authorization: `Bearer ${adminRunKey}`,
+                                        },
+                                        body: JSON.stringify({
+                                          job_id: issue.job_id,
+                                        }),
+                                      });
+                                      const data = await res.json().catch(() => ({}));
+                                      if (!res.ok || !data?.ok) {
+                                        throw new Error("Regeneration failed");
+                                      }
+                                      toast({
+                                        title: "Regeneration started",
+                                        description: "Job queued for regeneration.",
+                                      });
+                                      await fetchQueueMetrics();
+                                    } catch (err) {
+                                      toast({
+                                        title: "Regeneration failed",
+                                        description: "Unable to start regeneration.",
+                                        variant: "destructive",
+                                      });
+                                    } finally {
+                                      setIssueUpdating((prev) => ({
+                                        ...prev,
+                                        [regenKey]: false,
+                                      }));
+                                    }
+                                  }}
+                                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                  title={!issue.job_id ? "No job id" : undefined}
+                                >
+                                  Regenerate
+                                </button>
+                              </div>
+                              <div className="mt-2 text-[11px] text-slate-500 text-right">
+                                Regeneration re-queues the same job ID. It does not create a new job and does not consume entitlements.
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
 
               {/* RECENT REPORTS */}
               <motion.div
@@ -752,3 +776,4 @@ import { useToast } from "@/components/ui/use-toast";
     </>
   );
 }
+
