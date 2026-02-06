@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [issueFile, setIssueFile] = useState(null);
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueReport, setIssueReport] = useState(null);
+  const [showScopePreview, setShowScopePreview] = useState(false);
   const [entitlements, setEntitlements] = useState({
     screening: null,
     underwriting: null,
@@ -353,6 +354,7 @@ export default function Dashboard() {
       .sort()
       .join('|')}::${uploadedFiles.length}`,
   ]);
+
 
   const removeUploadedFile = (index) => {
   setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
@@ -1109,6 +1111,12 @@ if (verifiedCredits < 1) {
           <div className="mb-6 text-xs text-slate-600">
             Reports are property-specific and non-refundable once generation begins.
           </div>
+          <div className="mb-6 text-xs text-slate-600">
+            <div className="font-semibold text-[#0F172A]">Workflow</div>
+            <div>Step 1: Report type and availability</div>
+            <div>Step 2: Property and documents</div>
+            <div>Step 3: Generate report</div>
+          </div>
 
           <div className="mb-10">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1543,15 +1551,126 @@ if (verifiedCredits < 1) {
               </label>
             </div>
 
-            <AnalysisScopePreview
-              hasRentRoll={hasRentRoll}
-              hasT12={hasT12}
-              hasPurchase={hasPurchase}
-              hasCapex={hasCapex}
-              hasDebt={hasDebt}
-              hasMarket={hasMarket}
-              rentRollCoverage={rentRollCoverage}
-            />
+            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-[#0F172A]">What this report includes</div>
+                <button
+                  type="button"
+                  onClick={() => setShowScopePreview((prev) => !prev)}
+                  className="text-xs font-semibold text-[#1F8A8A] hover:underline"
+                >
+                  {showScopePreview ? 'Hide details' : 'View details'}
+                </button>
+              </div>
+              {!showScopePreview ? (
+                <div className="mt-2 text-xs text-slate-600">
+                  Included sections are determined strictly by the documents you upload. Missing sections render as DATA NOT AVAILABLE.
+                </div>
+              ) : (
+                <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        Analysis Scope Preview
+                      </h3>
+                      <p className="text-sm text-slate-600">
+                        Summary of what will be included based on the documents provided.
+                      </p>
+                    </div>
+                  </div>
+
+                  {rentRollCoverage && Number.isFinite(rentRollCoverage.provided) && (
+                    <div className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      {Number.isFinite(rentRollCoverage.total) &&
+                      Number.isFinite(rentRollCoverage.percent) ? (
+                        <>
+                          Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
+                          units ({Math.round(rentRollCoverage.percent)}%).
+                          {rentRollCoverage.percent < 70
+                            ? ' Analysis reflects only the units provided.'
+                            : ''}
+                        </>
+                      ) : (
+                        <>
+                          Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
+                          provided in uploaded documents.
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-6 space-y-6">
+                    <div className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-slate-900">
+                          First-Look Operating Snapshot
+                        </h4>
+                        {hasRentRoll && hasT12 && (
+                          <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                            INCLUDED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Requires: Rent Roll + T12/Operating Statement
+                      </p>
+                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                        <li>Unit count, occupancy, and rent roll summary</li>
+                        <li>Trailing 12 income and expense snapshot</li>
+                        <li>Document source summary</li>
+                      </ul>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-slate-900">
+                          Deal Underwriting
+                        </h4>
+                        {hasRentRoll && hasT12 && hasPurchase && hasCapex && hasDebt && (
+                          <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                            INCLUDED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Requires: Operating Snapshot + Purchase, Capex, Debt
+                      </p>
+                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                        <li>Underwriting inputs for price, capex, and debt</li>
+                        <li>Base-case return summary</li>
+                        <li>Scenario highlights from provided inputs</li>
+                      </ul>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-slate-900">
+                          IC-Ready Investment Memo
+                        </h4>
+                        {hasRentRoll &&
+                          hasT12 &&
+                          hasPurchase &&
+                          hasCapex &&
+                          hasDebt &&
+                          hasMarket && (
+                            <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                              INCLUDED
+                            </span>
+                          )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Requires: Deal Underwriting + Market Data
+                      </p>
+                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                        <li>Market positioning and location summary</li>
+                        <li>Risk and sensitivity highlights</li>
+                        <li>Institutional report formatting</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
