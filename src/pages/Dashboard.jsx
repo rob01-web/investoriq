@@ -1080,28 +1080,60 @@ if (!profile?.id || !effectiveJobId) {
               <div className="text-base font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
               <div className="mt-1 text-xs text-slate-500">Select report type and confirm availability.</div>
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedReportType('screening')}
-                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
-                    selectedReportType === 'screening'
-                      ? 'border-[#0F172A] bg-[#0F172A] text-white'
-                      : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
-                  }`}
-                >
-                  Screening Report
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedReportType('underwriting')}
-                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
-                    selectedReportType === 'underwriting'
-                      ? 'border-[#0F172A] bg-[#0F172A] text-white'
-                      : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
-                  }`}
-                >
-                  Underwriting Report
-                </button>
+                <div className="relative group inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReportType('screening')}
+                    className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                      selectedReportType === 'screening'
+                        ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                        : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
+                    }`}
+                  >
+                    Screening Report
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Screening report info"
+                    className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500 group-hover:border-slate-400 group-focus-within:border-slate-400"
+                  >
+                    i
+                  </button>
+                  <div className="pointer-events-none absolute left-0 top-full z-10 mt-2 hidden w-64 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm group-hover:block group-focus-within:block">
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Inputs: T12 + Rent Roll</li>
+                      <li>Output: Screening Report (document-based snapshot)</li>
+                      <li>Revisions: 2</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="relative group inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReportType('underwriting')}
+                    className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                      selectedReportType === 'underwriting'
+                        ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                        : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
+                    }`}
+                  >
+                    Underwriting Report
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Underwriting report info"
+                    className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500 group-hover:border-slate-400 group-focus-within:border-slate-400"
+                  >
+                    i
+                  </button>
+                  <div className="pointer-events-none absolute left-0 top-full z-10 mt-2 hidden w-72 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm group-hover:block group-focus-within:block">
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Inputs: T12 + Rent Roll + optional supporting documents</li>
+                      <li>Output: Underwriting Report (full document-based underwriting)</li>
+                      <li>Revisions: 3</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1127,6 +1159,104 @@ if (!profile?.id || !effectiveJobId) {
                     Purchase report
                   </button>
                 </div>
+              </div>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-[#0F172A]">What this report includes</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowScopePreview((prev) => !prev)}
+                    className="text-xs font-semibold text-[#1F8A8A] hover:underline"
+                  >
+                    {showScopePreview ? 'Hide details' : 'View details'}
+                  </button>
+                </div>
+                {!showScopePreview ? (
+                  <div className="mt-2 text-xs text-slate-600">
+                    Included sections are determined strictly by the documents you upload. Missing sections render as DATA NOT AVAILABLE.
+                  </div>
+                ) : (
+                  <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          Analysis Scope Preview
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          Summary of what will be included based on the documents provided.
+                        </p>
+                      </div>
+                    </div>
+
+                    {rentRollCoverage && Number.isFinite(rentRollCoverage.provided) && (
+                      <div className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        {Number.isFinite(rentRollCoverage.total) &&
+                        Number.isFinite(rentRollCoverage.percent) ? (
+                          <>
+                            Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
+                            units ({Math.round(rentRollCoverage.percent)}%).
+                            {rentRollCoverage.percent < 70
+                              ? ' Analysis reflects only the units provided.'
+                              : ''}
+                          </>
+                        ) : (
+                          <>
+                            Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
+                            provided in uploaded documents.
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-6 space-y-6">
+                      <div className="border border-slate-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-slate-900">
+                            Screening Report Overview
+                          </h4>
+                          {hasRentRoll && hasT12 && (
+                            <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                              INCLUDED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Requires: Rent Roll + T12 / Operating Statement
+                        </p>
+                        <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                          <li>Unit count, occupancy, and in-place rent summary (from rent roll)</li>
+                          <li>Trailing twelve income and expense summary (from T12)</li>
+                          <li>Document sources summary</li>
+                        </ul>
+                      </div>
+
+                      {selectedReportType === 'underwriting' && (
+                        <>
+                          <div className="border border-slate-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold text-slate-900">
+                                Underwriting Report Overview
+                              </h4>
+                              {hasRentRoll && hasT12 && hasPurchase && hasCapex && hasDebt && (
+                                <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
+                                  INCLUDED
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Requires: Rent Roll + T12 / Operating Statement + optional supporting documents
+                            </p>
+                            <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
+                              <li>Purchase, capital, and financing inputs as provided</li>
+                              <li>Return metrics and scenario outputs derived strictly from provided inputs</li>
+                              <li>Risk scoring and sensitivities based on available data</li>
+                            </ul>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div
@@ -1563,121 +1693,6 @@ if (!profile?.id || !effectiveJobId) {
                   </span>
                 </span>
               </label>
-            </div>
-
-            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-[#0F172A]">What this report includes</div>
-                <button
-                  type="button"
-                  onClick={() => setShowScopePreview((prev) => !prev)}
-                  className="text-xs font-semibold text-[#1F8A8A] hover:underline"
-                >
-                  {showScopePreview ? 'Hide details' : 'View details'}
-                </button>
-              </div>
-              {!showScopePreview ? (
-                <div className="mt-2 text-xs text-slate-600">
-                  Included sections are determined strictly by the documents you upload. Missing sections render as DATA NOT AVAILABLE.
-                </div>
-              ) : (
-                <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900">
-                        Analysis Scope Preview
-                      </h3>
-                      <p className="text-sm text-slate-600">
-                        Summary of what will be included based on the documents provided.
-                      </p>
-                    </div>
-                  </div>
-
-                  {rentRollCoverage && Number.isFinite(rentRollCoverage.provided) && (
-                    <div className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      {Number.isFinite(rentRollCoverage.total) &&
-                      Number.isFinite(rentRollCoverage.percent) ? (
-                        <>
-                          Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
-                          units ({Math.round(rentRollCoverage.percent)}%).
-                          {rentRollCoverage.percent < 70
-                            ? ' Analysis reflects only the units provided.'
-                            : ''}
-                        </>
-                      ) : (
-                        <>
-                          Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
-                          provided in uploaded documents.
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-6 space-y-6">
-                    <div className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">
-                          First-Look Operating Snapshot
-                        </h4>
-                        {hasRentRoll && hasT12 && (
-                          <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
-                            INCLUDED
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Requires: Rent Roll + T12/Operating Statement
-                      </p>
-                      <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                        <li>Unit count, occupancy, and rent roll summary</li>
-                        <li>Trailing 12 income and expense snapshot</li>
-                        <li>Document source summary</li>
-                      </ul>
-                    </div>
-
-                    {selectedReportType === 'underwriting' && (
-                      <>
-                        <div className="border border-slate-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-semibold text-slate-900">
-                              Deal Underwriting
-                            </h4>
-                            {hasRentRoll && hasT12 && hasPurchase && hasCapex && hasDebt && (
-                              <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
-                                INCLUDED
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Requires: Operating Snapshot + Purchase, Capex, Debt
-                          </p>
-                          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                            <li>Underwriting inputs for price, capex, and debt</li>
-                            <li>Base-case return summary</li>
-                            <li>Scenario highlights from provided inputs</li>
-                          </ul>
-                        </div>
-
-                        <div className="border border-slate-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-semibold text-slate-900">
-                              IC Report (Coming later)
-                            </h4>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Not available in V1. Coming later.
-                          </p>
-                          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-                            <li>Market positioning and location summary</li>
-                            <li>Risk and sensitivity highlights</li>
-                            <li>Institutional report formatting</li>
-                          </ul>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
                 </motion.div>

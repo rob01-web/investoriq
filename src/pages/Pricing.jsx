@@ -12,7 +12,7 @@ const tiers = [
     price: '$249',
     cadence: '',
     productType: 'screening',
-    description: 'Formal, lightweight institutional snapshot.',
+    description: 'Document-based screening report for initial investment review.',
     features: [
       'Based strictly on T12 + Rent Roll',
       'Formal, lightweight institutional snapshot',
@@ -26,7 +26,7 @@ const tiers = [
     cadence: '',
     productType: 'underwriting',
     highlight: true,
-    description: 'Full institutional underwriting artifact.',
+    description: 'Comprehensive, property-specific underwriting report suitable for investment committee review.',
     features: [
       'Based on T12 + Rent Roll + optional supporting documents',
       'Full institutional underwriting artifact',
@@ -150,7 +150,7 @@ export default function PricingPage() {
       <div className="min-h-screen bg-slate-50 py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: PALETTE.teal }}>
-            Early Access Pricing
+            Launch Pricing
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Simple, Transparent Pricing
@@ -161,10 +161,11 @@ export default function PricingPage() {
   </a>
 </p>
           <p className="text-lg text-[#334155] max-w-2xl mx-auto mb-10">
-  Two report types are available: Screening and Underwriting.
-  <span className="block">All outputs are deterministic and document-based, with no assumptions; missing inputs are shown as DATA NOT AVAILABLE.</span>
-  <span className="block">Revisions: Screening includes 2 total; Underwriting includes 3 total.</span>
-</p>
+            Two report types are available: Screening and Underwriting.
+            <span className="block">Reports are property-specific, document-based, and deterministic.</span>
+            <span className="block">No assumptions are made; missing or degraded inputs are disclosed as DATA NOT AVAILABLE.</span>
+            <span className="block">Revisions included: Screening 2 total; Underwriting 3 total.</span>
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {tiers.map((t) => (
@@ -179,6 +180,11 @@ export default function PricingPage() {
           </div>
 
           <p className="text-sm text-[#334155] mt-10">
+            Reports are bespoke, property-specific analyses.
+            <span className="block">Once report generation begins, refunds are not available.</span>
+            <span className="block">If generation fails due to a system error, InvestorIQ will regenerate the report at no cost.</span>
+          </p>
+          <p className="text-sm text-[#334155] mt-6">
             <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>
               Need institutional support for portfolio or fund-level diligence? Contact us.
             </span>
