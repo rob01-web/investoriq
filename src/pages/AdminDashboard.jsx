@@ -44,7 +44,7 @@ import { useToast } from "@/components/ui/use-toast";
       const res = await fetch("/api/admin/queue-metrics", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${adminRunKey}`,
+          Authorization: `Bearer ${adminRunKey.trim()}`,
         },
       });
 
@@ -575,7 +575,7 @@ import { useToast } from "@/components/ui/use-toast";
                                           method: "POST",
                                           headers: {
                                             "Content-Type": "application/json",
-                                            Authorization: `Bearer ${adminRunKey}`,
+                                            Authorization: `Bearer ${adminRunKey.trim()}`,
                                           },
                                           body: JSON.stringify({
                                             issue_id: issue.id,
@@ -613,7 +613,7 @@ import { useToast } from "@/components/ui/use-toast";
                                           method: "POST",
                                           headers: {
                                             "Content-Type": "application/json",
-                                            Authorization: `Bearer ${adminRunKey}`,
+                                            Authorization: `Bearer ${adminRunKey.trim()}`,
                                           },
                                           body: JSON.stringify({
                                             issue_id: issue.id,
@@ -654,7 +654,7 @@ import { useToast } from "@/components/ui/use-toast";
                                         method: "POST",
                                         headers: {
                                           "Content-Type": "application/json",
-                                          Authorization: `Bearer ${adminRunKey}`,
+                                          Authorization: `Bearer ${adminRunKey.trim()}`,
                                         },
                                         body: JSON.stringify({
                                           job_id: issue.job_id,

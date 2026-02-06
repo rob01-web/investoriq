@@ -9,41 +9,25 @@ export default async function handler(req, res) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
     const adminRunKey = (process.env.ADMIN_RUN_KEY || '').trim();
 
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       return res.status(500).json({
-        error: 'Server misconfigured: missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_ANON_KEY',
+        error: 'Server misconfigured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
       });
     }
 
-    const headerKeyRaw = req.headers['x-admin-run-key'];
-    const headerKey = Array.isArray(headerKeyRaw) ? headerKeyRaw[0] : headerKeyRaw || '';
-    const hasAdminKey = adminRunKey && String(headerKey).trim() === adminRunKey;
+    if (!adminRunKey) {
+      return res.status(500).json({ error: 'Unauthorized' });
+    }
 
-    if (!hasAdminKey) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length).trim()
+      : '';
 
-      if (!token) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const supabaseAuth = createClient(supabaseUrl, anonKey, {
-        auth: { persistSession: false },
-      });
-
-      const { data: userRes, error: userErr } = await supabaseAuth.auth.getUser(token);
-
-      if (userErr || !userRes?.user) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const adminEmail = 'hello@investoriq.tech';
-      if ((userRes.user.email || '').toLowerCase() !== adminEmail) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
+    if (!token || token.trim() !== adminRunKey) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
