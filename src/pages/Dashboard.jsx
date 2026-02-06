@@ -1068,7 +1068,7 @@ if (!profile?.id || !effectiveJobId) {
           </div>
           <div className="mb-6 text-xs text-slate-600">
             <div className="font-semibold text-[#0F172A]">Workflow</div>
-            <div className="mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+            <div className="mt-1 flex flex-col gap-1">
               <div>Step 1: Report type and availability</div>
               <div>Step 2: Property and documents</div>
               <div>Step 3: Generate report</div>
@@ -1201,12 +1201,16 @@ if (!profile?.id || !effectiveJobId) {
                   </div>
                 )}
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
+                  <div
+                    className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col ${
+                      selectedReportType === 'screening' ? 'opacity-50' : ''
+                    }`}
+                  >
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim()}
+                      disabled={!propertyName.trim() || selectedReportType === 'screening'}
                       onClick={async () => {
                         if (!profile) {
                           window.location.href = '/pricing';
@@ -1419,6 +1423,9 @@ if (!profile?.id || !effectiveJobId) {
                       Upload Supporting
                     </button>
                     <div className="mt-3 space-y-2">
+                      {selectedReportType === 'screening' && (
+                        <div className="text-xs text-slate-500">Not available for Screening.</div>
+                      )}
                       {otherFiles.length === 0 ? (
                         <div className="text-xs text-slate-500">No files uploaded.</div>
                       ) : (
@@ -1673,21 +1680,6 @@ if (!profile?.id || !effectiveJobId) {
               )}
             </div>
 
-            <div className="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={scopeConfirmed}
-                onChange={(event) => setScopeConfirmed(event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0F172A]"
-              />
-              <span>
-                I understand that this analysis will include only the sections supported by the documents I have uploaded.
-                One report underwrites one property. I may upload additional documents later to deepen the analysis at no
-                additional cost.
-              </span>
-            </div>
-
-            
                 </motion.div>
               </div>
             </div>
