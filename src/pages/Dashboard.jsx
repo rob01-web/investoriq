@@ -1091,22 +1091,6 @@ if (verifiedCredits < 1) {
               </p>
             </div>
 
-            <div className="text-right mt-4 sm:mt-0">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Purchase Report
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = '/pricing';
-                  }}
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
-                >
-                  Purchase report
-                </button>
-              </div>
-            </div>
           </motion.div>
           <div className="mb-6 text-xs text-slate-600">
             Reports are property-specific and non-refundable once generation begins.
@@ -1118,30 +1102,69 @@ if (verifiedCredits < 1) {
             <div>Step 3: Generate report</div>
           </div>
 
-          <div className="mb-10">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm font-semibold text-[#0F172A] mb-2">Your available reports</div>
-              <div className="text-sm text-[#334155] space-y-1">
-                <div>
-                  Screening Report:{' '}
-                  {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.screening ?? 0}`}
+          <div className="mt-8 grid gap-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportType('screening')}
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                    selectedReportType === 'screening'
+                      ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                      : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
+                  }`}
+                >
+                  Screening Report
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportType('underwriting')}
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                    selectedReportType === 'underwriting'
+                      ? 'border-[#0F172A] bg-[#0F172A] text-white'
+                      : 'border-slate-300 text-slate-600 hover:border-[#0F172A] hover:text-[#0F172A]'
+                  }`}
+                >
+                  Underwriting Report
+                </button>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-[#0F172A]">Your available reports</div>
+                  <div className="mt-2 text-sm text-slate-600">
+                    Screening Report:{' '}
+                    {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.screening ?? 0}`}
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    Underwriting Report:{' '}
+                    {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.underwriting ?? 0}`}
+                  </div>
                 </div>
-                <div>
-                  Underwriting Report:{' '}
-                  {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.underwriting ?? 0}`}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Purchase Report</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = '/pricing';
+                    }}
+                    className="mt-3 inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0d1326]"
+                  >
+                    Purchase report
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* UPLOAD SECTION */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-10"
-            id="upload-section"
-          >
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-semibold text-[#0F172A]">Step 2: Property and documents</div>
+              <div className="mt-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-10"
+                  id="upload-section"
+                >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
@@ -1672,31 +1695,6 @@ if (verifiedCredits < 1) {
               )}
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                onClick={() => setSelectedReportType('screening')}
-                className={`rounded-md border px-4 py-2 text-sm font-semibold ${
-                  selectedReportType === 'screening'
-                    ? 'border-[#0F172A] bg-[#0F172A] text-white'
-                    : 'border-slate-200 bg-white text-[#0F172A]'
-                }`}
-              >
-                Screening Report
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setSelectedReportType('underwriting')}
-                className={`rounded-md border px-4 py-2 text-sm font-semibold ${
-                  selectedReportType === 'underwriting'
-                    ? 'border-[#0F172A] bg-[#0F172A] text-white'
-                    : 'border-slate-200 bg-white text-[#0F172A]'
-                }`}
-              >
-                Underwriting Report
-              </Button>
-            </div>
-
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -1711,73 +1709,43 @@ if (verifiedCredits < 1) {
               </span>
             </div>
 
-            {/* ACTION BUTTON */}
-                        <div className="flex flex-col items-center mt-8">
-            <Button
-                size="lg"
-                onClick={handleAnalyze}
-                disabled={
-                  !propertyName.trim() ||
-                  !hasRequiredUploads ||
-                  loading ||
-                  !acknowledged ||
-                  hasBlockingJob ||
-                  !scopeConfirmed ||
-                  regenDisabled ||
-                  !jobId ||
-                  !hasRunsData
-                }
-                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-8 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing...
-                  </>
-                ) : hasBlockingJob ? (
-                  'Report In Progress'
-                ) : (
-                  runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'
-                )}
-              </Button>
-              <div className="mt-2 text-xs text-slate-600">
-                Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
+            
+                </motion.div>
               </div>
-              <div className="mt-2 text-xs font-semibold text-slate-600">
-                {regenDisabled
-                  ? 'You’ve used all available revisions for this report'
-                  : `Remaining runs: ${remainingTotal}`}
-                <span className="ml-2 text-slate-400">
-                  {hasRunsData
-                    ? `Generations ${Math.max(0, runsUsedValue + runsInflightValue)} of ${Math.max(0, runsLimitValue)}`
-                    : 'Generations: DATA NOT AVAILABLE'}
-                </span>
-              </div>
-
-              {!propertyName.trim() && (
-                <div className="mt-2 text-xs font-semibold text-red-700">
-                  Enter a property name to generate a report.
-                </div>
-              )}
-
-              {propertyName.trim() && !hasRequiredUploads && (
-                <div className="mt-2 text-xs font-semibold text-red-700">
-                  Rent Roll and T12/Operating Statement are required to start underwriting.
-                </div>
-              )}
-
-              {propertyName.trim() && hasRequiredUploads && !acknowledged && (
-                <div className="mt-2 text-xs font-semibold text-red-700">
-                  Acknowledge the disclosures to generate a report.
-                </div>
-              )}
-              {hasBlockingJob && (
-                <div className="mt-2 text-xs font-semibold text-slate-600">
-                  A report is already in progress. If Action Required appears, upload required documents and
-                  processing will resume automatically.
-                </div>
-              )}
             </div>
-          </motion.div>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm font-semibold text-[#0F172A]">Step 3: Generate report</div>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={loading || regenDisabled || !hasRunsData || !jobId || !scopeConfirmed}
+                  className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
+                    loading || regenDisabled || !hasRunsData || !jobId || !scopeConfirmed
+                      ? 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                  }`}
+                >
+                  {loading ? 'Working…' : runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'}
+                </button>
+                <div className="mt-2 text-xs text-slate-600">
+                  Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
+                </div>
+                {hasRunsData ? (
+                  <div className="mt-2 text-xs text-slate-600">
+                    Generations {runsUsedValue + runsInflightValue} of {runsLimitValue}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-slate-600">Generations: DATA NOT AVAILABLE</div>
+                )}
+                {hasRunsData && remainingTotal <= 0 ? (
+                  <div className="mt-2 text-xs text-red-700">
+                    You’ve used all available revisions for this report.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
 
                     {/* RESULT CARD */}
           {reportData && (
@@ -2213,3 +2181,4 @@ if (verifiedCredits < 1) {
     </>
   );
 }
+
