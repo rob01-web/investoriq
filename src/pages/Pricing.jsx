@@ -165,6 +165,9 @@ export default function PricingPage() {
             <span className="block">Reports are property-specific, document-based, and deterministic.</span>
             <span className="block">No assumptions are made; missing or degraded inputs are disclosed as DATA NOT AVAILABLE.</span>
             <span className="block">Revisions included: Screening 2 total; Underwriting 3 total.</span>
+            <span className="block">
+              Revisions apply to the same property and underlying document set. Submitting materially different financials requires a new report purchase.
+            </span>
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

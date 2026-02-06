@@ -1733,6 +1733,9 @@ if (!profile?.id || !effectiveJobId) {
                 ) : (
                   <div className="mt-2 text-xs text-slate-600">Generations: DATA NOT AVAILABLE</div>
                 )}
+                <div className="mt-2 text-xs text-slate-500">
+                  Revisions are limited to the same property and underlying documents. Materially different rent rolls or operating statements require a new report.
+                </div>
                 {hasRunsData && remainingTotal <= 0 ? (
                   <div className="mt-2 text-xs text-red-700">
                     You’ve used all available revisions for this report.
