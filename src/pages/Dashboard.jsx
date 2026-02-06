@@ -1078,8 +1078,8 @@ if (!profile?.id || !effectiveJobId) {
           <div className="mt-8 grid gap-4">
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-base font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
-              <div className="mt-1 text-xs text-slate-500">Select report type and confirm availability.</div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="text-xs text-slate-500">Select report type and confirm availability.</div>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
                 <div className="relative group inline-flex items-center">
                   <button
                     type="button"
@@ -1135,8 +1135,8 @@ if (!profile?.id || !effectiveJobId) {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
                   <div className="text-sm font-semibold text-[#0F172A]">Your available reports</div>
                   <div className="mt-2 text-sm text-slate-600">
                     Screening Report:{' '}
@@ -1147,7 +1147,7 @@ if (!profile?.id || !effectiveJobId) {
                     {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.underwriting ?? 0}`}
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
                   <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Purchase Report</div>
                   <button
                     type="button"
@@ -1160,7 +1160,7 @@ if (!profile?.id || !effectiveJobId) {
                   </button>
                 </div>
               </div>
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-[#0F172A]">What this report includes</div>
                   <button
@@ -1172,7 +1172,7 @@ if (!profile?.id || !effectiveJobId) {
                   </button>
                 </div>
                 {!showScopePreview ? (
-                  <div className="mt-2 text-xs text-slate-600">
+                  <div className="text-xs text-slate-600">
                     Included sections are determined strictly by the documents you upload. Missing sections render as DATA NOT AVAILABLE.
                   </div>
                 ) : (
@@ -1264,19 +1264,19 @@ if (!profile?.id || !effectiveJobId) {
                 step2Locked ? 'opacity-60' : 'opacity-100'
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-baseline justify-between">
                 <div className="text-base font-semibold text-[#0F172A]">Step 2: Property and documents</div>
                 {step2Locked ? (
-                  <div className="text-xs text-slate-500">Locked</div>
+                  <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
               </div>
-              <div className="mt-1 text-xs text-slate-500">Add property details and upload documents.</div>
-              <div className="mt-4">
+              <div className="text-xs text-slate-500">Add property details and upload documents.</div>
+              <div className="mt-5 space-y-2">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-10"
+                  className="bg-white border border-slate-200 rounded-xl p-6 md:p-10"
                   id="upload-section"
                 >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
@@ -1703,14 +1703,14 @@ if (!profile?.id || !effectiveJobId) {
                 step3Locked ? 'opacity-60' : 'opacity-100'
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-baseline justify-between">
                 <div className="text-base font-semibold text-[#0F172A]">Step 3: Generate report</div>
                 {step3Locked ? (
-                  <div className="text-xs text-slate-500">Locked</div>
+                  <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
               </div>
-              <div className="mt-1 text-xs text-slate-500">Generate your report. Missing sections render as DATA NOT AVAILABLE.</div>
-              <div className="mt-4">
+              <div className="text-xs text-slate-500">Generate your report. Missing sections render as DATA NOT AVAILABLE.</div>
+              <div className="mt-5 space-y-2">
                 <button
                   type="button"
                   onClick={handleAnalyze}
@@ -1723,21 +1723,21 @@ if (!profile?.id || !effectiveJobId) {
                 >
                   {loading ? 'Working…' : runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'}
                 </button>
-                <div className="mt-3 text-xs leading-relaxed text-slate-500">
+                <div className="text-xs leading-relaxed text-slate-500">
                   Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
                 </div>
                 {hasRunsData ? (
-                  <div className="mt-2 text-xs text-slate-600">
+                  <div className="text-xs text-slate-600">
                     Generations {runsUsedValue + runsInflightValue} of {runsLimitValue}
                   </div>
                 ) : (
-                  <div className="mt-2 text-xs text-slate-600">Generations: DATA NOT AVAILABLE</div>
+                  <div className="text-xs text-slate-600">Generations: DATA NOT AVAILABLE</div>
                 )}
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="text-xs text-slate-500">
                   Revisions are limited to the same property and underlying documents. Materially different rent rolls or operating statements require a new report.
                 </div>
                 {hasRunsData && remainingTotal <= 0 ? (
-                  <div className="mt-2 text-xs text-red-700">
+                  <div className="text-xs text-red-700">
                     You’ve used all available revisions for this report.
                   </div>
                 ) : null}
@@ -1817,7 +1817,7 @@ if (!profile?.id || !effectiveJobId) {
   usable version for this job. Please upload a Rent Roll and/or T12 (spreadsheet preferred).
 </div>
                   {errorMessage ? (
-                    <div className="mt-2 text-xs text-slate-500">Log: {errorMessage}</div>
+                    <div className="text-xs text-slate-500">Log: {errorMessage}</div>
                   ) : null}
                   <button
                     type="button"
@@ -2179,4 +2179,5 @@ if (!profile?.id || !effectiveJobId) {
     </>
   );
 }
+
 
