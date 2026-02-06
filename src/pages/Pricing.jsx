@@ -186,6 +186,7 @@ export default function PricingPage() {
             Reports are bespoke, property-specific analyses.
             <span className="block">Once report generation begins, refunds are not available.</span>
             <span className="block">If generation fails due to a system error, InvestorIQ will regenerate the report at no cost.</span>
+            <span className="block">InvestorIQ reports are analytical tools and do not constitute investment advice or an appraisal.</span>
           </p>
           <p className="text-sm text-[#334155] mt-6">
             <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>

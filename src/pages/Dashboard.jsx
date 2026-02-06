@@ -1678,8 +1678,9 @@ if (!profile?.id || !effectiveJobId) {
                 />
                 <span className="flex flex-col">
                   <span className="font-medium">
-                    I acknowledge that InvestorIQ produces document-based underwriting only, does not provide investment
-                    or appraisal advice, and will disclose any missing or degraded inputs in the final report.
+                    I acknowledge that InvestorIQ provides document-based analysis only, makes no assumptions, and
+                    discloses missing inputs as DATA NOT AVAILABLE. I acknowledge that refunds are not available once
+                    report generation begins.
                   </span>
                   <span className="mt-1 text-xs text-slate-500">
                     Accepted disclosures v2026-01-14

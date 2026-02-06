@@ -151,10 +151,11 @@ function TermsPage() {
       <p>
         Certain features of the InvestorIQ platform require the purchase of a report for a specific property.
         Each purchase creates one entitlement that is consumed when report generation is initiated.
+        Revisions apply only to the same property and the underlying document set. Submitting materially different rent rolls, T12s, or a different property requires a new report purchase.
 
         Because InvestorIQ provides bespoke, property-specific analytical artifacts generated from documents you provide, refunds are not available once report generation begins.
 
-        If a report fails to generate or is incomplete due to a system or processing error caused by InvestorIQ, InvestorIQ will regenerate the report for the same property at no additional cost. This regeneration is the sole remedy for such situations and does not constitute a cash refund.
+        If a report fails to generate or is incomplete due to a system or processing error caused by InvestorIQ, InvestorIQ will regenerate the report for the same property at no additional cost. This regeneration is the sole remedy for such situations and does not constitute a cash refund. Regeneration is not available for failures caused by document quality or missing inputs.
 
         Users are responsible for ensuring the accuracy, completeness, and suitability of uploaded documents prior to initiating report generation.
       </p>
