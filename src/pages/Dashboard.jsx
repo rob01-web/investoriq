@@ -1174,16 +1174,6 @@ if (!profile?.id || !effectiveJobId) {
                     </ul>
                   </div>
                 </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
