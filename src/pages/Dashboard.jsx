@@ -1101,7 +1101,7 @@ if (!profile?.id || !effectiveJobId) {
                 <span className="text-[#1F8A8A] font-semibold">Property IQ Report</span>.
               </p>
             </div>
-
+          </div>
           </motion.div>
           <div className="mb-6 text-xs text-slate-600">
             Reports are property-specific and non-refundable once generation begins.
@@ -1544,6 +1544,7 @@ if (!profile?.id || !effectiveJobId) {
                       )}
                     </div>
                   </div>
+                </div>
               </div>
 
             {selectedReportType === 'underwriting' && (
