@@ -1084,7 +1084,7 @@ if (!profile?.id || !effectiveJobId) {
       </Helmet>
 
       <div className="min-h-screen bg-slate-50 p-4 sm:p-8 flex flex-col">
-        <div className="max-w-6xl w-full mx-auto flex-grow">
+        <div className="max-w-7xl w-full mx-auto flex-grow">
           {/* HEADER */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1318,8 +1318,8 @@ if (!profile?.id || !effectiveJobId) {
                   className="bg-white border border-slate-200 rounded-xl p-6 md:p-10"
                   id="upload-section"
                 >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-              <div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-4 lg:col-start-9 space-y-6">
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
 
 <div className="mb-4">
@@ -1363,7 +1363,7 @@ if (!profile?.id || !effectiveJobId) {
                 </p>
               </div>
 
-              <div className="w-full">
+              <div className="lg:col-span-8 lg:col-start-1 space-y-6">
                 {!propertyName.trim() && (
                   <div className="mb-2 text-xs font-semibold text-slate-600">
                     Enter a property name to enable uploads.
@@ -1544,10 +1544,8 @@ if (!profile?.id || !effectiveJobId) {
                     </div>
                   </div>
                 </div>
-              </div>
-
             {selectedReportType === 'underwriting' && (
-              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-semibold text-[#0F172A]">
                     Supporting documents (recommended)
@@ -1690,39 +1688,11 @@ if (!profile?.id || !effectiveJobId) {
                 </div>
               </div>
             )}
+              </div>
 
-            <input
-              id="rentRollInput"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-              onChange={(e) => handleUpload(e, 'rent_roll')}
-              className="hidden"
-            />
-
-            <input
-              id="t12Input"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-              onChange={(e) => handleUpload(e, 't12')}
-              className="hidden"
-            />
-
-            {supportingDocTypes.map((doc) => (
-              <input
-                key={doc.slug}
-                id={`supporting-${doc.slug}-input`}
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-                onChange={(e) => handleUpload(e, doc.slug)}
-                className="hidden"
-              />
-            ))}
-
+              <div className="lg:col-span-4 lg:col-start-9 space-y-6">
             {/* DISCLAIMER */}
-            <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
+            <div className="bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-[#1F8A8A] flex-shrink-0 mt-[2px]" />
               <span>
                 <strong className="text-[#0F172A]">Note:</strong> Report accuracy depends on the completeness and clarity
@@ -1730,7 +1700,7 @@ if (!profile?.id || !effectiveJobId) {
               </span>
             </div>
 
-            <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
               <label className="flex items-start gap-3 text-sm text-slate-700">
                 <input
                   type="checkbox"
@@ -1788,8 +1758,38 @@ if (!profile?.id || !effectiveJobId) {
                 </span>
               </label>
             </div>
+              </div>
 
               </div>
+            <input
+              id="rentRollInput"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 'rent_roll')}
+              className="hidden"
+            />
+
+            <input
+              id="t12Input"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 't12')}
+              className="hidden"
+            />
+
+            {supportingDocTypes.map((doc) => (
+              <input
+                key={doc.slug}
+                id={`supporting-${doc.slug}-input`}
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+                onChange={(e) => handleUpload(e, doc.slug)}
+                className="hidden"
+              />
+            ))}
             </motion.div>
             </div>
           </div>
