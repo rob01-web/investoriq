@@ -2270,6 +2270,7 @@ if (!profile?.id || !effectiveJobId) {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }
