@@ -69,6 +69,153 @@ export default async function handler(req, res) {
       });
     }
 
+    const action = req.body?.action;
+    if (action === 'regenerate_pdf') {
+      const jobId = req.body?.job_id;
+      const reason = req.body?.reason || null;
+      if (typeof jobId !== 'string' || !jobId.trim()) {
+        return res.status(400).json({ ok: false });
+      }
+
+      const vercelUrl = process.env.VERCEL_URL || '';
+      const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+      const host = req.headers.host || '';
+      let baseUrl = '';
+      if (vercelUrl) {
+        baseUrl = `https://${vercelUrl}`;
+      } else if (publicSiteUrl) {
+        baseUrl = publicSiteUrl.startsWith('http://') || publicSiteUrl.startsWith('https://')
+          ? publicSiteUrl
+          : `https://${publicSiteUrl}`;
+      } else if (host) {
+        baseUrl = `https://${host}`;
+      } else {
+        return res.status(500).json({ ok: false, error: 'BASE_URL_UNAVAILABLE' });
+      }
+      const internalRegenKey = process.env.INTERNAL_REGEN_KEY || '';
+      if (!internalRegenKey) {
+        return res.status(500).json({ ok: false, error: 'INTERNAL_REGEN_KEY_MISSING' });
+      }
+
+      let regenResultStatus = 'error';
+      let regenResponse = null;
+      let regenErrorDetails = null;
+      try {
+        const regenRes = await fetch(`${baseUrl}/api/generate-client-report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-admin-regen': internalRegenKey,
+          },
+          body: JSON.stringify({
+            job_id: jobId,
+            admin_regen: true,
+            reason,
+          }),
+        });
+
+        if (!regenRes.ok) {
+          const rawText = await regenRes.text();
+          regenErrorDetails = rawText;
+          regenResultStatus = 'error';
+          const docraptorMode = process.env.DOCRAPTOR_TEST_MODE ? 'test' : 'production';
+          supabase
+            .from('analysis_job_events')
+            .insert([
+              {
+                job_id: jobId,
+                actor: 'admin',
+                event_type: 'admin_regenerate_pdf',
+                from_status: null,
+                to_status: null,
+                created_at: new Date().toISOString(),
+                meta: {
+                  route: '/api/admin/run-eligible-jobs-once',
+                  job_id: jobId,
+                  reason,
+                  result_status: 'error',
+                  docraptor_mode: docraptorMode,
+                },
+              },
+            ])
+            .catch(() => {});
+          return res.status(502).json({
+            ok: false,
+            job_id: jobId,
+            error: 'PDF regeneration failed',
+            details: regenErrorDetails,
+          });
+        }
+
+        regenResultStatus = 'success';
+        regenResponse = await regenRes.json().catch(() => ({}));
+      } catch (err) {
+        regenResultStatus = 'error';
+        regenErrorDetails = err?.message || 'PDF regeneration failed';
+        const docraptorMode = process.env.DOCRAPTOR_TEST_MODE ? 'test' : 'production';
+        supabase
+          .from('analysis_job_events')
+          .insert([
+            {
+              job_id: jobId,
+              actor: 'admin',
+              event_type: 'admin_regenerate_pdf',
+              from_status: null,
+              to_status: null,
+              created_at: new Date().toISOString(),
+              meta: {
+                route: '/api/admin/run-eligible-jobs-once',
+                job_id: jobId,
+                reason,
+                result_status: 'error',
+                docraptor_mode: docraptorMode,
+              },
+            },
+          ])
+          .catch(() => {});
+        return res.status(502).json({
+          ok: false,
+          job_id: jobId,
+          error: 'PDF regeneration failed',
+          details: regenErrorDetails,
+        });
+      }
+
+      const docraptorMode = process.env.DOCRAPTOR_TEST_MODE ? 'test' : 'production';
+      let warning = null;
+      try {
+        const { error: regenEventErr } = await supabase
+          .from('analysis_job_events')
+          .insert([
+            {
+              job_id: jobId,
+              actor: 'admin',
+              event_type: 'admin_regenerate_pdf',
+              from_status: null,
+              to_status: null,
+              created_at: new Date().toISOString(),
+              meta: {
+                route: '/api/admin/run-eligible-jobs-once',
+                job_id: jobId,
+                reason,
+                result_status: regenResultStatus,
+                docraptor_mode: docraptorMode,
+              },
+            },
+          ]);
+        if (regenEventErr) {
+          warning = 'Failed to log admin_regenerate_pdf event';
+        }
+      } catch (err) {
+        warning = 'Failed to log admin_regenerate_pdf event';
+      }
+
+      return res.json({
+        ...(regenResponse || {}),
+        ...(warning ? { warning } : {}),
+      });
+    }
+
     const dryRun = req.body?.dry_run !== false;
     const forceJobId = req.body?.job_id;
     if (forceJobId !== undefined) {

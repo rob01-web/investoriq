@@ -147,6 +147,16 @@ function stripChartBlockByAlt(html, altText) {
   return html.replace(re, "");
 }
 
+function constantTimeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
   const rows = unitMix
@@ -658,30 +668,52 @@ export default async function handler(req, res) {
   let slotJobId = null;
   let generationSucceeded = false;
   try {
+    const body = req.body || {};
+    const isAdminRegen = body?.admin_regen === true;
+    if (isAdminRegen) {
+      const internalKey = (process.env.INTERNAL_REGEN_KEY || "").trim();
+      if (!internalKey) {
+        return res
+          .status(500)
+          .json({ error: "Server misconfigured: missing INTERNAL_REGEN_KEY" });
+      }
+      const regenHeaderRaw = req.headers["x-internal-admin-regen"];
+      const regenHeader = Array.isArray(regenHeaderRaw)
+        ? regenHeaderRaw[0]
+        : regenHeaderRaw;
+      const provided = (typeof regenHeader === "string" ? regenHeader : "").trim();
+      if (!provided || !constantTimeEqual(provided, internalKey)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+    }
+
     const adminRunKey = (process.env.ADMIN_RUN_KEY || "").trim();
     let headerKey = req.headers["x-admin-run-key"];
     if (Array.isArray(headerKey)) headerKey = headerKey[0];
     headerKey = (typeof headerKey === "string" ? headerKey : "").trim();
 
-    if (!adminRunKey) {
-      return res
-        .status(500)
-        .json({ error: "Server misconfigured: missing ADMIN_RUN_KEY" });
-    }
+    if (!isAdminRegen) {
+      if (!adminRunKey) {
+        return res
+          .status(500)
+          .json({ error: "Server misconfigured: missing ADMIN_RUN_KEY" });
+      }
 
-    if (!headerKey || headerKey !== adminRunKey) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        hint: "bad admin key",
-        has_header: Boolean(headerKey),
-        env_key_len: adminRunKey.length,
-        header_key_len: headerKey.length,
-      });
+      if (!headerKey || headerKey !== adminRunKey) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          hint: "bad admin key",
+          has_header: Boolean(headerKey),
+          env_key_len: adminRunKey.length,
+          header_key_len: headerKey.length,
+        });
+      }
     }
 
     // 1. Parse input JSON (structured)
-    const body = req.body || {};
-    const { userId, property_name, jobId } = body;
+    const { userId: bodyUserId, property_name } = body;
+    const jobId = body?.job_id || body?.jobId;
+    let effectiveUserId = bodyUserId || null;
     const allowedReportTypes = ["screening", "underwriting", "ic"];
     let jobReportType = null;
     let jobUserId = null;
@@ -693,8 +725,19 @@ export default async function handler(req, res) {
         .maybeSingle();
       jobReportType = jobRow?.report_type || null;
       jobUserId = jobRow?.user_id || null;
-      if (jobUserId && userId && jobUserId !== userId) {
+      if (jobUserId && effectiveUserId && jobUserId !== effectiveUserId) {
         return res.status(403).json({ error: "Job ownership mismatch" });
+      }
+    }
+    if (isAdminRegen) {
+      if (typeof jobId !== "string" || !jobId.trim()) {
+        return res.status(400).json({ error: "job_id is required" });
+      }
+      if (!effectiveUserId) {
+        if (!jobUserId) {
+          return res.status(404).json({ error: "Job not found" });
+        }
+        effectiveUserId = jobUserId;
       }
     }
     const rawReportType = String(
@@ -709,7 +752,7 @@ export default async function handler(req, res) {
     if (jobId) {
       const { data: claimData, error: claimErr } = await supabase.rpc(
         "claim_generation_slot",
-        { p_job_id: jobId, p_user_id: userId }
+        { p_job_id: jobId, p_user_id: effectiveUserId }
       );
       if (claimErr) {
         return res
@@ -728,7 +771,7 @@ export default async function handler(req, res) {
       ...(Array.isArray(body.instructions) ? body.instructions : []),
     ];
 
-    if (!userId) {
+    if (!effectiveUserId) {
       return res.status(400).json({ error: "Missing userId" });
     }
 
@@ -739,7 +782,7 @@ export default async function handler(req, res) {
         .from("analysis_artifacts")
         .insert({
           job_id: jobId || null,
-          user_id: userId,
+          user_id: effectiveUserId,
           type: "worker_event",
           bucket: "system",
           object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/prompt_version_applied/${safeTimestamp}.json`,
@@ -1392,7 +1435,7 @@ export default async function handler(req, res) {
         .insert([
           {
             job_id: jobId || null,
-            user_id: userId || null,
+            user_id: effectiveUserId || null,
             type: "worker_event",
             bucket: "internal",
             object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/sentence_integrity_warning/${safeTimestamp}.json`,
@@ -1427,7 +1470,7 @@ try {
   const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
     {
       job_id: jobId || null,
-      user_id: userId || null,
+      user_id: effectiveUserId || null,
       type: "worker_event",
       bucket: "internal",
       object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/report_html_integrity/${integrityTimestamp}.json`,
@@ -1457,7 +1500,7 @@ if (!hasClosingHtml) {
     await supabase.from("analysis_artifacts").insert([
       {
         job_id: jobId || null,
-        user_id: userId || null,
+        user_id: effectiveUserId || null,
         type: "report_html_truncated",
         bucket: "internal",
         object_path: `analysis_jobs/${jobId || "unknown"}/report_html_truncated/${truncatedTimestamp}.json`,
@@ -1498,7 +1541,7 @@ if (!hasSectionTwelve) {
     await supabase.from("analysis_artifacts").insert([
       {
         job_id: jobId || null,
-        user_id: userId || null,
+        user_id: effectiveUserId || null,
         type: "report_html_incomplete",
         bucket: "internal",
         object_path: `analysis_jobs/${jobId || "unknown"}/report_html_incomplete/${incompleteTimestamp}.json`,
@@ -1539,7 +1582,7 @@ try {
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",
     {
-      test: true, // keep true until you're ready to burn real (non-watermark) credits
+      test: process.env.DOCRAPTOR_TEST_MODE ? true : false,
       document_content: htmlString,
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",
@@ -1565,7 +1608,7 @@ try {
     const { data: reportRow, error: reportCreateError } = await supabase
       .from("reports")
       .insert({
-  user_id: userId,
+  user_id: effectiveUserId,
   property_name: property_name || "Unknown Property",
   storage_path: "pending",
 })
@@ -1580,7 +1623,7 @@ try {
     const reportId = reportRow.id;
 
     // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
-    const storagePath = `${userId}/${reportId}.pdf`;
+    const storagePath = `${effectiveUserId}/${reportId}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from("generated_reports")
@@ -1632,7 +1675,7 @@ try {
       try {
         await supabase.rpc("finalize_generation_slot", {
           p_job_id: slotJobId,
-          p_user_id: userId,
+          p_user_id: effectiveUserId,
           p_success: generationSucceeded,
         });
       } catch (finalizeErr) {
