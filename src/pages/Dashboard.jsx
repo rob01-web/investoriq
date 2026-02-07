@@ -1331,16 +1331,12 @@ if (!profile?.id || !effectiveJobId) {
                   </div>
                 )}
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div
-                    className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col ${
-                      selectedReportType === 'screening' ? 'opacity-50' : ''
-                    }`}
-                  >
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim() || selectedReportType === 'screening'}
+                      disabled={!propertyName.trim()}
                       onClick={async () => {
                         if (!profile) {
                           window.location.href = '/pricing';
@@ -1421,14 +1417,18 @@ if (!profile?.id || !effectiveJobId) {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
+                  <div
+                    className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col ${
+                      selectedReportType === 'screening' ? 'opacity-50' : ''
+                    }`}
+                  >
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">
                       T12 (Operating Statement)
                     </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim()}
+                      disabled={!propertyName.trim() || selectedReportType === 'screening'}
                       onClick={async () => {
                         if (!profile) {
                           window.location.href = '/pricing';

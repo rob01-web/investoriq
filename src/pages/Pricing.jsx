@@ -44,18 +44,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
       className={`bg-white rounded-lg border ${tier.highlight ? 'border-[1.5px]' : 'border-slate-200'} p-8 flex flex-col shadow-sm`}
       style={tier.highlight ? { borderColor: PALETTE.teal } : {}}
     >
-      {tier.highlight && (
-        <div
-          className="mb-3 inline-flex self-center px-3 py-1 rounded-full text-xs font-bold border border-slate-200 bg-slate-50"
-          style={{
-            backgroundColor: `${PALETTE.teal}20`,
-            color: PALETTE.teal,
-          }}
-        >
-          Most Popular
-        </div>
-      )}
-
       <h3 className="text-2xl font-bold text-center mb-2" style={{ color: PALETTE.deepNavy }}>
         {tier.title}
       </h3>
