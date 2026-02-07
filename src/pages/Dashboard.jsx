@@ -366,7 +366,47 @@ const POLICY_VERSION = 'v2026-01-14';
 
 const rentRollFiles = uploadedFiles.filter((item) => item.docType === 'rent_roll');
 const t12Files = uploadedFiles.filter((item) => item.docType === 't12');
-const otherFiles = uploadedFiles.filter((item) => item.docType === 'other');
+const supportingDocGroups = [
+  {
+    title: 'Offering & diligence',
+    docs: [
+      { slug: 'om', label: 'Offering Memorandum (OM)' },
+      { slug: 'appraisal', label: 'Appraisal' },
+      { slug: 'pca', label: 'PCA (Property Condition Assessment)' },
+      { slug: 'esa_phase_1', label: 'ESA Phase I' },
+      { slug: 'esa_phase_2', label: 'ESA Phase II' },
+      { slug: 'survey_site_plan', label: 'Survey / Site Plan' },
+    ],
+  },
+  {
+    title: 'Operating & maintenance',
+    docs: [
+      { slug: 'utility_bills', label: 'Utility Bills (12–24 months)' },
+      { slug: 'property_tax', label: 'Property Tax Bill / Assessment' },
+      { slug: 'insurance_loss_runs', label: 'Insurance Loss Runs' },
+      { slug: 'service_contracts', label: 'Service Contracts (HVAC / Elevator / etc.)' },
+      { slug: 'capex_history', label: 'CapEx History / Invoices' },
+    ],
+  },
+  {
+    title: 'Capital & leases',
+    docs: [
+      { slug: 'lease_abstracts', label: 'Lease Abstracts / Major Leases' },
+      { slug: 'renovation_scope_bid', label: 'Unit Renovation Scope / Bid' },
+      { slug: 'gc_proposal', label: 'GC Proposal / Contractor Bid' },
+      { slug: 'property_photos', label: 'Property Photos / Inspection Package' },
+    ],
+  },
+  {
+    title: 'Legal & compliance',
+    docs: [
+      { slug: 'certificates_of_occupancy', label: 'Certificates of Occupancy' },
+      { slug: 'zoning_compliance', label: 'Zoning / Compliance Letter' },
+      { slug: 'litigation_claims', label: 'Litigation / Claims Summary' },
+    ],
+  },
+];
+const supportingDocTypes = supportingDocGroups.flatMap((group) => group.docs);
 const hasRequiredUploads = rentRollFiles.length > 0 && t12Files.length > 0;
 const hasRentRoll = rentRollFiles.length > 0;
 const hasT12 = t12Files.length > 0;
@@ -1134,6 +1174,16 @@ if (!profile?.id || !effectiveJobId) {
                     </ul>
                   </div>
                 </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -1417,18 +1467,14 @@ if (!profile?.id || !effectiveJobId) {
                     </div>
                   </div>
 
-                  <div
-                    className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col ${
-                      selectedReportType === 'screening' ? 'opacity-50' : ''
-                    }`}
-                  >
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">
                       T12 (Operating Statement)
                     </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim() || selectedReportType === 'screening'}
+                      disabled={!propertyName.trim()}
                       onClick={async () => {
                         if (!profile) {
                           window.location.href = '/pricing';
@@ -1508,98 +1554,152 @@ if (!profile?.id || !effectiveJobId) {
                       )}
                     </div>
                   </div>
+              </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
-                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Optional</div>
-                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">Other / Supporting</div>
-                    <button
-                      type="button"
-                      disabled={!propertyName.trim()}
-                      onClick={async () => {
-                        if (!profile) {
-                          window.location.href = '/pricing';
-                          return;
-                        }
-
-                        if (!propertyName.trim()) {
-                          toast({
-                            title: 'Property name required',
-                            description: 'Enter a property name before uploading documents.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-
-                        if (!acknowledged) {
-                          toast({
-                            title: 'Acknowledgement required',
-                            description:
-                              'Please acknowledge the document-based limitations before uploading files.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-
-                        document.getElementById('otherDocsInput')?.click();
-                      }}
-                      className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
-                        ${
-                          propertyName.trim()
-                            ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
-                            : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
-                    >
-                      <UploadCloud className="h-4 w-4" />
-                      Upload Supporting
-                    </button>
-                    <div className="mt-3 space-y-2">
-                      {selectedReportType === 'screening' && (
-                        <div className="text-xs text-slate-500">Not available for Screening.</div>
-                      )}
-                      {otherFiles.length === 0 ? (
-                        <div className="text-xs text-slate-500">No files uploaded.</div>
-                      ) : (
-                        otherFiles.map((entry, index) => (
-                          <div
-                            key={`${entry.file.name}-${index}`}
-                            className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate text-xs font-semibold text-[#0F172A]">
-                                {entry.file.name}
-                              </div>
-                              <div className="text-[10px] text-slate-500">
-                                {entry.file.size < 1024 * 1024
-                                  ? `${(entry.file.size / 1024).toFixed(2)} KB`
-                                  : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setUploadedFiles((prev) =>
-                                  prev.filter(
-                                    (item) =>
-                                      !(
-                                        item.docType === 'other' &&
-                                        item.file?.name === entry.file.name &&
-                                        item.file?.size === entry.file.size
-                                      )
-                                  )
-                                )
-                              }
-                              className="text-xs font-bold text-red-700 hover:text-red-900"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))
-                      )}
+            {selectedReportType === 'underwriting' && (
+              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-[#0F172A]">
+                    Supporting documents (recommended)
+                  </h4>
+                  <div className="relative group">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500">
+                      i
+                    </span>
+                    <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      <div className="text-xs font-semibold text-[#0F172A]">
+                        Supporting documents (recommended)
+                      </div>
+                      <ul className="mt-2 list-disc pl-4 text-slate-600">
+                        <li>
+                          Upload any available supporting materials to improve coverage and
+                          reduce DATA NOT AVAILABLE sections.
+                        </li>
+                        <li>
+                          InvestorIQ does not assume missing information.
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload what you have. Missing inputs render as DATA NOT AVAILABLE.
+                </p>
+
+                <div className="mt-4 space-y-5">
+                  {supportingDocGroups.map((group) => (
+                    <div key={group.title}>
+                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        {group.title}
+                      </div>
+                      <div className="mt-2 space-y-3">
+                        {group.docs.map((doc) => {
+                          const docFiles = uploadedFiles.filter(
+                            (entry) => entry.docType === doc.slug
+                          );
+                          return (
+                            <div
+                              key={doc.slug}
+                              className="rounded-lg border border-slate-200 bg-white p-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-sm font-semibold text-[#0F172A]">
+                                  {doc.label}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!profile) {
+                                      window.location.href = '/pricing';
+                                      return;
+                                    }
+
+                                    if (!propertyName.trim()) {
+                                      toast({
+                                        title: 'Property name required',
+                                        description:
+                                          'Enter a property name before uploading documents.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
+
+                                    if (!acknowledged) {
+                                      toast({
+                                        title: 'Acknowledgement required',
+                                        description:
+                                          'Please acknowledge the document-based limitations before uploading files.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
+
+                                    document
+                                      .getElementById(`supporting-${doc.slug}-input`)
+                                      ?.click();
+                                  }}
+                                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
+                                    ${
+                                      propertyName.trim()
+                                        ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                                        : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                  <UploadCloud className="h-4 w-4" />
+                                  {docFiles.length > 0 ? 'Replace' : 'Upload'}
+                                </button>
+                              </div>
+
+                              <div className="mt-2 space-y-2">
+                                {docFiles.length === 0 ? (
+                                  <div className="text-xs text-slate-500">No file uploaded.</div>
+                                ) : (
+                                  docFiles.map((entry, index) => (
+                                    <div
+                                      key={`${entry.file.name}-${index}`}
+                                      className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="truncate text-xs font-semibold text-[#0F172A]">
+                                          {entry.file.name}
+                                        </div>
+                                        <div className="text-[10px] text-slate-500">
+                                          {entry.file.size < 1024 * 1024
+                                            ? `${(entry.file.size / 1024).toFixed(2)} KB`
+                                            : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setUploadedFiles((prev) =>
+                                            prev.filter(
+                                              (item) =>
+                                                !(
+                                                  item.docType === doc.slug &&
+                                                  item.file?.name === entry.file.name &&
+                                                  item.file?.size === entry.file.size
+                                                )
+                                            )
+                                          )
+                                        }
+                                        className="text-xs font-bold text-red-700 hover:text-red-900"
+                                      >
+                                        ??
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <input
               id="rentRollInput"
@@ -1619,14 +1719,17 @@ if (!profile?.id || !effectiveJobId) {
               className="hidden"
             />
 
-            <input
-              id="otherDocsInput"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-              onChange={(e) => handleUpload(e, 'other')}
-              className="hidden"
-            />
+            {supportingDocTypes.map((doc) => (
+              <input
+                key={doc.slug}
+                id={`supporting-${doc.slug}-input`}
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+                onChange={(e) => handleUpload(e, doc.slug)}
+                className="hidden"
+              />
+            ))}
 
             {/* DISCLAIMER */}
             <div className="mt-6 bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
