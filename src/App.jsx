@@ -396,7 +396,25 @@ export default function App() {
         path="/sample-report"
         element={
           <MainLayout>
-            <SampleReport />
+            <SampleReport sampleTitle="Sample Report" sampleUrl="/reports/sample.pdf" />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/sample-report/screening"
+        element={
+          <MainLayout>
+            <SampleReport sampleTitle="Screening Sample Report" sampleUrl="/samples/screening-sample.pdf" />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/sample-report/underwriting"
+        element={
+          <MainLayout>
+            <SampleReport sampleTitle="Underwriting Sample Report" sampleUrl="/samples/underwriting-sample.pdf" />
           </MainLayout>
         }
       />

@@ -5,13 +5,10 @@ import { PALETTE } from "@/lib/utils";
 export default function About() {
   return (
     <MainLayout>
-      <div
-        className="min-h-screen px-6 py-16"
-        style={{ backgroundColor: PALETTE.paper }}
-      >
-        <div className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl p-10">
+      <div className="min-h-screen bg-slate-50 px-4 sm:px-8 py-16">
+        <div className="max-w-6xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl p-10">
           <div className="mb-6">
-            <h1 className="text-3xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
+            <h1 className="text-4xl md:text-5xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
               About InvestorIQ
             </h1>
           </div>

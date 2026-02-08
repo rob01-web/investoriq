@@ -1,13 +1,12 @@
-export default function SampleReport() {
-  const IS_SAMPLE_REPORT = false;
+export default function SampleReport({ sampleTitle = "Sample Report", sampleUrl = "/reports/sample.pdf" }) {
   const handleViewReport = () => {
-    window.open("/reports/sample.pdf", "_blank");
+    window.open(sampleUrl, "_blank");
   };
 
   return (
     <div className="flex flex-col items-center justify-center h-screen text-center px-6">
       <h1 className="text-3xl font-semibold text-slate-800 mb-2">
-        InvestorIQ{IS_SAMPLE_REPORT ? " Sample Report" : ""}
+        InvestorIQ {sampleTitle}
       </h1>
 
       <p className="text-slate-600 mb-6 max-w-md">
@@ -19,7 +18,7 @@ export default function SampleReport() {
         onClick={handleViewReport}
         className="px-6 py-3 bg-black text-white rounded-xl hover:opacity-90 transition"
       >
-        {IS_SAMPLE_REPORT ? "View Sample Report" : "View Report"}
+        View Sample Report
       </button>
     </div>
   );
