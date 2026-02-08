@@ -42,10 +42,10 @@ export default function SignUpPage() {
         transition={{ duration: 0.5 }}
         className="max-w-md w-full mx-auto bg-white rounded-2xl p-10 border border-slate-200"
       >
-        <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 text-center mb-2">
           Secure access
         </h1>
-        <p className="text-[#334155] text-center mb-8">
+        <p className="text-slate-600 text-center mb-8">
           Access your InvestorIQ account.
         </p>
 
@@ -117,7 +117,7 @@ export default function SignUpPage() {
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Account...
               </>
             ) : (
-              "Sign Up"
+              "Create account"
             )}
           </Button>
         </form>

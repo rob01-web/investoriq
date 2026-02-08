@@ -58,7 +58,7 @@ function LegalShell({ title, effectiveLabel, children }) {
         className="min-h-screen px-6 py-16"
         style={{ backgroundColor: PALETTE.paper }}
       >
-        <div className="max-w-6xl mx-auto bg-white border border-slate-200 rounded-2xl p-10">
+        <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
               {title}
@@ -74,7 +74,7 @@ function LegalShell({ title, effectiveLabel, children }) {
             This page outlines the terms governing use of InvestorIQ.
           </div>
 
-          <div className="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <div className="space-y-6 text-slate-700 text-sm leading-7">
   {children}
 </div>
 

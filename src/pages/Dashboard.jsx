@@ -1116,7 +1116,7 @@ if (!profile?.id || !effectiveJobId) {
 
           <div className="mt-8 grid gap-4">
             <div className="rounded-xl border border-slate-200 bg-white p-6">
-              <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 1: Report type and availability</div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-slate-700">Step 1: Report type and availability</div>
               <div className="text-xs text-slate-500">Select report type and confirm availability.</div>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <div className="relative group inline-flex items-center">
@@ -1304,7 +1304,7 @@ if (!profile?.id || !effectiveJobId) {
               }`}
             >
               <div className="flex items-baseline justify-between">
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 2: Property and documents</div>
+                <div className="text-xs font-semibold uppercase tracking-widest text-slate-700">Step 2: Property and documents</div>
                 {step2Locked ? (
                   <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
@@ -1799,7 +1799,7 @@ if (!profile?.id || !effectiveJobId) {
               }`}
             >
               <div className="flex items-baseline justify-between">
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 3: Generate report</div>
+                <div className="text-xs font-semibold uppercase tracking-widest text-slate-700">Step 3: Generate report</div>
                 {step3Locked ? (
                   <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
@@ -1846,7 +1846,7 @@ if (!profile?.id || !effectiveJobId) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="mt-12 bg-white rounded-xl border border-slate-200 p-8 text-center"
+              className="mt-10 bg-white rounded-xl border border-slate-200 p-8 text-center"
             >
               <h3 className="text-2xl font-bold text-[#0F172A] mb-2">
                 Report Generated Successfully
@@ -1888,7 +1888,7 @@ if (!profile?.id || !effectiveJobId) {
       </div>
     )}
 
-    <div className="overflow-hidden bg-white border border-slate-200 rounded-xl divide-y">
+    <div className="overflow-hidden border border-slate-200 rounded-xl divide-y">
       {inProgressJobs.map((job) => {
         const jobEvent = jobEvents[job.id];
         const eventName = jobEvent?.payload?.event || '';
@@ -2000,7 +2000,7 @@ if (!profile?.id || !effectiveJobId) {
             <h2 className="text-xl font-bold text-[#0F172A] mb-6">
               Recent Property IQ Reports
             </h2>
-            <div className="overflow-hidden bg-white border border-slate-200 rounded-xl">
+            <div className="overflow-hidden border border-slate-200 rounded-xl">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>

@@ -4,7 +4,7 @@ export default function SampleReport({ sampleTitle = "Sample Report", sampleUrl 
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen text-center px-6">
+    <div className="max-w-6xl w-full mx-auto flex flex-col items-center justify-center h-screen text-center px-6">
       <h1 className="text-3xl font-semibold text-slate-800 mb-2">
         InvestorIQ {sampleTitle}
       </h1>
