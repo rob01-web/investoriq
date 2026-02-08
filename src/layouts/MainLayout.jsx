@@ -19,6 +19,20 @@ export default function MainLayout({ children, showFooter = true }) {
 
             <div className="flex space-x-6">
               <Link
+                to="/about"
+                className="hover:text-slate-900 transition-colors"
+              >
+                About
+              </Link>
+
+              <Link
+                to="/contact"
+                className="hover:text-slate-900 transition-colors"
+              >
+                Contact
+              </Link>
+
+              <Link
                 to="/terms"
                 className="hover:text-slate-900 transition-colors"
               >

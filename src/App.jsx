@@ -13,6 +13,8 @@ import AdminDashboard from '@/pages/AdminDashboard';
 import LoginPage from '@/pages/Login';
 import SignUpPage from '@/pages/SignUp';
 import SampleReport from '@/pages/SampleReport';
+import Contact from '@/pages/Contact';
+import About from '@/pages/About';
 
 // ✅ ADD THIS
 import PricingPage from '@/pages/Pricing';
@@ -405,6 +407,24 @@ export default function App() {
         element={
           <MainLayout>
             <PricingPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/contact"
+        element={
+          <MainLayout>
+            <Contact />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/about"
+        element={
+          <MainLayout>
+            <About />
           </MainLayout>
         }
       />
