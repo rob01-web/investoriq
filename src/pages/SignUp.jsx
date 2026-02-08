@@ -35,19 +35,18 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-white px-6">
+    <div className="min-h-screen flex flex-col justify-center bg-slate-50 px-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full mx-auto bg-white shadow-2xl rounded-2xl p-10 border border-slate-200"
+        className="max-w-md w-full mx-auto bg-white rounded-2xl p-10 border border-slate-200"
       >
         <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
-          Create Your Account
+          Secure access
         </h1>
         <p className="text-[#334155] text-center mb-8">
-          Join <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> to generate
-          document-based Property IQ Reports.
+          Access your InvestorIQ account.
         </p>
 
         <form onSubmit={handleSignUp} className="space-y-6">

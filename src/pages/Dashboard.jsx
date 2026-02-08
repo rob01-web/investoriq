@@ -1115,8 +1115,8 @@ if (!profile?.id || !effectiveJobId) {
           </div>
 
           <div className="mt-8 grid gap-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-base font-semibold text-[#0F172A]">Step 1: Report type and availability</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 1: Report type and availability</div>
               <div className="text-xs text-slate-500">Select report type and confirm availability.</div>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <div className="relative group inline-flex items-center">
@@ -1215,7 +1215,7 @@ if (!profile?.id || !effectiveJobId) {
                     Included sections are determined strictly by the documents you upload. Missing sections render as DATA NOT AVAILABLE.
                   </div>
                 ) : (
-                  <div className="mt-4 bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                  <div className="mt-4 bg-white border border-slate-200 rounded-xl p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h3 className="text-lg font-semibold text-slate-900">
@@ -1299,12 +1299,12 @@ if (!profile?.id || !effectiveJobId) {
               </div>
             </div>
             <div
-              className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-opacity ${
+              className={`rounded-xl border border-slate-200 bg-white p-6 transition-opacity ${
                 step2Locked ? 'opacity-60' : 'opacity-100'
               }`}
             >
               <div className="flex items-baseline justify-between">
-                <div className="text-base font-semibold text-[#0F172A]">Step 2: Property and documents</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 2: Property and documents</div>
                 {step2Locked ? (
                   <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
@@ -1370,7 +1370,7 @@ if (!profile?.id || !effectiveJobId) {
                   </div>
                 )}
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
                     <button
@@ -1456,7 +1456,7 @@ if (!profile?.id || !effectiveJobId) {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">
                       T12 (Operating Statement)
@@ -1545,7 +1545,7 @@ if (!profile?.id || !effectiveJobId) {
                   </div>
                 </div>
             {selectedReportType === 'underwriting' && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-semibold text-[#0F172A]">
                     Supporting documents (recommended)
@@ -1794,12 +1794,12 @@ if (!profile?.id || !effectiveJobId) {
             </div>
           </div>
             <div
-              className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-opacity ${
+              className={`rounded-xl border border-slate-200 bg-white p-6 transition-opacity ${
                 step3Locked ? 'opacity-60' : 'opacity-100'
               }`}
             >
               <div className="flex items-baseline justify-between">
-                <div className="text-base font-semibold text-[#0F172A]">Step 3: Generate report</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-700">Step 3: Generate report</div>
                 {step3Locked ? (
                   <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
@@ -1846,7 +1846,7 @@ if (!profile?.id || !effectiveJobId) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="mt-12 bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center"
+              className="mt-12 bg-white rounded-xl border border-slate-200 p-8 text-center"
             >
               <h3 className="text-2xl font-bold text-[#0F172A] mb-2">
                 Report Generated Successfully
@@ -1888,7 +1888,7 @@ if (!profile?.id || !effectiveJobId) {
       </div>
     )}
 
-    <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm divide-y">
+    <div className="overflow-hidden bg-white border border-slate-200 rounded-xl divide-y">
       {inProgressJobs.map((job) => {
         const jobEvent = jobEvents[job.id];
         const eventName = jobEvent?.payload?.event || '';
@@ -2000,7 +2000,7 @@ if (!profile?.id || !effectiveJobId) {
             <h2 className="text-xl font-bold text-[#0F172A] mb-6">
               Recent Property IQ Reports
             </h2>
-            <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm">
+            <div className="overflow-hidden bg-white border border-slate-200 rounded-xl">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
@@ -2118,7 +2118,7 @@ if (!profile?.id || !effectiveJobId) {
       {/* INSTITUTIONAL LOADING OVERLAY */}
       {loading && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-sm text-center">
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 flex flex-col items-center max-w-sm text-center">
             <Loader2 className="h-12 w-12 text-[#0F172A] animate-spin mb-6" />
             <h3 className="text-xl font-bold text-[#0F172A] mb-2">Underwriting in Progress</h3>
             <p className="text-slate-600 text-sm leading-relaxed text-center">
@@ -2133,7 +2133,7 @@ if (!profile?.id || !effectiveJobId) {
 
       {issueModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6">
             <div className="text-lg font-semibold text-[#0F172A]">Report an issue</div>
             <div className="mt-2 text-sm text-[#334155]">
               Provide a brief description and an optional attachment.

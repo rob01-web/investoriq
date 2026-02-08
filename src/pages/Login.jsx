@@ -30,19 +30,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-white px-6">
+    <div className="min-h-screen flex flex-col justify-center bg-slate-50 px-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full mx-auto bg-white shadow-lg rounded-2xl p-10 border border-slate-200"
+        className="max-w-md w-full mx-auto bg-white rounded-2xl p-10 border border-slate-200"
       >
         <h1 className="text-3xl font-extrabold text-[#0F172A] text-center mb-2">
-          Welcome Back
+          Secure access
         </h1>
         <p className="text-[#334155] text-center mb-8">
-          Log in to your{" "}
-          <span className="font-semibold text-[#1F8A8A]">InvestorIQ</span> account
+          Access your InvestorIQ account.
         </p>
 
         <form onSubmit={handleLogin} className="space-y-6">
