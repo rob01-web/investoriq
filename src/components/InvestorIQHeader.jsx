@@ -39,17 +39,6 @@ export default function InvestorIQHeader() {
 
         {/* NAVIGATION */}
         <nav className="flex items-center gap-6 text-sm font-semibold text-[#0F172A]">
-          {IS_SAMPLE_REPORT && (
-            <a
-              href="/reports/sample-report.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#1F8A8A] transition"
-            >
-              Sample Report
-            </a>
-          )}
-
           {user ? (
             <button
               onClick={async () => {
@@ -64,6 +53,14 @@ export default function InvestorIQHeader() {
             <>
               <a href="/pricing" className="hover:text-[#1F8A8A] transition">
                 Pricing
+              </a>
+
+              <a href="/about" className="hover:text-[#1F8A8A] transition">
+                About
+              </a>
+
+              <a href="/contact" className="hover:text-[#1F8A8A] transition">
+                Contact
               </a>
 
               <a href="/login" className="hover:text-[#1F8A8A] transition">
