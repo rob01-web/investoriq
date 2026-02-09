@@ -85,6 +85,7 @@ export default function LandingPage() {
                   Outputs are generated strictly from extracted and computed data. The system does not infer missing values or introduce unsupported assumptions.
                 </p>
                 <p>Where inputs are absent, InvestorIQ displays DATA NOT AVAILABLE.</p>
+                <p>Outputs are formatted for Investment Committee review, not marketing presentation.</p>
                 <p>Each stage is logged and fail-closed.</p>
               </div>
             </div>
@@ -92,7 +93,7 @@ export default function LandingPage() {
 
           {/* TRUST STRIP */}
           <div className="mt-10 max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
               <div className="border border-slate-200 rounded-xl p-5 bg-white">
                 <div className="text-sm font-semibold text-[#0F172A]">Document-only</div>
                 <div className="mt-2 text-sm text-slate-600">
