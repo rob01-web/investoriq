@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
   const IS_SAMPLE_REPORT = false;
+  const SHOW_SAMPLE_REPORTS = false;
   
   return (
     <>
@@ -26,7 +27,7 @@ export default function LandingPage() {
           className="max-w-6xl mx-auto px-6 pt-20 pb-20 text-center space-y-6"
         >
           <p className="text-xs tracking-[0.18em] uppercase text-[#1F8A8A] font-semibold">
-            Institutional Real Estate Underwriting
+            IC-READY, DOCUMENT-TRACEABLE OUTPUT
           </p>
 
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
@@ -34,18 +35,20 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-base sm:text-lg text-slate-700 leading-7 max-w-3xl mx-auto">
-            InvestorIQ produces IC-ready Screening and Underwriting reports using a proprietary,
-            document-based analysis system. Every figure is traceable to source inputs. Missing items
-            are shown as DATA NOT AVAILABLE.
+            Document-based, deterministic outputs are traceable to source inputs. Missing items are
+            shown as DATA NOT AVAILABLE.
           </p>
 
           <ul className="text-sm sm:text-base text-slate-700 max-w-3xl mx-auto space-y-2 text-left">
             <li>Document-based only</li>
             <li>Deterministic pipeline with audit trail</li>
             <li>No assumptions. No inferred numbers.</li>
-            <li>Flat fee per property. Professional PDF output.</li>
-            <li>Revisions scoped to the same property and document set.</li>
           </ul>
+
+          <div className="text-sm sm:text-base text-slate-700 max-w-3xl mx-auto text-left space-y-1">
+            <div>Flat fee per property. Professional PDF output.</div>
+            <div>Revisions scoped to the same property and document set.</div>
+          </div>
 
           {/* CTA GROUP */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
@@ -54,16 +57,7 @@ export default function LandingPage() {
               className="inline-flex items-center rounded-lg border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
               onClick={() => (window.location.href = "/dashboard")}
             >
-              Generate a report
-            </Button>
-
-            <Button
-              size="lg"
-              variant="outline"
-              className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-              onClick={() => window.location.href = "/sample-report"}
-            >
-              View a sample report
+              Start a report
             </Button>
           </div>
 
@@ -77,7 +71,26 @@ export default function LandingPage() {
               />
             </div>
           </div>
-                    {/* TRUST STRIP */}
+
+          <div className="mt-12 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              <div className="md:col-span-4">
+                <h2 className="text-lg font-semibold text-[#0F172A]">Method and controls</h2>
+              </div>
+              <div className="md:col-span-8 space-y-3 text-sm text-slate-700 leading-relaxed">
+                <p>
+                  InvestorIQ operates a locked analysis pipeline: Upload → Parse → Extract → Validate → Underwrite → Score → Render → Publish → Notify.
+                </p>
+                <p>
+                  Outputs are generated strictly from extracted and computed data. The system does not infer missing values or introduce unsupported assumptions.
+                </p>
+                <p>Where inputs are absent, InvestorIQ displays DATA NOT AVAILABLE.</p>
+                <p>Each stage is logged and fail-closed.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* TRUST STRIP */}
           <div className="mt-10 max-w-6xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
               <div className="border border-slate-200 rounded-xl p-5 bg-white">
@@ -110,24 +123,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-12 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              <div className="md:col-span-4">
-                <h2 className="text-lg font-semibold text-[#0F172A]">Method and controls</h2>
-              </div>
-              <div className="md:col-span-8 space-y-3 text-sm text-slate-700 leading-relaxed">
-                <p>
-                  InvestorIQ operates a locked analysis pipeline: Upload → Parse → Extract → Validate → Underwrite → Score → Render → Publish → Notify.
-                </p>
-                <p>
-                  Outputs are generated strictly from extracted and computed data. The system does not infer missing values or introduce unsupported assumptions.
-                </p>
-                <p>Where inputs are absent, InvestorIQ displays DATA NOT AVAILABLE.</p>
-                <p>Each stage is logged and fail-closed.</p>
-              </div>
-            </div>
-          </div>
-
           <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
               <div className="md:col-span-4">
@@ -145,34 +140,36 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              <div className="md:col-span-4">
-                <h2 className="text-lg font-semibold text-[#0F172A]">Sample report</h2>
-              </div>
-              <div className="md:col-span-8 space-y-4 text-sm text-slate-700 leading-relaxed">
-                <p>Preview the institutional format before purchase.</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-                    onClick={() => window.location.href = "/sample-report/screening"}
-                  >
-                    Download screening sample
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-                    onClick={() => window.location.href = "/sample-report/underwriting"}
-                  >
-                    Download underwriting sample
-                  </Button>
+          {SHOW_SAMPLE_REPORTS && (
+            <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                <div className="md:col-span-4">
+                  <h2 className="text-lg font-semibold text-[#0F172A]">Sample report</h2>
+                </div>
+                <div className="md:col-span-8 space-y-4 text-sm text-slate-700 leading-relaxed">
+                  <p>Preview the institutional format before purchase.</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
+                      onClick={() => window.location.href = "/sample-report/screening"}
+                    >
+                      Download screening sample
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
+                      onClick={() => window.location.href = "/sample-report/underwriting"}
+                    >
+                      Download underwriting sample
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
         </motion.div>
       </main>
