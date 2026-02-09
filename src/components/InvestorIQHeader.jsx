@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { PALETTE } from "@/lib/utils";
 
 export default function InvestorIQHeader() {
   const { user, signOut } = useAuth();
@@ -29,11 +30,11 @@ export default function InvestorIQHeader() {
           className="flex items-center select-none"
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
-          <a href="/" className="inline-flex items-center gap-3">
-            <picture>
-              <source srcSet="/brand/logo-wordmark.svg" media="(max-width: 640px)" />
-              <img src="/brand/logo-primary.svg" alt="InvestorIQ" className="h-9 sm:h-10 w-auto" loading="eager" />
-            </picture>
+          <a href="/" className="inline-flex items-center" aria-label="InvestorIQ home">
+            <span className="text-xl sm:text-2xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
+              Investor
+              <span style={{ color: PALETTE.gold }}>IQ</span>
+            </span>
           </a>
         </motion.div>
 
