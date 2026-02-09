@@ -69,7 +69,7 @@ export default function InvestorIQHeader() {
 
               <a
                 href="/signup"
-                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326]"
+                className="inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] hover:text-white"
               >
                 Join InvestorIQ
               </a>
