@@ -123,23 +123,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              <div className="md:col-span-4">
-                <h2 className="text-lg font-semibold text-[#0F172A]">
-                  Built for the gap between data platforms and advisory services
-                </h2>
-              </div>
-              <div className="md:col-span-8 space-y-3 text-sm text-slate-700 leading-relaxed">
-                <p>Data platforms provide coverage. Advisory firms provide staffed analysis.</p>
-                <p>
-                  InvestorIQ provides fast, repeatable underwriting output from your documents in an
-                  institutional format, with deterministic controls and explicit gaps.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {SHOW_SAMPLE_REPORTS && (
             <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
