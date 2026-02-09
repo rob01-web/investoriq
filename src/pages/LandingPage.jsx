@@ -27,7 +27,7 @@ export default function LandingPage() {
           className="max-w-6xl mx-auto px-6 pt-20 pb-20 text-center space-y-6"
         >
           <p className="text-xs tracking-[0.18em] uppercase text-[#1F8A8A] font-semibold">
-            IC-READY, DOCUMENT-TRACEABLE OUTPUT
+            INVESTMENT COMMITTEE-READY, DOCUMENT-TRACEABLE OUTPUT
           </p>
 
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
@@ -114,12 +114,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="border border-slate-200 rounded-xl p-5 bg-white">
-                <div className="text-sm font-semibold text-[#0F172A]">IC-grade format</div>
-                <div className="mt-2 text-sm text-slate-600">
-                  Built for professional review, not marketing slides.
-                </div>
-              </div>
             </div>
           </div>
 
