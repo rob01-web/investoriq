@@ -161,7 +161,7 @@ export default function PricingPage() {
       <div className="min-h-screen bg-slate-50 py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
-            Fee schedule
+            Report Pricing
           </h1>
           {isAuthed && (
             <p className="text-sm text-slate-700 mt-2">
