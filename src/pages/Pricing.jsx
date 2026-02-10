@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet';
 import { CheckCircle } from 'lucide-react';
 import { PALETTE } from '@/lib/utils';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { getValidatedPriceConfig } from '@/lib/pricingConfig';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const tiers = [
@@ -37,7 +38,7 @@ const tiers = [
   },
 ];
 
-function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
+function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk }) {
   const isLoading = loadingKey === tier.productType;
 
   return (
@@ -65,19 +66,18 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
       <button
         type="button"
         onClick={() => onCheckout(tier.productType)}
-        disabled={isLoading}
+        disabled={isLoading || !pricingOk}
         className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {
-  isLoading
-    ? 'Redirecting…'
-    : !isAuthenticated
-    ? 'Log in to purchase'
-    : tier.productType === 'screening'
-    ? 'Purchase screening report'
-    : 'Purchase underwriting report'
-}
-
+        {isLoading
+          ? 'Redirecting…'
+          : !pricingOk
+          ? 'Pricing unavailable'
+          : !isAuthenticated
+          ? 'Log in to purchase'
+          : tier.productType === 'screening'
+          ? 'Purchase screening report'
+          : 'Purchase underwriting report'}
       </button>
     </div>
   );
@@ -87,6 +87,8 @@ export default function PricingPage() {
   const { user } = useAuth();
   const [loadingKey, setLoadingKey] = useState(null);
   const [isAuthed, setIsAuthed] = useState(false);
+  const pricingConfig = getValidatedPriceConfig();
+  const pricingOk = pricingConfig.ok;
 
   useEffect(() => {
     let mounted = true;
@@ -180,9 +182,16 @@ export default function PricingPage() {
                 onCheckout={handleCheckout}
                 loadingKey={loadingKey}
                 isAuthenticated={isAuthed}
+                pricingOk={pricingOk}
               />
             ))}
           </div>
+
+          {!pricingOk && (
+            <p className="text-sm text-slate-600 mt-4">
+              Pricing configuration is unavailable. Please try again later.
+            </p>
+          )}
 
           <p className="text-sm text-slate-700 mt-6">
             High-volume institutional usage available by request.
@@ -198,3 +207,6 @@ export default function PricingPage() {
     </>
   );
 }
+
+
+

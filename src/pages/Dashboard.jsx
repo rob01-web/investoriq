@@ -40,6 +40,7 @@ export default function Dashboard() {
     underwriting: null,
     error: false,
   });
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
@@ -298,6 +299,7 @@ export default function Dashboard() {
         title: 'Payment received',
         description: 'Report entitlement added.',
       });
+      setCheckoutSuccess(true);
     } else if (checkout === 'cancelled') {
       toast({
         title: 'Payment cancelled',
@@ -560,42 +562,34 @@ const regenDisabled = activeJobForRuns
       if (!allowedReportTypes.includes(reportType)) {
         return;
       }
-      const { data: purchaseRow, error: purchaseErr } = await supabase
-        .from('report_purchases')
-        .select('id')
-        .eq('user_id', profile.id)
-        .eq('product_type', reportType)
-        .is('consumed_at', null)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (purchaseErr || !purchaseRow?.id) {
-        toast({
-          title: 'Purchase required',
-          description: 'No unused purchase found for this report type.',
-          variant: 'destructive',
-        });
-        return;
-      }
       const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
-      const { data, error } = await supabase
-        .from('analysis_jobs')
-        .insert({
-                    user_id: profile.id,
-          property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
-          status: 'queued',
-          prompt_version: 'v2026-01-17',
-          parser_version: 'v1',
-          template_version: 'v2026-01-14',
-          scoring_version: 'v1',
-          report_type: reportType,
-          revisions_limit: revisionsLimit,
-          revisions_used: 0,
-        })
-        .select('id')
-        .single();
+      const jobPayload = {
+        property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
+        status: 'queued',
+        prompt_version: 'v2026-01-17',
+        parser_version: 'v1',
+        template_version: 'v2026-01-14',
+        scoring_version: 'v1',
+        report_type: reportType,
+        revisions_limit: revisionsLimit,
+        revisions_used: 0,
+      };
 
-      if (error || !data?.id) {
+      const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
+        p_report_type: reportType,
+        p_job_payload: jobPayload,
+      });
+
+      if (error) {
+        const msg = String(error.message || '');
+        if (msg.includes('NO_AVAILABLE_CREDIT')) {
+          toast({
+            title: 'Purchase required',
+            description: 'No unused purchase found for this report type.',
+            variant: 'destructive',
+          });
+          return;
+        }
         console.error('Failed to create analysis job:', error);
         toast({
           title: 'Unable to start analysis job',
@@ -605,27 +599,17 @@ const regenDisabled = activeJobForRuns
         return;
       }
 
-      const { data: consumeRow, error: consumeErr } = await supabase
-        .from('report_purchases')
-        .update({
-          consumed_at: new Date().toISOString(),
-          job_id: data.id,
-        })
-        .eq('id', purchaseRow.id)
-        .is('consumed_at', null)
-        .select('id')
-        .maybeSingle();
-      if (consumeErr || !consumeRow?.id) {
-        await supabase.from('analysis_jobs').delete().eq('id', data.id);
+      const createdJobId = data?.[0]?.job_id || data?.job_id;
+      if (!createdJobId) {
         toast({
           title: 'Unable to start analysis job',
-          description: 'We could not reserve your purchase. Please try again.',
+          description: 'We could not initialize your underwriting run. Please try again.',
           variant: 'destructive',
         });
         return;
       }
 
-      setJobId(data.id);
+      setJobId(createdJobId);
     }
 
     toast({
@@ -1105,6 +1089,23 @@ if (!profile?.id || !effectiveJobId) {
           <div className="mb-6 text-xs text-slate-600">
             Reports are property-specific and non-refundable once generation begins.
           </div>
+          {checkoutSuccess && (
+            <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+              <div className="font-semibold text-slate-900">Payment received</div>
+              <div>1 report credit added</div>
+              <div>Upload documents to begin</div>
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0d1326]"
+                onClick={() => {
+                  const target = document.getElementById('upload-section');
+                  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              >
+                Upload documents
+              </button>
+            </div>
+          )}
           <div className="mb-6 text-xs text-slate-600">
             <div className="font-semibold text-[#0F172A]">Workflow</div>
             <div className="mt-1 flex flex-col gap-1">
@@ -1184,6 +1185,15 @@ if (!profile?.id || !effectiveJobId) {
                   <div className="text-sm text-slate-600">
                     Underwriting Report:{' '}
                     {entitlements.error ? 'DATA NOT AVAILABLE' : `Available: ${entitlements.underwriting ?? 0}`}
+                  </div>
+                  <div className="mt-3 text-xs font-semibold text-slate-500">Available credits</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    Screening credits:{' '}
+                    {entitlements.error ? 'DATA NOT AVAILABLE' : `${entitlements.screening ?? 0}`}
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    Underwriting credits:{' '}
+                    {entitlements.error ? 'DATA NOT AVAILABLE' : `${entitlements.underwriting ?? 0}`}
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4">

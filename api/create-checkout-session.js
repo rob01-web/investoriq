@@ -20,10 +20,12 @@ function normalizeProductType({ productType, planKey }) {
   return map[raw] || "";
 }
 
-const PRICE_CONFIG = {
+export const PRICE_CONFIG = {
   screening: { priceId: process.env.STRIPE_PRICE_SCREENING, mode: "payment" },
   underwriting: { priceId: process.env.STRIPE_PRICE_UNDERWRITING, mode: "payment" },
 };
+
+export const ALLOWED_PRODUCT_TYPES = ["screening", "underwriting"];
 
 function requiredEnvFor(productType) {
   switch (productType) {
@@ -31,6 +33,20 @@ function requiredEnvFor(productType) {
     case "underwriting": return "STRIPE_PRICE_UNDERWRITING";
     default: return "UNKNOWN";
   }
+}
+
+export function getValidatedPriceConfig() {
+  const missing = [];
+  for (const type of ALLOWED_PRODUCT_TYPES) {
+    const priceId = PRICE_CONFIG?.[type]?.priceId;
+    if (!priceId) missing.push(requiredEnvFor(type));
+  }
+
+  return {
+    ok: missing.length === 0,
+    missing,
+    config: PRICE_CONFIG,
+  };
 }
 
 export default async function handler(req, res) {
@@ -43,7 +59,14 @@ export default async function handler(req, res) {
     const { productType, planKey, successUrl, cancelUrl, userId, userEmail } = req.body || {};
 
     const normalizedProductType = normalizeProductType({ productType, planKey });
-    const config = PRICE_CONFIG[normalizedProductType];
+    const { ok: configOk, missing, config: configMap } = getValidatedPriceConfig();
+    if (!configOk) {
+      return res.status(500).json({
+        error: "Server misconfigured: missing Stripe Price ID env vars.",
+        missing,
+      });
+    }
+    const config = configMap[normalizedProductType];
 
     if (!config) {
       return res.status(400).json({ error: "Invalid productType" });
