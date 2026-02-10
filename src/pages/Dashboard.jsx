@@ -410,6 +410,7 @@ const supportingDocGroups = [
 ];
 const supportingDocTypes = supportingDocGroups.flatMap((group) => group.docs);
 const hasRequiredUploads = rentRollFiles.length > 0 && t12Files.length > 0;
+const requiredDocsReady = hasRequiredUploads;
 const hasRentRoll = rentRollFiles.length > 0;
 const hasT12 = t12Files.length > 0;
 const hasPurchase = uploadedFiles.some((item) =>
@@ -441,6 +442,10 @@ const runsLimitValue = Number(activeJobForRuns?.runs_limit ?? 0);
 const runsUsedValue = Number(activeJobForRuns?.runs_used ?? 0);
 const runsInflightValue = Number(activeJobForRuns?.runs_inflight ?? 0);
 const remainingTotal = Math.max(0, runsLimitValue - runsUsedValue - runsInflightValue);
+const availableReportsCount = entitlements.error
+  ? 0
+  : Number(entitlements.screening ?? 0) + Number(entitlements.underwriting ?? 0);
+const hasAvailableReport = availableReportsCount >= 1;
 const step2Locked = !propertyName.trim();
 const step3Locked = !jobId || !hasRunsData || regenDisabled || !scopeConfirmed;
 const statusBlocksRegen = activeJobForRuns
@@ -1306,11 +1311,22 @@ if (!profile?.id || !effectiveJobId) {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
-                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">Rent Roll</div>
+                    <div className="mt-1 text-sm font-semibold text-[#0F172A]">
+                      Rent Roll <span className="text-red-700">*</span>
+                    </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim()}
+                      disabled={!propertyName.trim() || !hasAvailableReport}
                       onClick={async () => {
+                        if (!hasAvailableReport) {
+                          toast({
+                            title: 'No reports available',
+                            description: 'Purchase a report to upload documents.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
                         if (!profile) {
                           window.location.href = '/pricing';
                           return;
@@ -1339,7 +1355,7 @@ if (!profile?.id || !effectiveJobId) {
                       }}
                       className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
-                          propertyName.trim()
+                          propertyName.trim() && hasAvailableReport
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                             : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
@@ -1393,12 +1409,21 @@ if (!profile?.id || !effectiveJobId) {
                   <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
                     <div className="mt-1 text-sm font-semibold text-[#0F172A]">
-                      T12 (Operating Statement)
+                      T12 (Operating Statement) <span className="text-red-700">*</span>
                     </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim()}
+                      disabled={!propertyName.trim() || !hasAvailableReport}
                       onClick={async () => {
+                        if (!hasAvailableReport) {
+                          toast({
+                            title: 'No reports available',
+                            description: 'Purchase a report to upload documents.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
                         if (!profile) {
                           window.location.href = '/pricing';
                           return;
@@ -1427,7 +1452,7 @@ if (!profile?.id || !effectiveJobId) {
                       }}
                       className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
-                          propertyName.trim()
+                          propertyName.trim() && hasAvailableReport
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                             : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
@@ -1507,6 +1532,11 @@ if (!profile?.id || !effectiveJobId) {
                 <p className="text-xs text-slate-500 mt-1">
                   Upload what you have. Missing inputs render as DATA NOT AVAILABLE.
                 </p>
+                {!requiredDocsReady && (
+                  <div className="mt-2 text-xs text-slate-500">
+                    Upload Rent Roll and T12 to unlock supporting documents.
+                  </div>
+                )}
 
                 <div className="mt-4 space-y-5">
                   {supportingDocGroups.map((group) => (
@@ -1531,6 +1561,18 @@ if (!profile?.id || !effectiveJobId) {
                                 <button
                                   type="button"
                                   onClick={async () => {
+                                    if (!hasAvailableReport) {
+                                      toast({
+                                        title: 'No reports available',
+                                        description: 'Purchase a report to upload documents.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
+                                    if (!requiredDocsReady) {
+                                      return;
+                                    }
+
                                     if (!profile) {
                                       window.location.href = '/pricing';
                                       return;
@@ -1560,9 +1602,10 @@ if (!profile?.id || !effectiveJobId) {
                                       .getElementById(`supporting-${doc.slug}-input`)
                                       ?.click();
                                   }}
+                                  disabled={!propertyName.trim() || !hasAvailableReport || !requiredDocsReady}
                                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                                     ${
-                                      propertyName.trim()
+                                      propertyName.trim() && hasAvailableReport && requiredDocsReady
                                         ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                                         : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                                     }`}
@@ -1624,7 +1667,7 @@ if (!profile?.id || !effectiveJobId) {
             )}
               </div>
 
-              <div className="lg:col-span-4 lg:col-start-9 space-y-6">
+              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-1 space-y-6">
             {/* DISCLAIMER */}
             <div className="bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-[#1F8A8A] flex-shrink-0 mt-[2px]" />
