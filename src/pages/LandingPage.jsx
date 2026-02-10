@@ -31,7 +31,7 @@ export default function LandingPage() {
           </p>
 
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
-            Institutional underwriting output, built from your documents.
+            Institutional underwriting, derived from your documents.
           </h1>
 
           <p className="text-base sm:text-lg text-slate-700 leading-7 max-w-3xl mx-auto">
@@ -39,26 +39,9 @@ export default function LandingPage() {
             shown as DATA NOT AVAILABLE.
           </p>
 
-          <ul className="text-sm sm:text-base text-slate-700 max-w-3xl mx-auto space-y-2 text-left">
-            <li>Document-based only</li>
-            <li>Deterministic pipeline with audit trail</li>
-            <li>No assumptions. No inferred numbers.</li>
-          </ul>
-
-          <div className="text-sm sm:text-base text-slate-700 max-w-3xl mx-auto text-left space-y-1">
+          <div className="text-sm sm:text-base text-slate-600 max-w-3xl mx-auto text-left space-y-1">
             <div>Flat fee per property. Professional PDF output.</div>
             <div>Revisions scoped to the same property and document set.</div>
-          </div>
-
-          {/* CTA GROUP */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
-            <Button
-              size="lg"
-              className="inline-flex items-center rounded-lg border border-[#0F172A] bg-[#0F172A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0d1326]"
-              onClick={() => (window.location.href = "/dashboard")}
-            >
-              Start a report
-            </Button>
           </div>
 
           {/* HERO IMAGE */}

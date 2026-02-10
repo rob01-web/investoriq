@@ -30,7 +30,7 @@ const tiers = [
     highlight: true,
     description: 'Comprehensive, property-specific underwriting report suitable for investment committee review.',
     features: [
-      'Based on T12 + Rent Roll + optional supporting documents',
+      'Based on T12 + Rent Roll + supporting due diligence documents',
       'Full institutional underwriting artifact',
       'No assumptions, no invented data',
       'Revisions: 3 total',

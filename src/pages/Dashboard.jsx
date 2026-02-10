@@ -1070,8 +1070,8 @@ if (!profile?.id || !effectiveJobId) {
             <div className="rounded-xl border border-slate-200 bg-white p-6">
               <div className="text-xs font-semibold uppercase tracking-widest text-slate-700">Step 1: Report type and availability</div>
               <div className="text-xs text-slate-500">Select report type and confirm availability.</div>
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center">
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col items-start">
                   <button
                     type="button"
                     onClick={() => setSelectedReportType('screening')}
@@ -1085,11 +1085,11 @@ if (!profile?.id || !effectiveJobId) {
                   </button>
                   <div className="mt-2 text-xs text-slate-500 space-y-1">
                     <div>T12 + Rent Roll only</div>
-                    <div>Document-based snapshot for initial investment screening</div>
+                    <div>For initial investment review.</div>
                     <div>No charts. No projections.</div>
                   </div>
                 </div>
-                <div className="inline-flex items-center">
+                <div className="flex flex-col items-start">
                   <button
                     type="button"
                     onClick={() => setSelectedReportType('underwriting')}
@@ -1103,7 +1103,7 @@ if (!profile?.id || !effectiveJobId) {
                   </button>
                   <div className="mt-2 text-xs text-slate-500 space-y-1">
                     <div>T12 + Rent Roll plus supporting due diligence documents</div>
-                    <div>Full document-based underwriting for Investment Committee review</div>
+                    <div>For comprehensive, document-based underwriting.</div>
                     <div>Includes analysis tables and charts where supported by documents</div>
                   </div>
                 </div>
@@ -1253,7 +1253,7 @@ if (!profile?.id || !effectiveJobId) {
                   id="upload-section"
                 >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              <div className="lg:col-span-4 lg:col-start-9 space-y-6">
+              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-1 space-y-6">
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
 
 <div className="mb-4">
@@ -1297,7 +1297,7 @@ if (!profile?.id || !effectiveJobId) {
                 </p>
               </div>
 
-              <div className="lg:col-span-8 lg:col-start-1 space-y-6">
+              <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 space-y-6">
                 {!propertyName.trim() && (
                   <div className="mb-2 text-xs font-semibold text-slate-600">
                     Enter a property name to enable uploads.
