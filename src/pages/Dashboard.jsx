@@ -1258,7 +1258,7 @@ if (!profile?.id || !effectiveJobId) {
                   id="upload-section"
                 >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-1 space-y-6">
+              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-2 space-y-6">
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
 
 <div className="mb-4">
