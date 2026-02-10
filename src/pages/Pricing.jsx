@@ -75,7 +75,16 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
         disabled={isLoading}
         className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {isLoading\n          ? 'Redirecting…'\n          : !isAuthenticated\n          ? 'Log in to purchase'\n          : tier.productType === 'screening'\n          ? 'Purchase screening report'\n          : 'Purchase underwriting report'}
+        {
+  isLoading
+    ? 'Redirecting…'
+    : !isAuthenticated
+    ? 'Log in to purchase'
+    : tier.productType === 'screening'
+    ? 'Purchase screening report'
+    : 'Purchase underwriting report'
+}
+
       </button>
       {!isAuthenticated && (
         <a
