@@ -31,8 +31,12 @@ export default function LandingPage() {
           </p>
 
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#0F172A] leading-tight max-w-4xl mx-auto">
-            Institutional underwriting, derived from your documents.
+            Institutional underwriting reports for investment property analysis.
           </h1>
+
+          <p className="text-base sm:text-lg text-slate-700 leading-7 max-w-3xl mx-auto">
+            Built strictly from your documents for residential and commercial real estate investors.
+          </p>
 
           <p className="text-base sm:text-lg text-slate-700 leading-7 max-w-3xl mx-auto">
             Document-based, deterministic outputs are traceable to source inputs. Missing items are
