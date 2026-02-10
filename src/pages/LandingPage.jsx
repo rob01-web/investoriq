@@ -1,11 +1,19 @@
 import React from "react";
 import { Helmet } from "react-helmet";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
   const IS_SAMPLE_REPORT = false;
   const SHOW_SAMPLE_REPORTS = false;
+  const screeningSamplePages = [];
+  const underwritingSamplePages = [];
+  const [screeningIndex, setScreeningIndex] = useState(0);
+  const [underwritingIndex, setUnderwritingIndex] = useState(0);
+  const screeningTouchStartX = useRef(null);
+  const underwritingTouchStartX = useRef(null);
+  const swipeThreshold = 50;
   
   return (
     <>
@@ -51,11 +59,144 @@ export default function LandingPage() {
           {/* HERO IMAGE */}
           <div className="mt-14 relative">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <img
-                src="/hero-image.png"
-                alt="InvestorIQ institutional underwriting report preview"
-                className="w-full object-contain"
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
+                <div className="p-6">
+                  <div className="text-sm font-semibold text-[#0F172A]">Screening sample</div>
+                  <div className="mt-1 text-xs text-slate-500">T12 + Rent Roll only</div>
+                  <div
+                    className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500 overflow-hidden"
+                    onTouchStart={(e) => {
+                      if (screeningSamplePages.length === 0) return;
+                      screeningTouchStartX.current = e.touches[0]?.clientX ?? null;
+                    }}
+                    onTouchEnd={(e) => {
+                      if (screeningSamplePages.length === 0) return;
+                      const startX = screeningTouchStartX.current;
+                      if (startX == null) return;
+                      const endX = e.changedTouches[0]?.clientX ?? null;
+                      if (endX == null) return;
+                      const deltaX = endX - startX;
+                      if (deltaX <= -swipeThreshold) {
+                        setScreeningIndex((i) =>
+                          Math.min(screeningSamplePages.length - 1, i + 1)
+                        );
+                      } else if (deltaX >= swipeThreshold) {
+                        setScreeningIndex((i) => Math.max(0, i - 1));
+                      }
+                      screeningTouchStartX.current = null;
+                    }}
+                  >
+                    {screeningSamplePages.length > 0 ? (
+                      <img
+                        src={screeningSamplePages[screeningIndex]}
+                        alt={`Screening sample page ${screeningIndex + 1}`}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span>Sample pages will appear here.</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <button
+                      type="button"
+                      onClick={() => setScreeningIndex((i) => Math.max(0, i - 1))}
+                      disabled={screeningSamplePages.length === 0 || screeningIndex === 0}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <div>
+                      {screeningSamplePages.length > 0
+                        ? `Page ${screeningIndex + 1} of ${screeningSamplePages.length}`
+                        : "Page — of —"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setScreeningIndex((i) =>
+                          Math.min(screeningSamplePages.length - 1, i + 1)
+                        )
+                      }
+                      disabled={
+                        screeningSamplePages.length === 0 ||
+                        screeningIndex === screeningSamplePages.length - 1
+                      }
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="text-sm font-semibold text-[#0F172A]">Underwriting sample</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    T12 + Rent Roll + supporting due diligence documents
+                  </div>
+                  <div
+                    className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500 overflow-hidden"
+                    onTouchStart={(e) => {
+                      if (underwritingSamplePages.length === 0) return;
+                      underwritingTouchStartX.current = e.touches[0]?.clientX ?? null;
+                    }}
+                    onTouchEnd={(e) => {
+                      if (underwritingSamplePages.length === 0) return;
+                      const startX = underwritingTouchStartX.current;
+                      if (startX == null) return;
+                      const endX = e.changedTouches[0]?.clientX ?? null;
+                      if (endX == null) return;
+                      const deltaX = endX - startX;
+                      if (deltaX <= -swipeThreshold) {
+                        setUnderwritingIndex((i) =>
+                          Math.min(underwritingSamplePages.length - 1, i + 1)
+                        );
+                      } else if (deltaX >= swipeThreshold) {
+                        setUnderwritingIndex((i) => Math.max(0, i - 1));
+                      }
+                      underwritingTouchStartX.current = null;
+                    }}
+                  >
+                    {underwritingSamplePages.length > 0 ? (
+                      <img
+                        src={underwritingSamplePages[underwritingIndex]}
+                        alt={`Underwriting sample page ${underwritingIndex + 1}`}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span>Sample pages will appear here.</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <button
+                      type="button"
+                      onClick={() => setUnderwritingIndex((i) => Math.max(0, i - 1))}
+                      disabled={underwritingSamplePages.length === 0 || underwritingIndex === 0}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <div>
+                      {underwritingSamplePages.length > 0
+                        ? `Page ${underwritingIndex + 1} of ${underwritingSamplePages.length}`
+                        : "Page — of —"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setUnderwritingIndex((i) =>
+                          Math.min(underwritingSamplePages.length - 1, i + 1)
+                        )
+                      }
+                      disabled={
+                        underwritingSamplePages.length === 0 ||
+                        underwritingIndex === underwritingSamplePages.length - 1
+                      }
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
