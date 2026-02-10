@@ -7,8 +7,26 @@ import { Button } from "@/components/ui/button";
 export default function LandingPage() {
   const IS_SAMPLE_REPORT = false;
   const SHOW_SAMPLE_REPORTS = false;
-  const screeningSamplePages = [];
-  const underwritingSamplePages = [];
+  const screeningSamplePages = [
+    "/samples/screening/p01.webp",
+    "/samples/screening/p02.webp",
+    "/samples/screening/p03.webp",
+    "/samples/screening/p04.webp",
+    "/samples/screening/p05.webp",
+    "/samples/screening/p06.webp",
+    "/samples/screening/p07.webp",
+    "/samples/screening/p08.webp",
+  ];
+  const underwritingSamplePages = [
+    "/samples/underwriting/p01.webp",
+    "/samples/underwriting/p02.webp",
+    "/samples/underwriting/p03.webp",
+    "/samples/underwriting/p04.webp",
+    "/samples/underwriting/p05.webp",
+    "/samples/underwriting/p06.webp",
+    "/samples/underwriting/p07.webp",
+    "/samples/underwriting/p08.webp",
+  ];
   const [screeningIndex, setScreeningIndex] = useState(0);
   const [underwritingIndex, setUnderwritingIndex] = useState(0);
   const screeningTouchStartX = useRef(null);
@@ -57,6 +75,9 @@ export default function LandingPage() {
           </div>
 
           {/* HERO IMAGE */}
+          {/* TODO: Sample pages are defined in src/lib/sampleReportPages.js
+              Add optimized images under /public/samples/... and update the arrays
+              Keep page count reasonable for homepage performance (e.g., first 6–10 pages) */}
           <div className="mt-14 relative">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
@@ -93,7 +114,7 @@ export default function LandingPage() {
                         className="h-full w-full object-contain"
                       />
                     ) : (
-                      <span>Sample pages will appear here.</span>
+                      <span>Sample not available</span>
                     )}
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
@@ -162,7 +183,7 @@ export default function LandingPage() {
                         className="h-full w-full object-contain"
                       />
                     ) : (
-                      <span>Sample pages will appear here.</span>
+                      <span>Sample not available</span>
                     )}
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
