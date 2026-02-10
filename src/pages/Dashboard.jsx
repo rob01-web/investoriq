@@ -1258,7 +1258,7 @@ if (!profile?.id || !effectiveJobId) {
                   id="upload-section"
                 >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-2 space-y-6">
+              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-1 space-y-6">
                 <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Property Details</h2>
 
 <div className="mb-4">
@@ -1667,7 +1667,7 @@ if (!profile?.id || !effectiveJobId) {
             )}
               </div>
 
-              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-1 space-y-6">
+              <div className="lg:col-span-4 lg:col-start-9 lg:row-start-2 space-y-6">
             {/* DISCLAIMER */}
             <div className="bg-[#1F8A8A]/10 border border-[#1F8A8A]/30 rounded-lg p-4 text-sm text-[#334155] font-medium flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-[#1F8A8A] flex-shrink-0 mt-[2px]" />
