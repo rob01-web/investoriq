@@ -463,7 +463,7 @@ const statusBlocksRegen = activeJobForRuns
 const regenDisabled = activeJobForRuns
   ? remainingTotal <= 0 || statusBlocksRegen
   : false;
-const step3Locked = !jobId || regenDisabled || !scopeConfirmed;
+const step3Locked = !jobId || regenDisabled;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -521,7 +521,7 @@ const step3Locked = !jobId || regenDisabled || !scopeConfirmed;
       const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
       const jobPayload = {
         property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
-        status: 'queued',
+        status: 'needs_documents',
         prompt_version: 'v2026-01-17',
         parser_version: 'v1',
         template_version: 'v2026-01-14',
@@ -853,32 +853,6 @@ if (!profile?.id || !effectiveJobId) {
       });
       return;
     }
-    if (!hasRunsData) {
-      toast({
-        title: 'Cannot generate report',
-        description: 'Generations: DATA NOT AVAILABLE. Please refresh and try again.',
-        variant: 'destructive',
-      });
-      await Promise.all([
-        fetchInProgressJobs(),
-        fetchReports(),
-        fetchLatestFailedJob(),
-      ]);
-      return;
-    }
-    if (remainingTotal <= 0) {
-      toast({
-        title: 'Revision limit reached',
-        description: 'You?ve used all available revisions for this report.',
-        variant: 'destructive',
-      });
-      await Promise.all([
-        fetchInProgressJobs(),
-        fetchReports(),
-        fetchLatestFailedJob(),
-      ]);
-      return;
-    }
     if (statusBlocksRegen) {
       toast({
         title: 'Report is already processing',
@@ -893,6 +867,34 @@ if (!profile?.id || !effectiveJobId) {
 
     try {
       if (runsUsedValue > 0) {
+        if (!hasRunsData) {
+          toast({
+            title: 'Cannot generate report',
+            description: 'Generations: DATA NOT AVAILABLE. Please refresh and try again.',
+            variant: 'destructive',
+          });
+          await Promise.all([
+            fetchInProgressJobs(),
+            fetchReports(),
+            fetchLatestFailedJob(),
+          ]);
+          setLoading(false);
+          return;
+        }
+        if (remainingTotal <= 0) {
+          toast({
+            title: 'Revision limit reached',
+            description: 'You?ve used all available revisions for this report.',
+            variant: 'destructive',
+          });
+          await Promise.all([
+            fetchInProgressJobs(),
+            fetchReports(),
+            fetchLatestFailedJob(),
+          ]);
+          setLoading(false);
+          return;
+        }
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData?.session?.access_token;
         if (!accessToken) {
@@ -1786,9 +1788,9 @@ if (!profile?.id || !effectiveJobId) {
                 <button
                   type="button"
                   onClick={handleAnalyze}
-                  disabled={loading || regenDisabled || !jobId || !scopeConfirmed}
+                  disabled={loading || regenDisabled || !jobId}
                   className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
-                    loading || regenDisabled || !jobId || !scopeConfirmed
+                    loading || regenDisabled || !jobId
                       ? 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
