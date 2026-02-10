@@ -9,7 +9,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const tiers = [
   {
-    title: 'Screening Report - $249',
+    title: 'Screening Report',
     price: '$249',
     cadence: '',
     productType: 'screening',
@@ -22,7 +22,7 @@ const tiers = [
     ],
   },
   {
-    title: 'Underwriting Report - $699',
+    title: 'Underwriting Report',
     price: '$699',
     cadence: '',
     productType: 'underwriting',
@@ -158,9 +158,6 @@ export default function PricingPage() {
 
       <div className="min-h-screen bg-slate-50 py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: PALETTE.teal }}>
-            Launch Pricing
-          </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Fee schedule
           </h1>
@@ -192,10 +189,9 @@ export default function PricingPage() {
           </p>
 
           <p className="text-sm text-slate-700 mt-10">
-            Reports are bespoke, property-specific analyses.
-            <span className="block">Once report generation begins, refunds are not available.</span>
-            <span className="block">If generation fails due to a system error, InvestorIQ will regenerate the report at no cost.</span>
-            <span className="block">InvestorIQ reports are analytical tools and do not constitute investment advice or an appraisal.</span>
+            Reports are property-specific and document-based. Once generation begins, refunds are not available. If
+            generation fails due to a system error, InvestorIQ will regenerate the same report at no cost. InvestorIQ
+            does not provide investment advice or appraisals.
           </p>
         </div>
       </div>
