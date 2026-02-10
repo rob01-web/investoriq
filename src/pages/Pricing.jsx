@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { CheckCircle } from 'lucide-react';
 import { PALETTE } from '@/lib/utils';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const tiers = [
   {
@@ -74,12 +75,16 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
         disabled={isLoading}
         className="mt-auto w-full py-3 text-center font-semibold rounded-md border border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {isLoading
-          ? 'Redirecting…'
-          : isAuthenticated
-          ? 'Purchase report'
-          : 'Sign in to purchase'}
+        {isLoading\n          ? 'Redirecting…'\n          : !isAuthenticated\n          ? 'Log in to purchase'\n          : tier.productType === 'screening'\n          ? 'Purchase screening report'\n          : 'Purchase underwriting report'}
       </button>
+      {!isAuthenticated && (
+        <a
+          href="/signup"
+          className="mt-3 text-sm font-semibold text-center text-slate-700 hover:underline"
+        >
+          Create account
+        </a>
+      )}
     </div>
   );
 }
@@ -87,11 +92,33 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
 export default function PricingPage() {
   const { user } = useAuth();
   const [loadingKey, setLoadingKey] = useState(null);
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (mounted) {
+        setIsAuthed(Boolean(data?.session?.user));
+      }
+    };
+
+    init();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthed(Boolean(session?.user));
+    });
+
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   const handleCheckout = async (productType) => {
     try {
-      if (!user?.id) {
-        // Force auth first for institutional flow
+      if (!isAuthed) {
         window.location.href = `/login?next=/pricing`;
         return;
       }
@@ -173,10 +200,14 @@ export default function PricingPage() {
                 tier={t}
                 onCheckout={handleCheckout}
                 loadingKey={loadingKey}
-                isAuthenticated={Boolean(user)}
+                isAuthenticated={isAuthed}
               />
             ))}
           </div>
+
+          <p className="text-sm text-slate-700 mt-6">
+            High-volume institutional usage available by request.
+          </p>
 
           <p className="text-sm text-slate-700 mt-10">
             Reports are bespoke, property-specific analyses.
@@ -194,4 +225,5 @@ export default function PricingPage() {
     </>
   );
 }
+
 
