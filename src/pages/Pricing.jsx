@@ -188,7 +188,7 @@ export default function PricingPage() {
             High-volume institutional usage available by request.
           </p>
 
-          <p className="text-sm text-slate-700 mt-10">
+          <p className="text-sm md:text-[15px] leading-relaxed text-slate-700 mt-10">
             Reports are property-specific and document-based. Once generation begins, refunds are not available. If
             generation fails due to a system error, InvestorIQ will regenerate the same report at no cost. InvestorIQ
             does not provide investment advice or appraisals.
