@@ -53,13 +53,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
         <span className="text-xl font-semibold text-slate-500">{tier.cadence}</span>
       </p>
       <p className="text-slate-700 mb-2 text-center font-semibold">{tier.description}</p>
-      <a
-        href={tier.productType === 'screening' ? '/samples/screening-sample.pdf' : '/samples/underwriting-sample.pdf'}
-        className="text-sm text-slate-700 text-center mb-6 hover:underline"
-      >
-        View sample PDF
-      </a>
-
       <ul className="space-y-3 mb-8">
         {tier.features.map((feature, i) => (
           <li key={i} className="flex items-start">
@@ -86,14 +79,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated }) {
 }
 
       </button>
-      {!isAuthenticated && (
-        <a
-          href="/signup"
-          className="mt-3 text-sm font-semibold text-center text-slate-700 hover:underline"
-        >
-          Create account
-        </a>
-      )}
     </div>
   );
 }
@@ -179,28 +164,16 @@ export default function PricingPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3" style={{ color: PALETTE.deepNavy }}>
             Fee schedule
           </h1>
-          <p className="text-sm text-slate-700 mt-2">
-  <a href="/dashboard" className="underline hover:no-underline">
-    Back to Dashboard
-  </a>
-</p>
+          {isAuthed && (
+            <p className="text-sm text-slate-700 mt-2">
+              <a href="/dashboard" className="underline hover:no-underline">
+                Back to Dashboard
+              </a>
+            </p>
+          )}
           <p className="text-lg text-slate-700 max-w-2xl mx-auto mb-10">
             Two report types are available: Screening and Underwriting.
-            <span className="block">Reports are property-specific, document-based, and deterministic.</span>
-            <span className="block">No assumptions are made; missing or degraded inputs are disclosed as "Data Not Available."</span>
-            <span className="block">Revisions included: Screening 2 total; Underwriting 3 total.</span>
-            <span className="block">
-              Revisions apply to the same property and underlying document set. Submitting materially different financials requires a new report purchase.
-            </span>
           </p>
-
-          <div className="text-sm text-slate-700 max-w-2xl mx-auto mb-10 space-y-1">
-            <div>Scope and disclosures</div>
-            <div>Document-based only</div>
-            <div>No assumptions</div>
-            <div>DATA NOT AVAILABLE for missing inputs</div>
-            <div>One report = one property</div>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {tiers.map((t) => (
@@ -224,15 +197,8 @@ export default function PricingPage() {
             <span className="block">If generation fails due to a system error, InvestorIQ will regenerate the report at no cost.</span>
             <span className="block">InvestorIQ reports are analytical tools and do not constitute investment advice or an appraisal.</span>
           </p>
-          <p className="text-sm text-slate-700 mt-6">
-            <span className="font-semibold" style={{ color: PALETTE.deepNavy }}>
-              Need institutional support for portfolio or fund-level diligence? Contact us.
-            </span>
-          </p>
         </div>
       </div>
     </>
   );
 }
-
-
