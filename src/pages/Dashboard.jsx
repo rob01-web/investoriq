@@ -447,7 +447,6 @@ const availableReportsCount = entitlements.error
   : Number(entitlements.screening ?? 0) + Number(entitlements.underwriting ?? 0);
 const hasAvailableReport = availableReportsCount >= 1;
 const step2Locked = !propertyName.trim();
-const step3Locked = !jobId || !hasRunsData || regenDisabled || !scopeConfirmed;
 const statusBlocksRegen = activeJobForRuns
   ? [
       'queued',
@@ -464,6 +463,7 @@ const statusBlocksRegen = activeJobForRuns
 const regenDisabled = activeJobForRuns
   ? remainingTotal <= 0 || statusBlocksRegen
   : false;
+const step3Locked = !jobId || !hasRunsData || regenDisabled || !scopeConfirmed;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
