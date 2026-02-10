@@ -463,7 +463,7 @@ const statusBlocksRegen = activeJobForRuns
 const regenDisabled = activeJobForRuns
   ? remainingTotal <= 0 || statusBlocksRegen
   : false;
-const step3Locked = !jobId || !hasRunsData || regenDisabled || !scopeConfirmed;
+const step3Locked = !jobId || regenDisabled || !scopeConfirmed;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -1786,9 +1786,9 @@ if (!profile?.id || !effectiveJobId) {
                 <button
                   type="button"
                   onClick={handleAnalyze}
-                  disabled={loading || regenDisabled || !hasRunsData || !jobId || !scopeConfirmed}
+                  disabled={loading || regenDisabled || !jobId || !scopeConfirmed}
                   className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
-                    loading || regenDisabled || !hasRunsData || !jobId || !scopeConfirmed
+                    loading || regenDisabled || !jobId || !scopeConfirmed
                       ? 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
