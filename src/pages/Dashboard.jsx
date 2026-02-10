@@ -471,55 +471,6 @@ const regenDisabled = activeJobForRuns
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   };
 
-  const startCheckout = async () => {
-  try {
-    if (!profile?.id) {
-      toast({
-        title: 'Please sign in',
-        description: 'You must be signed in to purchase a report.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const origin = window.location.origin;
-
-    const res = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        planKey: 'single',
-        productType: 'singleReport',
-        userId: profile.id,
-        userEmail: profile.email,
-        successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${origin}/pricing?canceled=1`,
-      }),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data?.url) {
-      toast({
-        title: 'Checkout could not be started',
-        description: data?.error || 'Please try again.',
-        variant: 'destructive',
-      });
-      console.error('create-checkout-session failed:', res.status, data);
-      return;
-    }
-
-    window.location.href = data.url;
-  } catch (err) {
-    console.error(err);
-    toast({
-      title: 'Checkout could not be started',
-      description: 'Please try again.',
-      variant: 'destructive',
-    });
-  }
-};
-  
     const recordLegalAcceptance = async () => {
     if (!profile?.id) return false;
 
