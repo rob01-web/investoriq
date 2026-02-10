@@ -33,7 +33,7 @@ export default function InvestorIQHeader() {
           <a href="/" className="inline-flex items-center" aria-label="InvestorIQ home">
             <span className="text-xl sm:text-2xl font-extrabold" style={{ color: PALETTE.deepNavy }}>
               Investor
-              <span style={{ color: PALETTE.gold }}>IQ</span>
+              <span style={{ color: "#D4AF37" }}>IQ</span>
             </span>
           </a>
         </motion.div>
