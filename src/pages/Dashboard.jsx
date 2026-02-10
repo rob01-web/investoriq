@@ -1097,6 +1097,11 @@ if (!profile?.id || !effectiveJobId) {
                       <li>Revisions: 2</li>
                     </ul>
                   </div>
+                  <div className="mt-2 text-xs text-slate-500 space-y-1">
+                    <div>T12 + Rent Roll only</div>
+                    <div>Document-based snapshot for initial investment screening</div>
+                    <div>No charts. No projections.</div>
+                  </div>
                 </div>
                 <div className="relative group inline-flex items-center">
                   <button
@@ -1123,6 +1128,11 @@ if (!profile?.id || !effectiveJobId) {
                       <li>Output: Underwriting Report (full document-based underwriting)</li>
                       <li>Revisions: 3</li>
                     </ul>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500 space-y-1">
+                    <div>T12 + Rent Roll plus supporting due diligence documents</div>
+                    <div>Full document-based underwriting for Investment Committee review</div>
+                    <div>Includes analysis tables and charts where supported by documents</div>
                   </div>
                 </div>
               </div>
