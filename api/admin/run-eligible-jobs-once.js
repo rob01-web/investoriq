@@ -251,7 +251,7 @@ export default async function handler(req, res) {
 
       const { data: updatedRows, error: updateErr } = await supabase
         .from('analysis_jobs')
-        .update({ status: 'queued', last_error: null })
+        .update({ status: 'queued', last_error: null, started_at: null })
         .eq('id', forceJobId)
         .select('id');
 
