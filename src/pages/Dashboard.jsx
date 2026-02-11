@@ -944,8 +944,7 @@ if (!profile?.id || !effectiveJobId) {
       const { error: statusErr } = await supabase
         .from('analysis_jobs')
         .update({
-          status: 'validating_inputs',
-          started_at: new Date().toISOString(),
+          status: 'queued',
           // This grabs WHATEVER you typed (e.g., Forest City Manor)
           property_name: propertyName.trim() || 'Untitled Property', 
         })
