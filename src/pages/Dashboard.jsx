@@ -974,21 +974,15 @@ if (!profile?.id || !effectiveJobId) {
       }
 
       // Final update before status transition
-      const { error: statusErr } = await supabase
-        .from('analysis_jobs')
-        .update({
-          status: 'queued',
-          // This grabs WHATEVER you typed (e.g., Forest City Manor)
-          property_name: propertyName.trim() || 'Untitled Property', 
-        })
-        .eq('id', jobId)
-        .eq('user_id', profile.id);
+      const { error: statusErr } = await supabase.rpc('queue_job_for_processing', {
+        p_job_id: jobId,
+      });
 
       if (statusErr) {
         console.error('Failed to advance job status:', statusErr);
         toast({
           title: 'Unable to start analysis',
-          description: 'Please try again.',
+          description: 'Could not queue job for processing.',
           variant: 'destructive',
         });
         setLoading(false);
