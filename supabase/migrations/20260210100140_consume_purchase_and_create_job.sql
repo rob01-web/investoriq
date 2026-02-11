@@ -10,14 +10,16 @@ language plpgsql
 as $$
 declare
   v_purchase_id uuid;
+  v_product_type text;
   v_job_id uuid;
+  v_revisions_limit integer;
 begin
   if p_report_type is null or p_report_type not in ('screening','underwriting') then
     raise exception 'INVALID_REPORT_TYPE';
   end if;
 
-  select id
-    into v_purchase_id
+  select id, product_type
+    into v_purchase_id, v_product_type
   from public.report_purchases
   where user_id = auth.uid()
     and product_type = p_report_type
@@ -30,23 +32,44 @@ begin
     raise exception 'NO_AVAILABLE_CREDIT';
   end if;
 
-  update public.report_purchases
-  set consumed_at = now()
-  where id = v_purchase_id;
+  if v_product_type not in ('screening','underwriting') then
+    raise exception 'INVALID_REPORT_TYPE';
+  end if;
+
+  v_revisions_limit := case
+    when v_product_type = 'screening' then 2
+    when v_product_type = 'underwriting' then 3
+    else null
+  end;
+
+  if v_revisions_limit is null then
+    raise exception 'INVALID_REPORT_TYPE';
+  end if;
 
   insert into public.analysis_jobs (
     user_id,
     report_type,
     property_name,
-    status
+    status,
+    revisions_limit,
+    revisions_used,
+    started_at
   )
   values (
     auth.uid(),
-    p_report_type,
+    v_product_type,
     nullif(p_job_payload->>'property_name',''),
-    coalesce(nullif(p_job_payload->>'status',''), 'queued')
+    'needs_documents',
+    v_revisions_limit,
+    0,
+    null
   )
   returning id into v_job_id;
+
+  update public.report_purchases
+  set consumed_at = now(),
+      job_id = v_job_id
+  where id = v_purchase_id;
 
   return query select v_job_id, v_purchase_id;
 end;

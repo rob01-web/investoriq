@@ -700,21 +700,44 @@ let effectiveJobId = jobId;
 
 // Create a job the moment the user begins uploading (async underwriting anchor)
 if (profile?.id && !effectiveJobId) {
-      const { data, error } = await supabase
-    .from('analysis_jobs')
-    .insert({
-      user_id: profile.id,
-      property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
-      status: 'needs_documents',
-      prompt_version: 'v2026-01-17',
-      parser_version: 'v1',
-      template_version: 'v2026-01-14',
-      scoring_version: 'v1',
-    })
-    .select('id')
-    .single();
+  const reportType = (selectedReportType || '').toLowerCase();
+  const allowedReportTypes = ['screening', 'underwriting'];
+  if (!allowedReportTypes.includes(reportType)) {
+    toast({
+      title: 'Unable to start analysis job',
+      description: 'Report type is not available. Please try again.',
+      variant: 'destructive',
+    });
+    return;
+  }
+  const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
+  const jobPayload = {
+    property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
+    status: 'needs_documents',
+    prompt_version: 'v2026-01-17',
+    parser_version: 'v1',
+    template_version: 'v2026-01-14',
+    scoring_version: 'v1',
+    report_type: reportType,
+    revisions_limit: revisionsLimit,
+    revisions_used: 0,
+  };
 
-  if (error || !data?.id) {
+  const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
+    p_report_type: reportType,
+    p_job_payload: jobPayload,
+  });
+
+  if (error) {
+    const msg = String(error.message || '');
+    if (msg.includes('NO_AVAILABLE_CREDIT')) {
+      toast({
+        title: 'Purchase required',
+        description: 'No unused purchase found for this report type.',
+        variant: 'destructive',
+      });
+      return;
+    }
     console.error('Failed to create analysis job:', error);
     toast({
       title: 'Unable to start analysis job',
@@ -724,7 +747,17 @@ if (profile?.id && !effectiveJobId) {
     return;
   }
 
-  effectiveJobId = data.id;
+  const createdJobId = data?.[0]?.job_id || data?.job_id;
+  if (!createdJobId) {
+    toast({
+      title: 'Unable to start analysis job',
+      description: 'We could not initialize your underwriting run. Please try again.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  effectiveJobId = createdJobId;
   setJobId(effectiveJobId);
 }
 
