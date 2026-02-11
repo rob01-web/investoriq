@@ -569,8 +569,8 @@ const step3Locked = !jobId || regenDisabled;
     }
 
     toast({
-      title: 'Upload Successful',
-      description: 'Your documents have been received and queued for processing.',
+      title: 'Uploads received',
+      description: 'Documents are stored and ready for review.',
     });
 
     await fetchProfile(profile.id);
@@ -700,12 +700,12 @@ let effectiveJobId = jobId;
 
 // Create a job the moment the user begins uploading (async underwriting anchor)
 if (profile?.id && !effectiveJobId) {
-  const { data, error } = await supabase
+      const { data, error } = await supabase
     .from('analysis_jobs')
     .insert({
       user_id: profile.id,
       property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
-      status: 'queued',
+      status: 'needs_documents',
       prompt_version: 'v2026-01-17',
       parser_version: 'v1',
       template_version: 'v2026-01-14',
@@ -788,25 +788,10 @@ if (!profile?.id || !effectiveJobId) {
     }
   }
 
-  const { error: requeueErr } = await supabase
-    .from('analysis_jobs')
-    .update({ status: 'queued' })
-    .eq('id', effectiveJobId)
-    .in('status', ['needs_documents', 'extracting']);
-
-  if (requeueErr) {
-    console.error('Failed to requeue job after upload:', requeueErr);
-    toast({
-      title: 'Uploads received',
-      description: 'Uploads received, but processing could not resume yet.',
-      variant: 'destructive',
-    });
-  } else {
-    toast({
-      title: 'Uploads received',
-      description: 'Processing resumed.',
-    });
-  }
+  toast({
+    title: 'Uploads received',
+    description: 'Documents are stored and ready for review.',
+  });
 
   // Append new files instead of overwriting existing ones
   setUploadedFiles((prev) => {
@@ -1783,7 +1768,19 @@ if (!profile?.id || !effectiveJobId) {
                   <div className="text-[11px] text-slate-400">Locked</div>
                 ) : null}
               </div>
-              <div className="text-xs text-slate-500">Generate your report. Missing sections render as DATA NOT AVAILABLE.</div>
+              <div className="text-xs text-slate-500">
+                {activeJobForRuns?.status === 'queued'
+                  ? 'Queued for processing.'
+                  : ['validating_inputs', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
+                      activeJobForRuns?.status
+                    )
+                  ? 'Processing in progress.'
+                  : activeJobForRuns?.status === 'published'
+                  ? 'Report generated.'
+                  : activeJobForRuns?.status === 'failed'
+                  ? 'Action required. See issue details.'
+                  : 'Processing starts only after you click Generate Report.'}
+              </div>
               <div className="mt-5 space-y-2">
                 <button
                   type="button"
