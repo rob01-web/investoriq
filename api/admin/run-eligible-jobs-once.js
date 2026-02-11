@@ -265,7 +265,7 @@ export default async function handler(req, res) {
     const { data: jobRows, error: jobsErr } = await supabase
       .from('analysis_jobs')
       .select('id, user_id, status, runs_limit, runs_used, runs_inflight, created_at')
-      .in('status', ['queued', 'failed'])
+      .eq('status', 'queued')
       .order('created_at', { ascending: true })
       .limit(25);
 
@@ -293,18 +293,32 @@ export default async function handler(req, res) {
 
     const claimedJobs = [];
     for (const job of eligibleJobs) {
-      try {
-        const { data: claimData, error: claimErr } = await supabase.rpc(
-          'claim_generation_slot',
-          { p_job_id: job.id, p_user_id: job.user_id }
-        );
-        const claimed = claimData === true || claimData?.allowed === true;
-        if (!claimErr && claimed) {
-          claimedJobs.push(job.id);
-        }
-      } catch (err) {
-        // fail closed per job
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from('analysis_jobs')
+        .update({
+          status: 'validating_inputs',
+          started_at: new Date().toISOString(),
+          last_error: null,
+        })
+        .eq('id', job.id)
+        .eq('status', 'queued')
+        .select('id');
+
+      if (updateErr || !updatedRows || updatedRows.length === 0) {
+        return res.json({
+          ok: true,
+          fetched: (jobRows || []).length,
+          eligible: eligibleJobs.length,
+          claimed: 0,
+          claimed_job_ids: [],
+          transitioned: 0,
+          transitioned_job_ids: [],
+          failed_job_ids: [],
+          jobs: eligibleJobs,
+        });
       }
+
+      claimedJobs.push(job.id);
     }
 
     const transitionedJobIds = [];
@@ -329,23 +343,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      const { data: updatedRows, error: updateErr } = await supabase
-  .from('analysis_jobs')
-  .update({ status: 'validating_inputs', last_error: null })
-  .in('status', ['queued', 'failed'])
-  .eq('id', jobId)
-  .select('id');
-
-if (updateErr || !updatedRows || updatedRows.length === 0) {
-  console.error('ADMIN_RUN_ONCE_UPDATE_FAILED', {
-    jobId,
-    error: updateErr?.message ?? 'NO_ROWS_UPDATED',
-  });
-  failedJobIds.push(jobId);
-  continue;
-}
-
-transitionedJobIds.push(jobId);
+      transitionedJobIds.push(jobId);
     }
 
     return res.json({
