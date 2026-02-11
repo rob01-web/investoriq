@@ -728,24 +728,25 @@ if (profile?.id && !effectiveJobId) {
     revisions_used: 0,
   };
 
-  const fetchRequiredDocFlags = async (targetJobId) => {
-    if (!targetJobId) {
-      setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
-      return;
-    }
+  const fetchRequiredDocFlags = async (jobId) => {
+    if (!jobId) return;
+
     const { data, error } = await supabase
       .from('analysis_job_files')
       .select('doc_type')
-      .eq('job_id', targetJobId)
+      .eq('job_id', jobId)
       .in('doc_type', ['rent_roll', 't12']);
+
     if (error) {
+      console.error('fetchRequiredDocFlags error:', error);
       setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
       return;
     }
-    const types = new Set((data || []).map((row) => row.doc_type));
+
+    const types = (data || []).map((r) => r.doc_type);
     setRequiredDocsDb({
-      hasRentRoll: types.has('rent_roll'),
-      hasT12: types.has('t12'),
+      hasRentRoll: types.includes('rent_roll'),
+      hasT12: types.includes('t12'),
     });
   };
 
