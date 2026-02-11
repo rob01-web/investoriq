@@ -35,6 +35,10 @@ export default function Dashboard() {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueReport, setIssueReport] = useState(null);
   const [showScopePreview, setShowScopePreview] = useState(false);
+  const [requiredDocsDb, setRequiredDocsDb] = useState({
+    hasRentRoll: false,
+    hasT12: false,
+  });
   const [entitlements, setEntitlements] = useState({
     screening: null,
     underwriting: null,
@@ -318,6 +322,7 @@ export default function Dashboard() {
       return;
     }
     fetchRentRollCoverage(jobId);
+    fetchRequiredDocFlags(jobId);
   }, [jobId]);
 
   // REAL-TIME LISTENER: Watch for status changes (Queued -> Underwriting -> Success)
@@ -409,7 +414,7 @@ const supportingDocGroups = [
   },
 ];
 const supportingDocTypes = supportingDocGroups.flatMap((group) => group.docs);
-const hasRequiredUploads = rentRollFiles.length > 0 && t12Files.length > 0;
+const hasRequiredUploads = requiredDocsDb.hasRentRoll && requiredDocsDb.hasT12;
 const requiredDocsReady = hasRequiredUploads;
 const hasRentRoll = rentRollFiles.length > 0;
 const hasT12 = t12Files.length > 0;
@@ -723,6 +728,27 @@ if (profile?.id && !effectiveJobId) {
     revisions_used: 0,
   };
 
+  const fetchRequiredDocFlags = async (targetJobId) => {
+    if (!targetJobId) {
+      setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
+      return;
+    }
+    const { data, error } = await supabase
+      .from('analysis_job_files')
+      .select('doc_type')
+      .eq('job_id', targetJobId)
+      .in('doc_type', ['rent_roll', 't12']);
+    if (error) {
+      setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
+      return;
+    }
+    const types = new Set((data || []).map((row) => row.doc_type));
+    setRequiredDocsDb({
+      hasRentRoll: types.has('rent_roll'),
+      hasT12: types.has('t12'),
+    });
+  };
+
   const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
     p_report_type: reportType,
     p_job_payload: jobPayload,
@@ -840,6 +866,8 @@ if (!profile?.id || !effectiveJobId) {
       return true;
     });
   });
+
+  await fetchRequiredDocFlags(effectiveJobId);
 
   // IMPORTANT: do not force re-acknowledgement on each upload.
 };
