@@ -728,7 +728,7 @@ if (profile?.id && !effectiveJobId) {
     revisions_used: 0,
   };
 
-  const fetchRequiredDocFlags = async (jobId) => {
+  async function fetchRequiredDocFlags(jobId) {
     if (!jobId) return;
 
     const { data, error } = await supabase
@@ -748,7 +748,7 @@ if (profile?.id && !effectiveJobId) {
       hasRentRoll: types.includes('rent_roll'),
       hasT12: types.includes('t12'),
     });
-  };
+  }
 
   const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
     p_report_type: reportType,
