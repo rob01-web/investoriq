@@ -750,28 +750,6 @@ if (profile?.id && !effectiveJobId) {
     });
   }
 
-  async function fetchRequiredDocFlags(jobId) {
-    if (!jobId) return;
-
-    const { data, error } = await supabase
-      .from('analysis_job_files')
-      .select('doc_type')
-      .eq('job_id', jobId)
-      .in('doc_type', ['rent_roll', 't12']);
-
-    if (error) {
-      console.error('fetchRequiredDocFlags error:', error);
-      setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
-      return;
-    }
-
-    const types = (data || []).map((r) => r.doc_type);
-    setRequiredDocsDb({
-      hasRentRoll: types.includes('rent_roll'),
-      hasT12: types.includes('t12'),
-    });
-  }
-
   const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
     p_report_type: reportType,
     p_job_payload: jobPayload,
