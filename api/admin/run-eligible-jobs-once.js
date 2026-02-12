@@ -216,7 +216,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const dryRun = req.body?.dry_run !== false;
+    const dryRun = req.body?.dry_run === true;
     const forceJobId = req.body?.job_id;
     if (forceJobId !== undefined) {
       if (typeof forceJobId !== 'string' || !forceJobId.trim()) {
