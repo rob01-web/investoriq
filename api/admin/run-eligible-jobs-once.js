@@ -301,7 +301,7 @@ export default async function handler(req, res) {
       const { data: updatedRows, error: updateErr } = await supabase
         .from('analysis_jobs')
         .update({
-          status: 'validating_inputs',
+          status: 'extracting',
           started_at: new Date().toISOString(),
           error_code: null,
           error_message: null,
@@ -345,7 +345,7 @@ export default async function handler(req, res) {
           actor: 'admin',
           event_type: 'admin_run_once',
           from_status: fromStatus,
-          to_status: 'validating_inputs',
+          to_status: 'extracting',
           created_at: new Date().toISOString(),
           meta: { route: '/api/admin/run-eligible-jobs-once' },
         },
