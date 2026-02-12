@@ -251,7 +251,12 @@ export default async function handler(req, res) {
 
       const { data: updatedRows, error: updateErr } = await supabase
         .from('analysis_jobs')
-        .update({ status: 'queued', last_error: null, started_at: null })
+        .update({
+          status: 'queued',
+          error_code: null,
+          error_message: null,
+          started_at: null,
+        })
         .eq('id', forceJobId)
         .select('id');
 
@@ -298,13 +303,21 @@ export default async function handler(req, res) {
         .update({
           status: 'validating_inputs',
           started_at: new Date().toISOString(),
-          last_error: null,
+          error_code: null,
+          error_message: null,
         })
         .eq('id', job.id)
         .eq('status', 'queued')
         .select('id');
 
-      if (updateErr || !updatedRows || updatedRows.length === 0) {
+      if (updateErr) {
+        return res.status(500).json({
+          ok: false,
+          error: 'CLAIM_UPDATE_FAILED',
+          details: updateErr.message || updateErr,
+        });
+      }
+      if (!updatedRows || updatedRows.length === 0) {
         return res.json({
           ok: true,
           fetched: (jobRows || []).length,
