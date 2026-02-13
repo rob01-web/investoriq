@@ -108,7 +108,8 @@ export default async function handler(req, res) {
       .single();
 
     if (jobErr || !jobRow?.id) {
-      return res.status(500).json({ error: "Failed to create analysis job" });
+      console.error("ANALYSIS_JOB_INSERT_ERROR:", jobErr);
+      return res.status(500).json({ error: jobErr?.message || "Failed to create analysis job" });
     }
     const jobId = jobRow.id;
 
