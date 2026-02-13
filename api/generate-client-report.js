@@ -725,6 +725,12 @@ export default async function handler(req, res) {
         .maybeSingle();
       jobReportType = jobRow?.report_type || null;
       jobUserId = jobRow?.user_id || null;
+      if (!effectiveUserId) {
+        effectiveUserId = jobUserId;
+      }
+      if (!effectiveUserId) {
+        return res.status(404).json({ error: "Job not found" });
+      }
       if (jobUserId && effectiveUserId && jobUserId !== effectiveUserId) {
         return res.status(403).json({ error: "Job ownership mismatch" });
       }
