@@ -60,10 +60,15 @@ export default async function handler(req, res) {
 
   const userId = session?.metadata?.userId;
   const productType = session?.metadata?.productType;
+  const jobId = session?.metadata?.jobId;
 
-  if (!userId || !productType) {
-    console.warn("Missing metadata userId/productType", { userId, productType });
-    return res.status(400).json({ error: "Missing metadata userId/productType" });
+  if (!userId || !productType || !jobId) {
+    console.warn("Missing metadata userId/productType/jobId", {
+      userId,
+      productType,
+      jobId,
+    });
+    return res.status(400).json({ error: "Missing metadata jobId" });
   }
 
   if (productType !== "screening" && productType !== "underwriting") {
@@ -103,6 +108,7 @@ export default async function handler(req, res) {
       {
         user_id: userId,
         product_type: productType,
+        job_id: jobId,
         stripe_session_id: sessionId || null,
       },
     ]);
@@ -119,7 +125,7 @@ export default async function handler(req, res) {
     .from("analysis_job_events")
     .insert([
       {
-        job_id: null,
+        job_id: jobId,
         actor: "stripe",
         event_type: "purchase_completed",
         from_status: null,
