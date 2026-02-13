@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
   const { error: updateErr } = await supabaseAdmin
     .from('analysis_jobs')
-    .update({ status: 'queued', last_error: null })
+    .update({ status: 'queued', error_code: null, error_message: null })
     .eq('id', jobId);
 
   if (updateErr) {

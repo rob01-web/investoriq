@@ -759,7 +759,8 @@ export default async function handler(req, res) {
           .status(500)
           .json({ error: "Failed to claim generation slot" });
       }
-      if (!claimData?.allowed) {
+      const claimRow = Array.isArray(claimData) ? claimData[0] : claimData;
+      if (!claimRow?.allowed) {
         return res.status(409).json({ code: "REVISION_LIMIT_REACHED" });
       }
       slotClaimed = true;

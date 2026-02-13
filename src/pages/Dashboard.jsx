@@ -48,7 +48,6 @@ export default function Dashboard() {
   const hasBlockingJob = inProgressJobs.some((job) =>
     [
       'queued',
-      'validating_inputs',
       'extracting',
       'underwriting',
       'scoring',
@@ -155,7 +154,6 @@ export default function Dashboard() {
       .eq('user_id', profile.id)
     .in('status', [
       'queued',
-      'validating_inputs',
       'extracting',
       'needs_documents',
       'underwriting',
@@ -278,7 +276,6 @@ export default function Dashboard() {
         .eq('user_id', profile.id)
         .in('status', [
           'queued',
-          'validating_inputs',
           'extracting',
           'needs_documents',
           'underwriting',
@@ -477,7 +474,6 @@ const step2Locked = !propertyName.trim();
 const statusBlocksRegen = activeJobForRuns
   ? [
       'queued',
-      'validating_inputs',
       'extracting',
       'needs_documents',
       'underwriting',
@@ -537,63 +533,6 @@ const step3Locked = !jobId || regenDisabled;
 
     const handleUploadSuccess = async () => {
     if (!profile?.id) return;
-
-    // Create a job the moment the user begins uploading (async underwriting anchor)
-    if (!jobId) {
-      const reportType = (selectedReportType || '').toLowerCase();
-      const allowedReportTypes = ['screening', 'underwriting'];
-      if (!allowedReportTypes.includes(reportType)) {
-        return;
-      }
-      const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
-      const jobPayload = {
-        property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
-        status: 'needs_documents',
-        prompt_version: 'v2026-01-17',
-        parser_version: 'v1',
-        template_version: 'v2026-01-14',
-        scoring_version: 'v1',
-        report_type: reportType,
-        revisions_limit: revisionsLimit,
-        revisions_used: 0,
-      };
-
-      const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
-        p_report_type: reportType,
-        p_job_payload: jobPayload,
-      });
-
-      if (error) {
-        const msg = String(error.message || '');
-        if (msg.includes('NO_AVAILABLE_CREDIT')) {
-          toast({
-            title: 'Purchase required',
-            description: 'No unused purchase found for this report type.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        console.error('Failed to create analysis job:', error);
-        toast({
-          title: 'Unable to start analysis job',
-          description: 'We could not initialize your underwriting run. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const createdJobId = data?.[0]?.job_id || data?.job_id;
-      if (!createdJobId) {
-        toast({
-          title: 'Unable to start analysis job',
-          description: 'We could not initialize your underwriting run. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setJobId(createdJobId);
-    }
 
     toast({
       title: 'Uploads received',
@@ -1826,7 +1765,7 @@ if (!profile?.id || !effectiveJobId) {
               <div className="text-xs text-slate-500">
                 {activeJobForRuns?.status === 'queued'
                   ? 'Queued for processing.'
-                  : ['validating_inputs', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
+                  : ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
                       activeJobForRuns?.status
                     )
                   ? 'Processing in progress.'
