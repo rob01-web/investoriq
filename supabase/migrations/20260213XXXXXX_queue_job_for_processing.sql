@@ -1,0 +1,9 @@
+-- Placeholder migration for queue_job_for_processing
+-- This migration must contain the CREATE OR REPLACE FUNCTION public.queue_job_for_processing definition.
+-- Fetch it from Supabase with:
+-- select pg_get_functiondef(p.oid)
+-- from pg_proc p
+-- join pg_namespace n on n.oid = p.pronamespace
+-- where n.nspname = 'public'
+--   and p.proname = 'queue_job_for_processing';
+-- TODO: Replace this comment with the full function body once Supabase is stable.
