@@ -667,6 +667,7 @@ export default async function handler(req, res) {
   let slotClaimed = false;
   let slotJobId = null;
   let generationSucceeded = false;
+  let effectiveUserId = null;
   try {
     const body = req.body || {};
     const isAdminRegen = body?.admin_regen === true;
@@ -713,7 +714,7 @@ export default async function handler(req, res) {
     // 1. Parse input JSON (structured)
     const { userId: bodyUserId, property_name } = body;
     const jobId = body?.job_id || body?.jobId;
-    let effectiveUserId = bodyUserId || null;
+    effectiveUserId = bodyUserId || null;
     const allowedReportTypes = ["screening", "underwriting", "ic"];
     let jobReportType = null;
     let jobUserId = null;
