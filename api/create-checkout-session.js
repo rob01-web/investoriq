@@ -1,5 +1,6 @@
 // api/create-checkout-session.js
 import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
@@ -79,6 +80,38 @@ export default async function handler(req, res) {
       });
     }
 
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return res.status(500).json({
+        error: "Server misconfigured: missing Supabase env vars.",
+        missing: [
+          !supabaseUrl ? "SUPABASE_URL" : null,
+          !supabaseServiceKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+        ].filter(Boolean),
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const runsLimit = normalizedProductType === "underwriting" ? 3 : 2;
+    const { data: jobRow, error: jobErr } = await supabase
+      .from("analysis_jobs")
+      .insert({
+        user_id: userId,
+        report_type: normalizedProductType,
+        status: "needs_documents",
+        runs_limit: runsLimit,
+        runs_used: 0,
+        runs_inflight: 0,
+      })
+      .select("id")
+      .single();
+
+    if (jobErr || !jobRow?.id) {
+      return res.status(500).json({ error: "Failed to create analysis job" });
+    }
+    const jobId = jobRow.id;
+
     const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
 
     const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success`;
@@ -94,6 +127,7 @@ export default async function handler(req, res) {
         // 🔒 webhook should trust THIS canonical value
         userId: userId || "",
         productType: normalizedProductType || "",
+        jobId,
       },
     });
 
@@ -103,3 +137,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to create checkout session" });
   }
 }
+

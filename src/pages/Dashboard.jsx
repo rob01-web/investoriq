@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [lockedJobIdForUploads, setLockedJobIdForUploads] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [ackLocked, setAckLocked] = useState(false);
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
+  const [recentJobs, setRecentJobs] = useState([]);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState('screening');
@@ -175,6 +177,38 @@ export default function Dashboard() {
     await fetchJobEvents(rows.map((job) => job.id));
   };
 
+  const fetchRecentJobs = async () => {
+    if (!profile?.id) return [];
+
+    const { data, error } = await supabase
+      .from('analysis_jobs')
+      .select('id, property_name, status, created_at')
+      .eq('user_id', profile.id)
+      .in('status', [
+        'needs_documents',
+        'queued',
+        'extracting',
+        'underwriting',
+        'scoring',
+        'rendering',
+        'pdf_generating',
+        'publishing',
+        'published',
+        'failed',
+      ])
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (error) {
+      console.error('Failed to fetch recent jobs:', error);
+      return [];
+    }
+
+    const rows = data || [];
+    setRecentJobs(rows);
+    return rows;
+  };
+
   const fetchEntitlements = async () => {
     if (!profile?.id) return;
     const { data, error } = await supabase
@@ -267,33 +301,29 @@ export default function Dashboard() {
     await fetchInProgressJobs();
     await fetchLatestFailedJob();
     await fetchEntitlements();
+    const recent = await fetchRecentJobs();
 
-        // Reuse the most recent in-progress job (supports walk-away / return later)
-    if (!jobId) {
-      const { data: existingJob, error } = await supabase
-        .from('analysis_jobs')
-        .select('id, status, created_at, property_name, runs_limit, runs_used, runs_inflight')
-        .eq('user_id', profile.id)
-        .in('status', [
-          'queued',
-          'extracting',
-          'needs_documents',
-          'underwriting',
-          'scoring',
-          'rendering',
-          'pdf_generating',
-          'publishing',
-        ])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Reuse the most recent in-progress job (supports walk-away / return later)
+    if (!jobId && recent.length > 0) {
+      const jobIds = recent.map((job) => job.id);
+      const { data: fileRows, error: filesErr } = await supabase
+        .from('analysis_job_files')
+        .select('job_id')
+        .in('job_id', jobIds);
 
-      if (!error && existingJob?.id) {
-        setJobId(existingJob.id);
+      const jobsWithDocs = new Set(
+        (filesErr ? [] : fileRows || []).map((row) => row.job_id)
+      );
+      const preferredJob =
+        recent.find((job) => jobsWithDocs.has(job.id)) || recent[0];
+
+      if (preferredJob?.id) {
+        setJobId(preferredJob.id);
+        setLockedJobIdForUploads(preferredJob.id);
 
         // Hydrate the input only if the user has not typed anything yet
-        if (!propertyName.trim() && existingJob.property_name) {
-          setPropertyName(existingJob.property_name);
+        if (!propertyName.trim() && preferredJob.property_name) {
+          setPropertyName(preferredJob.property_name);
         }
       }
     }
@@ -662,7 +692,7 @@ const step3Locked = !jobId || regenDisabled;
   }
 
     // Use a local job id to avoid React state timing issues
-let effectiveJobId = jobId;
+let effectiveJobId = lockedJobIdForUploads || jobId;
 
 // Create a job the moment the user begins uploading (async underwriting anchor)
 if (profile?.id && !effectiveJobId) {
@@ -725,6 +755,9 @@ if (profile?.id && !effectiveJobId) {
 
   effectiveJobId = createdJobId;
   setJobId(effectiveJobId);
+  if (!lockedJobIdForUploads) {
+    setLockedJobIdForUploads(effectiveJobId);
+  }
 }
 
 // Upload files to Supabase Storage under this underwriting job
@@ -735,6 +768,10 @@ if (!profile?.id || !effectiveJobId) {
     variant: 'destructive',
   });
   return;
+}
+
+if (!lockedJobIdForUploads && effectiveJobId) {
+  setLockedJobIdForUploads(effectiveJobId);
 }
 
   const bucket = 'staged_uploads';
@@ -1118,6 +1155,30 @@ if (!profile?.id || !effectiveJobId) {
                     Purchase report
                   </button>
                 </div>
+                {recentJobs.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Active report</div>
+                    <div className="mt-2">
+                      <select
+                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        value={jobId || ''}
+                        onChange={(e) => {
+                          const nextJobId = e.target.value || null;
+                          setJobId(nextJobId);
+                          if (nextJobId) {
+                            setLockedJobIdForUploads(nextJobId);
+                          }
+                        }}
+                      >
+                        {recentJobs.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {(job.property_name || 'Untitled Property') + ` (${job.status})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : null}
               </div>
               <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between">
