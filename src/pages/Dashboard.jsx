@@ -974,7 +974,7 @@ if (!profile?.id || !effectiveJobId) {
       if (error?.status === 409 && error?.code === 'REVISION_LIMIT_REACHED') {
         toast({
           title: 'Revision limit reached',
-          description: 'You’ve used all available revisions for this report.',
+          description: 'Report run limit reached for this property. Please purchase a new report to run again.',
           variant: 'destructive',
         });
         await Promise.all([
@@ -2244,5 +2244,6 @@ if (!profile?.id || !effectiveJobId) {
     </>
   );
 }
+
 
 

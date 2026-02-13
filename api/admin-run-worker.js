@@ -1644,12 +1644,13 @@ export default async function handler(req, res) {
       }
     }
 
+    const advancedJobIds = Array.from(new Set(transitions.map((t) => t.job_id)));
     return res.status(200).json({
       ok: true,
       advancedCount: transitions.length,
       blockedNeedsDocumentsCount: blockedJobIds.length,
       failedCount: failedJobIds.length,
-      advancedJobIds: transitions.map((t) => t.job_id),
+      advancedJobIds,
       blockedJobIds,
       failedJobIds,
       transitions,
