@@ -152,7 +152,7 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at, runs_limit, runs_used, runs_inflight')
+      .select('id, property_name, status, created_at')
       .eq('user_id', profile.id)
     .in('status', [
       'queued',
@@ -234,7 +234,7 @@ export default function Dashboard() {
     const { data, error } = await supabase
       .from('analysis_jobs')
       .select(
-        'id, property_name, status, created_at, error_message, error_code, runs_limit, runs_used, runs_inflight'
+        'id, property_name, status, created_at, error_message, error_code'
       )
       .eq('user_id', profile.id)
       .eq('status', 'failed')
@@ -485,38 +485,16 @@ const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null
 const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
 const activeJobForRuns =
   jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
-const hasRunsData = !!(
-  activeJobForRuns &&
-  activeJobForRuns.id === jobId &&
-  typeof activeJobForRuns.runs_limit === 'number' &&
-  typeof activeJobForRuns.runs_used === 'number' &&
-  typeof activeJobForRuns.runs_inflight === 'number'
-);
-const runsLimitValue = Number(activeJobForRuns?.runs_limit ?? 0);
-const runsUsedValue = Number(activeJobForRuns?.runs_used ?? 0);
-const runsInflightValue = Number(activeJobForRuns?.runs_inflight ?? 0);
-const remainingTotal = Math.max(0, runsLimitValue - runsUsedValue - runsInflightValue);
 const availableReportsCount = entitlements.error
   ? 0
   : Number(entitlements.screening ?? 0) + Number(entitlements.underwriting ?? 0);
 const hasAvailableReport = availableReportsCount >= 1;
 const step2Locked = !propertyName.trim();
-const statusBlocksRegen = activeJobForRuns
-  ? [
-      'queued',
-      'extracting',
-      'needs_documents',
-      'underwriting',
-      'scoring',
-      'rendering',
-      'pdf_generating',
-      'publishing',
-    ].includes(activeJobForRuns.status)
-  : false;
-const regenDisabled = activeJobForRuns
-  ? remainingTotal <= 0 || statusBlocksRegen
-  : false;
-const step3Locked = !jobId || regenDisabled;
+const step3Locked =
+  !jobId ||
+  activeJobForRuns?.status !== 'needs_documents' ||
+  !hasRequiredUploads ||
+  !acknowledged;
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -867,6 +845,14 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       });
       return;
     }
+    if (!acknowledged) {
+      toast({
+        title: 'Acknowledgement required',
+        description: 'Please acknowledge the disclosure to proceed.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (!jobId) {
       toast({
@@ -876,7 +862,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       });
       return;
     }
-    if (statusBlocksRegen) {
+    if (activeJobForRuns?.status && activeJobForRuns.status !== 'needs_documents') {
       toast({
         title: 'Report is already processing',
         description: 'Please wait for the current run to finish.',
@@ -889,95 +875,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
     setLoading(true); 
 
     try {
-      if (runsUsedValue > 0) {
-        if (!hasRunsData) {
-          toast({
-            title: 'Cannot generate report',
-            description: 'Generations: DATA NOT AVAILABLE. Please refresh and try again.',
-            variant: 'destructive',
-          });
-          await Promise.all([
-            fetchInProgressJobs(),
-            fetchReports(),
-            fetchLatestFailedJob(),
-          ]);
-          setLoading(false);
-          return;
-        }
-        if (remainingTotal <= 0) {
-          toast({
-            title: 'Revision limit reached',
-            description: 'You?ve used all available revisions for this report.',
-            variant: 'destructive',
-          });
-          await Promise.all([
-            fetchInProgressJobs(),
-            fetchReports(),
-            fetchLatestFailedJob(),
-          ]);
-          setLoading(false);
-          return;
-        }
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) {
-          toast({
-            title: 'Failed to request revision',
-            description: 'Please try again.',
-            variant: 'destructive',
-          });
-          setLoading(false);
-          return;
-        }
-
-        const revisionRes = await fetch('/api/jobs/request-revision', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ job_id: jobId }),
-        });
-
-        const revisionData = await revisionRes.json().catch(() => ({}));
-        if (revisionRes.ok && revisionData?.ok) {
-          toast({
-            title: 'Revision requested',
-            description: 'Your revision request has been queued.',
-          });
-          await Promise.all([
-            fetchInProgressJobs(),
-            fetchReports(),
-            fetchLatestFailedJob(),
-          ]);
-          setLoading(false);
-          return;
-        }
-
-        if (revisionData?.code === 'REVISION_LIMIT_REACHED') {
-          toast({
-            title: 'Revision limit reached',
-            description: 'You’ve used all available revisions for this job.',
-            variant: 'destructive',
-          });
-          await Promise.all([
-            fetchInProgressJobs(),
-            fetchReports(),
-            fetchLatestFailedJob(),
-          ]);
-          setLoading(false);
-          return;
-        }
-
-        toast({
-          title: 'Failed to request revision',
-          description: 'Please try again.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
       // Final update before status transition
       const { error: statusErr } = await supabase.rpc('queue_job_for_processing', {
         p_job_id: jobId,
@@ -1010,7 +907,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       console.error('Queue Error FULL:', error, error?.stack);
       if (error?.status === 409 && error?.code === 'REVISION_LIMIT_REACHED') {
         toast({
-          title: 'Revision limit reached',
+          title: 'Report run limit reached',
           description: 'Report run limit reached for this property. Please purchase a new report to run again.',
           variant: 'destructive',
         });
@@ -1840,34 +1737,28 @@ if (!lockedJobIdForUploads && effectiveJobId) {
                 <button
                   type="button"
                   onClick={handleAnalyze}
-                  disabled={loading || regenDisabled || !jobId}
+                  disabled={
+                    loading ||
+                    !jobId ||
+                    !hasRequiredUploads ||
+                    !acknowledged ||
+                    activeJobForRuns?.status !== 'needs_documents'
+                  }
                   className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
-                    loading || regenDisabled || !jobId
+                    loading ||
+                    !jobId ||
+                    !hasRequiredUploads ||
+                    !acknowledged ||
+                    activeJobForRuns?.status !== 'needs_documents'
                       ? 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
                 >
-                  {loading ? 'Working…' : runsUsedValue === 0 ? 'Generate Report' : 'Generate Revision'}
+                  {loading ? 'Working…' : 'Generate Report'}
                 </button>
                 <div className="text-xs leading-relaxed text-slate-500">
                   Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
-                </div>
-                {hasRunsData ? (
-                  <div className="text-xs text-slate-600">
-                    Generations {runsUsedValue + runsInflightValue} of {runsLimitValue}
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-600">Generations: DATA NOT AVAILABLE</div>
-                )}
-                <div className="text-xs text-slate-500">
-                  Revisions are limited to the same property and underlying documents. Materially different rent rolls or operating statements require a new report.
-                </div>
-                {hasRunsData && remainingTotal <= 0 ? (
-                  <div className="text-xs text-red-700">
-                    You’ve used all available revisions for this report.
-                  </div>
-                ) : null}
-              </div>
+                </div></div>
             </div>
           </div>
 
@@ -1974,16 +1865,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
                 Status: {job.status.replaceAll('_', ' ')}
-              </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Revision {Math.max(0, Number(job.runs_used ?? 0) - 1)} of{' '}
-                {Math.max(0, Number(job.runs_limit ?? 0) - 1)}
-                {Number.isFinite(Number(job.runs_used)) &&
-                Number.isFinite(Number(job.runs_limit)) ? (
-                  <span className="ml-2 text-slate-400">
-                    Runs used: {Number(job.runs_used)} / {Number(job.runs_limit)}
-                  </span>
-                ) : null}
               </div>
             </div>
 
@@ -2305,6 +2186,8 @@ if (!lockedJobIdForUploads && effectiveJobId) {
     </>
   );
 }
+
+
 
 
 
