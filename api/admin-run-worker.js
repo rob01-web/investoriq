@@ -66,7 +66,6 @@ export default async function handler(req, res) {
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
       'queued',
-      'validating_inputs',
       'extracting',
       'underwriting',
       'scoring',
@@ -1593,7 +1592,7 @@ export default async function handler(req, res) {
                 subject: 'Your InvestorIQ report is ready',
                 text:
                   `Hello ${firstName},\n\n` +
-                  'Your InvestorIQ report has been completed and is now available in your dashboard.\n\n' +
+                  'Your InvestorIQ report has been published and is now available in your dashboard.\n\n' +
                   'Please log in to your InvestorIQ dashboard\n' +
                   'to review and download your report.\n\n' +
                   'If you have additional documents or wish to run another analysis,\n' +

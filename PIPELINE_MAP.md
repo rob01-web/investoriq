@@ -8,7 +8,7 @@ This file is a deterministic inventory of the current pipeline code paths from u
 - `src/pages/Dashboard.jsx`
   - `handleUpload()` and `handleUploadSuccess()` create a job via RPC and upload files.
   - `handleAnalyze()` queues a job via RPC (`queue_job_for_processing`).
-  - Revisions: `/api/jobs/request-revision` is called for revision requests.
+  - Revisions are not user-triggered; regeneration is admin-controlled.
 
 **API / Serverless Routes**
 - `api/admin-run-worker.js`
@@ -19,7 +19,6 @@ This file is a deterministic inventory of the current pipeline code paths from u
   - `action: "regenerate_pdf"`: calls `/api/generate-client-report` for an existing job.
 - `api/generate-client-report.js`
   - Builds HTML, calls DocRaptor, stores PDF, updates report rows, logs artifacts.
-  - Uses generation slot RPCs for run limits.
 - `api/parse/parse-doc.js`
   - Unified parser for `rent_roll`, `t12`, `other`.
 - `api/parse/extract-job-text.js`
@@ -27,7 +26,7 @@ This file is a deterministic inventory of the current pipeline code paths from u
 - `api/parse/classify-documents.js`
   - Document classification; writes artifacts and parse status.
 - `api/jobs/request-revision.js`
-  - Revision request: consumes revision slot and requeues job.
+  - Returns a fail-closed 403 (regeneration is admin-controlled).
 - `api/admin/queue-metrics.js`
   - Admin observability data for jobs and issues.
 
@@ -35,56 +34,44 @@ This file is a deterministic inventory of the current pipeline code paths from u
 - `.github/workflows/worker-kick.yml`
   - Every 5 minutes calls `POST https://investoriq.tech/api/admin/run-eligible-jobs-once` with `ADMIN_RUN_KEY`.
 
-## B) Status transitions (from → to, and where)
+## B) Status transitions (from -> to, and where)
 
 **Job creation**
 - `consume_purchase_and_create_job` (RPC): creates `analysis_jobs` with `status = 'needs_documents'`.
   - File: `supabase/migrations/20260210100140_consume_purchase_and_create_job.sql`
 
 **Queue / claim**
-- `Dashboard.handleAnalyze()` → `queue_job_for_processing` RPC sets job to queued (RPC definition not found in repo).
+- `Dashboard.handleAnalyze()` -> `queue_job_for_processing` RPC sets job to queued.
   - File: `src/pages/Dashboard.jsx`
-- `admin-run-worker.js`: claims `queued → extracting` via conditional update.
+  - RPC file: `supabase/migrations/20260214_0930_queue_job_for_processing.sql`
+- `admin-run-worker.js`: claims `queued -> extracting` via conditional update.
   - File: `api/admin-run-worker.js`
-- `run-eligible-jobs-once.js`: claims `queued → extracting` for eligible jobs.
+- `run-eligible-jobs-once.js`: claims `queued -> extracting` for queued jobs.
   - File: `api/admin/run-eligible-jobs-once.js`
-- `request-revision`: `status → queued` on revision.
-  - File: `api/jobs/request-revision.js`
-- Forced admin requeue: `status → queued` for a specific `job_id`.
+- Forced admin requeue: `status -> queued` for a specific `job_id`.
   - File: `api/admin/run-eligible-jobs-once.js`
 
 **Processing pipeline (admin-run-worker)**
-- `extracting → underwriting`
-- `underwriting → scoring`
-- `scoring → rendering`
-- `rendering → pdf_generating`
-- `pdf_generating → publishing`
-- `publishing → published`
+- `extracting -> underwriting`
+- `underwriting -> scoring`
+- `scoring -> rendering`
+- `rendering -> pdf_generating`
+- `pdf_generating -> publishing`
+- `publishing -> published`
   - File: `api/admin-run-worker.js`
 
 **Failure / blocked**
-- `rendering → needs_documents` (missing required parsed artifacts)
+- `rendering -> needs_documents` (missing required parsed artifacts)
   - File: `api/admin-run-worker.js`
-- `any stage → failed` on errors/timeouts
+- `any stage -> failed` on errors/timeouts
   - File: `api/admin-run-worker.js`
 
 ## C) Run/rate/limit enforcement points
 
 - **Purchase consumption + job creation**
   - `consume_purchase_and_create_job` uses `report_purchases` and `auth.uid()` with `FOR UPDATE SKIP LOCKED`.
-  - Enforces report_type and revisions_limit.
+  - Enforces report_type and creates jobs in `needs_documents`.
   - File: `supabase/migrations/20260210100140_consume_purchase_and_create_job.sql`
-
-- **Generation slot limits**
-  - `claim_generation_slot` (RPC) before DocRaptor generation.
-  - `finalize_generation_slot` (RPC) in finally block.
-  - File: `api/generate-client-report.js`
-
-- **Revision limits**
-  - `consume_revision_slot` (RPC) in `api/jobs/request-revision.js`.
-
-- **Eligibility check for admin run**
-  - `runs_limit`, `runs_used`, `runs_inflight` filters in `api/admin/run-eligible-jobs-once.js`.
 
 ## D) DocRaptor call sites
 
@@ -116,8 +103,7 @@ This file is a deterministic inventory of the current pipeline code paths from u
 
 - `analysis_job_events`:
   - Admin run claims and forced requeue, admin regenerate PDF.
-  - Revision requested events.
-  - Files: `api/admin/run-eligible-jobs-once.js`, `api/jobs/request-revision.js`
+  - Files: `api/admin/run-eligible-jobs-once.js`
 
 ## G) Cron wiring
 
@@ -126,7 +112,5 @@ This file is a deterministic inventory of the current pipeline code paths from u
 
 ## H) Legacy/duplicate/possible mismatch observations (no refactors)
 
-- `queue_job_for_processing` RPC is referenced in `src/pages/Dashboard.jsx` but no SQL migration or server definition appears in the repo.
-- `api/jobs/request-revision.js` updates `analysis_jobs` with `last_error: null`, while the admin runner uses `error_code`/`error_message`. This suggests mixed error-field usage.
+- `queue_job_for_processing` is defined in `supabase/migrations/20260214_0930_queue_job_for_processing.sql` and used by `Dashboard.handleAnalyze()`.
 - Both `handleUploadSuccess()` and `handleUpload()` attempt job creation via `consume_purchase_and_create_job`. This may be intentional but is duplicated.
-- Status `validating_inputs` appears in some UI gating/strings, but core worker transitions start at `queued → extracting`.

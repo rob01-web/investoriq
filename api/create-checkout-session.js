@@ -93,7 +93,6 @@ export default async function handler(req, res) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const runsLimit = normalizedProductType === "underwriting" ? 3 : 2;
     const { data: jobRow, error: jobErr } = await supabase
       .from("analysis_jobs")
       .insert({
@@ -101,9 +100,6 @@ export default async function handler(req, res) {
         report_type: normalizedProductType,
         property_name: "Untitled Property",
         status: "needs_documents",
-        runs_limit: runsLimit,
-        runs_used: 0,
-        runs_inflight: 0,
       })
       .select("id")
       .single();

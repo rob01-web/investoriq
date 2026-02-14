@@ -684,7 +684,6 @@ if (profile?.id && !effectiveJobId) {
     });
     return;
   }
-  const revisionsLimit = reportType === 'underwriting' ? 3 : 2;
   const jobPayload = {
     property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
     status: 'needs_documents',
@@ -693,8 +692,6 @@ if (profile?.id && !effectiveJobId) {
     template_version: 'v2026-01-14',
     scoring_version: 'v1',
     report_type: reportType,
-    revisions_limit: revisionsLimit,
-    revisions_used: 0,
   };
 
   const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
