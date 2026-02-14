@@ -801,7 +801,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
         const { error: rowErr } = await supabase
       .from('analysis_job_files')
-      .insert({
+      .upsert({
         job_id: effectiveJobId,
         user_id: profile.id,
         bucket,
@@ -811,7 +811,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         bytes: file.size,
         doc_type: slotDocType,
         parse_status: 'pending',
-      });
+      }, { onConflict: 'job_id,doc_type' });
 
     if (rowErr) {
       console.error('analysis_job_files insert failed:', rowErr);
@@ -1310,7 +1310,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
   <input
     type="text"
-    value={propertyName}
+    value={propertyName === 'Untitled Property' ? '' : propertyName}
     onChange={async (e) => {
       const next = e.target.value;
       propertyNameRef.current = next;
@@ -1329,7 +1329,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         }
       }
     }}
-    placeholder="e.g. 123 Main Street Apartments"
+    placeholder="Enter property name"
     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
   />
 </div>
