@@ -1751,6 +1751,20 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         const errorMessage = jobEvent?.payload?.error_message || '';
         const isActionRequired = eventName === 'missing_required_documents';
         const isWarning = !isActionRequired && Boolean(eventName);
+        const statusLabelMap = {
+          queued: 'Queued',
+          extracting: 'Extracting',
+          underwriting: 'Underwriting',
+          scoring: 'Scoring',
+          rendering: 'Rendering',
+          pdf_generating: 'PDF generating',
+          publishing: 'Publishing',
+          needs_documents: 'Needs documents',
+          published: 'Published',
+          failed: 'Failed',
+        };
+        const statusLabel =
+          statusLabelMap[job.status] || job.status.replaceAll('_', ' ');
 
         return (
           <div
@@ -1803,7 +1817,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
             </div>
 
             <div className="text-sm font-semibold text-[#1F8A8A]">
-              Processing
+              {statusLabel}
             </div>
           </div>
         );
