@@ -30,58 +30,8 @@ export default async function handler(req, res) {
   if (authErr || !authData?.user) {
     return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
   }
-
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-  const jobId = req.body?.job_id;
-  if (!jobId) {
-    return res.status(404).json({ ok: false, error: 'JOB_NOT_FOUND' });
-  }
-
-  const { data: jobRow, error: jobErr } = await supabaseAdmin
-    .from('analysis_jobs')
-    .select('id, user_id, status')
-    .eq('id', jobId)
-    .maybeSingle();
-
-  if (jobErr || !jobRow || jobRow.user_id !== authData.user.id) {
-    return res.status(404).json({ ok: false, error: 'JOB_NOT_FOUND' });
-  }
-
-  const { data: consumed, error: consumeErr } = await supabaseAdmin.rpc(
-    'consume_revision_slot',
-    { p_job_id: jobId }
-  );
-  if (consumeErr) {
-    return res.status(403).json({ ok: false, error: 'REVISION_LIMIT_REACHED' });
-  }
-  if (consumed === false) {
-    return res.status(403).json({ ok: false, error: 'REVISION_LIMIT_REACHED' });
-  }
-
-  const nowIso = new Date().toISOString();
-  const { error: eventErr } = await supabaseAdmin.from('analysis_job_events').insert([
-    {
-      job_id: jobId,
-      actor: 'user',
-      event_type: 'revision_requested',
-      from_status: jobRow.status,
-      to_status: 'queued',
-      created_at: nowIso,
-      meta: { route: '/api/jobs/request-revision' },
-    },
-  ]);
-  if (eventErr) {
-    return res.status(500).json({ ok: false, error: 'SERVER_MISCONFIGURED' });
-  }
-
-  const { error: updateErr } = await supabaseAdmin
-    .from('analysis_jobs')
-    .update({ status: 'queued', error_code: null, error_message: null })
-    .eq('id', jobId);
-
-  if (updateErr) {
-    return res.status(500).json({ ok: false, error: 'SERVER_MISCONFIGURED' });
-  }
-
-  return res.status(200).json({ ok: true });
+  return res.status(403).json({
+    message:
+      'Regeneration is admin-controlled. Please contact support with Job ID and reason.',
+  });
 }
