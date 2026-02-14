@@ -828,15 +828,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 };
 
   const handleAnalyze = async () => {
-    if (!propertyName.trim()) {
-      toast({
-        title: 'Property name required',
-        description: 'Enter a property name before generating your report.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     if (!hasRequiredUploads) {
       toast({
         title: 'Document Required',
@@ -1178,7 +1169,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
 <div className="mb-4">
   <label className="block text-sm font-semibold text-[#0F172A] mb-1">
-  Property Name <span className="text-red-700">*</span>
+  Property Address
 </label>
 
   <input
@@ -1202,7 +1193,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         }
       }
     }}
-    placeholder="Enter property name"
+    placeholder="Enter property address"
     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F8A8A]/30"
   />
 </div>
@@ -1218,11 +1209,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
               </div>
 
               <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 space-y-6">
-                {!propertyName.trim() && (
-                  <div className="mb-2 text-xs font-semibold text-slate-600">
-                    Enter a property name to enable uploads.
-                  </div>
-                )}
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col">
                     <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Required</div>
@@ -1244,15 +1230,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
                         if (!profile) {
                           window.location.href = '/pricing';
-                          return;
-                        }
-
-                        if (!propertyName.trim()) {
-                          toast({
-                            title: 'Property name required',
-                            description: 'Enter a property name before uploading documents.',
-                            variant: 'destructive',
-                          });
                           return;
                         }
 
@@ -1341,15 +1318,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
                         if (!profile) {
                           window.location.href = '/pricing';
-                          return;
-                        }
-
-                        if (!propertyName.trim()) {
-                          toast({
-                            title: 'Property name required',
-                            description: 'Enter a property name before uploading documents.',
-                            variant: 'destructive',
-                          });
                           return;
                         }
 
@@ -1490,16 +1458,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
                                     if (!profile) {
                                       window.location.href = '/pricing';
-                                      return;
-                                    }
-
-                                    if (!propertyName.trim()) {
-                                      toast({
-                                        title: 'Property name required',
-                                        description:
-                                          'Enter a property name before uploading documents.',
-                                        variant: 'destructive',
-                                      });
                                       return;
                                     }
 
