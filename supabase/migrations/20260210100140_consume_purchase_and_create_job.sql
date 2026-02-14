@@ -12,7 +12,6 @@ declare
   v_purchase_id uuid;
   v_product_type text;
   v_job_id uuid;
-  v_revisions_limit integer;
 begin
   if p_report_type is null or p_report_type not in ('screening','underwriting') then
     raise exception 'INVALID_REPORT_TYPE';
@@ -36,23 +35,11 @@ begin
     raise exception 'INVALID_REPORT_TYPE';
   end if;
 
-  v_revisions_limit := case
-    when v_product_type = 'screening' then 2
-    when v_product_type = 'underwriting' then 3
-    else null
-  end;
-
-  if v_revisions_limit is null then
-    raise exception 'INVALID_REPORT_TYPE';
-  end if;
-
   insert into public.analysis_jobs (
     user_id,
     report_type,
     property_name,
     status,
-    revisions_limit,
-    revisions_used,
     started_at
   )
   values (
@@ -60,8 +47,6 @@ begin
     v_product_type,
     nullif(p_job_payload->>'property_name',''),
     'needs_documents',
-    v_revisions_limit,
-    0,
     null
   )
   returning id into v_job_id;

@@ -94,7 +94,6 @@ import { useToast } from "@/components/ui/use-toast";
           .from("analysis_jobs")
           .select("*", { count: "exact", head: true })
           .in("status", [
-            "validating_inputs",
             "extracting",
             "underwriting",
             "scoring",
@@ -333,7 +332,6 @@ import { useToast } from "@/components/ui/use-toast";
                 {(() => {
                   const counts = queueMetrics?.counts_by_status || {};
                   const inProgressCount = [
-                    "validating_inputs",
                     "extracting",
                     "underwriting",
                     "scoring",

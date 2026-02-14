@@ -269,7 +269,7 @@ export default async function handler(req, res) {
 
     const { data: jobRows, error: jobsErr } = await supabase
       .from('analysis_jobs')
-      .select('id, user_id, status, runs_limit, runs_used, runs_inflight, created_at')
+      .select('id, user_id, status, created_at')
       .eq('status', 'queued')
       .order('created_at', { ascending: true })
       .limit(25);
@@ -278,14 +278,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
     }
 
-    const eligibleJobs = (jobRows || []).filter((job) => {
-      const runsLimitOk = typeof job.runs_limit === 'number';
-      const runsUsedOk = typeof job.runs_used === 'number';
-      const runsInflightOk = typeof job.runs_inflight === 'number';
-      if (!runsLimitOk || !runsUsedOk || !runsInflightOk) return false;
-      if (job.runs_inflight !== 0) return false;
-      return job.runs_used + job.runs_inflight < job.runs_limit;
-    });
+    const eligibleJobs = jobRows || [];
 
     if (dryRun) {
       return res.json({
