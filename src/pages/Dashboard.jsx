@@ -182,7 +182,7 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at')
+      .select('id, property_name, report_type, status, created_at')
       .eq('user_id', profile.id)
       .in('status', [
         'needs_documents',
@@ -301,32 +301,7 @@ export default function Dashboard() {
     await fetchInProgressJobs();
     await fetchLatestFailedJob();
     await fetchEntitlements();
-    const recent = await fetchRecentJobs();
-
-    // Reuse the most recent in-progress job (supports walk-away / return later)
-    if (!jobId && recent.length > 0) {
-      const jobIds = recent.map((job) => job.id);
-      const { data: fileRows, error: filesErr } = await supabase
-        .from('analysis_job_files')
-        .select('job_id')
-        .in('job_id', jobIds);
-
-      const jobsWithDocs = new Set(
-        (filesErr ? [] : fileRows || []).map((row) => row.job_id)
-      );
-      const preferredJob =
-        recent.find((job) => jobsWithDocs.has(job.id)) || recent[0];
-
-      if (preferredJob?.id) {
-        setJobId(preferredJob.id);
-        setLockedJobIdForUploads(preferredJob.id);
-
-        // Hydrate the input only if the user has not typed anything yet
-        if (!propertyName.trim() && preferredJob.property_name) {
-          setPropertyName(preferredJob.property_name);
-        }
-      }
-    }
+    await fetchRecentJobs();
   };
 
   if (profile?.id) {
@@ -343,6 +318,31 @@ export default function Dashboard() {
       };
     }
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (recentJobs.length === 0) return;
+    const typedJobs = recentJobs.filter(
+      (job) => job.report_type === selectedReportType
+    );
+    if (typedJobs.length === 0) {
+      if (jobId) {
+        setJobId(null);
+      }
+      setLockedJobIdForUploads(null);
+      return;
+    }
+    const preferredJob =
+      typedJobs.find((job) => job.status === 'needs_documents') || typedJobs[0];
+
+    if (preferredJob?.id && preferredJob.id !== jobId) {
+      setJobId(preferredJob.id);
+      setLockedJobIdForUploads(preferredJob.id);
+
+      if (!propertyName.trim() && preferredJob.property_name) {
+        setPropertyName(preferredJob.property_name);
+      }
+    }
+  }, [recentJobs, selectedReportType]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -1052,30 +1052,6 @@ if (!lockedJobIdForUploads && effectiveJobId) {
                     Purchase report
                   </button>
                 </div>
-                {recentJobs.length > 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Active report</div>
-                    <div className="mt-2">
-                      <select
-                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                        value={jobId || ''}
-                        onChange={(e) => {
-                          const nextJobId = e.target.value || null;
-                          setJobId(nextJobId);
-                          if (nextJobId) {
-                            setLockedJobIdForUploads(nextJobId);
-                          }
-                        }}
-                      >
-                        {recentJobs.map((job) => (
-                          <option key={job.id} value={job.id}>
-                            {(job.property_name || 'Untitled Property') + ` (${job.status})`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : null}
               </div>
               <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between">
