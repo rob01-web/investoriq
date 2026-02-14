@@ -1566,11 +1566,31 @@ if (!hasSectionTwelve) {
 }
 let pdfResponse;
 
+const docraptorMode =
+  process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
+const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
+if (docraptorMode === "production" && !allowProductionPdf) {
+  const disabledMessage =
+    "Production PDF generation is disabled. Contact support to enable production output.";
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "PRODUCTION_PDF_DISABLED",
+        error_message: disabledMessage,
+      })
+      .eq("id", jobId);
+  }
+  throw new Error("PRODUCTION_PDF_DISABLED");
+}
+
 try {
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",
     {
-      test: process.env.DOCRAPTOR_TEST_MODE ? true : false,
+      test: docraptorMode !== "production",
       document_content: htmlString,
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",

@@ -392,6 +392,7 @@ export default function Dashboard() {
           // Whenever a job changes status in the DB, refresh the UI list
           fetchInProgressJobs();
           fetchReports();
+          fetchEntitlements();
           fetchLatestFailedJob();
         }
       )
@@ -410,6 +411,32 @@ export default function Dashboard() {
       .sort()
       .join('|')}::${uploadedFiles.length}`,
   ]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const pollableStatuses = [
+      'needs_documents',
+      'queued',
+      'extracting',
+      'underwriting',
+      'scoring',
+      'rendering',
+      'pdf_generating',
+      'publishing',
+    ];
+    const hasActive = inProgressJobs.some((job) =>
+      pollableStatuses.includes(job.status)
+    );
+    if (!hasActive) return;
+
+    const intervalId = setInterval(() => {
+      fetchInProgressJobs();
+      fetchReports();
+      fetchLatestFailedJob();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [inProgressJobs, profile?.id]);
 
 
   const removeUploadedFile = (index) => {
@@ -888,6 +915,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       await Promise.all([
         fetchInProgressJobs(),
         fetchReports(),
+        fetchEntitlements(),
         fetchProfile(profile.id) 
       ]);
 
@@ -1187,6 +1215,21 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
         if (error) {
           console.error('Failed to update property name:', error);
+        }
+
+        const hasReportLink = reports.some((report) => report.job_id);
+        if (hasReportLink) {
+          const { error: reportErr } = await supabase
+            .from('reports')
+            .update({ property_name: next.trim() || 'Untitled Property' })
+            .eq('job_id', jobId)
+            .eq('user_id', profile.id);
+
+          if (reportErr) {
+            console.error('Failed to update report property name:', reportErr);
+          } else {
+            fetchReports();
+          }
         }
       }
     }}
