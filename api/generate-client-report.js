@@ -664,9 +664,6 @@ function applyChartPlaceholders(html, charts = {}) {
 // ---------- Main Handler ----------
 
 export default async function handler(req, res) {
-  let slotClaimed = false;
-  let slotJobId = null;
-  let generationSucceeded = false;
   let effectiveUserId = null;
   try {
     const body = req.body || {};
@@ -756,23 +753,6 @@ export default async function handler(req, res) {
     const reportTier =
       reportType === "underwriting" ? 2 : reportType === "ic" ? 3 : 1;
     const allowAssumptions = reportTier >= 2;
-    if (jobId) {
-      const { data: claimData, error: claimErr } = await supabase.rpc(
-        "claim_generation_slot",
-        { p_job_id: jobId, p_user_id: effectiveUserId }
-      );
-      if (claimErr) {
-        return res
-          .status(500)
-          .json({ error: "Failed to claim generation slot" });
-      }
-      const claimRow = Array.isArray(claimData) ? claimData[0] : claimData;
-      if (!claimRow?.allowed) {
-        return res.status(409).json({ code: "REVISION_LIMIT_REACHED" });
-      }
-      slotClaimed = true;
-      slotJobId = jobId;
-    }
     const nowIso = new Date().toISOString();
     const promptInstructions = [
       INVESTORIQ_MASTER_PROMPT_V71,
@@ -1668,7 +1648,6 @@ try {
     }
 
     // 14. Return JSON with the report URL and report_id
-    generationSucceeded = true;
     res.status(200).json({
       success: true,
       reportId,
@@ -1679,20 +1658,6 @@ try {
     console.error("❌ Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
-    if (slotClaimed && slotJobId) {
-      try {
-        await supabase.rpc("finalize_generation_slot", {
-          p_job_id: slotJobId,
-          p_user_id: effectiveUserId,
-          p_success: generationSucceeded,
-        });
-      } catch (finalizeErr) {
-        console.error(
-          "Failed to finalize generation slot:",
-          finalizeErr?.message || finalizeErr
-        );
-      }
-    }
   }
 }
 
