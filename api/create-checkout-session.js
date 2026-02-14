@@ -99,6 +99,7 @@ export default async function handler(req, res) {
       .insert({
         user_id: userId,
         report_type: normalizedProductType,
+        property_name: "Untitled Property",
         status: "needs_documents",
         runs_limit: runsLimit,
         runs_used: 0,
