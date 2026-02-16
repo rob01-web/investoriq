@@ -324,6 +324,31 @@ export default async function handler(req, res) {
         });
       }
 
+      const { data: consumedRows, error: consumeErr } = await supabase
+        .from('report_purchases')
+        .update({ consumed_at: new Date().toISOString() })
+        .eq('job_id', job.id)
+        .is('consumed_at', null)
+        .select('id');
+
+      if (consumeErr || !consumedRows || consumedRows.length === 0) {
+        await supabase.from('analysis_job_events').insert([
+          {
+            job_id: job.id,
+            actor: 'system',
+            event_type: 'purchase_consume_failed',
+            from_status: 'queued',
+            to_status: 'extracting',
+            created_at: new Date().toISOString(),
+            meta: { route: '/api/admin/run-eligible-jobs-once' },
+          },
+        ]);
+        return res.status(500).json({
+          ok: false,
+          error: 'PURCHASE_CONSUME_FAILED',
+        });
+      }
+
       claimedJobs.push(job.id);
     }
 

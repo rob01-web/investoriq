@@ -440,6 +440,28 @@ export default async function handler(req, res) {
               continue;
             }
 
+            const { data: consumedRows, error: consumeErr } = await supabaseAdmin
+              .from('report_purchases')
+              .update({ consumed_at: nowIso })
+              .eq('job_id', job.id)
+              .is('consumed_at', null)
+              .select('id');
+
+            if (consumeErr || !consumedRows || consumedRows.length === 0) {
+              await supabaseAdmin.from('analysis_job_events').insert([
+                {
+                  job_id: job.id,
+                  actor: 'system',
+                  event_type: 'purchase_consume_failed',
+                  from_status: 'queued',
+                  to_status: 'extracting',
+                  created_at: nowIso,
+                  meta: { route: '/api/admin-run-worker' },
+                },
+              ]);
+              throw new Error('Failed to mark purchase consumed on claim.');
+            }
+
             transitions.push({
               job_id: job.id,
               from_status: 'queued',

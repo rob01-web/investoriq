@@ -52,8 +52,7 @@ begin
   returning id into v_job_id;
 
   update public.report_purchases
-  set consumed_at = now(),
-      job_id = v_job_id
+  set job_id = v_job_id
   where id = v_purchase_id;
 
   return query select v_job_id, v_purchase_id;
