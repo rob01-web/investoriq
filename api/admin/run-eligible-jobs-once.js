@@ -291,47 +291,11 @@ export default async function handler(req, res) {
 
     const claimedJobs = [];
     for (const job of eligibleJobs) {
-      const { data: updatedRows, error: updateErr } = await supabase
-        .from('analysis_jobs')
-        .update({
-          status: 'extracting',
-          started_at: new Date().toISOString(),
-          error_code: null,
-          error_message: null,
-        })
-        .eq('id', job.id)
-        .eq('status', 'queued')
-        .select('id');
+      const nowIso = new Date().toISOString();
+      const { data: claimRows, error: claimErr } = await supabase
+        .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
 
-      if (updateErr) {
-        return res.status(500).json({
-          ok: false,
-          error: 'CLAIM_UPDATE_FAILED',
-          details: updateErr.message || updateErr,
-        });
-      }
-      if (!updatedRows || updatedRows.length === 0) {
-        return res.json({
-          ok: true,
-          fetched: (jobRows || []).length,
-          eligible: eligibleJobs.length,
-          claimed: 0,
-          claimed_job_ids: [],
-          transitioned: 0,
-          transitioned_job_ids: [],
-          failed_job_ids: [],
-          jobs: eligibleJobs,
-        });
-      }
-
-      const { data: consumedRows, error: consumeErr } = await supabase
-        .from('report_purchases')
-        .update({ consumed_at: new Date().toISOString() })
-        .eq('job_id', job.id)
-        .is('consumed_at', null)
-        .select('id');
-
-      if (consumeErr || !consumedRows || consumedRows.length === 0) {
+      if (claimErr || !claimRows || claimRows.length === 0) {
         await supabase.from('analysis_job_events').insert([
           {
             job_id: job.id,
@@ -339,14 +303,11 @@ export default async function handler(req, res) {
             event_type: 'purchase_consume_failed',
             from_status: 'queued',
             to_status: 'extracting',
-            created_at: new Date().toISOString(),
-            meta: { route: '/api/admin/run-eligible-jobs-once' },
+            created_at: nowIso,
+            meta: { route: '/api/admin/run-eligible-jobs-once', error: claimErr?.message || null },
           },
         ]);
-        return res.status(500).json({
-          ok: false,
-          error: 'PURCHASE_CONSUME_FAILED',
-        });
+        return res.status(500).json({ ok: false, error: 'CLAIM_AND_CONSUME_FAILED' });
       }
 
       claimedJobs.push(job.id);

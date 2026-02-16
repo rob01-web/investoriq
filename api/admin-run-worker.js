@@ -421,33 +421,10 @@ export default async function handler(req, res) {
       if (queuedJobs && queuedJobs.length > 0) {
         for (const job of queuedJobs) {
           try {
-            const claimUpdate = {
-              status: 'extracting',
-              started_at: nowIso,
-            };
-            const { data: claimed, error: claimErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .update(claimUpdate)
-              .eq('id', job.id)
-              .eq('status', 'queued')
-              .select('id, user_id, status');
+            const { data: claimRows, error: claimErr } = await supabaseAdmin
+              .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
 
-            if (claimErr) {
-              throw new Error(`Failed to advance queued jobs: ${claimErr.message}`);
-            }
-
-            if (!claimed || claimed.length === 0) {
-              continue;
-            }
-
-            const { data: consumedRows, error: consumeErr } = await supabaseAdmin
-              .from('report_purchases')
-              .update({ consumed_at: nowIso })
-              .eq('job_id', job.id)
-              .is('consumed_at', null)
-              .select('id');
-
-            if (consumeErr || !consumedRows || consumedRows.length === 0) {
+            if (claimErr || !claimRows || claimRows.length === 0) {
               await supabaseAdmin.from('analysis_job_events').insert([
                 {
                   job_id: job.id,
@@ -456,10 +433,10 @@ export default async function handler(req, res) {
                   from_status: 'queued',
                   to_status: 'extracting',
                   created_at: nowIso,
-                  meta: { route: '/api/admin-run-worker' },
+                  meta: { route: '/api/admin-run-worker', error: claimErr?.message || null },
                 },
               ]);
-              throw new Error('Failed to mark purchase consumed on claim.');
+              throw new Error('CLAIM_AND_CONSUME_FAILED');
             }
 
             transitions.push({
