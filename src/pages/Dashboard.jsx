@@ -911,7 +911,11 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         description: 'Your underwriting report has started. You may safely close this page and return later.',
       });
 
-      window.location.reload();
+      setPropertyName('');
+      setUploadedFiles([]);
+      setAcknowledged(false);
+      fetchEntitlements();
+      fetchReports();
 
       // Refresh data to reflect updated job status
       await Promise.all([
