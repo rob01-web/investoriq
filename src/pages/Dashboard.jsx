@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [ackLocked, setAckLocked] = useState(false);
   const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
   const [ackSubmitting, setAckSubmitting] = useState(false);
+  const [stagedBatchId, setStagedBatchId] = useState(null);
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [jobEvents, setJobEvents] = useState({});
@@ -700,89 +701,28 @@ const step3Locked =
     // Use a local job id to avoid React state timing issues
 let effectiveJobId = lockedJobIdForUploads || jobId;
 
-// Create a job the moment the user begins uploading (async underwriting anchor)
-if (profile?.id && !effectiveJobId) {
-  const reportType = (selectedReportType || '').toLowerCase();
-  const allowedReportTypes = ['screening', 'underwriting'];
-  if (!allowedReportTypes.includes(reportType)) {
-    toast({
-      title: 'Unable to start analysis job',
-      description: 'Report type is not available. Please try again.',
-      variant: 'destructive',
-    });
-    return;
-  }
-  const jobPayload = {
-    property_name: (propertyNameRef.current || propertyName).trim() || '',
-    status: 'needs_documents',
-    prompt_version: 'v2026-01-17',
-    parser_version: 'v1',
-    template_version: 'v2026-01-14',
-    scoring_version: 'v1',
-    report_type: reportType,
-  };
-
-  const { data, error } = await supabase.rpc('consume_purchase_and_create_job', {
-    p_report_type: reportType,
-    p_job_payload: jobPayload,
-  });
-
-  if (error) {
-    const msg = String(error.message || '');
-    if (msg.includes('PURCHASE_NOT_AVAILABLE')) {
-      toast({
-        title: 'Purchase required',
-        description: 'No unused purchase found for this report type.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    console.error('Failed to create analysis job:', error);
-    toast({
-      title: 'Unable to start analysis job',
-      description: 'We could not initialize your underwriting run. Please try again.',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  const createdJobId = data?.[0]?.job_id || data?.job_id;
-  if (!createdJobId) {
-    toast({
-      title: 'Unable to start analysis job',
-      description: 'We could not initialize your underwriting run. Please try again.',
-      variant: 'destructive',
-    });
-    return;
-  }
-
-  effectiveJobId = createdJobId;
-  setJobId(effectiveJobId);
-  if (!lockedJobIdForUploads) {
-    setLockedJobIdForUploads(effectiveJobId);
-  }
-}
-
-// Upload files to Supabase Storage under this underwriting job
-if (!profile?.id || !effectiveJobId) {
+// Upload files to Supabase Storage only (staged)
+if (!profile?.id) {
   toast({
     title: 'Upload blocked',
-    description: 'Unable to initialize your underwriting run. Please try again.',
+    description: 'Please sign in to upload documents.',
     variant: 'destructive',
   });
   return;
 }
 
-if (!lockedJobIdForUploads && effectiveJobId) {
-  setLockedJobIdForUploads(effectiveJobId);
+const currentBatchId = stagedBatchId || crypto.randomUUID();
+if (!stagedBatchId) {
+  setStagedBatchId(currentBatchId);
 }
 
   const bucket = 'staged_uploads';
+  const stagedEntries = [];
 
   for (const file of files) {
   // Prevent path injection
   const safeName = String(file.name || 'file').replaceAll('/', '_');
-  const objectPath = `staged/${profile.id}/${effectiveJobId}/${safeName}`;
+  const objectPath = `staged/${profile.id}/${currentBatchId}/${safeName}`;
 
     const { error: uploadErr } = await supabase.storage
   .from(bucket)
@@ -802,29 +742,14 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       return;
     }
 
-        const { error: rowErr } = await supabase
-      .from('analysis_job_files')
-      .upsert({
-        job_id: effectiveJobId,
-        user_id: profile.id,
-        bucket,
-        object_path: objectPath,
-        original_filename: safeName,
-        mime_type: file.type || 'application/octet-stream',
-        bytes: file.size,
-        doc_type: slotDocType,
-        parse_status: 'pending',
-      }, { onConflict: 'job_id,doc_type' });
-
-    if (rowErr) {
-      console.error('analysis_job_files insert failed:', rowErr);
-      toast({
-        title: 'Upload recorded incompletely',
-        description: `File uploaded but could not be linked to your job: ${safeName}.`,
-        variant: 'destructive',
-      });
-      return;
-    }
+    stagedEntries.push({
+      storage_path: objectPath,
+      original_name: safeName,
+      content_type: file.type || 'application/octet-stream',
+      size: file.size,
+      docType: slotDocType,
+      file,
+    });
   }
 
   toast({
@@ -834,20 +759,17 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
   // Append new files instead of overwriting existing ones
   setUploadedFiles((prev) => {
-    const nextEntries = files.map((file) => ({ file, docType: slotDocType }));
-    const combined = [...prev, ...nextEntries];
+    const combined = [...prev, ...stagedEntries];
 
     // Prevent accidental duplicates (same name + size)
     const seen = new Set();
     return combined.filter((f) => {
-      const key = `${f.file?.name}__${f.file?.size}__${f.docType}`;
+      const key = `${f.original_name || f.file?.name}__${f.size || f.file?.size}__${f.docType}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
   });
-
-  await fetchRequiredDocFlags(effectiveJobId);
 
   // IMPORTANT: do not force re-acknowledgement on each upload.
 };
@@ -915,6 +837,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       setPropertyName('');
       setUploadedFiles([]);
       setAcknowledged(false);
+      setStagedBatchId(null);
       fetchEntitlements();
       fetchReports();
 
