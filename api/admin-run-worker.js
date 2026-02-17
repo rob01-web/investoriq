@@ -1539,26 +1539,6 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${publishingTransitionErr.message}`);
           }
 
-          const creditResult = await consumeCreditOnce(job);
-          if (creditResult?.error) {
-            throw new Error(
-              `Failed to consume credits: ${creditResult.error.message || String(creditResult.error)}`
-            );
-          }
-
-          if (creditResult?.failed) {
-            transitions.push({
-              job_id: job.id,
-              from_status: 'publishing',
-              to_status: 'failed',
-            });
-            passTransitions += 1;
-            if (!failedJobIds.includes(job.id)) {
-              failedJobIds.push(job.id);
-            }
-            continue;
-          }
-
           const completeUpdate = { status: 'published' };
           if (supportsCompletedAt) {
             completeUpdate.completed_at = nowIso;
