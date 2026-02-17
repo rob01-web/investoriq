@@ -712,7 +712,7 @@ if (profile?.id && !effectiveJobId) {
     return;
   }
   const jobPayload = {
-    property_name: (propertyNameRef.current || propertyName).trim() || 'Untitled Property',
+    property_name: (propertyNameRef.current || propertyName).trim() || '',
     status: 'needs_documents',
     prompt_version: 'v2026-01-17',
     parser_version: 'v1',
@@ -1205,7 +1205,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
 
   <input
     type="text"
-    value={propertyName === 'Untitled Property' ? '' : propertyName}
+    value={propertyName || ''}
     onChange={async (e) => {
       const next = e.target.value;
       propertyNameRef.current = next;
@@ -1215,7 +1215,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
       if (profile?.id && jobId) {
         const { error } = await supabase
           .from('analysis_jobs')
-          .update({ property_name: next.trim() || 'Untitled Property' })
+          .update({ property_name: next.trim() || null })
           .eq('id', jobId)
           .eq('user_id', profile.id);
 
@@ -1227,7 +1227,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
         if (hasReportLink) {
           const { error: reportErr } = await supabase
             .from('reports')
-            .update({ property_name: next.trim() || 'Untitled Property' })
+            .update({ property_name: next.trim() || null })
             .eq('job_id', jobId)
             .eq('user_id', profile.id);
 
@@ -1855,7 +1855,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
               )}
 
               <div className="text-sm font-semibold text-[#0F172A]">
-                {job.property_name || 'Untitled Property'}
+                {job.property_name || 'Address not provided'}
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
                 Status: {job.status.replaceAll('_', ' ')}
