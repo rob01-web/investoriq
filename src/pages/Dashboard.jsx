@@ -519,11 +519,13 @@ const availableReportsCount = entitlements.error
 const hasAvailableReport = availableReportsCount >= 1;
 const step2Locked = !propertyName.trim();
 const step3Locked =
-  !jobId ||
+  !propertyName.trim() ||
   !hasAvailableReport ||
-  activeJobForRuns?.status !== 'needs_documents' ||
   !hasRequiredUploads ||
-  !acknowledged;
+  !acknowledged ||
+  ['queued', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
+    activeJobForRuns?.status
+  );
 
   const policyText =
     'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
@@ -697,9 +699,6 @@ const step3Locked =
     });
     return;
   }
-
-    // Use a local job id to avoid React state timing issues
-let effectiveJobId = lockedJobIdForUploads || jobId;
 
 // Upload files to Supabase Storage only (staged)
 if (!profile?.id) {
@@ -1678,19 +1677,23 @@ if (!stagedBatchId) {
                   onClick={handleAnalyze}
                   disabled={
                     loading ||
-                    !jobId ||
+                    !propertyName.trim() ||
                     !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
-                    activeJobForRuns?.status !== 'needs_documents'
+                    ['queued', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
+                      activeJobForRuns?.status
+                    )
                   }
                   className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
                     loading ||
-                    !jobId ||
+                    !propertyName.trim() ||
                     !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
-                    activeJobForRuns?.status !== 'needs_documents'
+                    ['queued', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
+                      activeJobForRuns?.status
+                    )
                       ? 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
