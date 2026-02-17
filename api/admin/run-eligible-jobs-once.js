@@ -233,35 +233,13 @@ export default async function handler(req, res) {
         return res.status(404).json({ ok: false });
       }
 
-      const { error: logErr } = await supabase.from('analysis_job_events').insert([
-        {
-          job_id: forceJobId,
-          actor: 'admin',
-          event_type: 'admin_run_once',
-          from_status: forcedJob.status || null,
-          to_status: 'queued',
-          created_at: new Date().toISOString(),
-          meta: { route: '/api/admin/run-eligible-jobs-once' },
-        },
-      ]);
+      const { data: requeued, error: rqErr } = await supabase.rpc(
+        'admin_requeue_job',
+        { p_job_id: forceJobId, p_reason: 'admin_run_once_force_job' }
+      );
 
-      if (logErr) {
-        return res.status(500).json({ ok: false });
-      }
-
-      const { data: updatedRows, error: updateErr } = await supabase
-        .from('analysis_jobs')
-        .update({
-          status: 'queued',
-          error_code: null,
-          error_message: null,
-          started_at: null,
-        })
-        .eq('id', forceJobId)
-        .select('id');
-
-      if (updateErr || !updatedRows || updatedRows.length === 0) {
-        return res.status(500).json({ ok: false });
+      if (rqErr || !requeued) {
+        return res.status(500).json({ ok: false, error: 'ADMIN_REQUEUE_FAILED' });
       }
 
       return res.json({ ok: true, forced_job_id: forceJobId });
