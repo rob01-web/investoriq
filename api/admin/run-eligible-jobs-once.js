@@ -267,20 +267,19 @@ export default async function handler(req, res) {
       return res.json({ ok: true, forced_job_id: forceJobId });
     }
 
-    const { data: jobRows, error: jobsErr } = await supabase
-      .from('analysis_jobs')
-      .select('id, user_id, status, created_at')
-      .eq('status', 'queued')
-      .order('created_at', { ascending: true })
-      .limit(25);
-
-    if (jobsErr) {
-      return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
-    }
-
-    const eligibleJobs = jobRows || [];
-
     if (dryRun) {
+      const { data: jobRows, error: jobsErr } = await supabase
+        .from('analysis_jobs')
+        .select('id, user_id, status, created_at')
+        .eq('status', 'queued')
+        .order('created_at', { ascending: true })
+        .limit(25);
+
+      if (jobsErr) {
+        return res.status(500).json({ ok: false, error: 'SERVER_QUERY_FAILED' });
+      }
+
+      const eligibleJobs = jobRows || [];
       return res.json({
         ok: true,
         fetched: (jobRows || []).length,
@@ -289,29 +288,27 @@ export default async function handler(req, res) {
       });
     }
 
-    const claimedJobs = [];
-    for (const job of eligibleJobs) {
-      const nowIso = new Date().toISOString();
-      const { data: claimRows, error: claimErr } = await supabase
-        .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
+    const { data: claimedJob, error: claimErr } = await supabase
+      .rpc('claim_next_job');
 
-      if (claimErr || !claimRows || claimRows.length === 0) {
-        await supabase.from('analysis_job_events').insert([
-          {
-            job_id: job.id,
-            actor: 'system',
-            event_type: 'purchase_consume_failed',
-            from_status: 'queued',
-            to_status: 'extracting',
-            created_at: nowIso,
-            meta: { route: '/api/admin/run-eligible-jobs-once', error: claimErr?.message || null },
-          },
-        ]);
-        return res.status(500).json({ ok: false, error: 'CLAIM_AND_CONSUME_FAILED' });
-      }
-
-      claimedJobs.push(job.id);
+    if (claimErr) {
+      return res.status(500).json({ ok: false, error: 'CLAIM_AND_CONSUME_FAILED' });
     }
+
+    if (!claimedJob || (Array.isArray(claimedJob) && claimedJob.length === 0)) {
+      return res.status(200).json({ ok: true, claimed: false });
+    }
+
+    const jobRow = Array.isArray(claimedJob) ? claimedJob[0] : claimedJob;
+    console.log('Claimed job:', {
+      id: jobRow?.id,
+      attempts: jobRow?.attempts,
+      claimed_at: jobRow?.claimed_at,
+    });
+
+    const claimedJobs = [jobRow.id];
+    const eligibleJobs = [jobRow];
+    const jobRows = [jobRow];
 
     const transitionedJobIds = [];
     const failedJobIds = [];
