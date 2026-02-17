@@ -38,10 +38,6 @@ export default function Dashboard() {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueReport, setIssueReport] = useState(null);
   const [showScopePreview, setShowScopePreview] = useState(false);
-  const [requiredDocsDb, setRequiredDocsDb] = useState({
-    hasRentRoll: false,
-    hasT12: false,
-  });
   const [entitlements, setEntitlements] = useState({
     screening: null,
     underwriting: null,
@@ -78,27 +74,6 @@ export default function Dashboard() {
     }
   };
 
-  async function fetchRequiredDocFlags(jobId) {
-    if (!jobId) return;
-
-    const { data, error } = await supabase
-      .from('analysis_job_files')
-      .select('doc_type')
-      .eq('job_id', jobId)
-      .in('doc_type', ['rent_roll', 't12']);
-
-    if (error) {
-      console.error('fetchRequiredDocFlags error:', error);
-      setRequiredDocsDb({ hasRentRoll: false, hasT12: false });
-      return;
-    }
-
-    const types = (data || []).map((r) => r.doc_type);
-    setRequiredDocsDb({
-      hasRentRoll: types.includes('rent_roll'),
-      hasT12: types.includes('t12'),
-    });
-  }
 
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) {
@@ -372,7 +347,6 @@ export default function Dashboard() {
       return;
     }
     fetchRentRollCoverage(jobId);
-    fetchRequiredDocFlags(jobId);
   }, [jobId]);
 
   // REAL-TIME LISTENER: Watch for status changes (Queued -> Underwriting -> Success)
