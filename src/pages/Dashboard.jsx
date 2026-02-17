@@ -729,7 +729,7 @@ if (profile?.id && !effectiveJobId) {
 
   if (error) {
     const msg = String(error.message || '');
-    if (msg.includes('NO_AVAILABLE_CREDIT')) {
+    if (msg.includes('PURCHASE_NOT_AVAILABLE')) {
       toast({
         title: 'Purchase required',
         description: 'No unused purchase found for this report type.',
