@@ -39,7 +39,7 @@ begin
   limit 1;
 
   if v_purchase_id is null then
-    raise exception 'NO_AVAILABLE_CREDIT';
+    raise exception 'PURCHASE_NOT_AVAILABLE';
   end if;
 
   if v_product_type not in ('screening','underwriting') then
@@ -72,7 +72,7 @@ begin
       raise exception 'INVALID_STAGED_FILES';
     end if;
 
-    if left(v_storage_path, 7) <> 'staged/' then
+    if v_storage_path not like ('staged/' || auth.uid()::text || '/%') then
       raise exception 'INVALID_STAGED_FILES';
     end if;
 
@@ -107,8 +107,14 @@ begin
   end loop;
 
   update public.report_purchases
-  set job_id = v_job_id
-  where id = v_purchase_id;
+  set job_id = v_job_id,
+      consumed_at = now()
+  where id = v_purchase_id
+    and consumed_at is null;
+
+  if not found then
+    raise exception 'PURCHASE_NOT_AVAILABLE';
+  end if;
 
   return query select v_job_id, v_purchase_id;
 end;
