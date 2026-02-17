@@ -1858,7 +1858,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
               )}
 
               <div className="text-sm font-semibold text-[#0F172A]">
-                {job.property_name || 'Address not provided'}
+                {job.property_name && job.property_name.trim() !== '' ? job.property_name : 'Address not provided'}
               </div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">
                 Status: {job.status.replaceAll('_', ' ')}
