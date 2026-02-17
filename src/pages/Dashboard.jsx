@@ -514,11 +514,12 @@ const activeJobForRuns =
   jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
 const availableReportsCount = entitlements.error
   ? 0
-  : Number(entitlements.screening ?? 0) + Number(entitlements.underwriting ?? 0);
+  : Number(entitlements[selectedReportType] ?? 0);
 const hasAvailableReport = availableReportsCount >= 1;
 const step2Locked = !propertyName.trim();
 const step3Locked =
   !jobId ||
+  !hasAvailableReport ||
   activeJobForRuns?.status !== 'needs_documents' ||
   !hasRequiredUploads ||
   !acknowledged;
@@ -1720,6 +1721,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
                   disabled={
                     loading ||
                     !jobId ||
+                    !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
                     activeJobForRuns?.status !== 'needs_documents'
@@ -1727,6 +1729,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
                   className={`inline-flex items-center rounded-md border px-6 py-3 text-sm font-semibold ${
                     loading ||
                     !jobId ||
+                    !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
                     activeJobForRuns?.status !== 'needs_documents'
@@ -1737,7 +1740,7 @@ if (!lockedJobIdForUploads && effectiveJobId) {
                   {loading ? 'Working…' : 'Generate Report'}
                 </button>
                 <div className="text-xs leading-relaxed text-slate-500">
-                  Starting report generation consumes one available report entitlement for this property. Once generation begins, refunds are not available.
+                  Each purchase allows a single generation. Once generation begins, refunds are not available.
                 </div></div>
             </div>
           </div>
