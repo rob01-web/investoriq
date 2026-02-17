@@ -468,6 +468,47 @@ export default async function handler(req, res) {
       if (extractingJobs && extractingJobs.length > 0) {
         for (const job of extractingJobs) {
           try {
+          const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
+            .from('report_purchases')
+            .select('id')
+            .eq('job_id', job.id)
+            .not('consumed_at', 'is', null)
+            .limit(1)
+            .maybeSingle();
+
+          if (purchaseErr || !purchaseRow?.id) {
+            const failUpdate = {
+              status: 'failed',
+              error_code: 'PURCHASE_NOT_CONSUMED',
+              error_message: 'PURCHASE_NOT_CONSUMED',
+            };
+            if (supportsFailedAt) {
+              failUpdate.failed_at = nowIso;
+            }
+
+            await supabaseAdmin
+              .from('analysis_jobs')
+              .update(failUpdate)
+              .eq('id', job.id);
+
+            await supabaseAdmin.from('analysis_job_events').insert([
+              {
+                job_id: job.id,
+                actor: 'system',
+                event_type: 'purchase_not_consumed',
+                from_status: 'extracting',
+                to_status: 'failed',
+                created_at: nowIso,
+                meta: {
+                  route: '/api/admin-run-worker',
+                  error: purchaseErr?.message || null,
+                },
+              },
+            ]);
+
+            continue;
+          }
+
           const { data: jobFiles, error: jobFilesErr } = await supabaseAdmin
             .from('analysis_job_files')
             .select('id, doc_type, original_filename, object_path, mime_type, parse_status, parse_error')
