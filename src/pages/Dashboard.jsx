@@ -133,7 +133,6 @@ export default function Dashboard() {
     .in('status', [
       'queued',
       'extracting',
-      'needs_documents',
       'underwriting',
       'scoring',
       'rendering',
@@ -161,7 +160,6 @@ export default function Dashboard() {
       .select('id, property_name, report_type, status, created_at')
       .eq('user_id', profile.id)
       .in('status', [
-        'needs_documents',
         'queued',
         'extracting',
         'underwriting',
@@ -773,7 +771,17 @@ if (!stagedBatchId) {
       return;
     }
 
-    if (activeJobForRuns?.status && activeJobForRuns.status !== 'needs_documents') {
+    if (
+      [
+        'queued',
+        'extracting',
+        'underwriting',
+        'scoring',
+        'rendering',
+        'pdf_generating',
+        'publishing',
+      ].includes(activeJobForRuns?.status)
+    ) {
       toast({
         title: 'Report is already processing',
         description: 'Please wait for the current run to finish.',
@@ -793,15 +801,22 @@ if (!stagedBatchId) {
         staged_files: uploadedFiles,
       };
 
+      const stagedFilesPayload = (uploadedFiles || []).map((file) => ({
+        path: file.storage_path || file.path,
+        name: file.original_name || file.name,
+      }));
+
       console.log('[Generate] RPC consume_purchase_and_create_job request', {
         p_report_type: reportType,
         p_job_payload: jobPayload,
+        p_staged_files: stagedFilesPayload,
       });
       const { data, error: createErr } = await supabase.rpc(
         'consume_purchase_and_create_job',
         {
           p_report_type: reportType,
           p_job_payload: jobPayload,
+          p_staged_files: stagedFilesPayload,
         }
       );
       console.log('[Generate] RPC consume_purchase_and_create_job response', {
