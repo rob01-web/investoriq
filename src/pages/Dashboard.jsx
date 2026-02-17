@@ -491,10 +491,10 @@ const supportingDocGroups = [
   },
 ];
 const supportingDocTypes = supportingDocGroups.flatMap((group) => group.docs);
-const hasRequiredUploads = requiredDocsDb.hasRentRoll && requiredDocsDb.hasT12;
-const requiredDocsReady = hasRequiredUploads;
 const hasRentRoll = rentRollFiles.length > 0;
 const hasT12 = t12Files.length > 0;
+const hasRequiredUploads = hasRentRoll && hasT12;
+const requiredDocsReady = hasRequiredUploads;
 const hasPurchase = uploadedFiles.some((item) =>
   ['purchase_agreement', 'loi', 'offering_memorandum'].includes(item.docType)
 );
@@ -775,6 +775,14 @@ if (!stagedBatchId) {
 };
 
   const handleAnalyze = async () => {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      toast({
+        title: 'No documents staged',
+        description: 'Upload required documents before generating your report.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!hasRequiredUploads) {
       toast({
         title: 'Document Required',
@@ -792,14 +800,6 @@ if (!stagedBatchId) {
       return;
     }
 
-    if (!jobId) {
-      toast({
-        title: 'Cannot generate report',
-        description: 'Job is not ready yet. Please refresh and try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (activeJobForRuns?.status && activeJobForRuns.status !== 'needs_documents') {
       toast({
         title: 'Report is already processing',
@@ -813,13 +813,61 @@ if (!stagedBatchId) {
     setLoading(true); 
 
     try {
-      // Final update before status transition
-      const { error: statusErr } = await supabase.rpc('queue_job_for_processing', {
-        p_job_id: jobId,
+      const reportType = (selectedReportType || '').toLowerCase();
+      const jobPayload = {
+        property_name: (propertyNameRef.current || propertyName).trim() || '',
+        report_type: reportType,
+        staged_files: uploadedFiles,
+      };
+
+      const { data, error: createErr } = await supabase.rpc(
+        'consume_purchase_and_create_job',
+        {
+          p_report_type: reportType,
+          p_job_payload: jobPayload,
+        }
+      );
+
+      if (createErr?.code === 'PURCHASE_NOT_AVAILABLE') {
+        toast({
+          title: 'No report available',
+          description: 'Please purchase a report before generating.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (createErr) {
+        console.error('Failed to create analysis job:', createErr);
+        toast({
+          title: 'Unable to start analysis',
+          description: 'Could not initialize the underwriting run.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const newJobId = data?.[0]?.job_id || data?.job_id || data?.id;
+      if (!newJobId) {
+        toast({
+          title: 'Unable to start analysis',
+          description: 'Job could not be initialized. Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      setJobId(newJobId);
+
+      const { error: queueErr } = await supabase.rpc('queue_job_for_processing', {
+        p_job_id: newJobId,
       });
 
-      if (statusErr) {
-        console.error('Failed to advance job status:', statusErr);
+      if (queueErr) {
+        console.error('Failed to advance job status:', queueErr);
         toast({
           title: 'Unable to start analysis',
           description: 'Could not queue job for processing.',
@@ -851,24 +899,11 @@ if (!stagedBatchId) {
 
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
-      if (error?.status === 409 && error?.code === 'REVISION_LIMIT_REACHED') {
-        toast({
-          title: 'Report run limit reached',
-          description: 'Report run limit reached for this property. Please purchase a new report to run again.',
-          variant: 'destructive',
-        });
-        await Promise.all([
-          fetchInProgressJobs(),
-          fetchReports(),
-          fetchLatestFailedJob(),
-        ]);
-      } else {
-        toast({
-          title: 'Unable to queue report',
-          description: error.message || 'An error occurred while starting the underwriting run.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Unable to queue report',
+        description: error.message || 'An error occurred while starting the underwriting run.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
