@@ -288,11 +288,10 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: claimedJob, error: claimErr } = await supabase
-      .rpc('claim_next_job');
+    const { data: claimedJob, error: claimErr } = await supabase.rpc('claim_next_job');
 
     if (claimErr) {
-      return res.status(500).json({ ok: false, error: 'CLAIM_AND_CONSUME_FAILED' });
+      return res.status(500).json({ ok: false, error: 'CLAIM_NEXT_JOB_FAILED' });
     }
 
     if (!claimedJob || (Array.isArray(claimedJob) && claimedJob.length === 0)) {
@@ -306,45 +305,11 @@ export default async function handler(req, res) {
       claimed_at: jobRow?.claimed_at,
     });
 
-    const claimedJobs = [jobRow.id];
-    const eligibleJobs = [jobRow];
-    const jobRows = [jobRow];
-
-    const transitionedJobIds = [];
-    const failedJobIds = [];
-    for (const jobId of claimedJobs) {
-      const jobRow = eligibleJobs.find((job) => job.id === jobId);
-      const fromStatus = jobRow?.status || null;
-      const { error: logErr } = await supabase.from('analysis_job_events').insert([
-        {
-          job_id: jobId,
-          actor: 'admin',
-          event_type: 'admin_run_once',
-          from_status: fromStatus,
-          to_status: 'extracting',
-          created_at: new Date().toISOString(),
-          meta: { route: '/api/admin/run-eligible-jobs-once' },
-        },
-      ]);
-
-      if (logErr) {
-        failedJobIds.push(jobId);
-        continue;
-      }
-
-      transitionedJobIds.push(jobId);
-    }
-
     return res.json({
       ok: true,
-      fetched: (jobRows || []).length,
-      eligible: eligibleJobs.length,
-      claimed: claimedJobs.length,
-      claimed_job_ids: claimedJobs,
-      transitioned: transitionedJobIds.length,
-      transitioned_job_ids: transitionedJobIds,
-      failed_job_ids: failedJobIds,
-      jobs: eligibleJobs,
+      claimed: true,
+      claimed_job_id: jobRow.id,
+      job: jobRow,
     });
   } catch (err) {
     console.error('Admin run endpoint error:', err);
