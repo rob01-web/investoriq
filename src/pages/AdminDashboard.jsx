@@ -473,7 +473,7 @@ import { useToast } from "@/components/ui/use-toast";
                               <tr key={job.id} className="border-b border-slate-100">
                                 <td className="p-3 text-xs text-slate-600">{job.id}</td>
                                 <td className="p-3 text-sm font-semibold text-[#0F172A]">
-                                  {job.property_name || "Untitled Property"}
+                                  {job.property_name || "Address not provided"}
                                 </td>
                                 <td className="p-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                                   {job.status}
