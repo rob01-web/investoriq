@@ -793,6 +793,10 @@ if (!stagedBatchId) {
         staged_files: uploadedFiles,
       };
 
+      console.log('[Generate] RPC consume_purchase_and_create_job request', {
+        p_report_type: reportType,
+        p_job_payload: jobPayload,
+      });
       const { data, error: createErr } = await supabase.rpc(
         'consume_purchase_and_create_job',
         {
@@ -800,6 +804,17 @@ if (!stagedBatchId) {
           p_job_payload: jobPayload,
         }
       );
+      console.log('[Generate] RPC consume_purchase_and_create_job response', {
+        data,
+        error: createErr
+          ? {
+              code: createErr.code,
+              message: createErr.message,
+              details: createErr.details,
+              hint: createErr.hint,
+            }
+          : null,
+      });
 
       if (createErr?.code === 'PURCHASE_NOT_AVAILABLE') {
         toast({
@@ -815,7 +830,7 @@ if (!stagedBatchId) {
         console.error('Failed to create analysis job:', createErr);
         toast({
           title: 'Unable to start analysis',
-          description: 'Could not initialize the underwriting run.',
+          description: `Generate failed at consume_purchase_and_create_job: ${createErr.message}`,
           variant: 'destructive',
         });
         setLoading(false);
@@ -826,7 +841,7 @@ if (!stagedBatchId) {
       if (!newJobId) {
         toast({
           title: 'Unable to start analysis',
-          description: 'Job could not be initialized. Please try again.',
+          description: 'Generate failed at consume_purchase_and_create_job: Job id not returned.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -835,15 +850,32 @@ if (!stagedBatchId) {
 
       setJobId(newJobId);
 
-      const { error: queueErr } = await supabase.rpc('queue_job_for_processing', {
+      console.log('[Generate] RPC queue_job_for_processing request', {
         p_job_id: newJobId,
+      });
+      const { data: queueData, error: queueErr } = await supabase.rpc(
+        'queue_job_for_processing',
+        {
+          p_job_id: newJobId,
+        }
+      );
+      console.log('[Generate] RPC queue_job_for_processing response', {
+        data: queueData,
+        error: queueErr
+          ? {
+              code: queueErr.code,
+              message: queueErr.message,
+              details: queueErr.details,
+              hint: queueErr.hint,
+            }
+          : null,
       });
 
       if (queueErr) {
         console.error('Failed to advance job status:', queueErr);
         toast({
           title: 'Unable to start analysis',
-          description: 'Could not queue job for processing.',
+          description: `Generate failed at queue_job_for_processing: ${queueErr.message}`,
           variant: 'destructive',
         });
         setLoading(false);
@@ -874,7 +906,9 @@ if (!stagedBatchId) {
       console.error('Queue Error FULL:', error, error?.stack);
       toast({
         title: 'Unable to queue report',
-        description: error.message || 'An error occurred while starting the underwriting run.',
+        description: `Generate failed at queue_job_for_processing: ${
+          error.message || 'An error occurred while starting the underwriting run.'
+        }`,
         variant: 'destructive',
       });
     } finally {
