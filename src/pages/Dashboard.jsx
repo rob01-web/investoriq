@@ -1244,7 +1244,7 @@ if (!stagedBatchId) {
                     </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim() || !hasAvailableReport}
+                      disabled={!hasAvailableReport}
                       onClick={async () => {
                         if (!hasAvailableReport) {
                           toast({
@@ -1274,7 +1274,7 @@ if (!stagedBatchId) {
                       }}
                       className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
-                          propertyName.trim() && hasAvailableReport
+                          hasAvailableReport
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                             : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
@@ -1332,7 +1332,7 @@ if (!stagedBatchId) {
                     </div>
                     <button
                       type="button"
-                      disabled={!propertyName.trim() || !hasAvailableReport}
+                      disabled={!hasAvailableReport}
                       onClick={async () => {
                         if (!hasAvailableReport) {
                           toast({
@@ -1362,7 +1362,7 @@ if (!stagedBatchId) {
                       }}
                       className={`mt-auto inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                         ${
-                          propertyName.trim() && hasAvailableReport
+                          hasAvailableReport
                             ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                             : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
@@ -1502,10 +1502,10 @@ if (!stagedBatchId) {
                                       .getElementById(`supporting-${doc.slug}-input`)
                                       ?.click();
                                   }}
-                                  disabled={!propertyName.trim() || !hasAvailableReport || !requiredDocsReady}
+                                  disabled={!hasAvailableReport || !requiredDocsReady}
                                   className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
                                     ${
-                                      propertyName.trim() && hasAvailableReport && requiredDocsReady
+                                      hasAvailableReport && requiredDocsReady
                                         ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                                         : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
                                     }`}
