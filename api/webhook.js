@@ -60,15 +60,12 @@ export default async function handler(req, res) {
 
   const userId = session?.metadata?.userId;
   const productType = session?.metadata?.productType;
-  const jobId = session?.metadata?.jobId;
-
-  if (!userId || !productType || !jobId) {
-    console.warn("Missing metadata userId/productType/jobId", {
+  if (!userId || !productType) {
+    console.warn("Missing metadata userId/productType", {
       userId,
       productType,
-      jobId,
     });
-    return res.status(400).json({ error: "Missing metadata jobId" });
+    return res.status(400).json({ error: "Missing metadata userId or productType" });
   }
 
   if (productType !== "screening" && productType !== "underwriting") {
@@ -120,30 +117,6 @@ export default async function handler(req, res) {
       console.error("Failed to record report purchase:", purchaseErr);
       return res.status(500).json({ error: "Report purchase insert failed" });
     }
-  }
-
-  const { error: eventErr } = await supabaseAdmin
-    .from("analysis_job_events")
-    .insert([
-      {
-        job_id: jobId,
-        actor: "stripe",
-        event_type: "purchase_completed",
-        from_status: null,
-        to_status: null,
-        created_at: new Date().toISOString(),
-        meta: {
-          user_id: userId,
-          product_type: productType,
-          stripe_session_id: sessionId || null,
-          stripe_event_id: eventId,
-        },
-      },
-    ]);
-
-  if (eventErr) {
-    console.error("Failed to record purchase event:", eventErr);
-    return res.status(500).json({ error: "Purchase event insert failed" });
   }
 
   console.log("Recorded purchase for userId=" + userId + " (" + productType + ")");
