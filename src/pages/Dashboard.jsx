@@ -888,7 +888,7 @@ if (!stagedBatchId) {
           : null,
       });
 
-      if (queueErr) {
+      if (queueErr && !String(queueErr.message || '').includes('status=queued')) {
         console.error('Failed to advance job status:', queueErr);
         toast({
           title: 'Unable to start analysis',
