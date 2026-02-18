@@ -128,7 +128,7 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at')
+      .select('id, property_name, status, created_at, failure_reason')
       .eq('user_id', profile.id)
     .in('status', [
       'queued',
@@ -138,6 +138,7 @@ export default function Dashboard() {
       'rendering',
       'pdf_generating',
       'publishing',
+      'failed',
     ])
       .order('created_at', { ascending: false })
       .limit(10);
@@ -1807,6 +1808,20 @@ if (!stagedBatchId) {
             className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between"
           >
             <div className="flex-1">
+              {job.status === 'failed' && (
+                <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 text-red-600" />
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wide text-red-700">
+                      Analysis Failed
+                    </div>
+                    <div className="mt-1 text-sm text-red-700">
+                      {job.failure_reason ||
+                        'Document requirements not met. This credit has been consumed.'}
+                    </div>
+                  </div>
+                </div>
+              )}
               {isActionRequired && (
                 <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#0F172A]">
                   <div className="text-sm font-bold uppercase tracking-wide text-slate-700">

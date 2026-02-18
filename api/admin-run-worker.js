@@ -666,7 +666,13 @@ export default async function handler(req, res) {
                   }
                 }
 
-                const needsDocsUpdate = { status: 'needs_documents' };
+                const needsDocsUpdate = {
+                  status: 'failed',
+                  failure_reason: `Missing structured financials: ${missingStructured.join(', ')}`,
+                };
+                if (supportsFailedAt) {
+                  needsDocsUpdate.failed_at = nowIso;
+                }
                 if (supportsErrorCode) {
                   needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIALS';
                 }
@@ -688,13 +694,13 @@ export default async function handler(req, res) {
                 const needsDocsTransitionErr = await writeStatusTransitionArtifact(
                   job.id,
                   'extracting',
-                  'needs_documents',
+                  'failed',
                   { user_id: job.user_id }
                 );
 
                 if (needsDocsTransitionErr) {
                   throw new Error(
-                    `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+                    `Failed to write extracting->failed status transition artifact: ${needsDocsTransitionErr.message}`
                   );
                 }
 
