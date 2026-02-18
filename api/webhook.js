@@ -108,7 +108,8 @@ export default async function handler(req, res) {
       {
         user_id: userId,
         product_type: productType,
-        job_id: jobId,
+        job_id: null,
+        consumed_at: null,
         stripe_session_id: sessionId || null,
       },
     ]);
