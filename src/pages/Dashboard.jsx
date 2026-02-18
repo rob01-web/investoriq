@@ -801,10 +801,12 @@ if (!stagedBatchId) {
         staged_files: uploadedFiles,
       };
 
-      const stagedFilesPayload = (uploadedFiles || []).map((file) => ({
-        path: file.storage_path || file.path,
-        name: file.original_name || file.name,
-      }));
+      const stagedFilesPayload = (uploadedFiles || [])
+        .filter((file) => ['rent_roll', 't12'].includes(file.docType))
+        .map((file) => ({
+          path: file.storage_path || file.path,
+          doc_type: file.docType,
+        }));
 
       console.log('[Generate] RPC consume_purchase_and_create_job request', {
         p_report_type: reportType,
