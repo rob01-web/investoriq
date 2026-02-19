@@ -429,7 +429,7 @@ export default async function handler(req, res) {
                 {
                   job_id: job.id,
                   actor: 'system',
-                  event_type: 'purchase_consume_failed',
+                  event_type: 'job_claim_failed',
                   from_status: 'queued',
                   to_status: 'extracting',
                   created_at: nowIso,
@@ -437,6 +437,44 @@ export default async function handler(req, res) {
                 },
               ]);
               throw new Error('CLAIM_AND_CONSUME_FAILED');
+            }
+
+            const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
+              .from('report_purchases')
+              .select('id')
+              .eq('job_id', job.id)
+              .not('consumed_at', 'is', null)
+              .limit(1)
+              .maybeSingle();
+
+            if (purchaseErr || !purchaseRow?.id) {
+              const failUpdate = {
+                status: 'failed',
+                error_code: 'PURCHASE_NOT_CONSUMED',
+                error_message: 'PURCHASE_NOT_CONSUMED',
+              };
+              if (supportsFailedAt) {
+                failUpdate.failed_at = nowIso;
+              }
+
+              await supabaseAdmin
+                .from('analysis_jobs')
+                .update(failUpdate)
+                .eq('id', job.id);
+
+              await supabaseAdmin.from('analysis_job_events').insert([
+                {
+                  job_id: job.id,
+                  actor: 'system',
+                  event_type: 'purchase_not_consumed',
+                  from_status: 'extracting',
+                  to_status: 'failed',
+                  created_at: nowIso,
+                  meta: { route: '/api/admin-run-worker', error: purchaseErr?.message || null },
+                },
+              ]);
+
+              continue;
             }
 
             transitions.push({
