@@ -19,6 +19,7 @@ declare
   v_content_type text;
   v_size bigint;
   v_doc_type text;
+  v_payload_doc_type text;
 begin
   if p_report_type is null or p_report_type not in ('screening','underwriting') then
     raise exception 'INVALID_REPORT_TYPE';
@@ -76,11 +77,16 @@ begin
       raise exception 'INVALID_STAGED_FILES';
     end if;
 
-    v_doc_type := case
-      when lower(v_original_name) like '%rent%' then 'rent_roll'
-      when lower(v_original_name) like '%t12%' then 't12'
-      else 'supporting'
-    end;
+    v_payload_doc_type := lower(trim(v_file->>'doc_type'));
+    if v_payload_doc_type in ('rent_roll', 't12', 'supporting') then
+      v_doc_type := v_payload_doc_type;
+    else
+      v_doc_type := case
+        when lower(v_original_name) like '%rent%' then 'rent_roll'
+        when lower(v_original_name) like '%t12%' then 't12'
+        else 'supporting'
+      end;
+    end if;
 
     insert into public.analysis_job_files (
       job_id,
