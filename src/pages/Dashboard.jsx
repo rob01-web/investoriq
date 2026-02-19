@@ -808,7 +808,10 @@ if (!stagedBatchId) {
       const stagedFilesPayload = (uploadedFiles || [])
         .filter((file) => ['rent_roll', 't12'].includes(file.docType))
         .map((file) => ({
-          path: file.storage_path || file.path,
+          storage_path: file.storage_path || file.path,
+          original_name: file.original_name || file.file?.name || 'file',
+          content_type: file.content_type || file.file?.type || 'application/octet-stream',
+          size: file.size || file.file?.size || 0,
           doc_type: file.docType,
         }));
 
