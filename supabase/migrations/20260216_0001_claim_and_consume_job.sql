@@ -12,7 +12,6 @@ set search_path = public
 as $$
 declare
   v_job_id uuid;
-  v_purchase_id uuid;
 begin
   -- 1) Claim the job (must be queued)
   update public.analysis_jobs
@@ -27,18 +26,6 @@ begin
 
   if v_job_id is null then
     raise exception 'JOB_NOT_CLAIMABLE: %', p_job_id
-      using errcode = 'P0001';
-  end if;
-
-  -- 2) Consume the entitlement linked to this job (must be unconsumed)
-  update public.report_purchases
-  set consumed_at = p_started_at
-  where job_id = p_job_id
-    and consumed_at is null
-  returning id into v_purchase_id;
-
-  if v_purchase_id is null then
-    raise exception 'PURCHASE_NOT_AVAILABLE_FOR_JOB: %', p_job_id
       using errcode = 'P0001';
   end if;
 
