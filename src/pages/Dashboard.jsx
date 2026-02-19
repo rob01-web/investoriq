@@ -13,6 +13,7 @@ export default function Dashboard() {
   const { profile, fetchProfile } = useAuth();
   const [propertyName, setPropertyName] = useState('');
   const propertyNameRef = useRef('');
+  const analyzeInFlightRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -747,6 +748,7 @@ if (!stagedBatchId) {
 };
 
   const handleAnalyze = async () => {
+    if (loading || analyzeInFlightRef.current) return;
     if (!uploadedFiles || uploadedFiles.length === 0) {
       toast({
         title: 'No documents staged',
@@ -792,7 +794,8 @@ if (!stagedBatchId) {
     }
 
     // ELITE UX: Trigger the "Working" state immediately
-    setLoading(true); 
+    analyzeInFlightRef.current = true;
+    setLoading(true);
 
     try {
       const reportType = (selectedReportType || '').toLowerCase();
@@ -931,6 +934,7 @@ if (!stagedBatchId) {
       });
     } finally {
       setLoading(false);
+      analyzeInFlightRef.current = false;
     }
   };
 
