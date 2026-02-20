@@ -1379,8 +1379,6 @@ export default async function handler(req, res) {
 
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
-      finalHtml = replaceAll(finalHtml, "Sample Output for Demonstration Only", "");
-      finalHtml = replaceAll(finalHtml, "Sample Output for Demonstration", "");
     }
 
     // Optional: log which narrative sections are missing for debugging
