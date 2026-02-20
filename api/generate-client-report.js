@@ -962,29 +962,29 @@ export default async function handler(req, res) {
       const unitMix = Object.entries(unitMixMap)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
         .map(([bedKey, count]) => {
-        const inPlaceValues = rentByBeds[bedKey] || [];
-        const marketValues = marketRentByBeds[bedKey] || [];
-        const sqftValues = sqftByBeds[bedKey] || [];
-        const avgInPlaceRent =
-          inPlaceValues.length > 0
-            ? inPlaceValues.reduce((sum, value) => sum + value, 0) / inPlaceValues.length
-            : null;
-        const avgMarketRent =
-          marketValues.length > 0
-            ? marketValues.reduce((sum, value) => sum + value, 0) / marketValues.length
-            : null;
-        const avgSqft =
-          sqftValues.length > 0
-            ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
-            : null;
-        return {
-          unit_type: bedKey === "0" ? "Studio" : `${bedKey} Bed`,
-          count,
-          current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
-          market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
-          avg_sqft: Number.isFinite(avgSqft) ? Math.round(avgSqft) : null,
-        };
-      });
+          const inPlaceValues = rentByBeds[bedKey] || [];
+          const marketValues = marketRentByBeds[bedKey] || [];
+          const sqftValues = sqftByBeds[bedKey] || [];
+          const avgInPlaceRent =
+            inPlaceValues.length > 0
+              ? inPlaceValues.reduce((sum, value) => sum + value, 0) / inPlaceValues.length
+              : null;
+          const avgMarketRent =
+            marketValues.length > 0
+              ? marketValues.reduce((sum, value) => sum + value, 0) / marketValues.length
+              : null;
+          const avgSqft =
+            sqftValues.length > 0
+              ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
+              : null;
+          return {
+            unit_type: bedKey === "0" ? "Studio" : `${bedKey} Bed`,
+            count,
+            current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
+            market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
+            avg_sqft: Number.isFinite(avgSqft) ? Math.round(avgSqft) : null,
+          };
+        });
 
       computedRentRoll = {
         total_units: totalUnits,
