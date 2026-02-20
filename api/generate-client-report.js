@@ -959,7 +959,9 @@ export default async function handler(req, res) {
       const totalMarketAnnual =
         totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
 
-      const unitMix = Object.entries(unitMixMap).map(([bedKey, count]) => {
+      const unitMix = Object.entries(unitMixMap)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([bedKey, count]) => {
         const inPlaceValues = rentByBeds[bedKey] || [];
         const marketValues = marketRentByBeds[bedKey] || [];
         const sqftValues = sqftByBeds[bedKey] || [];
@@ -976,7 +978,7 @@ export default async function handler(req, res) {
             ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
             : null;
         return {
-          unit_type: `${bedKey} Bed`,
+          unit_type: bedKey === "0" ? "Studio" : `${bedKey} Bed`,
           count,
           current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
           market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
