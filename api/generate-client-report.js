@@ -1344,6 +1344,8 @@ export default async function handler(req, res) {
     }
 
     if (reportTier === 1) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
