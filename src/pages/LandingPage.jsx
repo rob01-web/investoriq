@@ -267,37 +267,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {SHOW_SAMPLE_REPORTS && (
-            <div className="mt-10 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                <div className="md:col-span-4">
-                  <h2 className="text-lg font-semibold text-[#0F172A]">Sample report</h2>
-                </div>
-                <div className="md:col-span-8 space-y-4 text-sm text-slate-700 leading-relaxed">
-                  <p>Preview the institutional format before purchase.</p>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-                      onClick={() => window.location.href = "/sample-report/screening"}
-                    >
-                      Download screening sample
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="inline-flex items-center rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-[#0F172A] hover:border-slate-400"
-                      onClick={() => window.location.href = "/sample-report/underwriting"}
-                    >
-                      Download underwriting sample
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
         </motion.div>
       </main>
     </>

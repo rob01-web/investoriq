@@ -39,14 +39,6 @@ const CallToAction = () => {
             Upload Your Property
           </Button>
 
-          <Button
-            size="lg"
-            variant="outline"
-            className="rounded-md border border-slate-200 text-white px-6 py-3 hover:border-white"
-            onClick={() => navigate('/sample-report')}
-          >
-            View Sample IQ Report
-          </Button>
         </div>
       </motion.div>
 
