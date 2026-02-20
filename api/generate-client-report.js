@@ -158,23 +158,47 @@ function constantTimeEqual(a, b) {
 }
 
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
+  const toNum = (v) => {
+    if (v === null || v === undefined) return NaN;
+    if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+    if (typeof v !== "string") return NaN;
+    const trimmed = v.trim();
+    if (!trimmed) return NaN;
+    const parenNeg = trimmed.startsWith("(") && trimmed.endsWith(")");
+    const unwrapped = parenNeg ? trimmed.slice(1, -1) : trimmed;
+    const normalized = unwrapped.replace(/[^\d.-]/g, "");
+    if (!normalized) return NaN;
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) return NaN;
+    const absParsed = Math.abs(parsed);
+    return parenNeg ? -absParsed : parsed;
+  };
+
   if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
   const rows = unitMix
     .map((row) => {
-      const unitType = escapeHtml(row.unit_type || "");
-      const count = Number.isFinite(Number(row.count)) ? String(Number(row.count)) : "";
-      const avgSqft = Number.isFinite(Number(row.avg_sqft))
-        ? String(Math.round(Number(row.avg_sqft)))
+      const rawUnitType = String(row.unit_type ?? "").trim();
+      const normalizedUnitType = /^(studio|0|0br|0 br|0-bed|0 bed)$/i.test(rawUnitType)
+        ? "Studio"
+        : rawUnitType;
+      const unitType = escapeHtml(normalizedUnitType);
+      const countNum = toNum(row.count);
+      const avgSqftNum = toNum(row.avg_sqft);
+      const currentRentNum = toNum(row.current_rent);
+      const marketRentNum = toNum(row.market_rent);
+      const count = Number.isFinite(countNum) ? String(Math.round(countNum)) : "";
+      const avgSqft = Number.isFinite(avgSqftNum)
+        ? String(Math.round(avgSqftNum))
         : "";
-      const currentRent = Number.isFinite(Number(row.current_rent))
-        ? formatValue(row.current_rent)
+      const currentRent = Number.isFinite(currentRentNum)
+        ? formatValue(currentRentNum)
         : "";
-      const marketRent = Number.isFinite(Number(row.market_rent))
-        ? formatValue(row.market_rent)
+      const marketRent = Number.isFinite(marketRentNum)
+        ? formatValue(marketRentNum)
         : "";
       const plannedLift =
-        Number.isFinite(Number(row.current_rent)) && Number.isFinite(Number(row.market_rent))
-          ? formatValue(Number(row.market_rent) - Number(row.current_rent))
+        Number.isFinite(currentRentNum) && Number.isFinite(marketRentNum)
+          ? formatValue(marketRentNum - currentRentNum)
           : "";
       return `<tr>
             <td>${unitType}</td>
@@ -187,7 +211,8 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
     })
     .join("");
 
-  const total = Number.isFinite(Number(totalUnits)) ? String(Number(totalUnits)) : "";
+  const totalNum = toNum(totalUnits);
+  const total = Number.isFinite(totalNum) ? String(Math.round(totalNum)) : "";
 
   const totalRow = `<tr>
             <td><strong>Blended / Total</strong></td>
