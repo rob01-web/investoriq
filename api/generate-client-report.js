@@ -690,6 +690,7 @@ function applyChartPlaceholders(html, charts = {}) {
 
 export default async function handler(req, res) {
   let effectiveUserId = null;
+  const REPORT_MODE = "v1_core";
   try {
     const body = req.body || {};
     const isAdminRegen = body?.admin_regen === true;
@@ -1409,6 +1410,7 @@ export default async function handler(req, res) {
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
     }
+    finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", REPORT_MODE);
 
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [
