@@ -581,6 +581,71 @@ ul, ol {
 <!-- END SECTION_2 -->
 <!-- END SECTION_2_UNIT_VALUE_ADD -->
 
+<!-- BEGIN SECTION_3_OPERATING_STATEMENT -->
+<section class="section page-break">
+  <div class="section-header">
+    <div class="section-number">3.0 Operating Statement (Trailing Twelve Months)</div>
+    <h2>Income, Expenses, and Net Operating Income</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="no-break">
+      <p class="subsection-title">Income Reconstruction (TTM)</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Income Line Item</th>
+            <th>TTM Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{T12_INCOME_ROWS}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="no-break">
+      <p class="subsection-title">Operating Expenses (TTM)</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Expense Line Item</th>
+            <th>TTM Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{T12_EXPENSE_ROWS}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="no-break" style="margin-top:24px;">
+    <p class="subsection-title">Net Operating Income Summary</p>
+    <table>
+      <tbody>
+        <tr>
+          <td><strong>Effective Gross Income (TTM)</strong></td>
+          <td><strong>{{T12_EGI}}</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Total Operating Expenses (TTM)</strong></td>
+          <td><strong>{{T12_TOTAL_EXPENSES}}</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Net Operating Income (TTM)</strong></td>
+          <td><strong>{{T12_NOI}}</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Operating Expense Ratio</strong></td>
+          <td><strong>{{T12_EXPENSE_RATIO}}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<!-- END SECTION_3_OPERATING_STATEMENT -->
+
 
     <!-- BEGIN SECTION_3_SCENARIO -->
 <!-- 3.0 Scenario Analysis & Five-Year Outlook -->

@@ -297,6 +297,124 @@ function buildT12KeyMetricRows(t12Payload, formatValue) {
     .join("");
 }
 
+function buildT12IncomeRows(t12Payload, formatValue) {
+  if (!t12Payload || typeof t12Payload !== "object") return "";
+  const candidateCollections = [];
+  const pushCandidate = (value) => {
+    if (Array.isArray(value) || (value && typeof value === "object")) {
+      candidateCollections.push(value);
+    }
+  };
+  Object.entries(t12Payload).forEach(([key, value]) => {
+    if (/(income|revenue)/i.test(key)) pushCandidate(value);
+  });
+  if (t12Payload.statement && typeof t12Payload.statement === "object") {
+    Object.entries(t12Payload.statement).forEach(([key, value]) => {
+      if (/(income|revenue)/i.test(key)) pushCandidate(value);
+    });
+  }
+
+  const rows = [];
+  const seen = new Set();
+  const addRow = (labelRaw, amountRaw) => {
+    const label = String(labelRaw ?? "").trim();
+    const amountNum = coerceNumber(amountRaw);
+    if (!label || !Number.isFinite(amountNum)) return;
+    const rowKey = `${label}::${amountNum}`;
+    if (seen.has(rowKey)) return;
+    seen.add(rowKey);
+    rows.push(
+      `<tr><td>${escapeHtml(label)}</td><td>${formatValue(amountNum)}</td></tr>`
+    );
+  };
+
+  for (const collection of candidateCollections) {
+    if (Array.isArray(collection)) {
+      collection.forEach((entry) => {
+        if (entry && typeof entry === "object") {
+          const label =
+            entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
+          const amount =
+            entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
+          addRow(label, amount);
+        }
+      });
+      continue;
+    }
+    Object.entries(collection).forEach(([key, value]) => {
+      if (value && typeof value === "object") {
+        addRow(
+          value.line_item ?? value.label ?? value.name ?? key,
+          value.amount ?? value.value ?? value.ttm ?? value.total
+        );
+      } else {
+        addRow(key, value);
+      }
+    });
+  }
+
+  return rows.join("");
+}
+
+function buildT12ExpenseRows(t12Payload, formatValue) {
+  if (!t12Payload || typeof t12Payload !== "object") return "";
+  const candidateCollections = [];
+  const pushCandidate = (value) => {
+    if (Array.isArray(value) || (value && typeof value === "object")) {
+      candidateCollections.push(value);
+    }
+  };
+  Object.entries(t12Payload).forEach(([key, value]) => {
+    if (/(expense|operating_expense|operating_cost)/i.test(key)) pushCandidate(value);
+  });
+  if (t12Payload.statement && typeof t12Payload.statement === "object") {
+    Object.entries(t12Payload.statement).forEach(([key, value]) => {
+      if (/(expense|operating_expense|operating_cost)/i.test(key)) pushCandidate(value);
+    });
+  }
+
+  const rows = [];
+  const seen = new Set();
+  const addRow = (labelRaw, amountRaw) => {
+    const label = String(labelRaw ?? "").trim();
+    const amountNum = coerceNumber(amountRaw);
+    if (!label || !Number.isFinite(amountNum)) return;
+    const rowKey = `${label}::${amountNum}`;
+    if (seen.has(rowKey)) return;
+    seen.add(rowKey);
+    rows.push(
+      `<tr><td>${escapeHtml(label)}</td><td>${formatValue(amountNum)}</td></tr>`
+    );
+  };
+
+  for (const collection of candidateCollections) {
+    if (Array.isArray(collection)) {
+      collection.forEach((entry) => {
+        if (entry && typeof entry === "object") {
+          const label =
+            entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
+          const amount =
+            entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
+          addRow(label, amount);
+        }
+      });
+      continue;
+    }
+    Object.entries(collection).forEach(([key, value]) => {
+      if (value && typeof value === "object") {
+        addRow(
+          value.line_item ?? value.label ?? value.name ?? key,
+          value.amount ?? value.value ?? value.ttm ?? value.total
+        );
+      } else {
+        addRow(key, value);
+      }
+    });
+  }
+
+  return rows.join("");
+}
+
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -1188,6 +1306,40 @@ export default async function handler(req, res) {
 
     const t12Rows = buildT12KeyMetricRows(t12Payload, formatCurrency);
     finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
+    const t12IncomeRows = buildT12IncomeRows(t12Payload, formatCurrency);
+    const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatCurrency);
+    const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
+    const t12TotalExpensesValue = coerceNumber(t12Payload?.total_operating_expenses);
+    const t12NoiValue = coerceNumber(t12Payload?.net_operating_income);
+    const t12ExpenseRatioValue =
+      Number.isFinite(t12EgiValue) &&
+      Number.isFinite(t12TotalExpensesValue) &&
+      t12EgiValue > 0
+        ? `${((t12TotalExpensesValue / t12EgiValue) * 100).toLocaleString("en-CA", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}%`
+        : DATA_NOT_AVAILABLE;
+    finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
+    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_EGI}}",
+      Number.isFinite(t12EgiValue) ? formatCurrency(t12EgiValue) : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_TOTAL_EXPENSES}}",
+      Number.isFinite(t12TotalExpensesValue)
+        ? formatCurrency(t12TotalExpensesValue)
+        : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_NOI}}",
+      Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
 
     if (!documentSourcesHtml) {
       finalHtml = finalHtml.replace(
