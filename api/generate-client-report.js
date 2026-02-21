@@ -1304,8 +1304,6 @@ export default async function handler(req, res) {
         : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
     finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
 
-    const t12Rows = buildT12KeyMetricRows(t12Payload, formatCurrency);
-    finalHtml = injectKeyMetricsRows(finalHtml, t12Rows);
     const t12IncomeRows = buildT12IncomeRows(t12Payload, formatCurrency);
     const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatCurrency);
     const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
@@ -1340,6 +1338,15 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    const showOperatingStatement = Boolean(
+      t12IncomeRows ||
+        t12ExpenseRows ||
+        (Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue)) ||
+        Number.isFinite(t12NoiValue)
+    );
+    if (!showOperatingStatement) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
+    }
 
     if (!documentSourcesHtml) {
       finalHtml = finalHtml.replace(
