@@ -591,6 +591,53 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
   return rows.join("");
 }
 
+function buildRenovationBudgetRows(rows, formatValue) {
+  if (!Array.isArray(rows) || rows.length === 0) return "";
+  return rows
+    .map((row) => {
+      if (!row || typeof row !== "object") return "";
+      const category = String(row.category ?? row.line_item ?? row.item ?? "").trim();
+      const scope = String(row.scope_of_work ?? row.scope ?? "").trim();
+      const costNum = coerceNumber(row.estimated_cost ?? row.cost ?? row.amount);
+      const costRaw = String(row.estimated_cost ?? row.cost ?? row.amount ?? "").trim();
+      const cost = Number.isFinite(costNum)
+        ? formatValue(costNum)
+        : escapeHtml(costRaw);
+      const pctRaw = String(
+        row.percent_of_budget ?? row.percent ?? row.percentage ?? ""
+      ).trim();
+      const objective = String(
+        row.primary_objective ?? row.objective ?? row.note ?? ""
+      ).trim();
+      if (!category && !scope && !cost && !pctRaw && !objective) return "";
+      return `<tr><td>${escapeHtml(category)}</td><td>${escapeHtml(
+        scope
+      )}</td><td>${cost}</td><td>${escapeHtml(pctRaw)}</td><td>${escapeHtml(
+        objective
+      )}</td></tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+function buildRenovationExecutionRows(rows, formatValue) {
+  if (!Array.isArray(rows) || rows.length === 0) return "";
+  return rows
+    .map((row) => {
+      if (!row || typeof row !== "object") return "";
+      const metric = String(row.metric ?? row.label ?? row.item ?? "").trim();
+      const valueNum = coerceNumber(row.value ?? row.amount);
+      const valueRaw = String(row.value ?? row.amount ?? "").trim();
+      const value = Number.isFinite(valueNum)
+        ? formatValue(valueNum)
+        : escapeHtml(valueRaw);
+      if (!metric && !value) return "";
+      return `<tr><td>${escapeHtml(metric)}</td><td>${value}</td></tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -1514,6 +1561,85 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    let renovationPayload = null;
+    if (jobId) {
+      const { data: renovationArtifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "renovation_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      renovationPayload = renovationArtifact?.payload || null;
+    }
+    const hasExplicitRenovationInput = Boolean(
+      (renovationPayload && typeof renovationPayload === "object") ||
+        (financials && typeof financials === "object" && (
+          Array.isArray(financials.renovation_budget_rows) ||
+          Array.isArray(financials.renovation_execution_rows) ||
+          typeof financials.renovation_budget_note === "string" ||
+          typeof financials.renovation_execution_note === "string" ||
+          typeof financials.renovation_interpretation === "string"
+        ))
+    );
+    const renovationBudgetRows = hasExplicitRenovationInput
+      ? buildRenovationBudgetRows(
+          financials?.renovation_budget_rows || renovationPayload?.budget_rows || [],
+          formatCurrency
+        )
+      : "";
+    const renovationExecutionRows = hasExplicitRenovationInput
+      ? buildRenovationExecutionRows(
+          financials?.renovation_execution_rows ||
+            renovationPayload?.execution_rows ||
+            [],
+          formatCurrency
+        )
+      : "";
+    const renovationBudgetNote = hasExplicitRenovationInput
+      ? String(
+          financials?.renovation_budget_note ??
+            renovationPayload?.budget_note ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    const renovationExecutionNote = hasExplicitRenovationInput
+      ? String(
+          financials?.renovation_execution_note ??
+            renovationPayload?.execution_note ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    const renovationInterpretation = hasExplicitRenovationInput
+      ? String(
+          sections?.renovationInterpretation ??
+            financials?.renovation_interpretation ??
+            renovationPayload?.interpretation ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    finalHtml = replaceAll(finalHtml, "{{RENOVATION_BUDGET_ROWS}}", renovationBudgetRows);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_BUDGET_NOTE}}",
+      escapeHtml(renovationBudgetNote)
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_EXECUTION_ROWS}}",
+      renovationExecutionRows
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_EXECUTION_NOTE}}",
+      escapeHtml(renovationExecutionNote)
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_INTERPRETATION}}",
+      escapeHtml(renovationInterpretation)
+    );
     const refiResult = buildRefiStabilityModel({
       financials: body?.financials,
       t12Payload,
@@ -1532,6 +1658,16 @@ export default async function handler(req, res) {
     );
     if (!showOperatingStatement) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
+    }
+    const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
+    const showRenovationSection = Boolean(
+      (renovationBudgetRows || "").trim() ||
+        (renovationExecutionRows || "").trim() ||
+        renovationInterpretation !== DATA_NOT_AVAILABLE ||
+        (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
+    );
+    if (!showRenovationSection) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
 
     if (!documentSourcesHtml) {
@@ -1667,7 +1803,8 @@ export default async function handler(req, res) {
     }
 
     const showSection6 =
-      Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
+      showRenovationSection ||
+      (Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0);
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
