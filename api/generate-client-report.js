@@ -1031,7 +1031,6 @@ function applyChartPlaceholders(html, charts = {}) {
 
 export default async function handler(req, res) {
   let effectiveUserId = null;
-  const REPORT_MODE = "v1_core";
   try {
     const body = req.body || {};
     const isAdminRegen = body?.admin_regen === true;
@@ -1117,6 +1116,8 @@ export default async function handler(req, res) {
     const reportType = allowedReportTypes.includes(rawReportType)
       ? rawReportType
       : "screening";
+    const effectiveReportMode =
+      reportType === "screening" ? "screening_v1" : "v1_core";
     const reportTier =
       reportType === "underwriting" ? 2 : reportType === "ic" ? 3 : 1;
     const allowAssumptions = reportTier >= 2;
@@ -1427,6 +1428,25 @@ export default async function handler(req, res) {
         ? "Assumptions in this report are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
         : "This report contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
     );
+    if (effectiveReportMode === "screening_v1") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    } else {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
+    }
 
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
@@ -1490,6 +1510,11 @@ export default async function handler(req, res) {
       "{{RENOVATION_NARRATIVE}}",
       getNarrativeHtml("renovationNarrative")
     );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_STRATEGY}}",
+      getNarrativeHtml("renovationNarrative")
+    );
     finalHtml = finalHtml.replace(
       "{{DEBT_STRUCTURE}}",
       getNarrativeHtml("debtStructure")
@@ -1514,12 +1539,53 @@ export default async function handler(req, res) {
       "{{FINAL_RECOMMENDATION}}",
       getNarrativeHtml("finalRecommendation")
     );
+    const dna = "DATA NOT AVAILABLE (not present in uploaded documents)";
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
+      `<p>${dna}</p>`
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}",
+      `<p>${dna}</p>`
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_NOI_STABILITY_BLOCK}}",
+      `<p>${dna}</p>`
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_RENT_ROLL_BLOCK}}",
+      `<p>${dna}</p>`
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
+      `<p>${dna}</p>`
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
+      `<p>${dna}</p>`
+    );
 
     const unitMixRows = buildUnitMixRows(
       computedRentRoll?.unit_mix || rentRollPayload?.unit_mix,
       computedRentRoll?.total_units ?? rentRollPayload?.total_units,
       formatCurrency
     );
+    let descriptorLine = "";
+    const rrUnits = Number(computedRentRoll?.total_units);
+    if (Number.isFinite(rrUnits) && rrUnits > 0) {
+      descriptorLine = `${rrUnits}-Unit Multifamily`;
+    }
+    if (!descriptorLine) {
+      finalHtml = stripMarkedSection(finalHtml, "PROPERTY_DESCRIPTOR_LINE");
+    } else {
+      finalHtml = replaceAll(finalHtml, "{{PROPERTY_DESCRIPTOR_LINE}}", descriptorLine);
+    }
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
     const occupancyValue =
       computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
@@ -1892,18 +1958,7 @@ export default async function handler(req, res) {
     if (!IS_SAMPLE_REPORT) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
     }
-    finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", REPORT_MODE);
-    if (REPORT_MODE === "v1_core") {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
-    }
+    finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
 
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [
