@@ -643,69 +643,90 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
   const noiFromFinancials = coerceNumber(f.noi_base);
   const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
+  const formatPercent = (x, decimals = 2) =>
+    `${(Number(x) * 100).toFixed(decimals)}%`;
+  const formatMultiple = (x) => `${Number(x).toFixed(2)}x`;
+  const formatYears = (x) => `${x} yrs`;
+  const formatBps = (x) => `${Math.round(Number(x))} bps`;
+  const formatPercentArray = (arr) =>
+    `[${arr.map((entry) => formatPercent(coerceNumber(entry))).join(", ")}]`;
+  const formatBpsArray = (arr) =>
+    `[${arr.map((entry) => formatBps(coerceNumber(entry))).join(", ")}]`;
 
   const isPresentScalar = (value) => Number.isFinite(value) && value > 0;
   const isPresentArray = (value) =>
     Array.isArray(value) &&
     value.length > 0 &&
     value.every((entry) => Number.isFinite(coerceNumber(entry)));
-  const formatScalar = (value) =>
-    Number.isFinite(value) ? escapeHtml(String(value)) : DATA_NOT_AVAILABLE;
-  const formatArray = (value) =>
-    Array.isArray(value) && value.length > 0
-      ? escapeHtml(value.map((entry) => String(entry)).join(", "))
-      : DATA_NOT_AVAILABLE;
 
   const rows = [
     {
       label: "NOI (base)",
       present: isPresentScalar(noiValue),
-      value: formatScalar(noiValue),
+      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_debt_balance",
       present: isPresentScalar(coerceNumber(f.refi_debt_balance)),
-      value: formatScalar(coerceNumber(f.refi_debt_balance)),
+      value: Number.isFinite(coerceNumber(f.refi_debt_balance))
+        ? formatCurrency(coerceNumber(f.refi_debt_balance))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_ltv_max",
       present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
-      value: formatScalar(coerceNumber(f.refi_ltv_max)),
+      value: Number.isFinite(coerceNumber(f.refi_ltv_max))
+        ? formatPercent(coerceNumber(f.refi_ltv_max), 1)
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_dscr_min",
       present: isPresentScalar(coerceNumber(f.refi_dscr_min)),
-      value: formatScalar(coerceNumber(f.refi_dscr_min)),
+      value: Number.isFinite(coerceNumber(f.refi_dscr_min))
+        ? formatMultiple(coerceNumber(f.refi_dscr_min))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_interest_rate",
       present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
-      value: formatScalar(coerceNumber(f.refi_interest_rate)),
+      value: Number.isFinite(coerceNumber(f.refi_interest_rate))
+        ? formatPercent(coerceNumber(f.refi_interest_rate))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_amort_years",
       present: isPresentScalar(coerceNumber(f.refi_amort_years)),
-      value: formatScalar(coerceNumber(f.refi_amort_years)),
+      value: Number.isFinite(coerceNumber(f.refi_amort_years))
+        ? formatYears(coerceNumber(f.refi_amort_years))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "refi_cap_rate_base",
       present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
-      value: formatScalar(coerceNumber(f.refi_cap_rate_base)),
+      value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
+        ? formatPercent(coerceNumber(f.refi_cap_rate_base))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "stress_noi_shocks",
       present: isPresentArray(f.stress_noi_shocks),
-      value: formatArray(f.stress_noi_shocks),
+      value: isPresentArray(f.stress_noi_shocks)
+        ? escapeHtml(formatPercentArray(f.stress_noi_shocks))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "stress_cap_rate_bps",
       present: isPresentArray(f.stress_cap_rate_bps),
-      value: formatArray(f.stress_cap_rate_bps),
+      value: isPresentArray(f.stress_cap_rate_bps)
+        ? escapeHtml(formatBpsArray(f.stress_cap_rate_bps))
+        : DATA_NOT_AVAILABLE,
     },
     {
       label: "stress_rate_bps",
       present: isPresentArray(f.stress_rate_bps),
-      value: formatArray(f.stress_rate_bps),
+      value: isPresentArray(f.stress_rate_bps)
+        ? escapeHtml(formatBpsArray(f.stress_rate_bps))
+        : DATA_NOT_AVAILABLE,
     },
   ];
 
@@ -718,7 +739,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     )
     .join("");
 
-  return `<table><thead><tr><th>Input</th><th>Status</th><th>Observed Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
+  return `<table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
 }
 
 function buildScreeningDataCoverageSummary({
@@ -800,6 +821,97 @@ function buildScreeningDataCoverageSummary({
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
   )}</td></tr></tbody></table><ul>${missingHtml}</ul><p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+}
+
+function buildScreeningExpenseStructureHtml({
+  t12Payload,
+  computedRentRoll,
+  rentRollPayload,
+  formatCurrency,
+}) {
+  const egi = coerceNumber(t12Payload?.effective_gross_income);
+  const opex = coerceNumber(t12Payload?.total_operating_expenses);
+  const noi = coerceNumber(t12Payload?.net_operating_income);
+  const units = coerceNumber(
+    computedRentRoll?.total_units ?? rentRollPayload?.total_units
+  );
+
+  const rows = [];
+  if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
+    const expenseRatio = opex / egi;
+    rows.push(
+      `<tr><td>Operating Expense Ratio</td><td>${(expenseRatio * 100).toLocaleString(
+        "en-CA",
+        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+      )}%</td></tr>`
+    );
+  }
+  if (Number.isFinite(opex) && Number.isFinite(units) && units > 0) {
+    rows.push(
+      `<tr><td>Operating Expense per Unit</td><td>${formatCurrency(
+        opex / units
+      )}</td></tr>`
+    );
+  }
+  if (Number.isFinite(noi) && Number.isFinite(units) && units > 0) {
+    rows.push(
+      `<tr><td>NOI per Unit</td><td>${formatCurrency(noi / units)}</td></tr>`
+    );
+  }
+
+  if (rows.length === 0) return "";
+  return `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
+    ""
+  )}</tbody></table></div>`;
+}
+
+function buildScreeningNoiStabilityHtml({
+  t12Payload,
+  computedRentRoll,
+  rentRollPayload,
+  formatCurrency,
+}) {
+  const egi = coerceNumber(t12Payload?.effective_gross_income);
+  const opex = coerceNumber(t12Payload?.total_operating_expenses);
+  const noi = coerceNumber(t12Payload?.net_operating_income);
+  const rrAnnual = coerceNumber(
+    computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
+  );
+  const gpr = coerceNumber(t12Payload?.gross_potential_rent);
+
+  const rows = [];
+  if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) {
+    const noiMargin = noi / egi;
+    rows.push(
+      `<tr><td>NOI Margin</td><td>${(noiMargin * 100).toLocaleString("en-CA", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}%</td></tr>`
+    );
+  }
+  if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
+    const expenseSensitivity = 1 - opex / egi;
+    rows.push(
+      `<tr><td>Expense Sensitivity</td><td>${(expenseSensitivity * 100).toLocaleString(
+        "en-CA",
+        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+      )}%</td></tr>`
+    );
+  }
+  if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
+    const rrVsGprPct = (rrAnnual - gpr) / gpr;
+    rows.push(
+      `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${(rrVsGprPct * 100).toLocaleString(
+        "en-CA",
+        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+      )}%</td></tr>`
+    );
+  }
+
+  if (rows.length === 0) return "";
+  return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
+    ""
+  )}</tbody></table></div>`;
 }
 
 function injectKeyMetricsRows(html, rowsHtml) {
@@ -1761,8 +1873,24 @@ export default async function handler(req, res) {
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
     finalHtml = replaceAll(finalHtml, "{{SCREENING_INCOME_FORENSICS_BLOCK}}", "");
-    finalHtml = replaceAll(finalHtml, "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}", "");
-    finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", "");
+    const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    const screeningNoiHtml = buildScreeningNoiStabilityHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}",
+      screeningExpenseHtml
+    );
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
     finalHtml = replaceAll(finalHtml, "{{SCREENING_RENT_ROLL_BLOCK}}", "");
     const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
       financials,
