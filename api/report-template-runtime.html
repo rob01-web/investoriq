@@ -970,30 +970,15 @@ ul, ol {
     <div class="no-break">
       <p class="subsection-title">Illustrative Capital Structure (Acquisition)</p>
       <table>
-        <tr>
-          <th>Component</th>
-          <th>Assumed Terms</th>
-        </tr>
-        <tr>
-          <td>Senior Loan-to-Cost</td>
-          <td>65 percent of total project cost</td>
-        </tr>
-        <tr>
-          <td>Interest Rate</td>
-          <td>5.25 percent fixed (illustrative)</td>
-        </tr>
-        <tr>
-          <td>Amortization</td>
-          <td>30 years</td>
-        </tr>
-        <tr>
-          <td>Going-In DSCR (Year 1)</td>
-          <td>Approximately 1.30x (InvestorIQ Estimate)</td>
-        </tr>
-        <tr>
-          <td>Refinance Year</td>
-          <td>Target Year 3 post-stabilization</td>
-        </tr>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Terms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{DEBT_CAPITAL_STRUCTURE_ROWS}}
+        </tbody>
       </table>
     </div>
 <!-- END SECTION_7_DEBT_TABLES -->
@@ -1011,65 +996,20 @@ ul, ol {
 <!-- END SECTION_CHART_BREAKEVEN -->
 
       <p class="small" style="margin-top:16px;">
-        <strong>InvestorIQ Estimate:</strong> Under the Base Case, the asset remains comfortably above break-even occupancy and DSCR thresholds. In downside scenarios, DSCR approaches lender minimums but does not fall materially below break-even, reinforcing the importance of conservative leverage and disciplined operating management.
+        <strong>InvestorIQ:</strong> {{DEBT_DSCR_NOTE}}
       </p>
     </div>
   </div>
 
   <p class="subsection-title">Refinance Considerations</p>
   <p>
-    InvestorIQ assumes a potential refinance in Year 3 following renovation completion and stabilization. Refinance proceeds are sensitive to cap rate and interest rate environments at that time. The Base Case assumes modest value creation sufficient to return a portion of investor equity while maintaining prudent leverage. More aggressive BRRRR-style execution is possible but would introduce higher financial risk and is not assumed in the Base Case.
+    {{DEBT_REFI_CONSIDERATIONS}}
   </p>
 <!-- BEGIN SECTION_7_DEBT_TABLES -->
 
 
-  <p class="subsection-title">Refinance Sensitivity Matrix (Year 3)</p>
-  <div class="no-break">
-    <table style="margin-top:14px;">
-      <tr>
-        <th>Exit Cap Rate →<br />Interest Rate ↓</th>
-        <th>5.50 percent</th>
-        <th>5.70 percent</th>
-        <th>{{CAP_RATE_ON_COST}}</th>
-        <th>6.10 percent</th>
-      </tr>
-      <tr>
-        <td><strong>4.75 percent</strong></td>
-        <td>Approx. 72 percent LTV</td>
-        <td>Approx. 70 percent LTV</td>
-        <td>Approx. 68 percent LTV</td>
-        <td>Approx. 66 percent LTV</td>
-      </tr>
-      <tr>
-        <td><strong>5.25 percent</strong></td>
-        <td>Approx. 70 percent LTV</td>
-        <td>Approx. 68 percent LTV</td>
-        <td>Approx. 66 percent LTV</td>
-        <td>Approx. 64 percent LTV</td>
-      </tr>
-      <tr>
-        <td><strong>5.75 percent</strong></td>
-        <td>Approx. 68 percent LTV</td>
-        <td>Approx. 66 percent LTV</td>
-        <td>Approx. 64 percent LTV</td>
-        <td>Approx. 62 percent LTV</td>
-      </tr>
-      <tr>
-        <td><strong>6.25 percent</strong></td>
-        <td>Approx. 66 percent LTV</td>
-        <td>Approx. 64 percent LTV</td>
-        <td>Approx. 62 percent LTV</td>
-        <td>Approx. 60 percent LTV</td>
-      </tr>
-    </table>
-
-    <p class="small" style="margin-top:8px;">
-      <strong>InvestorIQ Estimate:</strong> This illustrative matrix shows achievable loan-to-value ratios at
-      a potential Year 3 refinance under varying interest rate and exit cap rate scenarios. The Base Case assumes
-      a 5.25 percent interest rate and 5.70 percent exit cap rate, yielding approximately mid-60s LTV and providing
-      capacity for a measured but not overly aggressive cash-out refinance.
-    </p>
-  </div>
+  <p class="subsection-title">Refinance Sensitivity Matrix</p>
+{{REFI_SENSITIVITY_MATRIX_BLOCK}}
 <!-- END SECTION_7_DEBT_TABLES -->
 
 </section>
