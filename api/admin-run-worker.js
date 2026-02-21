@@ -1276,18 +1276,20 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${scoringTransitionErr.message}`);
           }
 
-          const { data: requiredArtifacts, error: requiredErr } = await supabaseAdmin
-            .from('analysis_artifacts')
-            .select('id, type')
+          const { data: parsedFiles, error: parsedFilesErr } = await supabaseAdmin
+            .from('analysis_job_files')
+            .select('doc_type')
             .eq('job_id', job.id)
-            .in('type', ['rent_roll_parsed', 't12_parsed']);
+            .eq('parse_status', 'parsed')
+            .in('doc_type', ['rent_roll', 't12']);
 
-          if (requiredErr) {
-            throw new Error(`Failed to check required document artifacts: ${requiredErr.message}`);
+          if (parsedFilesErr) {
+            throw new Error(`Failed to check parsed required documents: ${parsedFilesErr.message}`);
           }
 
-          const hasRentRoll = (requiredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
-          const hasT12 = (requiredArtifacts || []).some((artifact) => artifact.type === 't12_parsed');
+          const parsed = parsedFiles || [];
+          const hasRentRoll = parsed.some((file) => file.doc_type === 'rent_roll');
+          const hasT12 = parsed.some((file) => file.doc_type === 't12');
 
           if (!hasRentRoll || !hasT12) {
             const missing = [];
