@@ -19,6 +19,12 @@ const getRequestBody = (req) => {
 const normalizeHeader = (value) => String(value || '').trim().toLowerCase();
 const normalizeCell = (value) => String(value || '').trim().toLowerCase();
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
+const normalizeClassifierText = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-z0-9\s]/g, '');
 
 const isSpreadsheetMime = (mime) => String(mime || '').toLowerCase().includes('spreadsheetml');
 const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
@@ -99,6 +105,122 @@ const numericFromCell = (value) => {
     num = -num;
   }
   return num;
+};
+
+const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
+  const normalizedHeaders = Array.isArray(headers)
+    ? headers.map((h) => normalizeClassifierText(h))
+    : [];
+  const rows = Array.isArray(sampleRows) ? sampleRows : [];
+
+  const headerHasAny = (terms) =>
+    normalizedHeaders.some((header) =>
+      terms.some((term) => header.includes(normalizeClassifierText(term)))
+    );
+
+  const isNumericLike = (value) => Number.isFinite(numericFromCell(value));
+  const unitLikeRegex = /^(?:[a-z]?\d{1,4}[a-z]?|\d{1,4}-\d{1,4}|[a-z]{1,3}-?\d{1,4})$/i;
+  const sampleHasUnitLike = (() => {
+    if (!rows.length) return false;
+    let rowHits = 0;
+    for (const row of rows) {
+      const values = Array.isArray(row)
+        ? row
+        : row && typeof row === 'object'
+        ? Object.values(row)
+        : [];
+      const hit = values.some((v) => unitLikeRegex.test(String(v || '').trim()));
+      if (hit) rowHits += 1;
+    }
+    return rowHits / rows.length >= 0.2;
+  })();
+  const rowCountSignal = rows.length >= 8;
+
+  const monthHeaderSignal = headerHasAny([
+    'jan',
+    'feb',
+    'mar',
+    'apr',
+    'may',
+    'jun',
+    'jul',
+    'aug',
+    'sep',
+    'oct',
+    'nov',
+    'dec',
+    'q1',
+    'q2',
+    'q3',
+    'q4',
+  ]) || normalizedHeaders.some((h) => /\b\d{4}[/-]\d{1,2}\b/.test(h));
+  const lineItemNumericSignal = (() => {
+    let qualifyingRows = 0;
+    for (const row of rows) {
+      const values = Array.isArray(row)
+        ? row
+        : row && typeof row === 'object'
+        ? Object.values(row)
+        : [];
+      const textCount = values.filter((v) => {
+        const t = String(v || '').trim();
+        return t && !isNumericLike(t);
+      }).length;
+      const numericCount = values.filter((v) => isNumericLike(v)).length;
+      if (textCount >= 1 && numericCount >= 4) {
+        qualifyingRows += 1;
+      }
+    }
+    return qualifyingRows >= 2;
+  })();
+
+  const rentRollSignals = {
+    unit_identifier_header: headerHasAny(['unit', 'apt', 'suite', 'apartment', 'unitid']),
+    rent_header: headerHasAny(['inplacerent', 'currentrent', 'actualrent', 'rent']),
+    market_header: headerHasAny(['marketrent', 'askingrent', 'market']),
+    status_header: headerHasAny(['status', 'occupied', 'vacant', 'occupancy']),
+    unit_like_values: sampleHasUnitLike,
+    row_count_signal: rowCountSignal,
+  };
+  const t12Signals = {
+    finance_total_header: headerHasAny([
+      'noi',
+      'netoperatingincome',
+      'effectivegrossincome',
+      'egi',
+      'grosspotentialrent',
+      'gpr',
+      'operatingexpenses',
+      'opex',
+    ]),
+    expense_line_header: headerHasAny([
+      'taxes',
+      'insurance',
+      'payroll',
+      'repairs',
+      'utilities',
+      'management',
+      'admin',
+    ]),
+    month_or_period_header: monthHeaderSignal,
+    line_item_numeric_pattern: lineItemNumericSignal,
+  };
+
+  const rent_roll_score = Object.values(rentRollSignals).filter(Boolean).length;
+  const t12_score = Object.values(t12Signals).filter(Boolean).length;
+
+  let detected_doc_type = 'unknown';
+  if (rent_roll_score >= 3 && rent_roll_score > t12_score) {
+    detected_doc_type = 'rent_roll';
+  } else if (t12_score >= 3 && t12_score > rent_roll_score) {
+    detected_doc_type = 't12';
+  }
+
+  return {
+    detected_doc_type,
+    signals: { rent_roll: rentRollSignals, t12: t12Signals },
+    score: { rent_roll_score, t12_score },
+  };
 };
 
 const isPdfOrImage = (mime) => {
@@ -249,6 +371,7 @@ export default async function handler(req, res) {
 
     const body = getRequestBody(req);
     const { job_id: jobId, file_id: fileId, doc_type: docType } = body || {};
+    const declaredDocType = docType;
 
     if (!jobId || !fileId || !docType) {
       return res.status(400).json({ error: 'Missing job_id, file_id, or doc_type' });
@@ -270,8 +393,56 @@ export default async function handler(req, res) {
     }
 
     const nowIso = new Date().toISOString();
+    const isTabularInput =
+      isSpreadsheetMime(fileRow.mime_type) ||
+      isXlsxName(fileRow.original_filename) ||
+      isCsvMime(fileRow.mime_type) ||
+      isCsvName(fileRow.original_filename);
 
-    if (docType === 'other') {
+    let detectedDocType = 'unknown';
+    let classifierScore = null;
+    let classifierSignals = null;
+    let effectiveDocType = declaredDocType;
+    let declaredTypeMismatch = false;
+
+    if (isTabularInput) {
+      try {
+        const { data: classifyData, error: classifyErr } = await supabaseAdmin.storage
+          .from(fileRow.bucket)
+          .download(fileRow.object_path);
+        if (!classifyErr && classifyData) {
+          const classifyBuffer = Buffer.from(await classifyData.arrayBuffer());
+          const classifyIsCsv = isCsvMime(fileRow.mime_type) || isCsvName(fileRow.original_filename);
+          const classifyWorkbook = classifyIsCsv
+            ? XLSX.read(classifyBuffer.toString('utf-8'), { type: 'string' })
+            : XLSX.read(classifyBuffer, { type: 'buffer' });
+          const classifySheetName = classifyWorkbook.SheetNames?.[0];
+          if (classifySheetName) {
+            const classifySheet = classifyWorkbook.Sheets[classifySheetName];
+            const classifyRows = XLSX.utils.sheet_to_json(classifySheet, { header: 1, blankrows: false }) || [];
+            const classifyHeader = Array.isArray(classifyRows[0]) ? classifyRows[0] : [];
+            const classifySampleRows = classifyRows.slice(1, 26);
+            const classifier = detectDocTypeFromTabular({
+              headers: classifyHeader,
+              sampleRows: classifySampleRows,
+            });
+            detectedDocType = classifier.detected_doc_type;
+            classifierSignals = classifier.signals;
+            classifierScore = classifier.score;
+            if (detectedDocType !== 'unknown') {
+              effectiveDocType = detectedDocType;
+            }
+            if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
+              declaredTypeMismatch = true;
+            }
+          }
+        }
+      } catch (classifyError) {
+        // Fail closed on classification: preserve declared type when classifier cannot run.
+      }
+    }
+
+    if (effectiveDocType === 'other') {
       let extraction = { ok: false, method: 'none' };
       let warning = null;
 
@@ -341,7 +512,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    if (docType === 'rent_roll') {
+    if (effectiveDocType === 'rent_roll') {
       const jobFiles = [fileRow];
       let parsedCount = 0;
       let failedCount = 0;
@@ -595,6 +766,47 @@ export default async function handler(req, res) {
             }
           }
 
+          if (declaredTypeMismatch && !parseWarnings.includes('declared_doc_type_mismatch')) {
+            parseWarnings.push('declared_doc_type_mismatch');
+          }
+
+          const hasFiniteInPlaceRent = isCsv
+            ? units.some((row) => Number.isFinite(row?.in_place_rent))
+            : Object.values(rentValuesByType).some(
+                (values) => Array.isArray(values) && values.some((value) => Number.isFinite(value))
+              );
+          const hasUnitIdentifier = isCsv
+            ? units.some((row) => String(row?.unit || '').trim() !== '')
+            : normalizedHeaders.some((header) =>
+                ['unit', 'apt', 'suite', 'apartment', 'unitid'].some((token) => header.includes(token))
+              );
+          const hasBedsOrStatus = isCsv
+            ? units.some(
+                (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
+              )
+            : normalizedHeaders.some((header) =>
+                ['bed', 'status', 'occup', 'vacant'].some((token) => header.includes(token))
+              );
+          const hasMarketRent = isCsv
+            ? units.some((row) => Number.isFinite(row?.market_rent))
+            : normalizedHeaders.some((header) =>
+                ['market', 'askingrent', 'marketrent'].some((token) => header.includes(token))
+              );
+          const hasMinimumRentRoll =
+            Number.isFinite(totalUnits) && totalUnits > 0 && hasFiniteInPlaceRent;
+          const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
+          const rentRollConfidence = hasMinimumRentRoll && hasSecondarySignal ? 0.95 : 0.5;
+
+          if (!(Number.isFinite(totalUnits) && totalUnits > 0) && !parseWarnings.includes('missing_total_units')) {
+            parseWarnings.push('missing_total_units');
+          }
+          if (!hasFiniteInPlaceRent && !parseWarnings.includes('missing_in_place_rent')) {
+            parseWarnings.push('missing_in_place_rent');
+          }
+          if (!hasUnitIdentifier && !parseWarnings.includes('missing_unit_identifier')) {
+            parseWarnings.push('missing_unit_identifier');
+          }
+
           const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
             {
               job_id: jobId,
@@ -605,12 +817,17 @@ export default async function handler(req, res) {
               payload: {
                 file_id: file.id,
                 original_filename: file.original_filename,
-                method: 'xlsx',
-                confidence: 0.9,
+                declared_doc_type: declaredDocType,
+                detected_doc_type: detectedDocType,
+                classifier_score: classifierScore,
+                classifier_signals: classifierSignals,
+                method: isCsv ? 'csv' : 'xlsx',
+                confidence: rentRollConfidence,
                 total_units: totalUnits,
                 unit_mix: unitMix,
                 occupancy,
-                ...(isCsv ? { units, column_map: columnMap, parse_warnings: parseWarnings } : {}),
+                ...(isCsv ? { units, column_map: columnMap } : {}),
+                parse_warnings: parseWarnings,
               },
             },
           ]);
@@ -707,7 +924,7 @@ export default async function handler(req, res) {
       });
     }
 
-    if (docType === 't12') {
+    if (effectiveDocType === 't12') {
       const jobFiles = [fileRow];
       let parsedCount = 0;
       let failedCount = 0;
@@ -882,12 +1099,30 @@ export default async function handler(req, res) {
             if (effective_gross_income === null) parse_warnings.push('missing_effective_gross_income');
             if (total_operating_expenses === null) parse_warnings.push('missing_total_operating_expenses');
             if (net_operating_income === null) parse_warnings.push('missing_net_operating_income');
+            if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
+
+            const requiredValues = [
+              gross_potential_rent,
+              effective_gross_income,
+              total_operating_expenses,
+              net_operating_income,
+            ];
+            const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
+            let confidence = Math.min(presentCount / 4, 0.95);
+            if (presentCount === 0) {
+              confidence = 0.1;
+              parse_warnings.push('missing_all_required_t12_fields');
+            }
 
             payload = {
               file_id: file.id,
               original_filename: file.original_filename,
+              declared_doc_type: declaredDocType,
+              detected_doc_type: detectedDocType,
+              classifier_score: classifierScore,
+              classifier_signals: classifierSignals,
               method: 'csv',
-              confidence: 0.9,
+              confidence,
               gross_potential_rent,
               effective_gross_income,
               total_operating_expenses,
@@ -916,12 +1151,37 @@ export default async function handler(req, res) {
               }
             }
 
+            const parse_warnings = [];
+            if (!Number.isFinite(found.gross_potential_rent)) parse_warnings.push('missing_gross_potential_rent');
+            if (!Number.isFinite(found.effective_gross_income)) parse_warnings.push('missing_effective_gross_income');
+            if (!Number.isFinite(found.total_operating_expenses)) parse_warnings.push('missing_total_operating_expenses');
+            if (!Number.isFinite(found.net_operating_income)) parse_warnings.push('missing_net_operating_income');
+            if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
+
+            const requiredValues = [
+              found.gross_potential_rent,
+              found.effective_gross_income,
+              found.total_operating_expenses,
+              found.net_operating_income,
+            ];
+            const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
+            let confidence = Math.min(presentCount / 4, 0.95);
+            if (presentCount === 0) {
+              confidence = 0.1;
+              parse_warnings.push('missing_all_required_t12_fields');
+            }
+
             payload = {
               file_id: file.id,
               original_filename: file.original_filename,
+              declared_doc_type: declaredDocType,
+              detected_doc_type: detectedDocType,
+              classifier_score: classifierScore,
+              classifier_signals: classifierSignals,
               method: 'xlsx',
-              confidence: 0.9,
+              confidence,
               ...found,
+              parse_warnings,
             };
           }
 
