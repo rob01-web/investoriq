@@ -103,6 +103,182 @@ const coerceNumber = (value) => {
   return Number.isFinite(num) ? num : null;
 };
 
+function computeMortgageConstant(rateAnnual, amortYears) {
+  const r = Number(rateAnnual);
+  const years = Number(amortYears);
+  if (!Number.isFinite(r) || !Number.isFinite(years) || years <= 0) return null;
+  const n = years * 12;
+  const rm = r / 12;
+  if (rm === 0) return 12 / n;
+  const denominator = 1 - (1 + rm) ** -n;
+  if (!Number.isFinite(denominator) || denominator <= 0) return null;
+  const pm = rm / denominator;
+  const mc = pm * 12;
+  return Number.isFinite(mc) && mc > 0 ? mc : null;
+}
+
+function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
+  const f = financials && typeof financials === "object" ? financials : {};
+  const debtBalance = coerceNumber(f.refi_debt_balance);
+  const ltvMax = coerceNumber(f.refi_ltv_max);
+  const dscrMin = coerceNumber(f.refi_dscr_min);
+  const interestRate = coerceNumber(f.refi_interest_rate);
+  const amortYears = coerceNumber(f.refi_amort_years);
+  const capRateBase = coerceNumber(f.refi_cap_rate_base);
+  const explicitNoiBase = coerceNumber(f.noi_base);
+  const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
+  const noiBase = Number.isFinite(explicitNoiBase) ? explicitNoiBase : noiFromT12;
+
+  const stressNoiShocksRaw = f.stress_noi_shocks;
+  const stressCapRateBpsRaw = f.stress_cap_rate_bps;
+  const stressRateBpsRaw = f.stress_rate_bps;
+  const stressNoiShocks = Array.isArray(stressNoiShocksRaw)
+    ? stressNoiShocksRaw.map((v) => coerceNumber(v))
+    : null;
+  const stressCapRateBps = Array.isArray(stressCapRateBpsRaw)
+    ? stressCapRateBpsRaw.map((v) => coerceNumber(v))
+    : null;
+  const stressRateBps = Array.isArray(stressRateBpsRaw)
+    ? stressRateBpsRaw.map((v) => coerceNumber(v))
+    : null;
+
+  const requiredScalars = [
+    debtBalance,
+    ltvMax,
+    dscrMin,
+    interestRate,
+    amortYears,
+    capRateBase,
+    noiBase,
+  ];
+  const hasValidScalars =
+    requiredScalars.every((v) => Number.isFinite(v)) &&
+    debtBalance > 0 &&
+    ltvMax > 0 &&
+    dscrMin > 0 &&
+    amortYears > 0 &&
+    capRateBase > 0 &&
+    noiBase > 0;
+  const hasValidStressArrays =
+    Array.isArray(stressNoiShocks) &&
+    stressNoiShocks.length > 0 &&
+    stressNoiShocks.every((v) => Number.isFinite(v)) &&
+    Array.isArray(stressCapRateBps) &&
+    stressCapRateBps.length > 0 &&
+    stressCapRateBps.every((v) => Number.isFinite(v)) &&
+    Array.isArray(stressRateBps) &&
+    stressRateBps.length > 0 &&
+    stressRateBps.every((v) => Number.isFinite(v));
+
+  if (!hasValidScalars || !hasValidStressArrays) {
+    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+  }
+
+  const baseMc = computeMortgageConstant(interestRate, amortYears);
+  const baseCap = capRateBase;
+  if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
+    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+  }
+  const baseValue = noiBase / baseCap;
+  const baseLoanLtv = baseValue * ltvMax;
+  const baseLoanDscr = noiBase / (dscrMin * baseMc);
+  const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
+  const coverageBase = baseMaxProceeds / debtBalance;
+  if (!Number.isFinite(coverageBase)) {
+    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+  }
+
+  const stressPoints = [];
+  for (const noiShock of stressNoiShocks) {
+    for (const capBps of stressCapRateBps) {
+      for (const rateBps of stressRateBps) {
+        const noi = noiBase * (1 + noiShock);
+        const cap = capRateBase + capBps / 10000;
+        const rate = interestRate + rateBps / 10000;
+        const mc = computeMortgageConstant(rate, amortYears);
+        let maxProceeds = 0;
+        let coverage = Number.NEGATIVE_INFINITY;
+        if (Number.isFinite(noi) && Number.isFinite(cap) && Number.isFinite(mc) && noi > 0 && cap > 0) {
+          const value = noi / cap;
+          const loanLtv = value * ltvMax;
+          const loanDscr = noi / (dscrMin * mc);
+          maxProceeds = Math.min(loanLtv, loanDscr);
+          coverage = maxProceeds / debtBalance;
+        }
+        stressPoints.push({
+          noiShock,
+          capBps,
+          rateBps,
+          proceeds: maxProceeds,
+          coverage,
+        });
+      }
+    }
+  }
+
+  const coverageWorst = stressPoints.reduce(
+    (minCoverage, point) =>
+      point.coverage < minCoverage ? point.coverage : minCoverage,
+    Number.POSITIVE_INFINITY
+  );
+  const worstFiniteCoverage = Number.isFinite(coverageWorst)
+    ? coverageWorst
+    : Number.NEGATIVE_INFINITY;
+
+  let refiTier = "Stable";
+  if (coverageBase < 1.0) {
+    refiTier = "Refinance Failure Under Stress";
+  } else if (worstFiniteCoverage < 0.90) {
+    refiTier = "Refinance Failure Under Stress";
+  } else if (worstFiniteCoverage < 1.0) {
+    refiTier = "Fragile";
+  } else if (worstFiniteCoverage < 1.1) {
+    refiTier = "Sensitized";
+  }
+
+  const formatCoverage = (value) =>
+    Number.isFinite(value)
+      ? `${(value * 100).toLocaleString("en-CA", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}%`
+      : DATA_NOT_AVAILABLE;
+  const evidence = `base_coverage=${formatCoverage(
+    coverageBase
+  )}; worst_coverage=${formatCoverage(
+    worstFiniteCoverage
+  )}; thresholds: fail<90.0%, fragile<100.0%, sensitized<110.0%`;
+  const worstRows = stressPoints
+    .slice()
+    .sort((a, b) => a.coverage - b.coverage)
+    .slice(0, 4)
+    .map((point) => {
+      const noiShockPct = `${(point.noiShock * 100).toLocaleString("en-CA", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}%`;
+      const capBpsLabel = `${Math.round(point.capBps)}`;
+      const rateBpsLabel = `${Math.round(point.rateBps)}`;
+      const proceedsLabel = Number.isFinite(point.proceeds)
+        ? formatValue(point.proceeds)
+        : DATA_NOT_AVAILABLE;
+      const coverageLabel = formatCoverage(point.coverage);
+      return `<tr><td>${noiShockPct}</td><td>${capBpsLabel}</td><td>${rateBpsLabel}</td><td>${proceedsLabel}</td><td>${coverageLabel}</td></tr>`;
+    })
+    .join("");
+  const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
+    refiTier
+  )}</strong></p><p>Base Coverage: ${formatCoverage(
+    coverageBase
+  )}</p><p>Worst-Case Coverage: ${formatCoverage(
+    worstFiniteCoverage
+  )}</p><p class="small">${escapeHtml(
+    evidence
+  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>`;
+
+  return { tier: refiTier, evidence, html: refiHtml };
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -1338,6 +1514,16 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    const refiResult = buildRefiStabilityModel({
+      financials: body?.financials,
+      t12Payload,
+      formatValue: formatCurrency,
+    });
+    const refiHtmlOrDNA = refiResult?.html || DATA_NOT_AVAILABLE;
+    finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtmlOrDNA);
+    if (refiHtmlOrDNA === DATA_NOT_AVAILABLE) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+    }
     const showOperatingStatement = Boolean(
       t12IncomeRows ||
         t12ExpenseRows ||
