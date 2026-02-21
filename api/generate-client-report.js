@@ -638,6 +638,170 @@ function buildRenovationExecutionRows(rows, formatValue) {
     .join("");
 }
 
+function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
+  const f = financials && typeof financials === "object" ? financials : {};
+  const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
+  const noiFromFinancials = coerceNumber(f.noi_base);
+  const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
+
+  const isPresentScalar = (value) => Number.isFinite(value) && value > 0;
+  const isPresentArray = (value) =>
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => Number.isFinite(coerceNumber(entry)));
+  const formatScalar = (value) =>
+    Number.isFinite(value) ? escapeHtml(String(value)) : DATA_NOT_AVAILABLE;
+  const formatArray = (value) =>
+    Array.isArray(value) && value.length > 0
+      ? escapeHtml(value.map((entry) => String(entry)).join(", "))
+      : DATA_NOT_AVAILABLE;
+
+  const rows = [
+    {
+      label: "NOI (base)",
+      present: isPresentScalar(noiValue),
+      value: formatScalar(noiValue),
+    },
+    {
+      label: "refi_debt_balance",
+      present: isPresentScalar(coerceNumber(f.refi_debt_balance)),
+      value: formatScalar(coerceNumber(f.refi_debt_balance)),
+    },
+    {
+      label: "refi_ltv_max",
+      present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
+      value: formatScalar(coerceNumber(f.refi_ltv_max)),
+    },
+    {
+      label: "refi_dscr_min",
+      present: isPresentScalar(coerceNumber(f.refi_dscr_min)),
+      value: formatScalar(coerceNumber(f.refi_dscr_min)),
+    },
+    {
+      label: "refi_interest_rate",
+      present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
+      value: formatScalar(coerceNumber(f.refi_interest_rate)),
+    },
+    {
+      label: "refi_amort_years",
+      present: isPresentScalar(coerceNumber(f.refi_amort_years)),
+      value: formatScalar(coerceNumber(f.refi_amort_years)),
+    },
+    {
+      label: "refi_cap_rate_base",
+      present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
+      value: formatScalar(coerceNumber(f.refi_cap_rate_base)),
+    },
+    {
+      label: "stress_noi_shocks",
+      present: isPresentArray(f.stress_noi_shocks),
+      value: formatArray(f.stress_noi_shocks),
+    },
+    {
+      label: "stress_cap_rate_bps",
+      present: isPresentArray(f.stress_cap_rate_bps),
+      value: formatArray(f.stress_cap_rate_bps),
+    },
+    {
+      label: "stress_rate_bps",
+      present: isPresentArray(f.stress_rate_bps),
+      value: formatArray(f.stress_rate_bps),
+    },
+  ];
+
+  const rowsHtml = rows
+    .map(
+      (row) =>
+        `<tr><td>${escapeHtml(row.label)}</td><td>${
+          row.present ? "Present" : "Missing"
+        }</td><td>${row.value}</td></tr>`
+    )
+    .join("");
+
+  return `<table><thead><tr><th>Input</th><th>Status</th><th>Observed Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
+}
+
+function buildScreeningDataCoverageSummary({
+  t12Payload,
+  computedRentRoll,
+  rentRollPayload,
+  financials,
+}) {
+  const t12Checks = [
+    {
+      label: "gross_potential_rent",
+      present: Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)),
+    },
+    {
+      label: "effective_gross_income",
+      present: Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)),
+    },
+    {
+      label: "total_operating_expenses",
+      present: Number.isFinite(coerceNumber(t12Payload?.total_operating_expenses)),
+    },
+    {
+      label: "net_operating_income",
+      present: Number.isFinite(coerceNumber(t12Payload?.net_operating_income)),
+    },
+  ];
+  const t12PresentCount = t12Checks.filter((entry) => entry.present).length;
+  const t12CoveragePct = ((t12PresentCount / t12Checks.length) * 100).toLocaleString(
+    "en-CA",
+    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+  );
+  const t12Missing = t12Checks
+    .filter((entry) => !entry.present)
+    .map((entry) => entry.label);
+
+  const rentRollRows = Array.isArray(computedRentRoll?.unit_mix)
+    ? computedRentRoll.unit_mix
+    : Array.isArray(rentRollPayload?.unit_mix)
+    ? rentRollPayload.unit_mix
+    : [];
+  const totalUnitsPresent = Number.isFinite(
+    coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)
+  );
+  const occupancyPresent = Number.isFinite(
+    coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy)
+  );
+  const inPlacePresent = Array.isArray(rentRollRows)
+    ? rentRollRows.some((row) =>
+        Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
+      )
+    : false;
+  const marketPresent = Array.isArray(rentRollRows)
+    ? rentRollRows.some((row) =>
+        Number.isFinite(coerceNumber(row?.market_rent))
+      )
+    : false;
+  const rentRollChecks = [
+    { label: "total_units", present: totalUnitsPresent },
+    { label: "occupancy", present: occupancyPresent },
+    { label: "in_place_rent", present: inPlacePresent },
+    { label: "market_rent", present: marketPresent },
+  ];
+  const rrPresentCount = rentRollChecks.filter((entry) => entry.present).length;
+  const rrCoveragePct = ((rrPresentCount / rentRollChecks.length) * 100).toLocaleString(
+    "en-CA",
+    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+  );
+  const rrMissing = rentRollChecks
+    .filter((entry) => !entry.present)
+    .map((entry) => entry.label);
+
+  const missingInputs = [...t12Missing, ...rrMissing];
+  const missingHtml = missingInputs.length
+    ? missingInputs.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")
+    : "<li>None</li>";
+
+  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
+    t12Missing.join(", ") || "None"
+  )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
+    rrMissing.join(", ") || "None"
+  )}</td></tr></tbody></table><ul>${missingHtml}</ul><p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+}
+
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -1539,37 +1703,6 @@ export default async function handler(req, res) {
       "{{FINAL_RECOMMENDATION}}",
       getNarrativeHtml("finalRecommendation")
     );
-    const dna = "DATA NOT AVAILABLE (not present in uploaded documents)";
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
-      `<p>${dna}</p>`
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}",
-      `<p>${dna}</p>`
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_NOI_STABILITY_BLOCK}}",
-      `<p>${dna}</p>`
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_RENT_ROLL_BLOCK}}",
-      `<p>${dna}</p>`
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
-      `<p>${dna}</p>`
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
-      `<p>${dna}</p>`
-    );
 
     const unitMixRows = buildUnitMixRows(
       computedRentRoll?.unit_mix || rentRollPayload?.unit_mix,
@@ -1627,6 +1760,63 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_INCOME_FORENSICS_BLOCK}}", "");
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}", "");
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", "");
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_RENT_ROLL_BLOCK}}", "");
+    const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
+      financials,
+      t12Payload,
+    });
+    const screeningCoverageHtml = buildScreeningDataCoverageSummary({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      financials,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
+      screeningRefiSufficiencyHtml
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
+      screeningCoverageHtml
+    );
+    const rrUnitsValue = coerceNumber(
+      computedRentRoll?.total_units ?? rentRollPayload?.total_units
+    );
+    const screeningUnits = Array.isArray(computedRentRoll?.unit_mix)
+      ? computedRentRoll.unit_mix
+      : Array.isArray(rentRollPayload?.unit_mix)
+      ? rentRollPayload.unit_mix
+      : [];
+    const hasInPlaceRentForScreening = screeningUnits.some((row) =>
+      Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
+    );
+    const hasMinimumT12ForScreening =
+      Number.isFinite(t12EgiValue) &&
+      Number.isFinite(t12TotalExpensesValue) &&
+      Number.isFinite(t12NoiValue);
+    const hasMinimumRentRollForScreening =
+      Number.isFinite(rrUnitsValue) && hasInPlaceRentForScreening;
+    const hasMinimumScreeningDataset =
+      hasMinimumT12ForScreening && hasMinimumRentRollForScreening;
+    if (effectiveReportMode === "screening_v1") {
+      if (!hasMinimumScreeningDataset) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      }
+      if (!String(screeningRefiSufficiencyHtml || "").trim()) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
+      }
+      if (!String(screeningCoverageHtml || "").trim()) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
+      }
+    }
     let renovationPayload = null;
     if (jobId) {
       const { data: renovationArtifact } = await supabase
