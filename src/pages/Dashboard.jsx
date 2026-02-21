@@ -132,6 +132,7 @@ export default function Dashboard() {
       .select('id, property_name, status, created_at, failure_reason')
       .eq('user_id', profile.id)
     .in('status', [
+      'needs_documents',
       'queued',
       'extracting',
       'underwriting',
@@ -162,6 +163,7 @@ export default function Dashboard() {
       .select('id, property_name, report_type, status, created_at')
       .eq('user_id', profile.id)
       .in('status', [
+        'needs_documents',
         'queued',
         'extracting',
         'underwriting',
@@ -1177,6 +1179,11 @@ if (!stagedBatchId) {
                 ) : null}
               </div>
               <div className="text-xs text-slate-500">Add property details and upload documents.</div>
+              {activeJobForRuns?.status === 'needs_documents' ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Action required: Required documents were not recognized for this report. Please upload a T12 (Operating Statement) and a Rent Roll.
+                </div>
+              ) : null}
               <div className="mt-3 space-y-2">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1692,7 +1699,9 @@ if (!stagedBatchId) {
                 ) : null}
               </div>
               <div className="text-xs text-slate-500">
-                {activeJobForRuns?.status === 'queued'
+                {activeJobForRuns?.status === 'needs_documents'
+                  ? 'Action required. Required documents were not recognized. Please upload a T12 (Operating Statement) and a Rent Roll.'
+                  : activeJobForRuns?.status === 'queued'
                   ? 'Queued for processing.'
                   : ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
                       activeJobForRuns?.status
@@ -1704,6 +1713,11 @@ if (!stagedBatchId) {
                   ? 'Action required. See issue details.'
                   : 'Processing starts only after you click Generate Report.'}
               </div>
+              {activeJobForRuns?.status === 'needs_documents' ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Action required: Required documents were not recognized for this report. Please upload a T12 (Operating Statement) and a Rent Roll.
+                </div>
+              ) : null}
               <div className="mt-5 space-y-2">
                 <button
                   type="button"
