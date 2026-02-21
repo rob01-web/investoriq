@@ -48,7 +48,7 @@ function formatPercent(value, decimals = 1) {
     num.toLocaleString("en-CA", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }) + " percent"
+    }) + "%"
   );
 }
 
@@ -59,7 +59,7 @@ function formatMultiple(value, decimals = 2) {
     num.toLocaleString("en-CA", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }) + " x"
+    }) + "x"
   );
 }
 
@@ -70,7 +70,7 @@ function formatYears(value, decimals = 1) {
     num.toLocaleString("en-CA", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }) + " years"
+    }) + " yrs"
   );
 }
 
@@ -912,6 +912,190 @@ function buildScreeningNoiStabilityHtml({
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>`;
+}
+
+function buildScreeningRentRollDistributionHtml({
+  computedRentRoll,
+  rentRollPayload,
+  formatCurrency,
+}) {
+  const source =
+    computedRentRoll && typeof computedRentRoll === "object"
+      ? computedRentRoll
+      : rentRollPayload && typeof rentRollPayload === "object"
+      ? rentRollPayload
+      : null;
+  if (!source) return "";
+
+  const totalUnits = coerceNumber(source.total_units);
+  const occupiedUnits = coerceNumber(source.occupied_units);
+  let occupancy = coerceNumber(source.occupancy);
+  if (
+    !Number.isFinite(occupancy) &&
+    Number.isFinite(occupiedUnits) &&
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0
+  ) {
+    occupancy = occupiedUnits / totalUnits;
+  }
+
+  let totalInPlaceAnnual = coerceNumber(source.total_in_place_annual);
+  if (!Number.isFinite(totalInPlaceAnnual)) {
+    const inPlaceMonthly = coerceNumber(source.total_in_place_monthly);
+    if (Number.isFinite(inPlaceMonthly)) totalInPlaceAnnual = inPlaceMonthly * 12;
+  }
+  let totalMarketAnnual = coerceNumber(source.total_market_annual);
+  if (!Number.isFinite(totalMarketAnnual)) {
+    const marketMonthly = coerceNumber(source.total_market_monthly);
+    if (Number.isFinite(marketMonthly)) totalMarketAnnual = marketMonthly * 12;
+  }
+
+  const unitMix = Array.isArray(source.unit_mix) ? source.unit_mix : [];
+  let weightedInPlace = null;
+  let weightedMarket = null;
+  if (unitMix.length > 0) {
+    let sumCountInPlace = 0;
+    let sumRentInPlace = 0;
+    let sumCountMarket = 0;
+    let sumRentMarket = 0;
+    unitMix.forEach((row) => {
+      const count = coerceNumber(row?.count);
+      if (!Number.isFinite(count) || count <= 0) return;
+      const currentRent = coerceNumber(row?.current_rent);
+      const marketRent = coerceNumber(row?.market_rent);
+      if (Number.isFinite(currentRent)) {
+        sumCountInPlace += count;
+        sumRentInPlace += count * currentRent;
+      }
+      if (Number.isFinite(marketRent)) {
+        sumCountMarket += count;
+        sumRentMarket += count * marketRent;
+      }
+    });
+    if (sumCountInPlace > 0) weightedInPlace = sumRentInPlace / sumCountInPlace;
+    if (sumCountMarket > 0) weightedMarket = sumRentMarket / sumCountMarket;
+  }
+  if (
+    !Number.isFinite(weightedInPlace) &&
+    Number.isFinite(totalInPlaceAnnual) &&
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0
+  ) {
+    weightedInPlace = totalInPlaceAnnual / totalUnits / 12;
+  }
+  if (
+    !Number.isFinite(weightedMarket) &&
+    Number.isFinite(totalMarketAnnual) &&
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0
+  ) {
+    weightedMarket = totalMarketAnnual / totalUnits / 12;
+  }
+
+  const metricsRows = [];
+  if (Number.isFinite(totalUnits)) {
+    metricsRows.push(`<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>`);
+  }
+  if (Number.isFinite(occupiedUnits)) {
+    metricsRows.push(
+      `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>`
+    );
+  }
+  if (Number.isFinite(occupancy)) {
+    metricsRows.push(
+      `<tr><td>Occupancy</td><td>${(occupancy * 100).toLocaleString("en-CA", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}%</td></tr>`
+    );
+  }
+  if (Number.isFinite(weightedInPlace)) {
+    metricsRows.push(
+      `<tr><td>Weighted Avg In-Place Rent</td><td>${formatCurrency(
+        weightedInPlace
+      )}</td></tr>`
+    );
+  }
+  if (Number.isFinite(weightedMarket)) {
+    metricsRows.push(
+      `<tr><td>Weighted Avg Market Rent</td><td>${formatCurrency(
+        weightedMarket
+      )}</td></tr>`
+    );
+  }
+  if (
+    Number.isFinite(weightedInPlace) &&
+    Number.isFinite(weightedMarket) &&
+    weightedInPlace > 0
+  ) {
+    const premiumPct = ((weightedMarket - weightedInPlace) / weightedInPlace) * 100;
+    metricsRows.push(
+      `<tr><td>Market Rent Premium (Avg)</td><td>${premiumPct.toLocaleString("en-CA", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}%</td></tr>`
+    );
+  }
+  if (Number.isFinite(totalInPlaceAnnual)) {
+    metricsRows.push(
+      `<tr><td>Annual In-Place Rent (Total)</td><td>${formatCurrency(
+        totalInPlaceAnnual
+      )}</td></tr>`
+    );
+  }
+  if (Number.isFinite(totalMarketAnnual)) {
+    metricsRows.push(
+      `<tr><td>Annual Market Rent (Total)</td><td>${formatCurrency(
+        totalMarketAnnual
+      )}</td></tr>`
+    );
+  }
+
+  const rentBandRows = unitMix
+    .map((row) => {
+      const units = coerceNumber(row?.count);
+      if (!Number.isFinite(units) || units <= 0) return "";
+      const inPlace = coerceNumber(row?.current_rent);
+      const market = coerceNumber(row?.market_rent);
+      const gap = Number.isFinite(inPlace) && Number.isFinite(market) ? market - inPlace : null;
+      const gapPct =
+        Number.isFinite(inPlace) &&
+        Number.isFinite(market) &&
+        inPlace > 0
+          ? ((market - inPlace) / inPlace) * 100
+          : null;
+      return `<tr><td>${escapeHtml(String(row?.unit_type ?? ""))}</td><td>${Math.round(
+        units
+      )}</td><td>${
+        Number.isFinite(inPlace) ? formatCurrency(inPlace) : ""
+      }</td><td>${
+        Number.isFinite(market) ? formatCurrency(market) : ""
+      }</td><td>${
+        Number.isFinite(gap) ? formatCurrency(gap) : ""
+      }</td><td>${
+        Number.isFinite(gapPct)
+          ? `${gapPct.toLocaleString("en-CA", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}%`
+          : ""
+      }</td></tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+
+  if (metricsRows.length === 0 && !rentBandRows) return "";
+
+  const metricsHtml =
+    metricsRows.length > 0
+      ? `<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${metricsRows.join(
+          ""
+        )}</tbody></table>`
+      : "";
+  const bandsHtml = rentBandRows
+    ? `<p class="subsection-title" style="margin-top:12px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
+    : "";
+  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>`;
 }
 
 function injectKeyMetricsRows(html, rowsHtml) {
@@ -1891,7 +2075,16 @@ export default async function handler(req, res) {
       screeningExpenseHtml
     );
     finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
-    finalHtml = replaceAll(finalHtml, "{{SCREENING_RENT_ROLL_BLOCK}}", "");
+    const screeningRentRollHtml = buildScreeningRentRollDistributionHtml({
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_RENT_ROLL_BLOCK}}",
+      screeningRentRollHtml
+    );
     const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
       financials,
       t12Payload,
