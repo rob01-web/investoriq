@@ -1250,6 +1250,60 @@ export default async function handler(req, res) {
               throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
             }
 
+            const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .select('purchase_id')
+              .eq('id', job.id)
+              .maybeSingle();
+
+            if (needsDocsJobErr) {
+              throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
+            }
+
+            const restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            if (restorePurchaseId) {
+              const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
+                .from('report_purchases')
+                .update({ consumed_at: null })
+                .eq('id', restorePurchaseId)
+                .not('consumed_at', 'is', null)
+                .select('id')
+                .maybeSingle();
+
+              if (restorePurchaseErr) {
+                throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
+              }
+
+              if (restoredPurchase?.id) {
+                const { error: clearPurchaseLinkErr } = await supabaseAdmin
+                  .from('analysis_jobs')
+                  .update({ purchase_id: null })
+                  .eq('id', job.id)
+                  .eq('status', 'needs_documents');
+
+                if (clearPurchaseLinkErr) {
+                  throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
+                }
+
+                const entitlementRestoredErr = await writeWorkerEventArtifact(
+                  job.id,
+                  job.user_id,
+                  'entitlement_restored',
+                  {
+                    reason: 'needs_documents',
+                    purchase_id: restorePurchaseId,
+                    timestamp: nowIso,
+                  }
+                );
+
+                if (entitlementRestoredErr) {
+                  throw new Error(
+                    `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
+                  );
+                }
+              }
+            }
+
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
               job.id,
               'rendering',

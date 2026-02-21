@@ -176,12 +176,20 @@ const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
 
   const rentRollSignals = {
     unit_identifier_header: headerHasAny(['unit', 'apt', 'suite', 'apartment', 'unitid']),
+    beds_header: headerHasAny(['beds', 'br', 'bedrooms']),
     rent_header: headerHasAny(['inplacerent', 'currentrent', 'actualrent', 'rent']),
     market_header: headerHasAny(['marketrent', 'askingrent', 'market']),
     status_header: headerHasAny(['status', 'occupied', 'vacant', 'occupancy']),
     unit_like_values: sampleHasUnitLike,
     row_count_signal: rowCountSignal,
   };
+  const hasUnitSignal =
+    rentRollSignals.unit_identifier_header ||
+    rentRollSignals.unit_like_values ||
+    rentRollSignals.beds_header ||
+    rentRollSignals.status_header;
+  rentRollSignals.has_unit_signal = hasUnitSignal;
+  rentRollSignals.no_unit_signal = !hasUnitSignal;
   const t12Signals = {
     finance_total_header: headerHasAny([
       'noi',
@@ -192,6 +200,10 @@ const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
       'gpr',
       'operatingexpenses',
       'opex',
+      'totalopex',
+      'revenue',
+      'income',
+      'expenses',
     ]),
     expense_line_header: headerHasAny([
       'taxes',
@@ -206,13 +218,16 @@ const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
     line_item_numeric_pattern: lineItemNumericSignal,
   };
 
-  const rent_roll_score = Object.values(rentRollSignals).filter(Boolean).length;
+  let rent_roll_score = Object.values(rentRollSignals).filter(Boolean).length;
   const t12_score = Object.values(t12Signals).filter(Boolean).length;
+  if (!hasUnitSignal) {
+    rent_roll_score = 0;
+  }
 
   let detected_doc_type = 'unknown';
-  if (rent_roll_score >= 3 && rent_roll_score > t12_score) {
+  if (rent_roll_score >= 3 && hasUnitSignal === true && rent_roll_score > t12_score) {
     detected_doc_type = 'rent_roll';
-  } else if (t12_score >= 3 && t12_score > rent_roll_score) {
+  } else if (t12_score >= 3 && t12_score >= rent_roll_score) {
     detected_doc_type = 't12';
   }
 
@@ -440,6 +455,13 @@ export default async function handler(req, res) {
       } catch (classifyError) {
         // Fail closed on classification: preserve declared type when classifier cannot run.
       }
+    }
+
+    if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
+      await supabaseAdmin
+        .from('analysis_job_files')
+        .update({ doc_type: detectedDocType })
+        .eq('id', fileRow.id);
     }
 
     if (effectiveDocType === 'other') {

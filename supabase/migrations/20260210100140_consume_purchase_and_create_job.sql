@@ -50,6 +50,7 @@ begin
   insert into public.analysis_jobs (
     user_id,
     report_type,
+    purchase_id,
     property_name,
     status,
     started_at
@@ -57,6 +58,7 @@ begin
   values (
     auth.uid(),
     v_product_type,
+    v_purchase_id,
     nullif(p_job_payload->>'property_name',''),
     'needs_documents',
     null
