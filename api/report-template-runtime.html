@@ -527,7 +527,9 @@ ul, ol {
   <div class="section-header">
     <div class="section-number">1.0 Executive Summary</div>
     <h1>{{PROPERTY_NAME}} &ndash; {{CITY}}, {{PROVINCE}}</h1>
-    <p class="small">144-Unit Tier III Institutional Multifamily &middot; South London (Westminster / Pond Mills)</p>
+    <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
+    <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
+    <!-- END PROPERTY_DESCRIPTOR_LINE -->
   </div>
 
   <div class="grid-2">
@@ -885,41 +887,12 @@ ul, ol {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td><strong>Interior Suites</strong></td>
-          <td>Kitchens, bathrooms, flooring, lighting, paint</td>
-          <td>$1,900,000</td>
-          <td>81 percent</td>
-          <td>Drive rent lift and tenant retention</td>
-        </tr>
-        <tr>
-          <td><strong>Common Areas</strong></td>
-          <td>Lobby refresh, corridors, shared amenities</td>
-          <td>$270,000</td>
-          <td>11 percent</td>
-          <td>Improve curb appeal and leasing velocity</td>
-        </tr>
-        <tr>
-          <td><strong>Building Systems</strong></td>
-          <td>Mechanical upgrades, electrical, envelope items</td>
-          <td>$180,000</td>
-          <td>8 percent</td>
-          <td>Reduce long-term capital risk</td>
-        </tr>
-        <tr>
-          <td><strong>Total Program</strong></td>
-          <td>&ndash;</td>
-          <td><strong>$2,350,000</strong></td>
-          <td><strong>100 percent</strong></td>
-          <td>Stabilize asset and reposition revenue profile</td>
-        </tr>
+        {{RENOVATION_BUDGET_ROWS}}
       </tbody>
     </table>
 
     <p class="small" style="margin-top:8px;">
-      <strong>InvestorIQ Estimate:</strong> Budget reflects typical mid-rise value-add execution in
-      South London based on recent contractor pricing, unit count assumptions, and phased renovation
-      sequencing over the stabilization period.
+      <strong>InvestorIQ:</strong> {{RENOVATION_BUDGET_NOTE}}
     </p>
   </div>
 
@@ -935,53 +908,22 @@ ul, ol {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Total Renovation Budget</td>
-          <td>$2.35 million</td>
-        </tr>
-        <tr>
-          <td>Total Units</td>
-          <td>144 units</td>
-        </tr>
-        <tr>
-          <td>Average Cost per Unit (All Units)</td>
-          <td>Approximately $16,300</td>
-        </tr>
-        <tr>
-          <td>Target Renovated Units</td>
-          <td>Phased program tied to natural turnover</td>
-        </tr>
-        <tr>
-          <td>Estimated Renovation Period</td>
-          <td>24 to 30 months</td>
-        </tr>
+        {{RENOVATION_EXECUTION_ROWS}}
       </tbody>
     </table>
 
     <p class="small" style="margin-top:8px;">
-      <strong>InvestorIQ Estimate:</strong> The renovation program is designed to minimize tenant
-      disruption and vacancy loss by prioritizing natural turnover and selective common area upgrades,
-      rather than full-scale displacement.
+      <strong>InvestorIQ:</strong> {{RENOVATION_EXECUTION_NOTE}}
     </p>
   </div>
 
   <!-- INTERPRETATION -->
 <div class="no-break" style="margin-top:18px;">
   <p class="subsection-title">Interpretation</p>
-  <p>
-    The renovation budget is heavily weighted toward interior suite upgrades, reflecting the direct
-    link between in-suite quality and achievable rent premiums. Common area and building system
-    investments are targeted and disciplined, ensuring capital is deployed where it most directly
-    supports revenue growth and long-term asset durability.
-  </p>
+  <!-- BEGIN RENOVATION_INTERPRETATION -->
+  <p>{{RENOVATION_INTERPRETATION}}</p>
+  <!-- END RENOVATION_INTERPRETATION -->
 </div>
-
-<p>
-  At an average cost of approximately <span class="highlight">$16,000 per unit</span>, the program
-  remains well within typical value-add multifamily benchmarks and is expected to generate a
-  compelling return on invested capital when paired with the projected rent uplift and stabilization
-  strategy.
-</p>
 
   </section>
 <!-- END SECTION_6 -->
