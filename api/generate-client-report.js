@@ -1411,6 +1411,17 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "Sample Report", "");
     }
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", REPORT_MODE);
+    if (REPORT_MODE === "v1_core") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    }
 
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [
