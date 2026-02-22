@@ -631,18 +631,23 @@ export default async function handler(req, res) {
             }
           }
 
-          const { data: structuredArtifacts, error: structuredErr } = await supabaseAdmin
-            .from('analysis_artifacts')
-            .select('id, type')
+          const { data: parsedStructuredFiles, error: parsedStructuredFilesErr } = await supabaseAdmin
+            .from('analysis_job_files')
+            .select('doc_type')
             .eq('job_id', job.id)
-            .in('type', ['rent_roll_parsed', 't12_parsed']);
+            .eq('parse_status', 'parsed')
+            .in('doc_type', ['rent_roll', 't12']);
 
-          if (structuredErr) {
-            throw new Error(`Failed to check structured financial artifacts: ${structuredErr.message}`);
+          if (parsedStructuredFilesErr) {
+            throw new Error(`Failed to check parsed structured files: ${parsedStructuredFilesErr.message}`);
           }
 
-          const hasRentRollParsed = (structuredArtifacts || []).some((artifact) => artifact.type === 'rent_roll_parsed');
-          const hasT12Parsed = (structuredArtifacts || []).some((artifact) => artifact.type === 't12_parsed');
+          const hasRentRollParsed = (parsedStructuredFiles || []).some(
+            (file) => file.doc_type === 'rent_roll'
+          );
+          const hasT12Parsed = (parsedStructuredFiles || []).some(
+            (file) => file.doc_type === 't12'
+          );
 
           if (!hasRentRollParsed || !hasT12Parsed) {
             const hasStructuredFinancialDoc = (jobFiles || []).some((file) => {
@@ -938,7 +943,22 @@ export default async function handler(req, res) {
               throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
             }
 
-            const restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            if (!restorePurchaseId) {
+              const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
+                .from('report_purchases')
+                .select('id')
+                .eq('job_id', job.id)
+                .not('consumed_at', 'is', null)
+                .limit(1)
+                .maybeSingle();
+
+              if (purchaseByJobErr) {
+                throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
+              }
+
+              restorePurchaseId = purchaseByJobRow?.id || null;
+            }
             if (restorePurchaseId) {
               const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
                 .from('report_purchases')
@@ -1316,7 +1336,22 @@ export default async function handler(req, res) {
               throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
             }
 
-            const restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            if (!restorePurchaseId) {
+              const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
+                .from('report_purchases')
+                .select('id')
+                .eq('job_id', job.id)
+                .not('consumed_at', 'is', null)
+                .limit(1)
+                .maybeSingle();
+
+              if (purchaseByJobErr) {
+                throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
+              }
+
+              restorePurchaseId = purchaseByJobRow?.id || null;
+            }
             if (restorePurchaseId) {
               const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
                 .from('report_purchases')
