@@ -1821,6 +1821,7 @@ export default async function handler(req, res) {
       "{{PROPERTY_SUBMARKET}}",
       ""
     );
+    finalHtml = finalHtml.replace(/\(\s*,\s*\)/g, "");
 
     // 4. Inject key financial metrics
     finalHtml = replaceAll(
@@ -2805,7 +2806,7 @@ try {
       .from("reports")
       .insert({
   user_id: effectiveUserId,
-  property_name: property_name || "Unknown Property",
+            property_name: property_name || "Property",
   storage_path: "pending",
 })
       .select("id")
