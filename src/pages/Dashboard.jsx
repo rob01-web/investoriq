@@ -499,7 +499,8 @@ const activeJobForRuns =
 const showNeedsDocsWarning =
   Boolean(jobId) &&
   activeJobForRuns?.id === jobId &&
-  activeJobForRuns?.status === 'needs_documents';
+  activeJobForRuns?.status === 'needs_documents' &&
+  uploadedFiles.length > 0;
 const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(
   jobEvents,
   activeJobForRuns?.id || null
