@@ -2056,7 +2056,12 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
-    finalHtml = replaceAll(finalHtml, "{{SCREENING_INCOME_FORENSICS_BLOCK}}", "");
+    const screeningIncomeForensicsHtml = "";
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
+      screeningIncomeForensicsHtml
+    );
     const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
       t12Payload,
       computedRentRoll,
@@ -2085,6 +2090,20 @@ export default async function handler(req, res) {
       "{{SCREENING_RENT_ROLL_BLOCK}}",
       screeningRentRollHtml
     );
+    if (effectiveReportMode === "screening_v1") {
+      if ((screeningIncomeForensicsHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+      }
+      if ((screeningExpenseHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+      }
+      if ((screeningNoiHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+      }
+      if ((screeningRentRollHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      }
+    }
     const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
       financials,
       t12Payload,
@@ -2130,12 +2149,6 @@ export default async function handler(req, res) {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
-      }
-      if (!String(screeningRefiSufficiencyHtml || "").trim()) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
-      }
-      if (!String(screeningCoverageHtml || "").trim()) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
       }
     }
     let renovationPayload = null;
