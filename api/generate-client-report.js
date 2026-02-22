@@ -2434,8 +2434,7 @@ export default async function handler(req, res) {
     }
 
     const showSection9 =
-      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) ||
-      hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
+      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
     }
