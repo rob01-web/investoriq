@@ -109,131 +109,74 @@ const numericFromCell = (value) => {
 
 const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
   const normalizedHeaders = Array.isArray(headers)
-    ? headers.map((h) => normalizeClassifierText(h))
+    ? headers.map((h) => String(h || '').trim().toLowerCase())
     : [];
-  const rows = Array.isArray(sampleRows) ? sampleRows : [];
-
-  const headerHasAny = (terms) =>
-    normalizedHeaders.some((header) =>
-      terms.some((term) => header.includes(normalizeClassifierText(term)))
+  const normalizedHeaderCompact = normalizedHeaders.map((h) =>
+    h.replace(/[^a-z0-9]/g, '')
+  );
+  const _rows = Array.isArray(sampleRows) ? sampleRows : [];
+  const hasHeaderTerm = (term) => {
+    const normalizedTerm = String(term || '').trim().toLowerCase();
+    const compactTerm = normalizedTerm.replace(/[^a-z0-9]/g, '');
+    return (
+      normalizedHeaders.some((header) => header.includes(normalizedTerm)) ||
+      normalizedHeaderCompact.some((header) => header.includes(compactTerm))
     );
-
-  const isNumericLike = (value) => Number.isFinite(numericFromCell(value));
-  const unitLikeRegex = /^(?:[a-z]?\d{1,4}[a-z]?|\d{1,4}-\d{1,4}|[a-z]{1,3}-?\d{1,4})$/i;
-  const sampleHasUnitLike = (() => {
-    if (!rows.length) return false;
-    let rowHits = 0;
-    for (const row of rows) {
-      const values = Array.isArray(row)
-        ? row
-        : row && typeof row === 'object'
-        ? Object.values(row)
-        : [];
-      const hit = values.some((v) => unitLikeRegex.test(String(v || '').trim()));
-      if (hit) rowHits += 1;
-    }
-    return rowHits / rows.length >= 0.2;
-  })();
-  const rowCountSignal = rows.length >= 8;
-
-  const monthHeaderSignal = headerHasAny([
-    'jan',
-    'feb',
-    'mar',
-    'apr',
-    'may',
-    'jun',
-    'jul',
-    'aug',
-    'sep',
-    'oct',
-    'nov',
-    'dec',
-    'q1',
-    'q2',
-    'q3',
-    'q4',
-  ]) || normalizedHeaders.some((h) => /\b\d{4}[/-]\d{1,2}\b/.test(h));
-  const lineItemNumericSignal = (() => {
-    let qualifyingRows = 0;
-    for (const row of rows) {
-      const values = Array.isArray(row)
-        ? row
-        : row && typeof row === 'object'
-        ? Object.values(row)
-        : [];
-      const textCount = values.filter((v) => {
-        const t = String(v || '').trim();
-        return t && !isNumericLike(t);
-      }).length;
-      const numericCount = values.filter((v) => isNumericLike(v)).length;
-      if (textCount >= 1 && numericCount >= 4) {
-        qualifyingRows += 1;
-      }
-    }
-    return qualifyingRows >= 2;
-  })();
-
-  const rentRollSignals = {
-    unit_identifier_header: headerHasAny(['unit', 'apt', 'suite', 'apartment', 'unitid']),
-    beds_header: headerHasAny(['beds', 'br', 'bedrooms']),
-    rent_header: headerHasAny(['inplacerent', 'currentrent', 'actualrent', 'rent']),
-    market_header: headerHasAny(['marketrent', 'askingrent', 'market']),
-    status_header: headerHasAny(['status', 'occupied', 'vacant', 'occupancy']),
-    unit_like_values: sampleHasUnitLike,
-    row_count_signal: rowCountSignal,
-  };
-  const hasUnitSignal =
-    rentRollSignals.unit_identifier_header ||
-    rentRollSignals.unit_like_values ||
-    rentRollSignals.beds_header ||
-    rentRollSignals.status_header;
-  rentRollSignals.has_unit_signal = hasUnitSignal;
-  rentRollSignals.no_unit_signal = !hasUnitSignal;
-  const t12Signals = {
-    finance_total_header: headerHasAny([
-      'noi',
-      'netoperatingincome',
-      'effectivegrossincome',
-      'egi',
-      'grosspotentialrent',
-      'gpr',
-      'operatingexpenses',
-      'opex',
-      'totalopex',
-      'revenue',
-      'income',
-      'expenses',
-    ]),
-    expense_line_header: headerHasAny([
-      'taxes',
-      'insurance',
-      'payroll',
-      'repairs',
-      'utilities',
-      'management',
-      'admin',
-    ]),
-    month_or_period_header: monthHeaderSignal,
-    line_item_numeric_pattern: lineItemNumericSignal,
   };
 
-  let rent_roll_score = Object.values(rentRollSignals).filter(Boolean).length;
-  const t12_score = Object.values(t12Signals).filter(Boolean).length;
-  if (!hasUnitSignal) {
-    rent_roll_score = 0;
-  }
+  const rentRollIndicators = [
+    'unit',
+    'bed',
+    'bath',
+    'sqft',
+    'tenantname',
+    'leasestart',
+    'leaseend',
+    'marketrent',
+    'inplacerent',
+    'totalmonthly',
+    'deposit',
+    'status',
+  ];
+  const t12Indicators = [
+    'month',
+    'gpr_rent',
+    'vacancyloss',
+    'concessions',
+    'baddebt',
+    'otherincome',
+    'egi',
+    'totalopex',
+    'noi',
+    'repairsmaintenance',
+    'propertymanagement',
+    'insurance',
+    'taxes',
+    'utilities',
+    'payroll',
+    'revenue',
+    'income',
+    'expenses',
+  ];
+
+  const rentRollMatched = rentRollIndicators.filter((term) => hasHeaderTerm(term));
+  const t12Matched = t12Indicators.filter((term) => hasHeaderTerm(term));
+  const rent_roll_score = rentRollMatched.length;
+  const t12_score = t12Matched.length;
 
   let detected_doc_type = 'unknown';
-  if (rent_roll_score >= 3 && hasUnitSignal === true && rent_roll_score > t12_score) {
-    detected_doc_type = 'rent_roll';
-  } else if (t12_score >= 3 && t12_score >= rent_roll_score) {
+  if (t12_score >= 3 && t12_score > rent_roll_score) {
     detected_doc_type = 't12';
+  } else if (rent_roll_score >= 3 && rent_roll_score > t12_score) {
+    detected_doc_type = 'rent_roll';
   }
 
   return {
     detected_doc_type,
-    signals: { rent_roll: rentRollSignals, t12: t12Signals },
+    signals: {
+      rent_roll: { matched_terms: rentRollMatched },
+      t12: { matched_terms: t12Matched },
+    },
     score: { rent_roll_score, t12_score },
   };
 };
@@ -441,6 +384,13 @@ export default async function handler(req, res) {
               headers: classifyHeader,
               sampleRows: classifySampleRows,
             });
+            console.log(
+              '[parse-doc] classifier',
+              {
+                detected_doc_type: classifier.detected_doc_type,
+                headers: classifyHeader.slice(0, 15).map((h) => String(h || '').trim().toLowerCase()),
+              }
+            );
             detectedDocType = classifier.detected_doc_type;
             classifierSignals = classifier.signals;
             classifierScore = classifier.score;
@@ -1026,6 +976,10 @@ export default async function handler(req, res) {
             const egiIdx = findCsvColumnIndex(normalizedHeaders, egiSynonyms);
             const opexIdx = findCsvColumnIndex(normalizedHeaders, opexSynonyms);
             const noiIdx = findCsvColumnIndex(normalizedHeaders, noiSynonyms);
+            const gprAliasIdx = normalizedHeaders.findIndex((header) => header === 'gpr_rent');
+            const egiAliasIdx = normalizedHeaders.findIndex((header) => header === 'egi');
+            const opexAliasIdx = normalizedHeaders.findIndex((header) => header === 'totalopex');
+            const noiAliasIdx = normalizedHeaders.findIndex((header) => header === 'noi');
 
             const sumColumn = (idx) => {
               if (idx === -1) return null;
@@ -1046,12 +1000,36 @@ export default async function handler(req, res) {
             let effective_gross_income = sumColumn(egiIdx);
             let total_operating_expenses = sumColumn(opexIdx);
             let net_operating_income = sumColumn(noiIdx);
+            if (gross_potential_rent === null) gross_potential_rent = sumColumn(gprAliasIdx);
+            if (effective_gross_income === null) effective_gross_income = sumColumn(egiAliasIdx);
+            if (total_operating_expenses === null) total_operating_expenses = sumColumn(opexAliasIdx);
+            if (net_operating_income === null) net_operating_income = sumColumn(noiAliasIdx);
 
             const column_map = {
-              gross_potential_rent: gprIdx >= 0 ? headerRow[gprIdx] : null,
-              effective_gross_income: egiIdx >= 0 ? headerRow[egiIdx] : null,
-              total_operating_expenses: opexIdx >= 0 ? headerRow[opexIdx] : null,
-              net_operating_income: noiIdx >= 0 ? headerRow[noiIdx] : null,
+              gross_potential_rent:
+                gprIdx >= 0
+                  ? headerRow[gprIdx]
+                  : gprAliasIdx >= 0
+                  ? headerRow[gprAliasIdx]
+                  : null,
+              effective_gross_income:
+                egiIdx >= 0
+                  ? headerRow[egiIdx]
+                  : egiAliasIdx >= 0
+                  ? headerRow[egiAliasIdx]
+                  : null,
+              total_operating_expenses:
+                opexIdx >= 0
+                  ? headerRow[opexIdx]
+                  : opexAliasIdx >= 0
+                  ? headerRow[opexAliasIdx]
+                  : null,
+              net_operating_income:
+                noiIdx >= 0
+                  ? headerRow[noiIdx]
+                  : noiAliasIdx >= 0
+                  ? headerRow[noiAliasIdx]
+                  : null,
             };
 
             if (
