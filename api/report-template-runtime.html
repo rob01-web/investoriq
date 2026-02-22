@@ -382,6 +382,25 @@
   margin-right: auto;
 }
 
+.chart-title{
+  font-size: 12px;
+  font-weight: 600;
+  margin: 6px 0 8px 0;
+}
+
+.chart-clip{
+  overflow: hidden;
+}
+
+.chart-clip--radar{
+  height: 430px;
+}
+
+.chart-img--radar{
+  width: 100%;
+  transform: translateY(-55px);
+}
+
 /* Small supporting charts */
 .chart-small img {
   max-width: 45%;
@@ -859,11 +878,9 @@ ul, ol {
   </p>
   <!-- END RISK_ASSESSMENT -->
 
-  <div class="chart-block chart-large no-break" style="margin-top:14px;">
-    <img
-      src="{{RISK_RADAR_CHART_URL}}"
-      alt="Risk Factor Radar Chart"
-    />
+  <div class="chart-title">Risk Factor Radar &mdash; {{PROPERTY_NAME}}</div>
+  <div class="chart-clip chart-clip--radar">
+    <img class="chart-img chart-img--radar" src="{{RISK_RADAR_CHART_URL}}" alt="Risk factor radar chart" />
   </div>
 <!-- END SECTION_CHART_RISK_RADAR -->
 

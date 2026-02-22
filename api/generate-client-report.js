@@ -1821,7 +1821,7 @@ export default async function handler(req, res) {
 
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
-    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", property.name);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", property_name || "Property");
     finalHtml = replaceAll(finalHtml, "{{CITY}}", property.city);
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", property.province);
     finalHtml = replaceAll(
@@ -1949,7 +1949,36 @@ export default async function handler(req, res) {
     finalHtml = applyChartPlaceholders(finalHtml, charts);
 
     // 7. Inject ALL narrative sections (12)
-    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", getNarrativeHtml("execSummary"));
+    const execMetricsParts = [];
+    const execUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+    const execOccupancy = coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy);
+    const execAnnualInPlace = coerceNumber(
+      computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
+    );
+    const execEgi = coerceNumber(t12Payload?.effective_gross_income);
+    const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
+    const execNoi = coerceNumber(t12Payload?.net_operating_income);
+    const execOpexRatio =
+      Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
+        ? `${((execOpex / execEgi) * 100).toLocaleString("en-CA", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}%`
+        : null;
+    if (Number.isFinite(execUnits) && execUnits > 0) execMetricsParts.push(`Units: ${Math.round(execUnits)}`);
+    if (Number.isFinite(execOccupancy)) execMetricsParts.push(`Occupancy: ${formatPercent(execOccupancy)}`);
+    if (Number.isFinite(execAnnualInPlace)) execMetricsParts.push(`Annual In-Place Rent: ${formatCurrency(execAnnualInPlace)}`);
+    if (Number.isFinite(execEgi)) execMetricsParts.push(`EGI: ${formatCurrency(execEgi)}`);
+    if (Number.isFinite(execOpex)) execMetricsParts.push(`OpEx: ${formatCurrency(execOpex)}`);
+    if (Number.isFinite(execNoi)) execMetricsParts.push(`NOI: ${formatCurrency(execNoi)}`);
+    if (execOpexRatio) execMetricsParts.push(`OpEx Ratio: ${execOpexRatio}`);
+    const execMetricsLine = execMetricsParts.length
+      ? `<p class="small"><strong>Key Metrics:</strong> ${escapeHtml(execMetricsParts.join(" | "))}</p>`
+      : "";
+    finalHtml = finalHtml.replace(
+      "{{EXEC_SUMMARY}}",
+      `${execMetricsLine}${getNarrativeHtml("execSummary")}`
+    );
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
       getNarrativeHtml("unitValueAdd")
@@ -2015,6 +2044,9 @@ export default async function handler(req, res) {
     } else {
       finalHtml = replaceAll(finalHtml, "{{PROPERTY_DESCRIPTOR_LINE}}", descriptorLine);
     }
+    finalHtml = finalHtml.replace(/&ndash;\s*,\s*/g, "");
+    finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
+    finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
     const occupancyValue =
       computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
@@ -2362,7 +2394,38 @@ export default async function handler(req, res) {
       "net_operating_income",
     ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
 
-    const showSection2 = hasRentRollData;
+    const marketRentPremiumAvg =
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
+      coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
+        ? (coerceNumber(computedRentRoll?.avg_market_rent) -
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) /
+          coerceNumber(computedRentRoll?.avg_in_place_rent)
+        : null;
+    const hasTargetRentInputs =
+      (Array.isArray(rentRollUnits) &&
+        rentRollUnits.some((unit) => Number.isFinite(coerceNumber(unit?.market_rent)))) ||
+      (Array.isArray(computedRentRoll?.unit_mix) &&
+        computedRentRoll.unit_mix.some((row) => Number.isFinite(coerceNumber(row?.market_rent)))) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some((row) => Number.isFinite(Number(row?.market_rent))));
+    const hasPositiveLiftSignal =
+      (Number.isFinite(marketRentPremiumAvg) && marketRentPremiumAvg > 0) ||
+      (Array.isArray(computedRentRoll?.unit_mix) &&
+        computedRentRoll.unit_mix.some(
+          (row) =>
+            Number.isFinite(coerceNumber(row?.current_rent)) &&
+            Number.isFinite(coerceNumber(row?.market_rent)) &&
+            coerceNumber(row?.market_rent) > coerceNumber(row?.current_rent)
+        )) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some(
+          (row) =>
+            Number.isFinite(Number(row?.current_rent)) &&
+            Number.isFinite(Number(row?.market_rent)) &&
+            Number(row?.market_rent) > Number(row?.current_rent)
+        ));
+    const showSection2 = hasRentRollData && hasTargetRentInputs && hasPositiveLiftSignal;
     if (!showSection2) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
     }
