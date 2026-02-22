@@ -124,6 +124,24 @@ export default function Dashboard() {
     setJobEvents(nextEvents);
   };
 
+  const getNeedsDocumentsWorkerEvent = (jobEventsByJobId, activeJobId) => {
+    if (!activeJobId || !jobEventsByJobId) return null;
+    const row = jobEventsByJobId[activeJobId];
+    const payload = row?.payload || {};
+    const eventName = String(payload.event || '');
+    const code = String(payload.code || '');
+    const isRelevant =
+      row?.type === 'worker_event' ||
+      eventName === 'missing_structured_financials' ||
+      code === 'NO_STRUCTURED_FINANCIALS';
+    if (!isRelevant) return null;
+    return {
+      missing: Array.isArray(payload.missing) ? payload.missing : [],
+      detected: Array.isArray(payload.detected) ? payload.detected : [],
+      code: code || null,
+    };
+  };
+
   const fetchInProgressJobs = async () => {
     if (!profile?.id) return;
 
@@ -489,6 +507,90 @@ const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null
 const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
 const activeJobForRuns =
   jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
+const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(
+  jobEvents,
+  activeJobForRuns?.id || null
+);
+const formatDocLabel = (label) => {
+  const normalized = String(label || '').trim().toLowerCase();
+  if (normalized === 't12_or_operating_statement' || normalized === 't12') {
+    return 'T12 (Operating Statement)';
+  }
+  if (normalized === 'rent_roll') {
+    return 'Rent Roll';
+  }
+  if (normalized === 'supporting') {
+    return 'Supporting Document';
+  }
+  return String(label || '').trim() || String(label || '');
+};
+const joinLabels = (labels) => {
+  if (!labels || labels.length === 0) return '';
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+};
+const defaultNeedsDocumentsMessage =
+  'Action required: Required documents were not recognized. Please upload a T12 (Operating Statement) and a Rent Roll.';
+const needsDocumentsMessage = (() => {
+  if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
+  if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
+
+  const missingRaw = Array.isArray(activeNeedsDocumentsEvent.missing)
+    ? activeNeedsDocumentsEvent.missing
+    : [];
+  const detectedRaw = Array.isArray(activeNeedsDocumentsEvent.detected)
+    ? activeNeedsDocumentsEvent.detected
+    : [];
+
+  const missingCanonical = new Set(
+    missingRaw.map((value) => {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 't12_or_operating_statement' || normalized === 't12') return 't12';
+      if (normalized === 'rent_roll') return 'rent_roll';
+      if (normalized === 'supporting') return 'supporting';
+      return normalized;
+    })
+  );
+
+  const detectedCanonical = detectedRaw.map((value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 't12_or_operating_statement' || normalized === 't12') return 't12';
+    if (normalized === 'rent_roll') return 'rent_roll';
+    if (normalized === 'supporting') return 'supporting';
+    return normalized;
+  });
+  const detectedLabels = detectedRaw.map((value) => formatDocLabel(value)).filter(Boolean);
+  const hasDetectedDuplicates =
+    detectedCanonical.length > 1 &&
+    detectedCanonical.some(
+      (value, idx) => value && detectedCanonical.indexOf(value) !== idx
+    );
+
+  if (hasDetectedDuplicates && detectedLabels.length > 0) {
+    return `Action required: Uploaded documents were detected as ${joinLabels(
+      detectedLabels
+    )}. Please upload one T12 (Operating Statement) and one Rent Roll.`;
+  }
+
+  const missingT12 = missingCanonical.has('t12');
+  const missingRentRoll = missingCanonical.has('rent_roll');
+  if (missingT12 && missingRentRoll) {
+    return 'Action required: Uploaded documents were not recognized as a T12 (Operating Statement) and Rent Roll. Please re-upload both documents.';
+  }
+  if (missingT12) {
+    const detectedSuffix =
+      detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : '';
+    return `Action required: T12 (Operating Statement) was not recognized.${detectedSuffix} Please upload a valid T12 (Operating Statement).`;
+  }
+  if (missingRentRoll) {
+    const detectedSuffix =
+      detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : '';
+    return `Action required: Rent Roll was not recognized.${detectedSuffix} Please upload a valid Rent Roll.`;
+  }
+
+  return defaultNeedsDocumentsMessage;
+})();
 const availableReportsCount = entitlements.error
   ? 0
   : Number(entitlements[selectedReportType] ?? 0);
@@ -1181,7 +1283,7 @@ if (!stagedBatchId) {
               <div className="text-xs text-slate-500">Add property details and upload documents.</div>
               {activeJobForRuns?.status === 'needs_documents' ? (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Action required: Required documents were not recognized for this report. Please upload a T12 (Operating Statement) and a Rent Roll.
+                  {needsDocumentsMessage}
                 </div>
               ) : null}
               <div className="mt-3 space-y-2">
@@ -1700,7 +1802,7 @@ if (!stagedBatchId) {
               </div>
               <div className="text-xs text-slate-500">
                 {activeJobForRuns?.status === 'needs_documents'
-                  ? 'Action required. Required documents were not recognized. Please upload a T12 (Operating Statement) and a Rent Roll.'
+                  ? needsDocumentsMessage
                   : activeJobForRuns?.status === 'queued'
                   ? 'Queued for processing.'
                   : ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
@@ -1715,7 +1817,7 @@ if (!stagedBatchId) {
               </div>
               {activeJobForRuns?.status === 'needs_documents' ? (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Action required: Required documents were not recognized for this report. Please upload a T12 (Operating Statement) and a Rent Roll.
+                  {needsDocumentsMessage}
                 </div>
               ) : null}
               <div className="mt-5 space-y-2">
