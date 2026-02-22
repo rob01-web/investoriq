@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV === "production") {
+  throw new Error("DEV_ONLY_SAMPLE_TOOLING_DISABLED_IN_PROD");
+}
+
 // api/generate-sample-pdf.js
 // InvestorIQ – Sample Report Generator (Public HTML → DocRaptor)
 

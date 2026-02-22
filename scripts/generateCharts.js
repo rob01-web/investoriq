@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV === "production") {
+  throw new Error("DEV_ONLY_SAMPLE_TOOLING_DISABLED_IN_PROD");
+}
+
 // api/lib/generateCharts.js (Riverbend Heights – Institutional Chart Pack)
 // ------------------------------------------------------------------------
 // Generates all institutional charts for Riverbend Heights using the
@@ -960,3 +964,5 @@ main().catch((err) => {
   console.error("❌ Chart generation failed:", err);
   process.exit(1);
 });
+
+

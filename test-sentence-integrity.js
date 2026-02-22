@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV === "production") {
+  throw new Error("DEV_ONLY_SAMPLE_TOOLING_DISABLED_IN_PROD");
+}
+
 // test-sentence-integrity.js (ESM compatible)
 
 import fs from "fs";
@@ -44,3 +48,5 @@ const outPath = path.join(__dirname, "sentence-integrity-output.html");
 fs.writeFileSync(outPath, cleanedHtml, "utf8");
 
 console.log(`\n📝 Cleaned HTML written to: ${outPath}\n`);
+
+
