@@ -19,7 +19,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-const IS_SAMPLE_REPORT = false;
 
 // ---------- Formatting Helpers ----------
 
@@ -1621,13 +1620,6 @@ export default async function handler(req, res) {
     const tables = body.tables || {};
     const charts = body.charts || {};
 
-    const property = {
-  name: property_name || "Unknown Property",
-  city: "",
-  province: "",
-  submarket: "",
-};
-
     // Optional financials payload; falls back to sample values
     const financials = body.financials || {};
 
@@ -1822,12 +1814,12 @@ export default async function handler(req, res) {
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", property_name || "Property");
-    finalHtml = replaceAll(finalHtml, "{{CITY}}", property.city);
-    finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", property.province);
+    finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
+    finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
     finalHtml = replaceAll(
       finalHtml,
       "{{PROPERTY_SUBMARKET}}",
-      property.submarket
+      ""
     );
 
     // 4. Inject key financial metrics
@@ -2520,6 +2512,27 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
 
+    finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+
+    const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
+    const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!hasRiskMatrixRows && !hasRiskNarrative) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
+    }
+
+    const dcfRow =
+      Array.isArray(tables?.returnSummary) && tables.returnSummary.length > 0
+        ? tables.returnSummary[0] || {}
+        : {};
+    const hasDcfMetric =
+      Number.isFinite(coerceNumber(dcfRow?.irr)) ||
+      Number.isFinite(coerceNumber(dcfRow?.equityMultiple)) ||
+      Number.isFinite(coerceNumber(dcfRow?.salePrice)) ||
+      (typeof dcfRow?.salePriceText === "string" && dcfRow.salePriceText.trim().length > 0);
+    if (!hasDcfMetric) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
+    }
+
     if (reportTier === 1) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
@@ -2556,9 +2569,6 @@ export default async function handler(req, res) {
     finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Equity Return Components");
 
-    if (!IS_SAMPLE_REPORT) {
-      finalHtml = replaceAll(finalHtml, "Sample Report", "");
-    }
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
 
     // Optional: log which narrative sections are missing for debugging
