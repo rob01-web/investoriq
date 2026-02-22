@@ -171,13 +171,13 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     stressRateBps.every((v) => Number.isFinite(v));
 
   if (!hasValidScalars || !hasValidStressArrays) {
-    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+    return { tier: null, evidence: null, html: "" };
   }
 
   const baseMc = computeMortgageConstant(interestRate, amortYears);
   const baseCap = capRateBase;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
-    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+    return { tier: null, evidence: null, html: "" };
   }
   const baseValue = noiBase / baseCap;
   const baseLoanLtv = baseValue * ltvMax;
@@ -185,7 +185,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
   const coverageBase = baseMaxProceeds / debtBalance;
   if (!Number.isFinite(coverageBase)) {
-    return { tier: null, evidence: DATA_NOT_AVAILABLE, html: DATA_NOT_AVAILABLE };
+    return { tier: null, evidence: null, html: "" };
   }
 
   const stressPoints = [];
@@ -2217,15 +2217,30 @@ export default async function handler(req, res) {
       "{{RENOVATION_INTERPRETATION}}",
       escapeHtml(renovationInterpretation)
     );
-    const refiResult = buildRefiStabilityModel({
-      financials: body?.financials,
-      t12Payload,
-      formatValue: formatCurrency,
-    });
-    const refiHtmlOrDNA = refiResult?.html || DATA_NOT_AVAILABLE;
-    finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtmlOrDNA);
-    if (refiHtmlOrDNA === DATA_NOT_AVAILABLE) {
+    if (effectiveReportMode !== "v1_core") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+      finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+    } else {
+      const refiResult = buildRefiStabilityModel({
+        financials: body?.financials,
+        t12Payload,
+        formatValue: formatCurrency,
+      });
+      const validRefiTiers = new Set([
+        "Stable",
+        "Sensitized",
+        "Fragile",
+        "Refinance Failure Under Stress",
+      ]);
+      const refiHtml = String(refiResult?.html || "").trim();
+      const canRenderRefi =
+        validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
+      if (canRenderRefi) {
+        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
+      } else {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+      }
     }
     const showOperatingStatement = Boolean(
       t12IncomeRows ||
