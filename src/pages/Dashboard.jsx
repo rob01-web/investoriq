@@ -496,15 +496,15 @@ const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null
 const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
 const activeJobForRuns =
   jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
-const showNeedsDocsWarning =
-  Boolean(jobId) &&
-  activeJobForRuns?.id === jobId &&
-  activeJobForRuns?.status === 'needs_documents' &&
-  uploadedFiles.length > 0;
 const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(
   jobEvents,
   activeJobForRuns?.id || null
 );
+const showNeedsDocsWarning =
+  Boolean(jobId) &&
+  activeJobForRuns?.id === jobId &&
+  activeJobForRuns?.status === 'needs_documents' &&
+  Boolean(activeNeedsDocumentsEvent);
 const formatDocLabel = (label) => {
   const normalized = String(label || '').trim().toLowerCase();
   if (normalized === 't12_or_operating_statement' || normalized === 't12') {
@@ -1802,7 +1802,7 @@ if (!stagedBatchId) {
                 ) : null}
               </div>
               <div className="text-xs text-slate-500">
-                {activeJobForRuns?.status === 'needs_documents'
+                {showNeedsDocsWarning
                   ? needsDocumentsMessage
                   : activeJobForRuns?.status === 'queued'
                   ? 'Queued for processing.'
