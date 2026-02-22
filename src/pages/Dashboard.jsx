@@ -496,6 +496,10 @@ const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null
 const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
 const activeJobForRuns =
   jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
+const showNeedsDocsWarning =
+  Boolean(jobId) &&
+  activeJobForRuns?.id === jobId &&
+  activeJobForRuns?.status === 'needs_documents';
 const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(
   jobEvents,
   activeJobForRuns?.id || null
@@ -1277,7 +1281,7 @@ if (!stagedBatchId) {
                 ) : null}
               </div>
               <div className="text-xs text-slate-500">Add property details and upload documents.</div>
-              {activeJobForRuns?.status === 'needs_documents' ? (
+              {showNeedsDocsWarning ? (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   {needsDocumentsMessage}
                 </div>
@@ -1811,7 +1815,7 @@ if (!stagedBatchId) {
                   ? 'Action required. See issue details.'
                   : 'Processing starts only after you click Generate Report.'}
               </div>
-              {activeJobForRuns?.status === 'needs_documents' ? (
+              {showNeedsDocsWarning ? (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   {needsDocumentsMessage}
                 </div>
