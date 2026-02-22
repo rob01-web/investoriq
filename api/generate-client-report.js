@@ -1965,12 +1965,44 @@ export default async function handler(req, res) {
     if (Number.isFinite(execOpex)) execMetricsParts.push(`OpEx: ${formatCurrency(execOpex)}`);
     if (Number.isFinite(execNoi)) execMetricsParts.push(`NOI: ${formatCurrency(execNoi)}`);
     if (execOpexRatio) execMetricsParts.push(`OpEx Ratio: ${execOpexRatio}`);
-    const execMetricsLine = execMetricsParts.length
-      ? `<p class="small"><strong>Key Metrics:</strong> ${escapeHtml(execMetricsParts.join(" | "))}</p>`
-      : "";
+    const execUnitsText =
+      Number.isFinite(execUnits) && execUnits > 0 ? String(Math.round(execUnits)) : DATA_NOT_AVAILABLE;
+    const execNoiText = Number.isFinite(execNoi) ? formatCurrency(execNoi) : DATA_NOT_AVAILABLE;
+    const execOccupancyText = Number.isFinite(execOccupancy)
+      ? formatPercent(execOccupancy)
+      : DATA_NOT_AVAILABLE;
+    const execAnnualInPlaceText = Number.isFinite(execAnnualInPlace)
+      ? formatCurrency(execAnnualInPlace)
+      : DATA_NOT_AVAILABLE;
+    const execOpexRatioText = execOpexRatio || DATA_NOT_AVAILABLE;
+    let execRefiLine = "";
+    if (effectiveReportMode === "v1_core") {
+      const refiTier = buildRefiStabilityModel({
+        financials: body?.financials,
+        t12Payload,
+        formatValue: formatCurrency,
+      })?.tier;
+      const validRefiTiers = new Set([
+        "Stable",
+        "Sensitized",
+        "Fragile",
+        "Refinance Failure Under Stress",
+      ]);
+      if (validRefiTiers.has(refiTier)) {
+        execRefiLine = `<p>Refinance Stability Classification: ${escapeHtml(refiTier)}.</p>`;
+      }
+    }
+    const execArticle = String(execUnitsText).trim().startsWith("8") ? "an" : "a";
+    const execOpeningLine = `<p>${escapeHtml(
+      `${property_name || "Property"} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
+    )}</p>`;
+    const execStructuredMetricsLine = `<p>${escapeHtml(
+      `Occupancy: ${execOccupancyText} · Annual In-Place Rent: ${execAnnualInPlaceText} · OpEx Ratio: ${execOpexRatioText}`
+    )}</p>`;
+    const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
     finalHtml = finalHtml.replace(
       "{{EXEC_SUMMARY}}",
-      `${execMetricsLine}${getNarrativeHtml("execSummary")}`
+      `${execOpeningLine}${execStructuredMetricsLine}${execRefiLine}${execNarrativeHtml}`
     );
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
