@@ -1,4 +1,8 @@
 export default function SampleReport({ sampleTitle = "Sample Report", sampleUrl = "/reports/sample.pdf" }) {
+  if (import.meta.env.PROD) {
+    return null;
+  }
+
   const handleViewReport = () => {
     window.open(sampleUrl, "_blank");
   };

@@ -91,6 +91,10 @@ function buildSafePdfFileName(reportData, fileNameOverride) {
 }
 
 export const generatePDF = async (reportData = {}, options = {}) => {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SAMPLE_PDF_DISABLED_IN_PROD");
+  }
+
   const { preview = false, fileName } = options;
 
   let pdfMake;
@@ -152,6 +156,10 @@ export const generatePDF = async (reportData = {}, options = {}) => {
 };
 
 export const generatePDFBlob = async (reportData = {}) => {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SAMPLE_PDF_DISABLED_IN_PROD");
+  }
+
   let pdfMake;
   try {
     pdfMake = await loadPdfMakeFromCdn();
