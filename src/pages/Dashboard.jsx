@@ -302,16 +302,6 @@ export default function Dashboard() {
 
   if (profile?.id) {
     syncEverything();
-      
-      // ELITE PERFORMANCE: Automatically check for newly purchased entitlements every 2 seconds
-      // This ensures if they just came from checkout, the entitlement appears without a refresh.
-      const fastInterval = setInterval(() => fetchProfile(profile.id), 2000);
-      const timeout = setTimeout(() => clearInterval(fastInterval), 10000);
-
-      return () => {
-        clearInterval(fastInterval);
-        clearTimeout(timeout);
-      };
     }
   }, [profile?.id]);
 
@@ -387,7 +377,6 @@ export default function Dashboard() {
           // Whenever a job changes status in the DB, refresh the UI list
           fetchInProgressJobs();
           fetchReports();
-          fetchEntitlements();
           fetchLatestFailedJob();
         }
       )
@@ -1073,6 +1062,13 @@ if (!stagedBatchId) {
                 <span className="text-[#1F8A8A] font-semibold">Property IQ Report</span>.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 sm:mt-0 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Reload dashboard
+            </button>
           </motion.div>
           <div className="mb-6 text-xs text-slate-600">
             Reports are property-specific and non-refundable once generation begins.

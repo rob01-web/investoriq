@@ -188,6 +188,13 @@ import { useToast } from "@/components/ui/use-toast";
                   Admin Run Key required to access admin endpoints.
                 </div>
               ) : null}
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-2 inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Reload dashboard
+              </button>
             </div>
             <div className="mt-4 h-1 w-24 bg-[#0F172A] mx-auto rounded-full" />
           </div>
