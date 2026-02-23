@@ -411,6 +411,24 @@
   transform: translateY(-55px);
 }
 
+.chart-clip--deal-score-radar{
+  height: 430px;
+}
+
+.chart-img--deal-score-radar{
+  width: 100%;
+  transform: translateY(-55px);
+}
+
+.chart-clip--cashflow-waterfall{
+  height: 430px;
+}
+
+.chart-img--cashflow-waterfall{
+  width: 100%;
+  transform: translateY(-55px);
+}
+
 /* Small supporting charts */
 .chart-small img {
   max-width: 45%;
@@ -1030,10 +1048,14 @@ ul, ol {
 
   <!-- RADAR CHART -->
   <div class="chart-block chart-large no-break">
-    <img
-      src="{{DEAL_SCORE_RADAR_CHART_URL}}"
-      alt="InvestorIQ Deal Score Radar Chart"
-    />
+    <div class="chart-title">Deal Quality Radar &mdash; {{PROPERTY_NAME}}</div>
+    <div class="chart-clip chart-clip--deal-score-radar">
+      <img
+        class="chart-img chart-img--deal-score-radar"
+        src="{{DEAL_SCORE_RADAR_CHART_URL}}"
+        alt="InvestorIQ Deal Score Radar Chart"
+      />
+    </div>
   </div>
 <!-- END SECTION_CHART_DEAL_SCORE_RADAR -->
 
@@ -1156,7 +1178,10 @@ ul, ol {
 
   <!-- Equity Components Chart -->
   <div class="chart-block chart-large no-break" style="margin-top:22px;">
-    <img src="{{EQUITY_COMPONENTS_CHART_URL}}" alt="Equity Return Components" />
+    <div class="chart-title">Equity Cash Flow Waterfall &mdash; {{PROPERTY_NAME}}</div>
+    <div class="chart-clip chart-clip--cashflow-waterfall">
+      <img class="chart-img chart-img--cashflow-waterfall" src="{{EQUITY_COMPONENTS_CHART_URL}}" alt="Equity Return Components" />
+    </div>
   </div>
 <!-- END SECTION_CHART_EQUITY_COMPONENTS -->
 
