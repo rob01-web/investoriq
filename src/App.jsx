@@ -155,11 +155,13 @@ function TermsPage() {
       <h2>7. Payments and refunds</h2>
       <p>
         Certain features of the InvestorIQ platform require the purchase of a report for a specific property.
-        - One generation per purchase (per property).
-        - Upload the correct T12 + Rent Roll before generating.
-        - If a report fails due to an InvestorIQ processing error, use “Report an issue” in the dashboard.
-        - User upload issues (wrong/missing docs) require a new purchase.
       </p>
+      <ul>
+        <li>One generation per purchase (per property).</li>
+        <li>Upload the correct T12 + Rent Roll before generating.</li>
+        <li>If a report fails due to an InvestorIQ processing error, use “Report an issue” in the dashboard.</li>
+        <li>User upload issues (wrong/missing docs) require a new purchase.</li>
+      </ul>
 
       <h2>Refund Policy</h2>
       <p>
