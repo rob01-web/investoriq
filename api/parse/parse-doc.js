@@ -327,8 +327,9 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   };
 
   const grossRental = findValue(['gross rental income', 'rental income', 'gross rent']);
-  const laundryIncome = findValue(['laundry', 'laundry income']);
-  const parkingIncome = findValue(['parking', 'parking income']);
+  const laundryIncomeTotal = sumValues(['laundry', 'laundry income']);
+  const parkingIncomeTotal = sumValues(['parking', 'parking income']);
+  const otherIncomeTotal = sumValues(['other income', 'misc income']);
   const vacancyLoss = findValue(['vacancy loss', 'vacancy']);
   const egiDirect = findValue(['effective gross income', 'egi']);
   const gprDirect = findValue(['gross potential rent', 'gpr', 'gpr rent']);
@@ -353,20 +354,33 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   }
   const expenseLinesFound = Object.keys(expenseValues).length;
   const summedExpenseLines = Object.values(expenseValues).reduce((sum, value) => sum + value, 0);
+  const total_other_income =
+    (Number.isFinite(laundryIncomeTotal) ? laundryIncomeTotal : 0) +
+    (Number.isFinite(parkingIncomeTotal) ? parkingIncomeTotal : 0) +
+    (Number.isFinite(otherIncomeTotal) ? otherIncomeTotal : 0);
 
   let gross_potential_rent = Number.isFinite(gprDirect?.value)
     ? gprDirect.value
     : Number.isFinite(grossRental?.value)
     ? grossRental.value
     : null;
-  if (!Number.isFinite(gross_potential_rent) && Number.isFinite(grossRental?.value)) {
-    gross_potential_rent =
-      grossRental.value +
-      (Number.isFinite(laundryIncome?.value) ? laundryIncome.value : 0) +
-      (Number.isFinite(parkingIncome?.value) ? parkingIncome.value : 0);
-  }
+  const hasMinimumT12Coverage =
+    Number.isFinite(grossRental?.value) && expenseLinesFound >= 3;
+  const vacancyAdjusted = Number.isFinite(vacancyLoss?.value)
+    ? vacancyLoss.value > 0
+      ? -vacancyLoss.value
+      : vacancyLoss.value
+    : 0;
+  const derivedEgi =
+    Number.isFinite(grossRental?.value)
+      ? grossRental.value + total_other_income + vacancyAdjusted
+      : null;
 
-  let effective_gross_income = Number.isFinite(egiDirect?.value) ? egiDirect.value : null;
+  let effective_gross_income = Number.isFinite(egiDirect?.value)
+    ? egiDirect.value
+    : Number.isFinite(derivedEgi)
+    ? derivedEgi
+    : null;
   let total_operating_expenses = Number.isFinite(totalOpexDirect?.value)
     ? totalOpexDirect.value
     : expenseLinesFound > 0
@@ -375,21 +389,18 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   let net_operating_income = Number.isFinite(noiDirect?.value) ? noiDirect.value : null;
 
   if (
-    !Number.isFinite(effective_gross_income) &&
-    Number.isFinite(gross_potential_rent) &&
-    Number.isFinite(vacancyLoss?.value)
-  ) {
-    const vacancyAdjusted =
-      vacancyLoss.value > 0 ? -vacancyLoss.value : vacancyLoss.value;
-    effective_gross_income = gross_potential_rent + vacancyAdjusted;
-  }
-
-  if (
     !Number.isFinite(net_operating_income) &&
     Number.isFinite(effective_gross_income) &&
     Number.isFinite(total_operating_expenses)
   ) {
     net_operating_income = effective_gross_income - total_operating_expenses;
+  }
+
+  if (!hasMinimumT12Coverage) {
+    gross_potential_rent = null;
+    effective_gross_income = null;
+    total_operating_expenses = null;
+    net_operating_income = null;
   }
 
   if (Number.isFinite(gross_potential_rent)) column_map.gross_potential_rent = gprDirect?.label || grossRental?.label || null;
@@ -404,6 +415,7 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     net_operating_income: Number.isFinite(net_operating_income) ? net_operating_income : null,
     expense_lines_found: expenseLinesFound,
     has_gross_rental_income: Number.isFinite(grossRental?.value),
+    has_minimum_t12_coverage: hasMinimumT12Coverage,
     column_map,
   };
 };
