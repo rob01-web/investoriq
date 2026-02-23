@@ -45,6 +45,29 @@ export default function LandingPage() {
             <div>Revisions scoped to the same property and document set.</div>
           </div>
 
+          <div className="mt-14 relative">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-slate-200">
+                <div className="p-6">
+                  <div className="text-sm font-semibold text-[#0F172A]">Screening report sample</div>
+                  <div className="mt-1 text-xs text-slate-500">T12 + Rent Roll only</div>
+                  <div className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500">
+                    Preview placeholder
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="text-sm font-semibold text-[#0F172A]">Underwriting report sample</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    T12 + Rent Roll + supporting due diligence documents
+                  </div>
+                  <div className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500">
+                    Preview placeholder
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-12 max-w-6xl mx-auto border border-slate-200 rounded-2xl p-8 bg-white text-left">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
               <div className="md:col-span-4">
