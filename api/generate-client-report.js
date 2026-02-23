@@ -662,70 +662,70 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     {
       label: "NOI (base)",
       present: isPresentScalar(noiValue),
-      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : DATA_NOT_AVAILABLE,
+      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : "—",
     },
     {
-      label: "refi_debt_balance",
+      label: "Current loan balance",
       present: isPresentScalar(coerceNumber(f.refi_debt_balance)),
       value: Number.isFinite(coerceNumber(f.refi_debt_balance))
         ? formatCurrency(coerceNumber(f.refi_debt_balance))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "refi_ltv_max",
+      label: "Max LTV",
       present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
       value: Number.isFinite(coerceNumber(f.refi_ltv_max))
         ? formatPercent(coerceNumber(f.refi_ltv_max), 1)
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "refi_dscr_min",
+      label: "Minimum DSCR",
       present: isPresentScalar(coerceNumber(f.refi_dscr_min)),
       value: Number.isFinite(coerceNumber(f.refi_dscr_min))
         ? formatMultiple(coerceNumber(f.refi_dscr_min))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "refi_interest_rate",
+      label: "Interest rate",
       present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
       value: Number.isFinite(coerceNumber(f.refi_interest_rate))
         ? formatPercent(coerceNumber(f.refi_interest_rate))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "refi_amort_years",
+      label: "Amortization (years)",
       present: isPresentScalar(coerceNumber(f.refi_amort_years)),
       value: Number.isFinite(coerceNumber(f.refi_amort_years))
         ? formatYears(coerceNumber(f.refi_amort_years))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "refi_cap_rate_base",
+      label: "Refinance cap rate",
       present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
       value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
         ? formatPercent(coerceNumber(f.refi_cap_rate_base))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "stress_noi_shocks",
+      label: "NOI stress shocks",
       present: isPresentArray(f.stress_noi_shocks),
       value: isPresentArray(f.stress_noi_shocks)
         ? escapeHtml(formatPercentArray(f.stress_noi_shocks))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "stress_cap_rate_bps",
+      label: "Cap rate stress (bps)",
       present: isPresentArray(f.stress_cap_rate_bps),
       value: isPresentArray(f.stress_cap_rate_bps)
         ? escapeHtml(formatBpsArray(f.stress_cap_rate_bps))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
     {
-      label: "stress_rate_bps",
+      label: "Rate stress (bps)",
       present: isPresentArray(f.stress_rate_bps),
       value: isPresentArray(f.stress_rate_bps)
         ? escapeHtml(formatBpsArray(f.stress_rate_bps))
-        : DATA_NOT_AVAILABLE,
+        : "—",
     },
   ];
 
@@ -738,7 +738,16 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     )
     .join("");
 
-  return `<table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
+  const missingLabels = rows
+    .filter((row) => !row.present)
+    .map((row) => row.label);
+  const missingHtml = missingLabels.length
+    ? `<ul>${missingLabels
+        .map((label) => `<li>${escapeHtml(label)}</li>`)
+        .join("")}</ul>`
+    : "";
+
+  return `<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table>${missingHtml}<p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
 }
 
 function buildScreeningDataCoverageSummary({
@@ -1815,7 +1824,12 @@ export default async function handler(req, res) {
 
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
-    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", property_name || "Property");
+    const displayPropertyName =
+      String(property_name || "Property")
+        .trim()
+        .replace(/\s*\((?=[^)]*test)[^)]*\)\s*$/i, "")
+        .trim() || "Property";
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", displayPropertyName);
     finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
     finalHtml = replaceAll(
@@ -1950,6 +1964,11 @@ export default async function handler(req, res) {
     const execAnnualInPlace = coerceNumber(
       computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
     );
+    const execMonthlyInPlace = coerceNumber(
+      computedRentRoll?.total_in_place_monthly ??
+        rentRollPayload?.total_in_place_monthly ??
+        (Number.isFinite(execAnnualInPlace) ? execAnnualInPlace / 12 : null)
+    );
     const execEgi = coerceNumber(t12Payload?.effective_gross_income);
     const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
     const execNoi = coerceNumber(t12Payload?.net_operating_income);
@@ -1996,16 +2015,46 @@ export default async function handler(req, res) {
     }
     const execArticle = String(execUnitsText).trim().startsWith("8") ? "an" : "a";
     const execOpeningLine = `<p>${escapeHtml(
-      `${property_name || "Property"} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
+      `${displayPropertyName} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
     )}</p>`;
     const execStructuredMetricsLine = `<p class="exec-kpis">${escapeHtml(
       `Occupancy: ${execOccupancyText} · Annual In-Place Rent: ${execAnnualInPlaceText} · OpEx Ratio: ${execOpexRatioText}`
     )}</p>`;
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
-    finalHtml = finalHtml.replace(
-      "{{EXEC_SUMMARY}}",
-      `${execOpeningLine}${execStructuredMetricsLine}${execRefiLine}${execNarrativeHtml}`
-    );
+    const execScreeningLines = [];
+    if (Number.isFinite(execUnits) && execUnits > 0) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
+      );
+    }
+    if (Number.isFinite(execMonthlyInPlace) || Number.isFinite(execAnnualInPlace)) {
+      const rentParts = [];
+      if (Number.isFinite(execMonthlyInPlace)) {
+        rentParts.push(`In-Place Rent (Monthly): ${formatCurrency(execMonthlyInPlace)}`);
+      }
+      if (Number.isFinite(execAnnualInPlace)) {
+        rentParts.push(`In-Place Rent (Annualized): ${formatCurrency(execAnnualInPlace)}`);
+      }
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(rentParts.join(" · "))}</p>`
+      );
+    }
+    if (Number.isFinite(execNoi)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`NOI: ${formatCurrency(execNoi)}`)}</p>`
+      );
+    }
+    if (execOpexRatio) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`Expense Ratio: ${execOpexRatio}`)}</p>`
+      );
+    }
+    const execSummaryHtml = `${execOpeningLine}${
+      effectiveReportMode === "screening_v1"
+        ? execScreeningLines.join("")
+        : execStructuredMetricsLine
+    }${execRefiLine}${execNarrativeHtml}`;
+    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", execSummaryHtml);
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
       getNarrativeHtml("unitValueAdd")
@@ -2348,7 +2397,10 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
 
-    const showExec = hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
+    const showExec =
+      effectiveReportMode === "screening_v1"
+        ? true
+        : hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
     if (!showExec) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
     }
