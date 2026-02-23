@@ -1630,6 +1630,7 @@ export default async function handler(req, res) {
     };
 
     let documentSourcesHtml = "";
+    let documentSources = [];
     let rentRollPayload = null;
     let t12Payload = null;
     if (jobId) {
@@ -1662,6 +1663,7 @@ export default async function handler(req, res) {
         .order("created_at", { ascending: true });
 
       if (!sourceErr && sourceRows && sourceRows.length > 0) {
+        documentSources = sourceRows;
         const items = sourceRows
           .map((row) => {
             const name = escapeHtml(row.original_filename || "Unnamed file");
@@ -2339,6 +2341,12 @@ export default async function handler(req, res) {
       );
     }
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesHtml);
+    const hasDocSources =
+      Array.isArray(documentSources) &&
+      documentSources.some((s) => s?.status || s?.parse_status || s?.doc_type);
+    if (!hasDocSources || effectiveReportMode === "screening_v1") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
+    }
 
     const showExec = hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
     if (!showExec) {

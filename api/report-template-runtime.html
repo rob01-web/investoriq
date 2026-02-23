@@ -532,17 +532,6 @@ ul, ol {
     </div>   <!-- close .header-top -->
   </div>     <!-- close .header-strip -->
 
-  <div class="section-intro">
-    <div class="section-header">
-      <div class="section-number">0.5 Document Sources</div>
-      <h2>Document Sources</h2>
-    </div>
-    <p class="section-intro">
-      This section lists the documents uploaded for underwriting and their parse status.
-    </p>
-    {{DOCUMENT_SOURCES_TABLE}}
-  </div>
-
   <div class="section-header">
     <div class="section-number">1.0 Executive Summary</div>
     <h1>{{PROPERTY_NAME}} &ndash; {{CITY}}, {{PROVINCE}}</h1>
@@ -562,6 +551,19 @@ ul, ol {
     </div>
 
   </div>
+
+  <!-- BEGIN SECTION_DOC_SOURCES -->
+  <div class="section-intro">
+    <div class="section-header">
+      <div class="section-number">0.5 Document Sources</div>
+      <h2>Document Sources</h2>
+    </div>
+    <p class="section-intro">
+      This section lists the documents uploaded for underwriting and their parse status.
+    </p>
+    {{DOCUMENT_SOURCES_TABLE}}
+  </div>
+  <!-- END SECTION_DOC_SOURCES -->
 
 </section>
 <!-- END SECTION_0_5 -->
@@ -711,17 +713,6 @@ ul, ol {
 </section>
 <!-- END SECTION_S5_RENT_ROLL_DISTRIBUTION -->
 
-<!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
-<section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">S6.0 Refinance Data Sufficiency Flag</div>
-    <h2>Eligibility for Refinance Stability Classification</h2>
-  </div>
-
-  {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
-</section>
-<!-- END SECTION_S6_REFI_DATA_SUFFICIENCY -->
-
 <!-- BEGIN SECTION_S7_DATA_COVERAGE_GAPS -->
 <section class="section page-break">
   <div class="section-header">
@@ -732,6 +723,17 @@ ul, ol {
   {{SCREENING_DATA_COVERAGE_BLOCK}}
 </section>
 <!-- END SECTION_S7_DATA_COVERAGE_GAPS -->
+
+<!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
+<section class="section page-break">
+  <div class="section-header">
+    <div class="section-number">S6.0 Refinance Data Sufficiency Flag</div>
+    <h2>Eligibility for Refinance Stability Classification</h2>
+  </div>
+
+  {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
+</section>
+<!-- END SECTION_S6_REFI_DATA_SUFFICIENCY -->
 
 
     <!-- BEGIN SECTION_3_SCENARIO -->
