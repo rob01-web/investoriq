@@ -155,14 +155,10 @@ function TermsPage() {
       <h2>7. Payments and refunds</h2>
       <p>
         Certain features of the InvestorIQ platform require the purchase of a report for a specific property.
-        Each purchase creates one entitlement that is consumed when report generation is initiated.
-        One generation per purchase.
-
-        Because InvestorIQ provides bespoke, property-specific analytical artifacts generated from documents you provide, refunds are not available once report generation begins.
-
-        Rerun only if InvestorIQ error (not user upload issues). To flag an issue, click “Report an issue” beside your report in the dashboard.
-
-        Users are responsible for ensuring the accuracy, completeness, and suitability of uploaded documents prior to initiating report generation.
+        - One generation per purchase (per property).
+        - Upload the correct T12 + Rent Roll before generating.
+        - If a report fails due to an InvestorIQ processing error, use “Report an issue” in the dashboard.
+        - User upload issues (wrong/missing docs) require a new purchase.
       </p>
 
       <h2>Refund Policy</h2>
