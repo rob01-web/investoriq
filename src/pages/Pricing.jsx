@@ -19,7 +19,7 @@ const tiers = [
       'Based strictly on T12 + Rent Roll',
       'Formal, lightweight institutional snapshot',
       'No assumptions, no invented data',
-      'Revisions: 2 total',
+      'One generation per purchase.',
     ],
   },
   {
@@ -33,7 +33,7 @@ const tiers = [
       'Based on T12 + Rent Roll + supporting due diligence documents',
       'Full institutional underwriting artifact',
       'No assumptions, no invented data',
-      'Revisions: 3 total',
+      'One generation per purchase.',
     ],
   },
 ];
@@ -207,6 +207,5 @@ export default function PricingPage() {
     </>
   );
 }
-
 
 

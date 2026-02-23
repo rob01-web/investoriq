@@ -67,7 +67,7 @@ export default function LandingPage() {
 
           <div className="text-sm sm:text-base text-slate-600 max-w-3xl mx-auto text-left space-y-1">
             <div>Flat fee per property. Professional PDF output.</div>
-            <div>Revisions scoped to the same property and document set.</div>
+            <div>One generation per purchase.</div>
           </div>
 
           <div className="mt-14 relative">
