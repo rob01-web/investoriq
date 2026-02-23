@@ -26,6 +26,22 @@ const normalizeClassifierText = (value) =>
     .replace(/\s+/g, ' ')
     .replace(/[^a-z0-9\s]/g, '');
 
+const parseMoneyLike = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  const text = String(value).trim();
+  if (!text || text === '-') return null;
+  const isParenNegative = /^\(.*\)$/.test(text);
+  const cleaned = text.replace(/[,$()\s]/g, '').replace(/[^0-9.\-]/g, '');
+  if (!cleaned) return null;
+  let parsed = Number(cleaned);
+  if (!Number.isFinite(parsed)) return null;
+  if (isParenNegative && parsed > 0) parsed = -parsed;
+  return parsed;
+};
+
 const isSpreadsheetMime = (mime) => String(mime || '').toLowerCase().includes('spreadsheetml');
 const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
 const isCsvName = (name) => String(name || '').toLowerCase().endsWith('.csv');
@@ -76,9 +92,7 @@ const findColumnIndex = (row, tokens) => {
 
 const extractNumericRight = (row, startIndex) => {
   for (let i = startIndex + 1; i < row.length; i += 1) {
-    const raw = String(row[i] ?? '').replace(/[^0-9.\-]/g, '');
-    if (!raw) continue;
-    const value = Number(raw);
+    const value = parseMoneyLike(row[i]);
     if (Number.isFinite(value)) {
       return value;
     }
@@ -94,17 +108,304 @@ const labelRules = [
 ];
 
 const numericFromCell = (value) => {
-  const text = String(value ?? '').trim();
-  if (!text) return null;
-  const isParenNegative = /^\s*\(.*\)\s*$/.test(text);
-  const cleaned = text.replace(/[(),$]/g, '').replace(/[^0-9.\-]/g, '');
-  if (!cleaned) return null;
-  let num = Number(cleaned);
-  if (!Number.isFinite(num)) return null;
-  if (isParenNegative && num > 0) {
-    num = -num;
+  return parseMoneyLike(value);
+};
+
+const toSheetRows = (sheet) => {
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) || [];
+  return rawRows.map((row) =>
+    Array.isArray(row) ? row.map((cell) => String(cell ?? '').trim()) : []
+  );
+};
+
+const getWorkbookRowMatrices = (workbook) =>
+  (workbook?.SheetNames || [])
+    .map((sheetName) => {
+      const sheet = workbook.Sheets?.[sheetName];
+      if (!sheet) return null;
+      const rows = toSheetRows(sheet);
+      return { sheetName, rows };
+    })
+    .filter((entry) => Array.isArray(entry?.rows) && entry.rows.length > 0);
+
+const findHeaderIndex = (headerCells, tokenGroups) => {
+  const normalized = headerCells.map((cell) => normalizeClassifierText(cell));
+  for (let i = 0; i < normalized.length; i += 1) {
+    const header = normalized[i];
+    if (!header) continue;
+    for (const token of tokenGroups) {
+      const normalizedToken = normalizeClassifierText(token);
+      if (header.includes(normalizedToken)) return i;
+    }
   }
-  return num;
+  return -1;
+};
+
+const parseRentRollFromRowMatrices = (rowMatrices) => {
+  const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
+  for (const matrix of matrices) {
+    const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
+    if (!rows.length) continue;
+
+    let headerIdx = -1;
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i] || [];
+      const normalized = row.map((cell) => normalizeClassifierText(cell));
+      const hasUnitHeader = normalized.some((cell) =>
+        ['unit', 'apt', 'apartment', 'suite', 'unitid'].some((token) => cell.includes(token))
+      );
+      const hasRentHeader = normalized.some((cell) =>
+        ['currentrent', 'inplacerent', 'monthlyrent', 'rent'].some((token) => cell.includes(token))
+      );
+      if (hasUnitHeader && hasRentHeader) {
+        headerIdx = i;
+        break;
+      }
+    }
+    if (headerIdx === -1) continue;
+
+    const header = rows[headerIdx] || [];
+    const unitIdx = findHeaderIndex(header, ['unit', 'unit number', 'unit #', 'apt', 'suite', 'apartment']);
+    const rentIdx = findHeaderIndex(header, ['current rent', 'in place rent', 'monthly rent', 'rent']);
+    const marketRentIdx = findHeaderIndex(header, ['market rent', 'asking rent', 'market']);
+    const statusIdx = findHeaderIndex(header, ['status', 'occupied', 'vacant', 'occupancy']);
+    const unitTypeIdx = findHeaderIndex(header, ['type', 'unit type', 'layout', 'floor plan', '1br', '2br', '3br']);
+    const bedsIdx = findHeaderIndex(header, ['beds', 'bed', 'bedrooms', 'br']);
+    const bathsIdx = findHeaderIndex(header, ['baths', 'bath', 'ba']);
+    const sqftIdx = findHeaderIndex(header, ['sqft', 'sq ft', 'sf', 'square feet']);
+
+    const units = [];
+    const unitMixMap = {};
+    const rentValuesByType = {};
+    const marketValuesByType = {};
+    let occupiedCount = 0;
+    let statusCount = 0;
+    let blankRowStreak = 0;
+
+    for (let i = headerIdx + 1; i < rows.length; i += 1) {
+      const row = rows[i] || [];
+      if (!hasAnyValue(row)) {
+        blankRowStreak += 1;
+        if (blankRowStreak >= 2) break;
+        continue;
+      }
+      blankRowStreak = 0;
+
+      const firstLabel = normalizeClassifierText(row[0]);
+      if (firstLabel && (firstLabel.includes('total') || firstLabel.includes('summary'))) {
+        break;
+      }
+
+      const unit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
+      const inPlaceRent = rentIdx !== -1 ? parseMoneyLike(row[rentIdx]) : null;
+      if (!unit || !Number.isFinite(inPlaceRent)) continue;
+
+      const marketRent = marketRentIdx !== -1 ? parseMoneyLike(row[marketRentIdx]) : null;
+      const status = statusIdx !== -1 ? String(row[statusIdx] || '').trim() : '';
+      const rawUnitType = unitTypeIdx !== -1 ? String(row[unitTypeIdx] || '').trim() : '';
+      const beds = bedsIdx !== -1 ? parseMoneyLike(row[bedsIdx]) : null;
+      const baths = bathsIdx !== -1 ? parseMoneyLike(row[bathsIdx]) : null;
+      const sqft = sqftIdx !== -1 ? parseMoneyLike(row[sqftIdx]) : null;
+
+      if (status) {
+        statusCount += 1;
+        const s = status.toLowerCase();
+        if (s.includes('occup')) occupiedCount += 1;
+      }
+
+      let unitType = rawUnitType;
+      if (!unitType && Number.isFinite(beds)) {
+        unitType = `${Math.round(beds)} Bed`;
+      }
+      if (!unitType) unitType = 'Unknown';
+
+      units.push({
+        unit,
+        unit_type: unitType,
+        beds: Number.isFinite(beds) ? beds : null,
+        baths: Number.isFinite(baths) ? baths : null,
+        sqft: Number.isFinite(sqft) ? sqft : null,
+        in_place_rent: inPlaceRent,
+        market_rent: Number.isFinite(marketRent) ? marketRent : null,
+        status: status || null,
+      });
+
+      unitMixMap[unitType] = (unitMixMap[unitType] || 0) + 1;
+      if (!rentValuesByType[unitType]) rentValuesByType[unitType] = [];
+      rentValuesByType[unitType].push(inPlaceRent);
+      if (Number.isFinite(marketRent)) {
+        if (!marketValuesByType[unitType]) marketValuesByType[unitType] = [];
+        marketValuesByType[unitType].push(marketRent);
+      }
+    }
+
+    if (units.length < 4) continue;
+
+    const unitMix = Object.entries(unitMixMap).map(([unit_type, count]) => {
+      const inPlace = rentValuesByType[unit_type] || [];
+      const market = marketValuesByType[unit_type] || [];
+      const row = {
+        unit_type,
+        count,
+      };
+      if (inPlace.length) {
+        row.current_rent = Math.round(inPlace.reduce((a, b) => a + b, 0) / inPlace.length);
+      }
+      if (market.length) {
+        row.market_rent = Math.round(market.reduce((a, b) => a + b, 0) / market.length);
+      }
+      return row;
+    });
+
+    return {
+      total_units: units.length,
+      unit_mix: unitMix,
+      occupancy: statusCount > 0 ? occupiedCount / statusCount : null,
+      units,
+      column_map: {
+        unit: unitIdx !== -1 ? header[unitIdx] : null,
+        unit_type: unitTypeIdx !== -1 ? header[unitTypeIdx] : null,
+        beds: bedsIdx !== -1 ? header[bedsIdx] : null,
+        baths: bathsIdx !== -1 ? header[bathsIdx] : null,
+        sqft: sqftIdx !== -1 ? header[sqftIdx] : null,
+        in_place_rent: rentIdx !== -1 ? header[rentIdx] : null,
+        market_rent: marketRentIdx !== -1 ? header[marketRentIdx] : null,
+        status: statusIdx !== -1 ? header[statusIdx] : null,
+      },
+    };
+  }
+  return null;
+};
+
+const parseT12FromRowMatrices = (rowMatrices) => {
+  const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
+  const entries = [];
+  for (const matrix of matrices) {
+    const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
+    for (const row of rows) {
+      if (!Array.isArray(row) || row.length === 0) continue;
+      const labelIdx = row.findIndex((cell) => /[A-Za-z]/.test(String(cell || '')));
+      if (labelIdx === -1) continue;
+      const label = normalizeClassifierText(row[labelIdx]);
+      if (!label) continue;
+      let value = null;
+      for (let i = 0; i < row.length; i += 1) {
+        if (i === labelIdx) continue;
+        const candidate = parseMoneyLike(row[i]);
+        if (Number.isFinite(candidate)) {
+          value = candidate;
+          break;
+        }
+      }
+      if (!Number.isFinite(value)) continue;
+      entries.push({ label, value });
+    }
+  }
+
+  const column_map = {
+    gross_potential_rent: null,
+    effective_gross_income: null,
+    total_operating_expenses: null,
+    net_operating_income: null,
+  };
+  const findValue = (synonyms) => {
+    const normalizedSynonyms = synonyms.map((s) => normalizeClassifierText(s));
+    for (const entry of entries) {
+      if (normalizedSynonyms.some((term) => entry.label.includes(term))) {
+        return entry;
+      }
+    }
+    return null;
+  };
+  const sumValues = (synonyms) => {
+    const normalizedSynonyms = synonyms.map((s) => normalizeClassifierText(s));
+    const matches = entries.filter((entry) =>
+      normalizedSynonyms.some((term) => entry.label.includes(term))
+    );
+    if (!matches.length) return null;
+    return matches.reduce((sum, entry) => sum + entry.value, 0);
+  };
+
+  const grossRental = findValue(['gross rental income', 'rental income', 'gross rent']);
+  const laundryIncome = findValue(['laundry', 'laundry income']);
+  const parkingIncome = findValue(['parking', 'parking income']);
+  const vacancyLoss = findValue(['vacancy loss', 'vacancy']);
+  const egiDirect = findValue(['effective gross income', 'egi']);
+  const gprDirect = findValue(['gross potential rent', 'gpr', 'gpr rent']);
+  const totalOpexDirect = findValue(['total operating expenses', 'operating expenses', 'total expenses', 'total opex', 'opex']);
+  const noiDirect = findValue(['net operating income', 'noi']);
+
+  const expenseSynonyms = [
+    { key: 'property_taxes', synonyms: ['property taxes', 'taxes'] },
+    { key: 'insurance', synonyms: ['insurance'] },
+    { key: 'repairs_maintenance', synonyms: ['repairs', 'repairs maintenance', 'maintenance'] },
+    { key: 'landscaping_snow', synonyms: ['landscaping', 'snow', 'landscaping snow'] },
+    { key: 'utilities', synonyms: ['utilities', 'utilities water gas', 'water', 'gas'] },
+    { key: 'management', synonyms: ['management', 'property management'] },
+    { key: 'administrative', synonyms: ['administrative', 'admin'] },
+    { key: 'garbage_misc', synonyms: ['garbage', 'misc', 'garbage misc'] },
+  ];
+
+  const expenseValues = {};
+  for (const group of expenseSynonyms) {
+    const value = sumValues(group.synonyms);
+    if (Number.isFinite(value)) expenseValues[group.key] = value;
+  }
+  const expenseLinesFound = Object.keys(expenseValues).length;
+  const summedExpenseLines = Object.values(expenseValues).reduce((sum, value) => sum + value, 0);
+
+  let gross_potential_rent = Number.isFinite(gprDirect?.value)
+    ? gprDirect.value
+    : Number.isFinite(grossRental?.value)
+    ? grossRental.value
+    : null;
+  if (!Number.isFinite(gross_potential_rent) && Number.isFinite(grossRental?.value)) {
+    gross_potential_rent =
+      grossRental.value +
+      (Number.isFinite(laundryIncome?.value) ? laundryIncome.value : 0) +
+      (Number.isFinite(parkingIncome?.value) ? parkingIncome.value : 0);
+  }
+
+  let effective_gross_income = Number.isFinite(egiDirect?.value) ? egiDirect.value : null;
+  let total_operating_expenses = Number.isFinite(totalOpexDirect?.value)
+    ? totalOpexDirect.value
+    : expenseLinesFound > 0
+    ? summedExpenseLines
+    : null;
+  let net_operating_income = Number.isFinite(noiDirect?.value) ? noiDirect.value : null;
+
+  if (
+    !Number.isFinite(effective_gross_income) &&
+    Number.isFinite(gross_potential_rent) &&
+    Number.isFinite(vacancyLoss?.value)
+  ) {
+    const vacancyAdjusted =
+      vacancyLoss.value > 0 ? -vacancyLoss.value : vacancyLoss.value;
+    effective_gross_income = gross_potential_rent + vacancyAdjusted;
+  }
+
+  if (
+    !Number.isFinite(net_operating_income) &&
+    Number.isFinite(effective_gross_income) &&
+    Number.isFinite(total_operating_expenses)
+  ) {
+    net_operating_income = effective_gross_income - total_operating_expenses;
+  }
+
+  if (Number.isFinite(gross_potential_rent)) column_map.gross_potential_rent = gprDirect?.label || grossRental?.label || null;
+  if (Number.isFinite(effective_gross_income)) column_map.effective_gross_income = egiDirect?.label || null;
+  if (Number.isFinite(total_operating_expenses)) column_map.total_operating_expenses = totalOpexDirect?.label || 'expense_lines_sum';
+  if (Number.isFinite(net_operating_income)) column_map.net_operating_income = noiDirect?.label || null;
+
+  return {
+    gross_potential_rent: Number.isFinite(gross_potential_rent) ? gross_potential_rent : null,
+    effective_gross_income: Number.isFinite(effective_gross_income) ? effective_gross_income : null,
+    total_operating_expenses: Number.isFinite(total_operating_expenses) ? total_operating_expenses : null,
+    net_operating_income: Number.isFinite(net_operating_income) ? net_operating_income : null,
+    expense_lines_found: expenseLinesFound,
+    has_gross_rental_income: Number.isFinite(grossRental?.value),
+    column_map,
+  };
 };
 
 const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
@@ -374,31 +675,43 @@ export default async function handler(req, res) {
           const classifyWorkbook = classifyIsCsv
             ? XLSX.read(classifyBuffer.toString('utf-8'), { type: 'string' })
             : XLSX.read(classifyBuffer, { type: 'buffer' });
-          const classifySheetName = classifyWorkbook.SheetNames?.[0];
-          if (classifySheetName) {
-            const classifySheet = classifyWorkbook.Sheets[classifySheetName];
-            const classifyRows = XLSX.utils.sheet_to_json(classifySheet, { header: 1, blankrows: false }) || [];
-            const classifyHeader = Array.isArray(classifyRows[0]) ? classifyRows[0] : [];
-            const classifySampleRows = classifyRows.slice(1, 26);
-            const classifier = detectDocTypeFromTabular({
-              headers: classifyHeader,
-              sampleRows: classifySampleRows,
-            });
-            console.log(
-              '[parse-doc] classifier',
-              {
-                detected_doc_type: classifier.detected_doc_type,
-                headers: classifyHeader.slice(0, 15).map((h) => String(h || '').trim().toLowerCase()),
+          const matrices = getWorkbookRowMatrices(classifyWorkbook);
+          if (matrices.length > 0) {
+            let bestClassifier = null;
+            for (const matrix of matrices) {
+              const classifyHeader = Array.isArray(matrix.rows?.[0]) ? matrix.rows[0] : [];
+              const classifySampleRows = (matrix.rows || []).slice(1, 26);
+              const classifier = detectDocTypeFromTabular({
+                headers: classifyHeader,
+                sampleRows: classifySampleRows,
+              });
+              const classifierTotalScore =
+                Number(classifier?.score?.rent_roll_score || 0) + Number(classifier?.score?.t12_score || 0);
+              const bestScore =
+                Number(bestClassifier?.score?.rent_roll_score || 0) +
+                Number(bestClassifier?.score?.t12_score || 0);
+              if (!bestClassifier || classifierTotalScore > bestScore) {
+                bestClassifier = classifier;
               }
-            );
-            detectedDocType = classifier.detected_doc_type;
-            classifierSignals = classifier.signals;
-            classifierScore = classifier.score;
-            if (detectedDocType !== 'unknown') {
-              effectiveDocType = detectedDocType;
             }
-            if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
-              declaredTypeMismatch = true;
+            if (bestClassifier) {
+              const previewHeaders =
+                (Array.isArray(matrices[0]?.rows?.[0]) ? matrices[0].rows[0] : [])
+                  .slice(0, 15)
+                  .map((h) => String(h || '').trim().toLowerCase());
+              console.log('[parse-doc] classifier', {
+                detected_doc_type: bestClassifier.detected_doc_type,
+                headers: previewHeaders,
+              });
+              detectedDocType = bestClassifier.detected_doc_type;
+              classifierSignals = bestClassifier.signals;
+              classifierScore = bestClassifier.score;
+              if (detectedDocType !== 'unknown') {
+                effectiveDocType = detectedDocType;
+              }
+              if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
+                declaredTypeMismatch = true;
+              }
             }
           }
         }
@@ -522,254 +835,38 @@ export default async function handler(req, res) {
           const workbook = isCsv
             ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
             : XLSX.read(buffer, { type: 'buffer' });
-          const firstSheetName = workbook.SheetNames?.[0];
-          if (!firstSheetName) {
+          const rowMatrices = getWorkbookRowMatrices(workbook);
+          if (!rowMatrices.length) {
             throw new Error('No worksheet found');
           }
-
-          const sheet = workbook.Sheets[firstSheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
-          if (!rows || rows.length === 0) {
-            throw new Error('Worksheet is empty');
-          }
-
-          const headerRow = rows[0] || [];
-          const normalizedHeaders = headerRow.map(normalizeHeader);
-
-          let unitTypeIdx = -1;
-          let rentIdx = -1;
-          let occupancyIdx = -1;
-          let bedsIdx = -1;
-          let bathsIdx = -1;
-          let sqftIdx = -1;
-          let marketRentIdx = -1;
-          let unitIdx = -1;
-          let statusIdx = -1;
-          let units = [];
-          let columnMap = null;
+          const parsedRentRoll = parseRentRollFromRowMatrices(rowMatrices);
           let parseWarnings = [];
+          const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
+          const columnMap = parsedRentRoll?.column_map || null;
+          const unitMix = Array.isArray(parsedRentRoll?.unit_mix) ? parsedRentRoll.unit_mix : [];
+          const totalUnits = Number.isFinite(parsedRentRoll?.total_units) ? parsedRentRoll.total_units : 0;
+          const occupancy = Number.isFinite(parsedRentRoll?.occupancy) ? parsedRentRoll.occupancy : null;
 
-          if (isCsv) {
-            const findCsvColumnIndex = (headers, synonyms) => {
-              const tokens = synonyms.map((token) => normalizeHeader(token));
-              for (let i = 0; i < headers.length; i += 1) {
-                const header = headers[i];
-                if (!header) continue;
-                for (const token of tokens) {
-                  if (header === token || header.includes(token)) {
-                    return i;
-                  }
-                }
-              }
-              return -1;
-            };
-
-            const headerLabels = headerRow.map((cell) => String(cell || '').trim());
-            const unitSynonyms = ['unit', 'unit number', 'unit #', 'apt', 'apartment', 'suite', 'unit id'];
-            const unitTypeSynonyms = ['unit type', 'type', 'layout', 'floor plan', 'plan'];
-            const bedsSynonyms = ['beds', 'bed', 'bedrooms', 'br'];
-            const bathsSynonyms = ['baths', 'bath', 'bathrooms', 'ba'];
-            const sqftSynonyms = ['sqft', 'sq ft', 'square feet', 'sf'];
-            const inPlaceRentSynonyms = ['rent', 'in place rent', 'in-place rent', 'current rent', 'in_place_rent'];
-            const marketRentSynonyms = ['market rent', 'market', 'market_rent'];
-            const statusSynonyms = ['status', 'occupied', 'occupancy', 'lease status'];
-
-            unitIdx = findCsvColumnIndex(normalizedHeaders, unitSynonyms);
-            unitTypeIdx = findCsvColumnIndex(normalizedHeaders, unitTypeSynonyms);
-            bedsIdx = findCsvColumnIndex(normalizedHeaders, bedsSynonyms);
-            bathsIdx = findCsvColumnIndex(normalizedHeaders, bathsSynonyms);
-            sqftIdx = findCsvColumnIndex(normalizedHeaders, sqftSynonyms);
-            rentIdx = findCsvColumnIndex(normalizedHeaders, inPlaceRentSynonyms);
-            marketRentIdx = findCsvColumnIndex(normalizedHeaders, marketRentSynonyms);
-            statusIdx = findCsvColumnIndex(normalizedHeaders, statusSynonyms);
-
-            columnMap = {
-              unit: unitIdx !== -1 ? headerLabels[unitIdx] : null,
-              unit_type: unitTypeIdx !== -1 ? headerLabels[unitTypeIdx] : null,
-              beds: bedsIdx !== -1 ? headerLabels[bedsIdx] : null,
-              baths: bathsIdx !== -1 ? headerLabels[bathsIdx] : null,
-              sqft: sqftIdx !== -1 ? headerLabels[sqftIdx] : null,
-              in_place_rent: rentIdx !== -1 ? headerLabels[rentIdx] : null,
-              market_rent: marketRentIdx !== -1 ? headerLabels[marketRentIdx] : null,
-              status: statusIdx !== -1 ? headerLabels[statusIdx] : null,
-            };
-
-            const requiredFields = ['unit', 'in_place_rent'];
-            parseWarnings = requiredFields.filter((field) => !columnMap?.[field]).map((field) => `missing_${field}`);
-          } else {
-            const unitTypeHeaders = ['unit', 'unit type', 'type'];
-            const rentHeaders = ['rent', 'current rent'];
-            const occupancyHeaders = ['occupied', 'status', 'lease status'];
-
-            const findHeaderIndex = (candidates) =>
-              normalizedHeaders.findIndex((header) => candidates.includes(header));
-
-            unitTypeIdx = findHeaderIndex(unitTypeHeaders);
-            rentIdx = findHeaderIndex(rentHeaders);
-            occupancyIdx = findHeaderIndex(occupancyHeaders);
-          }
-
-          const dataRows = rows.slice(1).filter(hasAnyValue);
-          const totalUnits = dataRows.length;
-
-          const unitMixMap = {};
-          const rentValuesByType = {};
-          for (const row of dataRows) {
-            if (isCsv) {
-              const rawUnit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
-              const rawUnitType = unitTypeIdx !== -1 ? String(row[unitTypeIdx] || '').trim() : '';
-              const normUnitType = rawUnitType.toLowerCase();
-              const rawBeds = bedsIdx !== -1 ? String(row[bedsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
-              const rawBaths = bathsIdx !== -1 ? String(row[bathsIdx] || '').replace(/[^0-9.\-]/g, '') : '';
-              const rawSqft = sqftIdx !== -1 ? String(row[sqftIdx] || '').replace(/[^0-9.\-]/g, '') : '';
-              const rawRent = rentIdx !== -1 ? String(row[rentIdx] || '').replace(/[^0-9.\-]/g, '') : '';
-              const rawMarketRent =
-                marketRentIdx !== -1 ? String(row[marketRentIdx] || '').replace(/[^0-9.\-]/g, '') : '';
-              const rawStatus = statusIdx !== -1 ? String(row[statusIdx] || '').trim() : '';
-
-              let beds = rawBeds ? Number(rawBeds) : null;
-              const baths = rawBaths ? Number(rawBaths) : null;
-              const sqft = rawSqft ? Number(rawSqft) : null;
-              const inPlaceRent = rawRent ? Number(rawRent) : null;
-              const marketRent = rawMarketRent ? Number(rawMarketRent) : null;
-              if (!Number.isFinite(beds) && (normUnitType.includes('studio') || normUnitType.includes('bachelor'))) {
-                beds = 0;
-              }
-
-              units.push({
-                unit: rawUnit || null,
-                unit_type: rawUnitType || null,
-                beds: Number.isFinite(beds) ? beds : null,
-                baths: Number.isFinite(baths) ? baths : null,
-                sqft: Number.isFinite(sqft) ? sqft : null,
-                in_place_rent: Number.isFinite(inPlaceRent) ? inPlaceRent : null,
-                market_rent: Number.isFinite(marketRent) ? marketRent : null,
-                status: rawStatus || null,
-              });
-
-              let unitTypeValue = null;
-              if (Number.isFinite(beds) && beds === 0 && (normUnitType.includes('studio') || normUnitType.includes('bachelor'))) {
-                unitTypeValue = 'Studio';
-              } else if (Number.isFinite(beds)) {
-                if (Number.isFinite(baths)) {
-                  unitTypeValue = `${beds} Bed / ${baths} Bath`;
-                } else {
-                  unitTypeValue = `${beds} Bed`;
-                }
-              }
-
-              if (unitTypeValue) {
-                unitMixMap[unitTypeValue] = (unitMixMap[unitTypeValue] || 0) + 1;
-                if (Number.isFinite(inPlaceRent)) {
-                  if (!rentValuesByType[unitTypeValue]) {
-                    rentValuesByType[unitTypeValue] = [];
-                  }
-                  rentValuesByType[unitTypeValue].push(inPlaceRent);
-                }
-              }
-            } else {
-              if (unitTypeIdx === -1) {
-                break;
-              }
-              const unitType = String(row[unitTypeIdx] || '').trim();
-              if (!unitType) {
-                continue;
-              }
-              unitMixMap[unitType] = (unitMixMap[unitType] || 0) + 1;
-              if (rentIdx !== -1) {
-                const rawRent = String(row[rentIdx] || '').replace(/[^0-9.\-]/g, '');
-                const rentValue = Number(rawRent);
-                if (Number.isFinite(rentValue)) {
-                  if (!rentValuesByType[unitType]) {
-                    rentValuesByType[unitType] = [];
-                  }
-                  rentValuesByType[unitType].push(rentValue);
-                }
-              }
-            }
-          }
-
-          const unitMix = Object.entries(unitMixMap).map(([unit_type, count]) => {
-            const rentValues = rentValuesByType[unit_type] || [];
-            const hasRent = rentValues.length > 0;
-            const avgRent = hasRent
-              ? Math.round(rentValues.reduce((sum, value) => sum + value, 0) / rentValues.length)
-              : null;
-
-            return hasRent
-              ? { unit_type, count, current_rent: avgRent }
-              : { unit_type, count };
-          });
-
-          let occupancy = null;
-          if (!isCsv && occupancyIdx !== -1) {
-            let occupiedCount = 0;
-            let vacantCount = 0;
-            let invalidValue = false;
-            for (const row of dataRows) {
-              const raw = String(row[occupancyIdx] || '').trim().toLowerCase();
-              if (!raw) continue;
-              if (raw === 'occupied') {
-                occupiedCount += 1;
-              } else if (raw === 'vacant') {
-                vacantCount += 1;
-              } else {
-                invalidValue = true;
-                break;
-              }
-            }
-            if (!invalidValue && totalUnits > 0) {
-              occupancy = occupiedCount / totalUnits;
-            }
-          }
-          if (isCsv && statusIdx !== -1) {
-            let occupiedCount = 0;
-            for (const row of units) {
-              const raw = String(row.status || '').trim().toLowerCase();
-              if (!raw) continue;
-              if (raw.includes('occup')) {
-                occupiedCount += 1;
-              } else if (raw.includes('vacant')) {
-                continue;
-              }
-            }
-            if (totalUnits > 0) {
-              occupancy = occupiedCount / totalUnits;
-            }
-          }
+          if (!columnMap?.unit) parseWarnings.push('missing_unit');
+          if (!columnMap?.in_place_rent) parseWarnings.push('missing_in_place_rent');
+          if (!parsedRentRoll) parseWarnings.push('insufficient_rent_roll_structure');
 
           if (declaredTypeMismatch && !parseWarnings.includes('declared_doc_type_mismatch')) {
             parseWarnings.push('declared_doc_type_mismatch');
           }
 
-          const hasFiniteInPlaceRent = isCsv
-            ? units.some((row) => Number.isFinite(row?.in_place_rent))
-            : Object.values(rentValuesByType).some(
-                (values) => Array.isArray(values) && values.some((value) => Number.isFinite(value))
-              );
-          const hasUnitIdentifier = isCsv
-            ? units.some((row) => String(row?.unit || '').trim() !== '')
-            : normalizedHeaders.some((header) =>
-                ['unit', 'apt', 'suite', 'apartment', 'unitid'].some((token) => header.includes(token))
-              );
-          const hasBedsOrStatus = isCsv
-            ? units.some(
-                (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
-              )
-            : normalizedHeaders.some((header) =>
-                ['bed', 'status', 'occup', 'vacant'].some((token) => header.includes(token))
-              );
-          const hasMarketRent = isCsv
-            ? units.some((row) => Number.isFinite(row?.market_rent))
-            : normalizedHeaders.some((header) =>
-                ['market', 'askingrent', 'marketrent'].some((token) => header.includes(token))
-              );
+          const hasFiniteInPlaceRent = units.some((row) => Number.isFinite(row?.in_place_rent));
+          const hasUnitIdentifier = units.some((row) => String(row?.unit || '').trim() !== '');
+          const hasBedsOrStatus = units.some(
+            (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
+          );
+          const hasMarketRent = units.some((row) => Number.isFinite(row?.market_rent));
           const hasMinimumRentRoll =
-            Number.isFinite(totalUnits) && totalUnits > 0 && hasFiniteInPlaceRent;
+            Number.isFinite(totalUnits) && totalUnits >= 4 && hasFiniteInPlaceRent;
           const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
           const rentRollConfidence = hasMinimumRentRoll && hasSecondarySignal ? 0.95 : 0.5;
 
-          if (!(Number.isFinite(totalUnits) && totalUnits > 0) && !parseWarnings.includes('missing_total_units')) {
+          if (!(Number.isFinite(totalUnits) && totalUnits >= 4) && !parseWarnings.includes('missing_total_units')) {
             parseWarnings.push('missing_total_units');
           }
           if (!hasFiniteInPlaceRent && !parseWarnings.includes('missing_in_place_rent')) {
@@ -934,16 +1031,12 @@ export default async function handler(req, res) {
           const workbook = isCsv
             ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
             : XLSX.read(buffer, { type: 'buffer' });
-          const firstSheetName = workbook.SheetNames?.[0];
-          if (!firstSheetName) {
+          const rowMatrices = getWorkbookRowMatrices(workbook);
+          if (!rowMatrices.length) {
             throw new Error('No worksheet found');
           }
-
-          const sheet = workbook.Sheets[firstSheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
-          if (!rows || rows.length === 0) {
-            throw new Error('Worksheet is empty');
-          }
+          const parsedT12 = parseT12FromRowMatrices(rowMatrices);
+          const rows = rowMatrices[0].rows;
 
           let payload = null;
 
@@ -1004,6 +1097,19 @@ export default async function handler(req, res) {
             if (effective_gross_income === null) effective_gross_income = sumColumn(egiAliasIdx);
             if (total_operating_expenses === null) total_operating_expenses = sumColumn(opexAliasIdx);
             if (net_operating_income === null) net_operating_income = sumColumn(noiAliasIdx);
+
+            if (!Number.isFinite(gross_potential_rent) && Number.isFinite(parsedT12.gross_potential_rent)) {
+              gross_potential_rent = parsedT12.gross_potential_rent;
+            }
+            if (!Number.isFinite(effective_gross_income) && Number.isFinite(parsedT12.effective_gross_income)) {
+              effective_gross_income = parsedT12.effective_gross_income;
+            }
+            if (!Number.isFinite(total_operating_expenses) && Number.isFinite(parsedT12.total_operating_expenses)) {
+              total_operating_expenses = parsedT12.total_operating_expenses;
+            }
+            if (!Number.isFinite(net_operating_income) && Number.isFinite(parsedT12.net_operating_income)) {
+              net_operating_income = parsedT12.net_operating_income;
+            }
 
             const column_map = {
               gross_potential_rent:
@@ -1101,6 +1207,18 @@ export default async function handler(req, res) {
             if (net_operating_income === null) parse_warnings.push('missing_net_operating_income');
             if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
 
+            const hasMinimumT12Coverage =
+              parsedT12.has_gross_rental_income && Number(parsedT12.expense_lines_found || 0) >= 3;
+            if (!hasMinimumT12Coverage) {
+              gross_potential_rent = null;
+              effective_gross_income = null;
+              total_operating_expenses = null;
+              net_operating_income = null;
+              if (!parse_warnings.includes('insufficient_t12_coverage')) {
+                parse_warnings.push('insufficient_t12_coverage');
+              }
+            }
+
             const requiredValues = [
               gross_potential_rent,
               effective_gross_income,
@@ -1131,25 +1249,12 @@ export default async function handler(req, res) {
               parse_warnings,
             };
           } else {
-            const found = {};
-            for (const row of rows) {
-              if (!Array.isArray(row)) continue;
-              for (let i = 0; i < row.length; i += 1) {
-                const cellText = normalizeCell(row[i]);
-                if (!cellText) continue;
-                for (const rule of labelRules) {
-                  if (found[rule.key] !== undefined) {
-                    continue;
-                  }
-                  if (rule.labels.includes(cellText)) {
-                    const value = extractNumericRight(row, i);
-                    if (value !== null) {
-                      found[rule.key] = value;
-                    }
-                  }
-                }
-              }
-            }
+            const found = {
+              gross_potential_rent: parsedT12.gross_potential_rent,
+              effective_gross_income: parsedT12.effective_gross_income,
+              total_operating_expenses: parsedT12.total_operating_expenses,
+              net_operating_income: parsedT12.net_operating_income,
+            };
 
             const parse_warnings = [];
             if (!Number.isFinite(found.gross_potential_rent)) parse_warnings.push('missing_gross_potential_rent');
@@ -1157,6 +1262,18 @@ export default async function handler(req, res) {
             if (!Number.isFinite(found.total_operating_expenses)) parse_warnings.push('missing_total_operating_expenses');
             if (!Number.isFinite(found.net_operating_income)) parse_warnings.push('missing_net_operating_income');
             if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
+
+            const hasMinimumT12Coverage =
+              parsedT12.has_gross_rental_income && Number(parsedT12.expense_lines_found || 0) >= 3;
+            if (!hasMinimumT12Coverage) {
+              found.gross_potential_rent = null;
+              found.effective_gross_income = null;
+              found.total_operating_expenses = null;
+              found.net_operating_income = null;
+              if (!parse_warnings.includes('insufficient_t12_coverage')) {
+                parse_warnings.push('insufficient_t12_coverage');
+              }
+            }
 
             const requiredValues = [
               found.gross_potential_rent,
@@ -1181,6 +1298,7 @@ export default async function handler(req, res) {
               method: 'xlsx',
               confidence,
               ...found,
+              column_map: parsedT12.column_map,
               parse_warnings,
             };
           }
