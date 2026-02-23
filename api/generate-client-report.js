@@ -1998,7 +1998,7 @@ export default async function handler(req, res) {
     const execOpeningLine = `<p>${escapeHtml(
       `${property_name || "Property"} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
     )}</p>`;
-    const execStructuredMetricsLine = `<p>${escapeHtml(
+    const execStructuredMetricsLine = `<p class="exec-kpis">${escapeHtml(
       `Occupancy: ${execOccupancyText} · Annual In-Place Rent: ${execAnnualInPlaceText} · OpEx Ratio: ${execOpexRatioText}`
     )}</p>`;
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
