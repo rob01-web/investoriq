@@ -1,9 +1,34 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { motion } from "framer-motion";
 
 export default function LandingPage() {
-  
+  const screeningSamplePages = [
+    "/samples/screening/p01.webp",
+    "/samples/screening/p02.webp",
+    "/samples/screening/p03.webp",
+    "/samples/screening/p04.webp",
+    "/samples/screening/p05.webp",
+    "/samples/screening/p06.webp",
+    "/samples/screening/p07.webp",
+    "/samples/screening/p08.webp",
+  ];
+  const underwritingSamplePages = [
+    "/samples/underwriting/p01.webp",
+    "/samples/underwriting/p02.webp",
+    "/samples/underwriting/p03.webp",
+    "/samples/underwriting/p04.webp",
+    "/samples/underwriting/p05.webp",
+    "/samples/underwriting/p06.webp",
+    "/samples/underwriting/p07.webp",
+    "/samples/underwriting/p08.webp",
+  ];
+  const [screeningIndex, setScreeningIndex] = useState(0);
+  const [underwritingIndex, setUnderwritingIndex] = useState(0);
+  const screeningTouchStartX = useRef(null);
+  const underwritingTouchStartX = useRef(null);
+  const swipeThreshold = 50;
+
   return (
     <>
       {/* META TAGS */}
@@ -51,8 +76,76 @@ export default function LandingPage() {
                 <div className="p-6">
                   <div className="text-sm font-semibold text-[#0F172A]">Screening report sample</div>
                   <div className="mt-1 text-xs text-slate-500">T12 + Rent Roll only</div>
-                  <div className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500">
-                    Preview placeholder
+                  <div
+                    className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500 overflow-hidden"
+                    onTouchStart={(e) => {
+                      screeningTouchStartX.current = e.touches[0]?.clientX ?? null;
+                    }}
+                    onTouchEnd={(e) => {
+                      const startX = screeningTouchStartX.current;
+                      if (startX == null) return;
+                      const endX = e.changedTouches[0]?.clientX ?? null;
+                      if (endX == null) return;
+                      const deltaX = endX - startX;
+                      if (deltaX <= -swipeThreshold) {
+                        setScreeningIndex((i) =>
+                          Math.min(screeningSamplePages.length - 1, i + 1)
+                        );
+                      } else if (deltaX >= swipeThreshold) {
+                        setScreeningIndex((i) => Math.max(0, i - 1));
+                      }
+                      screeningTouchStartX.current = null;
+                    }}
+                  >
+                    {screeningSamplePages.length > 0 ? (
+                      <img
+                        src={screeningSamplePages[screeningIndex]}
+                        alt={`Screening sample page ${screeningIndex + 1}`}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span>Preview not available</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <button
+                      type="button"
+                      onClick={() => setScreeningIndex((i) => Math.max(0, i - 1))}
+                      disabled={screeningIndex === 0}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <div>{`Page ${screeningIndex + 1} of ${screeningSamplePages.length}`}</div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setScreeningIndex((i) =>
+                          Math.min(screeningSamplePages.length - 1, i + 1)
+                        )
+                      }
+                      disabled={screeningIndex === screeningSamplePages.length - 1}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <a
+                      href="/samples/investoriq-screening-sample.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Open Screening Sample
+                    </a>
+                    <a
+                      href="/samples/investoriq-screening-sample.pdf"
+                      download
+                      className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Download
+                    </a>
                   </div>
                 </div>
                 <div className="p-6">
@@ -60,8 +153,76 @@ export default function LandingPage() {
                   <div className="mt-1 text-xs text-slate-500">
                     T12 + Rent Roll + supporting due diligence documents
                   </div>
-                  <div className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500">
-                    Preview placeholder
+                  <div
+                    className="mt-4 aspect-[8.5/11] w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-500 overflow-hidden"
+                    onTouchStart={(e) => {
+                      underwritingTouchStartX.current = e.touches[0]?.clientX ?? null;
+                    }}
+                    onTouchEnd={(e) => {
+                      const startX = underwritingTouchStartX.current;
+                      if (startX == null) return;
+                      const endX = e.changedTouches[0]?.clientX ?? null;
+                      if (endX == null) return;
+                      const deltaX = endX - startX;
+                      if (deltaX <= -swipeThreshold) {
+                        setUnderwritingIndex((i) =>
+                          Math.min(underwritingSamplePages.length - 1, i + 1)
+                        );
+                      } else if (deltaX >= swipeThreshold) {
+                        setUnderwritingIndex((i) => Math.max(0, i - 1));
+                      }
+                      underwritingTouchStartX.current = null;
+                    }}
+                  >
+                    {underwritingSamplePages.length > 0 ? (
+                      <img
+                        src={underwritingSamplePages[underwritingIndex]}
+                        alt={`Underwriting sample page ${underwritingIndex + 1}`}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span>Preview not available</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <button
+                      type="button"
+                      onClick={() => setUnderwritingIndex((i) => Math.max(0, i - 1))}
+                      disabled={underwritingIndex === 0}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <div>{`Page ${underwritingIndex + 1} of ${underwritingSamplePages.length}`}</div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setUnderwritingIndex((i) =>
+                          Math.min(underwritingSamplePages.length - 1, i + 1)
+                        )
+                      }
+                      disabled={underwritingIndex === underwritingSamplePages.length - 1}
+                      className="px-2 py-1 rounded border border-slate-200 disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <a
+                      href="/samples/investoriq-underwriting-sample.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Open Underwriting Sample
+                    </a>
+                    <a
+                      href="/samples/investoriq-underwriting-sample.pdf"
+                      download
+                      className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Download
+                    </a>
                   </div>
                 </div>
               </div>
