@@ -2610,6 +2610,25 @@ export default async function handler(req, res) {
     finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Equity Return Components");
 
+    const dataCoverageToken = finalHtml.includes("<!-- BEGIN SECTION_7_DATA_COVERAGE -->")
+      ? "SECTION_7_DATA_COVERAGE"
+      : "SECTION_S7_DATA_COVERAGE_GAPS";
+    const dataCoverageBegin = `<!-- BEGIN ${dataCoverageToken} -->`;
+    const dataCoverageEnd = `<!-- END ${dataCoverageToken} -->`;
+    if (finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
+      const escapedCoverageToken = dataCoverageToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const coverageMatch = finalHtml.match(
+        new RegExp(
+          `<!-- BEGIN ${escapedCoverageToken} -->([\\s\\S]*?)<!-- END ${escapedCoverageToken} -->`
+        )
+      );
+      const coverageSection = coverageMatch?.[1] || "";
+      const dnaCount = (coverageSection.match(/DATA NOT AVAILABLE/g) || []).length;
+      if (dnaCount >= 3) {
+        finalHtml = stripMarkedSection(finalHtml, dataCoverageToken);
+      }
+    }
+
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
 
     // Optional: log which narrative sections are missing for debugging
