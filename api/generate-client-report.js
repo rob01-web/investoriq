@@ -2179,7 +2179,11 @@ export default async function handler(req, res) {
       sanitizeDisplayText(propertyName)?.trim() || "Property";
     const displayPropertyAddress = sanitizeDisplayText(propertyAddress) || "";
     const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
-    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", displayPropertyName);
+    const propertyNameDisplay = displayPropertyName
+      .replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", propertyNameDisplay);
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS}}", displayPropertyAddress);
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS_LINE}}", displayPropertyAddress);
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);
@@ -2685,13 +2689,22 @@ export default async function handler(req, res) {
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
 
+    const execOccupancyPreferred = coerceNumber(computedRentRoll?.occupancy_rate);
+    const execOccupancyTokenText = Number.isFinite(execOccupancyPreferred)
+      ? formatPercent1(execOccupancyPreferred)
+      : execOccupancyText;
+    const execAnnualInPlacePreferred = coerceNumber(computedRentRoll?.annual_in_place_rent);
+    const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlacePreferred)
+      ? formatCurrency(execAnnualInPlacePreferred)
+      : execAnnualInPlaceText;
+
     finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", execSummaryHtml);
     finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
-    finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyTokenText);
     finalHtml = replaceAll(
       finalHtml,
       "{{EXEC_ANNUAL_IN_PLACE}}",
-      execAnnualInPlaceText
+      execAnnualInPlaceTokenText
     );
     finalHtml = replaceAll(finalHtml, "{{EXEC_EGI}}", execEgiText);
     finalHtml = replaceAll(finalHtml, "{{EXEC_OPEX}}", execOpexText);
