@@ -2633,11 +2633,6 @@ export default async function handler(req, res) {
         )}</p>`
       );
     }
-    const execSummaryHtml = `${execOpeningLine}${
-      effectiveReportMode === "screening_v1"
-        ? execScreeningLines.join("")
-        : execStructuredMetricsLine
-    }${execRefiLine}${execNarrativeHtml}`;
     const upsideBullets = [];
     if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
       upsideBullets.push(
@@ -2689,16 +2684,43 @@ export default async function handler(req, res) {
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
 
+    console.log("DEBUG computedRentRoll:", computedRentRoll);
     const execOccupancyPreferred = coerceNumber(computedRentRoll?.occupancy_rate);
+    let execOccupancyPreferredWithFallback = execOccupancyPreferred;
+    if (!Number.isFinite(execOccupancyPreferredWithFallback)) {
+      const rrRowsForOccupancy = Array.isArray(rentRollPayload?.units)
+        ? rentRollPayload.units
+        : [];
+      if (rrRowsForOccupancy.length > 0) {
+        const totalUnitsFromRows = rrRowsForOccupancy.length;
+        const occupiedUnitsFromRows = rrRowsForOccupancy.reduce((acc, row) => {
+          const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
+          return status === "vacant" ? acc : acc + 1;
+        }, 0);
+        if (totalUnitsFromRows > 0) {
+          execOccupancyPreferredWithFallback = occupiedUnitsFromRows / totalUnitsFromRows;
+        }
+      }
+    }
+    console.log("DEBUG computedRentRoll.total_units:", computedRentRoll?.total_units);
+    console.log(
+      "DEBUG computedRentRoll.annual_in_place_rent:",
+      computedRentRoll?.annual_in_place_rent
+    );
+    console.log(
+      "DEBUG computedRentRoll.occupancy_rate:",
+      computedRentRoll?.occupancy_rate
+    );
     const execOccupancyTokenText = Number.isFinite(execOccupancyPreferred)
       ? formatPercent1(execOccupancyPreferred)
+      : Number.isFinite(execOccupancyPreferredWithFallback)
+      ? formatPercent1(execOccupancyPreferredWithFallback)
       : execOccupancyText;
     const execAnnualInPlacePreferred = coerceNumber(computedRentRoll?.annual_in_place_rent);
     const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlacePreferred)
       ? formatCurrency(execAnnualInPlacePreferred)
       : execAnnualInPlaceText;
 
-    finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", execSummaryHtml);
     finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
     finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyTokenText);
     finalHtml = replaceAll(
