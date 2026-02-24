@@ -2330,8 +2330,9 @@ export default async function handler(req, res) {
       getNarrativeHtml("finalRecommendation")
     );
 
+    const unitMix = computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
     const unitMixRows = buildUnitMixRows(
-      computedRentRoll?.unit_mix || rentRollPayload?.unit_mix,
+      unitMix,
       computedRentRoll?.total_units ?? rentRollPayload?.total_units,
       formatCurrency
     );
@@ -2349,6 +2350,21 @@ export default async function handler(req, res) {
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
+    const hasAnyAvgSqft =
+      Array.isArray(unitMix) &&
+      unitMix.some((r) => Number.isFinite(Number(r?.avg_sqft)) && Number(r.avg_sqft) > 0);
+    if (!hasAnyAvgSqft) {
+      finalHtml = finalHtml.replace(
+        /(<table[^>]*class="[^"]*unit-mix-table[^"]*"[^>]*>[\s\S]*?<thead>[\s\S]*?<tr>[\s\S]*?)<th>\s*Avg\s*Sq\s*Ft\s*<\/th>\s*([\s\S]*?<\/tr>[\s\S]*?<\/thead>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>[\s\S]*?<\/table>)/i,
+        (_, beforeHeader, afterHeader, tbodyHtml, tableEnd) => {
+          const updatedTbody = String(tbodyHtml || "").replace(
+            /(<tr>\s*<td[\s\S]*?<\/td>\s*<td[\s\S]*?<\/td>\s*)<td[\s\S]*?<\/td>\s*/gi,
+            "$1"
+          );
+          return `${beforeHeader}${afterHeader}${updatedTbody}${tableEnd}`;
+        }
+      );
+    }
     const occupancyValue =
       computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
         ? DATA_NOT_AVAILABLE
