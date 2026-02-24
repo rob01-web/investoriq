@@ -2432,8 +2432,15 @@ export default async function handler(req, res) {
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+        const refiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
+          financials: body?.financials || financials,
+          t12Payload,
+        });
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{REFI_STABILITY_BLOCK}}",
+          refiSufficiencyHtml || ""
+        );
       }
     }
     const showOperatingStatement = Boolean(
