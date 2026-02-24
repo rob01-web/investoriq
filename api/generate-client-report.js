@@ -270,6 +270,19 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const worstPoint = stressPoints
     .slice()
     .sort((a, b) => a.coverage - b.coverage)[0] || null;
+  const worstNoiShockText =
+    worstPoint && Number.isFinite(worstPoint.noiShock)
+      ? formatPercent1(worstPoint.noiShock)
+      : DATA_NOT_AVAILABLE;
+  const worstCapBpsText =
+    worstPoint && Number.isFinite(Number(worstPoint.capBps))
+      ? `${Math.round(Number(worstPoint.capBps))} bps`
+      : DATA_NOT_AVAILABLE;
+  const worstRateBpsText =
+    worstPoint && Number.isFinite(Number(worstPoint.rateBps))
+      ? `${Math.round(Number(worstPoint.rateBps))} bps`
+      : DATA_NOT_AVAILABLE;
+  const worstDriverTripleText = `${worstNoiShockText} · ${worstCapBpsText} · ${worstRateBpsText}`;
 
   let worstNoi = null;
   let worstCap = null;
@@ -363,6 +376,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
+      <tr><td>Worst-Case Drivers (NOI shock · Cap expansion · Rate shock)</td><td>—</td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
