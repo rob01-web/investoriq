@@ -973,6 +973,162 @@ function buildScreeningDataCoverageSummary({
   )}</td></tr></tbody></table><ul>${missingHtml}</ul><p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 
+function buildScreeningIncomeForensicsHtml({
+  t12Payload,
+  computedRentRoll,
+  rentRollPayload,
+  formatCurrency,
+}) {
+  const toRows = (collection) => {
+    if (!collection) return [];
+    if (Array.isArray(collection)) {
+      return collection
+        .map((entry) => {
+          if (!entry || typeof entry !== "object") return null;
+          const label = String(
+            entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? ""
+          ).trim();
+          const amount = coerceNumber(
+            entry.amount ?? entry.value ?? entry.ttm ?? entry.total
+          );
+          if (!label || !Number.isFinite(amount)) return null;
+          return { label, amount };
+        })
+        .filter(Boolean);
+    }
+    if (typeof collection === "object") {
+      return Object.entries(collection)
+        .map(([key, value]) => {
+          if (value && typeof value === "object") {
+            const label = String(
+              value.line_item ?? value.label ?? value.name ?? key ?? ""
+            ).trim();
+            const amount = coerceNumber(
+              value.amount ?? value.value ?? value.ttm ?? value.total
+            );
+            if (!label || !Number.isFinite(amount)) return null;
+            return { label, amount };
+          }
+          const amount = coerceNumber(value);
+          const label = String(key ?? "").trim();
+          if (!label || !Number.isFinite(amount)) return null;
+          return { label, amount };
+        })
+        .filter(Boolean);
+    }
+    return [];
+  };
+
+  const incomeLinesRaw = Array.isArray(t12Payload?.income_lines)
+    ? t12Payload.income_lines
+    : t12Payload?.income_breakdown
+    ? t12Payload.income_breakdown
+    : Array.isArray(t12Payload?.line_items)
+    ? t12Payload.line_items.filter(
+        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "income"
+      )
+    : [];
+  const expenseLinesRaw = Array.isArray(t12Payload?.expense_lines)
+    ? t12Payload.expense_lines
+    : t12Payload?.expense_breakdown
+    ? t12Payload.expense_breakdown
+    : Array.isArray(t12Payload?.line_items)
+    ? t12Payload.line_items.filter(
+        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
+      )
+    : [];
+
+  const incomeLines = toRows(incomeLinesRaw)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+  const expenseLines = toRows(expenseLinesRaw)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+
+  if (incomeLines.length < 2 || expenseLines.length < 2) return "";
+
+  const egi = coerceNumber(t12Payload?.effective_gross_income);
+  const opex = coerceNumber(t12Payload?.total_operating_expenses);
+
+  const incomeRowsHtml = incomeLines
+    .map((row) => {
+      const share =
+        Number.isFinite(egi) && egi > 0 ? ` (${formatPercent1(row.amount / egi)})` : "";
+      return `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(
+        row.amount
+      )}${escapeHtml(share)}</td></tr>`;
+    })
+    .join("");
+
+  const expenseRowsHtml = expenseLines
+    .map((row) => {
+      const share =
+        Number.isFinite(opex) && opex > 0 ? ` (${formatPercent1(row.amount / opex)})` : "";
+      return `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(
+        row.amount
+      )}${escapeHtml(share)}</td></tr>`;
+    })
+    .join("");
+
+  let marketPremiumPct = null;
+  const avgInPlace = coerceNumber(
+    computedRentRoll?.avg_in_place_rent ?? rentRollPayload?.avg_in_place_rent
+  );
+  const avgMarket = coerceNumber(
+    computedRentRoll?.avg_market_rent ?? rentRollPayload?.avg_market_rent
+  );
+  if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
+    marketPremiumPct = ((avgMarket - avgInPlace) / avgInPlace) * 100;
+  }
+
+  const bullets = [];
+  const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
+  if (
+    otherIncome &&
+    Number.isFinite(egi) &&
+    egi > 0 &&
+    Number.isFinite(otherIncome.amount / egi) &&
+    otherIncome.amount / egi >= 0.05
+  ) {
+    bullets.push(
+      `Other income represents ${formatPercent1(
+        otherIncome.amount / egi
+      )} of EGI (verify sustainability and recurring nature).`
+    );
+  }
+  const largestExpense = expenseLines[0];
+  if (
+    largestExpense &&
+    Number.isFinite(opex) &&
+    opex > 0 &&
+    Number.isFinite(largestExpense.amount / opex) &&
+    largestExpense.amount / opex >= 0.2
+  ) {
+    bullets.push(
+      `Largest operating expense line item is ${largestExpense.label} at ${formatPercent1(
+        largestExpense.amount / opex
+      )} of OpEx (concentration flag).`
+    );
+  }
+  if (Number.isFinite(marketPremiumPct) && marketPremiumPct >= 10) {
+    bullets.push(
+      `In-place rents trail market by approximately ${formatPercent1(
+        marketPremiumPct
+      )} (document-backed upside).`
+    );
+  }
+
+  const bulletsHtml = bullets
+    .slice(0, 3)
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  const bulletsCard = bulletsHtml
+    ? `<div class="card no-break" style="margin-top:12px;"><ul>${bulletsHtml}</ul></div>`
+    : "";
+
+  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${bulletsCard}`;
+}
+
 function buildScreeningExpenseStructureHtml({
   t12Payload,
   computedRentRoll,
@@ -2631,7 +2787,12 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
-    const screeningIncomeForensicsHtml = "";
+    const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
     finalHtml = replaceAll(
       finalHtml,
       "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
