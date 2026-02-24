@@ -2703,6 +2703,22 @@ export default async function handler(req, res) {
       "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
       execBreakEvenText
     );
+    const execSnapshotTokens = [
+      "{{EXEC_UNITS}}",
+      "{{EXEC_OCCUPANCY}}",
+      "{{EXEC_ANNUAL_IN_PLACE}}",
+      "{{EXEC_EGI}}",
+      "{{EXEC_OPEX}}",
+      "{{EXEC_NOI}}",
+      "{{EXEC_EXPENSE_RATIO}}",
+      "{{EXEC_NOI_MARGIN}}",
+      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
+    ];
+    execSnapshotTokens.forEach((token) => {
+      if (finalHtml.includes(token)) {
+        finalHtml = replaceAll(finalHtml, token, DATA_NOT_AVAILABLE);
+      }
+    });
     const execSnapshotValues = [
       execUnitsText,
       execOccupancyText,
@@ -2858,9 +2874,13 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
     if (!String(t12IncomeRows || "").trim()) {
+      finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", "");
+      finalHtml = stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Income Reconstruction (TTM)");
     }
     if (!String(t12ExpenseRows || "").trim()) {
+      finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", "");
+      finalHtml = stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
     }
     finalHtml = replaceAll(
