@@ -225,6 +225,8 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const baseLoanDscr = noiBase / (dscrMin * baseMc);
   const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
   const coverageBase = baseMaxProceeds / debtBalance;
+  const baseBinding =
+    baseLoanLtv <= baseLoanDscr ? "LTV-limited" : "DSCR-limited";
   if (!Number.isFinite(coverageBase)) {
     return { tier: null, evidence: null, html: "" };
   }
@@ -265,6 +267,41 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const worstFiniteCoverage = Number.isFinite(coverageWorst)
     ? coverageWorst
     : Number.NEGATIVE_INFINITY;
+  const worstPoint = stressPoints
+    .slice()
+    .sort((a, b) => a.coverage - b.coverage)[0] || null;
+
+  let worstNoi = null;
+  let worstCap = null;
+  let worstRate = null;
+  let worstMc = null;
+  let worstValue = null;
+  let worstLoanLtv = null;
+  let worstLoanDscr = null;
+  let worstMaxProceeds = null;
+  let worstCoverage = worstFiniteCoverage;
+  let worstBinding = null;
+
+  if (worstPoint && Number.isFinite(worstPoint.noiShock)) {
+    worstNoi = noiBase * (1 + worstPoint.noiShock);
+    worstCap = capRateBase + worstPoint.capBps / 10000;
+    worstRate = interestRate + worstPoint.rateBps / 10000;
+    worstMc = computeMortgageConstant(worstRate, amortYears);
+
+    if (
+      Number.isFinite(worstNoi) && worstNoi > 0 &&
+      Number.isFinite(worstCap) && worstCap > 0 &&
+      Number.isFinite(worstMc) && worstMc > 0
+    ) {
+      worstValue = worstNoi / worstCap;
+      worstLoanLtv = worstValue * ltvMax;
+      worstLoanDscr = worstNoi / (dscrMin * worstMc);
+      worstMaxProceeds = Math.min(worstLoanLtv, worstLoanDscr);
+      worstCoverage = worstMaxProceeds / debtBalance;
+      worstBinding =
+        worstLoanLtv <= worstLoanDscr ? "LTV-limited" : "DSCR-limited";
+    }
+  }
 
   let refiTier = "Stable";
   if (coverageBase < 1.0) {
@@ -307,6 +344,29 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       return `<tr><td>${noiShockPct}</td><td>${capBpsLabel}</td><td>${rateBpsLabel}</td><td>${proceedsLabel}</td><td>${coverageLabel}</td></tr>`;
     })
     .join("");
+  const fmtMoney = (x) => (Number.isFinite(x) ? formatValue(x) : DATA_NOT_AVAILABLE);
+  const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
+  const fmtCap = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
+  const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
+  const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:12px;">
+  <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>Base Case</th><th>Worst Case</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>NOI</td><td>${fmtMoney(noiBase)}</td><td>${fmtMoney(worstNoi)}</td></tr>
+      <tr><td>Cap Rate</td><td>${fmtCap(baseCap)}</td><td>${fmtCap(worstCap)}</td></tr>
+      <tr><td>Implied Value (NOI / Cap)</td><td>${fmtMoney(baseValue)}</td><td>${fmtMoney(worstValue)}</td></tr>
+      <tr><td>LTV-Limited Proceeds</td><td>${fmtMoney(baseLoanLtv)}</td><td>${fmtMoney(worstLoanLtv)}</td></tr>
+      <tr><td>DSCR-Limited Proceeds</td><td>${fmtMoney(baseLoanDscr)}</td><td>${fmtMoney(worstLoanDscr)}</td></tr>
+      <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
+      <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
+      <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
+</div>`;
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
   )}</strong></p><p>Base Coverage: ${formatCoverage(
@@ -315,7 +375,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstFiniteCoverage
   )}</p><p class="small">${escapeHtml(
     evidence
-  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>`;
+  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
 
   return { tier: refiTier, evidence, html: refiHtml };
 }
