@@ -51,6 +51,13 @@ function formatPercent(value, decimals = 1) {
   );
 }
 
+function formatPercent1(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = n > 1.5 ? n : n * 100;
+  return `${pct.toFixed(1)}%`;
+}
+
 function formatMultiple(value, decimals = 2) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -101,6 +108,41 @@ const coerceNumber = (value) => {
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 };
+
+function isFiniteNumber(x) {
+  const n = Number(x);
+  return Number.isFinite(n);
+}
+
+function isFinitePositive(x) {
+  const n = Number(x);
+  return Number.isFinite(n) && n > 0;
+}
+
+function hasMinimumScreeningCoverage(t12Payload) {
+  const gpr =
+    t12Payload?.gross_potential_rent ??
+    t12Payload?.gross_scheduled_rent ??
+    t12Payload?.gross_income ??
+    t12Payload?.total_income;
+
+  const totalExp =
+    t12Payload?.total_operating_expenses ??
+    t12Payload?.total_expenses ??
+    t12Payload?.expenses_total;
+
+  const expenseLines =
+    t12Payload?.expense_lines_found ??
+    t12Payload?.expense_lines_count ??
+    t12Payload?.expense_line_count;
+
+  const hasCore = isFinitePositive(gpr) && isFiniteNumber(totalExp);
+  const hasExpenseDetail = Number.isFinite(Number(expenseLines))
+    ? Number(expenseLines) >= 3
+    : isFinitePositive(totalExp);
+
+  return hasCore && hasExpenseDetail;
+}
 
 function computeMortgageConstant(rateAnnual, amortYears) {
   const r = Number(rateAnnual);
@@ -642,13 +684,9 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
   const noiFromFinancials = coerceNumber(f.noi_base);
   const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
-  const formatPercent = (x, decimals = 2) =>
-    `${(Number(x) * 100).toFixed(decimals)}%`;
-  const formatMultiple = (x) => `${Number(x).toFixed(2)}x`;
-  const formatYears = (x) => `${x} yrs`;
   const formatBps = (x) => `${Math.round(Number(x))} bps`;
   const formatPercentArray = (arr) =>
-    `[${arr.map((entry) => formatPercent(coerceNumber(entry))).join(", ")}]`;
+    `[${arr.map((entry) => formatPercent1(coerceNumber(entry))).join(", ")}]`;
   const formatBpsArray = (arr) =>
     `[${arr.map((entry) => formatBps(coerceNumber(entry))).join(", ")}]`;
 
@@ -675,7 +713,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
       label: "Max LTV",
       present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
       value: Number.isFinite(coerceNumber(f.refi_ltv_max))
-        ? formatPercent(coerceNumber(f.refi_ltv_max), 1)
+        ? formatPercent1(coerceNumber(f.refi_ltv_max))
         : "—",
     },
     {
@@ -689,7 +727,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
       label: "Interest rate",
       present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
       value: Number.isFinite(coerceNumber(f.refi_interest_rate))
-        ? formatPercent(coerceNumber(f.refi_interest_rate))
+        ? formatPercent1(coerceNumber(f.refi_interest_rate))
         : "—",
     },
     {
@@ -703,7 +741,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
       label: "Refinance cap rate",
       present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
       value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
-        ? formatPercent(coerceNumber(f.refi_cap_rate_base))
+        ? formatPercent1(coerceNumber(f.refi_cap_rate_base))
         : "—",
     },
     {
@@ -848,10 +886,9 @@ function buildScreeningExpenseStructureHtml({
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
     const expenseRatio = opex / egi;
     rows.push(
-      `<tr><td>Operating Expense Ratio</td><td>${(expenseRatio * 100).toLocaleString(
-        "en-CA",
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-      )}%</td></tr>`
+      `<tr><td>Operating Expense Ratio</td><td>${formatPercent1(
+        expenseRatio
+      )}</td></tr>`
     );
   }
   if (Number.isFinite(opex) && Number.isFinite(units) && units > 0) {
@@ -891,28 +928,23 @@ function buildScreeningNoiStabilityHtml({
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) {
     const noiMargin = noi / egi;
     rows.push(
-      `<tr><td>NOI Margin</td><td>${(noiMargin * 100).toLocaleString("en-CA", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      })}%</td></tr>`
+      `<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`
     );
   }
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
     const expenseSensitivity = 1 - opex / egi;
     rows.push(
-      `<tr><td>Expense Sensitivity</td><td>${(expenseSensitivity * 100).toLocaleString(
-        "en-CA",
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-      )}%</td></tr>`
+      `<tr><td>Expense Sensitivity</td><td>${formatPercent1(
+        expenseSensitivity
+      )}</td></tr>`
     );
   }
   if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
     const rrVsGprPct = (rrAnnual - gpr) / gpr;
     rows.push(
-      `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${(rrVsGprPct * 100).toLocaleString(
-        "en-CA",
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-      )}%</td></tr>`
+      `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${formatPercent1(
+        rrVsGprPct
+      )}</td></tr>`
     );
   }
 
@@ -1972,6 +2004,9 @@ export default async function handler(req, res) {
     const execEgi = coerceNumber(t12Payload?.effective_gross_income);
     const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
     const execNoi = coerceNumber(t12Payload?.net_operating_income);
+    const breakEvenOcc =
+      t12Payload?.break_even_occupancy ??
+      t12Payload?.break_even_occupancy_ratio;
     const expenseRatio = Number.isFinite(coerceNumber(t12Payload?.expense_ratio))
       ? coerceNumber(t12Payload?.expense_ratio)
       : Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
@@ -1993,10 +2028,7 @@ export default async function handler(req, res) {
         : null;
     const execOpexRatio =
       Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
-        ? `${((execOpex / execEgi) * 100).toLocaleString("en-CA", {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          })}%`
+        ? formatPercent1(execOpex / execEgi)
         : null;
     if (Number.isFinite(execUnits) && execUnits > 0) execMetricsParts.push(`Units: ${Math.round(execUnits)}`);
     if (Number.isFinite(execOccupancy)) execMetricsParts.push(`Occupancy: ${formatPercent(execOccupancy)}`);
@@ -2043,13 +2075,9 @@ export default async function handler(req, res) {
     const execScreeningLines = [];
     let screeningClass = null;
     let screeningExplanation = null;
-    const t12SufficientForScreening =
-      t12Payload?.has_minimum_t12_coverage === true ||
-      (Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) &&
-        Number.isFinite(coerceNumber(t12Payload?.expense_lines_found)) &&
-        coerceNumber(t12Payload?.expense_lines_found) >= 3);
+    const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
     if (effectiveReportMode === "screening_v1") {
-      if (!t12SufficientForScreening) {
+      if (!screeningHasSufficientData) {
         screeningClass = "Insufficient Data";
         screeningExplanation =
           "Insufficient operating data to assess acquisition viability.";
@@ -2106,6 +2134,13 @@ export default async function handler(req, res) {
     if (execOpexRatio) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Expense Ratio: ${execOpexRatio}`)}</p>`
+      );
+    }
+    if (Number.isFinite(Number(breakEvenOcc))) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `Break-even Occupancy: ${formatPercent1(breakEvenOcc)}`
+        )}</p>`
       );
     }
     const execSummaryHtml = `${execOpeningLine}${
@@ -2198,10 +2233,7 @@ export default async function handler(req, res) {
       Number.isFinite(t12EgiValue) &&
       Number.isFinite(t12TotalExpensesValue) &&
       t12EgiValue > 0
-        ? `${((t12TotalExpensesValue / t12EgiValue) * 100).toLocaleString("en-CA", {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          })}%`
+        ? formatPercent1(t12TotalExpensesValue / t12EgiValue)
         : DATA_NOT_AVAILABLE;
     finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
@@ -2291,27 +2323,9 @@ export default async function handler(req, res) {
       "{{SCREENING_DATA_COVERAGE_BLOCK}}",
       screeningCoverageHtml
     );
-    const rrUnitsValue = coerceNumber(
-      computedRentRoll?.total_units ?? rentRollPayload?.total_units
-    );
-    const screeningUnits = Array.isArray(computedRentRoll?.unit_mix)
-      ? computedRentRoll.unit_mix
-      : Array.isArray(rentRollPayload?.unit_mix)
-      ? rentRollPayload.unit_mix
-      : [];
-    const hasInPlaceRentForScreening = screeningUnits.some((row) =>
-      Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
-    );
-    const hasMinimumT12ForScreening =
-      Number.isFinite(t12EgiValue) &&
-      Number.isFinite(t12TotalExpensesValue) &&
-      Number.isFinite(t12NoiValue);
-    const hasMinimumRentRollForScreening =
-      Number.isFinite(rrUnitsValue) && hasInPlaceRentForScreening;
-    const hasMinimumScreeningDataset =
-      hasMinimumT12ForScreening && hasMinimumRentRollForScreening;
+    const screeningHasSufficientDataGate = hasMinimumScreeningCoverage(t12Payload);
     if (effectiveReportMode === "screening_v1") {
-      if (!hasMinimumScreeningDataset) {
+      if (!screeningHasSufficientDataGate) {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
