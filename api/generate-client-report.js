@@ -1035,8 +1035,14 @@ function buildScreeningIncomeForensicsHtml({
     : [];
   const expenseLinesRaw = Array.isArray(t12Payload?.expense_lines)
     ? t12Payload.expense_lines
-    : t12Payload?.expense_breakdown
+    : Array.isArray(t12Payload?.expense_breakdown)
     ? t12Payload.expense_breakdown
+    : t12Payload?.expense_breakdown &&
+      typeof t12Payload.expense_breakdown === "object"
+    ? Object.entries(t12Payload.expense_breakdown).map(([label, amount]) => ({
+        label,
+        amount,
+      }))
     : Array.isArray(t12Payload?.line_items)
     ? t12Payload.line_items.filter(
         (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
@@ -1190,7 +1196,7 @@ function buildScreeningExpenseStructureHtml({
     (Array.isArray(entries) ? entries : [])
       .map((entry) => {
         const label = String(
-          entry?.line_item ?? entry?.label ?? entry?.name ?? ""
+          entry?.line_item ?? entry?.label ?? entry?.name ?? entry?.item ?? ""
         ).trim();
         const amount = coerceNumber(
           entry?.amount ?? entry?.value ?? entry?.ttm ?? entry?.total
