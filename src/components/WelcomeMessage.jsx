@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 
 /**
- * WelcomeMessage — InvestorIQ
+ * WelcomeMessage  -  InvestorIQ
  * A sleek, animated intro blurb that reinforces the platform's
  * premium, document-led underwriting tone.
  */

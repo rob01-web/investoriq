@@ -486,7 +486,7 @@ import { useToast } from "@/components/ui/use-toast";
                                   {job.status}
                                 </td>
                                 <td className="p-3 text-xs text-slate-600">
-                                  {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
+                                  {job.created_at ? new Date(job.created_at).toLocaleString() : " - "}
                                 </td>
                                 <td className="p-3 text-xs text-slate-600">
                                   {(job.started_at || job.created_at) ? new Date(job.started_at || job.created_at).toLocaleString() : "-"}
@@ -561,7 +561,7 @@ import { useToast } from "@/components/ui/use-toast";
                               ) : issue.attachment_path ? (
                                 "DATA NOT AVAILABLE"
                               ) : (
-                                "—"
+                                " - "
                               )}
                             </td>
                             <td className="p-3 text-right text-xs text-slate-600">

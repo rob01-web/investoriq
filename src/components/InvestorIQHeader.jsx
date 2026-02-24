@@ -23,7 +23,7 @@ export default function InvestorIQHeader() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between py-4 px-6 sm:px-10">
         
-        {/* LOGO — always return home */}
+        {/* LOGO  -  always return home */}
         <motion.div
           onClick={() => (window.location.href = "/")}
           style={{ scale, cursor: "pointer" }}

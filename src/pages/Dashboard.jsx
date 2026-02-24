@@ -452,7 +452,7 @@ const supportingDocGroups = [
   {
     title: 'Operating & maintenance',
     docs: [
-      { slug: 'utility_bills', label: 'Utility Bills (12–24 months)' },
+      { slug: 'utility_bills', label: 'Utility Bills (12-24 months)' },
       { slug: 'property_tax', label: 'Property Tax Bill / Assessment' },
       { slug: 'insurance_loss_runs', label: 'Insurance Loss Runs' },
       { slug: 'service_contracts', label: 'Service Contracts (HVAC / Elevator / etc.)' },
@@ -1442,7 +1442,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              ×
+                              � - 
                             </button>
                           </div>
                         ))
@@ -1530,7 +1530,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              ×
+                              � - 
                             </button>
                           </div>
                         ))

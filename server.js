@@ -1,4 +1,4 @@
-// server.js — Local + Production API server for InvestorIQ
+// server.js  -  Local + Production API server for InvestorIQ
 
 import express from "express";
 import cors from "cors";
@@ -26,7 +26,7 @@ console.log("🚀 Environment:", isProd ? "PRODUCTION" : "LOCAL DEVELOPMENT");
 app.use(cors());
 
 // -------------------------------------------------------
-// 1️⃣ Webhook route (RAW BODY) — *only enabled locally*
+// 1️⃣ Webhook route (RAW BODY)  -  *only enabled locally*
 // -------------------------------------------------------
 if (!isProd) {
   console.log("⚡ Webhook ENABLED (local mode)");
@@ -40,7 +40,7 @@ if (!isProd) {
 }
 
 // -------------------------------------------------------
-// 2️⃣ JSON Body Parser — must come AFTER webhook
+// 2️⃣ JSON Body Parser  -  must come AFTER webhook
 // -------------------------------------------------------
 app.use(express.json({ limit: "10mb" }));
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 /**
- * HeroImage Component — InvestorIQ
+ * HeroImage Component  -  InvestorIQ
  * ---------------------------------
  * Clean, modern hero visual featuring the InvestorIQ dashboard preview.
  * Subtle floating animation and brand color gradient for a professional aesthetic.

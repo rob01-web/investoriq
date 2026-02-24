@@ -3,7 +3,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // api/generate-sample-pdf.js
-// InvestorIQ – Sample Report Generator (Public HTML → DocRaptor)
+// InvestorIQ  -  Sample Report Generator (Public HTML → DocRaptor)
 
 import { ensureSentenceIntegrity } from "../src/lib/sentenceIntegrity.js";
 

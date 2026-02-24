@@ -371,7 +371,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
-      <tr><td>Worst-Case Drivers (NOI shock · Cap expansion · Rate shock)</td><td>—</td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
+      <tr><td>Worst-Case Drivers (NOI shock · Cap expansion · Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
@@ -408,6 +408,11 @@ function hasMeaningfulNarrative(html) {
 function sanitizeDisplayText(s) {
   if (!s) return s;
   return String(s).replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "").trim();
+}
+
+function sanitizeTypography(html) {
+  if (typeof html !== "string") return html;
+  return html.replace(/[–—]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
 }
 
 function stripMarkedSection(html, key) {
@@ -790,70 +795,70 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     {
       label: "NOI (base)",
       present: isPresentScalar(noiValue),
-      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : "—",
+      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : " - ",
     },
     {
       label: "Current loan balance",
       present: isPresentScalar(coerceNumber(f.refi_debt_balance)),
       value: Number.isFinite(coerceNumber(f.refi_debt_balance))
         ? formatCurrency(coerceNumber(f.refi_debt_balance))
-        : "—",
+        : " - ",
     },
     {
       label: "Max LTV",
       present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
       value: Number.isFinite(coerceNumber(f.refi_ltv_max))
         ? formatPercent1(coerceNumber(f.refi_ltv_max))
-        : "—",
+        : " - ",
     },
     {
       label: "Minimum DSCR",
       present: isPresentScalar(coerceNumber(f.refi_dscr_min)),
       value: Number.isFinite(coerceNumber(f.refi_dscr_min))
         ? formatMultiple(coerceNumber(f.refi_dscr_min))
-        : "—",
+        : " - ",
     },
     {
       label: "Interest rate",
       present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
       value: Number.isFinite(coerceNumber(f.refi_interest_rate))
         ? formatPercent1(coerceNumber(f.refi_interest_rate))
-        : "—",
+        : " - ",
     },
     {
       label: "Amortization (years)",
       present: isPresentScalar(coerceNumber(f.refi_amort_years)),
       value: Number.isFinite(coerceNumber(f.refi_amort_years))
         ? formatYears(coerceNumber(f.refi_amort_years))
-        : "—",
+        : " - ",
     },
     {
       label: "Refinance cap rate",
       present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
       value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
         ? formatPercent1(coerceNumber(f.refi_cap_rate_base))
-        : "—",
+        : " - ",
     },
     {
       label: "NOI stress shocks",
       present: isPresentArray(f.stress_noi_shocks),
       value: isPresentArray(f.stress_noi_shocks)
         ? escapeHtml(formatPercentArray(f.stress_noi_shocks))
-        : "—",
+        : " - ",
     },
     {
       label: "Cap rate stress (bps)",
       present: isPresentArray(f.stress_cap_rate_bps),
       value: isPresentArray(f.stress_cap_rate_bps)
         ? escapeHtml(formatBpsArray(f.stress_cap_rate_bps))
-        : "—",
+        : " - ",
     },
     {
       label: "Rate stress (bps)",
       present: isPresentArray(f.stress_rate_bps),
       value: isPresentArray(f.stress_rate_bps)
         ? escapeHtml(formatBpsArray(f.stress_rate_bps))
-        : "—",
+        : " - ",
     },
   ];
 
@@ -1629,7 +1634,7 @@ function buildDealScoreTable(rows = [], totalScore) {
 <table>
   <tr>
     <th>Factor</th>
-    <th>Score (1–10)</th>
+    <th>Score (1-10)</th>
     <th>Weight</th>
     <th>Weighted Contribution</th>
   </tr>
@@ -1650,7 +1655,7 @@ function buildDealScoreTable(rows = [], totalScore) {
     <td>${!isNil(row.score) ? row.score : ""}</td>
     <td>${
       !isNil(row.weight)
-        ? formatPercent(row.weight, 0) // already in 0–1 form ideally
+        ? formatPercent(row.weight, 0) // already in 0-1 form ideally
         : ""
     }</td>
     <td>${
@@ -2022,7 +2027,7 @@ export default async function handler(req, res) {
             const createdAt = row.created_at
               ? new Date(row.created_at).toLocaleString()
               : "Unknown date";
-            return `<li>${name} &mdash; ${escapeHtml(createdAt)}</li>`;
+            return `<li>${name}  -  ${escapeHtml(createdAt)}</li>`;
           })
           .join("");
         documentSourcesHtml = `<ul>${items}</ul>`;
@@ -2302,7 +2307,7 @@ export default async function handler(req, res) {
       buildCompsTable(tables.comps || [])
     );
 
-    // 6. Inject charts (URLs – can be overridden by caller)
+    // 6. Inject charts (URLs  -  can be overridden by caller)
     finalHtml = applyChartPlaceholders(finalHtml, charts);
 
     // 7. Inject ALL narrative sections (12)
@@ -2771,7 +2776,7 @@ export default async function handler(req, res) {
     } else {
       finalHtml = replaceAll(finalHtml, "{{PROPERTY_DESCRIPTOR_LINE}}", descriptorLine);
     }
-    finalHtml = finalHtml.replace(/&ndash;\s*,\s*/g, "");
+    finalHtml = finalHtml.replace(/ - \s*,\s*/g, "");
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
@@ -3403,12 +3408,13 @@ export default async function handler(req, res) {
     }
 
 // 9. Send to DocRaptor (STILL IN TEST MODE)
-const htmlString =
+const htmlStringRaw =
   typeof safeHtml === "string"
     ? safeHtml
     : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
       ? safeHtml.html
       : String(safeHtml || "");
+const htmlString = sanitizeTypography(htmlStringRaw);
 const htmlLength = htmlString.length;
 const hasClosingHtml = htmlString.includes("</html>");
 const hasFinalRecommendation =

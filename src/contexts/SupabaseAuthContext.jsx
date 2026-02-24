@@ -10,7 +10,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
 /**
- * Supabase Authentication Context — InvestorIQ
+ * Supabase Authentication Context  -  InvestorIQ
  * --------------------------------------------
  * Handles global auth state, session sync, and user profiles.
  * Provides sign-up, sign-in, and sign-out utilities with toast feedback.

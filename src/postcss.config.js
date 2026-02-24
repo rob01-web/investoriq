@@ -1,5 +1,5 @@
 // ---------------------------------------
-// InvestorIQ — PostCSS Configuration
+// InvestorIQ  -  PostCSS Configuration
 // Ensures TailwindCSS + Autoprefixer work with Vite
 // ---------------------------------------
 

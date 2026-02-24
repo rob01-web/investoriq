@@ -39,7 +39,7 @@ export default function ReportHistory() {
   return (
     <>
       <Helmet>
-        <title>Report History – InvestorIQ</title>
+        <title>Report History  -  InvestorIQ</title>
         <meta
           name="description"
           content="Review, manage, and download your previously generated InvestorIQ Property IQ Reports."

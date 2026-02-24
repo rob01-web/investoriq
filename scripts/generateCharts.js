@@ -2,7 +2,7 @@ if (process.env.NODE_ENV === "production") {
   throw new Error("DEV_ONLY_SAMPLE_TOOLING_DISABLED_IN_PROD");
 }
 
-// api/lib/generateCharts.js (Riverbend Heights – Institutional Chart Pack)
+// api/lib/generateCharts.js (Riverbend Heights  -  Institutional Chart Pack)
 // ------------------------------------------------------------------------
 // Generates all institutional charts for Riverbend Heights using the
 // Riverbend dataset JSON as the single source of truth.
@@ -151,7 +151,7 @@ async function generateIrrScenarioChart() {
       plugins: {
         title: {
           display: true,
-          text: "IRR by Scenario – 5-Year Levered Returns",
+          text: "IRR by Scenario  -  5-Year Levered Returns",
           color: BRAND.navy,
           font: {
             size: 20,
@@ -284,7 +284,7 @@ async function generateCashFlow5yrChart() {
       plugins: {
         title: {
           display: true,
-          text: "Cumulative Distributions to Equity – 5-Year Horizon",
+          text: "Cumulative Distributions to Equity  -  5-Year Horizon",
           color: BRAND.navy,
           font: { size: 24 }
         },
@@ -471,7 +471,7 @@ async function generateBreakEvenDscrChart() {
       plugins: {
         title: {
           display: true,
-          text: "DSCR vs. Lender Minimum – Current Underwriting",
+          text: "DSCR vs. Lender Minimum  -  Current Underwriting",
           color: BRAND.navy,
           font: { size: 22 }
         },
@@ -544,7 +544,7 @@ async function generateNoiWaterfallChart() {
       plugins: {
         title: {
           display: true,
-          text: "Cash Flow Waterfall – From Gross Income to Cash Flow (Millions)",
+          text: "Cash Flow Waterfall  -  From Gross Income to Cash Flow (Millions)",
           color: BRAND.navy,
           font: { size: 22 }
         },
@@ -630,7 +630,7 @@ async function generateRenovationRoiChart() {
 }
 
 // ---------------------------------
-// CHART 9: DEAL SCORE – BAR
+// CHART 9: DEAL SCORE  -  BAR
 // ---------------------------------
 async function generateDealScoreBarChart() {
   const d = riverbend.deal_score;
@@ -677,7 +677,7 @@ async function generateDealScoreBarChart() {
       plugins: {
         title: {
           display: true,
-          text: "Deal Score Components – InvestorIQ Framework",
+          text: "Deal Score Components  -  InvestorIQ Framework",
           color: BRAND.navy,
           font: { size: 22 }
         },
@@ -707,7 +707,7 @@ async function generateDealScoreBarChart() {
 }
 
 // ---------------------------------
-// CHART 10: DEAL SCORE – RADAR
+// CHART 10: DEAL SCORE  -  RADAR
 // ---------------------------------
 async function generateDealScoreRadarChart() {
   const d = riverbend.deal_score;
@@ -751,7 +751,7 @@ async function generateDealScoreRadarChart() {
       plugins: {
         title: {
           display: true,
-          text: "Deal Quality Radar – Riverbend Heights",
+          text: "Deal Quality Radar  -  Riverbend Heights",
           color: BRAND.navy,
           font: { size: 22 }
         },
@@ -813,7 +813,7 @@ async function generateRiskRadarChart() {
       labels,
       datasets: [
         {
-          label: "Risk Profile (0–10, Higher = More Risk)",
+          label: "Risk Profile (0-10, Higher = More Risk)",
           data: values,
           borderColor: BRAND.navy,
           backgroundColor: "rgba(15, 23, 42, 0.12)",
@@ -828,7 +828,7 @@ async function generateRiskRadarChart() {
       plugins: {
         title: {
           display: true,
-          text: "Risk Factor Radar – Riverbend Heights",
+          text: "Risk Factor Radar  -  Riverbend Heights",
           color: BRAND.navy,
           font: { size: 22 }
         },
@@ -907,7 +907,7 @@ async function generateCashflowWaterfallChart() {
       plugins: {
         title: {
           display: true,
-          text: "Equity Cash Flow Waterfall – Riverbend Heights",
+          text: "Equity Cash Flow Waterfall  -  Riverbend Heights",
           color: BRAND.navy,
           font: { size: 20 }
         },

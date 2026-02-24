@@ -151,7 +151,7 @@ export default function PricingPage() {
   return (
     <>
       <Helmet>
-        <title>Pricing — InvestorIQ</title>
+        <title>Pricing  -  InvestorIQ</title>
         <meta
           name="description"
           content="Flat-fee institutional reports with transparent scope. Screening and underwriting options."

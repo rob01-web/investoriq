@@ -1,5 +1,5 @@
 // ---------------------------------------
-// InvestorIQ — Application Entry Point
+// InvestorIQ  -  Application Entry Point
 // ---------------------------------------
 
 import React from 'react';
