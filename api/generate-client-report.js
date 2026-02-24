@@ -1080,6 +1080,9 @@ function buildScreeningIncomeForensicsHtml({
   if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
     marketPremiumPct = ((avgMarket - avgInPlace) / avgInPlace) * 100;
   }
+  const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
+    ? marketPremiumPct / 100
+    : NaN;
 
   const bullets = [];
   const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
@@ -1110,10 +1113,10 @@ function buildScreeningIncomeForensicsHtml({
       )} of OpEx (concentration flag).`
     );
   }
-  if (Number.isFinite(marketPremiumPct) && marketPremiumPct >= 10) {
+  if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
     bullets.push(
       `In-place rents trail market by approximately ${formatPercent1(
-        marketPremiumPct
+        marketRentPremiumRatio
       )} (document-backed upside).`
     );
   }
@@ -2398,7 +2401,6 @@ export default async function handler(req, res) {
       if (!Number.isFinite(n)) return null;
       return n > 1.5 ? n : n * 100;
     };
-    const occupancyPct = toPctValue(execOccupancy);
     const breakEvenOccPct = toPctValue(breakEvenOcc);
     const operatingCushionPct =
       Number.isFinite(breakEvenOccPct) ? 100 - breakEvenOccPct : null;
@@ -2411,6 +2413,9 @@ export default async function handler(req, res) {
             coerceNumber(computedRentRoll?.avg_in_place_rent)) *
           100
         : null;
+    const marketRentPremiumRatio = Number.isFinite(marketRentPremiumPct)
+      ? marketRentPremiumPct / 100
+      : NaN;
     const execOpexRatio =
       Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
         ? formatPercent1(execOpex / execEgi)
@@ -2617,16 +2622,16 @@ export default async function handler(req, res) {
         : execStructuredMetricsLine
     }${execRefiLine}${execNarrativeHtml}`;
     const upsideBullets = [];
-    if (Number.isFinite(marketRentPremiumPct) && marketRentPremiumPct >= 10) {
+    if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
       upsideBullets.push(
-        `In-place rents trail market by approximately ${formatPercent1(
-          marketRentPremiumPct
+        `In-place rents trail market by ~${formatPercent1(
+          marketRentPremiumRatio
         )} (document-backed upside).`
       );
     }
-    if (Number.isFinite(occupancyPct) && occupancyPct >= 95) {
+    if (Number.isFinite(execOccupancy) && execOccupancy >= 0.95) {
       upsideBullets.push(
-        `Occupancy is ${formatPercent1(occupancyPct)}, supporting cash flow stability.`
+        `Occupancy is ${formatPercent1(execOccupancy)}, supporting cash flow stability.`
       );
     }
     if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
