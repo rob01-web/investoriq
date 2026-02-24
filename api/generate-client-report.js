@@ -1173,9 +1173,90 @@ function buildScreeningExpenseStructureHtml({
   }
 
   if (rows.length === 0) return "";
-  return `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
+  const metricsCard = `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>`;
+
+  const expenseLinesRaw = Array.isArray(t12Payload?.expense_lines)
+    ? t12Payload.expense_lines
+    : t12Payload?.expense_breakdown
+    ? t12Payload.expense_breakdown
+    : Array.isArray(t12Payload?.line_items)
+    ? t12Payload.line_items.filter(
+        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
+      )
+    : [];
+  const toExpenseRows = (entries) =>
+    (Array.isArray(entries) ? entries : [])
+      .map((entry) => {
+        const label = String(
+          entry?.line_item ?? entry?.label ?? entry?.name ?? ""
+        ).trim();
+        const amount = coerceNumber(
+          entry?.amount ?? entry?.value ?? entry?.ttm ?? entry?.total
+        );
+        if (!label || !Number.isFinite(amount)) return null;
+        return { label, amount };
+      })
+      .filter(Boolean);
+  const expenseDriverRows = toExpenseRows(expenseLinesRaw)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+
+  let topDriversCard = "";
+  if (
+    Number.isFinite(opex) &&
+    opex > 0 &&
+    Array.isArray(expenseDriverRows) &&
+    expenseDriverRows.length >= 2
+  ) {
+    const topDriverRowsHtml = expenseDriverRows
+      .map((row) => {
+        const share = row.amount / opex;
+        return `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(
+          row.amount
+        )} (${escapeHtml(formatPercent1(share))})</td></tr>`;
+      })
+      .join("");
+    topDriversCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top 3 Expense Drivers (Share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${topDriverRowsHtml}</tbody></table></div>`;
+  }
+
+  const flags = [];
+  const largestExpense = expenseDriverRows[0];
+  if (
+    largestExpense &&
+    Number.isFinite(opex) &&
+    opex > 0 &&
+    Number.isFinite(largestExpense.amount / opex) &&
+    largestExpense.amount / opex >= 0.2
+  ) {
+    flags.push(
+      `Largest operating expense line item is ${largestExpense.label} at ${formatPercent1(
+        largestExpense.amount / opex
+      )} of OpEx (concentration flag).`
+    );
+  }
+  const expenseRatio =
+    Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
+  if (Number.isFinite(expenseRatio) && expenseRatio > 0.65) {
+    flags.push(
+      `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
+    );
+  }
+  const noiMargin =
+    Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
+  if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
+    flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
+  }
+  const flagsHtml = flags
+    .slice(0, 3)
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  const flagsCard = flagsHtml
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
+    : "";
+
+  return `${metricsCard}${topDriversCard}${flagsCard}`;
 }
 
 function buildScreeningNoiStabilityHtml({
@@ -1250,13 +1331,48 @@ function buildScreeningNoiStabilityHtml({
       `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
     );
   }
-  const flagsHtml = flags
+
+  const stabilityDrivers = [];
+  if (Number.isFinite(noiMargin)) {
+    stabilityDrivers.push({
+      label: `NOI Margin ${formatPercent1(noiMargin)}`,
+      severity: Math.max(0, 0.35 - noiMargin),
+    });
+  }
+  if (Number.isFinite(expenseRatio)) {
+    stabilityDrivers.push({
+      label: `Expense Ratio ${formatPercent1(expenseRatio)}`,
+      severity: Math.max(0, expenseRatio - 0.65),
+    });
+  }
+  if (Number.isFinite(rrVsGprPct)) {
+    stabilityDrivers.push({
+      label: `Rent Roll vs T12 GPR ${formatPercent1(rrVsGprPct)}`,
+      severity: Math.max(0, Math.abs(rrVsGprPct) - 0.05),
+    });
+  }
+  const rankedDrivers = stabilityDrivers
+    .slice()
+    .sort((a, b) => b.severity - a.severity)
+    .slice(0, 3)
+    .map((d) => d.label);
+  const driverRankHtml = rankedDrivers.length
+    ? `<p class="subsection-title">Stability Drivers (Worst -> Best): ${escapeHtml(
+        rankedDrivers.join(" | ")
+      )}</p>`
+    : "";
+
+  const uniqueFlags = [...new Set(flags)];
+  const flagsHtml = uniqueFlags
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
-  const flagsCard = flagsHtml
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
-    : "";
+  const flagsCard =
+    driverRankHtml || flagsHtml
+      ? `<div class="card no-break" style="margin-top:12px;">${driverRankHtml}${
+          flagsHtml ? `<p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul>` : ""
+        }</div>`
+      : "";
 
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
@@ -1433,6 +1549,29 @@ function buildScreeningRentRollDistributionHtml({
     .filter(Boolean)
     .join("");
 
+  let largestUnitType = "";
+  let largestUnitTypeConcentration = null;
+  if (unitMix.length > 0 && Number.isFinite(totalUnits) && totalUnits > 0) {
+    const largestMixRow = unitMix
+      .map((row) => ({
+        unitType: String(row?.unit_type ?? "").trim(),
+        count: coerceNumber(row?.count),
+      }))
+      .filter((row) => Number.isFinite(row.count) && row.count > 0)
+      .sort((a, b) => b.count - a.count)[0];
+    if (largestMixRow) {
+      largestUnitType = largestMixRow.unitType;
+      largestUnitTypeConcentration = largestMixRow.count / totalUnits;
+    }
+  }
+  if (Number.isFinite(largestUnitTypeConcentration)) {
+    metricsRows.push(
+      `<tr><td>Largest Unit Type Concentration</td><td>${formatPercent1(
+        largestUnitTypeConcentration
+      )}</td></tr>`
+    );
+  }
+
   if (metricsRows.length === 0 && !rentBandRows) return "";
 
   const metricsHtml =
@@ -1444,7 +1583,40 @@ function buildScreeningRentRollDistributionHtml({
   const bandsHtml = rentBandRows
     ? `<p class="subsection-title" style="margin-top:12px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
     : "";
-  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>`;
+
+  const marketPremiumRatio =
+    Number.isFinite(weightedInPlace) &&
+    Number.isFinite(weightedMarket) &&
+    weightedInPlace > 0
+      ? (weightedMarket - weightedInPlace) / weightedInPlace
+      : null;
+  const flags = [];
+  if (Number.isFinite(occupancy) && occupancy < 0.9) {
+    flags.push(`Occupancy is ${formatPercent1(occupancy)} (stabilization flag).`);
+  }
+  if (Number.isFinite(marketPremiumRatio) && marketPremiumRatio >= 0.1) {
+    flags.push(
+      `In-place rents trail market by ~${formatPercent1(
+        marketPremiumRatio
+      )} (document-backed upside).`
+    );
+  }
+  if (Number.isFinite(largestUnitTypeConcentration) && largestUnitTypeConcentration >= 0.6) {
+    flags.push(
+      `Unit mix concentration: ${largestUnitType || "Largest unit type"} represents ${formatPercent1(
+        largestUnitTypeConcentration
+      )} of units (concentration flag).`
+    );
+  }
+  const flagsHtml = flags
+    .slice(0, 3)
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  const flagsCard = flagsHtml
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
+    : "";
+
+  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}`;
 }
 
 function injectKeyMetricsRows(html, rowsHtml) {
