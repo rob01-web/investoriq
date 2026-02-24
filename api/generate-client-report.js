@@ -405,13 +405,9 @@ function hasMeaningfulNarrative(html) {
   return true;
 }
 
-function sanitizeDisplayPropertyName(name) {
-  if (!name) return name;
-
-  // Remove trailing "(...test...)" or "(...clean...)" style QA suffixes
-  return String(name)
-    .replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "")
-    .trim();
+function sanitizeDisplayText(s) {
+  if (!s) return s;
+  return String(s).replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "").trim();
 }
 
 function stripMarkedSection(html, key) {
@@ -616,20 +612,18 @@ function buildT12KeyMetricRows(t12Payload, formatValue) {
 
 function buildT12IncomeRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
-  const candidateCollections = [];
-  const pushCandidate = (value) => {
-    if (Array.isArray(value) || (value && typeof value === "object")) {
-      candidateCollections.push(value);
-    }
-  };
-  Object.entries(t12Payload).forEach(([key, value]) => {
-    if (/(income|revenue)/i.test(key)) pushCandidate(value);
-  });
-  if (t12Payload.statement && typeof t12Payload.statement === "object") {
-    Object.entries(t12Payload.statement).forEach(([key, value]) => {
-      if (/(income|revenue)/i.test(key)) pushCandidate(value);
-    });
-  }
+  const candidateCollection = Array.isArray(t12Payload.income_lines)
+    ? t12Payload.income_lines
+    : t12Payload.income_breakdown &&
+      (Array.isArray(t12Payload.income_breakdown) ||
+        typeof t12Payload.income_breakdown === "object")
+    ? t12Payload.income_breakdown
+    : Array.isArray(t12Payload.line_items)
+    ? t12Payload.line_items.filter(
+        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "income"
+      )
+    : null;
+  if (!candidateCollection) return "";
 
   const rows = [];
   const seen = new Set();
@@ -645,20 +639,18 @@ function buildT12IncomeRows(t12Payload, formatValue) {
     );
   };
 
-  for (const collection of candidateCollections) {
-    if (Array.isArray(collection)) {
-      collection.forEach((entry) => {
-        if (entry && typeof entry === "object") {
-          const label =
-            entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
-          const amount =
-            entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
-          addRow(label, amount);
-        }
-      });
-      continue;
-    }
-    Object.entries(collection).forEach(([key, value]) => {
+  if (Array.isArray(candidateCollection)) {
+    candidateCollection.forEach((entry) => {
+      if (entry && typeof entry === "object") {
+        const label =
+          entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
+        const amount =
+          entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
+        addRow(label, amount);
+      }
+    });
+  } else {
+    Object.entries(candidateCollection).forEach(([key, value]) => {
       if (value && typeof value === "object") {
         addRow(
           value.line_item ?? value.label ?? value.name ?? key,
@@ -670,25 +662,24 @@ function buildT12IncomeRows(t12Payload, formatValue) {
     });
   }
 
+  if (rows.length < 3) return "";
   return rows.join("");
 }
 
 function buildT12ExpenseRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
-  const candidateCollections = [];
-  const pushCandidate = (value) => {
-    if (Array.isArray(value) || (value && typeof value === "object")) {
-      candidateCollections.push(value);
-    }
-  };
-  Object.entries(t12Payload).forEach(([key, value]) => {
-    if (/(expense|operating_expense|operating_cost)/i.test(key)) pushCandidate(value);
-  });
-  if (t12Payload.statement && typeof t12Payload.statement === "object") {
-    Object.entries(t12Payload.statement).forEach(([key, value]) => {
-      if (/(expense|operating_expense|operating_cost)/i.test(key)) pushCandidate(value);
-    });
-  }
+  const candidateCollection = Array.isArray(t12Payload.expense_lines)
+    ? t12Payload.expense_lines
+    : t12Payload.expense_breakdown &&
+      (Array.isArray(t12Payload.expense_breakdown) ||
+        typeof t12Payload.expense_breakdown === "object")
+    ? t12Payload.expense_breakdown
+    : Array.isArray(t12Payload.line_items)
+    ? t12Payload.line_items.filter(
+        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
+      )
+    : null;
+  if (!candidateCollection) return "";
 
   const rows = [];
   const seen = new Set();
@@ -704,20 +695,18 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
     );
   };
 
-  for (const collection of candidateCollections) {
-    if (Array.isArray(collection)) {
-      collection.forEach((entry) => {
-        if (entry && typeof entry === "object") {
-          const label =
-            entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
-          const amount =
-            entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
-          addRow(label, amount);
-        }
-      });
-      continue;
-    }
-    Object.entries(collection).forEach(([key, value]) => {
+  if (Array.isArray(candidateCollection)) {
+    candidateCollection.forEach((entry) => {
+      if (entry && typeof entry === "object") {
+        const label =
+          entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "";
+        const amount =
+          entry.amount ?? entry.value ?? entry.ttm ?? entry.total ?? null;
+        addRow(label, amount);
+      }
+    });
+  } else {
+    Object.entries(candidateCollection).forEach(([key, value]) => {
       if (value && typeof value === "object") {
         addRow(
           value.line_item ?? value.label ?? value.name ?? key,
@@ -729,6 +718,7 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
     });
   }
 
+  if (rows.length < 3) return "";
   return rows.join("");
 }
 
@@ -1689,7 +1679,12 @@ export default async function handler(req, res) {
     }
 
     // 1. Parse input JSON (structured)
-    const { userId: bodyUserId, property_name } = body;
+    const {
+      userId: bodyUserId,
+      property_name,
+      property_address,
+      property_title,
+    } = body;
     const jobId = body?.job_id || body?.jobId;
     effectiveUserId = bodyUserId || null;
     const allowedReportTypes = ["screening", "underwriting", "ic"];
@@ -1973,9 +1968,16 @@ export default async function handler(req, res) {
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
     const propertyName = property_name || jobPropertyName || "";
+    const propertyAddress = property_address || "";
+    const propertyTitle = property_title || "";
     const displayPropertyName =
-      sanitizeDisplayPropertyName(propertyName)?.trim() || "Property";
+      sanitizeDisplayText(propertyName)?.trim() || "Property";
+    const displayPropertyAddress = sanitizeDisplayText(propertyAddress) || "";
+    const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", displayPropertyName);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS}}", displayPropertyAddress);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS_LINE}}", displayPropertyAddress);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);
     finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
     finalHtml = replaceAll(
@@ -2132,13 +2134,41 @@ export default async function handler(req, res) {
       Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
         ? rrOccupiedUnits / rrTotalUnits
         : null;
+    const rrUnitRows = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : [];
+    const rrTotalUnitsFromRows = rrUnitRows.length > 0 ? rrUnitRows.length : null;
+    const rrOccupiedFromRows = rrUnitRows.length
+      ? rrUnitRows.reduce((acc, u) => {
+          const status = String(u?.lease_status || u?.status || "").toLowerCase();
+          const rent = Number(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+          if (status.includes("vacant")) return acc;
+          if (Number.isFinite(rent) && rent > 0) return acc + 1;
+          return acc;
+        }, 0)
+      : null;
+    const rrOccFromRows =
+      Number.isFinite(rrTotalUnitsFromRows) &&
+      rrTotalUnitsFromRows > 0 &&
+      Number.isFinite(rrOccupiedFromRows)
+        ? rrOccupiedFromRows / rrTotalUnitsFromRows
+        : null;
+    const rrAnnualInPlaceFromRows = rrUnitRows.length
+      ? rrUnitRows.reduce((acc, u) => {
+          const rent = Number(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+          return Number.isFinite(rent) && rent > 0 ? acc + rent * 12 : acc;
+        }, 0)
+      : null;
     const execOccupancy =
-      Number.isFinite(execOccFromT12) ? execOccFromT12 : execOccFromRR;
+      Number.isFinite(execOccFromT12)
+        ? execOccFromT12
+        : Number.isFinite(execOccFromRR)
+        ? execOccFromRR
+        : rrOccFromRows;
     const execAnnualInPlace = coerceNumber(
       computedRentRoll?.annual_in_place_rent ??
         computedRentRoll?.annual_in_place_rent_total ??
         computedRentRoll?.annual_current_rent ??
         computedRentRoll?.in_place_rent_annual ??
+        rrAnnualInPlaceFromRows ??
         computedRentRoll?.total_in_place_annual ??
         rentRollPayload?.total_in_place_annual
     );
