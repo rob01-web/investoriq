@@ -1209,9 +1209,50 @@ function buildScreeningNoiStabilityHtml({
   }
 
   if (rows.length === 0) return "";
+  const rrVsGprPct =
+    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
+      ? (rrAnnual - gpr) / gpr
+      : null;
+  const noiMargin =
+    Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
+  const expenseRatio =
+    Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
+
+  const flags = [];
+  if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
+    if (rrVsGprPct >= 0) {
+      flags.push(
+        `Rent roll annualized rent is +${formatPercent1(
+          rrVsGprPct
+        )} vs T12 GPR (reconciliation flag).`
+      );
+    } else {
+      flags.push(
+        `Rent roll annualized rent is −${formatPercent1(
+          Math.abs(rrVsGprPct)
+        )} vs T12 GPR (reconciliation flag).`
+      );
+    }
+  }
+  if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
+    flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
+  }
+  if (Number.isFinite(expenseRatio) && expenseRatio > 0.65) {
+    flags.push(
+      `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
+    );
+  }
+  const flagsHtml = flags
+    .slice(0, 3)
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  const flagsCard = flagsHtml
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
+    : "";
+
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
-  )}</tbody></table></div>`;
+  )}</tbody></table></div>${flagsCard}`;
 }
 
 function buildScreeningRentRollDistributionHtml({
