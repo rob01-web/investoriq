@@ -1972,6 +1972,25 @@ export default async function handler(req, res) {
     const execEgi = coerceNumber(t12Payload?.effective_gross_income);
     const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
     const execNoi = coerceNumber(t12Payload?.net_operating_income);
+    const expenseRatio = Number.isFinite(coerceNumber(t12Payload?.expense_ratio))
+      ? coerceNumber(t12Payload?.expense_ratio)
+      : Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
+      ? execOpex / execEgi
+      : null;
+    const noiMargin =
+      Number.isFinite(coerceNumber(t12Payload?.net_operating_income)) &&
+      Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)) &&
+      coerceNumber(t12Payload?.effective_gross_income) > 0
+        ? coerceNumber(t12Payload?.net_operating_income) /
+          coerceNumber(t12Payload?.effective_gross_income)
+        : null;
+    const breakEvenOccupancy =
+      Number.isFinite(coerceNumber(t12Payload?.total_operating_expenses)) &&
+      Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) &&
+      coerceNumber(t12Payload?.gross_potential_rent) > 0
+        ? coerceNumber(t12Payload?.total_operating_expenses) /
+          coerceNumber(t12Payload?.gross_potential_rent)
+        : null;
     const execOpexRatio =
       Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
         ? `${((execOpex / execEgi) * 100).toLocaleString("en-CA", {
@@ -2022,6 +2041,46 @@ export default async function handler(req, res) {
     )}</p>`;
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
     const execScreeningLines = [];
+    let screeningClass = null;
+    let screeningExplanation = null;
+    const t12SufficientForScreening =
+      t12Payload?.has_minimum_t12_coverage === true ||
+      (Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) &&
+        Number.isFinite(coerceNumber(t12Payload?.expense_lines_found)) &&
+        coerceNumber(t12Payload?.expense_lines_found) >= 3);
+    if (effectiveReportMode === "screening_v1") {
+      if (!t12SufficientForScreening) {
+        screeningClass = "Insufficient Data";
+        screeningExplanation =
+          "Insufficient operating data to assess acquisition viability.";
+      } else if (
+        (Number.isFinite(expenseRatio) && expenseRatio > 0.65) ||
+        (Number.isFinite(noiMargin) && noiMargin < 0.35) ||
+        (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.85)
+      ) {
+        screeningClass = "Fragile";
+        screeningExplanation =
+          "Operating margin is thin and vulnerable to modest income or expense shocks.";
+      } else if (
+        (Number.isFinite(expenseRatio) && expenseRatio > 0.55) ||
+        (Number.isFinite(noiMargin) && noiMargin < 0.45) ||
+        (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.75)
+      ) {
+        screeningClass = "Sensitized";
+        screeningExplanation =
+          "Cash flow performance is viable but sensitive to revenue disruption or expense inflation.";
+      } else {
+        screeningClass = "Stable";
+        screeningExplanation =
+          "Operating profile demonstrates margin resilience under current income structure.";
+      }
+      execScreeningLines.push(
+        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningClass}`)}</p>`
+      );
+      execScreeningLines.push(
+        `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
+      );
+    }
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
