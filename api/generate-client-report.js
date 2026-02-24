@@ -2441,7 +2441,15 @@ export default async function handler(req, res) {
     const execAnnualInPlaceText = Number.isFinite(execAnnualInPlace)
       ? formatCurrency(execAnnualInPlace)
       : DATA_NOT_AVAILABLE;
+    const execEgiText = Number.isFinite(execEgi) ? formatCurrency(execEgi) : DATA_NOT_AVAILABLE;
+    const execOpexText = Number.isFinite(execOpex) ? formatCurrency(execOpex) : DATA_NOT_AVAILABLE;
     const execOpexRatioText = execOpexRatio || DATA_NOT_AVAILABLE;
+    const execNoiMarginText = Number.isFinite(noiMargin)
+      ? formatPercent1(noiMargin)
+      : DATA_NOT_AVAILABLE;
+    const execBreakEvenText = Number.isFinite(breakEvenOcc)
+      ? formatPercent1(breakEvenOcc)
+      : DATA_NOT_AVAILABLE;
     let execRefiLine = "";
     if (effectiveReportMode === "v1_core") {
       const refiTier = buildRefiStabilityModel({
@@ -2678,6 +2686,41 @@ export default async function handler(req, res) {
       .join("");
 
     finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", execSummaryHtml);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyText);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EXEC_ANNUAL_IN_PLACE}}",
+      execAnnualInPlaceText
+    );
+    finalHtml = replaceAll(finalHtml, "{{EXEC_EGI}}", execEgiText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_OPEX}}", execOpexText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_NOI}}", execNoiText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_EXPENSE_RATIO}}", execOpexRatioText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_NOI_MARGIN}}", execNoiMarginText);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
+      execBreakEvenText
+    );
+    const execSnapshotValues = [
+      execUnitsText,
+      execOccupancyText,
+      execAnnualInPlaceText,
+      execEgiText,
+      execOpexText,
+      execNoiText,
+      execOpexRatioText,
+      execNoiMarginText,
+      execBreakEvenText,
+    ];
+    if (
+      execSnapshotValues.every((value) => value === DATA_NOT_AVAILABLE) &&
+      finalHtml.includes("<!-- BEGIN EXEC_METRICS_SNAPSHOT -->") &&
+      finalHtml.includes("<!-- END EXEC_METRICS_SNAPSHOT -->")
+    ) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_METRICS_SNAPSHOT");
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
