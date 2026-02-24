@@ -2031,7 +2031,7 @@ export default async function handler(req, res) {
         ? formatPercent1(execOpex / execEgi)
         : null;
     if (Number.isFinite(execUnits) && execUnits > 0) execMetricsParts.push(`Units: ${Math.round(execUnits)}`);
-    if (Number.isFinite(execOccupancy)) execMetricsParts.push(`Occupancy: ${formatPercent(execOccupancy)}`);
+    if (Number.isFinite(execOccupancy)) execMetricsParts.push(`Occupancy: ${formatPercent1(execOccupancy)}`);
     if (Number.isFinite(execAnnualInPlace)) execMetricsParts.push(`Annual In-Place Rent: ${formatCurrency(execAnnualInPlace)}`);
     if (Number.isFinite(execEgi)) execMetricsParts.push(`EGI: ${formatCurrency(execEgi)}`);
     if (Number.isFinite(execOpex)) execMetricsParts.push(`OpEx: ${formatCurrency(execOpex)}`);
@@ -2041,7 +2041,7 @@ export default async function handler(req, res) {
       Number.isFinite(execUnits) && execUnits > 0 ? String(Math.round(execUnits)) : DATA_NOT_AVAILABLE;
     const execNoiText = Number.isFinite(execNoi) ? formatCurrency(execNoi) : DATA_NOT_AVAILABLE;
     const execOccupancyText = Number.isFinite(execOccupancy)
-      ? formatPercent(execOccupancy)
+      ? formatPercent1(execOccupancy)
       : DATA_NOT_AVAILABLE;
     const execAnnualInPlaceText = Number.isFinite(execAnnualInPlace)
       ? formatCurrency(execAnnualInPlace)
