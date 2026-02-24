@@ -405,6 +405,15 @@ function hasMeaningfulNarrative(html) {
   return true;
 }
 
+function sanitizeDisplayPropertyName(name) {
+  if (!name) return name;
+
+  // Remove trailing "(...test...)" or "(...clean...)" style QA suffixes
+  return String(name)
+    .replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "")
+    .trim();
+}
+
 function stripMarkedSection(html, key) {
   const token = String(key || "");
   if (!token) return html;
@@ -920,9 +929,21 @@ function buildScreeningDataCoverageSummary({
   const totalUnitsPresent = Number.isFinite(
     coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)
   );
-  const occupancyPresent = Number.isFinite(
-    coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy)
-  );
+  const occFromT12 =
+    coerceNumber(t12Payload?.physical_occupancy) ??
+    coerceNumber(t12Payload?.economic_occupancy) ??
+    coerceNumber(t12Payload?.occupancy);
+  const rrTotalUnits =
+    coerceNumber(computedRentRoll?.total_units) ??
+    coerceNumber(rentRollPayload?.totals?.total_units);
+  const rrOccupiedUnits =
+    coerceNumber(computedRentRoll?.occupied_units) ??
+    coerceNumber(rentRollPayload?.totals?.occupied_units);
+  const occFromRR =
+    Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
+      ? rrOccupiedUnits / rrTotalUnits
+      : null;
+  const occPresent = Number.isFinite(occFromT12) || Number.isFinite(occFromRR);
   const inPlacePresent = Array.isArray(rentRollRows)
     ? rentRollRows.some((row) =>
         Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
@@ -935,10 +956,12 @@ function buildScreeningDataCoverageSummary({
     : false;
   const rentRollChecks = [
     { label: "total_units", present: totalUnitsPresent },
-    { label: "occupancy", present: occupancyPresent },
     { label: "in_place_rent", present: inPlacePresent },
     { label: "market_rent", present: marketPresent },
   ];
+  if (occPresent) {
+    rentRollChecks.push({ label: "occupancy", present: true });
+  }
   const rrPresentCount = rentRollChecks.filter((entry) => entry.present).length;
   const rrCoveragePct = ((rrPresentCount / rentRollChecks.length) * 100).toLocaleString(
     "en-CA",
@@ -1672,14 +1695,16 @@ export default async function handler(req, res) {
     const allowedReportTypes = ["screening", "underwriting", "ic"];
     let jobReportType = null;
     let jobUserId = null;
+    let jobPropertyName = null;
     if (jobId) {
       const { data: jobRow } = await supabase
         .from("analysis_jobs")
-        .select("report_type, user_id")
+        .select("report_type, user_id, property_name")
         .eq("id", jobId)
         .maybeSingle();
       jobReportType = jobRow?.report_type || null;
       jobUserId = jobRow?.user_id || null;
+      jobPropertyName = jobRow?.property_name || null;
       if (!effectiveUserId) {
         effectiveUserId = jobUserId;
       }
@@ -1947,11 +1972,9 @@ export default async function handler(req, res) {
 
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
+    const propertyName = property_name || jobPropertyName || "";
     const displayPropertyName =
-      String(property_name || "Property")
-        .trim()
-        .replace(/\s*\((?=[^)]*test)[^)]*\)\s*$/i, "")
-        .trim() || "Property";
+      sanitizeDisplayPropertyName(propertyName)?.trim() || "Property";
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", displayPropertyName);
     finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
