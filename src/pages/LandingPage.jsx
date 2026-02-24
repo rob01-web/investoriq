@@ -130,7 +130,7 @@ export default function LandingPage() {
                       →
                     </button>
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex justify-center gap-3">
                     <a
                       href="/samples/investoriq-screening-sample.pdf"
                       target="_blank"
@@ -207,7 +207,7 @@ export default function LandingPage() {
                       →
                     </button>
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex justify-center gap-3">
                     <a
                       href="/samples/investoriq-underwriting-sample.pdf"
                       target="_blank"

@@ -324,7 +324,11 @@ export default function Dashboard() {
       setJobId(preferredJob.id);
       setLockedJobIdForUploads(preferredJob.id);
 
-      if (!propertyName.trim() && preferredJob.property_name) {
+      if (
+        preferredJob.status === 'needs_documents' &&
+        !propertyName.trim() &&
+        preferredJob.property_name
+      ) {
         setPropertyName(preferredJob.property_name);
       }
     }
@@ -1009,6 +1013,7 @@ if (!stagedBatchId) {
         description: 'Your underwriting report has started. You may safely close this page and return later.',
       });
 
+      propertyNameRef.current = '';
       setPropertyName('');
       setUploadedFiles([]);
       setAcknowledged(false);

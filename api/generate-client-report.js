@@ -328,17 +328,12 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   }
 
   const formatCoverage = (value) =>
-    Number.isFinite(value)
-      ? `${(value * 100).toLocaleString("en-CA", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        })}%`
-      : DATA_NOT_AVAILABLE;
+    Number.isFinite(value) ? formatMultiple(value, 2) : DATA_NOT_AVAILABLE;
   const evidence = `base_coverage=${formatCoverage(
     coverageBase
   )}; worst_coverage=${formatCoverage(
     worstFiniteCoverage
-  )}; thresholds: fail<90.0%, fragile<100.0%, sensitized<110.0%`;
+  )}; thresholds: fail<0.90x, fragile<1.00x, sensitized<1.10x`;
   const worstRows = stressPoints
     .slice()
     .sort((a, b) => a.coverage - b.coverage)
