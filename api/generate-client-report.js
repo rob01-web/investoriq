@@ -2684,42 +2684,81 @@ export default async function handler(req, res) {
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
 
-    console.log("DEBUG computedRentRoll:", computedRentRoll);
-    const execOccupancyPreferred = coerceNumber(computedRentRoll?.occupancy_rate);
-    let execOccupancyPreferredWithFallback = execOccupancyPreferred;
-    if (!Number.isFinite(execOccupancyPreferredWithFallback)) {
-      const rrRowsForOccupancy = Array.isArray(rentRollPayload?.units)
-        ? rentRollPayload.units
-        : [];
-      if (rrRowsForOccupancy.length > 0) {
-        const totalUnitsFromRows = rrRowsForOccupancy.length;
-        const occupiedUnitsFromRows = rrRowsForOccupancy.reduce((acc, row) => {
-          const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
-          return status === "vacant" ? acc : acc + 1;
-        }, 0);
-        if (totalUnitsFromRows > 0) {
-          execOccupancyPreferredWithFallback = occupiedUnitsFromRows / totalUnitsFromRows;
-        }
-      }
+    const execRentRollSource =
+      computedRentRoll && typeof computedRentRoll === "object"
+        ? computedRentRoll
+        : rentRollPayload && typeof rentRollPayload === "object"
+        ? rentRollPayload
+        : null;
+    const rrRowsRaw =
+      rentRollPayload?.units ||
+      rentRollPayload?.rows ||
+      rentRollPayload?.rent_roll ||
+      rentRollPayload?.data ||
+      [];
+    const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
+    const execTotalUnits = coerceNumber(execRentRollSource?.total_units);
+    const execOccupiedUnits = coerceNumber(execRentRollSource?.occupied_units);
+    let execOccRatio = coerceNumber(execRentRollSource?.occupancy);
+    if (
+      !Number.isFinite(execOccRatio) &&
+      Number.isFinite(execOccupiedUnits) &&
+      Number.isFinite(execTotalUnits) &&
+      execTotalUnits > 0
+    ) {
+      execOccRatio = execOccupiedUnits / execTotalUnits;
     }
-    console.log("DEBUG computedRentRoll.total_units:", computedRentRoll?.total_units);
-    console.log(
-      "DEBUG computedRentRoll.annual_in_place_rent:",
-      computedRentRoll?.annual_in_place_rent
-    );
-    console.log(
-      "DEBUG computedRentRoll.occupancy_rate:",
-      computedRentRoll?.occupancy_rate
-    );
-    const execOccupancyTokenText = Number.isFinite(execOccupancyPreferred)
-      ? formatPercent1(execOccupancyPreferred)
-      : Number.isFinite(execOccupancyPreferredWithFallback)
-      ? formatPercent1(execOccupancyPreferredWithFallback)
-      : execOccupancyText;
-    const execAnnualInPlacePreferred = coerceNumber(computedRentRoll?.annual_in_place_rent);
-    const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlacePreferred)
-      ? formatCurrency(execAnnualInPlacePreferred)
-      : execAnnualInPlaceText;
+    if (!Number.isFinite(execOccRatio) && rrRows.length > 0) {
+      const totalUnitsFromRows = rrRows.length;
+      const occupiedUnitsFromRows = rrRows.reduce((acc, row) => {
+        const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
+        if (status) return status === "vacant" ? acc : acc + 1;
+        const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
+        return Number.isFinite(currentRent) && currentRent > 0 ? acc + 1 : acc;
+      }, 0);
+      execOccRatio =
+        totalUnitsFromRows > 0 ? occupiedUnitsFromRows / totalUnitsFromRows : null;
+    }
+    const execOccupancyTokenText = Number.isFinite(execOccRatio)
+      ? formatPercent1(execOccRatio)
+      : DATA_NOT_AVAILABLE;
+
+    const execUnitMix = Array.isArray(execRentRollSource?.unit_mix)
+      ? execRentRollSource.unit_mix
+      : [];
+    let weightedAvgInPlaceRent = coerceNumber(execRentRollSource?.avg_in_place_rent);
+    if (!Number.isFinite(weightedAvgInPlaceRent) && execUnitMix.length > 0) {
+      let sumCountInPlace = 0;
+      let sumRentInPlace = 0;
+      execUnitMix.forEach((row) => {
+        const count = coerceNumber(row?.count);
+        const currentRent = coerceNumber(row?.current_rent);
+        if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(currentRent)) return;
+        sumCountInPlace += count;
+        sumRentInPlace += count * currentRent;
+      });
+      if (sumCountInPlace > 0) weightedAvgInPlaceRent = sumRentInPlace / sumCountInPlace;
+    }
+    let execAnnualInPlaceTokenValue = null;
+    if (
+      Number.isFinite(weightedAvgInPlaceRent) &&
+      Number.isFinite(execTotalUnits) &&
+      execTotalUnits > 0
+    ) {
+      execAnnualInPlaceTokenValue = weightedAvgInPlaceRent * execTotalUnits * 12;
+    } else if (rrRows.length > 0) {
+      const annualFromRows = rrRows.reduce((acc, row) => {
+        const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
+        const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
+        if (!Number.isFinite(currentRent) || currentRent <= 0) return acc;
+        if (status && status === "vacant") return acc;
+        return acc + currentRent * 12;
+      }, 0);
+      execAnnualInPlaceTokenValue = Number.isFinite(annualFromRows) ? annualFromRows : null;
+    }
+    const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlaceTokenValue)
+      ? formatCurrency(execAnnualInPlaceTokenValue)
+      : DATA_NOT_AVAILABLE;
 
     finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
     finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyTokenText);
