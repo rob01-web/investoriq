@@ -2196,6 +2196,24 @@ export default async function handler(req, res) {
         ? execOpex / execGpr
         : null;
     const breakEvenOcc = breakEvenOccupancy;
+    const toPctValue = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n > 1.5 ? n : n * 100;
+    };
+    const occupancyPct = toPctValue(execOccupancy);
+    const breakEvenOccPct = toPctValue(breakEvenOcc);
+    const operatingCushionPct =
+      Number.isFinite(breakEvenOccPct) ? 100 - breakEvenOccPct : null;
+    const marketRentPremiumPct =
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
+      coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
+        ? ((coerceNumber(computedRentRoll?.avg_market_rent) -
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) /
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) *
+          100
+        : null;
     const execOpexRatio =
       Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
         ? formatPercent1(execOpex / execEgi)
@@ -2245,6 +2263,75 @@ export default async function handler(req, res) {
     const execScreeningLines = [];
     let screeningClass = null;
     let screeningExplanation = null;
+    const driverCandidates = [];
+    if (Number.isFinite(expenseRatio)) {
+      const severity =
+        expenseRatio > 0.65
+          ? expenseRatio - 0.65
+          : expenseRatio > 0.55
+          ? expenseRatio - 0.55
+          : 0;
+      const trigger =
+        expenseRatio > 0.65
+          ? ">= 65.0% fragile threshold breached"
+          : expenseRatio > 0.55
+          ? ">= 55.0% sensitized threshold breached"
+          : "< 55.0% within stable range";
+      driverCandidates.push({
+        label: "Expense Ratio",
+        value: formatPercent1(expenseRatio),
+        trigger,
+        severity,
+      });
+    }
+    if (Number.isFinite(noiMargin)) {
+      const severity =
+        noiMargin < 0.35
+          ? 0.35 - noiMargin
+          : noiMargin < 0.45
+          ? 0.45 - noiMargin
+          : 0;
+      const trigger =
+        noiMargin < 0.35
+          ? "<= 35.0% fragile threshold breached"
+          : noiMargin < 0.45
+          ? "<= 45.0% sensitized threshold breached"
+          : ">= 45.0% within stable range";
+      driverCandidates.push({
+        label: "NOI Margin",
+        value: formatPercent1(noiMargin),
+        trigger,
+        severity,
+      });
+    }
+    if (Number.isFinite(breakEvenOccupancy)) {
+      const severity =
+        breakEvenOccupancy > 0.85
+          ? breakEvenOccupancy - 0.85
+          : breakEvenOccupancy > 0.75
+          ? breakEvenOccupancy - 0.75
+          : 0;
+      const trigger =
+        breakEvenOccupancy > 0.85
+          ? ">= 85.0% fragile threshold breached"
+          : breakEvenOccupancy > 0.75
+          ? ">= 75.0% sensitized threshold breached"
+          : "< 75.0% within stable range";
+      driverCandidates.push({
+        label: "Break-even Occupancy",
+        value: formatPercent1(breakEvenOccupancy),
+        trigger,
+        severity,
+      });
+    }
+    const rankedDrivers = driverCandidates
+      .slice()
+      .sort((a, b) => b.severity - a.severity);
+    const driver1 = rankedDrivers[0] || null;
+    const driver2 = rankedDrivers[1] || null;
+    const driver3 = rankedDrivers[2] || null;
+    const primaryPressurePoint =
+      driver1?.label || DATA_NOT_AVAILABLE;
     const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
     if (effectiveReportMode === "screening_v1") {
       if (!screeningHasSufficientData) {
@@ -2332,7 +2419,90 @@ export default async function handler(req, res) {
         ? execScreeningLines.join("")
         : execStructuredMetricsLine
     }${execRefiLine}${execNarrativeHtml}`;
+    const upsideBullets = [];
+    if (Number.isFinite(marketRentPremiumPct) && marketRentPremiumPct >= 10) {
+      upsideBullets.push(
+        `In-place rents trail market by approximately ${formatPercent1(
+          marketRentPremiumPct
+        )} (document-backed upside).`
+      );
+    }
+    if (Number.isFinite(occupancyPct) && occupancyPct >= 95) {
+      upsideBullets.push(
+        `Occupancy is ${formatPercent1(occupancyPct)}, supporting cash flow stability.`
+      );
+    }
+    if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
+      upsideBullets.push(
+        `Operating cushion is approximately ${formatPercent1(
+          operatingCushionPct
+        )} above break-even occupancy.`
+      );
+    }
+    const riskBullets = [];
+    if (Number.isFinite(expenseRatio) && expenseRatio > 0.55) {
+      riskBullets.push(
+        `Expense ratio is ${formatPercent1(
+          expenseRatio
+        )}, pressuring NOI margin.`
+      );
+    }
+    if (Number.isFinite(noiMargin) && noiMargin < 0.45) {
+      riskBullets.push(
+        `NOI margin is ${formatPercent1(
+          noiMargin
+        )}, leaving limited buffer for shocks.`
+      );
+    }
+    if (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.75) {
+      riskBullets.push(
+        `Break-even occupancy is ${formatPercent1(
+          breakEvenOccupancy
+        )}, increasing sensitivity to vacancy and income disruption.`
+      );
+    }
+    const upsideHtml = upsideBullets
+      .slice(0, 3)
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
+    const risksHtml = riskBullets
+      .slice(0, 3)
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
+
     finalHtml = finalHtml.replace("{{EXEC_SUMMARY}}", execSummaryHtml);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{OPERATING_PROFILE_CLASSIFICATION}}",
+      screeningClass || ""
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{PRIMARY_PRESSURE_POINT}}",
+      primaryPressurePoint
+    );
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_VALUE}}", driver1?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_TRIGGER}}", driver1?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_LABEL}}", driver2?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_VALUE}}", driver2?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_TRIGGER}}", driver2?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
+    finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
+    if (!String(upsideHtml || "").trim()) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
+    }
+    if (!String(risksHtml || "").trim()) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_RISK_BULLETS");
+    }
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{OPERATING_CUSHION}}",
+      Number.isFinite(operatingCushionPct) ? `${operatingCushionPct.toFixed(1)}%` : ""
+    );
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
       getNarrativeHtml("unitValueAdd")

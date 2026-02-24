@@ -234,6 +234,67 @@
       opacity: 0.95;
     }
 
+    .exec-signal-box {
+      border: 1px solid #E5E7EB;
+      border-left: 3px solid var(--teal);
+      background: #FAFAFA;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin: 0 0 10px 0;
+    }
+
+    .exec-signal-classification {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 0 6px 0;
+    }
+
+    .exec-signal-line {
+      margin: 2px 0;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .exec-signal-drivers {
+      margin: 6px 0 0 18px;
+      padding: 0;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .exec-signal-drivers li {
+      margin: 3px 0;
+    }
+
+    .exec-major-heading {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 12px 0 6px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--gold);
+    }
+
+    .exec-metrics-table th {
+      background: #F8FAFC;
+      font-weight: 600;
+    }
+
+    .exec-metrics-table th,
+    .exec-metrics-table td {
+      padding: 6px 8px;
+    }
+
+    .exec-bullet-block ul {
+      margin: 6px 0 0 18px;
+      padding: 0;
+    }
+
+    .exec-bullet-block li {
+      margin: 3px 0;
+      line-height: 1.35;
+    }
+
     .footer-note {
       margin-top: 18px;
       font-size: 10px;
@@ -573,6 +634,57 @@ ul, ol {
       <!-- EXEC SUMMARY PLACEHOLDER -->
       <!-- BEGIN EXEC_SUMMARY -->
       <div class="exec-summary-block">
+        <div class="exec-signal-box">
+          <p class="exec-signal-classification">Acquisition Viability Classification: {{OPERATING_PROFILE_CLASSIFICATION}}</p>
+          <p class="exec-signal-line">Primary Pressure Point: {{PRIMARY_PRESSURE_POINT}}</p>
+        </div>
+
+        <p class="exec-major-heading">Key Metrics Snapshot</p>
+        <table class="exec-metrics-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Units</td><td>{{EXEC_UNITS}}</td></tr>
+            <tr><td>Occupancy</td><td>{{EXEC_OCCUPANCY}}</td></tr>
+            <tr><td>Annual In-Place Rent</td><td>{{EXEC_ANNUAL_IN_PLACE}}</td></tr>
+            <tr><td>Effective Gross Income</td><td>{{EXEC_EGI}}</td></tr>
+            <tr><td>Operating Expenses</td><td>{{EXEC_OPEX}}</td></tr>
+            <tr><td>Net Operating Income</td><td>{{EXEC_NOI}}</td></tr>
+            <tr><td>Expense Ratio</td><td>{{EXEC_EXPENSE_RATIO}}</td></tr>
+            <tr><td>NOI Margin</td><td>{{EXEC_NOI_MARGIN}}</td></tr>
+            <tr><td>Break-even Occupancy</td><td>{{EXEC_BREAK_EVEN_OCCUPANCY}}</td></tr>
+          </tbody>
+        </table>
+
+        <!-- BEGIN EXEC_UPSIDE_BULLETS -->
+        <div class="exec-bullet-block">
+          <p class="exec-major-heading">Key Upside Drivers</p>
+          <ul>
+            {{KEY_UPSIDE_DRIVERS_BULLETS}}
+          </ul>
+        </div>
+        <!-- END EXEC_UPSIDE_BULLETS -->
+
+        <!-- BEGIN EXEC_RISK_BULLETS -->
+        <div class="exec-bullet-block">
+          <p class="exec-major-heading">Key Risks and Constraints</p>
+          <ul>
+            {{KEY_RISKS_BULLETS}}
+          </ul>
+        </div>
+        <!-- END EXEC_RISK_BULLETS -->
+
+        <p class="exec-major-heading">Ranked Drivers (Worst &rarr; Best)</p>
+        <ol class="exec-signal-drivers">
+          <li>{{DRIVER_1_LABEL}}: {{DRIVER_1_VALUE}} (trigger: {{DRIVER_1_TRIGGER}})</li>
+          <li>{{DRIVER_2_LABEL}}: {{DRIVER_2_VALUE}} (trigger: {{DRIVER_2_TRIGGER}})</li>
+          <li>{{DRIVER_3_LABEL}}: {{DRIVER_3_VALUE}} (trigger: {{DRIVER_3_TRIGGER}})</li>
+        </ol>
+
         {{EXEC_SUMMARY}}
       </div>
       <!-- END EXEC_SUMMARY -->
