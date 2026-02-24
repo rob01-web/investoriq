@@ -2060,22 +2060,48 @@ export default async function handler(req, res) {
 
     // 7. Inject ALL narrative sections (12)
     const execMetricsParts = [];
-    const execUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
-    const execOccupancy = coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy);
+    const execUnits = coerceNumber(
+      computedRentRoll?.total_units ??
+        rentRollPayload?.total_units ??
+        rentRollPayload?.totals?.total_units
+    );
+    const execEgi = coerceNumber(t12Payload?.effective_gross_income);
+    const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
+    const execNoi = coerceNumber(t12Payload?.net_operating_income);
+    const execGpr =
+      coerceNumber(t12Payload?.gross_potential_rent) ??
+      coerceNumber(t12Payload?.gross_scheduled_rent) ??
+      coerceNumber(t12Payload?.gross_income) ??
+      coerceNumber(t12Payload?.total_income);
+    const execOccFromT12 =
+      coerceNumber(t12Payload?.physical_occupancy) ??
+      coerceNumber(t12Payload?.economic_occupancy) ??
+      coerceNumber(t12Payload?.occupancy);
+    const rrTotalUnits =
+      coerceNumber(computedRentRoll?.total_units) ??
+      coerceNumber(rentRollPayload?.totals?.total_units);
+    const rrOccupiedUnits =
+      coerceNumber(computedRentRoll?.occupied_units) ??
+      coerceNumber(rentRollPayload?.totals?.occupied_units);
+    const execOccFromRR =
+      Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
+        ? rrOccupiedUnits / rrTotalUnits
+        : null;
+    const execOccupancy =
+      Number.isFinite(execOccFromT12) ? execOccFromT12 : execOccFromRR;
     const execAnnualInPlace = coerceNumber(
-      computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
+      computedRentRoll?.annual_in_place_rent ??
+        computedRentRoll?.annual_in_place_rent_total ??
+        computedRentRoll?.annual_current_rent ??
+        computedRentRoll?.in_place_rent_annual ??
+        computedRentRoll?.total_in_place_annual ??
+        rentRollPayload?.total_in_place_annual
     );
     const execMonthlyInPlace = coerceNumber(
       computedRentRoll?.total_in_place_monthly ??
         rentRollPayload?.total_in_place_monthly ??
         (Number.isFinite(execAnnualInPlace) ? execAnnualInPlace / 12 : null)
     );
-    const execEgi = coerceNumber(t12Payload?.effective_gross_income);
-    const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
-    const execNoi = coerceNumber(t12Payload?.net_operating_income);
-    const breakEvenOcc =
-      t12Payload?.break_even_occupancy ??
-      t12Payload?.break_even_occupancy_ratio;
     const expenseRatio = Number.isFinite(coerceNumber(t12Payload?.expense_ratio))
       ? coerceNumber(t12Payload?.expense_ratio)
       : Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
@@ -2089,12 +2115,12 @@ export default async function handler(req, res) {
           coerceNumber(t12Payload?.effective_gross_income)
         : null;
     const breakEvenOccupancy =
-      Number.isFinite(coerceNumber(t12Payload?.total_operating_expenses)) &&
-      Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) &&
-      coerceNumber(t12Payload?.gross_potential_rent) > 0
-        ? coerceNumber(t12Payload?.total_operating_expenses) /
-          coerceNumber(t12Payload?.gross_potential_rent)
+      Number.isFinite(execOpex) &&
+      Number.isFinite(execGpr) &&
+      execGpr > 0
+        ? execOpex / execGpr
         : null;
+    const breakEvenOcc = breakEvenOccupancy;
     const execOpexRatio =
       Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
         ? formatPercent1(execOpex / execEgi)
@@ -2183,6 +2209,13 @@ export default async function handler(req, res) {
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
       );
     }
+    if (Number.isFinite(execOccupancy)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `Occupancy: ${formatPercent1(execOccupancy)}`
+        )}</p>`
+      );
+    }
     if (Number.isFinite(execMonthlyInPlace) || Number.isFinite(execAnnualInPlace)) {
       const rentParts = [];
       if (Number.isFinite(execMonthlyInPlace)) {
@@ -2203,6 +2236,13 @@ export default async function handler(req, res) {
     if (execOpexRatio) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Expense Ratio: ${execOpexRatio}`)}</p>`
+      );
+    }
+    if (Number.isFinite(noiMargin)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `NOI Margin: ${formatPercent1(noiMargin)}`
+        )}</p>`
       );
     }
     if (Number.isFinite(Number(breakEvenOcc))) {
