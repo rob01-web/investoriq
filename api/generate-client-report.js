@@ -423,6 +423,28 @@ function stripMarkedSection(html, key) {
   return html.replace(re, "");
 }
 
+function stripT12DetailSubsection(html, headingText) {
+  if (!html) return html;
+  const escapedHeading = String(headingText || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escapedHeading) return html;
+
+  // Pattern A: heading is <h3> or similar + the next table
+  const patternA = new RegExp(
+    String.raw`<h[1-6][^>]*>\s*${escapedHeading}\s*<\/h[1-6]>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
+    "i"
+  );
+
+  // Pattern B: heading is a div/span label + the next table (common in templates)
+  const patternB = new RegExp(
+    String.raw`<(div|span)[^>]*>\s*${escapedHeading}\s*<\/\1>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
+    "i"
+  );
+
+  let out = html.replace(patternA, "");
+  out = out.replace(patternB, "");
+  return out;
+}
+
 function stripChartBlockByAlt(html, altText) {
   if (!altText) return html;
   const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -2346,6 +2368,12 @@ export default async function handler(req, res) {
         : DATA_NOT_AVAILABLE;
     finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
+    if (!String(t12IncomeRows || "").trim()) {
+      finalHtml = stripT12DetailSubsection(finalHtml, "Income Reconstruction (TTM)");
+    }
+    if (!String(t12ExpenseRows || "").trim()) {
+      finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{T12_EGI}}",
