@@ -2582,6 +2582,7 @@ export default async function handler(req, res) {
       execGpr > 0
         ? execOpex / execGpr
         : null;
+    const breakEvenOccRatio = breakEvenOccupancy;
     const breakEvenOcc = breakEvenOccupancy;
     const toPctValue = (value) => {
       const n = Number(value);
@@ -2625,12 +2626,36 @@ export default async function handler(req, res) {
       : DATA_NOT_AVAILABLE;
     const execEgiText = Number.isFinite(execEgi) ? formatCurrency(execEgi) : DATA_NOT_AVAILABLE;
     const execOpexText = Number.isFinite(execOpex) ? formatCurrency(execOpex) : DATA_NOT_AVAILABLE;
-    const execOpexRatioText = execOpexRatio || DATA_NOT_AVAILABLE;
-    const execNoiMarginText = Number.isFinite(noiMargin)
-      ? formatPercent1(noiMargin)
+    const expenseRatioBand = Number.isFinite(expenseRatio)
+      ? expenseRatio >= 0.65
+        ? "Fragile"
+        : expenseRatio >= 0.55
+        ? "Sensitized"
+        : "Stable"
+      : null;
+    const noiMarginBand = Number.isFinite(noiMargin)
+      ? noiMargin <= 0.3
+        ? "Fragile"
+        : noiMargin <= 0.45
+        ? "Sensitized"
+        : "Stable"
+      : null;
+    const breakEvenBand = Number.isFinite(breakEvenOccRatio)
+      ? breakEvenOccRatio >= 0.8
+        ? "Fragile"
+        : breakEvenOccRatio >= 0.75
+        ? "Sensitized"
+        : "Stable"
+      : null;
+
+    const execOpexRatioText = Number.isFinite(expenseRatio)
+      ? `${formatPercent1(expenseRatio)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
       : DATA_NOT_AVAILABLE;
-    const execBreakEvenText = Number.isFinite(breakEvenOcc)
-      ? formatPercent1(breakEvenOcc)
+    const execNoiMarginText = Number.isFinite(noiMargin)
+      ? `${formatPercent1(noiMargin)}${noiMarginBand ? ` (${noiMarginBand})` : ""}`
+      : DATA_NOT_AVAILABLE;
+    const execBreakEvenText = Number.isFinite(breakEvenOccRatio)
+      ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     let execRefiLine = "";
     if (effectiveReportMode === "v1_core") {
@@ -2763,6 +2788,26 @@ export default async function handler(req, res) {
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
       );
     }
+    const classificationDrivers = [];
+    if (Number.isFinite(expenseRatio) && expenseRatio >= 0.55) {
+      classificationDrivers.push(
+        `elevated Expense Ratio (${formatPercent1(expenseRatio)})`
+      );
+    }
+    if (Number.isFinite(noiMargin) && noiMargin <= 0.45) {
+      classificationDrivers.push(
+        `compressed NOI Margin (${formatPercent1(noiMargin)})`
+      );
+    }
+    if (Number.isFinite(breakEvenOccRatio) && breakEvenOccRatio >= 0.75) {
+      classificationDrivers.push(
+        `high Break-even Occupancy (${formatPercent1(breakEvenOccRatio)})`
+      );
+    }
+    const whyLine =
+      classificationDrivers.length > 0
+        ? `Classification is driven primarily by ${classificationDrivers.join(" and ")}.`
+        : "";
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -2999,6 +3044,14 @@ export default async function handler(req, res) {
       "{{PRIMARY_PRESSURE_POINT}}",
       primaryPressurePoint
     );
+    if (whyLine) {
+      finalHtml = finalHtml.replace(
+        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
+        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p><p class="exec-signal-line">${escapeHtml(
+          whyLine
+        )}</p>`
+      );
+    }
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_VALUE}}", driver1?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_TRIGGER}}", driver1?.trigger || "");
