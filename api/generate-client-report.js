@@ -2737,6 +2737,7 @@ export default async function handler(req, res) {
       Number.isFinite(rrOccupiedFromRows)
         ? rrOccupiedFromRows / rrTotalUnitsFromRows
         : null;
+    console.log("[DEBUG] rrOccFromRows:", rrOccFromRows, "rrTotalUnitsFromRows:", rrTotalUnitsFromRows, "rrOccupiedFromRows:", rrOccupiedFromRows);
     const rrAnnualInPlaceFromRows = rrUnitRows.length
       ? rrUnitRows.reduce((acc, u) => {
           const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
