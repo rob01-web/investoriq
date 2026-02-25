@@ -951,7 +951,9 @@ function buildScreeningDataCoverageSummary({
     .filter((entry) => !entry.present)
     .map((entry) => entry.label);
 
-  const rentRollRows = Array.isArray(computedRentRoll?.unit_mix)
+  const rentRollRows = Array.isArray(rentRollPayload?.units) && rentRollPayload.units.length > 0
+    ? rentRollPayload.units
+    : Array.isArray(computedRentRoll?.unit_mix)
     ? computedRentRoll.unit_mix
     : Array.isArray(rentRollPayload?.unit_mix)
     ? rentRollPayload.unit_mix
@@ -2371,24 +2373,7 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       t12Payload = t12Artifact?.payload || null;
-      // TEMP DEBUG: remove after one verification run
-      console.log(
-        "[DEBUG] t12Payload keys:",
-        t12Payload && typeof t12Payload === "object" ? Object.keys(t12Payload) : null
-      );
-      console.log("[DEBUG] rentRollPayload.totals:", rentRollPayload?.totals || null);
-      console.log(
-        "[DEBUG] rentRollPayload.units[0]:",
-        Array.isArray(rentRollPayload?.units) && rentRollPayload.units.length > 0
-          ? rentRollPayload.units[0]
-          : null
-      );
-      console.log("[DEBUG] units length:",
-        rentRollPayload?.units?.length ?? "no units array"
-      );
-      console.log("[DEBUG] units[0]:",
-        JSON.stringify(rentRollPayload?.units?.[0] ?? null)
-      );
+
 
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -2426,10 +2411,14 @@ export default async function handler(req, res) {
 
       for (const unit of rentRollUnits) {
         const statusText = String(unit?.status || "").toLowerCase();
-        if (statusText.includes("occup")) {
+        if (statusText) {
+          if (statusText.includes("occup")) {
+            occupiedUnits += 1;
+          } else if (statusText.includes("vacant")) {
+            vacantUnits += 1;
+          }
+        } else if (Number(unit?.in_place_rent) > 0) {
           occupiedUnits += 1;
-        } else if (statusText.includes("vacant")) {
-          vacantUnits += 1;
         }
 
         const beds = coerceNumber(unit?.beds);
@@ -2444,26 +2433,28 @@ export default async function handler(req, res) {
           marketRents.push(marketRent);
         }
 
-        if (Number.isFinite(beds)) {
-          const bedKey = String(beds);
-          unitMixMap[bedKey] = (unitMixMap[bedKey] || 0) + 1;
+        const unitKey = Number.isFinite(beds)
+          ? String(beds)
+          : String(unit?.unit_type || "").trim() || null;
+        if (unitKey) {
+          unitMixMap[unitKey] = (unitMixMap[unitKey] || 0) + 1;
           if (Number.isFinite(inPlaceRent)) {
-            if (!rentByBeds[bedKey]) {
-              rentByBeds[bedKey] = [];
+            if (!rentByBeds[unitKey]) {
+              rentByBeds[unitKey] = [];
             }
-            rentByBeds[bedKey].push(inPlaceRent);
+            rentByBeds[unitKey].push(inPlaceRent);
           }
           if (Number.isFinite(marketRent)) {
-            if (!marketRentByBeds[bedKey]) {
-              marketRentByBeds[bedKey] = [];
+            if (!marketRentByBeds[unitKey]) {
+              marketRentByBeds[unitKey] = [];
             }
-            marketRentByBeds[bedKey].push(marketRent);
+            marketRentByBeds[unitKey].push(marketRent);
           }
           if (Number.isFinite(sqft)) {
-            if (!sqftByBeds[bedKey]) {
-              sqftByBeds[bedKey] = [];
+            if (!sqftByBeds[unitKey]) {
+              sqftByBeds[unitKey] = [];
             }
-            sqftByBeds[bedKey].push(sqft);
+            sqftByBeds[unitKey].push(sqft);
           }
         }
       }
@@ -2509,7 +2500,7 @@ export default async function handler(req, res) {
               ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
               : null;
           return {
-            unit_type: bedKey === "0" ? "Studio" : `${bedKey} Bed`,
+            unit_type: bedKey === "0" ? "Studio" : /^\d+$/.test(bedKey) ? `${bedKey} Bed` : bedKey,
             count,
             current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
             market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
@@ -2737,7 +2728,7 @@ export default async function handler(req, res) {
       Number.isFinite(rrOccupiedFromRows)
         ? rrOccupiedFromRows / rrTotalUnitsFromRows
         : null;
-    console.log("[DEBUG] rrOccFromRows:", rrOccFromRows, "rrTotalUnitsFromRows:", rrTotalUnitsFromRows, "rrOccupiedFromRows:", rrOccupiedFromRows);
+
     const rrAnnualInPlaceFromRows = rrUnitRows.length
       ? rrUnitRows.reduce((acc, u) => {
           const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
