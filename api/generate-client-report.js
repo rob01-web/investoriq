@@ -568,10 +568,16 @@ function injectOccupancyNote(html, occupancy) {
 }
 
 function deriveOccFromRentRollUnits(rentRollPayload) {
-  const rrUnits = rentRollPayload?.units;
-  if (!Array.isArray(rrUnits) || rrUnits.length === 0) return null;
+  const rrRowsRaw =
+    rentRollPayload?.units ||
+    rentRollPayload?.rows ||
+    rentRollPayload?.rent_roll ||
+    rentRollPayload?.data ||
+    [];
+  const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
+  if (rrRows.length === 0) return null;
 
-  const unitRows = rrUnits.filter((u) => {
+  const unitRows = rrRows.filter((u) => {
     const id =
       u?.unit ??
       u?.unit_number ??
