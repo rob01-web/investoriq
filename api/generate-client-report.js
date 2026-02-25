@@ -567,6 +567,35 @@ function injectOccupancyNote(html, occupancy) {
   return html.replace(regex, `$1${note}`);
 }
 
+function deriveOccFromRentRollUnits(rentRollPayload) {
+  const rrUnits = rentRollPayload?.units;
+  if (!Array.isArray(rrUnits) || rrUnits.length === 0) return null;
+
+  const unitRows = rrUnits.filter((u) => {
+    const id =
+      u?.unit ??
+      u?.unit_number ??
+      u?.unit_no ??
+      u?.unit_id ??
+      u?.unitid ??
+      u?.suite ??
+      u?.apt ??
+      u?.apartment;
+    return String(id ?? "").trim().length > 0;
+  });
+  if (unitRows.length === 0) return null;
+
+  const total = unitRows.length;
+  const occupied = unitRows.reduce((acc, u) => {
+    const s = String(u?.status || u?.unit_status || "").toLowerCase();
+    if (s.includes("occupied")) return acc + 1;
+    const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+    return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
+  }, 0);
+
+  return total > 0 ? occupied / total : null;
+}
+
 function buildT12SummaryHtml(t12Payload, formatValue) {
   if (!t12Payload) return "";
   const rows = [
@@ -938,7 +967,9 @@ function buildScreeningDataCoverageSummary({
     Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
       ? rrOccupiedUnits / rrTotalUnits
       : null;
-  const occPresent = Number.isFinite(occFromT12) || Number.isFinite(occFromRR);
+  const rrOccPresent = Number.isFinite(
+    coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy)
+  ) || Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload));
   const inPlacePresent = Array.isArray(rentRollRows)
     ? rentRollRows.some((row) =>
         Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
@@ -953,10 +984,11 @@ function buildScreeningDataCoverageSummary({
     { label: "total_units", present: totalUnitsPresent },
     { label: "in_place_rent", present: inPlacePresent },
     { label: "market_rent", present: marketPresent },
+    {
+      label: "Occupancy / unit status (occupied/vacant) or occupied/total summary",
+      present: rrOccPresent,
+    },
   ];
-  if (occPresent) {
-    rentRollChecks.push({ label: "occupancy", present: true });
-  }
   const rrPresentCount = rentRollChecks.filter((entry) => entry.present).length;
   const rrCoveragePct = ((rrPresentCount / rentRollChecks.length) * 100).toLocaleString(
     "en-CA",
@@ -977,7 +1009,7 @@ function buildScreeningDataCoverageSummary({
   if (rrMissing.includes("in_place_rent") || rrMissing.includes("market_rent")) {
     suggestions.push("Current Rent Roll with in-place & market rents");
   }
-  if (!occPresent) {
+  if (!rrOccPresent) {
     suggestions.push("Rent Roll with unit status (occupied/vacant) or occupied/total summary");
   }
   const suggestionHtml = [...new Set(suggestions)]
@@ -1490,6 +1522,9 @@ function buildScreeningNoiStabilityHtml({
     Number.isFinite(rrOccupiedUnits)
   ) {
     occupancy = rrOccupiedUnits / rrTotalUnits;
+  }
+  if (!Number.isFinite(occupancy)) {
+    occupancy = deriveOccFromRentRollUnits(rentRollPayload);
   }
 
   const sensitivityRows = [];
@@ -3100,30 +3135,9 @@ export default async function handler(req, res) {
         totalUnitsFromRows > 0 ? occupiedUnitsFromRows / totalUnitsFromRows : null;
     }
     if (!Number.isFinite(execOccRatio)) {
-      const rrUnits2 = rentRollPayload?.units;
-      if (Array.isArray(rrUnits2) && rrUnits2.length > 0) {
-        const unitRows = rrUnits2.filter((u) => {
-          const id =
-            u?.unit ??
-            u?.unit_number ??
-            u?.unit_no ??
-            u?.unit_id ??
-            u?.unitid ??
-            u?.suite ??
-            u?.apt ??
-            u?.apartment;
-          return String(id ?? "").trim().length > 0;
-        });
-        if (unitRows.length > 0) {
-          const total = unitRows.length;
-          const occ = unitRows.reduce((acc, u) => {
-            const s = String(u?.status || u?.unit_status || "").toLowerCase();
-            if (s.includes("occupied")) return acc + 1;
-            const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
-            return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
-          }, 0);
-          execOccRatio = total > 0 ? occ / total : null;
-        }
+      const derivedOcc = deriveOccFromRentRollUnits(rentRollPayload);
+      if (Number.isFinite(derivedOcc)) {
+        execOccRatio = derivedOcc;
       }
     }
     const execOccupancyTokenText = Number.isFinite(execOccRatio)
