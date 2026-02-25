@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(du -sh /c/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/*)"
     ]
   }
 }
