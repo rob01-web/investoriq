@@ -595,7 +595,7 @@ function deriveOccFromRentRollUnits(rentRollPayload) {
   const occupied = unitRows.reduce((acc, u) => {
     const s = String(u?.status || u?.unit_status || "").toLowerCase();
     if (s.includes("occupied")) return acc + 1;
-    const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+    const r = coerceNumber(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
     return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
   }, 0);
 
@@ -2719,7 +2719,7 @@ export default async function handler(req, res) {
     const rrOccupiedFromRows = rrUnitRows.length
       ? rrUnitRows.reduce((acc, u) => {
           const status = String(u?.lease_status || u?.status || "").toLowerCase();
-          const rent = Number(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+          const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
           if (status.includes("vacant")) return acc;
           if (Number.isFinite(rent) && rent > 0) return acc + 1;
           return acc;
@@ -2733,7 +2733,7 @@ export default async function handler(req, res) {
         : null;
     const rrAnnualInPlaceFromRows = rrUnitRows.length
       ? rrUnitRows.reduce((acc, u) => {
-          const rent = Number(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+          const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
           return Number.isFinite(rent) && rent > 0 ? acc + rent * 12 : acc;
         }, 0)
       : null;
@@ -2749,7 +2749,8 @@ export default async function handler(req, res) {
         const totalUnits = rrUnits.length;
         const occupiedUnits = rrUnits.filter((u) => {
           const status = String(u.status || u.unit_status || "").toLowerCase();
-          return status.includes("occupied");
+          if (status) return status.includes("occupied");
+          return Number(u.in_place_rent) > 0;
         }).length;
 
         if (totalUnits > 0 && occupiedUnits >= 0) {
