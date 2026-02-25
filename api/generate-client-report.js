@@ -3083,11 +3083,24 @@ export default async function handler(req, res) {
       const occupiedUnitsFromRows = rrRows.reduce((acc, row) => {
         const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
         if (status) return status === "vacant" ? acc : acc + 1;
-        const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
+        const currentRent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
         return Number.isFinite(currentRent) && currentRent > 0 ? acc + 1 : acc;
       }, 0);
       execOccRatio =
         totalUnitsFromRows > 0 ? occupiedUnitsFromRows / totalUnitsFromRows : null;
+    }
+    if (!Number.isFinite(execOccRatio)) {
+      const rrUnits2 = rentRollPayload?.units;
+      if (Array.isArray(rrUnits2) && rrUnits2.length > 0) {
+        const total = rrUnits2.length;
+        const occ = rrUnits2.reduce((acc, u) => {
+          const s = String(u?.status || u?.unit_status || "").toLowerCase();
+          if (s.includes("occupied")) return acc + 1;
+          const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+          return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
+        }, 0);
+        execOccRatio = total > 0 ? occ / total : null;
+      }
     }
     const execOccupancyTokenText = Number.isFinite(execOccRatio)
       ? formatPercent1(execOccRatio)
