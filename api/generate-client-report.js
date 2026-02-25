@@ -1378,6 +1378,16 @@ function buildScreeningNoiStabilityHtml({
       )}</td></tr>`
     );
   }
+  if (Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0) {
+    const breakEvenOcc = opex / gpr;
+    if (Number.isFinite(breakEvenOcc)) {
+      rows.push(
+        `<tr><td>Break-even Occupancy</td><td>${formatPercent1(
+          breakEvenOcc
+        )}</td></tr>`
+      );
+    }
+  }
   if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
     const rrVsGprPct = (rrAnnual - gpr) / gpr;
     rows.push(
@@ -3092,14 +3102,28 @@ export default async function handler(req, res) {
     if (!Number.isFinite(execOccRatio)) {
       const rrUnits2 = rentRollPayload?.units;
       if (Array.isArray(rrUnits2) && rrUnits2.length > 0) {
-        const total = rrUnits2.length;
-        const occ = rrUnits2.reduce((acc, u) => {
-          const s = String(u?.status || u?.unit_status || "").toLowerCase();
-          if (s.includes("occupied")) return acc + 1;
-          const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
-          return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
-        }, 0);
-        execOccRatio = total > 0 ? occ / total : null;
+        const unitRows = rrUnits2.filter((u) => {
+          const id =
+            u?.unit ??
+            u?.unit_number ??
+            u?.unit_no ??
+            u?.unit_id ??
+            u?.unitid ??
+            u?.suite ??
+            u?.apt ??
+            u?.apartment;
+          return String(id ?? "").trim().length > 0;
+        });
+        if (unitRows.length > 0) {
+          const total = unitRows.length;
+          const occ = unitRows.reduce((acc, u) => {
+            const s = String(u?.status || u?.unit_status || "").toLowerCase();
+            if (s.includes("occupied")) return acc + 1;
+            const r = coerceNumber(u?.current_rent ?? u?.in_place_rent ?? u?.rent);
+            return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
+          }, 0);
+          execOccRatio = total > 0 ? occ / total : null;
+        }
       }
     }
     const execOccupancyTokenText = Number.isFinite(execOccRatio)
