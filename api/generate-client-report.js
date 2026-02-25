@@ -3120,34 +3120,8 @@ export default async function handler(req, res) {
     const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
     const execTotalUnits = coerceNumber(execRentRollSource?.total_units);
     const execOccupiedUnits = coerceNumber(execRentRollSource?.occupied_units);
-    let execOccRatio = coerceNumber(execRentRollSource?.occupancy);
-    if (
-      !Number.isFinite(execOccRatio) &&
-      Number.isFinite(execOccupiedUnits) &&
-      Number.isFinite(execTotalUnits) &&
-      execTotalUnits > 0
-    ) {
-      execOccRatio = execOccupiedUnits / execTotalUnits;
-    }
-    if (!Number.isFinite(execOccRatio) && rrRows.length > 0) {
-      const totalUnitsFromRows = rrRows.length;
-      const occupiedUnitsFromRows = rrRows.reduce((acc, row) => {
-        const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
-        if (status) return status === "vacant" ? acc : acc + 1;
-        const currentRent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
-        return Number.isFinite(currentRent) && currentRent > 0 ? acc + 1 : acc;
-      }, 0);
-      execOccRatio =
-        totalUnitsFromRows > 0 ? occupiedUnitsFromRows / totalUnitsFromRows : null;
-    }
-    if (!Number.isFinite(execOccRatio)) {
-      const derivedOcc = deriveOccFromRentRollUnits(rentRollPayload);
-      if (Number.isFinite(derivedOcc)) {
-        execOccRatio = derivedOcc;
-      }
-    }
-    const execOccupancyTokenText = Number.isFinite(execOccRatio)
-      ? formatPercent1(execOccRatio)
+    const execOccupancyTokenText = Number.isFinite(execOccupancy)
+      ? formatPercent1(execOccupancy)
       : DATA_NOT_AVAILABLE;
 
     const execUnitMix = Array.isArray(execRentRollSource?.unit_mix)
