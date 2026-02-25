@@ -2754,8 +2754,9 @@ export default async function handler(req, res) {
       if (Array.isArray(rrUnits) && rrUnits.length > 0) {
         const totalUnits = rrUnits.length;
         const occupiedUnits = rrUnits.filter((u) => {
-          const status = String(u.status || u.unit_status || "").toLowerCase();
-          if (status) return status.includes("occupied");
+          const status = (u.status || u.unit_status || "").toString().toLowerCase().trim();
+          const hasStatus = status.length > 0 && status !== "null" && status !== "undefined";
+          if (hasStatus) return status.includes("occupied");
           return Number(u.in_place_rent) > 0;
         }).length;
 
