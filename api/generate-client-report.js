@@ -2383,6 +2383,12 @@ export default async function handler(req, res) {
           ? rentRollPayload.units[0]
           : null
       );
+      console.log("[DEBUG] units length:",
+        rentRollPayload?.units?.length ?? "no units array"
+      );
+      console.log("[DEBUG] units[0]:",
+        JSON.stringify(rentRollPayload?.units?.[0] ?? null)
+      );
 
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
