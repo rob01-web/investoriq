@@ -2674,12 +2674,29 @@ export default async function handler(req, res) {
           return Number.isFinite(rent) && rent > 0 ? acc + rent * 12 : acc;
         }, 0)
       : null;
-    const execOccupancy =
+    let execOccupancy =
       Number.isFinite(execOccFromT12)
         ? execOccFromT12
         : Number.isFinite(execOccFromRR)
         ? execOccFromRR
         : rrOccFromRows;
+    if (!Number.isFinite(execOccupancy)) {
+      const rrUnits = rentRollPayload?.units;
+      if (Array.isArray(rrUnits) && rrUnits.length > 0) {
+        const totalUnits = rrUnits.length;
+        const occupiedUnits = rrUnits.filter((u) => {
+          const status = String(u.status || u.unit_status || "").toLowerCase();
+          return status.includes("occupied");
+        }).length;
+
+        if (totalUnits > 0 && occupiedUnits >= 0) {
+          const derivedOcc = occupiedUnits / totalUnits;
+          if (Number.isFinite(derivedOcc)) {
+            execOccupancy = derivedOcc;
+          }
+        }
+      }
+    }
     const execAnnualInPlace = coerceNumber(
       computedRentRoll?.annual_in_place_rent ??
         computedRentRoll?.annual_in_place_rent_total ??
