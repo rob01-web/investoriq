@@ -2371,6 +2371,18 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       t12Payload = t12Artifact?.payload || null;
+      // TEMP DEBUG: remove after one verification run
+      console.log(
+        "[DEBUG] t12Payload keys:",
+        t12Payload && typeof t12Payload === "object" ? Object.keys(t12Payload) : null
+      );
+      console.log("[DEBUG] rentRollPayload.totals:", rentRollPayload?.totals || null);
+      console.log(
+        "[DEBUG] rentRollPayload.units[0]:",
+        Array.isArray(rentRollPayload?.units) && rentRollPayload.units.length > 0
+          ? rentRollPayload.units[0]
+          : null
+      );
 
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -4195,7 +4207,6 @@ try {
   } finally {
   }
 }
-
 
 
 
