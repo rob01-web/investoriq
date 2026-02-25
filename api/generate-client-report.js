@@ -970,12 +970,29 @@ function buildScreeningDataCoverageSummary({
   const missingHtml = missingInputs.length
     ? missingInputs.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")
     : "<li>None</li>";
+  const suggestions = [];
+  if (t12Missing.length > 0) {
+    suggestions.push("Trailing-12 Operating Statement (T12) with EGI, OpEx, NOI");
+  }
+  if (rrMissing.includes("in_place_rent") || rrMissing.includes("market_rent")) {
+    suggestions.push("Current Rent Roll with in-place & market rents");
+  }
+  if (!occPresent) {
+    suggestions.push("Rent Roll with unit status (occupied/vacant) or occupied/total summary");
+  }
+  const suggestionHtml = [...new Set(suggestions)]
+    .slice(0, 3)
+    .map((entry) => `<li>${escapeHtml(entry)}</li>`)
+    .join("");
+  const nextBestUploadsHtml = suggestionHtml
+    ? `<p class="subsection-title" style="margin-top:12px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
+    : "";
 
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
-  )}</td></tr></tbody></table><ul>${missingHtml}</ul><p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+  )}</td></tr></tbody></table><ul>${missingHtml}</ul>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 
 function buildScreeningIncomeForensicsHtml({
@@ -1081,6 +1098,19 @@ function buildScreeningIncomeForensicsHtml({
     })
     .join("");
 
+  const topIncomeLineConcentration =
+    Number.isFinite(egi) &&
+    egi > 0 &&
+    incomeLines.length > 0 &&
+    Number.isFinite(incomeLines[0]?.amount)
+      ? incomeLines[0].amount / egi
+      : null;
+  const concentrationLineHtml = Number.isFinite(topIncomeLineConcentration)
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top Income Line Concentration</p><p>${escapeHtml(
+        formatPercent1(topIncomeLineConcentration)
+      )}</p></div>`
+    : "";
+
   let marketPremiumPct = null;
   const avgInPlace = coerceNumber(
     computedRentRoll?.avg_in_place_rent ?? rentRollPayload?.avg_in_place_rent
@@ -1094,8 +1124,23 @@ function buildScreeningIncomeForensicsHtml({
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
     ? marketPremiumPct / 100
     : NaN;
+  const rrAnnual = coerceNumber(
+    computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
+  );
+  const gpr = coerceNumber(t12Payload?.gross_potential_rent);
+  const rrVsGprPct =
+    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
+      ? (rrAnnual - gpr) / gpr
+      : null;
 
   const bullets = [];
+  if (Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration >= 0.85) {
+    bullets.push(
+      `Top income line concentration is ${formatPercent1(
+        topIncomeLineConcentration
+      )} of EGI (concentration flag).`
+    );
+  }
   const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
   if (
     otherIncome &&
@@ -1131,8 +1176,23 @@ function buildScreeningIncomeForensicsHtml({
       )} (document-backed upside).`
     );
   }
+  if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
+    if (rrVsGprPct >= 0) {
+      bullets.push(
+        `Rent roll annualized rent is +${formatPercent1(
+          rrVsGprPct
+        )} vs T12 GPR (reconciliation flag).`
+      );
+    } else {
+      bullets.push(
+        `Rent roll annualized rent is -${formatPercent1(
+          Math.abs(rrVsGprPct)
+        )} vs T12 GPR (reconciliation flag).`
+      );
+    }
+  }
 
-  const bulletsHtml = bullets
+  const bulletsHtml = [...new Set(bullets)]
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
@@ -1140,7 +1200,7 @@ function buildScreeningIncomeForensicsHtml({
     ? `<div class="card no-break" style="margin-top:12px;"><ul>${bulletsHtml}</ul></div>`
     : "";
 
-  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${bulletsCard}`;
+  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
 
 function buildScreeningExpenseStructureHtml({
@@ -1183,29 +1243,53 @@ function buildScreeningExpenseStructureHtml({
     ""
   )}</tbody></table></div>`;
 
-  const expenseLinesRaw = Array.isArray(t12Payload?.expense_lines)
-    ? t12Payload.expense_lines
-    : t12Payload?.expense_breakdown
-    ? t12Payload.expense_breakdown
-    : Array.isArray(t12Payload?.line_items)
-    ? t12Payload.line_items.filter(
-        (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
-      )
-    : [];
-  const toExpenseRows = (entries) =>
-    (Array.isArray(entries) ? entries : [])
-      .map((entry) => {
-        const label = String(
-          entry?.line_item ?? entry?.label ?? entry?.name ?? entry?.item ?? ""
-        ).trim();
-        const amount = coerceNumber(
-          entry?.amount ?? entry?.value ?? entry?.ttm ?? entry?.total
-        );
-        if (!label || !Number.isFinite(amount)) return null;
-        return { label, amount };
-      })
-      .filter(Boolean);
-  const expenseDriverRows = toExpenseRows(expenseLinesRaw)
+  const toExpenseRows = (source) => {
+    if (Array.isArray(source)) {
+      return source
+        .map((entry) => {
+          const label = String(
+            entry?.line_item ?? entry?.label ?? entry?.name ?? entry?.item ?? ""
+          ).trim();
+          const amount = coerceNumber(
+            entry?.amount ?? entry?.value ?? entry?.ttm ?? entry?.total
+          );
+          if (!label || !Number.isFinite(amount)) return null;
+          return { label, amount };
+        })
+        .filter(Boolean);
+    }
+    if (source && typeof source === "object") {
+      return Object.entries(source)
+        .map(([key, value]) => {
+          const label = String(
+            value?.line_item ?? value?.label ?? value?.name ?? value?.item ?? key ?? ""
+          ).trim();
+          const amount = coerceNumber(
+            value?.amount ?? value?.value ?? value?.ttm ?? value?.total ?? value
+          );
+          if (!label || !Number.isFinite(amount)) return null;
+          return { label, amount };
+        })
+        .filter(Boolean);
+    }
+    return [];
+  };
+  const expenseRowsFromExpenseLines = toExpenseRows(t12Payload?.expense_lines);
+  const expenseRowsFromBreakdown = toExpenseRows(t12Payload?.expense_breakdown);
+  const expenseRowsFromLineItems = toExpenseRows(
+    Array.isArray(t12Payload?.line_items)
+      ? t12Payload.line_items.filter(
+          (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
+        )
+      : []
+  );
+  const expenseDriverRows = (
+    expenseRowsFromExpenseLines.length > 0
+      ? expenseRowsFromExpenseLines
+      : expenseRowsFromBreakdown.length > 0
+      ? expenseRowsFromBreakdown
+      : expenseRowsFromLineItems
+  )
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
@@ -1380,9 +1464,55 @@ function buildScreeningNoiStabilityHtml({
         }</div>`
       : "";
 
+  const rrTotalUnits = coerceNumber(
+    computedRentRoll?.total_units ?? rentRollPayload?.total_units
+  );
+  const rrOccupiedUnits = coerceNumber(
+    computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units
+  );
+  let occupancy = coerceNumber(
+    computedRentRoll?.occupancy ?? rentRollPayload?.occupancy
+  );
+  if (
+    !Number.isFinite(occupancy) &&
+    Number.isFinite(rrTotalUnits) &&
+    rrTotalUnits > 0 &&
+    Number.isFinite(rrOccupiedUnits)
+  ) {
+    occupancy = rrOccupiedUnits / rrTotalUnits;
+  }
+
+  const sensitivityRows = [];
+  if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
+    const noiRevenueShock = noi - 0.05 * egi;
+    const egiRevenueShock = egi * 0.95;
+    if (Number.isFinite(noiRevenueShock) && Number.isFinite(egiRevenueShock) && egiRevenueShock > 0) {
+      sensitivityRows.push(
+        `<tr><td>EGI -5% (revenue shock)</td><td>${formatCurrency(
+          noiRevenueShock
+        )}</td><td>${formatPercent1(noiRevenueShock / egiRevenueShock)}</td></tr>`
+      );
+    }
+    if (Number.isFinite(opex)) {
+      const noiCostShock = noi - 0.05 * opex;
+      if (Number.isFinite(noiCostShock) && egi > 0) {
+        sensitivityRows.push(
+          `<tr><td>OpEx +5% (cost shock)</td><td>${formatCurrency(
+            noiCostShock
+          )}</td><td>${formatPercent1(noiCostShock / egi)}</td></tr>`
+        );
+      }
+    }
+  }
+  const sensitivityCard = sensitivityRows.length
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">NOI Sensitivity (Deterministic)</p><table><thead><tr><th>Scenario</th><th>Implied NOI</th><th>NOI Margin (Implied)</th></tr></thead><tbody>${sensitivityRows.join(
+        ""
+      )}</tbody></table></div>`
+    : "";
+
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
-  )}</tbody></table></div>${flagsCard}`;
+  )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
 }
 
 function buildScreeningRentRollDistributionHtml({
