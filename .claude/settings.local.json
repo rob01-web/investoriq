@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node -e \":*)",
-      "Bash(du -sh /c/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/*)"
+      "Bash(du -sh /c/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/*)",
+      "Bash(node --check \"c:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/api/generate-client-report.js\")"
     ]
   }
 }

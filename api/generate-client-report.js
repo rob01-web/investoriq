@@ -1323,63 +1323,40 @@ function buildScreeningExpenseStructureHtml({
         )
       : []
   );
-  const expenseDriverRows = (
+  const allExpenseRows = (
     expenseRowsFromExpenseLines.length > 0
       ? expenseRowsFromExpenseLines
       : expenseRowsFromBreakdown.length > 0
       ? expenseRowsFromBreakdown
       : expenseRowsFromLineItems
-  )
+  ).filter((r) => r.amount > 0);
+  const totalOpEx = allExpenseRows.reduce((s, r) => s + r.amount, 0);
+  const expenseDriverRows = allExpenseRows
+    .slice()
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
   let topDriversCard = "";
-  if (
-    Number.isFinite(opex) &&
-    opex > 0 &&
-    Array.isArray(expenseDriverRows) &&
-    expenseDriverRows.length >= 2
-  ) {
-    const topDriverRowsHtml = expenseDriverRows
+  if (expenseDriverRows.length > 0 && totalOpEx > 0) {
+    const topDriverItemsHtml = expenseDriverRows
       .map((row) => {
-        const share = row.amount / opex;
-        return `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(
-          row.amount
-        )} (${escapeHtml(formatPercent1(share))})</td></tr>`;
+        const share = row.amount / totalOpEx;
+        return `<li>${escapeHtml(row.label)} &mdash; ${escapeHtml(formatPercent1(share))} of OpEx</li>`;
       })
       .join("");
-    topDriversCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top 3 Expense Drivers (Share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${topDriverRowsHtml}</tbody></table></div>`;
+    topDriversCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top 3 Expense Drivers (Share of OpEx)</p><ul>${topDriverItemsHtml}</ul></div>`;
   }
 
   const flags = [];
-  const largestExpense = expenseDriverRows[0];
-  if (
-    largestExpense &&
-    Number.isFinite(opex) &&
-    opex > 0 &&
-    Number.isFinite(largestExpense.amount / opex) &&
-    largestExpense.amount / opex >= 0.2
-  ) {
-    flags.push(
-      `Largest operating expense line item is ${largestExpense.label} at ${formatPercent1(
-        largestExpense.amount / opex
-      )} of OpEx (concentration flag).`
-    );
-  }
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
-  if (Number.isFinite(expenseRatio) && expenseRatio > 0.65) {
-    flags.push(
-      `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
-    );
+  if (Number.isFinite(expenseRatio) && expenseRatio >= 0.60) {
+    flags.push("Operating expense ratio is elevated (> 60%).");
   }
-  const noiMargin =
-    Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
-  if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
-    flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
+  if (totalOpEx > 0 && expenseDriverRows.some((r) => r.amount / totalOpEx >= 0.30)) {
+    flags.push("Top expense line exceeds 30% of OpEx (concentration risk).");
   }
   const flagsHtml = flags
-    .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
   const flagsCard = flagsHtml
