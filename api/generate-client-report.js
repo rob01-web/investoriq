@@ -1292,15 +1292,15 @@ function buildScreeningExpenseStructureHtml({
           ).trim();
           const amount = coerceNumber(
             entry?.amount ??
-              entry?.value ??
-              entry?.ttm ??
-              entry?.total ??
               entry?.amount_ttm ??
               entry?.ttm_amount ??
               entry?.annual_amount ??
               entry?.annual ??
               entry?.ytd ??
-              entry?.total_amount
+              entry?.total_amount ??
+              entry?.value ??
+              entry?.ttm ??
+              entry?.total
           );
           if (!label || !Number.isFinite(amount)) return null;
           return { label, amount };
@@ -1315,15 +1315,15 @@ function buildScreeningExpenseStructureHtml({
           ).trim();
           const amount = coerceNumber(
             value?.amount ??
-              value?.value ??
-              value?.ttm ??
-              value?.total ??
               value?.amount_ttm ??
               value?.ttm_amount ??
               value?.annual_amount ??
               value?.annual ??
               value?.ytd ??
               value?.total_amount ??
+              value?.value ??
+              value?.ttm ??
+              value?.total ??
               value
           );
           if (!label || !Number.isFinite(amount)) return null;
