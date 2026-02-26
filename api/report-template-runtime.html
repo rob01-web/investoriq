@@ -48,130 +48,102 @@
   box-sizing: border-box;
 }
 
-  .cover-page {
-    width: 100%;
-    height: 1056px;
-    max-height: 1056px;
-    overflow: hidden;
+  .cover-wrap {
     page-break-after: always;
     page-break-inside: avoid;
-    display: block;
-    position: relative;
+    margin: -24px -32px 0 -32px;
+    padding: 0;
   }
 
-  .cover-page-inner {
-    position: absolute;
-    top: 0;
-    left: -32px;
-    right: -32px;
-    bottom: 0;
+  .cover-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .cover-cell {
     background: #0F172A;
     padding: 60px 56px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-sizing: border-box;
+    vertical-align: top;
+    width: 100%;
   }
 
-    .cover-brand {
-      font-family: "Inter", sans-serif;
-      font-size: 28px;
-      font-weight: 700;
-      color: #c9a84c;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
+  .cover-brand-name {
+    font-family: "Inter", sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #c9a84c;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
 
-    .cover-tagline {
-      font-family: "Inter", sans-serif;
-      font-size: 10px;
-      font-weight: 500;
-      color: #6B7280;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      margin-top: 6px;
-    }
+  .cover-brand-sub {
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    color: #6B7280;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 140px;
+  }
 
-    .cover-mid {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 60px 0;
-    }
+  .cover-prop-name {
+    font-family: "Inter", sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #F9FAFB;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 10px;
+  }
 
-    .cover-report-type {
-      font-family: "Inter", sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      color: #6B7280;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
+  .cover-prop-sub {
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: #9CA3AF;
+    margin-bottom: 60px;
+  }
 
-    .cover-property-name {
-      font-family: "Inter", sans-serif;
-      font-size: 42px;
-      font-weight: 700;
-      color: #F9FAFB;
-      line-height: 1.15;
-      margin-bottom: 10px;
-    }
+  .cover-divider {
+    border: none;
+    border-top: 1px solid rgba(201, 168, 76, 0.4);
+    margin: 0 0 28px 0;
+  }
 
-    .cover-property-sub {
-      font-family: "Inter", sans-serif;
-      font-size: 16px;
-      font-weight: 400;
-      color: #9CA3AF;
-      margin-bottom: 0;
-    }
+  .cover-verdict-label {
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    color: #6B7280;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
 
-    .cover-hero {
-      border-top: 1px solid rgba(201, 168, 76, 0.3);
-      border-bottom: 1px solid rgba(201, 168, 76, 0.3);
-      padding: 24px 0;
-      margin-bottom: 48px;
-    }
+  .cover-verdict-value {
+    font-family: "Inter", sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #c9a84c;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 60px;
+  }
 
-    .cover-hero-label {
-      font-family: "Inter", sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      color: #6B7280;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
+  .cover-footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
 
-    .cover-hero-value {
-      font-family: "Inter", sans-serif;
-      font-size: 32px;
-      font-weight: 700;
-      color: #c9a84c;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .cover-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-
-    .cover-confidential {
-      font-family: "Inter", sans-serif;
-      font-size: 10px;
-      color: #4B5563;
-      letter-spacing: 0.08em;
-    }
-
-    .cover-date {
-      font-family: "Inter", sans-serif;
-      font-size: 10px;
-      color: #4B5563;
-      letter-spacing: 0.08em;
-    }
+  .cover-footer-text {
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    color: #4B5563;
+    letter-spacing: 0.08em;
+  }
 
     h1,
     h2,
@@ -781,29 +753,30 @@ ul, ol {
   <div class="report-container">
 
   <!-- COVER PAGE -->
-  <div class="cover-page">
-    <div class="cover-page-inner">
-      <div class="cover-top">
-        <div class="cover-brand">INVESTORIQ</div>
-        <div class="cover-tagline">INSTITUTIONAL GRADE PROPERTY INTELLIGENCE</div>
-      </div>
+  <div class="cover-wrap">
+    <table class="cover-table" width="100%">
+      <tr>
+        <td class="cover-cell">
 
-      <div class="cover-mid">
-        <div class="cover-report-type">Property Intelligence Report</div>
-        <div class="cover-property-name">{{PROPERTY_NAME}}</div>
-        <div class="cover-property-sub">{{PROPERTY_SUBMARKET}}</div>
-      </div>
+          <div class="cover-brand-name">INVESTORIQ</div>
+          <div class="cover-brand-sub">Institutional Grade Property Intelligence</div>
 
-      <div class="cover-hero">
-        <div class="cover-hero-label">ACQUISITION VIABILITY CLASSIFICATION</div>
-        <div class="cover-hero-value">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
-      </div>
+          <div class="cover-prop-name">{{PROPERTY_NAME}}</div>
+          <div class="cover-prop-sub">{{PROPERTY_SUBMARKET}}</div>
 
-      <div class="cover-bottom">
-        <div class="cover-confidential">Confidential &mdash; Prepared by InvestorIQ Technologies Inc.</div>
-        <div class="cover-date">{{REPORT_DATE}}</div>
-      </div>
-    </div>
+          <hr class="cover-divider">
+
+          <div class="cover-verdict-label">INVESTORIQ VERDICT</div>
+          <div class="cover-verdict-value">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+
+          <div class="cover-footer-row">
+            <span class="cover-footer-text">Confidential &mdash; InvestorIQ Technologies Inc.</span>
+            <span class="cover-footer-text">{{REPORT_DATE}}</span>
+          </div>
+
+        </td>
+      </tr>
+    </table>
   </div>
   <!-- END COVER PAGE -->
 
