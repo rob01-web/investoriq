@@ -1291,13 +1291,13 @@ function buildScreeningExpenseStructureHtml({
             entry?.line_item ?? entry?.label ?? entry?.name ?? entry?.item ?? ""
           ).trim();
           const amount = coerceNumber(
-            entry?.amount ??
-              entry?.amount_ttm ??
+            entry?.amount_ttm ??
               entry?.ttm_amount ??
               entry?.annual_amount ??
               entry?.annual ??
               entry?.ytd ??
               entry?.total_amount ??
+              entry?.amount ??
               entry?.value ??
               entry?.ttm ??
               entry?.total
