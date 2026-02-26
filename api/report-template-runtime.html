@@ -9,6 +9,11 @@
     size: Letter;
     margin: 36px 36px 48px 36px;
   }
+
+  @page cover-page {
+    size: Letter;
+    margin: 0;
+  }
     :root {
       --navy: #0F172A;
       --teal: #1F8A8A;
@@ -49,11 +54,13 @@
 }
 
 .cover-wrap {
+  page: cover-page;
   page-break-after: always;
   page-break-inside: avoid;
-  margin: 0;
+  margin: -24px -32px 0 -32px;
   padding: 0;
   display: block;
+  height: 11in;
 }
 
   .cover-table {
