@@ -3894,7 +3894,7 @@ export default async function handler(req, res) {
 
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
     finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
-    finalHtml = finalHtml.replace(/12-Unit Multifamily\./g, "12-Unit Multifamily");
+    finalHtml = finalHtml.replace(/(\d+)-Unit Multifamily\./g, "$1-Unit Multifamily");
     finalHtml = finalHtml.replace(/Key Metrics Snapshot\./g, "Key Metrics Snapshot");
     finalHtml = finalHtml.replace(/Key Upside Drivers\./g, "Key Upside Drivers");
     finalHtml = finalHtml.replace(/Key Risks and Constraints\./g, "Key Risks and Constraints");
@@ -3918,6 +3918,11 @@ export default async function handler(req, res) {
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
+    finalHtml = finalHtml.replace(/â€¢/g, "•");
+    finalHtml = finalHtml.replace(/â†’/g, "→");
+    finalHtml = finalHtml.replace(/Â·/g, "·");
+    finalHtml = finalHtml.replace(/Â©/g, "©");
+    finalHtml = finalHtml.replace(/Â/g, "");
 
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
