@@ -89,6 +89,7 @@
 }
 
     .section-header {
+      font-family: "Inter", sans-serif;
       font-size: 22px;
       font-weight: 700;
       color: #1a2744;
@@ -105,14 +106,6 @@
       width: 100%;
     }
 
-    .section-number {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      color: var(--teal);
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
 
     .grid-2,
 .grid-2-balanced,
@@ -519,7 +512,7 @@
     }
   
     /* Pagination tuning for DocRaptor */
-h2, h3, .subsection-title, .section-number {
+h2, h3, .subsection-title {
   page-break-after: avoid;
 }
 
@@ -702,10 +695,8 @@ ul, ol {
 
   <!-- BEGIN SECTION_DOC_SOURCES -->
   <div class="section-intro">
-    <div class="section-header">
-      <div class="section-number">Document Sources</div>
-      <h2>Document Sources</h2>
-    </div>
+    <div class="section-header">Document Sources</div>
+    <hr class="section-header-rule">
     <p class="section-intro">
       This section lists the documents uploaded for underwriting and their parse status.
     </p>
@@ -720,10 +711,8 @@ ul, ol {
 <!-- 2.0 Unit-Level Value Add Analysis -->
 <!-- BEGIN SECTION_2 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Unit-Level Value Add Analysis</div>
-    <h2>Rent Positioning and Renovation Thesis</h2>
-  </div>
+  <div class="section-header">Unit-Level Value Add Analysis &mdash; Rent Positioning and Renovation Thesis</div>
+  <hr class="section-header-rule">
 
   <div class="grid-2">
     <!-- LEFT COLUMN -->
@@ -754,10 +743,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_3_OPERATING_STATEMENT -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Operating Statement (Trailing Twelve Months)</div>
-    <h2>Income, Expenses, and Net Operating Income</h2>
-  </div>
+  <div class="section-header">Operating Statement (Trailing Twelve Months) &mdash; Income, Expenses, and Net Operating Income</div>
+  <hr class="section-header-rule">
 
   <div class="grid-2">
     <!-- BEGIN T12_INCOME_TABLE -->
@@ -823,10 +810,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S2_INCOME_FORENSICS -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Income &amp; Revenue Forensics</div>
-    <h2>Income Composition, Concentration, and Stability</h2>
-  </div>
+  <div class="section-header">Income &amp; Revenue Forensics &mdash; Income Composition, Concentration, and Stability</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_INCOME_FORENSICS_BLOCK}}
 </section>
@@ -834,10 +819,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Expense Structure Analysis</div>
-    <h2>Expense Ratio, Drivers, and Intensity Flags</h2>
-  </div>
+  <div class="section-header">Expense Structure Analysis &mdash; Expense Ratio, Drivers, and Intensity Flags</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_EXPENSE_STRUCTURE_BLOCK}}
 </section>
@@ -845,10 +828,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S4_NOI_STABILITY -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">NOI Stability Review</div>
-    <h2>Margin, Volatility, and Operating Leverage Indicators</h2>
-  </div>
+  <div class="section-header">NOI Stability Review &mdash; Margin, Volatility, and Operating Leverage Indicators</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_NOI_STABILITY_BLOCK}}
 </section>
@@ -856,10 +837,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S5_RENT_ROLL_DISTRIBUTION -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Rent Roll Distribution</div>
-    <h2>Occupancy, Rent Dispersion, and Unit Mix Profile</h2>
-  </div>
+  <div class="section-header">Rent Roll Distribution &mdash; Occupancy, Rent Dispersion, and Unit Mix Profile</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_RENT_ROLL_BLOCK}}
 </section>
@@ -867,10 +846,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S7_DATA_COVERAGE_GAPS -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Data Coverage &amp; Underwriting Gaps</div>
-    <h2>Missing Inputs and Omitted Sections</h2>
-  </div>
+  <div class="section-header">Data Coverage &amp; Underwriting Gaps &mdash; Missing Inputs and Omitted Sections</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_DATA_COVERAGE_BLOCK}}
 </section>
@@ -878,10 +855,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Refinance Data Sufficiency Flag</div>
-    <h2>Eligibility for Refinance Stability Classification</h2>
-  </div>
+  <div class="section-header">Refinance Data Sufficiency Flag &mdash; Eligibility for Refinance Stability Classification</div>
+  <hr class="section-header-rule">
 
   {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
 </section>
@@ -892,10 +867,8 @@ ul, ol {
 <!-- 3.0 Scenario Analysis & Five-Year Outlook -->
 <!-- BEGIN SECTION_3 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Scenario Analysis &amp; Five-Year Outlook</div>
-    <h2>Cash Flow Projections and Return Sensitivities</h2>
-  </div>
+  <div class="section-header">Scenario Analysis &amp; Five-Year Outlook &mdash; Cash Flow Projections and Return Sensitivities</div>
+  <hr class="section-header-rule">
 
   <!-- BEGIN CASH_FLOW_PROJECTIONS -->
   <p class="section-intro">
@@ -953,10 +926,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_4_NEIGHBORHOOD -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Neighborhood Fundamentals</div>
-    <h2>{{PROPERTY_SUBMARKET}} Location Review</h2>
-  </div>
+  <div class="section-header">Neighborhood Fundamentals &mdash; {{PROPERTY_SUBMARKET}} Location Review</div>
+  <hr class="section-header-rule">
   </section>
 <!-- END SECTION_4_NEIGHBORHOOD -->
 
@@ -966,10 +937,8 @@ ul, ol {
 <!-- 5.0 Risk Scoring & Sensitivities -->
 <!-- BEGIN SECTION_5 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Risk Scoring &amp; Sensitivities</div>
-    <h2>Risk Matrix and Mitigation Framework</h2>
-  </div>
+  <div class="section-header">Risk Scoring &amp; Sensitivities &mdash; Risk Matrix and Mitigation Framework</div>
+  <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC RISK ASSESSMENT GOES HERE -->
   <!-- BEGIN RISK_ASSESSMENT -->
@@ -998,10 +967,8 @@ ul, ol {
 <!-- 6.0 Renovation Strategy & Capital Plan -->
 <!-- BEGIN SECTION_6 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Renovation Strategy &amp; Capital Plan</div>
-    <h2>Scope, Budget Allocation, and Value Creation Drivers</h2>
-  </div>
+  <div class="section-header">Renovation Strategy &amp; Capital Plan &mdash; Scope, Budget Allocation, and Value Creation Drivers</div>
+  <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC RENOVATION INTRO -->
   <!-- BEGIN RENOVATION_NARRATIVE -->
@@ -1069,7 +1036,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_7_REFI_STABILITY -->
 <section class="section page-break">
-  <div class="section-number">Refinance Stability Classification</div>
+  <div class="section-header">Refinance Stability Classification</div>
+  <hr class="section-header-rule">
   <p class="small">
     Deterministic refinance capacity under explicit stress inputs. If required inputs are not present in uploaded documents, this section is omitted.
   </p>
@@ -1082,10 +1050,8 @@ ul, ol {
 <!-- 7.0 Debt Structure & Financing -->
 <!-- BEGIN SECTION_7 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Debt Structure &amp; Financing</div>
-    <h2>Leverage, DSCR, and Refinance Considerations</h2>
-  </div>
+  <div class="section-header">Debt Structure &amp; Financing &mdash; Leverage, DSCR, and Refinance Considerations</div>
+  <hr class="section-header-rule">
 
   <!-- BEGIN DEBT_STRUCTURE -->
 <!-- Narrative Bridge for Smoother Flow -->
@@ -1155,10 +1121,8 @@ ul, ol {
 <!-- 8.0 Deal Scorecard & Radar -->
 <!-- BEGIN SECTION_8 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Deal Scorecard &amp; Radar</div>
-    <h2>InvestorIQ Deal Score Components</h2>
-  </div>
+  <div class="section-header">Deal Scorecard &amp; Radar &mdash; InvestorIQ Deal Score Components</div>
+  <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC DEAL SCORE SUMMARY -->
   <p class="section-intro">
@@ -1212,10 +1176,8 @@ ul, ol {
 <!-- 9.0 Discounted Cash Flow (DCF) -->
 <!-- BEGIN SECTION_9 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Discounted Cash Flow (DCF)</div>
-    <h2>Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)</h2>
-  </div>
+  <div class="section-header">Discounted Cash Flow (DCF) &mdash; Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)</div>
+  <hr class="section-header-rule">
 
   <p class="section-intro">
     The DCF analysis estimates the intrinsic value of the property by projecting annual net cash flows and discounting
@@ -1242,10 +1204,8 @@ ul, ol {
 <!-- 10.0 Advanced Financial Modeling -->
 <!-- BEGIN SECTION_10 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Advanced Financial Modeling</div>
-    <h2>Expense Profile, DCF Outcomes, and Comparable Positioning</h2>
-  </div>
+  <div class="section-header">Advanced Financial Modeling &mdash; Expense Profile, DCF Outcomes, and Comparable Positioning</div>
+  <hr class="section-header-rule">
 
   <!-- BEGIN ADVANCED_MODELING_INTRO -->
   <p class="section-intro">
@@ -1318,10 +1278,8 @@ ul, ol {
 <!-- 11.0 Final Recommendations -->
 <!-- BEGIN SECTION_11 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Final Recommendations</div>
-    <h2>Action Plan, Negotiation Strategy, and Deal Breakers</h2>
-  </div>
+  <div class="section-header">Final Recommendations &mdash; Action Plan, Negotiation Strategy, and Deal Breakers</div>
+  <hr class="section-header-rule">
 
   <!-- BEGIN FINAL_RECOMMENDATIONS -->
   <p>
@@ -1336,10 +1294,8 @@ ul, ol {
 <!-- 12.0 Methodology & Data Transparency -->
 <!-- BEGIN SECTION_12 -->
 <section class="section page-break">
-  <div class="section-header">
-    <div class="section-number">Methodology &amp; Data Transparency</div>
-    <h2>InvestorIQ Estimates, Data Sources, and Limitations</h2>
-  </div>
+  <div class="section-header">Methodology &amp; Data Transparency &mdash; InvestorIQ Estimates, Data Sources, and Limitations</div>
+  <hr class="section-header-rule">
 
   <p class="section-intro">
     InvestorIQ does not assume or gap-fill missing data. Outputs are driven by uploaded documents and
