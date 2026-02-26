@@ -53,14 +53,25 @@
     height: 1056px;
     max-height: 1056px;
     overflow: hidden;
+    page-break-after: always;
+    page-break-inside: avoid;
+    display: block;
+    position: relative;
+  }
+
+  .cover-page-inner {
+    position: absolute;
+    top: 0;
+    left: -32px;
+    right: -32px;
+    bottom: 0;
     background: #0F172A;
+    padding: 60px 56px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-      padding: 60px 56px;
-      box-sizing: border-box;
-      page-break-after: always;
-    }
+    box-sizing: border-box;
+  }
 
     .cover-brand {
       font-family: "Inter", sans-serif;
@@ -771,25 +782,27 @@ ul, ol {
 
   <!-- COVER PAGE -->
   <div class="cover-page">
-    <div class="cover-top">
-      <div class="cover-brand">INVESTORIQ</div>
-      <div class="cover-tagline">INSTITUTIONAL GRADE PROPERTY INTELLIGENCE</div>
-    </div>
+    <div class="cover-page-inner">
+      <div class="cover-top">
+        <div class="cover-brand">INVESTORIQ</div>
+        <div class="cover-tagline">INSTITUTIONAL GRADE PROPERTY INTELLIGENCE</div>
+      </div>
 
-    <div class="cover-mid">
-      <div class="cover-report-type">Property Intelligence Report</div>
-      <div class="cover-property-name">{{PROPERTY_NAME}}</div>
-      <div class="cover-property-sub">{{PROPERTY_SUBMARKET}}</div>
-    </div>
+      <div class="cover-mid">
+        <div class="cover-report-type">Property Intelligence Report</div>
+        <div class="cover-property-name">{{PROPERTY_NAME}}</div>
+        <div class="cover-property-sub">{{PROPERTY_SUBMARKET}}</div>
+      </div>
 
-    <div class="cover-hero">
-      <div class="cover-hero-label">ACQUISITION VIABILITY CLASSIFICATION</div>
-      <div class="cover-hero-value">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
-    </div>
+      <div class="cover-hero">
+        <div class="cover-hero-label">ACQUISITION VIABILITY CLASSIFICATION</div>
+        <div class="cover-hero-value">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+      </div>
 
-    <div class="cover-bottom">
-      <div class="cover-confidential">Confidential &mdash; Prepared by InvestorIQ Technologies Inc.</div>
-      <div class="cover-date">{{REPORT_DATE}}</div>
+      <div class="cover-bottom">
+        <div class="cover-confidential">Confidential &mdash; Prepared by InvestorIQ Technologies Inc.</div>
+        <div class="cover-date">{{REPORT_DATE}}</div>
+      </div>
     </div>
   </div>
   <!-- END COVER PAGE -->
