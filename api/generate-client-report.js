@@ -1496,7 +1496,7 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst -> Best)</p><ol>${rankedDrivers
+    ? `<p class="subsection-title">Stability Drivers (Worst → Best)</p><ol>${rankedDrivers
         .map((line) => `<li>${escapeHtml(line)}</li>`)
         .join("")}</ol>`
     : "";
