@@ -1336,17 +1336,6 @@ function buildScreeningExpenseStructureHtml({
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
-  let topDriversCard = "";
-  if (expenseDriverRows.length > 0 && totalOpEx > 0) {
-    const topDriverItemsHtml = expenseDriverRows
-      .map((row) => {
-        const share = row.amount / totalOpEx;
-        return `<li>${escapeHtml(row.label)} &mdash; ${escapeHtml(formatPercent1(share))} of OpEx</li>`;
-      })
-      .join("");
-    topDriversCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top 3 Expense Drivers (Share of OpEx)</p><ul>${topDriverItemsHtml}</ul></div>`;
-  }
-
   const flags = [];
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
@@ -1363,7 +1352,18 @@ function buildScreeningExpenseStructureHtml({
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
     : "";
 
-  return `${metricsCard}${topDriversCard}${flagsCard}`;
+  let topDriversAfterCard = "";
+  if (expenseDriverRows.length >= 1 && totalOpEx > 0) {
+    const driversListHtml = expenseDriverRows
+      .map((row, i) => {
+        const share = row.amount / totalOpEx;
+        return `<li>${i + 1}. ${escapeHtml(row.label)} &mdash; ${(share * 100).toFixed(1)}%</li>`;
+      })
+      .join("");
+    topDriversAfterCard = `<div class="card no-break" style="margin-top:12px;"><div class="subsection-title">Top 3 Expense Drivers</div><ol>${driversListHtml}</ol></div>`;
+  }
+
+  return `${metricsCard}${flagsCard}${topDriversAfterCard}`;
 }
 
 function buildScreeningNoiStabilityHtml({
@@ -3880,6 +3880,13 @@ export default async function handler(req, res) {
     }
 
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
+
+    // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
+    finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
+    const leftoverTokens = finalHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
+    leftoverTokens.forEach((t) => {
+      finalHtml = finalHtml.replaceAll(t, "");
+    });
 
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [
