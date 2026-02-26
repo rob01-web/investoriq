@@ -906,16 +906,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     )
     .join("");
 
-  const missingLabels = rows
-    .filter((row) => !row.present)
-    .map((row) => row.label);
-  const missingHtml = missingLabels.length
-    ? `<ul>${missingLabels
-        .map((label) => `<li>${escapeHtml(label)}</li>`)
-        .join("")}</ul>`
-    : "";
-
-  return `<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table>${missingHtml}<p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
+  return `<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
 }
 
 function buildScreeningDataCoverageSummary({
@@ -3902,6 +3893,31 @@ export default async function handler(req, res) {
     }
 
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
+    finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
+    finalHtml = finalHtml.replace(/12-Unit Multifamily\./g, "12-Unit Multifamily");
+    finalHtml = finalHtml.replace(/Key Metrics Snapshot\./g, "Key Metrics Snapshot");
+    finalHtml = finalHtml.replace(/Key Upside Drivers\./g, "Key Upside Drivers");
+    finalHtml = finalHtml.replace(/Key Risks and Constraints\./g, "Key Risks and Constraints");
+    finalHtml = finalHtml.replace(
+      /EXPENSE STRUCTURE ANALYSIS\s*-\s*EXPENSE RATIO,\s*DRIVERS,\s*AND INTENSITY FLAGS/g,
+      "Expense Structure Analysis - Expense Ratio, Drivers, and Intensity Flags"
+    );
+    finalHtml = finalHtml.replace(
+      /NOI STABILITY REVIEW\s*-\s*MARGIN,\s*VOLATILITY,\s*AND OPERATING LEVERAGE INDICATORS/g,
+      "NOI Stability Review - Margin, Volatility, and Operating Leverage Indicators"
+    );
+    finalHtml = finalHtml.replace(
+      /RENT ROLL DISTRIBUTION\s*-\s*OCCUPANCY,\s*RENT DISPERSION,\s*AND UNIT MIX PROFILE/g,
+      "Rent Roll Distribution - Occupancy, Rent Dispersion, and Unit Mix Profile"
+    );
+    finalHtml = finalHtml.replace(
+      /DATA COVERAGE\s*&\s*UNDERWRITING GAPS\s*-\s*MISSING INPUTS AND OMITTED SECTIONS/g,
+      "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
+    );
+    finalHtml = finalHtml.replace(
+      /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
+      "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
+    );
 
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
