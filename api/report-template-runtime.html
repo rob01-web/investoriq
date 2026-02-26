@@ -89,9 +89,20 @@
 }
 
     .section-header {
-      border-bottom: 2px solid var(--gold);
-      padding-bottom: 8px;
-      margin-bottom: 14px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a2744;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      margin-top: 40px;
+    }
+
+    .section-header-rule {
+      border: none;
+      border-top: 2px solid #c9a84c;
+      margin-bottom: 24px;
+      width: 100%;
     }
 
     .section-number {
@@ -621,12 +632,11 @@ ul, ol {
     </div>   <!-- close .header-top -->
   </div>     <!-- close .header-strip -->
 
-  <div class="section-header">
-    <div class="section-number">Executive Summary</div>
-    <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
-    <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
-    <!-- END PROPERTY_DESCRIPTOR_LINE -->
-  </div>
+  <div class="section-header">Executive Summary</div>
+  <hr class="section-header-rule">
+  <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
+  <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
+  <!-- END PROPERTY_DESCRIPTOR_LINE -->
 
   <div class="grid-2">
     <div>
