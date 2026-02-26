@@ -1353,12 +1353,14 @@ function buildScreeningExpenseStructureHtml({
     : "";
 
   let topDriversAfterCard = "";
-  if (expenseDriverRows.length >= 1 && totalOpEx > 0) {
-    const driversListHtml = expenseDriverRows
-      .map((row, i) => {
-        const share = row.amount / totalOpEx;
-        return `<li>${i + 1}. ${escapeHtml(row.label)} &mdash; ${(share * 100).toFixed(1)}%</li>`;
-      })
+  const expenseDrivers = expenseDriverRows.map((row) => ({
+    label: row.label,
+    value: totalOpEx > 0 ? row.amount / totalOpEx : null,
+  }));
+  const top3 = (expenseDrivers || []).filter((d) => Number.isFinite(d?.value)).slice(0, 3);
+  if (top3.length > 0) {
+    const driversListHtml = top3
+      .map((driver, i) => `<li>${i + 1}. ${escapeHtml(driver.label)}: ${formatPercent1(driver.value)}</li>`)
       .join("");
     topDriversAfterCard = `<div class="card no-break" style="margin-top:12px;"><div class="subsection-title">Top 3 Expense Drivers</div><ol>${driversListHtml}</ol></div>`;
   }
