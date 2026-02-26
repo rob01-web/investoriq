@@ -57,9 +57,9 @@
   page: cover-page;
   page-break-after: always;
   page-break-inside: avoid;
-  margin: -24px -32px 0 -32px;
+  margin: 0;
   padding: 0;
-  display: block;
+  width: 100%;
   height: 11in;
 }
 
@@ -771,8 +771,6 @@ ul, ol {
 
 </head>
 <body>
-  <div class="report-container">
-
   <!-- COVER PAGE -->
   <div class="cover-wrap">
     <table class="cover-table" width="100%">
@@ -800,6 +798,8 @@ ul, ol {
     </table>
   </div>
   <!-- END COVER PAGE -->
+
+  <div class="report-container">
   <div style="background:#ffffff; height:0;"></div>
 
     <!-- 1.0 Executive Summary -->
@@ -834,7 +834,7 @@ ul, ol {
       <!-- BEGIN EXEC_SUMMARY -->
       <div class="exec-summary-block">
         <div class="verdict-block">
-          <div class="verdict-label">ACQUISITION VIABILITY CLASSIFICATION</div>
+          <div class="verdict-label">INVESTORIQ VERDICT</div>
           <div class="verdict-classification">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
           <div class="verdict-pressure">Primary Pressure Point &mdash; {{PRIMARY_PRESSURE_POINT}}</div>
           <div class="verdict-rationale">{{EXEC_CLASSIFICATION_RATIONALE}}</div>
