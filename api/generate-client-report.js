@@ -1009,7 +1009,7 @@ function buildScreeningDataCoverageSummary({
   const missingInputs = [...t12Missing, ...rrMissing];
   const missingHtml = missingInputs.length
     ? missingInputs.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")
-    : "<li>None</li>";
+    : "";
   const suggestions = [];
   if (t12Missing.length > 0) {
     suggestions.push("Trailing-12 Operating Statement (T12) with EGI, OpEx, NOI");
@@ -1032,7 +1032,7 @@ function buildScreeningDataCoverageSummary({
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
-  )}</td></tr></tbody></table><ul>${missingHtml}</ul>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+  )}</td></tr></tbody></table>${missingHtml ? `<ul>${missingHtml}</ul>` : ""}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 
 function buildScreeningIncomeForensicsHtml({
@@ -1496,9 +1496,9 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst -> Best): ${escapeHtml(
-        rankedDrivers.join(" | ")
-      )}</p>`
+    ? `<p class="subsection-title">Stability Drivers (Worst -> Best)</p><ol>${rankedDrivers
+        .map((line) => `<li>${escapeHtml(line)}</li>`)
+        .join("")}</ol>`
     : "";
 
   const uniqueFlags = [...new Set(flags)];

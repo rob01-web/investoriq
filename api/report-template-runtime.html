@@ -83,7 +83,10 @@
     font-size: 22px;
     font-weight: 700;
     color: #c9a84c;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    word-spacing: 0;
+    hyphens: none;
     text-transform: uppercase;
     margin-bottom: 6px;
   }
@@ -189,6 +192,11 @@
 
     p {
       margin: 4px 0 8px 0;
+    }
+
+    .data-not-available {
+      color: #6b7280;
+      font-weight: 500;
     }
 
     .tagline {
@@ -584,15 +592,20 @@
 
     .metric-label {
       font-size: 11px;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #CBD5F5;
+      color: #374151;
       margin-bottom: 4px;
     }
 
     .metric-value {
       font-size: 16px;
       font-weight: 600;
+    }
+
+    .methodology-section p {
+      margin-bottom: 12px;
     }
 
     .metric-sub {
@@ -1018,20 +1031,20 @@ ul, ol {
     <table>
       <tbody>
         <tr>
-          <td><strong>Effective Gross Income (TTM)</strong></td>
-          <td><strong>{{T12_EGI}}</strong></td>
+          <td class="metric-label"><strong>Effective Gross Income (TTM)</strong></td>
+          <td class="metric-value"><strong>{{T12_EGI}}</strong></td>
         </tr>
         <tr>
-          <td><strong>Total Operating Expenses (TTM)</strong></td>
-          <td><strong>{{T12_TOTAL_EXPENSES}}</strong></td>
+          <td class="metric-label"><strong>Total Operating Expenses (TTM)</strong></td>
+          <td class="metric-value"><strong>{{T12_TOTAL_EXPENSES}}</strong></td>
         </tr>
         <tr>
-          <td><strong>Net Operating Income (TTM)</strong></td>
-          <td><strong>{{T12_NOI}}</strong></td>
+          <td class="metric-label"><strong>Net Operating Income (TTM)</strong></td>
+          <td class="metric-value"><strong>{{T12_NOI}}</strong></td>
         </tr>
         <tr>
-          <td><strong>Operating Expense Ratio</strong></td>
-          <td><strong>{{T12_EXPENSE_RATIO}}</strong></td>
+          <td class="metric-label"><strong>Operating Expense Ratio</strong></td>
+          <td class="metric-value"><strong>{{T12_EXPENSE_RATIO}}</strong></td>
         </tr>
       </tbody>
     </table>
@@ -1086,7 +1099,7 @@ ul, ol {
 
 <!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
 <section class="section page-break">
-  <div class="section-header">Refinance Data Sufficiency Flag &mdash; Eligibility for Refinance Stability Classification</div>
+  <div class="section-header">Refinance Data Sufficiency &mdash; Eligibility for Refinance Stability Classification</div>
   <hr class="section-header-rule">
 
   {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
@@ -1527,6 +1540,7 @@ ul, ol {
 <section class="section page-break">
   <div class="section-header">Methodology &amp; Data Transparency</div>
   <hr class="section-header-rule">
+  <div class="methodology-section">
 
   <p class="section-intro">
     InvestorIQ does not assume or gap-fill missing data. Outputs are driven by uploaded documents and
@@ -1543,6 +1557,7 @@ ul, ol {
 
   <h3>12.3 Data Limitations &amp; Missing Inputs</h3>
   <p>{{LIMITATIONS_NOTES}}</p>
+  </div>
 
   </section>
 <!-- END SECTION_12 -->
