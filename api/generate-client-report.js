@@ -1348,24 +1348,23 @@ function buildScreeningExpenseStructureHtml({
   const flagsHtml = flags
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
+  const rankedExpenseDrivers = expenseDriverRows.map((row) => ({
+    label: row.label,
+    pct: totalOpEx > 0 ? (row.amount / totalOpEx) * 100 : NaN,
+  }));
+  const top3 = (rankedExpenseDrivers || [])
+    .filter((x) => x && x.label && Number.isFinite(x.pct))
+    .slice(0, 3);
+  const top3Html = top3.length
+    ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
+        .map((x, i) => `<li>${i + 1}. ${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
+        .join("")}</ol>`
+    : "";
   const flagsCard = flagsHtml
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p><ul>${flagsHtml}</ul>${top3Html}</div>`
     : "";
 
-  let topDriversAfterCard = "";
-  const expenseDrivers = expenseDriverRows.map((row) => ({
-    label: row.label,
-    value: totalOpEx > 0 ? row.amount / totalOpEx : null,
-  }));
-  const top3 = (expenseDrivers || []).filter((d) => Number.isFinite(d?.value)).slice(0, 3);
-  if (top3.length > 0) {
-    const driversListHtml = top3
-      .map((driver, i) => `<li>${i + 1}. ${escapeHtml(driver.label)}: ${formatPercent1(driver.value)}</li>`)
-      .join("");
-    topDriversAfterCard = `<div class="card no-break" style="margin-top:12px;"><div class="subsection-title">Top 3 Expense Drivers</div><ol>${driversListHtml}</ol></div>`;
-  }
-
-  return `${metricsCard}${flagsCard}${topDriversAfterCard}`;
+  return `${metricsCard}${flagsCard}`;
 }
 
 function buildScreeningNoiStabilityHtml({
