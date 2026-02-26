@@ -2094,10 +2094,6 @@ const INLINE_CHARTS =
     ? true
     : process.env.INLINE_CHARTS === "true";
 
-console.log(
-  `[charts] INLINE_CHARTS=${INLINE_CHARTS} CHART_BASE_URL=${CHART_BASE_URL}`
-);
-
 function chartVersion(filename) {
   try {
     const stat = fs.statSync(
@@ -2154,8 +2150,6 @@ function applyChartPlaceholders(html, charts = {}) {
       chartUrl("break_even_occupancy.png")
     ),
   };
-
-  console.log("[charts] dealScoreBarChartUrl:", defaults.dealScoreBarChartUrl.slice(0, 80));
 
   const merged = { ...defaults, ...(charts || {}) };
 
@@ -3940,7 +3934,7 @@ export default async function handler(req, res) {
     }
 
     if (warnings.length > 0) {
-      console.warn("?s??,? Sentence Integrity Warnings:");
+      console.warn("⚠️ Sentence Integrity Warnings:");
       warnings.forEach((w) => console.warn(" - " + w));
 
       const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -4093,6 +4087,13 @@ if (!hasSectionTwelve) {
 }
 let pdfResponse;
 
+// Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
+// renders them correctly regardless of charset detection.
+const docHtml = htmlString
+  .replace(/·/g, "&middot;")
+  .replace(/•/g, "&bull;")
+  .replace(/→/g, "&rarr;");
+
 const docraptorMode =
   process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
 const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
@@ -4118,7 +4119,7 @@ try {
     "https://docraptor.com/docs",
     {
       test: docraptorMode !== "production",
-      document_content: htmlString,
+      document_content: docHtml,
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",
     },

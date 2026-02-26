@@ -64,9 +64,16 @@ Failure paths: `rendering → needs_documents` (missing docs), any stage → `fa
 
 ## Active Bugs (Priority Order)
 
-1. **Occupancy showing 0.0%** — parser reads status column but XLSX rent rolls have no status column; occupancy should be derived from units with positive in-place rent
-2. **Coverage showing 50% for rent roll** when `in_place_rent` + `market_rent` are present — field name mismatch between `parse-doc.js` output and the coverage checker
-3. **Unit mix table empty on page 3** — same field name mismatch as bug #2
+No active bugs. All three previously tracked issues are resolved.
+
+## Established Patterns (Do Not Regress)
+
+- **Occupancy derivation from unit rows:** when `status` is blank/null, count a unit as occupied if `in_place_rent > 0`. This applies in both the `computedRentRoll` builder (~line 2428) and the `execOccupancy` fallback block (~line 2750).
+- **Coverage checker source:** `rentRollPayload.units[]` (individual rows) must be checked for `in_place_rent` / `market_rent` presence — not `unit_mix`, which is empty when no `beds` column exists.
+- **Unit mix grouping key:** use `beds` when finite, otherwise fall back to `unit_type` string. Label formatter: numeric keys → `"X Bed"`, non-numeric keys → use as-is.
+- **Rent field priority:** always `in_place_rent ?? current_rent ?? rent`. Parser writes `in_place_rent`; `current_rent` is the fallback only.
+- **`rent_roll_parsed` artifact payload:** always includes `units` and `column_map` for both CSV and XLSX (guard was removed from `parse-doc.js:910`).
+- **Token replacement:** `execOccupancyTokenText` reads from `execOccupancy` (computed at ~line 2728). Do not re-derive independently at the token replacement site.
 
 ## Key Field/Type Strings
 
