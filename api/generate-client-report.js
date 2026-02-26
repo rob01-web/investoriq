@@ -1291,7 +1291,16 @@ function buildScreeningExpenseStructureHtml({
             entry?.line_item ?? entry?.label ?? entry?.name ?? entry?.item ?? ""
           ).trim();
           const amount = coerceNumber(
-            entry?.amount ?? entry?.value ?? entry?.ttm ?? entry?.total
+            entry?.amount ??
+              entry?.value ??
+              entry?.ttm ??
+              entry?.total ??
+              entry?.amount_ttm ??
+              entry?.ttm_amount ??
+              entry?.annual_amount ??
+              entry?.annual ??
+              entry?.ytd ??
+              entry?.total_amount
           );
           if (!label || !Number.isFinite(amount)) return null;
           return { label, amount };
@@ -1305,7 +1314,17 @@ function buildScreeningExpenseStructureHtml({
             value?.line_item ?? value?.label ?? value?.name ?? value?.item ?? key ?? ""
           ).trim();
           const amount = coerceNumber(
-            value?.amount ?? value?.value ?? value?.ttm ?? value?.total ?? value
+            value?.amount ??
+              value?.value ??
+              value?.ttm ??
+              value?.total ??
+              value?.amount_ttm ??
+              value?.ttm_amount ??
+              value?.annual_amount ??
+              value?.annual ??
+              value?.ytd ??
+              value?.total_amount ??
+              value
           );
           if (!label || !Number.isFinite(amount)) return null;
           return { label, amount };
@@ -1357,11 +1376,13 @@ function buildScreeningExpenseStructureHtml({
     .slice(0, 3);
   const top3Html = top3.length
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
-        .map((x, i) => `<li>${i + 1}. ${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
+        .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
-    : "";
-  const flagsCard = flagsHtml
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p><ul>${flagsHtml}</ul>${top3Html}</div>`
+    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">${escapeHtml(
+        DATA_NOT_AVAILABLE
+      )}</div>`;
+  const flagsCard = (flagsHtml || top3Html)
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
 
   return `${metricsCard}${flagsCard}`;
@@ -3884,6 +3905,7 @@ export default async function handler(req, res) {
 
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
+    finalHtml = finalHtml.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
     const leftoverTokens = finalHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
     leftoverTokens.forEach((t) => {
       finalHtml = finalHtml.replaceAll(t, "");
