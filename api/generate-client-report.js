@@ -2523,6 +2523,7 @@ export default async function handler(req, res) {
       .replace(/\s{2,}/g, " ")
       .trim();
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", propertyNameDisplay);
+    finalHtml = replaceAll(finalHtml, "{{REPORT_DATE}}", new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }));
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS}}", displayPropertyAddress);
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS_LINE}}", displayPropertyAddress);
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);

@@ -48,12 +48,128 @@
   box-sizing: border-box;
 }
 
+    .cover-page {
+      width: 100%;
+      min-height: 100vh;
+      background: #0F172A;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 60px 56px;
+      box-sizing: border-box;
+      page-break-after: always;
+    }
+
+    .cover-brand {
+      font-family: "Inter", sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #c9a84c;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .cover-tagline {
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      color: #6B7280;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .cover-mid {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 0;
+    }
+
+    .cover-report-type {
+      font-family: "Inter", sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: #6B7280;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .cover-property-name {
+      font-family: "Inter", sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: #F9FAFB;
+      line-height: 1.15;
+      margin-bottom: 10px;
+    }
+
+    .cover-property-sub {
+      font-family: "Inter", sans-serif;
+      font-size: 16px;
+      font-weight: 400;
+      color: #9CA3AF;
+      margin-bottom: 0;
+    }
+
+    .cover-hero {
+      border-top: 1px solid rgba(201, 168, 76, 0.3);
+      border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+      padding: 24px 0;
+      margin-bottom: 48px;
+    }
+
+    .cover-hero-label {
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      color: #6B7280;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .cover-hero-value {
+      font-family: "Inter", sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #c9a84c;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .cover-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .cover-confidential {
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      color: #4B5563;
+      letter-spacing: 0.08em;
+    }
+
+    .cover-date {
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      color: #4B5563;
+      letter-spacing: 0.08em;
+    }
+
     h1,
     h2,
-    h3,
     h4 {
       font-family: "Merriweather", "Times New Roman", serif;
       margin: 0;
+    }
+    h3 {
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     h1 {
@@ -238,25 +354,47 @@
       opacity: 0.95;
     }
 
-    .exec-signal-box {
-      border: 1px solid #E5E7EB;
-      border-left: 3px solid var(--teal);
-      background: #FAFAFA;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin: 0 0 10px 0;
+    .verdict-block {
+      background: #0F172A;
+      border-left: 6px solid #c9a84c;
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
     }
 
-    .exec-signal-classification {
-      font-size: 13px;
+    .verdict-label {
+      font-size: 10px;
+      font-family: "Inter", sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      margin-bottom: 6px;
+    }
+
+    .verdict-classification {
+      font-size: 26px;
+      font-family: "Inter", sans-serif;
       font-weight: 700;
-      margin: 0 0 6px 0;
+      color: #c9a84c;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
 
-    .exec-signal-line {
-      margin: 2px 0;
+    .verdict-pressure {
+      font-size: 12px;
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      color: #E5E7EB;
+      margin-bottom: 6px;
+    }
+
+    .verdict-rationale {
       font-size: 11px;
-      line-height: 1.35;
+      font-family: "Inter", sans-serif;
+      color: #9CA3AF;
+      line-height: 1.5;
     }
 
     .exec-signal-drivers {
@@ -279,14 +417,38 @@
       border-bottom: 1px solid var(--gold);
     }
 
-    .exec-metrics-table th {
-      background: #F8FAFC;
-      font-weight: 600;
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
     }
 
-    .exec-metrics-table th,
-    .exec-metrics-table td {
-      padding: 6px 8px;
+    .kpi-card {
+      background: #0F172A;
+      border-radius: 6px;
+      padding: 10px 12px;
+      border-left: 3px solid #1F8A8A;
+    }
+
+    .kpi-card--flagged {
+      border-left: 3px solid #c9a84c;
+    }
+
+    .kpi-label {
+      font-size: 9px;
+      font-family: "Inter", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9CA3AF;
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 15px;
+      font-family: "Inter", sans-serif;
+      font-weight: 700;
+      color: #F9FAFB;
     }
 
     .exec-bullet-block ul {
@@ -605,6 +767,31 @@ ul, ol {
 <body>
   <div class="report-container">
 
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-top">
+      <div class="cover-brand">INVESTORIQ</div>
+      <div class="cover-tagline">INSTITUTIONAL GRADE PROPERTY INTELLIGENCE</div>
+    </div>
+
+    <div class="cover-mid">
+      <div class="cover-report-type">Property Intelligence Report</div>
+      <div class="cover-property-name">{{PROPERTY_NAME}}</div>
+      <div class="cover-property-sub">{{PROPERTY_SUBMARKET}}</div>
+    </div>
+
+    <div class="cover-hero">
+      <div class="cover-hero-label">ACQUISITION VIABILITY CLASSIFICATION</div>
+      <div class="cover-hero-value">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+    </div>
+
+    <div class="cover-bottom">
+      <div class="cover-confidential">Confidential &mdash; Prepared by InvestorIQ Technologies Inc.</div>
+      <div class="cover-date">{{REPORT_DATE}}</div>
+    </div>
+  </div>
+  <!-- END COVER PAGE -->
+
     <!-- 1.0 Executive Summary -->
 <!-- BEGIN SECTION_0_5 -->
 <section class="section no-break">
@@ -636,31 +823,62 @@ ul, ol {
       <!-- EXEC SUMMARY PLACEHOLDER -->
       <!-- BEGIN EXEC_SUMMARY -->
       <div class="exec-summary-block">
-        <div class="exec-signal-box">
-          <p class="exec-signal-classification">Acquisition Viability Classification: {{OPERATING_PROFILE_CLASSIFICATION}}</p>
-          <p class="exec-signal-line">Primary Pressure Point: {{PRIMARY_PRESSURE_POINT}}</p>
+        <div class="verdict-block">
+          <div class="verdict-label">ACQUISITION VIABILITY CLASSIFICATION</div>
+          <div class="verdict-classification">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+          <div class="verdict-pressure">Primary Pressure Point &mdash; {{PRIMARY_PRESSURE_POINT}}</div>
+          <div class="verdict-rationale">{{EXEC_CLASSIFICATION_RATIONALE}}</div>
         </div>
 
         <p class="exec-major-heading">Key Metrics Snapshot</p>
-        <table class="exec-metrics-table">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Units</td><td>{{EXEC_UNITS}}</td></tr>
-            <tr><td>Occupancy</td><td>{{EXEC_OCCUPANCY}}</td></tr>
-            <tr><td>Annual In-Place Rent</td><td>{{EXEC_ANNUAL_IN_PLACE}}</td></tr>
-            <tr><td>Effective Gross Income</td><td>{{EXEC_EGI}}</td></tr>
-            <tr><td>Operating Expenses</td><td>{{EXEC_OPEX}}</td></tr>
-            <tr><td>Net Operating Income</td><td>{{EXEC_NOI}}</td></tr>
-            <tr><td>Expense Ratio</td><td>{{EXEC_EXPENSE_RATIO}}</td></tr>
-            <tr><td>NOI Margin</td><td>{{EXEC_NOI_MARGIN}}</td></tr>
-            <tr><td>Break-even Occupancy</td><td>{{EXEC_BREAK_EVEN_OCCUPANCY}}</td></tr>
-          </tbody>
-        </table>
+        <div class="kpi-grid">
+
+          <div class="kpi-card">
+            <div class="kpi-label">Units</div>
+            <div class="kpi-value">{{EXEC_UNITS}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Occupancy</div>
+            <div class="kpi-value">{{EXEC_OCCUPANCY}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Annual In-Place Rent</div>
+            <div class="kpi-value">{{EXEC_ANNUAL_IN_PLACE}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Effective Gross Income</div>
+            <div class="kpi-value">{{EXEC_EGI}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Operating Expenses</div>
+            <div class="kpi-value">{{EXEC_OPEX}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Net Operating Income</div>
+            <div class="kpi-value">{{EXEC_NOI}}</div>
+          </div>
+
+          <div class="kpi-card kpi-card--flagged">
+            <div class="kpi-label">Expense Ratio</div>
+            <div class="kpi-value">{{EXEC_EXPENSE_RATIO}}</div>
+          </div>
+
+          <div class="kpi-card kpi-card--flagged">
+            <div class="kpi-label">NOI Margin</div>
+            <div class="kpi-value">{{EXEC_NOI_MARGIN}}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Break-even Occupancy</div>
+            <div class="kpi-value">{{EXEC_BREAK_EVEN_OCCUPANCY}}</div>
+          </div>
+
+        </div>
 
         <!-- BEGIN EXEC_UPSIDE_BULLETS -->
         <div class="exec-bullet-block">
@@ -711,7 +929,7 @@ ul, ol {
 <!-- 2.0 Unit-Level Value Add Analysis -->
 <!-- BEGIN SECTION_2 -->
 <section class="section page-break">
-  <div class="section-header">Unit-Level Value Add Analysis &mdash; Rent Positioning and Renovation Thesis</div>
+  <div class="section-header">Unit-Level Value Add Analysis</div>
   <hr class="section-header-rule">
 
   <div class="grid-2">
@@ -743,7 +961,7 @@ ul, ol {
 
 <!-- BEGIN SECTION_3_OPERATING_STATEMENT -->
 <section class="section page-break">
-  <div class="section-header">Operating Statement (Trailing Twelve Months) &mdash; Income, Expenses, and Net Operating Income</div>
+  <div class="section-header">Operating Statement (Trailing Twelve Months)</div>
   <hr class="section-header-rule">
 
   <div class="grid-2">
@@ -1294,7 +1512,7 @@ ul, ol {
 <!-- 12.0 Methodology & Data Transparency -->
 <!-- BEGIN SECTION_12 -->
 <section class="section page-break">
-  <div class="section-header">Methodology &amp; Data Transparency &mdash; InvestorIQ Estimates, Data Sources, and Limitations</div>
+  <div class="section-header">Methodology &amp; Data Transparency</div>
   <hr class="section-header-rule">
 
   <p class="section-intro">
