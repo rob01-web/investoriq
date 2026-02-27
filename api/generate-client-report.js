@@ -282,7 +282,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstPoint && Number.isFinite(Number(worstPoint.rateBps))
       ? `${Math.round(Number(worstPoint.rateBps))} bps`
       : DATA_NOT_AVAILABLE;
-  const worstDriverTripleText = `${worstNoiShockText} · ${worstCapBpsText} · ${worstRateBpsText}`;
+  const worstDriverTripleText = `${worstNoiShockText} Â· ${worstCapBpsText} Â· ${worstRateBpsText}`;
 
   let worstNoi = null;
   let worstCap = null;
@@ -356,6 +356,35 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
+  const fmtRate2 = (x) =>
+    Number.isFinite(x)
+      ? `${(x * 100).toLocaleString("en-CA", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}%`
+      : DATA_NOT_AVAILABLE;
+  const fmtBufferPct = (x) =>
+    Number.isFinite(x)
+      ? `${(x * 100).toLocaleString("en-CA", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}%`
+      : DATA_NOT_AVAILABLE;
+  const toRateRatio = (x) => {
+    const n = Number(x);
+    if (!Number.isFinite(n)) return null;
+    return n > 1.5 ? n / 100 : n;
+  };
+  const pmtAnnual = (principal, rateRatio, years) => {
+    const p = Number(principal);
+    const r = toRateRatio(rateRatio);
+    const y = Number(years);
+    if (!Number.isFinite(p) || p <= 0 || !Number.isFinite(r) || r < 0 || !Number.isFinite(y) || y <= 0) {
+      return null;
+    }
+    const mc = computeMortgageConstant(r, y);
+    return Number.isFinite(mc) ? p * mc : null;
+  };
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:12px;">
   <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
   <table>
@@ -371,11 +400,115 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
-      <tr><td>Worst-Case Drivers (NOI shock · Cap expansion · Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
+      <tr><td>Worst-Case Drivers (NOI shock Â· Cap expansion Â· Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
 </div>`;
+  const rate0 = toRateRatio(interestRate);
+  const capRate0 = toRateRatio(capRateBase);
+  const ltvMaxR = toRateRatio(ltvMax);
+  const value0 =
+    coerceNumber(f.appraisedValue) ??
+    coerceNumber(f.appraised_value) ??
+    coerceNumber(f.purchasePrice) ??
+    coerceNumber(f.purchase_price);
+  const breakpointInputsReady = [
+    noiBase,
+    debtBalance,
+    rate0,
+    amortYears,
+    value0,
+    dscrMin,
+    ltvMaxR,
+  ].every((v) => Number.isFinite(v)) && debtBalance > 0 && noiBase > 0 && amortYears > 0 && value0 > 0 && dscrMin > 0 && ltvMaxR > 0;
+  let breakpointTableHtml = "";
+  if (breakpointInputsReady) {
+    const ads0 = pmtAnnual(debtBalance, rate0, amortYears);
+    const noiFail = Number.isFinite(ads0) ? ads0 * dscrMin : null;
+    const noiDropPct = Number.isFinite(noiFail) && noiBase > 0
+      ? Math.max(0, 1 - noiFail / noiBase)
+      : null;
+
+    let rateFail = null;
+    if (Number.isFinite(ads0) && Number.isFinite(rate0)) {
+      const baseDscr = ads0 > 0 ? noiBase / ads0 : null;
+      if (Number.isFinite(baseDscr) && baseDscr <= dscrMin) {
+        rateFail = rate0;
+      } else {
+        const adsHigh = pmtAnnual(debtBalance, 0.20, amortYears);
+        const dscrHigh = Number.isFinite(adsHigh) && adsHigh > 0 ? noiBase / adsHigh : null;
+        if (Number.isFinite(dscrHigh) && dscrHigh <= dscrMin) {
+          let lo = Math.max(0, rate0);
+          let hi = 0.20;
+          for (let i = 0; i < 60; i += 1) {
+            const mid = (lo + hi) / 2;
+            const adsMid = pmtAnnual(debtBalance, mid, amortYears);
+            const dscrMid = Number.isFinite(adsMid) && adsMid > 0 ? noiBase / adsMid : null;
+            if (!Number.isFinite(dscrMid) || dscrMid <= dscrMin) {
+              hi = mid;
+            } else {
+              lo = mid;
+            }
+          }
+          rateFail = hi;
+        }
+      }
+    }
+    const rateDeltaBps = Number.isFinite(rateFail) && Number.isFinite(rate0)
+      ? Math.max(0, Math.round((rateFail - rate0) * 10000))
+      : null;
+
+    const valueFail = debtBalance / ltvMaxR;
+    const valueDropPct = Number.isFinite(valueFail) && value0 > 0
+      ? Math.max(0, 1 - valueFail / value0)
+      : null;
+    const capFail = Number.isFinite(noiBase) && Number.isFinite(valueFail) && valueFail > 0
+      ? noiBase / valueFail
+      : null;
+    const capDeltaBps = Number.isFinite(capFail) && Number.isFinite(capRate0)
+      ? Math.round((capFail - capRate0) * 10000)
+      : null;
+
+    const breakpointCandidates = [];
+    if (Number.isFinite(noiDropPct)) {
+      breakpointCandidates.push({
+        sortValue: noiDropPct,
+        text: `NOI (-${fmtBufferPct(noiDropPct)})`,
+      });
+    }
+    if (Number.isFinite(rateDeltaBps)) {
+      breakpointCandidates.push({
+        sortValue: rateDeltaBps / 10000,
+        text: `Rate (+${Math.round(rateDeltaBps)} bps)`,
+      });
+    }
+    if (Number.isFinite(valueDropPct)) {
+      breakpointCandidates.push({
+        sortValue: valueDropPct,
+        text: `Value (-${fmtBufferPct(valueDropPct)})`,
+      });
+    }
+    const primaryBreakpoint = breakpointCandidates
+      .slice()
+      .sort((a, b) => a.sortValue - b.sortValue)[0] || null;
+
+    breakpointTableHtml = `<div class="card no-break" style="margin-top:12px;">
+  <p><strong>Breakpoint Table - Refinance Failure Thresholds</strong></p>
+  <table>
+    <thead>
+      <tr><th>Breakpoint</th><th>Current</th><th>Failure At</th><th>Buffer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>NOI (TTM)</td><td>${fmtMoney(noiBase)}</td><td>${fmtMoney(noiFail)}</td><td>${Number.isFinite(noiDropPct) ? `${fmtBufferPct(noiDropPct)} NOI decline` : DATA_NOT_AVAILABLE}</td></tr>
+      <tr><td>Interest Rate</td><td>${fmtRate2(rate0)}</td><td>${fmtRate2(rateFail)}</td><td>${Number.isFinite(rateDeltaBps) ? `${Math.round(rateDeltaBps)} bps increase` : DATA_NOT_AVAILABLE}</td></tr>
+      <tr><td>Value</td><td>${fmtMoney(value0)}</td><td>${fmtMoney(valueFail)}</td><td>${Number.isFinite(valueDropPct) ? `${fmtBufferPct(valueDropPct)} value decline` : DATA_NOT_AVAILABLE}</td></tr>
+      <tr><td>Cap Rate</td><td>${fmtRate2(capRate0)}</td><td>${fmtRate2(capFail)}</td><td>${Number.isFinite(capRate0) && Number.isFinite(capDeltaBps) ? `${Math.round(capDeltaBps)} bps cap expansion` : DATA_NOT_AVAILABLE}</td></tr>
+    </tbody>
+  </table>
+  ${primaryBreakpoint ? `<p class="small">Primary Breakpoint: ${escapeHtml(primaryBreakpoint.text)}</p>` : ""}
+</div>`;
+  }
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
   )}</strong></p><p>Base Coverage: ${formatCoverage(
@@ -384,9 +517,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstFiniteCoverage
   )}</p><p class="small">${escapeHtml(
     evidence
-  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
-
-  return { tier: refiTier, evidence, html: refiHtml };
+  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}${breakpointTableHtml}`;  return { tier: refiTier, evidence, html: refiHtml };
 }
 
 function escapeHtml(value) {
@@ -412,7 +543,7 @@ function sanitizeDisplayText(s) {
 
 function sanitizeTypography(html) {
   if (typeof html !== "string") return html;
-  return html.replace(/[–—]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
+  return html.replace(/[â€“â€”]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
 }
 
 function stripMarkedSection(html, key) {
@@ -1447,7 +1578,7 @@ function buildScreeningNoiStabilityHtml({
       );
     } else {
       flags.push(
-        `Rent roll annualized rent is −${formatPercent1(
+        `Rent roll annualized rent is âˆ’${formatPercent1(
           Math.abs(rrVsGprPct)
         )} vs T12 GPR (reconciliation flag).`
       );
@@ -1487,7 +1618,7 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst → Best)</p><ol>${rankedDrivers
+    ? `<p class="subsection-title">Stability Drivers (Worst â†’ Best)</p><ol>${rankedDrivers
         .map((line) => `<li>${escapeHtml(line)}</li>`)
         .join("")}</ol>`
     : "";
@@ -2882,7 +3013,7 @@ export default async function handler(req, res) {
       `${displayPropertyName} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
     )}</p>`;
     const execStructuredMetricsLine = `<p class="exec-kpis">${escapeHtml(
-      `Occupancy: ${execOccupancyText} · Annual In-Place Rent: ${execAnnualInPlaceText} · OpEx Ratio: ${execOpexRatioText}`
+      `Occupancy: ${execOccupancyText} Â· Annual In-Place Rent: ${execAnnualInPlaceText} Â· OpEx Ratio: ${execOpexRatioText}`
     )}</p>`;
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
     const execScreeningLines = [];
@@ -3212,7 +3343,7 @@ export default async function handler(req, res) {
         rentParts.push(`In-Place Rent (Annualized): ${formatCurrency(execAnnualInPlace)}`);
       }
       execScreeningLines.push(
-        `<p class="exec-kpis">${escapeHtml(rentParts.join(" · "))}</p>`
+        `<p class="exec-kpis">${escapeHtml(rentParts.join(" Â· "))}</p>`
       );
     }
     if (Number.isFinite(execNoi)) {
@@ -4108,11 +4239,11 @@ export default async function handler(req, res) {
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
-    finalHtml = finalHtml.replace(/â€¢/g, "•");
-    finalHtml = finalHtml.replace(/â†’/g, "→");
-    finalHtml = finalHtml.replace(/Â·/g, "·");
-    finalHtml = finalHtml.replace(/Â©/g, "©");
-    finalHtml = finalHtml.replace(/Â/g, "");
+    finalHtml = finalHtml.replace(/Ã¢â‚¬Â¢/g, "â€¢");
+    finalHtml = finalHtml.replace(/Ã¢â€ â€™/g, "â†’");
+    finalHtml = finalHtml.replace(/Ã‚Â·/g, "Â·");
+    finalHtml = finalHtml.replace(/Ã‚Â©/g, "Â©");
+    finalHtml = finalHtml.replace(/Ã‚/g, "");
 
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
@@ -4139,7 +4270,7 @@ export default async function handler(req, res) {
     ].filter((k) => !sections[k]);
 
     if (missingKeys.length > 0) {
-      console.warn("⚠️ Missing narrative sections:", missingKeys.join(", "));
+      console.warn("âš ï¸ Missing narrative sections:", missingKeys.join(", "));
     }
 
     // 8. Sentence integrity with safe fallback
@@ -4153,7 +4284,7 @@ export default async function handler(req, res) {
     }
 
     if (warnings.length > 0) {
-      console.warn("⚠️ Sentence Integrity Warnings:");
+      console.warn("âš ï¸ Sentence Integrity Warnings:");
       warnings.forEach((w) => console.warn(" - " + w));
 
       const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -4309,9 +4440,9 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 const docHtml = htmlString
-  .replace(/·/g, "&middot;")
-  .replace(/•/g, "&bull;")
-  .replace(/→/g, "&rarr;");
+  .replace(/Â·/g, "&middot;")
+  .replace(/â€¢/g, "&bull;")
+  .replace(/â†’/g, "&rarr;");
 
 const docraptorMode =
   process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
@@ -4353,8 +4484,8 @@ try {
     }
   );
 } catch (err) {
-  console.error("❌ DOC RAPTOR ERROR STATUS:", err.response?.status);
-  console.error("❌ DOC RAPTOR ERROR BODY ↓↓↓");
+  console.error("âŒ DOC RAPTOR ERROR STATUS:", err.response?.status);
+  console.error("âŒ DOC RAPTOR ERROR BODY â†“â†“â†“");
   console.error(err.response?.data?.toString());
   throw err;
 }
@@ -4371,7 +4502,7 @@ try {
       .single();
 
     if (reportCreateError || !reportRow?.id) {
-      console.error("❌ Report DB Create Error:", reportCreateError);
+      console.error("âŒ Report DB Create Error:", reportCreateError);
       throw new Error("Failed to create report record");
     }
 
@@ -4389,7 +4520,7 @@ try {
       });
 
     if (uploadError) {
-      console.error("❌ Storage Upload Error:", uploadError);
+      console.error("âŒ Storage Upload Error:", uploadError);
       throw new Error("Failed to upload report to storage");
     }
 
@@ -4400,7 +4531,7 @@ try {
       .eq("id", reportId);
 
     if (reportUpdateError) {
-      console.error("❌ Report DB Update Error:", reportUpdateError);
+      console.error("âŒ Report DB Update Error:", reportUpdateError);
       // Do not throw. The PDF is stored and we can still return the signed URL.
     }
 
@@ -4410,7 +4541,7 @@ try {
       .createSignedUrl(storagePath, 3600);
 
     if (signedError) {
-      console.error("❌ Signed URL Error:", signedError);
+      console.error("âŒ Signed URL Error:", signedError);
       throw new Error("Failed to generate access link");
     }
 
@@ -4422,7 +4553,7 @@ try {
     });
 
   } catch (err) {
-    console.error("❌ Error generating report:", err);
+    console.error("âŒ Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
   }
