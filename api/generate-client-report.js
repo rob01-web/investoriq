@@ -282,7 +282,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstPoint && Number.isFinite(Number(worstPoint.rateBps))
       ? `${Math.round(Number(worstPoint.rateBps))} bps`
       : DATA_NOT_AVAILABLE;
-  const worstDriverTripleText = `${worstNoiShockText} Â· ${worstCapBpsText} Â· ${worstRateBpsText}`;
+  const worstDriverTripleText = `${worstNoiShockText} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${worstCapBpsText} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${worstRateBpsText}`;
 
   let worstNoi = null;
   let worstCap = null;
@@ -400,7 +400,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
-      <tr><td>Worst-Case Drivers (NOI shock Â· Cap expansion Â· Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
+      <tr><td>Worst-Case Drivers (NOI shock ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Cap expansion ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
@@ -543,7 +543,7 @@ function sanitizeDisplayText(s) {
 
 function sanitizeTypography(html) {
   if (typeof html !== "string") return html;
-  return html.replace(/[â€“â€”]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
+  return html.replace(/[ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
 }
 
 function stripMarkedSection(html, key) {
@@ -1500,9 +1500,7 @@ function buildScreeningExpenseStructureHtml({
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
-    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">${escapeHtml(
-        DATA_NOT_AVAILABLE
-      )}</div>`;
+    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">Expense line-item detail not present in uploaded T12; category ranking omitted.</div>`;
   const flagsCard = (flagsHtml || top3Html)
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
@@ -1578,7 +1576,7 @@ function buildScreeningNoiStabilityHtml({
       );
     } else {
       flags.push(
-        `Rent roll annualized rent is âˆ’${formatPercent1(
+        `Rent roll annualized rent is ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${formatPercent1(
           Math.abs(rrVsGprPct)
         )} vs T12 GPR (reconciliation flag).`
       );
@@ -1618,7 +1616,7 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst â†’ Best)</p><ol>${rankedDrivers
+    ? `<p class="subsection-title">Stability Drivers (Worst ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Best)</p><ol>${rankedDrivers
         .map((line) => `<li>${escapeHtml(line)}</li>`)
         .join("")}</ol>`
     : "";
@@ -1656,34 +1654,66 @@ function buildScreeningNoiStabilityHtml({
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
   }
 
-  const sensitivityRows = [];
+  let sensitivityCard = "";
   if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
-    const noiRevenueShock = noi - 0.05 * egi;
-    const egiRevenueShock = egi * 0.95;
-    if (Number.isFinite(noiRevenueShock) && Number.isFinite(egiRevenueShock) && egiRevenueShock > 0) {
-      sensitivityRows.push(
-        `<tr><td>EGI -5% (revenue shock)</td><td>${formatCurrency(
-          noiRevenueShock
-        )}</td><td>${formatPercent1(noiRevenueShock / egiRevenueShock)}</td></tr>`
-      );
-    }
-    if (Number.isFinite(opex)) {
-      const noiCostShock = noi - 0.05 * opex;
-      if (Number.isFinite(noiCostShock) && egi > 0) {
-        sensitivityRows.push(
-          `<tr><td>OpEx +5% (cost shock)</td><td>${formatCurrency(
-            noiCostShock
-          )}</td><td>${formatPercent1(noiCostShock / egi)}</td></tr>`
-        );
+    const classifyMargin = (m) =>
+      (Number.isFinite(m) && m <= 0.30)
+        ? "Fragile"
+        : (Number.isFinite(m) && m > 0.40)
+          ? "Stable"
+          : "Sensitized";
+    const baseMarginR = Number.isFinite(noi) && egi > 0 ? noi / egi : null;
+    const expenseUp5Expenses = Number.isFinite(opex) ? opex * 1.05 : null;
+    const expenseUp5NOI = Number.isFinite(expenseUp5Expenses) ? egi - expenseUp5Expenses : null;
+    const expenseUp5MarginR =
+      Number.isFinite(expenseUp5NOI) && egi > 0 ? expenseUp5NOI / egi : null;
+    const incomeDown5EGI = egi * 0.95;
+    const incomeDown5NOI = incomeDown5EGI - opex;
+    const incomeDown5MarginR =
+      Number.isFinite(incomeDown5NOI) && incomeDown5EGI > 0 ? incomeDown5NOI / incomeDown5EGI : null;
+    const combinedEGI = egi * 0.95;
+    const combinedExpenses = Number.isFinite(opex) ? opex * 1.05 : null;
+    const combinedNOI = Number.isFinite(combinedExpenses) ? combinedEGI - combinedExpenses : null;
+    const marginC =
+      Number.isFinite(combinedNOI) && combinedEGI > 0 ? combinedNOI / combinedEGI : null;
+    const sensitivityRows = [
+      { label: "Base", margin: baseMarginR },
+      { label: "Expenses +5%", margin: expenseUp5MarginR },
+      { label: "Income -5%", margin: incomeDown5MarginR },
+      { label: "Combined Shock", margin: marginC },
+    ]
+      .filter((row) => Number.isFinite(row.margin))
+      .map(
+        (row) =>
+          `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
+            classifyMargin(row.margin)
+          )}</td></tr>`
+      )
+      .join("");
+    if (sensitivityRows) {
+      const marginDeltaBps =
+        Number.isFinite(baseMarginR) && Number.isFinite(marginC)
+          ? (baseMarginR - marginC) * 10000
+          : null;
+      let stressLine = "";
+      if (Number.isFinite(marginDeltaBps)) {
+        if (marginDeltaBps > 0) {
+          stressLine = `Under modest operating stress, NOI margin compresses by ${Math.round(marginDeltaBps)} bps.`;
+        } else if (marginDeltaBps < 0) {
+          stressLine = `Under modest operating stress, NOI margin expands by ${Math.round(Math.abs(marginDeltaBps))} bps.`;
+        } else {
+          stressLine = `Under modest operating stress, NOI margin remains unchanged.`;
+        }
       }
+      sensitivityCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
+        stressLine ? `<p class="exec-signal-line">${escapeHtml(stressLine)}</p>` : ""
+      }${
+        Number.isFinite(marginC) && marginC <= 0.3
+          ? `<p class="exec-signal-line">Stress testing indicates fragility under modest operating deterioration.</p>`
+          : ""
+      }</div>`;
     }
   }
-  const sensitivityCard = sensitivityRows.length
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">NOI Sensitivity (Deterministic)</p><table><thead><tr><th>Scenario</th><th>Implied NOI</th><th>NOI Margin (Implied)</th></tr></thead><tbody>${sensitivityRows.join(
-        ""
-      )}</tbody></table></div>`
-    : "";
-
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
@@ -3013,7 +3043,7 @@ export default async function handler(req, res) {
       `${displayPropertyName} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
     )}</p>`;
     const execStructuredMetricsLine = `<p class="exec-kpis">${escapeHtml(
-      `Occupancy: ${execOccupancyText} Â· Annual In-Place Rent: ${execAnnualInPlaceText} Â· OpEx Ratio: ${execOpexRatioText}`
+      `Occupancy: ${execOccupancyText} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Annual In-Place Rent: ${execAnnualInPlaceText} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· OpEx Ratio: ${execOpexRatioText}`
     )}</p>`;
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
     const execScreeningLines = [];
@@ -3343,7 +3373,7 @@ export default async function handler(req, res) {
         rentParts.push(`In-Place Rent (Annualized): ${formatCurrency(execAnnualInPlace)}`);
       }
       execScreeningLines.push(
-        `<p class="exec-kpis">${escapeHtml(rentParts.join(" Â· "))}</p>`
+        `<p class="exec-kpis">${escapeHtml(rentParts.join(" ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· "))}</p>`
       );
     }
     if (Number.isFinite(execNoi)) {
@@ -3538,15 +3568,18 @@ export default async function handler(req, res) {
       "{{PRIMARY_PRESSURE_POINT}}",
       primaryPressurePoint
     );
-    if (whyLine || decisionContextHtml || miniSensitivityHtml) {
-      finalHtml = finalHtml.replace(
-        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
-        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>${
-          whyLine
-            ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
-            : ""
-        }${decisionContextHtml}${miniSensitivityHtml}`
-      );
+    if (effectiveReportMode === "screening_v1") {
+      const insertionHtml = `${
+        whyLine
+          ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
+          : ""
+      }${decisionContextHtml}${miniSensitivityHtml}`;
+      if (insertionHtml.trim()) {
+        finalHtml = finalHtml.replace(
+          /(<p class="exec-signal-line">[^<]*Primary Pressure Point[^<]*<\/p>)/,
+          `$1${insertionHtml}`
+        );
+      }
     }
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_VALUE}}", driver1?.value || "");
@@ -4239,11 +4272,11 @@ export default async function handler(req, res) {
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
-    finalHtml = finalHtml.replace(/Ã¢â‚¬Â¢/g, "â€¢");
-    finalHtml = finalHtml.replace(/Ã¢â€ â€™/g, "â†’");
-    finalHtml = finalHtml.replace(/Ã‚Â·/g, "Â·");
-    finalHtml = finalHtml.replace(/Ã‚Â©/g, "Â©");
-    finalHtml = finalHtml.replace(/Ã‚/g, "");
+    finalHtml = finalHtml.replace(/ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢/g, "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢");
+    finalHtml = finalHtml.replace(/ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢/g, "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢");
+    finalHtml = finalHtml.replace(/ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·/g, "ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·");
+    finalHtml = finalHtml.replace(/ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©/g, "ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©");
+    finalHtml = finalHtml.replace(/ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡/g, "");
 
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
@@ -4270,7 +4303,7 @@ export default async function handler(req, res) {
     ].filter((k) => !sections[k]);
 
     if (missingKeys.length > 0) {
-      console.warn("âš ï¸ Missing narrative sections:", missingKeys.join(", "));
+      console.warn("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Missing narrative sections:", missingKeys.join(", "));
     }
 
     // 8. Sentence integrity with safe fallback
@@ -4284,7 +4317,7 @@ export default async function handler(req, res) {
     }
 
     if (warnings.length > 0) {
-      console.warn("âš ï¸ Sentence Integrity Warnings:");
+      console.warn("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Sentence Integrity Warnings:");
       warnings.forEach((w) => console.warn(" - " + w));
 
       const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -4440,9 +4473,9 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 const docHtml = htmlString
-  .replace(/Â·/g, "&middot;")
-  .replace(/â€¢/g, "&bull;")
-  .replace(/â†’/g, "&rarr;");
+  .replace(/ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·/g, "&middot;")
+  .replace(/ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢/g, "&bull;")
+  .replace(/ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢/g, "&rarr;");
 
 const docraptorMode =
   process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
@@ -4484,8 +4517,8 @@ try {
     }
   );
 } catch (err) {
-  console.error("âŒ DOC RAPTOR ERROR STATUS:", err.response?.status);
-  console.error("âŒ DOC RAPTOR ERROR BODY â†“â†“â†“");
+  console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ DOC RAPTOR ERROR STATUS:", err.response?.status);
+  console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ DOC RAPTOR ERROR BODY ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ");
   console.error(err.response?.data?.toString());
   throw err;
 }
@@ -4502,7 +4535,7 @@ try {
       .single();
 
     if (reportCreateError || !reportRow?.id) {
-      console.error("âŒ Report DB Create Error:", reportCreateError);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Report DB Create Error:", reportCreateError);
       throw new Error("Failed to create report record");
     }
 
@@ -4520,7 +4553,7 @@ try {
       });
 
     if (uploadError) {
-      console.error("âŒ Storage Upload Error:", uploadError);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Storage Upload Error:", uploadError);
       throw new Error("Failed to upload report to storage");
     }
 
@@ -4531,7 +4564,7 @@ try {
       .eq("id", reportId);
 
     if (reportUpdateError) {
-      console.error("âŒ Report DB Update Error:", reportUpdateError);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Report DB Update Error:", reportUpdateError);
       // Do not throw. The PDF is stored and we can still return the signed URL.
     }
 
@@ -4541,7 +4574,7 @@ try {
       .createSignedUrl(storagePath, 3600);
 
     if (signedError) {
-      console.error("âŒ Signed URL Error:", signedError);
+      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Signed URL Error:", signedError);
       throw new Error("Failed to generate access link");
     }
 
@@ -4553,7 +4586,7 @@ try {
     });
 
   } catch (err) {
-    console.error("âŒ Error generating report:", err);
+    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
   }
