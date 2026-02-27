@@ -3002,9 +3002,9 @@ export default async function handler(req, res) {
         `compressed NOI Margin (${formatPercent1(noiMarginR)})`
       );
     }
-    if (Number.isFinite(breakEvenOccRatio) && breakEvenOccRatio >= 0.75) {
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR >= 0.75) {
       classificationDrivers.push(
-        `high Break-even Occupancy (${formatPercent1(breakEvenOccRatio)})`
+        `high Break-even Occupancy (${formatPercent1(breakEvenOccR)})`
       );
     }
     const whyLine =

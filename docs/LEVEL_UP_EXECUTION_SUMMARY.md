@@ -8,6 +8,7 @@
 1. **Decision Context Block (Screening)**
 - Deterministic pass conditions + hard disqualifiers + current satisfied count.
 - No inference, no opinion language.
+- “This deal passes institutional viability gates under deterministic operating thresholds.”
 
 2. **Mini Sensitivity Grid (Screening)**
 - Base + simple deterministic perturbations from uploaded values.
