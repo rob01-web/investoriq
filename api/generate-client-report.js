@@ -2502,6 +2502,31 @@ export default async function handler(req, res) {
 
     const reportId = reportRow.id;
 
+
+    if (!process.env.DOCRAPTOR_API_KEY) {
+      throw new Error("Server misconfigured: missing DOCRAPTOR_API_KEY");
+    }
+
+    const finalHtml = String(body?.final_html || "").trim();
+    if (!finalHtml) {
+      throw new Error("Fail-closed: finalHtml is empty");
+    }
+
+    const pdfResponse = await axios.post(
+      "https://api.docraptor.com/docs",
+      {
+        test: process.env.NODE_ENV !== "production",
+        document_type: "pdf",
+        document_content: finalHtml
+      },
+      {
+        responseType: "arraybuffer",
+        auth: {
+          username: process.env.DOCRAPTOR_API_KEY,
+          password: ""
+        }
+      }
+    );
     // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
     const storagePath = `${effectiveUserId}/${reportId}.pdf`;
 
