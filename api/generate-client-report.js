@@ -215,18 +215,22 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   if (!hasValidScalars || !hasValidStressArrays) {
     return { tier: null, evidence: null, html: "" };
 
+  }
   const baseMc = computeMortgageConstant(interestRate, amortYears);
   const baseCap = capRateBaseR;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
     return { tier: null, evidence: null, html: "" };
+  }
   const baseValue = noiBase / baseCap;
   const baseLoanLtv = baseValue * ltvMax;
+  const baseLoanDscr = noiBase / (dscrMin * baseMc);
   const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
   const coverageBase = baseMaxProceeds / debtBalance;
   const baseBinding =
     baseLoanLtv <= baseLoanDscr ? "LTV-limited" : "DSCR-limited";
   if (!Number.isFinite(coverageBase)) {
     return { tier: null, evidence: null, html: "" };
+  }
 
   const stressPoints = [];
   for (const noiShock of stressNoiShocks) {
@@ -254,6 +258,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
         });
       }
     }
+  }
 
   const coverageWorst = stressPoints.reduce(
     (minCoverage, point) =>
@@ -310,6 +315,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       worstBinding =
         worstLoanLtv <= worstLoanDscr ? "LTV-limited" : "DSCR-limited";
     }
+  }
 
   let refiTier = "Stable";
   if (coverageBase < 1.0) {
@@ -320,6 +326,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     refiTier = "Fragile";
   } else if (worstFiniteCoverage < 1.1) {
     refiTier = "Sensitized";
+  }
 
   const formatCoverage = (value) =>
     Number.isFinite(value) ? formatMultiple(value, 2) : DATA_NOT_AVAILABLE;
