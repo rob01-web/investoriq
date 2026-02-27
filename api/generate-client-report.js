@@ -3003,6 +3003,82 @@ export default async function handler(req, res) {
       classificationDrivers.length > 0
         ? `Classification is driven primarily by ${classificationDrivers.join(" and ")}.`
         : "";
+    const toPercentMetric = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n <= 1.5 ? n * 100 : n;
+    };
+    const expenseRatioPct = toPercentMetric(expenseRatio);
+    const noiMarginPct = toPercentMetric(noiMargin);
+    const breakEvenDecisionPct = toPercentMetric(breakEvenOccupancy);
+    const decisionContextInputs = [expenseRatioPct, noiMarginPct, breakEvenDecisionPct];
+    let decisionContextHtml = "";
+    if (decisionContextInputs.some((v) => Number.isFinite(v))) {
+      const formatDecisionValue = (v) =>
+        Number.isFinite(v) ? `${v.toFixed(1)}%` : DATA_NOT_AVAILABLE;
+      const passChecks = [
+        {
+          label: "Expense Ratio < 55%",
+          value: expenseRatioPct,
+          test: (v) => v < 55,
+        },
+        {
+          label: "NOI Margin > 40%",
+          value: noiMarginPct,
+          test: (v) => v > 40,
+        },
+        {
+          label: "Break-even Occupancy < 85%",
+          value: breakEvenDecisionPct,
+          test: (v) => v < 85,
+        },
+      ];
+      const disqualifierChecks = [
+        {
+          label: "Expense Ratio >= 65%",
+          value: expenseRatioPct,
+          test: (v) => v >= 65,
+        },
+        {
+          label: "NOI Margin <= 30%",
+          value: noiMarginPct,
+          test: (v) => v <= 30,
+        },
+        {
+          label: "Break-even Occupancy >= 95%",
+          value: breakEvenDecisionPct,
+          test: (v) => v >= 95,
+        },
+      ];
+      const passLinesHtml = passChecks
+        .map((row) => {
+          const status = Number.isFinite(row.value)
+            ? row.test(row.value)
+              ? "PASS"
+              : "FAIL"
+            : "DATA NOT AVAILABLE";
+          return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
+            formatDecisionValue(row.value)
+          )})</li>`;
+        })
+        .join("");
+      const disqualifierLinesHtml = disqualifierChecks
+        .map((row) => {
+          const status = Number.isFinite(row.value)
+            ? row.test(row.value)
+              ? "TRIGGERED"
+              : "NOT TRIGGERED"
+            : "DATA NOT AVAILABLE";
+          return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
+            formatDecisionValue(row.value)
+          )})</li>`;
+        })
+        .join("");
+      const satisfiedCount = passChecks.filter(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      ).length;
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">Current Result: ${satisfiedCount} / 3 satisfied</p></div>`;
+    }
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -3219,12 +3295,14 @@ export default async function handler(req, res) {
       "{{PRIMARY_PRESSURE_POINT}}",
       primaryPressurePoint
     );
-    if (whyLine) {
+    if (whyLine || decisionContextHtml) {
       finalHtml = finalHtml.replace(
         `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
-        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p><p class="exec-signal-line">${escapeHtml(
+        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>${
           whyLine
-        )}</p>`
+            ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
+            : ""
+        }${decisionContextHtml}`
       );
     }
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
