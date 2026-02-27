@@ -157,22 +157,6 @@ function computeMortgageConstant(rateAnnual, amortYears) {
   const mc = pm * 12;
   return Number.isFinite(mc) && mc > 0 ? mc : null;
 }
-function toRateRatio(value) {
-  const n = coerceNumber(value);
-  if (!Number.isFinite(n)) return null;
-  // Accept either 0.055 or 5.5 (percent). Treat > 1.5 as percent input.
-  const r = n > 1.5 ? n / 100 : n;
-  return Number.isFinite(r) && r > 0 ? r : null;
-}
-
-function toCapRatio(value) {
-  const n = coerceNumber(value);
-  if (!Number.isFinite(n)) return null;
-  // Accept either 0.05 or 5.0 (percent). Treat > 1.5 as percent input.
-  const r = n > 1.5 ? n / 100 : n;
-  return Number.isFinite(r) && r > 0 ? r : null;
-}
-
 
 function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -199,14 +183,13 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     ? stressRateBpsRaw.map((v) => coerceNumber(v))
     : null;
 
-  const capRateBaseR = toCapRatio(capRateBase);
   const requiredScalars = [
     debtBalance,
     ltvMax,
     dscrMin,
     interestRate,
     amortYears,
-    capRateBaseR,
+    capRateBase,
     noiBase,
   ];
   const hasValidScalars =
@@ -215,7 +198,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     ltvMax > 0 &&
     dscrMin > 0 &&
     amortYears > 0 &&
-    capRateBaseR > 0 &&
+    capRateBase > 0 &&
     noiBase > 0;
   const hasValidStressArrays =
     Array.isArray(stressNoiShocks) &&
@@ -230,10 +213,10 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
 
   if (!hasValidScalars || !hasValidStressArrays) {
     return { tier: null, evidence: null, html: "" };
-
   }
+
   const baseMc = computeMortgageConstant(interestRate, amortYears);
-  const baseCap = capRateBaseR;
+  const baseCap = capRateBase;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
     return { tier: null, evidence: null, html: "" };
   }
@@ -253,7 +236,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     for (const capBps of stressCapRateBps) {
       for (const rateBps of stressRateBps) {
         const noi = noiBase * (1 + noiShock);
-        const cap = capRateBaseR + capBps / 10000;
+        const cap = capRateBase + capBps / 10000;
         const rate = interestRate + rateBps / 10000;
         const mc = computeMortgageConstant(rate, amortYears);
         let maxProceeds = 0;
@@ -299,7 +282,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstPoint && Number.isFinite(Number(worstPoint.rateBps))
       ? `${Math.round(Number(worstPoint.rateBps))} bps`
       : DATA_NOT_AVAILABLE;
-  const worstDriverTripleText = `${worstNoiShockText} | ${worstCapBpsText} | ${worstRateBpsText}`;
+  const worstDriverTripleText = `${worstNoiShockText} · ${worstCapBpsText} · ${worstRateBpsText}`;
 
   let worstNoi = null;
   let worstCap = null;
@@ -314,7 +297,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
 
   if (worstPoint && Number.isFinite(worstPoint.noiShock)) {
     worstNoi = noiBase * (1 + worstPoint.noiShock);
-    worstCap = capRateBaseR + worstPoint.capBps / 10000;
+    worstCap = capRateBase + worstPoint.capBps / 10000;
     worstRate = interestRate + worstPoint.rateBps / 10000;
     worstMc = computeMortgageConstant(worstRate, amortYears);
 
@@ -373,30 +356,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
-  const fmtRate2 = (x) =>
-    Number.isFinite(x)
-      ? `${(x * 100).toLocaleString("en-CA", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}%`
-      : DATA_NOT_AVAILABLE;
-  const fmtBufferPct = (x) =>
-    Number.isFinite(x)
-      ? `${(x * 100).toLocaleString("en-CA", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        })}%`
-      : DATA_NOT_AVAILABLE;
-  const pmtAnnual = (principal, rateRatio, years) => {
-    const p = Number(principal);
-    const r = toRateRatio(rateRatio);
-    const y = Number(years);
-    if (!Number.isFinite(p) || p <= 0 || !Number.isFinite(r) || r < 0 || !Number.isFinite(y) || y <= 0) {
-      return null;
-    }
-    const mc = computeMortgageConstant(r, y);
-    return Number.isFinite(mc) ? p * mc : null;
-  };
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:12px;">
   <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
   <table>
@@ -412,135 +371,11 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
-      <tr><td>Worst-Case Drivers (NOI shock | Cap expansion | Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
+      <tr><td>Worst-Case Drivers (NOI shock · Cap expansion · Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
 </div>`;
-  const rate0 = toRateRatio(interestRate);
-  const capRate0 = capRateBaseR;
-  const ltvMaxR = toRateRatio(ltvMax);
-  const value0 =
-    coerceNumber(f.appraisedValue) ??
-    coerceNumber(f.appraised_value) ??
-    coerceNumber(f.purchasePrice) ??
-    coerceNumber(f.purchase_price);
-  const breakpointInputsReady = [
-    noiBase,
-    debtBalance,
-    rate0,
-    amortYears,
-    value0,
-    dscrMin,
-    ltvMaxR,
-  ].every((v) => Number.isFinite(v)) && debtBalance > 0 && noiBase > 0 && amortYears > 0 && value0 > 0 && dscrMin > 0 && ltvMaxR > 0;
-  let breakpointTableHtml = "";
-  if (breakpointInputsReady) {
-    const ads0 = pmtAnnual(debtBalance, rate0, amortYears);
-    const noiFail = Number.isFinite(ads0) ? ads0 * dscrMin : null;
-    const noiDropPct = Number.isFinite(noiFail) && noiBase > 0
-      ? Math.max(0, 1 - noiFail / noiBase)
-      : null;
-
-    let rateFail = null;
-    if (Number.isFinite(ads0) && Number.isFinite(rate0)) {
-      const baseDscr = ads0 > 0 ? noiBase / ads0 : null;
-      if (Number.isFinite(baseDscr) && baseDscr <= dscrMin) {
-        rateFail = rate0;
-      } else {
-        const adsHigh = pmtAnnual(debtBalance, 0.20, amortYears);
-        const dscrHigh = Number.isFinite(adsHigh) && adsHigh > 0 ? noiBase / adsHigh : null;
-        if (Number.isFinite(dscrHigh) && dscrHigh <= dscrMin) {
-          let lo = Math.max(0, rate0);
-          let hi = 0.20;
-          for (let i = 0; i < 60; i += 1) {
-            const mid = (lo + hi) / 2;
-            const adsMid = pmtAnnual(debtBalance, mid, amortYears);
-            const dscrMid = Number.isFinite(adsMid) && adsMid > 0 ? noiBase / adsMid : null;
-            if (!Number.isFinite(dscrMid) || dscrMid <= dscrMin) {
-              hi = mid;
-            } else {
-              lo = mid;
-            }
-          }
-          rateFail = hi;
-        }
-      }
-    }
-    const rateDeltaBps = Number.isFinite(rateFail) && Number.isFinite(rate0)
-      ? Math.max(0, Math.round((rateFail - rate0) * 10000))
-      : null;
-
-    const valueFail = debtBalance / ltvMaxR;
-    const valueDropPct = Number.isFinite(valueFail) && value0 > 0
-      ? Math.max(0, 1 - valueFail / value0)
-      : null;
-    const capFail = Number.isFinite(noiBase) && Number.isFinite(valueFail) && valueFail > 0
-      ? noiBase / valueFail
-      : null;
-    const capDeltaBps = Number.isFinite(capFail) && Number.isFinite(capRate0)
-      ? Math.max(0, Math.round((capFail - capRate0) * 10000))
-      : null;
-    const capIsBinding =
-      Number.isFinite(capFail) &&
-      Number.isFinite(capRate0) &&
-      capFail <= capRate0;
-
-    const hasAnyBreakpointBuffer =
-      Number.isFinite(noiDropPct) ||
-      Number.isFinite(rateDeltaBps) ||
-      Number.isFinite(valueDropPct) ||
-      (Number.isFinite(capDeltaBps) && (capDeltaBps >= 1 || capIsBinding));
-
-    if (!hasAnyBreakpointBuffer) {
-      breakpointTableHtml = "";
-    } else {
-      const breakpointCandidates = [];
-      if (Number.isFinite(noiDropPct)) {
-        breakpointCandidates.push({
-          sortValue: Math.round(Math.abs(noiDropPct) * 10000),
-          text: `NOI (-${fmtBufferPct(noiDropPct)})`,
-        });
-      }
-      if (Number.isFinite(rateDeltaBps)) {
-        breakpointCandidates.push({
-          sortValue: rateDeltaBps,
-          text: `Rate (+${Math.round(rateDeltaBps)} bps)`,
-        });
-      }
-      if (Number.isFinite(valueDropPct)) {
-        breakpointCandidates.push({
-          sortValue: Math.round(Math.abs(valueDropPct) * 10000),
-          text: `Value (-${fmtBufferPct(valueDropPct)})`,
-        });
-      }
-      if (Number.isFinite(capDeltaBps) && (capDeltaBps >= 1 || capIsBinding)) {
-        breakpointCandidates.push({
-          sortValue: capDeltaBps,
-          text: `Cap (+${Math.round(capDeltaBps)} bps)`,
-        });
-      }
-      const primaryBreakpoint = breakpointCandidates
-        .slice()
-        .sort((a, b) => a.sortValue - b.sortValue)[0] || null;
-
-      breakpointTableHtml = `<div class="card no-break" style="margin-top:12px;">
-  <p><strong>Breakpoint Table - Refinance Failure Thresholds</strong></p>
-  <table>
-    <thead>
-      <tr><th>Breakpoint</th><th>Current</th><th>Failure At</th><th>Buffer</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>NOI (TTM)</td><td>${fmtMoney(noiBase)}</td><td>${fmtMoney(noiFail)}</td><td>${Number.isFinite(noiDropPct) ? `${fmtBufferPct(noiDropPct)} NOI decline` : DATA_NOT_AVAILABLE}</td></tr>
-      <tr><td>Interest Rate</td><td>${fmtRate2(rate0)}</td><td>${fmtRate2(rateFail)}</td><td>${Number.isFinite(rateDeltaBps) ? `${Math.round(rateDeltaBps)} bps increase` : DATA_NOT_AVAILABLE}</td></tr>
-      <tr><td>Value</td><td>${fmtMoney(value0)}</td><td>${fmtMoney(valueFail)}</td><td>${Number.isFinite(valueDropPct) ? `${fmtBufferPct(valueDropPct)} value decline` : DATA_NOT_AVAILABLE}</td></tr>
-      <tr><td>Cap Rate</td><td>${fmtRate2(capRate0)}</td><td>${fmtRate2(capFail)}</td><td>${Number.isFinite(capRate0) && Number.isFinite(capDeltaBps) ? `${Math.round(capDeltaBps)} bps cap expansion` : DATA_NOT_AVAILABLE}</td></tr>
-    </tbody>
-  </table>
-  ${primaryBreakpoint ? `<p class="small">Primary Breakpoint: ${escapeHtml(primaryBreakpoint.text)}</p>` : ""}
-</div>`;
-    }
-  }
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
   )}</strong></p><p>Base Coverage: ${formatCoverage(
@@ -549,7 +384,9 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     worstFiniteCoverage
   )}</p><p class="small">${escapeHtml(
     evidence
-  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}${breakpointTableHtml}`;  return { tier: refiTier, evidence, html: refiHtml };
+  )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
+
+  return { tier: refiTier, evidence, html: refiHtml };
 }
 
 function escapeHtml(value) {
@@ -575,12 +412,7 @@ function sanitizeDisplayText(s) {
 
 function sanitizeTypography(html) {
   if (typeof html !== "string") return html;
-  return html
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/\u00A0/g, " ")
-    .replace(/&(?:ndash|mdash);/g, "-");
+  return html.replace(/[–—]/g, "-").replace(/&(?:ndash|mdash);/g, "-");
 }
 
 function stripMarkedSection(html, key) {
@@ -868,8 +700,8 @@ function buildT12IncomeRows(t12Payload, formatValue) {
         addRow(key, value);
       }
     });
-
   }
+
   if (rows.length < 3) return "";
   return rows.join("");
 }
@@ -1172,10 +1004,13 @@ function buildScreeningDataCoverageSummary({
   const suggestions = [];
   if (t12Missing.length > 0) {
     suggestions.push("Trailing-12 Operating Statement (T12) with EGI, OpEx, NOI");
+  }
   if (rrMissing.includes("in_place_rent") || rrMissing.includes("market_rent")) {
     suggestions.push("Current Rent Roll with in-place & market rents");
+  }
   if (!rrOccPresent) {
     suggestions.push("Rent Roll with unit status (occupied/vacant) or occupied/total summary");
+  }
   const suggestionHtml = [...new Set(suggestions)]
     .slice(0, 3)
     .map((entry) => `<li>${escapeHtml(entry)}</li>`)
@@ -1191,9 +1026,6 @@ function buildScreeningDataCoverageSummary({
   )}</td></tr></tbody></table>${missingHtml ? `<ul>${missingHtml}</ul>` : ""}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 
-}
-}
-}
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
   computedRentRoll,
@@ -1319,6 +1151,7 @@ function buildScreeningIncomeForensicsHtml({
   );
   if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
     marketPremiumPct = ((avgMarket - avgInPlace) / avgInPlace) * 100;
+  }
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
     ? marketPremiumPct / 100
     : NaN;
@@ -1338,6 +1171,7 @@ function buildScreeningIncomeForensicsHtml({
         topIncomeLineConcentration
       )} of EGI (concentration flag).`
     );
+  }
   const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
   if (
     otherIncome &&
@@ -1351,6 +1185,7 @@ function buildScreeningIncomeForensicsHtml({
         otherIncome.amount / egi
       )} of EGI (verify sustainability and recurring nature).`
     );
+  }
   const largestExpense = expenseLines[0];
   if (
     largestExpense &&
@@ -1364,12 +1199,14 @@ function buildScreeningIncomeForensicsHtml({
         largestExpense.amount / opex
       )} of OpEx (concentration flag).`
     );
+  }
   if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
     bullets.push(
       `In-place rents trail market by approximately ${formatPercent1(
         marketRentPremiumRatio
       )} (document-backed upside).`
     );
+  }
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
       bullets.push(
@@ -1384,6 +1221,7 @@ function buildScreeningIncomeForensicsHtml({
         )} vs T12 GPR (reconciliation flag).`
       );
     }
+  }
 
   const bulletsHtml = [...new Set(bullets)]
     .slice(0, 3)
@@ -1396,12 +1234,6 @@ function buildScreeningIncomeForensicsHtml({
   return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
 
-}
-}
-}
-}
-}
-}
 function buildScreeningExpenseStructureHtml({
   t12Payload,
   computedRentRoll,
@@ -1423,16 +1255,19 @@ function buildScreeningExpenseStructureHtml({
         expenseRatio
       )}</td></tr>`
     );
+  }
   if (Number.isFinite(opex) && Number.isFinite(units) && units > 0) {
     rows.push(
       `<tr><td>Operating Expense per Unit</td><td>${formatCurrency(
         opex / units
       )}</td></tr>`
     );
+  }
   if (Number.isFinite(noi) && Number.isFinite(units) && units > 0) {
     rows.push(
       `<tr><td>NOI per Unit</td><td>${formatCurrency(noi / units)}</td></tr>`
     );
+  }
 
   if (rows.length === 0) return "";
   const metricsCard = `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
@@ -1516,8 +1351,10 @@ function buildScreeningExpenseStructureHtml({
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
   if (Number.isFinite(expenseRatio) && expenseRatio >= 0.60) {
     flags.push("Operating expense ratio is elevated (> 60%).");
+  }
   if (totalOpEx > 0 && expenseDriverRows.some((r) => r.amount / totalOpEx >= 0.30)) {
     flags.push("Top expense line exceeds 30% of OpEx (concentration risk).");
+  }
   const flagsHtml = flags
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
@@ -1532,7 +1369,9 @@ function buildScreeningExpenseStructureHtml({
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
-    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">Expense line-item detail not present in uploaded T12; category ranking omitted.</div>`;
+    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">${escapeHtml(
+        DATA_NOT_AVAILABLE
+      )}</div>`;
   const flagsCard = (flagsHtml || top3Html)
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
@@ -1540,11 +1379,6 @@ function buildScreeningExpenseStructureHtml({
   return `${metricsCard}${flagsCard}`;
 }
 
-}
-}
-}
-}
-}
 function buildScreeningNoiStabilityHtml({
   t12Payload,
   computedRentRoll,
@@ -1565,6 +1399,7 @@ function buildScreeningNoiStabilityHtml({
     rows.push(
       `<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`
     );
+  }
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
     const expenseSensitivity = 1 - opex / egi;
     rows.push(
@@ -1572,6 +1407,7 @@ function buildScreeningNoiStabilityHtml({
         expenseSensitivity
       )}</td></tr>`
     );
+  }
   if (Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0) {
     const breakEvenOcc = opex / gpr;
     if (Number.isFinite(breakEvenOcc)) {
@@ -1581,6 +1417,7 @@ function buildScreeningNoiStabilityHtml({
         )}</td></tr>`
       );
     }
+  }
   if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
     const rrVsGprPct = (rrAnnual - gpr) / gpr;
     rows.push(
@@ -1588,24 +1425,42 @@ function buildScreeningNoiStabilityHtml({
         rrVsGprPct
       )}</td></tr>`
     );
+  }
 
   if (rows.length === 0) return "";
+  const rrVsGprPct =
+    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
+      ? (rrAnnual - gpr) / gpr
+      : null;
+  const noiMargin =
+    Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
+  const expenseRatio =
+    Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
 
   const flags = [];
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
       flags.push(
-        `Rent roll annualized rent is -${formatPercent1(
+        `Rent roll annualized rent is +${formatPercent1(
+          rrVsGprPct
+        )} vs T12 GPR (reconciliation flag).`
+      );
+    } else {
+      flags.push(
+        `Rent roll annualized rent is −${formatPercent1(
           Math.abs(rrVsGprPct)
         )} vs T12 GPR (reconciliation flag).`
       );
     }
+  }
   if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
     flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
+  }
   if (Number.isFinite(expenseRatio) && expenseRatio > 0.65) {
     flags.push(
       `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
     );
+  }
 
   const stabilityDrivers = [];
   if (Number.isFinite(noiMargin)) {
@@ -1613,23 +1468,26 @@ function buildScreeningNoiStabilityHtml({
       label: `NOI Margin ${formatPercent1(noiMargin)}`,
       severity: Math.max(0, 0.35 - noiMargin),
     });
+  }
   if (Number.isFinite(expenseRatio)) {
     stabilityDrivers.push({
       label: `Expense Ratio ${formatPercent1(expenseRatio)}`,
       severity: Math.max(0, expenseRatio - 0.65),
     });
+  }
   if (Number.isFinite(rrVsGprPct)) {
     stabilityDrivers.push({
       label: `Rent Roll vs T12 GPR ${formatPercent1(rrVsGprPct)}`,
       severity: Math.max(0, Math.abs(rrVsGprPct) - 0.05),
     });
+  }
   const rankedDrivers = stabilityDrivers
     .slice()
     .sort((a, b) => b.severity - a.severity)
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst -> Best)</p><ol>${rankedDrivers
+    ? `<p class="subsection-title">Stability Drivers (Worst → Best)</p><ol>${rankedDrivers
         .map((line) => `<li>${escapeHtml(line)}</li>`)
         .join("")}</ol>`
     : "";
@@ -1662,86 +1520,44 @@ function buildScreeningNoiStabilityHtml({
     Number.isFinite(rrOccupiedUnits)
   ) {
     occupancy = rrOccupiedUnits / rrTotalUnits;
+  }
   if (!Number.isFinite(occupancy)) {
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
+  }
 
-  let sensitivityCard = "";
+  const sensitivityRows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
-    const classifyMargin = (m) =>
-      (Number.isFinite(m) && m <= 0.30)
-        ? "Fragile"
-        : (Number.isFinite(m) && m > 0.40)
-          ? "Stable"
-          : "Sensitized";
-    const baseMarginR = Number.isFinite(noi) && egi > 0 ? noi / egi : null;
-    const expenseUp5Expenses = Number.isFinite(opex) ? opex * 1.05 : null;
-    const expenseUp5NOI = Number.isFinite(expenseUp5Expenses) ? egi - expenseUp5Expenses : null;
-    const expenseUp5MarginR =
-      Number.isFinite(expenseUp5NOI) && egi > 0 ? expenseUp5NOI / egi : null;
-    const incomeDown5EGI = egi * 0.95;
-    const incomeDown5NOI = incomeDown5EGI - opex;
-    const incomeDown5MarginR =
-      Number.isFinite(incomeDown5NOI) && incomeDown5EGI > 0 ? incomeDown5NOI / incomeDown5EGI : null;
-    const combinedEGI = egi * 0.95;
-    const combinedExpenses = Number.isFinite(opex) ? opex * 1.05 : null;
-    const combinedNOI = Number.isFinite(combinedExpenses) ? combinedEGI - combinedExpenses : null;
-    const marginC =
-      Number.isFinite(combinedNOI) && combinedEGI > 0 ? combinedNOI / combinedEGI : null;
-    const sensitivityRows = [
-      { label: "Base", margin: baseMarginR },
-      { label: "Expenses +5%", margin: expenseUp5MarginR },
-      { label: "Income -5%", margin: incomeDown5MarginR },
-      { label: "Combined Shock", margin: marginC },
-    ]
-      .filter((row) => Number.isFinite(row.margin))
-      .map(
-        (row) =>
-          `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
-            classifyMargin(row.margin)
-          )}</td></tr>`
-      )
-      .join("");
-    if (sensitivityRows) {
-      const marginDeltaBps =
-        Number.isFinite(baseMarginR) && Number.isFinite(marginC)
-          ? (baseMarginR - marginC) * 10000
-          : null;
-      let stressLine = "";
-      if (Number.isFinite(marginDeltaBps)) {
-        if (marginDeltaBps > 0) {
-          stressLine = `Under modest operating stress, NOI margin compresses by ${Math.round(marginDeltaBps)} bps.`;
-        } else if (marginDeltaBps < 0) {
-          stressLine = `Under modest operating stress, NOI margin expands by ${Math.round(Math.abs(marginDeltaBps))} bps.`;
-        } else {
-          stressLine = `Under modest operating stress, NOI margin remains unchanged.`;
-        }
-      }
-      sensitivityCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
-        stressLine ? `<p class="exec-signal-line">${escapeHtml(stressLine)}</p>` : ""
-      }${
-        Number.isFinite(marginC) && marginC <= 0.3
-          ? `<p class="exec-signal-line">Stress testing indicates fragility under modest operating deterioration.</p>`
-          : ""
-      }</div>`;
+    const noiRevenueShock = noi - 0.05 * egi;
+    const egiRevenueShock = egi * 0.95;
+    if (Number.isFinite(noiRevenueShock) && Number.isFinite(egiRevenueShock) && egiRevenueShock > 0) {
+      sensitivityRows.push(
+        `<tr><td>EGI -5% (revenue shock)</td><td>${formatCurrency(
+          noiRevenueShock
+        )}</td><td>${formatPercent1(noiRevenueShock / egiRevenueShock)}</td></tr>`
+      );
     }
+    if (Number.isFinite(opex)) {
+      const noiCostShock = noi - 0.05 * opex;
+      if (Number.isFinite(noiCostShock) && egi > 0) {
+        sensitivityRows.push(
+          `<tr><td>OpEx +5% (cost shock)</td><td>${formatCurrency(
+            noiCostShock
+          )}</td><td>${formatPercent1(noiCostShock / egi)}</td></tr>`
+        );
+      }
+    }
+  }
+  const sensitivityCard = sensitivityRows.length
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">NOI Sensitivity (Deterministic)</p><table><thead><tr><th>Scenario</th><th>Implied NOI</th><th>NOI Margin (Implied)</th></tr></thead><tbody>${sensitivityRows.join(
+        ""
+      )}</tbody></table></div>`
+    : "";
+
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
 }
 
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
@@ -1765,15 +1581,18 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     occupancy = occupiedUnits / totalUnits;
+  }
 
   let totalInPlaceAnnual = coerceNumber(source.total_in_place_annual);
   if (!Number.isFinite(totalInPlaceAnnual)) {
     const inPlaceMonthly = coerceNumber(source.total_in_place_monthly);
     if (Number.isFinite(inPlaceMonthly)) totalInPlaceAnnual = inPlaceMonthly * 12;
+  }
   let totalMarketAnnual = coerceNumber(source.total_market_annual);
   if (!Number.isFinite(totalMarketAnnual)) {
     const marketMonthly = coerceNumber(source.total_market_monthly);
     if (Number.isFinite(marketMonthly)) totalMarketAnnual = marketMonthly * 12;
+  }
 
   const unitMix = Array.isArray(source.unit_mix) ? source.unit_mix : [];
   let weightedInPlace = null;
@@ -1799,6 +1618,7 @@ function buildScreeningRentRollDistributionHtml({
     });
     if (sumCountInPlace > 0) weightedInPlace = sumRentInPlace / sumCountInPlace;
     if (sumCountMarket > 0) weightedMarket = sumRentMarket / sumCountMarket;
+  }
   if (
     !Number.isFinite(weightedInPlace) &&
     Number.isFinite(totalInPlaceAnnual) &&
@@ -1806,6 +1626,7 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     weightedInPlace = totalInPlaceAnnual / totalUnits / 12;
+  }
   if (
     !Number.isFinite(weightedMarket) &&
     Number.isFinite(totalMarketAnnual) &&
@@ -1813,14 +1634,17 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     weightedMarket = totalMarketAnnual / totalUnits / 12;
+  }
 
   const metricsRows = [];
   if (Number.isFinite(totalUnits)) {
     metricsRows.push(`<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>`);
+  }
   if (Number.isFinite(occupiedUnits)) {
     metricsRows.push(
       `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>`
     );
+  }
   if (Number.isFinite(occupancy)) {
     metricsRows.push(
       `<tr><td>Occupancy</td><td>${(occupancy * 100).toLocaleString("en-CA", {
@@ -1828,18 +1652,21 @@ function buildScreeningRentRollDistributionHtml({
         maximumFractionDigits: 1,
       })}%</td></tr>`
     );
+  }
   if (Number.isFinite(weightedInPlace)) {
     metricsRows.push(
       `<tr><td>Weighted Avg In-Place Rent</td><td>${formatCurrency(
         weightedInPlace
       )}</td></tr>`
     );
+  }
   if (Number.isFinite(weightedMarket)) {
     metricsRows.push(
       `<tr><td>Weighted Avg Market Rent</td><td>${formatCurrency(
         weightedMarket
       )}</td></tr>`
     );
+  }
   if (
     Number.isFinite(weightedInPlace) &&
     Number.isFinite(weightedMarket) &&
@@ -1852,18 +1679,21 @@ function buildScreeningRentRollDistributionHtml({
         maximumFractionDigits: 1,
       })}%</td></tr>`
     );
+  }
   if (Number.isFinite(totalInPlaceAnnual)) {
     metricsRows.push(
       `<tr><td>Annual In-Place Rent (Total)</td><td>${formatCurrency(
         totalInPlaceAnnual
       )}</td></tr>`
     );
+  }
   if (Number.isFinite(totalMarketAnnual)) {
     metricsRows.push(
       `<tr><td>Annual Market Rent (Total)</td><td>${formatCurrency(
         totalMarketAnnual
       )}</td></tr>`
     );
+  }
 
   const rentBandRows = unitMix
     .map((row) => {
@@ -1912,12 +1742,14 @@ function buildScreeningRentRollDistributionHtml({
       largestUnitType = largestMixRow.unitType;
       largestUnitTypeConcentration = largestMixRow.count / totalUnits;
     }
+  }
   if (Number.isFinite(largestUnitTypeConcentration)) {
     metricsRows.push(
       `<tr><td>Largest Unit Type Concentration</td><td>${formatPercent1(
         largestUnitTypeConcentration
       )}</td></tr>`
     );
+  }
 
   if (metricsRows.length === 0 && !rentBandRows) return "";
 
@@ -1940,18 +1772,21 @@ function buildScreeningRentRollDistributionHtml({
   const flags = [];
   if (Number.isFinite(occupancy) && occupancy < 0.9) {
     flags.push(`Occupancy is ${formatPercent1(occupancy)} (stabilization flag).`);
+  }
   if (Number.isFinite(marketPremiumRatio) && marketPremiumRatio >= 0.1) {
     flags.push(
       `In-place rents trail market by ~${formatPercent1(
         marketPremiumRatio
       )} (document-backed upside).`
     );
+  }
   if (Number.isFinite(largestUnitTypeConcentration) && largestUnitTypeConcentration >= 0.6) {
     flags.push(
       `Unit mix concentration: ${largestUnitType || "Largest unit type"} represents ${formatPercent1(
         largestUnitTypeConcentration
       )} of units (concentration flag).`
     );
+  }
   const flagsHtml = flags
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
@@ -1963,25 +1798,6 @@ function buildScreeningRentRollDistributionHtml({
   return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}`;
 }
 
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -2023,13 +1839,13 @@ function buildUnitMixTable(rows = []) {
     <td>${!isNil(lift) ? formatCurrency(lift) : ""}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
   return html;
 }
 
-}
 function buildRenovationTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2064,13 +1880,13 @@ function buildRenovationTable(rows = []) {
     <td>${!isNil(paybackYears) ? formatYears(paybackYears) : ""}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
   return html;
 }
 
-}
 function buildScenarioTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2093,13 +1909,13 @@ function buildScenarioTable(rows = []) {
     <td>${formatPercent(row.exitCap)}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
   return html;
 }
 
-}
 function buildReturnSummaryTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2129,13 +1945,13 @@ function buildReturnSummaryTable(rows = []) {
     <td>${salePriceText}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
   return html;
 }
 
-}
 function buildCapitalPlanTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2156,13 +1972,13 @@ function buildCapitalPlanTable(rows = []) {
     <td>${row.objective ?? ""}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
   return html;
 }
 
-}
 function buildDealScoreTable(rows = [], totalScore) {
   if (!rows.length) return "";
   let html = `
@@ -2203,6 +2019,7 @@ function buildDealScoreTable(rows = [], totalScore) {
     }</td>
   </tr>
 `;
+  }
 
   const finalScore =
     !isNil(totalScore) && !isNaN(Number(totalScore))
@@ -2222,7 +2039,6 @@ function buildDealScoreTable(rows = [], totalScore) {
   return html;
 }
 
-}
 function buildCompsTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2247,6 +2063,7 @@ function buildCompsTable(rows = []) {
     <td>${formatPercent(row.capRate)}</td>
   </tr>
 `;
+  }
   html += `
 </table>
 `;
@@ -2267,7 +2084,6 @@ const INLINE_CHARTS =
     ? true
     : process.env.INLINE_CHARTS === "true";
 
-}
 function chartVersion(filename) {
   try {
     const stat = fs.statSync(
@@ -2276,9 +2092,9 @@ function chartVersion(filename) {
     return String(stat.mtime.getTime());
   } catch (err) {
     return String(Date.now());
+  }
 }
 
-}
 function chartUrl(filename) {
   const version = chartVersion(filename);
   return `${CHART_BASE_URL}/charts/institutional/${filename}?v=${version}`;
@@ -2299,9 +2115,9 @@ function inlineChart(filename, fallbackUrl) {
   } catch (err) {
     console.warn(`Inline chart missing (${filename}), using fallback URL`);
     return fallbackUrl;
+  }
 }
 
-}
 function applyChartPlaceholders(html, charts = {}) {
   const defaults = {
     renovationChartUrl: inlineChart("renovation_roi.png", chartUrl("renovation_roi.png")),
@@ -2496,53 +2312,2059 @@ export default async function handler(req, res) {
         });
 
       if (promptEventErr) {
-        console.error("Failed to write prompt version artifact:", promptEventErr);
+        console.error("Failed to log prompt_version_applied:", promptEventErr);
+      }
+    }
+    // ------------------------------------------------------------------
+// Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
+// ------------------------------------------------------------------
+    
+    const tables = body.tables || {};
+    const charts = body.charts || {};
+
+    // Optional financials payload; falls back to sample values
+    const financials = body.financials || {};
+
+    const getSection = (key) => sections[key] || "";
+    const getNarrativeHtml = (key) => {
+      const html = sections?.[key] || "";
+      return typeof html === "string" ? html : "";
+    };
+
+    let documentSourcesHtml = "";
+    let documentSources = [];
+    let rentRollPayload = null;
+    let t12Payload = null;
+    if (jobId) {
+      const { data: rentRollArtifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "rent_roll_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      rentRollPayload = rentRollArtifact?.payload || null;
+
+      const { data: t12Artifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "t12_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      t12Payload = t12Artifact?.payload || null;
+
+
+      const { data: sourceRows, error: sourceErr } = await supabase
+        .from("analysis_job_files")
+        .select("original_filename, created_at")
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: true });
+
+      if (!sourceErr && sourceRows && sourceRows.length > 0) {
+        documentSources = sourceRows;
+        const items = sourceRows
+          .map((row) => {
+            const name = escapeHtml(row.original_filename || "Unnamed file");
+            const createdAt = row.created_at
+              ? new Date(row.created_at).toLocaleString()
+              : "Unknown date";
+            return `<li>${name}  -  ${escapeHtml(createdAt)}</li>`;
+          })
+          .join("");
+        documentSourcesHtml = `<ul>${items}</ul>`;
       }
     }
 
+    let computedRentRoll = null;
+    const rentRollUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : null;
+    if (rentRollUnits && rentRollUnits.length > 0) {
+      const totalUnits = rentRollUnits.length;
+      let occupiedUnits = 0;
+      let vacantUnits = 0;
+      const inPlaceRents = [];
+      const marketRents = [];
+      const unitMixMap = {};
+      const rentByBeds = {};
+      const marketRentByBeds = {};
+      const sqftByBeds = {};
+
+      for (const unit of rentRollUnits) {
+        const statusText = String(unit?.status || "").toLowerCase();
+        if (statusText) {
+          if (statusText.includes("occup")) {
+            occupiedUnits += 1;
+          } else if (statusText.includes("vacant")) {
+            vacantUnits += 1;
+          }
+        } else if (Number(unit?.in_place_rent) > 0) {
+          occupiedUnits += 1;
+        }
+
+        const beds = coerceNumber(unit?.beds);
+        const inPlaceRent = coerceNumber(unit?.in_place_rent);
+        const marketRent = coerceNumber(unit?.market_rent);
+        const sqft = coerceNumber(unit?.sqft);
+
+        if (Number.isFinite(inPlaceRent)) {
+          inPlaceRents.push(inPlaceRent);
+        }
+        if (Number.isFinite(marketRent)) {
+          marketRents.push(marketRent);
+        }
+
+        const unitKey = Number.isFinite(beds)
+          ? String(beds)
+          : String(unit?.unit_type || "").trim() || null;
+        if (unitKey) {
+          unitMixMap[unitKey] = (unitMixMap[unitKey] || 0) + 1;
+          if (Number.isFinite(inPlaceRent)) {
+            if (!rentByBeds[unitKey]) {
+              rentByBeds[unitKey] = [];
+            }
+            rentByBeds[unitKey].push(inPlaceRent);
+          }
+          if (Number.isFinite(marketRent)) {
+            if (!marketRentByBeds[unitKey]) {
+              marketRentByBeds[unitKey] = [];
+            }
+            marketRentByBeds[unitKey].push(marketRent);
+          }
+          if (Number.isFinite(sqft)) {
+            if (!sqftByBeds[unitKey]) {
+              sqftByBeds[unitKey] = [];
+            }
+            sqftByBeds[unitKey].push(sqft);
+          }
+        }
+      }
+
+      const occupancy =
+        totalUnits > 0 && (occupiedUnits + vacantUnits > 0)
+          ? occupiedUnits / totalUnits
+          : null;
+
+      const avgInPlaceRent =
+        inPlaceRents.length > 0
+          ? inPlaceRents.reduce((sum, value) => sum + value, 0) / inPlaceRents.length
+          : null;
+      const avgMarketRent =
+        marketRents.length > 0
+          ? marketRents.reduce((sum, value) => sum + value, 0) / marketRents.length
+          : null;
+      const totalInPlaceMonthly =
+        inPlaceRents.length > 0 ? inPlaceRents.reduce((sum, value) => sum + value, 0) : null;
+      const totalMarketMonthly =
+        marketRents.length > 0 ? marketRents.reduce((sum, value) => sum + value, 0) : null;
+      const totalInPlaceAnnual =
+        totalInPlaceMonthly !== null ? totalInPlaceMonthly * 12 : null;
+      const totalMarketAnnual =
+        totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
+
+      const unitMix = Object.entries(unitMixMap)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([bedKey, count]) => {
+          const inPlaceValues = rentByBeds[bedKey] || [];
+          const marketValues = marketRentByBeds[bedKey] || [];
+          const sqftValues = sqftByBeds[bedKey] || [];
+          const avgInPlaceRent =
+            inPlaceValues.length > 0
+              ? inPlaceValues.reduce((sum, value) => sum + value, 0) / inPlaceValues.length
+              : null;
+          const avgMarketRent =
+            marketValues.length > 0
+              ? marketValues.reduce((sum, value) => sum + value, 0) / marketValues.length
+              : null;
+          const avgSqft =
+            sqftValues.length > 0
+              ? sqftValues.reduce((sum, value) => sum + value, 0) / sqftValues.length
+              : null;
+          return {
+            unit_type: bedKey === "0" ? "Studio" : /^\d+$/.test(bedKey) ? `${bedKey} Bed` : bedKey,
+            count,
+            current_rent: Number.isFinite(avgInPlaceRent) ? avgInPlaceRent : null,
+            market_rent: Number.isFinite(avgMarketRent) ? avgMarketRent : null,
+            avg_sqft: Number.isFinite(avgSqft) ? Math.round(avgSqft) : null,
+          };
+        });
+
+      computedRentRoll = {
+        total_units: totalUnits,
+        occupied_units: occupiedUnits,
+        vacant_units: vacantUnits,
+        occupancy,
+        avg_in_place_rent: avgInPlaceRent ?? DATA_NOT_AVAILABLE,
+        avg_market_rent: avgMarketRent ?? DATA_NOT_AVAILABLE,
+        total_in_place_monthly: totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
+        total_market_monthly: totalMarketMonthly ?? DATA_NOT_AVAILABLE,
+        total_in_place_annual: totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
+        total_market_annual: totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        unit_mix: unitMix,
+      };
+    }
+
+    const rentRollUnitMixRows =
+      computedRentRoll?.unit_mix && computedRentRoll.unit_mix.length > 0
+        ? computedRentRoll.unit_mix.map((row) => ({
+            type: row.unit_type,
+            count: row.count,
+            avgSqft: row.avg_sqft,
+            currentRent: row.current_rent,
+            targetRent: row.market_rent,
+          }))
+        : null;
+
+    // 2. Load the HTML template (SACRED MASTER COPY)
+    const templatePath = path.join(__dirname, "report-template-runtime.html");
+    let htmlTemplate = fs.readFileSync(templatePath, "utf8");
+
+    // 3. Inject property identity
+    let finalHtml = htmlTemplate;
+    const propertyName = property_name || jobPropertyName || "";
+    const propertyAddress = property_address || "";
+    const propertyTitle = property_title || "";
+    const displayPropertyName =
+      sanitizeDisplayText(propertyName)?.trim() || "Property";
+    const displayPropertyAddress = sanitizeDisplayText(propertyAddress) || "";
+    const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
+    const propertyNameDisplay = displayPropertyName
+      .replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", propertyNameDisplay);
+    finalHtml = replaceAll(finalHtml, "{{REPORT_DATE}}", new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }));
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS}}", displayPropertyAddress);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_ADDRESS_LINE}}", displayPropertyAddress);
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);
+    finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
+    finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{PROPERTY_SUBMARKET}}",
+      ""
+    );
+    finalHtml = finalHtml.replace(/\(\s*,\s*\)/g, "");
+
+    // 4. Inject key financial metrics
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{PURCHASE_PRICE}}",
+      formatCurrency(financials.purchasePrice) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{TOTAL_PROJECT_COST}}",
+      formatCurrency(financials.totalProjectCost) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EQUITY_REQUIRED}}",
+      formatCurrency(financials.equityRequired) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{CAP_RATE_ON_COST}}",
+      formatPercent(financials.capRateOnCost) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{LEVERED_IRR}}",
+      formatPercent(financials.leveredIrr) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EQUITY_MULTIPLE}}",
+      formatMultiple(financials.equityMultiple, 2) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{YEAR1_COC}}",
+      formatPercent(financials.year1CoC) || DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{ESTIMATES_DISCLOSURE}}",
+      "InvestorIQ estimates are derived from uploaded documents and standardized underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred."
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{METHODOLOGY_NOTES}}",
+      "Metrics and tables reflect document-backed inputs and deterministic calculations. No manual adjustments or external assumptions are introduced when source data is incomplete."
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{LIMITATIONS_NOTES}}",
+      "This report is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{ASSUMPTIONS_DISCLOSURE}}",
+      allowAssumptions
+        ? "Assumptions in this report are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
+        : "This report contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
+    );
+    if (effectiveReportMode === "screening_v1") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    } else {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
+    }
+
+    // 5. Inject dynamic tables (fall back to blank if not provided)
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{UNIT_MIX_TABLE}}",
+      buildUnitMixTable(rentRollUnitMixRows || tables.unitMix || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_TABLE}}",
+      buildRenovationTable(tables.renovationSummary || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCENARIO_TABLE}}",
+      buildScenarioTable(tables.scenarios || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RETURN_SUMMARY_TABLE}}",
+      buildReturnSummaryTable(tables.returnSummary || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{CAPITAL_PLAN_TABLE}}",
+      buildCapitalPlanTable(tables.capitalPlan || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{DEAL_SCORE_TABLE}}",
+      buildDealScoreTable(tables.dealScore || [], tables.totalDealScore)
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{COMPARABLES_TABLE}}",
+      buildCompsTable(tables.comps || [])
+    );
+
+    // 6. Inject charts (URLs  -  can be overridden by caller)
+    finalHtml = applyChartPlaceholders(finalHtml, charts);
+
+    // 7. Inject ALL narrative sections (12)
+    const execMetricsParts = [];
+    const execUnits = coerceNumber(
+      computedRentRoll?.total_units ??
+        rentRollPayload?.total_units ??
+        rentRollPayload?.totals?.total_units
+    );
+    const execEgi = coerceNumber(t12Payload?.effective_gross_income);
+    const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
+    const execNoi = coerceNumber(t12Payload?.net_operating_income);
+    const execGpr =
+      coerceNumber(t12Payload?.gross_potential_rent) ??
+      coerceNumber(t12Payload?.gross_scheduled_rent) ??
+      coerceNumber(t12Payload?.gross_income) ??
+      coerceNumber(t12Payload?.total_income);
+    const execOccFromT12 =
+      coerceNumber(t12Payload?.physical_occupancy) ??
+      coerceNumber(t12Payload?.economic_occupancy) ??
+      coerceNumber(t12Payload?.occupancy);
+    const rrTotalUnits =
+      coerceNumber(computedRentRoll?.total_units) ??
+      coerceNumber(rentRollPayload?.totals?.total_units);
+    const rrOccupiedUnits =
+      coerceNumber(computedRentRoll?.occupied_units) ??
+      coerceNumber(rentRollPayload?.totals?.occupied_units);
+    const execOccFromRR =
+      Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
+        ? rrOccupiedUnits / rrTotalUnits
+        : null;
+    const rrUnitRows = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : [];
+    const rrTotalUnitsFromRows = rrUnitRows.length > 0 ? rrUnitRows.length : null;
+    const rrOccupiedFromRows = rrUnitRows.length
+      ? rrUnitRows.reduce((acc, u) => {
+          const status = String(u?.lease_status || u?.status || "").toLowerCase();
+          const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
+          if (status.includes("vacant")) return acc;
+          if (Number.isFinite(rent) && rent > 0) return acc + 1;
+          return acc;
+        }, 0)
+      : null;
+    const rrOccFromRows =
+      Number.isFinite(rrTotalUnitsFromRows) &&
+      rrTotalUnitsFromRows > 0 &&
+      Number.isFinite(rrOccupiedFromRows)
+        ? rrOccupiedFromRows / rrTotalUnitsFromRows
+        : null;
+
+    const rrAnnualInPlaceFromRows = rrUnitRows.length
+      ? rrUnitRows.reduce((acc, u) => {
+          const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
+          return Number.isFinite(rent) && rent > 0 ? acc + rent * 12 : acc;
+        }, 0)
+      : null;
+    let execOccupancy =
+      Number.isFinite(execOccFromT12)
+        ? execOccFromT12
+        : Number.isFinite(execOccFromRR)
+        ? execOccFromRR
+        : rrOccFromRows;
+    if (!Number.isFinite(execOccupancy)) {
+      const rrUnits = rentRollPayload?.units;
+      if (Array.isArray(rrUnits) && rrUnits.length > 0) {
+        const totalUnits = rrUnits.length;
+        const occupiedUnits = rrUnits.filter((u) => {
+          const status = (u.status || u.unit_status || "").toString().toLowerCase().trim();
+          const hasStatus = status.length > 0 && status !== "null" && status !== "undefined";
+          if (hasStatus) return status.includes("occupied");
+          return Number(u.in_place_rent) > 0;
+        }).length;
+
+        if (totalUnits > 0 && occupiedUnits >= 0) {
+          const derivedOcc = occupiedUnits / totalUnits;
+          if (Number.isFinite(derivedOcc)) {
+            execOccupancy = derivedOcc;
+          }
+        }
+      }
+    }
+    const execAnnualInPlace = coerceNumber(
+      computedRentRoll?.annual_in_place_rent ??
+        computedRentRoll?.annual_in_place_rent_total ??
+        computedRentRoll?.annual_current_rent ??
+        computedRentRoll?.in_place_rent_annual ??
+        rrAnnualInPlaceFromRows ??
+        computedRentRoll?.total_in_place_annual ??
+        rentRollPayload?.total_in_place_annual
+    );
+    const execMonthlyInPlace = coerceNumber(
+      computedRentRoll?.total_in_place_monthly ??
+        rentRollPayload?.total_in_place_monthly ??
+        (Number.isFinite(execAnnualInPlace) ? execAnnualInPlace / 12 : null)
+    );
+    const expenseRatio = Number.isFinite(coerceNumber(t12Payload?.expense_ratio))
+      ? coerceNumber(t12Payload?.expense_ratio)
+      : Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
+      ? execOpex / execEgi
+      : null;
+    const noiMargin =
+      Number.isFinite(coerceNumber(t12Payload?.net_operating_income)) &&
+      Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)) &&
+      coerceNumber(t12Payload?.effective_gross_income) > 0
+        ? coerceNumber(t12Payload?.net_operating_income) /
+          coerceNumber(t12Payload?.effective_gross_income)
+        : null;
+    const breakEvenOccupancy =
+      Number.isFinite(execOpex) &&
+      Number.isFinite(execGpr) &&
+      execGpr > 0
+        ? execOpex / execGpr
+        : null;
+    const toRatioMetric = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n > 1.5 ? n / 100 : n;
+    };
+    const expenseRatioR = toRatioMetric(expenseRatio);
+    const noiMarginR = toRatioMetric(noiMargin);
+    const breakEvenOccR = toRatioMetric(breakEvenOccupancy);
+    const breakEvenOccRatio = breakEvenOccR;
+    const breakEvenOcc = breakEvenOccR;
+    const toPctValue = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n > 1.5 ? n : n * 100;
+    };
+    const breakEvenOccPct = toPctValue(breakEvenOcc);
+    const operatingCushionPct =
+      Number.isFinite(breakEvenOccPct) ? 100 - breakEvenOccPct : null;
+    const marketRentPremiumPct =
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
+      coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
+        ? ((coerceNumber(computedRentRoll?.avg_market_rent) -
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) /
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) *
+          100
+        : null;
+    const marketRentPremiumRatio = Number.isFinite(marketRentPremiumPct)
+      ? marketRentPremiumPct / 100
+      : NaN;
+    const execOpexRatio =
+      Number.isFinite(execEgi) && Number.isFinite(execOpex) && execEgi > 0
+        ? formatPercent1(execOpex / execEgi)
+        : null;
+    if (Number.isFinite(execUnits) && execUnits > 0) execMetricsParts.push(`Units: ${Math.round(execUnits)}`);
+    if (Number.isFinite(execOccupancy)) execMetricsParts.push(`Occupancy: ${formatPercent1(execOccupancy)}`);
+    if (Number.isFinite(execAnnualInPlace)) execMetricsParts.push(`Annual In-Place Rent: ${formatCurrency(execAnnualInPlace)}`);
+    if (Number.isFinite(execEgi)) execMetricsParts.push(`EGI: ${formatCurrency(execEgi)}`);
+    if (Number.isFinite(execOpex)) execMetricsParts.push(`OpEx: ${formatCurrency(execOpex)}`);
+    if (Number.isFinite(execNoi)) execMetricsParts.push(`NOI: ${formatCurrency(execNoi)}`);
+    if (execOpexRatio) execMetricsParts.push(`OpEx Ratio: ${execOpexRatio}`);
+    const execUnitsText =
+      Number.isFinite(execUnits) && execUnits > 0 ? String(Math.round(execUnits)) : DATA_NOT_AVAILABLE;
+    const execNoiText = Number.isFinite(execNoi) ? formatCurrency(execNoi) : DATA_NOT_AVAILABLE;
+    const execOccupancyText = Number.isFinite(execOccupancy)
+      ? formatPercent1(execOccupancy)
+      : DATA_NOT_AVAILABLE;
+    const execAnnualInPlaceText = Number.isFinite(execAnnualInPlace)
+      ? formatCurrency(execAnnualInPlace)
+      : DATA_NOT_AVAILABLE;
+    const execEgiText = Number.isFinite(execEgi) ? formatCurrency(execEgi) : DATA_NOT_AVAILABLE;
+    const execOpexText = Number.isFinite(execOpex) ? formatCurrency(execOpex) : DATA_NOT_AVAILABLE;
+    const expenseRatioBand = Number.isFinite(expenseRatioR)
+      ? expenseRatioR >= 0.65
+        ? "Fragile"
+        : expenseRatioR >= 0.55
+        ? "Sensitized"
+        : "Stable"
+      : null;
+    const noiMarginBand = Number.isFinite(noiMarginR)
+      ? noiMarginR <= 0.3
+        ? "Fragile"
+        : noiMarginR <= 0.45
+        ? "Sensitized"
+        : "Stable"
+      : null;
+    const breakEvenBand = Number.isFinite(breakEvenOccRatio)
+      ? breakEvenOccRatio >= 0.8
+        ? "Fragile"
+        : breakEvenOccRatio >= 0.75
+        ? "Sensitized"
+        : "Stable"
+      : null;
+
+    const execOpexRatioText = Number.isFinite(expenseRatioR)
+      ? `${formatPercent1(expenseRatioR)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
+      : DATA_NOT_AVAILABLE;
+    const execNoiMarginText = Number.isFinite(noiMarginR)
+      ? `${formatPercent1(noiMarginR)}${noiMarginBand ? ` (${noiMarginBand})` : ""}`
+      : DATA_NOT_AVAILABLE;
+    const execBreakEvenText = Number.isFinite(breakEvenOccRatio)
+      ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
+      : DATA_NOT_AVAILABLE;
+    let execRefiLine = "";
+    if (effectiveReportMode === "v1_core") {
+      const refiTier = buildRefiStabilityModel({
+        financials: body?.financials,
+        t12Payload,
+        formatValue: formatCurrency,
+      })?.tier;
+      const validRefiTiers = new Set([
+        "Stable",
+        "Sensitized",
+        "Fragile",
+        "Refinance Failure Under Stress",
+      ]);
+      if (validRefiTiers.has(refiTier)) {
+        execRefiLine = `<p>Refinance Stability Classification: ${escapeHtml(refiTier)}.</p>`;
+      }
+    }
+    const execArticle = String(execUnitsText).trim().startsWith("8") ? "an" : "a";
+    const execOpeningLine = `<p>${escapeHtml(
+      `${displayPropertyName} is ${execArticle} ${execUnitsText}-unit multifamily asset generating ${execNoiText} in trailing twelve-month NOI.`
+    )}</p>`;
+    const execStructuredMetricsLine = `<p class="exec-kpis">${escapeHtml(
+      `Occupancy: ${execOccupancyText} · Annual In-Place Rent: ${execAnnualInPlaceText} · OpEx Ratio: ${execOpexRatioText}`
+    )}</p>`;
+    const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
+    const execScreeningLines = [];
+    let screeningClass = null;
+    let screeningExplanation = null;
+    const driverCandidates = [];
+    if (Number.isFinite(expenseRatioR)) {
+      const severity =
+        expenseRatioR > 0.65
+          ? expenseRatioR - 0.65
+          : expenseRatioR > 0.55
+          ? expenseRatioR - 0.55
+          : 0;
+      const trigger =
+        expenseRatioR > 0.65
+          ? ">= 65.0% fragile threshold breached"
+          : expenseRatioR > 0.55
+          ? ">= 55.0% sensitized threshold breached"
+          : "< 55.0% within stable range";
+      driverCandidates.push({
+        label: "Expense Ratio",
+        value: formatPercent1(expenseRatioR),
+        trigger,
+        severity,
+      });
+    }
+    if (Number.isFinite(noiMarginR)) {
+      const severity =
+        noiMarginR < 0.35
+          ? 0.35 - noiMarginR
+          : noiMarginR < 0.45
+          ? 0.45 - noiMarginR
+          : 0;
+      const trigger =
+        noiMarginR < 0.35
+          ? "<= 35.0% fragile threshold breached"
+          : noiMarginR < 0.45
+          ? "<= 45.0% sensitized threshold breached"
+          : ">= 45.0% within stable range";
+      driverCandidates.push({
+        label: "NOI Margin",
+        value: formatPercent1(noiMarginR),
+        trigger,
+        severity,
+      });
+    }
+    if (Number.isFinite(breakEvenOccR)) {
+      const severity =
+        breakEvenOccR > 0.85
+          ? breakEvenOccR - 0.85
+          : breakEvenOccR > 0.75
+          ? breakEvenOccR - 0.75
+          : 0;
+      const trigger =
+        breakEvenOccR > 0.85
+          ? ">= 85.0% fragile threshold breached"
+          : breakEvenOccR > 0.75
+          ? ">= 75.0% sensitized threshold breached"
+          : "< 75.0% within stable range";
+      driverCandidates.push({
+        label: "Break-even Occupancy",
+        value: formatPercent1(breakEvenOccR),
+        trigger,
+        severity,
+      });
+    }
+    const rankedDrivers = driverCandidates
+      .slice()
+      .sort((a, b) => b.severity - a.severity);
+    const driver1 = rankedDrivers[0] || null;
+    const driver2 = rankedDrivers[1] || null;
+    const driver3 = rankedDrivers[2] || null;
+    const primaryPressurePoint =
+      driver1?.label || DATA_NOT_AVAILABLE;
+    const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
+    if (effectiveReportMode === "screening_v1") {
+      if (!screeningHasSufficientData) {
+        screeningClass = "Insufficient Data";
+        screeningExplanation =
+          "Insufficient operating data to assess acquisition viability.";
+      } else if (
+        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
+        (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
+        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85)
+      ) {
+        screeningClass = "Fragile";
+        screeningExplanation =
+          "Operating margin is thin and vulnerable to modest income or expense shocks.";
+      } else if (
+        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
+        (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
+        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75)
+      ) {
+        screeningClass = "Sensitized";
+        screeningExplanation =
+          "Cash flow performance is viable but sensitive to revenue disruption or expense inflation.";
+      } else {
+        screeningClass = "Stable";
+        screeningExplanation =
+          "Operating profile demonstrates margin resilience under current income structure.";
+      }
+      execScreeningLines.push(
+        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningClass}`)}</p>`
+      );
+      execScreeningLines.push(
+        `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
+      );
+    }
+    const classificationDrivers = [];
+    if (Number.isFinite(expenseRatioR) && expenseRatioR >= 0.55) {
+      classificationDrivers.push(
+        `elevated Expense Ratio (${formatPercent1(expenseRatioR)})`
+      );
+    }
+    if (Number.isFinite(noiMarginR) && noiMarginR <= 0.45) {
+      classificationDrivers.push(
+        `compressed NOI Margin (${formatPercent1(noiMarginR)})`
+      );
+    }
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR >= 0.75) {
+      classificationDrivers.push(
+        `high Break-even Occupancy (${formatPercent1(breakEvenOccR)})`
+      );
+    }
+    const whyLine =
+      classificationDrivers.length > 0
+        ? `Classification is driven primarily by ${classificationDrivers.join(" and ")}.`
+        : "";
+    const toPercentMetric = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n <= 1.5 ? n * 100 : n;
+    };
+    const expenseRatioPct = toPercentMetric(expenseRatioR);
+    const noiMarginPct = toPercentMetric(noiMarginR);
+    const breakEvenDecisionPct = toPercentMetric(breakEvenOccR);
+    const decisionContextInputs = [expenseRatioPct, noiMarginPct, breakEvenDecisionPct];
+    let passChecks = [];
+    let disqualifierChecks = [];
+    let anyHardDisq = false;
+    let finitePassCount = 0;
+    let allPass = false;
+    let decisionContextHtml = "";
+    let miniSensitivityHtml = "";
+    if (decisionContextInputs.some((v) => Number.isFinite(v))) {
+      const formatDecisionValue = (v) =>
+        Number.isFinite(v) ? `${v.toFixed(1)}%` : DATA_NOT_AVAILABLE;
+      passChecks = [
+        {
+          label: "Expense Ratio < 55%",
+          value: expenseRatioPct,
+          test: (v) => v < 55,
+        },
+        {
+          label: "NOI Margin > 40%",
+          value: noiMarginPct,
+          test: (v) => v > 40,
+        },
+        {
+          label: "Break-even Occupancy < 85%",
+          value: breakEvenDecisionPct,
+          test: (v) => v < 85,
+        },
+      ];
+      disqualifierChecks = [
+        {
+          label: "Expense Ratio >= 65%",
+          value: expenseRatioPct,
+          test: (v) => v >= 65,
+        },
+        {
+          label: "NOI Margin <= 30%",
+          value: noiMarginPct,
+          test: (v) => v <= 30,
+        },
+        {
+          label: "Break-even Occupancy >= 95%",
+          value: breakEvenDecisionPct,
+          test: (v) => v >= 95,
+        },
+      ];
+      const passLinesHtml = passChecks
+        .map((row) => {
+          const status = Number.isFinite(row.value)
+            ? row.test(row.value)
+              ? "PASS"
+              : "FAIL"
+            : "DATA NOT AVAILABLE";
+          return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
+            formatDecisionValue(row.value)
+          )})</li>`;
+        })
+        .join("");
+      const disqualifierLinesHtml = disqualifierChecks
+        .map((row) => {
+          const status = Number.isFinite(row.value)
+            ? row.test(row.value)
+              ? "TRIGGERED"
+              : "NOT TRIGGERED"
+            : "DATA NOT AVAILABLE";
+          return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
+            formatDecisionValue(row.value)
+          )})</li>`;
+        })
+        .join("");
+      const satisfiedCount = passChecks.filter(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      ).length;
+      anyHardDisq = disqualifierChecks.some(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      );
+      finitePassCount = passChecks.filter((row) => Number.isFinite(row.value)).length;
+      allPass = finitePassCount === passChecks.length && satisfiedCount === passChecks.length;
+      const decisionStatusText = anyHardDisq
+        ? "Decision Status: Non-Compliance"
+        : allPass
+        ? "Decision Status: Full Compliance"
+        : satisfiedCount === 0
+        ? "Decision Status: Non-Compliance"
+        : `Decision Status: Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`;
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
+    }
+    if (
+      effectiveReportMode === "screening_v1" &&
+      Number.isFinite(execEgi) &&
+      execEgi > 0 &&
+      Number.isFinite(execOpex) &&
+      execOpex > 0
+    ) {
+      const baseEGI = execEgi;
+      const baseExpenses = execOpex;
+      const baseNOI = baseEGI - baseExpenses;
+      const baseMarginR =
+        Number.isFinite(baseNOI) && baseEGI > 0 ? baseNOI / baseEGI : null;
+      const expenseUp5Expenses = baseExpenses * 1.05;
+      const expenseUp5NOI = baseEGI - expenseUp5Expenses;
+      const expenseUp5MarginR =
+        Number.isFinite(expenseUp5NOI) && baseEGI > 0 ? expenseUp5NOI / baseEGI : null;
+      const incomeDown5EGI = baseEGI * 0.95;
+      const incomeDown5NOI = incomeDown5EGI - baseExpenses;
+      const incomeDown5MarginR =
+        Number.isFinite(incomeDown5NOI) && incomeDown5EGI > 0 ? incomeDown5NOI / incomeDown5EGI : null;
+      const combinedEGI = baseEGI * 0.95;
+      const combinedExpenses = baseExpenses * 1.05;
+      const combinedNOI = combinedEGI - combinedExpenses;
+      const marginC =
+        Number.isFinite(combinedNOI) && combinedEGI > 0 ? combinedNOI / combinedEGI : null;
+      const sensitivityRows = [
+        { label: "Base", margin: baseMarginR },
+        { label: "Expenses +5%", margin: expenseUp5MarginR },
+        { label: "Income -5%", margin: incomeDown5MarginR },
+        { label: "Combined Shock", margin: marginC },
+      ]
+        .filter((row) => Number.isFinite(row.margin))
+        .map(
+          (row) =>
+            `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
+              row.label === "Base"
+                ? screeningClass || DATA_NOT_AVAILABLE
+                : Number.isFinite(row.margin) && row.margin <= 0.3
+                ? "Fragile"
+                : Number.isFinite(row.margin) && row.margin > 0.4
+                ? "Stable"
+                : "Sensitized"
+            )}</td></tr>`
+        )
+        .join("");
+      if (sensitivityRows) {
+        const marginCompressionBps =
+          Number.isFinite(baseMarginR) && Number.isFinite(marginC)
+            ? Math.round((baseMarginR - marginC) * 10000)
+            : null;
+        miniSensitivityHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
+          Number.isFinite(marginCompressionBps)
+            ? `<p class="exec-signal-line">Under modest operating stress, NOI margin compresses by ${marginCompressionBps} bps.</p>`
+            : ""
+        }${
+          Number.isFinite(marginC) && marginC <= 0.3
+            ? `<p class="exec-signal-line">Stress testing indicates fragility under modest operating deterioration.</p>`
+            : ""
+        }</div>`;
+      }
+    }
+    if (
+      effectiveReportMode === "screening_v1" &&
+      screeningHasSufficientData &&
+      decisionContextInputs.some((v) => Number.isFinite(v))
+    ) {
+      if (anyHardDisq) {
+        screeningClass = "Fragile";
+      } else if (allPass) {
+        screeningClass = "Stable";
+      } else {
+        screeningClass = "Sensitized";
+      }
+    }
+    if (Number.isFinite(execUnits) && execUnits > 0) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
+      );
+    }
+    if (Number.isFinite(execOccupancy)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `Occupancy: ${formatPercent1(execOccupancy)}`
+        )}</p>`
+      );
+    }
+    if (Number.isFinite(execMonthlyInPlace) || Number.isFinite(execAnnualInPlace)) {
+      const rentParts = [];
+      if (Number.isFinite(execMonthlyInPlace)) {
+        rentParts.push(`In-Place Rent (Monthly): ${formatCurrency(execMonthlyInPlace)}`);
+      }
+      if (Number.isFinite(execAnnualInPlace)) {
+        rentParts.push(`In-Place Rent (Annualized): ${formatCurrency(execAnnualInPlace)}`);
+      }
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(rentParts.join(" · "))}</p>`
+      );
+    }
+    if (Number.isFinite(execNoi)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`NOI: ${formatCurrency(execNoi)}`)}</p>`
+      );
+    }
+    if (execOpexRatio) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(`Expense Ratio: ${execOpexRatio}`)}</p>`
+      );
+    }
+    if (Number.isFinite(noiMarginR)) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `NOI Margin: ${formatPercent1(noiMarginR)}`
+        )}</p>`
+      );
+    }
+    if (Number.isFinite(Number(breakEvenOcc))) {
+      execScreeningLines.push(
+        `<p class="exec-kpis">${escapeHtml(
+          `Break-even Occupancy: ${formatPercent1(breakEvenOcc)}`
+        )}</p>`
+      );
+    }
+    const upsideBullets = [];
+    if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
+      upsideBullets.push(
+        `In-place rents trail market by ~${formatPercent1(
+          marketRentPremiumRatio
+        )} (document-backed upside).`
+      );
+    }
+    if (Number.isFinite(execOccupancy) && execOccupancy >= 0.95) {
+      upsideBullets.push(
+        `Occupancy is ${formatPercent1(execOccupancy)}, supporting cash flow stability.`
+      );
+    }
+    if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
+      upsideBullets.push(
+        `Operating cushion is approximately ${formatPercent1(
+          operatingCushionPct
+        )} above break-even occupancy.`
+      );
+    }
+    const riskBullets = [];
+    if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) {
+      riskBullets.push(
+        `Expense ratio is ${formatPercent1(
+          expenseRatioR
+        )}, pressuring NOI margin.`
+      );
+    }
+    if (Number.isFinite(noiMarginR) && noiMarginR < 0.45) {
+      riskBullets.push(
+        `NOI margin is ${formatPercent1(
+          noiMarginR
+        )}, leaving limited buffer for shocks.`
+      );
+    }
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75) {
+      riskBullets.push(
+        `Break-even occupancy is ${formatPercent1(
+          breakEvenOccR
+        )}, increasing sensitivity to vacancy and income disruption.`
+      );
+    }
+    const upsideHtml = upsideBullets
+      .slice(0, 3)
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
+    const risksHtml = riskBullets
+      .slice(0, 3)
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
+
+    const execRentRollSource =
+      computedRentRoll && typeof computedRentRoll === "object"
+        ? computedRentRoll
+        : rentRollPayload && typeof rentRollPayload === "object"
+        ? rentRollPayload
+        : null;
+    const rrRowsRaw =
+      rentRollPayload?.units ||
+      rentRollPayload?.rows ||
+      rentRollPayload?.rent_roll ||
+      rentRollPayload?.data ||
+      [];
+    const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
+    const execTotalUnits = coerceNumber(execRentRollSource?.total_units);
+    const execOccupiedUnits = coerceNumber(execRentRollSource?.occupied_units);
+    const execOccupancyTokenText = Number.isFinite(execOccupancy)
+      ? formatPercent1(execOccupancy)
+      : DATA_NOT_AVAILABLE;
+
+    const execUnitMix = Array.isArray(execRentRollSource?.unit_mix)
+      ? execRentRollSource.unit_mix
+      : [];
+    let weightedAvgInPlaceRent = coerceNumber(execRentRollSource?.avg_in_place_rent);
+    if (!Number.isFinite(weightedAvgInPlaceRent) && execUnitMix.length > 0) {
+      let sumCountInPlace = 0;
+      let sumRentInPlace = 0;
+      execUnitMix.forEach((row) => {
+        const count = coerceNumber(row?.count);
+        const currentRent = coerceNumber(row?.current_rent);
+        if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(currentRent)) return;
+        sumCountInPlace += count;
+        sumRentInPlace += count * currentRent;
+      });
+      if (sumCountInPlace > 0) weightedAvgInPlaceRent = sumRentInPlace / sumCountInPlace;
+    }
+    let execAnnualInPlaceTokenValue = null;
+    if (
+      Number.isFinite(weightedAvgInPlaceRent) &&
+      Number.isFinite(execTotalUnits) &&
+      execTotalUnits > 0
+    ) {
+      execAnnualInPlaceTokenValue = weightedAvgInPlaceRent * execTotalUnits * 12;
+    } else if (rrRows.length > 0) {
+      const annualFromRows = rrRows.reduce((acc, row) => {
+        const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
+        const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
+        if (!Number.isFinite(currentRent) || currentRent <= 0) return acc;
+        if (status && status === "vacant") return acc;
+        return acc + currentRent * 12;
+      }, 0);
+      execAnnualInPlaceTokenValue = Number.isFinite(annualFromRows) ? annualFromRows : null;
+    }
+    const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlaceTokenValue)
+      ? formatCurrency(execAnnualInPlaceTokenValue)
+      : DATA_NOT_AVAILABLE;
+
+    finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyTokenText);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EXEC_ANNUAL_IN_PLACE}}",
+      execAnnualInPlaceTokenText
+    );
+    finalHtml = replaceAll(finalHtml, "{{EXEC_EGI}}", execEgiText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_OPEX}}", execOpexText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_NOI}}", execNoiText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_EXPENSE_RATIO}}", execOpexRatioText);
+    finalHtml = replaceAll(finalHtml, "{{EXEC_NOI_MARGIN}}", execNoiMarginText);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
+      execBreakEvenText
+    );
+    const execSnapshotTokens = [
+      "{{EXEC_UNITS}}",
+      "{{EXEC_OCCUPANCY}}",
+      "{{EXEC_ANNUAL_IN_PLACE}}",
+      "{{EXEC_EGI}}",
+      "{{EXEC_OPEX}}",
+      "{{EXEC_NOI}}",
+      "{{EXEC_EXPENSE_RATIO}}",
+      "{{EXEC_NOI_MARGIN}}",
+      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
+    ];
+    execSnapshotTokens.forEach((token) => {
+      if (finalHtml.includes(token)) {
+        finalHtml = replaceAll(finalHtml, token, DATA_NOT_AVAILABLE);
+      }
+    });
+    const execSnapshotValues = [
+      execUnitsText,
+      execOccupancyText,
+      execAnnualInPlaceText,
+      execEgiText,
+      execOpexText,
+      execNoiText,
+      execOpexRatioText,
+      execNoiMarginText,
+      execBreakEvenText,
+    ];
+    if (
+      execSnapshotValues.every((value) => value === DATA_NOT_AVAILABLE) &&
+      finalHtml.includes("<!-- BEGIN EXEC_METRICS_SNAPSHOT -->") &&
+      finalHtml.includes("<!-- END EXEC_METRICS_SNAPSHOT -->")
+    ) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_METRICS_SNAPSHOT");
+    }
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{OPERATING_PROFILE_CLASSIFICATION}}",
+      screeningClass || ""
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{PRIMARY_PRESSURE_POINT}}",
+      primaryPressurePoint
+    );
+    if (whyLine || decisionContextHtml || miniSensitivityHtml) {
+      finalHtml = finalHtml.replace(
+        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
+        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>${
+          whyLine
+            ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
+            : ""
+        }${decisionContextHtml}${miniSensitivityHtml}`
+      );
+    }
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_VALUE}}", driver1?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_1_TRIGGER}}", driver1?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_LABEL}}", driver2?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_VALUE}}", driver2?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_2_TRIGGER}}", driver2?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
+    finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+    finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
+    finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
+    if (!String(upsideHtml || "").trim()) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
+    }
+    if (!String(risksHtml || "").trim()) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_RISK_BULLETS");
+    }
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{OPERATING_CUSHION}}",
+      Number.isFinite(operatingCushionPct) ? `${operatingCushionPct.toFixed(1)}%` : ""
+    );
+    finalHtml = finalHtml.replace(
+      "{{UNIT_VALUE_ADD}}",
+      getNarrativeHtml("unitValueAdd")
+    );
+    finalHtml = finalHtml.replace(
+      "{{CASH_FLOW_PROJECTIONS}}",
+      getNarrativeHtml("cashFlowProjections")
+    );
+    finalHtml = finalHtml.replace(
+      "{{NEIGHBORHOOD_ANALYSIS}}",
+      getNarrativeHtml("neighborhoodAnalysis")
+    );
+    finalHtml = finalHtml.replace(
+      "{{RISK_ASSESSMENT}}",
+      getNarrativeHtml("riskAssessment")
+    );
+    finalHtml = finalHtml.replace(
+      "{{RENOVATION_NARRATIVE}}",
+      getNarrativeHtml("renovationNarrative")
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_STRATEGY}}",
+      getNarrativeHtml("renovationNarrative")
+    );
+    finalHtml = finalHtml.replace(
+      "{{DEBT_STRUCTURE}}",
+      getNarrativeHtml("debtStructure")
+    );
+    finalHtml = finalHtml.replace(
+      "{{DEAL_SCORE_SUMMARY}}",
+      getNarrativeHtml("dealScoreSummary")
+    );
+    finalHtml = finalHtml.replace(
+      "{{DEAL_SCORE_INTERPRETATION}}",
+      getNarrativeHtml("dealScoreInterpretation")
+    );
+    finalHtml = finalHtml.replace(
+      "{{ADVANCED_MODELING_INTRO}}",
+      getNarrativeHtml("advancedModelingIntro")
+    );
+    finalHtml = finalHtml.replace(
+      "{{DCF_INTERPRETATION}}",
+      getNarrativeHtml("dcfInterpretation")
+    );
+    finalHtml = finalHtml.replace(
+      "{{FINAL_RECOMMENDATION}}",
+      getNarrativeHtml("finalRecommendation")
+    );
+
+    const unitMix = computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
+    const unitMixRows = buildUnitMixRows(
+      unitMix,
+      computedRentRoll?.total_units ?? rentRollPayload?.total_units,
+      formatCurrency
+    );
+    let descriptorLine = "";
+    const rrUnits = Number(computedRentRoll?.total_units);
+    if (Number.isFinite(rrUnits) && rrUnits > 0) {
+      descriptorLine = `${rrUnits}-Unit Multifamily`;
+    }
+    if (!descriptorLine) {
+      finalHtml = stripMarkedSection(finalHtml, "PROPERTY_DESCRIPTOR_LINE");
+    } else {
+      finalHtml = replaceAll(finalHtml, "{{PROPERTY_DESCRIPTOR_LINE}}", descriptorLine);
+    }
+    finalHtml = finalHtml.replace(/ - \s*,\s*/g, "");
+    finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
+    finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
+    finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
+    const hasAnyAvgSqft =
+      Array.isArray(unitMix) &&
+      unitMix.some((r) => Number.isFinite(Number(r?.avg_sqft)) && Number(r.avg_sqft) > 0);
+    if (!hasAnyAvgSqft) {
+      finalHtml = finalHtml.replace(
+        /(<table[^>]*class="[^"]*unit-mix-table[^"]*"[^>]*>[\s\S]*?<thead>[\s\S]*?<tr>[\s\S]*?)<th>\s*Avg\s*Sq\s*Ft\s*<\/th>\s*([\s\S]*?<\/tr>[\s\S]*?<\/thead>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>[\s\S]*?<\/table>)/i,
+        (_, beforeHeader, afterHeader, tbodyHtml, tableEnd) => {
+          const updatedTbody = String(tbodyHtml || "").replace(
+            /(<tr>\s*<td[\s\S]*?<\/td>\s*<td[\s\S]*?<\/td>\s*)<td[\s\S]*?<\/td>\s*/gi,
+            "$1"
+          );
+          return `${beforeHeader}${afterHeader}${updatedTbody}${tableEnd}`;
+        }
+      );
+    }
+    const occupancyValue =
+      computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
+        ? DATA_NOT_AVAILABLE
+        : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
+    finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
+
+    const t12IncomeRows = buildT12IncomeRows(t12Payload, formatCurrency);
+    const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatCurrency);
+    const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
+    const t12TotalExpensesValue = coerceNumber(t12Payload?.total_operating_expenses);
+    const t12NoiValue = coerceNumber(t12Payload?.net_operating_income);
+    const t12ExpenseRatioValue =
+      Number.isFinite(t12EgiValue) &&
+      Number.isFinite(t12TotalExpensesValue) &&
+      t12EgiValue > 0
+        ? formatPercent1(t12TotalExpensesValue / t12EgiValue)
+        : DATA_NOT_AVAILABLE;
+    finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
+    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
+    if (!String(t12IncomeRows || "").trim()) {
+      finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", "");
+      finalHtml = stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
+      finalHtml = stripT12DetailSubsection(finalHtml, "Income Reconstruction (TTM)");
+    }
+    if (!String(t12ExpenseRows || "").trim()) {
+      finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", "");
+      finalHtml = stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
+      finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
+    }
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_EGI}}",
+      Number.isFinite(t12EgiValue) ? formatCurrency(t12EgiValue) : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_TOTAL_EXPENSES}}",
+      Number.isFinite(t12TotalExpensesValue)
+        ? formatCurrency(t12TotalExpensesValue)
+        : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_NOI}}",
+      Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
+    );
+    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
+      screeningIncomeForensicsHtml
+    );
+    const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    const screeningNoiHtml = buildScreeningNoiStabilityHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}",
+      screeningExpenseHtml
+    );
+    finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
+    const screeningRentRollHtml = buildScreeningRentRollDistributionHtml({
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_RENT_ROLL_BLOCK}}",
+      screeningRentRollHtml
+    );
+    if (effectiveReportMode === "screening_v1") {
+      if ((screeningIncomeForensicsHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+      }
+      if ((screeningExpenseHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+      }
+      if ((screeningNoiHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+      }
+      if ((screeningRentRollHtml || "").trim().length === 0) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      }
+    }
+    const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
+      financials,
+      t12Payload,
+    });
+    const screeningCoverageHtml = buildScreeningDataCoverageSummary({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      financials,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
+      screeningRefiSufficiencyHtml
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
+      screeningCoverageHtml
+    );
+    const screeningHasSufficientDataGate = hasMinimumScreeningCoverage(t12Payload);
+    if (effectiveReportMode === "screening_v1") {
+      if (!screeningHasSufficientDataGate) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      }
+    }
+    let renovationPayload = null;
+    if (jobId) {
+      const { data: renovationArtifact } = await supabase
+        .from("analysis_artifacts")
+        .select("payload")
+        .eq("job_id", jobId)
+        .eq("type", "renovation_parsed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      renovationPayload = renovationArtifact?.payload || null;
+    }
+    const hasExplicitRenovationInput = Boolean(
+      (renovationPayload && typeof renovationPayload === "object") ||
+        (financials && typeof financials === "object" && (
+          Array.isArray(financials.renovation_budget_rows) ||
+          Array.isArray(financials.renovation_execution_rows) ||
+          typeof financials.renovation_budget_note === "string" ||
+          typeof financials.renovation_execution_note === "string" ||
+          typeof financials.renovation_interpretation === "string"
+        ))
+    );
+    const renovationBudgetRows = hasExplicitRenovationInput
+      ? buildRenovationBudgetRows(
+          financials?.renovation_budget_rows || renovationPayload?.budget_rows || [],
+          formatCurrency
+        )
+      : "";
+    const renovationExecutionRows = hasExplicitRenovationInput
+      ? buildRenovationExecutionRows(
+          financials?.renovation_execution_rows ||
+            renovationPayload?.execution_rows ||
+            [],
+          formatCurrency
+        )
+      : "";
+    const renovationBudgetNote = hasExplicitRenovationInput
+      ? String(
+          financials?.renovation_budget_note ??
+            renovationPayload?.budget_note ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    const renovationExecutionNote = hasExplicitRenovationInput
+      ? String(
+          financials?.renovation_execution_note ??
+            renovationPayload?.execution_note ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    const renovationInterpretation = hasExplicitRenovationInput
+      ? String(
+          sections?.renovationInterpretation ??
+            financials?.renovation_interpretation ??
+            renovationPayload?.interpretation ??
+            DATA_NOT_AVAILABLE
+        ).trim() || DATA_NOT_AVAILABLE
+      : DATA_NOT_AVAILABLE;
+    finalHtml = replaceAll(finalHtml, "{{RENOVATION_BUDGET_ROWS}}", renovationBudgetRows);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_BUDGET_NOTE}}",
+      escapeHtml(renovationBudgetNote)
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_EXECUTION_ROWS}}",
+      renovationExecutionRows
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_EXECUTION_NOTE}}",
+      escapeHtml(renovationExecutionNote)
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RENOVATION_INTERPRETATION}}",
+      escapeHtml(renovationInterpretation)
+    );
+    if (effectiveReportMode !== "v1_core") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+      finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+    } else {
+      const refiResult = buildRefiStabilityModel({
+        financials: body?.financials,
+        t12Payload,
+        formatValue: formatCurrency,
+      });
+      const validRefiTiers = new Set([
+        "Stable",
+        "Sensitized",
+        "Fragile",
+        "Refinance Failure Under Stress",
+      ]);
+      const refiHtml = String(refiResult?.html || "").trim();
+      const canRenderRefi =
+        validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
+      if (canRenderRefi) {
+        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
+      } else {
+        const refiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
+          financials: body?.financials || financials,
+          t12Payload,
+        });
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{REFI_STABILITY_BLOCK}}",
+          refiSufficiencyHtml || ""
+        );
+      }
+    }
+    const showOperatingStatement = Boolean(
+      t12IncomeRows ||
+        t12ExpenseRows ||
+        (Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue)) ||
+        Number.isFinite(t12NoiValue)
+    );
+    if (!showOperatingStatement) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
+    }
+    const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
+    const showRenovationSection = Boolean(
+      (renovationBudgetRows || "").trim() ||
+        (renovationExecutionRows || "").trim() ||
+        renovationInterpretation !== DATA_NOT_AVAILABLE ||
+        (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
+    );
+    if (!showRenovationSection) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+    }
+
+    if (!documentSourcesHtml) {
+      finalHtml = finalHtml.replace(
+        /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES_TABLE\}\}[\s\S]*?<\/div>\s*/m,
+        ""
+      );
+    }
+    finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesHtml);
+    const hasDocSources =
+      Array.isArray(documentSources) &&
+      documentSources.some((s) => s?.status || s?.parse_status || s?.doc_type);
+    if (!hasDocSources || effectiveReportMode === "screening_v1") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
+    }
+
+    const showExec =
+      effectiveReportMode === "screening_v1"
+        ? true
+        : hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
+    if (!showExec) {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
+    }
+    const showUnitValueAdd = hasMeaningfulNarrative(getNarrativeHtml("unitValueAdd"));
+    if (!showUnitValueAdd) {
+      finalHtml = stripMarkedSection(finalHtml, "UNIT_VALUE_ADD");
+    }
+    const showCashFlow = hasMeaningfulNarrative(getNarrativeHtml("cashFlowProjections"));
+    if (!showCashFlow) {
+      finalHtml = stripMarkedSection(finalHtml, "CASH_FLOW_PROJECTIONS");
+    }
+    const showNeighborhood = hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis"));
+    if (!showNeighborhood) {
+      finalHtml = stripMarkedSection(finalHtml, "NEIGHBORHOOD_ANALYSIS");
+    }
+    const showRisk = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showRisk) {
+      finalHtml = stripMarkedSection(finalHtml, "RISK_ASSESSMENT");
+    }
+    const showRenovation = hasMeaningfulNarrative(getNarrativeHtml("renovationNarrative"));
+    if (!showRenovation) {
+      finalHtml = stripMarkedSection(finalHtml, "RENOVATION_NARRATIVE");
+    }
+    const showDebt = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    if (!showDebt) {
+      finalHtml = stripMarkedSection(finalHtml, "DEBT_STRUCTURE");
+    }
+    const showDealScoreSummary = hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary"));
+    if (!showDealScoreSummary) {
+      finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_SUMMARY");
+    }
+    const showDealScoreInterpretation = hasMeaningfulNarrative(
+      getNarrativeHtml("dealScoreInterpretation")
+    );
+    if (!showDealScoreInterpretation) {
+      finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_INTERPRETATION");
+    }
+    const showAdvancedModeling = hasMeaningfulNarrative(
+      getNarrativeHtml("advancedModelingIntro")
+    );
+    if (!showAdvancedModeling) {
+      finalHtml = stripMarkedSection(finalHtml, "ADVANCED_MODELING_INTRO");
+    }
+    const showDcf = hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
+    if (!showDcf) {
+      finalHtml = stripMarkedSection(finalHtml, "DCF_INTERPRETATION");
+    }
+    const showFinalRecommendation = hasMeaningfulNarrative(
+      getNarrativeHtml("finalRecommendation")
+    );
+    if (!showFinalRecommendation) {
+      finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
+    }
+
+    const hasRentRollUnitMix =
+      (Array.isArray(rentRollUnits) && rentRollUnits.length > 0) ||
+      (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0);
+    const hasRentRollRents =
+      (Array.isArray(rentRollUnits) &&
+        rentRollUnits.some(
+          (unit) =>
+            Number.isFinite(coerceNumber(unit?.in_place_rent)) &&
+            Number.isFinite(coerceNumber(unit?.market_rent))
+        )) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some(
+          (row) =>
+            Number.isFinite(Number(row?.current_rent)) &&
+            Number.isFinite(Number(row?.market_rent))
+        ));
+    const hasRentRollData = hasRentRollUnitMix && hasRentRollRents;
+    const hasT12Data = [
+      "gross_potential_rent",
+      "effective_gross_income",
+      "total_operating_expenses",
+      "net_operating_income",
+    ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
+
+    const marketRentPremiumAvg =
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
+      coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
+        ? (coerceNumber(computedRentRoll?.avg_market_rent) -
+            coerceNumber(computedRentRoll?.avg_in_place_rent)) /
+          coerceNumber(computedRentRoll?.avg_in_place_rent)
+        : null;
+    const hasTargetRentInputs =
+      (Array.isArray(rentRollUnits) &&
+        rentRollUnits.some((unit) => Number.isFinite(coerceNumber(unit?.market_rent)))) ||
+      (Array.isArray(computedRentRoll?.unit_mix) &&
+        computedRentRoll.unit_mix.some((row) => Number.isFinite(coerceNumber(row?.market_rent)))) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some((row) => Number.isFinite(Number(row?.market_rent))));
+    const hasPositiveLiftSignal =
+      (Number.isFinite(marketRentPremiumAvg) && marketRentPremiumAvg > 0) ||
+      (Array.isArray(computedRentRoll?.unit_mix) &&
+        computedRentRoll.unit_mix.some(
+          (row) =>
+            Number.isFinite(coerceNumber(row?.current_rent)) &&
+            Number.isFinite(coerceNumber(row?.market_rent)) &&
+            coerceNumber(row?.market_rent) > coerceNumber(row?.current_rent)
+        )) ||
+      (Array.isArray(rentRollPayload?.unit_mix) &&
+        rentRollPayload.unit_mix.some(
+          (row) =>
+            Number.isFinite(Number(row?.current_rent)) &&
+            Number.isFinite(Number(row?.market_rent)) &&
+            Number(row?.market_rent) > Number(row?.current_rent)
+        ));
+    const showSection2 = hasRentRollData && hasTargetRentInputs && hasPositiveLiftSignal;
+    if (!showSection2) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
+    }
+
+    const showSection2Roi =
+      Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
+    if (!showSection2Roi) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
+    }
+
+    const showSection3 =
+      hasRentRollData &&
+      hasT12Data &&
+      Array.isArray(tables.scenarios) &&
+      tables.scenarios.length > 0;
+    if (!showSection3) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+    }
+
+    const showSection4 =
+      hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis")) ||
+      hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showSection4) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+    }
+
+    const showSection4Table = hasMeaningfulNarrative(
+      getNarrativeHtml("neighborhoodAnalysis")
+    );
+    if (!showSection4Table) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
+    }
+
+    const showSection5 = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!showSection5) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+    }
+
+    const showSection5Matrix =
+      Array.isArray(tables.riskMatrix) && tables.riskMatrix.length > 0;
+    if (!showSection5Matrix) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
+    }
+
+    const showSection6 =
+      showRenovationSection ||
+      (Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0);
+    if (!showSection6) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+    }
+
+    const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    if (!showSection7) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+    }
+
+    const showSection7Tables =
+      Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0;
+    if (!showSection7Tables) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
+    }
+
+    const showSection8 =
+      (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
+      hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
+      hasMeaningfulNarrative(getNarrativeHtml("dealScoreInterpretation"));
+    if (!showSection8) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+    }
+
+    const showSection9 =
+      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
+    if (!showSection9) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+    }
+
+    const showSection9Table =
+      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
+    if (!showSection9Table) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
+    }
+
+    const showSection10 =
+      (Array.isArray(tables.comps) && tables.comps.length > 0) ||
+      hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro"));
+    if (!showSection10) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+    }
+
+    const showSection11 = hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation"));
+    if (!showSection11) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    }
+
+    finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+
+    const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
+    const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    if (!hasRiskMatrixRows && !hasRiskNarrative) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
+    }
+
+    const dcfRow =
+      Array.isArray(tables?.returnSummary) && tables.returnSummary.length > 0
+        ? tables.returnSummary[0] || {}
+        : {};
+    const hasDcfMetric =
+      Number.isFinite(coerceNumber(dcfRow?.irr)) ||
+      Number.isFinite(coerceNumber(dcfRow?.equityMultiple)) ||
+      Number.isFinite(coerceNumber(dcfRow?.salePrice)) ||
+      (typeof dcfRow?.salePriceText === "string" && dcfRow.salePriceText.trim().length > 0);
+    if (!hasDcfMetric) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
+    }
+
+    if (reportTier === 1) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+    }
+
+    const allowCharts = reportTier >= 3;
+    if (!allowCharts) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RISK_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_BREAKEVEN");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_BAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EXPENSE_RATIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EQUITY_COMPONENTS");
+    }
+    if (!allowAssumptions) {
+      finalHtml = stripMarkedSection(finalHtml, "ASSUMPTIONS_ONLY");
+    }
+
+    finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "IRR by Scenario");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Risk Factor Radar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Break-Even Occupancy Analysis");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Radar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Factor Breakdown Bar Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
+    finalHtml = stripChartBlockByAlt(finalHtml, "Equity Return Components");
+
+    const dataCoverageToken = finalHtml.includes("<!-- BEGIN SECTION_7_DATA_COVERAGE -->")
+      ? "SECTION_7_DATA_COVERAGE"
+      : "SECTION_S7_DATA_COVERAGE_GAPS";
+    const dataCoverageBegin = `<!-- BEGIN ${dataCoverageToken} -->`;
+    const dataCoverageEnd = `<!-- END ${dataCoverageToken} -->`;
+    if (finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
+      const escapedCoverageToken = dataCoverageToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const coverageMatch = finalHtml.match(
+        new RegExp(
+          `<!-- BEGIN ${escapedCoverageToken} -->([\\s\\S]*?)<!-- END ${escapedCoverageToken} -->`
+        )
+      );
+      const coverageSection = coverageMatch?.[1] || "";
+      const dnaCount = (coverageSection.match(/DATA NOT AVAILABLE/g) || []).length;
+      if (dnaCount >= 3) {
+        finalHtml = stripMarkedSection(finalHtml, dataCoverageToken);
+      }
+    }
+
+    finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
+    finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
+    finalHtml = finalHtml.replace(/(\d+)-Unit Multifamily\./g, "$1-Unit Multifamily");
+    finalHtml = finalHtml.replace(/Key Metrics Snapshot\./g, "Key Metrics Snapshot");
+    finalHtml = finalHtml.replace(/Key Upside Drivers\./g, "Key Upside Drivers");
+    finalHtml = finalHtml.replace(/Key Risks and Constraints\./g, "Key Risks and Constraints");
+    finalHtml = finalHtml.replace(
+      /EXPENSE STRUCTURE ANALYSIS\s*-\s*EXPENSE RATIO,\s*DRIVERS,\s*AND INTENSITY FLAGS/g,
+      "Expense Structure Analysis - Expense Ratio, Drivers, and Intensity Flags"
+    );
+    finalHtml = finalHtml.replace(
+      /NOI STABILITY REVIEW\s*-\s*MARGIN,\s*VOLATILITY,\s*AND OPERATING LEVERAGE INDICATORS/g,
+      "NOI Stability Review - Margin, Volatility, and Operating Leverage Indicators"
+    );
+    finalHtml = finalHtml.replace(
+      /RENT ROLL DISTRIBUTION\s*-\s*OCCUPANCY,\s*RENT DISPERSION,\s*AND UNIT MIX PROFILE/g,
+      "Rent Roll Distribution - Occupancy, Rent Dispersion, and Unit Mix Profile"
+    );
+    finalHtml = finalHtml.replace(
+      /DATA COVERAGE\s*&\s*UNDERWRITING GAPS\s*-\s*MISSING INPUTS AND OMITTED SECTIONS/g,
+      "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
+    );
+    finalHtml = finalHtml.replace(
+      /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
+      "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
+    );
+    finalHtml = finalHtml.replace(/â€¢/g, "•");
+    finalHtml = finalHtml.replace(/â†’/g, "→");
+    finalHtml = finalHtml.replace(/Â·/g, "·");
+    finalHtml = finalHtml.replace(/Â©/g, "©");
+    finalHtml = finalHtml.replace(/Â/g, "");
+
+    // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
+    finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
+    finalHtml = finalHtml.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
+    const leftoverTokens = finalHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
+    leftoverTokens.forEach((t) => {
+      finalHtml = finalHtml.replaceAll(t, "");
+    });
+
+    // Optional: log which narrative sections are missing for debugging
+    const missingKeys = [
+      "execSummary",
+      "unitValueAdd",
+      "cashFlowProjections",
+      "neighborhoodAnalysis",
+      "riskAssessment",
+      "renovationNarrative",
+      "debtStructure",
+      "dealScoreSummary",
+      "dealScoreInterpretation",
+      "advancedModelingIntro",
+      "dcfInterpretation",
+      "finalRecommendation",
+    ].filter((k) => !sections[k]);
+
+    if (missingKeys.length > 0) {
+      console.warn("⚠️ Missing narrative sections:", missingKeys.join(", "));
+    }
+
+    // 8. Sentence integrity with safe fallback
+    let safeHtml = finalHtml;
+    let warnings = [];
+
+    try {
+      safeHtml = ensureSentenceIntegrity(finalHtml);
+    } catch (err) {
+      warnings.push(err?.message || "Sentence integrity validation failed");
+    }
+
+    if (warnings.length > 0) {
+      console.warn("⚠️ Sentence Integrity Warnings:");
+      warnings.forEach((w) => console.warn(" - " + w));
+
+      const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
+      const { error: warnErr } = await supabase
+        .from("analysis_artifacts")
+        .insert([
+          {
+            job_id: jobId || null,
+            user_id: effectiveUserId || null,
+            type: "worker_event",
+            bucket: "internal",
+            object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/sentence_integrity_warning/${safeTimestamp}.json`,
+            payload: {
+              warnings,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        ]);
+
+      if (warnErr) {
+        console.error("Failed to write sentence_integrity_warning artifact:", warnErr);
+      }
+    }
+
+// 9. Send to DocRaptor (STILL IN TEST MODE)
+const htmlStringRaw =
+  typeof safeHtml === "string"
+    ? safeHtml
+    : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
+      ? safeHtml.html
+      : String(safeHtml || "");
+const htmlString = sanitizeTypography(htmlStringRaw);
+const htmlLength = htmlString.length;
+const hasClosingHtml = htmlString.includes("</html>");
+const hasFinalRecommendation =
+  htmlString.includes("11.0") && htmlString.includes("Final Recommendations");
+const hasSectionTwelve =
+  htmlString.includes("12.0") && htmlString.includes("Methodology & Data Transparency");
+
+const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
+try {
+  const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "worker_event",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/report_html_integrity/${integrityTimestamp}.json`,
+      payload: {
+        event: "report_html_integrity",
+        html_length: htmlLength,
+        has_closing_html: hasClosingHtml,
+        has_final_recommendation: hasFinalRecommendation,
+        has_section_12: hasSectionTwelve,
+        report_tier: reportTier,
+        report_type: reportType,
+        allow_assumptions: allowAssumptions,
+        timestamp: new Date().toISOString(),
+      },
+    },
+  ]);
+  if (integrityErr) {
+    console.error("Failed to write report_html_integrity event:", integrityErr);
+  }
+} catch (err) {
+  console.error("Failed to log report_html_integrity:", err);
+}
+
+if (!hasClosingHtml) {
+  const truncatedTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "report_html_truncated",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/report_html_truncated/${truncatedTimestamp}.json`,
+        payload: {
+          error: "report_html_truncated",
+          html_length: htmlLength,
+          has_closing_html: hasClosingHtml,
+          has_final_recommendation: hasFinalRecommendation,
+          has_section_12: hasSectionTwelve,
+          html: htmlString,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (err) {
+    console.error("Failed to write report_html_truncated artifact:", err);
+  }
+
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "REPORT_HTML_TRUNCATED",
+        error_message: "report_html_truncated",
+      })
+      .eq("id", jobId);
+  }
+
+  return res.status(500).json({ error: "report_html_truncated" });
+}
+
+const templateLength = typeof htmlTemplate === "string" ? htmlTemplate.length : null;
+if (!hasSectionTwelve) {
+  const incompleteTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "report_html_incomplete",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/report_html_incomplete/${incompleteTimestamp}.json`,
+        payload: {
+          error: "report_html_incomplete",
+          template_path: templatePath,
+          template_length: templateLength,
+          final_length: htmlLength,
+          first_500: htmlString.slice(0, 500),
+          last_500: htmlString.slice(-500),
+          has_section_12: hasSectionTwelve,
+          has_closing_html: hasClosingHtml,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (err) {
+    console.error("Failed to write report_html_incomplete artifact:", err);
+  }
+
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "REPORT_HTML_INCOMPLETE",
+        error_message: "report_html_incomplete",
+      })
+      .eq("id", jobId);
+  }
+
+  return res.status(500).json({ error: "report_html_incomplete" });
+}
+let pdfResponse;
+
+// Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
+// renders them correctly regardless of charset detection.
+const docHtml = htmlString
+  .replace(/·/g, "&middot;")
+  .replace(/•/g, "&bull;")
+  .replace(/→/g, "&rarr;");
+
+const docraptorMode =
+  process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
+const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
+if (docraptorMode === "production" && !allowProductionPdf) {
+  const disabledMessage =
+    "Production PDF generation is disabled. Contact support to enable production output.";
+  if (jobId) {
+    await supabase
+      .from("analysis_jobs")
+      .update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_code: "PRODUCTION_PDF_DISABLED",
+        error_message: disabledMessage,
+      })
+      .eq("id", jobId);
+  }
+  throw new Error("PRODUCTION_PDF_DISABLED");
+}
+
+try {
+  pdfResponse = await axios.post(
+    "https://docraptor.com/docs",
+    {
+      test: docraptorMode !== "production",
+      document_content: docHtml,
+      name: "InvestorIQ-ClientReport.pdf",
+      document_type: "pdf",
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(
+          process.env.DOCRAPTOR_API_KEY + ":"
+        ).toString("base64")}`,
+      },
+      responseType: "arraybuffer",
+    }
+  );
+} catch (err) {
+  console.error("❌ DOC RAPTOR ERROR STATUS:", err.response?.status);
+  console.error("❌ DOC RAPTOR ERROR BODY ↓↓↓");
+  console.error(err.response?.data?.toString());
+  throw err;
+}
+
+        // 10. Create DB row first so we have a deterministic report_id for storage
     const { data: reportRow, error: reportCreateError } = await supabase
       .from("reports")
       .insert({
-        user_id: effectiveUserId,
-        job_id: jobId || null,
-        report_type: reportType,
-        property_name: property_name || jobPropertyName || null,
-      })
+  user_id: effectiveUserId,
+            property_name: property_name || "Property",
+  storage_path: "pending",
+})
       .select("id")
       .single();
 
     if (reportCreateError || !reportRow?.id) {
-      console.error("Report DB Create Error:", reportCreateError);
+      console.error("❌ Report DB Create Error:", reportCreateError);
       throw new Error("Failed to create report record");
     }
 
     const reportId = reportRow.id;
 
-
-    if (!process.env.DOCRAPTOR_API_KEY) {
-      throw new Error("Server misconfigured: missing DOCRAPTOR_API_KEY");
-    }
-
-    const finalHtml = String(body?.final_html || "").trim();
-    if (!finalHtml) {
-      throw new Error("Fail-closed: finalHtml is empty");
-    }
-
-    const pdfResponse = await axios.post(
-      "https://api.docraptor.com/docs",
-      {
-        test: process.env.NODE_ENV !== "production",
-        document_type: "pdf",
-        document_content: finalHtml
-      },
-      {
-        responseType: "arraybuffer",
-        auth: {
-          username: process.env.DOCRAPTOR_API_KEY,
-          password: ""
-        }
-      }
-    );
     // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
     const storagePath = `${effectiveUserId}/${reportId}.pdf`;
 
@@ -2555,7 +4377,7 @@ export default async function handler(req, res) {
       });
 
     if (uploadError) {
-      console.error("Failed to upload report to storage:", uploadError);
+      console.error("❌ Storage Upload Error:", uploadError);
       throw new Error("Failed to upload report to storage");
     }
 
@@ -2566,7 +4388,7 @@ export default async function handler(req, res) {
       .eq("id", reportId);
 
     if (reportUpdateError) {
-      console.error("Failed to update report record with storage path:", reportUpdateError);
+      console.error("❌ Report DB Update Error:", reportUpdateError);
       // Do not throw. The PDF is stored and we can still return the signed URL.
     }
 
@@ -2576,7 +4398,7 @@ export default async function handler(req, res) {
       .createSignedUrl(storagePath, 3600);
 
     if (signedError) {
-      console.error("Failed to create signed URL:", signedError);
+      console.error("❌ Signed URL Error:", signedError);
       throw new Error("Failed to generate access link");
     }
 
@@ -2588,8 +4410,9 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Error generating report:", err);
+    console.error("❌ Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
+  } finally {
   }
 }
 
