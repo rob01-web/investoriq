@@ -3115,6 +3115,12 @@ export default async function handler(req, res) {
       const baseEGI = execEgi;
       const baseExpenses = execOpex;
       const baseNOI = baseEGI - baseExpenses;
+      const classifyMargin = (m) =>
+        (Number.isFinite(m) && m <= 0.30)
+          ? "Fragile"
+          : (Number.isFinite(m) && m > 0.40)
+            ? "Stable"
+            : "Sensitized";
       const baseMarginR =
         Number.isFinite(baseNOI) && baseEGI > 0 ? baseNOI / baseEGI : null;
       const expenseUp5Expenses = baseExpenses * 1.05;
@@ -3141,7 +3147,7 @@ export default async function handler(req, res) {
           (row) =>
             `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
               row.label === "Base"
-                ? screeningClass || DATA_NOT_AVAILABLE
+                ? classifyMargin(baseMarginR)
                 : Number.isFinite(row.margin) && row.margin <= 0.3
                 ? "Fragile"
                 : Number.isFinite(row.margin) && row.margin > 0.4
@@ -3151,13 +3157,23 @@ export default async function handler(req, res) {
         )
         .join("");
       if (sensitivityRows) {
-        const marginCompressionBps =
+        const marginDeltaBps =
           Number.isFinite(baseMarginR) && Number.isFinite(marginC)
-            ? Math.round((baseMarginR - marginC) * 10000)
+            ? (baseMarginR - marginC) * 10000
             : null;
+        let stressLine = "";
+        if (Number.isFinite(marginDeltaBps)) {
+          if (marginDeltaBps > 0) {
+            stressLine = `Under modest operating stress, NOI margin compresses by ${Math.round(marginDeltaBps)} bps.`;
+          } else if (marginDeltaBps < 0) {
+            stressLine = `Under modest operating stress, NOI margin expands by ${Math.round(Math.abs(marginDeltaBps))} bps.`;
+          } else {
+            stressLine = `Under modest operating stress, NOI margin remains unchanged.`;
+          }
+        }
         miniSensitivityHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
-          Number.isFinite(marginCompressionBps)
-            ? `<p class="exec-signal-line">Under modest operating stress, NOI margin compresses by ${marginCompressionBps} bps.</p>`
+          stressLine
+            ? `<p class="exec-signal-line">${escapeHtml(stressLine)}</p>`
             : ""
         }${
           Number.isFinite(marginC) && marginC <= 0.3
