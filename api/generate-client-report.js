@@ -157,6 +157,22 @@ function computeMortgageConstant(rateAnnual, amortYears) {
   const mc = pm * 12;
   return Number.isFinite(mc) && mc > 0 ? mc : null;
 }
+function toRateRatio(value) {
+  const n = coerceNumber(value);
+  if (!Number.isFinite(n)) return null;
+  // Accept either 0.055 or 5.5 (percent). Treat > 1.5 as percent input.
+  const r = n > 1.5 ? n / 100 : n;
+  return Number.isFinite(r) && r > 0 ? r : null;
+}
+
+function toCapRatio(value) {
+  const n = coerceNumber(value);
+  if (!Number.isFinite(n)) return null;
+  // Accept either 0.05 or 5.0 (percent). Treat > 1.5 as percent input.
+  const r = n > 1.5 ? n / 100 : n;
+  return Number.isFinite(r) && r > 0 ? r : null;
+}
+
 
 function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const f = financials && typeof financials === "object" ? financials : {};
