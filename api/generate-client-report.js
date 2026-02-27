@@ -3012,11 +3012,13 @@ export default async function handler(req, res) {
     const noiMarginPct = toPercentMetric(noiMargin);
     const breakEvenDecisionPct = toPercentMetric(breakEvenOccupancy);
     const decisionContextInputs = [expenseRatioPct, noiMarginPct, breakEvenDecisionPct];
+    let passChecks = [];
+    let disqualifierChecks = [];
     let decisionContextHtml = "";
     if (decisionContextInputs.some((v) => Number.isFinite(v))) {
       const formatDecisionValue = (v) =>
         Number.isFinite(v) ? `${v.toFixed(1)}%` : DATA_NOT_AVAILABLE;
-      const passChecks = [
+      passChecks = [
         {
           label: "Expense Ratio < 55%",
           value: expenseRatioPct,
@@ -3033,7 +3035,7 @@ export default async function handler(req, res) {
           test: (v) => v < 85,
         },
       ];
-      const disqualifierChecks = [
+      disqualifierChecks = [
         {
           label: "Expense Ratio >= 65%",
           value: expenseRatioPct,
@@ -3077,7 +3079,28 @@ export default async function handler(req, res) {
       const satisfiedCount = passChecks.filter(
         (row) => Number.isFinite(row.value) && row.test(row.value)
       ).length;
-      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">Current Result: ${satisfiedCount} / 3 satisfied</p></div>`;
+      const decisionStatus =
+        satisfiedCount === 3
+          ? "Full Compliance"
+          : satisfiedCount >= 1
+          ? `Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`
+          : "Non-Compliance";
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">Decision Status: ${decisionStatus}</p></div>`;
+    }
+    if (effectiveReportMode === "screening_v1" && screeningHasSufficientData && passChecks.length === 3 && disqualifierChecks.length === 3) {
+      const anyHardDisqualifierTriggered = disqualifierChecks.some(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      );
+      const allPassConditionsSatisfied = passChecks.every(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      );
+      if (anyHardDisqualifierTriggered) {
+        screeningClass = "Fragile";
+      } else if (allPassConditionsSatisfied) {
+        screeningClass = "Stable";
+      } else {
+        screeningClass = "Sensitized";
+      }
     }
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
