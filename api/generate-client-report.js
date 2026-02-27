@@ -3148,11 +3148,7 @@ export default async function handler(req, res) {
             `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
               row.label === "Base"
                 ? classifyMargin(baseMarginR)
-                : Number.isFinite(row.margin) && row.margin <= 0.3
-                ? "Fragile"
-                : Number.isFinite(row.margin) && row.margin > 0.4
-                ? "Stable"
-                : "Sensitized"
+                : classifyMargin(row.margin)
             )}</td></tr>`
         )
         .join("");
