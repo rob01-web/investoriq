@@ -524,6 +524,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   ${primaryBreakpoint ? `<p class="small">Primary Breakpoint: ${escapeHtml(primaryBreakpoint.text)}</p>` : ""}
 </div>`;
     }
+  }
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
   )}</strong></p><p>Base Coverage: ${formatCoverage(
