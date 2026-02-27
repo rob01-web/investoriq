@@ -214,22 +214,19 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
 
   if (!hasValidScalars || !hasValidStressArrays) {
     return { tier: null, evidence: null, html: "" };
-  }
 
   const baseMc = computeMortgageConstant(interestRate, amortYears);
   const baseCap = capRateBaseR;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
     return { tier: null, evidence: null, html: "" };
-  }
+  const baseValue = noiBase / baseCap;
   const baseLoanLtv = baseValue * ltvMax;
-  const baseLoanDscr = noiBase / (dscrMin * baseMc);
   const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
   const coverageBase = baseMaxProceeds / debtBalance;
   const baseBinding =
     baseLoanLtv <= baseLoanDscr ? "LTV-limited" : "DSCR-limited";
   if (!Number.isFinite(coverageBase)) {
     return { tier: null, evidence: null, html: "" };
-  }
 
   const stressPoints = [];
   for (const noiShock of stressNoiShocks) {
@@ -257,7 +254,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
         });
       }
     }
-  }
 
   const coverageWorst = stressPoints.reduce(
     (minCoverage, point) =>
@@ -314,7 +310,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       worstBinding =
         worstLoanLtv <= worstLoanDscr ? "LTV-limited" : "DSCR-limited";
     }
-  }
 
   let refiTier = "Stable";
   if (coverageBase < 1.0) {
@@ -325,7 +320,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     refiTier = "Fragile";
   } else if (worstFiniteCoverage < 1.1) {
     refiTier = "Sensitized";
-  }
 
   const formatCoverage = (value) =>
     Number.isFinite(value) ? formatMultiple(value, 2) : DATA_NOT_AVAILABLE;
@@ -370,16 +364,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
           maximumFractionDigits: 1,
         })}%`
       : DATA_NOT_AVAILABLE;
-  function toRateRatio(x) {
-    const n = Number(x);
-    if (!Number.isFinite(n)) return null;
-    return n > 1.5 ? n / 100 : n;
-  }
-  function toCapRatio(x) {
-    const n = Number(x);
-    if (!Number.isFinite(n)) return null;
-    return n > 1 ? n / 100 : n;
-  }
   const pmtAnnual = (principal, rateRatio, years) => {
     const p = Number(principal);
     const r = toRateRatio(rateRatio);
@@ -533,7 +517,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   ${primaryBreakpoint ? `<p class="small">Primary Breakpoint: ${escapeHtml(primaryBreakpoint.text)}</p>` : ""}
 </div>`;
     }
-  }
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
   )}</strong></p><p>Base Coverage: ${formatCoverage(
@@ -585,7 +568,6 @@ function stripMarkedSection(html, key) {
   if (!html.includes(end)) {
     console.warn(`Section marker missing END for ${token}`);
     return html;
-  }
   const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(
     `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
@@ -632,7 +614,6 @@ function constantTimeEqual(a, b) {
   let result = 0;
   for (let i = 0; i < a.length; i += 1) {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
   return result === 0;
 }
 
@@ -861,7 +842,6 @@ function buildT12IncomeRows(t12Payload, formatValue) {
         addRow(key, value);
       }
     });
-  }
 
   if (rows.length < 3) return "";
   return rows.join("");
@@ -917,7 +897,6 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
         addRow(key, value);
       }
     });
-  }
 
   if (rows.length < 3) return "";
   return rows.join("");
@@ -1165,13 +1144,10 @@ function buildScreeningDataCoverageSummary({
   const suggestions = [];
   if (t12Missing.length > 0) {
     suggestions.push("Trailing-12 Operating Statement (T12) with EGI, OpEx, NOI");
-  }
   if (rrMissing.includes("in_place_rent") || rrMissing.includes("market_rent")) {
     suggestions.push("Current Rent Roll with in-place & market rents");
-  }
   if (!rrOccPresent) {
     suggestions.push("Rent Roll with unit status (occupied/vacant) or occupied/total summary");
-  }
   const suggestionHtml = [...new Set(suggestions)]
     .slice(0, 3)
     .map((entry) => `<li>${escapeHtml(entry)}</li>`)
@@ -1312,7 +1288,6 @@ function buildScreeningIncomeForensicsHtml({
   );
   if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
     marketPremiumPct = ((avgMarket - avgInPlace) / avgInPlace) * 100;
-  }
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
     ? marketPremiumPct / 100
     : NaN;
@@ -1332,7 +1307,6 @@ function buildScreeningIncomeForensicsHtml({
         topIncomeLineConcentration
       )} of EGI (concentration flag).`
     );
-  }
   const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
   if (
     otherIncome &&
@@ -1346,7 +1320,6 @@ function buildScreeningIncomeForensicsHtml({
         otherIncome.amount / egi
       )} of EGI (verify sustainability and recurring nature).`
     );
-  }
   const largestExpense = expenseLines[0];
   if (
     largestExpense &&
@@ -1360,14 +1333,12 @@ function buildScreeningIncomeForensicsHtml({
         largestExpense.amount / opex
       )} of OpEx (concentration flag).`
     );
-  }
   if (Number.isFinite(marketRentPremiumRatio) && marketRentPremiumRatio >= 0.10) {
     bullets.push(
       `In-place rents trail market by approximately ${formatPercent1(
         marketRentPremiumRatio
       )} (document-backed upside).`
     );
-  }
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
       bullets.push(
@@ -1382,7 +1353,6 @@ function buildScreeningIncomeForensicsHtml({
         )} vs T12 GPR (reconciliation flag).`
       );
     }
-  }
 
   const bulletsHtml = [...new Set(bullets)]
     .slice(0, 3)
@@ -1416,19 +1386,16 @@ function buildScreeningExpenseStructureHtml({
         expenseRatio
       )}</td></tr>`
     );
-  }
   if (Number.isFinite(opex) && Number.isFinite(units) && units > 0) {
     rows.push(
       `<tr><td>Operating Expense per Unit</td><td>${formatCurrency(
         opex / units
       )}</td></tr>`
     );
-  }
   if (Number.isFinite(noi) && Number.isFinite(units) && units > 0) {
     rows.push(
       `<tr><td>NOI per Unit</td><td>${formatCurrency(noi / units)}</td></tr>`
     );
-  }
 
   if (rows.length === 0) return "";
   const metricsCard = `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
@@ -1512,10 +1479,8 @@ function buildScreeningExpenseStructureHtml({
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
   if (Number.isFinite(expenseRatio) && expenseRatio >= 0.60) {
     flags.push("Operating expense ratio is elevated (> 60%).");
-  }
   if (totalOpEx > 0 && expenseDriverRows.some((r) => r.amount / totalOpEx >= 0.30)) {
     flags.push("Top expense line exceeds 30% of OpEx (concentration risk).");
-  }
   const flagsHtml = flags
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
@@ -1558,7 +1523,6 @@ function buildScreeningNoiStabilityHtml({
     rows.push(
       `<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`
     );
-  }
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
     const expenseSensitivity = 1 - opex / egi;
     rows.push(
@@ -1566,7 +1530,6 @@ function buildScreeningNoiStabilityHtml({
         expenseSensitivity
       )}</td></tr>`
     );
-  }
   if (Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0) {
     const breakEvenOcc = opex / gpr;
     if (Number.isFinite(breakEvenOcc)) {
@@ -1576,7 +1539,6 @@ function buildScreeningNoiStabilityHtml({
         )}</td></tr>`
       );
     }
-  }
   if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
     const rrVsGprPct = (rrAnnual - gpr) / gpr;
     rows.push(
@@ -1584,17 +1546,8 @@ function buildScreeningNoiStabilityHtml({
         rrVsGprPct
       )}</td></tr>`
     );
-  }
 
   if (rows.length === 0) return "";
-  const rrVsGprPct =
-    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
-      ? (rrAnnual - gpr) / gpr
-      : null;
-  const noiMargin =
-    Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
-  const expenseRatio =
-    Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
 
   const flags = [];
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
@@ -1605,15 +1558,12 @@ function buildScreeningNoiStabilityHtml({
         )} vs T12 GPR (reconciliation flag).`
       );
     }
-  }
   if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
     flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
-  }
   if (Number.isFinite(expenseRatio) && expenseRatio > 0.65) {
     flags.push(
       `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
     );
-  }
 
   const stabilityDrivers = [];
   if (Number.isFinite(noiMargin)) {
@@ -1621,19 +1571,16 @@ function buildScreeningNoiStabilityHtml({
       label: `NOI Margin ${formatPercent1(noiMargin)}`,
       severity: Math.max(0, 0.35 - noiMargin),
     });
-  }
   if (Number.isFinite(expenseRatio)) {
     stabilityDrivers.push({
       label: `Expense Ratio ${formatPercent1(expenseRatio)}`,
       severity: Math.max(0, expenseRatio - 0.65),
     });
-  }
   if (Number.isFinite(rrVsGprPct)) {
     stabilityDrivers.push({
       label: `Rent Roll vs T12 GPR ${formatPercent1(rrVsGprPct)}`,
       severity: Math.max(0, Math.abs(rrVsGprPct) - 0.05),
     });
-  }
   const rankedDrivers = stabilityDrivers
     .slice()
     .sort((a, b) => b.severity - a.severity)
@@ -1673,10 +1620,8 @@ function buildScreeningNoiStabilityHtml({
     Number.isFinite(rrOccupiedUnits)
   ) {
     occupancy = rrOccupiedUnits / rrTotalUnits;
-  }
   if (!Number.isFinite(occupancy)) {
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
-  }
 
   let sensitivityCard = "";
   if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
@@ -1737,7 +1682,6 @@ function buildScreeningNoiStabilityHtml({
           : ""
       }</div>`;
     }
-  }
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
@@ -1766,18 +1710,15 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     occupancy = occupiedUnits / totalUnits;
-  }
 
   let totalInPlaceAnnual = coerceNumber(source.total_in_place_annual);
   if (!Number.isFinite(totalInPlaceAnnual)) {
     const inPlaceMonthly = coerceNumber(source.total_in_place_monthly);
     if (Number.isFinite(inPlaceMonthly)) totalInPlaceAnnual = inPlaceMonthly * 12;
-  }
   let totalMarketAnnual = coerceNumber(source.total_market_annual);
   if (!Number.isFinite(totalMarketAnnual)) {
     const marketMonthly = coerceNumber(source.total_market_monthly);
     if (Number.isFinite(marketMonthly)) totalMarketAnnual = marketMonthly * 12;
-  }
 
   const unitMix = Array.isArray(source.unit_mix) ? source.unit_mix : [];
   let weightedInPlace = null;
@@ -1803,7 +1744,6 @@ function buildScreeningRentRollDistributionHtml({
     });
     if (sumCountInPlace > 0) weightedInPlace = sumRentInPlace / sumCountInPlace;
     if (sumCountMarket > 0) weightedMarket = sumRentMarket / sumCountMarket;
-  }
   if (
     !Number.isFinite(weightedInPlace) &&
     Number.isFinite(totalInPlaceAnnual) &&
@@ -1811,7 +1751,6 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     weightedInPlace = totalInPlaceAnnual / totalUnits / 12;
-  }
   if (
     !Number.isFinite(weightedMarket) &&
     Number.isFinite(totalMarketAnnual) &&
@@ -1819,17 +1758,14 @@ function buildScreeningRentRollDistributionHtml({
     totalUnits > 0
   ) {
     weightedMarket = totalMarketAnnual / totalUnits / 12;
-  }
 
   const metricsRows = [];
   if (Number.isFinite(totalUnits)) {
     metricsRows.push(`<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>`);
-  }
   if (Number.isFinite(occupiedUnits)) {
     metricsRows.push(
       `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>`
     );
-  }
   if (Number.isFinite(occupancy)) {
     metricsRows.push(
       `<tr><td>Occupancy</td><td>${(occupancy * 100).toLocaleString("en-CA", {
@@ -1837,21 +1773,18 @@ function buildScreeningRentRollDistributionHtml({
         maximumFractionDigits: 1,
       })}%</td></tr>`
     );
-  }
   if (Number.isFinite(weightedInPlace)) {
     metricsRows.push(
       `<tr><td>Weighted Avg In-Place Rent</td><td>${formatCurrency(
         weightedInPlace
       )}</td></tr>`
     );
-  }
   if (Number.isFinite(weightedMarket)) {
     metricsRows.push(
       `<tr><td>Weighted Avg Market Rent</td><td>${formatCurrency(
         weightedMarket
       )}</td></tr>`
     );
-  }
   if (
     Number.isFinite(weightedInPlace) &&
     Number.isFinite(weightedMarket) &&
@@ -1864,21 +1797,18 @@ function buildScreeningRentRollDistributionHtml({
         maximumFractionDigits: 1,
       })}%</td></tr>`
     );
-  }
   if (Number.isFinite(totalInPlaceAnnual)) {
     metricsRows.push(
       `<tr><td>Annual In-Place Rent (Total)</td><td>${formatCurrency(
         totalInPlaceAnnual
       )}</td></tr>`
     );
-  }
   if (Number.isFinite(totalMarketAnnual)) {
     metricsRows.push(
       `<tr><td>Annual Market Rent (Total)</td><td>${formatCurrency(
         totalMarketAnnual
       )}</td></tr>`
     );
-  }
 
   const rentBandRows = unitMix
     .map((row) => {
@@ -1927,14 +1857,12 @@ function buildScreeningRentRollDistributionHtml({
       largestUnitType = largestMixRow.unitType;
       largestUnitTypeConcentration = largestMixRow.count / totalUnits;
     }
-  }
   if (Number.isFinite(largestUnitTypeConcentration)) {
     metricsRows.push(
       `<tr><td>Largest Unit Type Concentration</td><td>${formatPercent1(
         largestUnitTypeConcentration
       )}</td></tr>`
     );
-  }
 
   if (metricsRows.length === 0 && !rentBandRows) return "";
 
@@ -1957,21 +1885,18 @@ function buildScreeningRentRollDistributionHtml({
   const flags = [];
   if (Number.isFinite(occupancy) && occupancy < 0.9) {
     flags.push(`Occupancy is ${formatPercent1(occupancy)} (stabilization flag).`);
-  }
   if (Number.isFinite(marketPremiumRatio) && marketPremiumRatio >= 0.1) {
     flags.push(
       `In-place rents trail market by ~${formatPercent1(
         marketPremiumRatio
       )} (document-backed upside).`
     );
-  }
   if (Number.isFinite(largestUnitTypeConcentration) && largestUnitTypeConcentration >= 0.6) {
     flags.push(
       `Unit mix concentration: ${largestUnitType || "Largest unit type"} represents ${formatPercent1(
         largestUnitTypeConcentration
       )} of units (concentration flag).`
     );
-  }
   const flagsHtml = flags
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
@@ -2024,7 +1949,6 @@ function buildUnitMixTable(rows = []) {
     <td>${!isNil(lift) ? formatCurrency(lift) : ""}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2065,7 +1989,6 @@ function buildRenovationTable(rows = []) {
     <td>${!isNil(paybackYears) ? formatYears(paybackYears) : ""}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2094,7 +2017,6 @@ function buildScenarioTable(rows = []) {
     <td>${formatPercent(row.exitCap)}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2130,7 +2052,6 @@ function buildReturnSummaryTable(rows = []) {
     <td>${salePriceText}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2157,7 +2078,6 @@ function buildCapitalPlanTable(rows = []) {
     <td>${row.objective ?? ""}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2204,7 +2124,6 @@ function buildDealScoreTable(rows = [], totalScore) {
     }</td>
   </tr>
 `;
-  }
 
   const finalScore =
     !isNil(totalScore) && !isNaN(Number(totalScore))
@@ -2248,7 +2167,6 @@ function buildCompsTable(rows = []) {
     <td>${formatPercent(row.capRate)}</td>
   </tr>
 `;
-  }
   html += `
 </table>
 `;
@@ -2277,7 +2195,6 @@ function chartVersion(filename) {
     return String(stat.mtime.getTime());
   } catch (err) {
     return String(Date.now());
-  }
 }
 
 function chartUrl(filename) {
@@ -2300,7 +2217,6 @@ function inlineChart(filename, fallbackUrl) {
   } catch (err) {
     console.warn(`Inline chart missing (${filename}), using fallback URL`);
     return fallbackUrl;
-  }
 }
 
 function applyChartPlaceholders(html, charts = {}) {
@@ -2567,7 +2483,6 @@ export default async function handler(req, res) {
     console.error("Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
-  }
 }
 
 
