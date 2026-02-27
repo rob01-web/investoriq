@@ -3026,6 +3026,7 @@ export default async function handler(req, res) {
     let finitePassCount = 0;
     let allPass = false;
     let decisionContextHtml = "";
+    let miniSensitivityHtml = "";
     if (decisionContextInputs.some((v) => Number.isFinite(v))) {
       const formatDecisionValue = (v) =>
         Number.isFinite(v) ? `${v.toFixed(1)}%` : DATA_NOT_AVAILABLE;
@@ -3103,6 +3104,67 @@ export default async function handler(req, res) {
         ? "Decision Status: Non-Compliance"
         : `Decision Status: Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`;
       decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
+    }
+    if (
+      effectiveReportMode === "screening_v1" &&
+      Number.isFinite(execEgi) &&
+      execEgi > 0 &&
+      Number.isFinite(execOpex) &&
+      execOpex > 0
+    ) {
+      const baseEGI = execEgi;
+      const baseExpenses = execOpex;
+      const baseNOI = baseEGI - baseExpenses;
+      const baseMarginR =
+        Number.isFinite(baseNOI) && baseEGI > 0 ? baseNOI / baseEGI : null;
+      const expenseUp5Expenses = baseExpenses * 1.05;
+      const expenseUp5NOI = baseEGI - expenseUp5Expenses;
+      const expenseUp5MarginR =
+        Number.isFinite(expenseUp5NOI) && baseEGI > 0 ? expenseUp5NOI / baseEGI : null;
+      const incomeDown5EGI = baseEGI * 0.95;
+      const incomeDown5NOI = incomeDown5EGI - baseExpenses;
+      const incomeDown5MarginR =
+        Number.isFinite(incomeDown5NOI) && incomeDown5EGI > 0 ? incomeDown5NOI / incomeDown5EGI : null;
+      const combinedEGI = baseEGI * 0.95;
+      const combinedExpenses = baseExpenses * 1.05;
+      const combinedNOI = combinedEGI - combinedExpenses;
+      const marginC =
+        Number.isFinite(combinedNOI) && combinedEGI > 0 ? combinedNOI / combinedEGI : null;
+      const sensitivityRows = [
+        { label: "Base", margin: baseMarginR },
+        { label: "Expenses +5%", margin: expenseUp5MarginR },
+        { label: "Income -5%", margin: incomeDown5MarginR },
+        { label: "Combined Shock", margin: marginC },
+      ]
+        .filter((row) => Number.isFinite(row.margin))
+        .map(
+          (row) =>
+            `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
+              row.label === "Base"
+                ? screeningClass || DATA_NOT_AVAILABLE
+                : Number.isFinite(row.margin) && row.margin <= 0.3
+                ? "Fragile"
+                : Number.isFinite(row.margin) && row.margin > 0.4
+                ? "Stable"
+                : "Sensitized"
+            )}</td></tr>`
+        )
+        .join("");
+      if (sensitivityRows) {
+        const marginCompressionBps =
+          Number.isFinite(baseMarginR) && Number.isFinite(marginC)
+            ? Math.round((baseMarginR - marginC) * 10000)
+            : null;
+        miniSensitivityHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
+          Number.isFinite(marginCompressionBps)
+            ? `<p class="exec-signal-line">Under modest operating stress, NOI margin compresses by ${marginCompressionBps} bps.</p>`
+            : ""
+        }${
+          Number.isFinite(marginC) && marginC <= 0.3
+            ? `<p class="exec-signal-line">Stress testing indicates fragility under modest operating deterioration.</p>`
+            : ""
+        }</div>`;
+      }
     }
     if (
       effectiveReportMode === "screening_v1" &&
@@ -3333,14 +3395,14 @@ export default async function handler(req, res) {
       "{{PRIMARY_PRESSURE_POINT}}",
       primaryPressurePoint
     );
-    if (whyLine || decisionContextHtml) {
+    if (whyLine || decisionContextHtml || miniSensitivityHtml) {
       finalHtml = finalHtml.replace(
         `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
         `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>${
           whyLine
             ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
             : ""
-        }${decisionContextHtml}`
+        }${decisionContextHtml}${miniSensitivityHtml}`
       );
     }
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
