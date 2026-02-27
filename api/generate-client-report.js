@@ -2777,8 +2777,16 @@ export default async function handler(req, res) {
       execGpr > 0
         ? execOpex / execGpr
         : null;
-    const breakEvenOccRatio = breakEvenOccupancy;
-    const breakEvenOcc = breakEvenOccupancy;
+    const toRatioMetric = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return n > 1.5 ? n / 100 : n;
+    };
+    const expenseRatioR = toRatioMetric(expenseRatio);
+    const noiMarginR = toRatioMetric(noiMargin);
+    const breakEvenOccR = toRatioMetric(breakEvenOccupancy);
+    const breakEvenOccRatio = breakEvenOccR;
+    const breakEvenOcc = breakEvenOccR;
     const toPctValue = (value) => {
       const n = Number(value);
       if (!Number.isFinite(n)) return null;
@@ -2821,17 +2829,17 @@ export default async function handler(req, res) {
       : DATA_NOT_AVAILABLE;
     const execEgiText = Number.isFinite(execEgi) ? formatCurrency(execEgi) : DATA_NOT_AVAILABLE;
     const execOpexText = Number.isFinite(execOpex) ? formatCurrency(execOpex) : DATA_NOT_AVAILABLE;
-    const expenseRatioBand = Number.isFinite(expenseRatio)
-      ? expenseRatio >= 0.65
+    const expenseRatioBand = Number.isFinite(expenseRatioR)
+      ? expenseRatioR >= 0.65
         ? "Fragile"
-        : expenseRatio >= 0.55
+        : expenseRatioR >= 0.55
         ? "Sensitized"
         : "Stable"
       : null;
-    const noiMarginBand = Number.isFinite(noiMargin)
-      ? noiMargin <= 0.3
+    const noiMarginBand = Number.isFinite(noiMarginR)
+      ? noiMarginR <= 0.3
         ? "Fragile"
-        : noiMargin <= 0.45
+        : noiMarginR <= 0.45
         ? "Sensitized"
         : "Stable"
       : null;
@@ -2843,11 +2851,11 @@ export default async function handler(req, res) {
         : "Stable"
       : null;
 
-    const execOpexRatioText = Number.isFinite(expenseRatio)
-      ? `${formatPercent1(expenseRatio)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
+    const execOpexRatioText = Number.isFinite(expenseRatioR)
+      ? `${formatPercent1(expenseRatioR)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
       : DATA_NOT_AVAILABLE;
-    const execNoiMarginText = Number.isFinite(noiMargin)
-      ? `${formatPercent1(noiMargin)}${noiMarginBand ? ` (${noiMarginBand})` : ""}`
+    const execNoiMarginText = Number.isFinite(noiMarginR)
+      ? `${formatPercent1(noiMarginR)}${noiMarginBand ? ` (${noiMarginBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     const execBreakEvenText = Number.isFinite(breakEvenOccRatio)
       ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
@@ -2881,62 +2889,62 @@ export default async function handler(req, res) {
     let screeningClass = null;
     let screeningExplanation = null;
     const driverCandidates = [];
-    if (Number.isFinite(expenseRatio)) {
+    if (Number.isFinite(expenseRatioR)) {
       const severity =
-        expenseRatio > 0.65
-          ? expenseRatio - 0.65
-          : expenseRatio > 0.55
-          ? expenseRatio - 0.55
+        expenseRatioR > 0.65
+          ? expenseRatioR - 0.65
+          : expenseRatioR > 0.55
+          ? expenseRatioR - 0.55
           : 0;
       const trigger =
-        expenseRatio > 0.65
+        expenseRatioR > 0.65
           ? ">= 65.0% fragile threshold breached"
-          : expenseRatio > 0.55
+          : expenseRatioR > 0.55
           ? ">= 55.0% sensitized threshold breached"
           : "< 55.0% within stable range";
       driverCandidates.push({
         label: "Expense Ratio",
-        value: formatPercent1(expenseRatio),
+        value: formatPercent1(expenseRatioR),
         trigger,
         severity,
       });
     }
-    if (Number.isFinite(noiMargin)) {
+    if (Number.isFinite(noiMarginR)) {
       const severity =
-        noiMargin < 0.35
-          ? 0.35 - noiMargin
-          : noiMargin < 0.45
-          ? 0.45 - noiMargin
+        noiMarginR < 0.35
+          ? 0.35 - noiMarginR
+          : noiMarginR < 0.45
+          ? 0.45 - noiMarginR
           : 0;
       const trigger =
-        noiMargin < 0.35
+        noiMarginR < 0.35
           ? "<= 35.0% fragile threshold breached"
-          : noiMargin < 0.45
+          : noiMarginR < 0.45
           ? "<= 45.0% sensitized threshold breached"
           : ">= 45.0% within stable range";
       driverCandidates.push({
         label: "NOI Margin",
-        value: formatPercent1(noiMargin),
+        value: formatPercent1(noiMarginR),
         trigger,
         severity,
       });
     }
-    if (Number.isFinite(breakEvenOccupancy)) {
+    if (Number.isFinite(breakEvenOccR)) {
       const severity =
-        breakEvenOccupancy > 0.85
-          ? breakEvenOccupancy - 0.85
-          : breakEvenOccupancy > 0.75
-          ? breakEvenOccupancy - 0.75
+        breakEvenOccR > 0.85
+          ? breakEvenOccR - 0.85
+          : breakEvenOccR > 0.75
+          ? breakEvenOccR - 0.75
           : 0;
       const trigger =
-        breakEvenOccupancy > 0.85
+        breakEvenOccR > 0.85
           ? ">= 85.0% fragile threshold breached"
-          : breakEvenOccupancy > 0.75
+          : breakEvenOccR > 0.75
           ? ">= 75.0% sensitized threshold breached"
           : "< 75.0% within stable range";
       driverCandidates.push({
         label: "Break-even Occupancy",
-        value: formatPercent1(breakEvenOccupancy),
+        value: formatPercent1(breakEvenOccR),
         trigger,
         severity,
       });
@@ -2956,17 +2964,17 @@ export default async function handler(req, res) {
         screeningExplanation =
           "Insufficient operating data to assess acquisition viability.";
       } else if (
-        (Number.isFinite(expenseRatio) && expenseRatio > 0.65) ||
-        (Number.isFinite(noiMargin) && noiMargin < 0.35) ||
-        (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.85)
+        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
+        (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
+        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85)
       ) {
         screeningClass = "Fragile";
         screeningExplanation =
           "Operating margin is thin and vulnerable to modest income or expense shocks.";
       } else if (
-        (Number.isFinite(expenseRatio) && expenseRatio > 0.55) ||
-        (Number.isFinite(noiMargin) && noiMargin < 0.45) ||
-        (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.75)
+        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
+        (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
+        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75)
       ) {
         screeningClass = "Sensitized";
         screeningExplanation =
@@ -2984,14 +2992,14 @@ export default async function handler(req, res) {
       );
     }
     const classificationDrivers = [];
-    if (Number.isFinite(expenseRatio) && expenseRatio >= 0.55) {
+    if (Number.isFinite(expenseRatioR) && expenseRatioR >= 0.55) {
       classificationDrivers.push(
-        `elevated Expense Ratio (${formatPercent1(expenseRatio)})`
+        `elevated Expense Ratio (${formatPercent1(expenseRatioR)})`
       );
     }
-    if (Number.isFinite(noiMargin) && noiMargin <= 0.45) {
+    if (Number.isFinite(noiMarginR) && noiMarginR <= 0.45) {
       classificationDrivers.push(
-        `compressed NOI Margin (${formatPercent1(noiMargin)})`
+        `compressed NOI Margin (${formatPercent1(noiMarginR)})`
       );
     }
     if (Number.isFinite(breakEvenOccRatio) && breakEvenOccRatio >= 0.75) {
@@ -3008,12 +3016,15 @@ export default async function handler(req, res) {
       if (!Number.isFinite(n)) return null;
       return n <= 1.5 ? n * 100 : n;
     };
-    const expenseRatioPct = toPercentMetric(expenseRatio);
-    const noiMarginPct = toPercentMetric(noiMargin);
-    const breakEvenDecisionPct = toPercentMetric(breakEvenOccupancy);
+    const expenseRatioPct = toPercentMetric(expenseRatioR);
+    const noiMarginPct = toPercentMetric(noiMarginR);
+    const breakEvenDecisionPct = toPercentMetric(breakEvenOccR);
     const decisionContextInputs = [expenseRatioPct, noiMarginPct, breakEvenDecisionPct];
     let passChecks = [];
     let disqualifierChecks = [];
+    let anyHardDisq = false;
+    let finitePassCount = 0;
+    let allPass = false;
     let decisionContextHtml = "";
     if (decisionContextInputs.some((v) => Number.isFinite(v))) {
       const formatDecisionValue = (v) =>
@@ -3079,24 +3090,28 @@ export default async function handler(req, res) {
       const satisfiedCount = passChecks.filter(
         (row) => Number.isFinite(row.value) && row.test(row.value)
       ).length;
-      const decisionStatus =
-        satisfiedCount === 3
-          ? "Full Compliance"
-          : satisfiedCount >= 1
-          ? `Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`
-          : "Non-Compliance";
-      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">Decision Status: ${decisionStatus}</p></div>`;
+      anyHardDisq = disqualifierChecks.some(
+        (row) => Number.isFinite(row.value) && row.test(row.value)
+      );
+      finitePassCount = passChecks.filter((row) => Number.isFinite(row.value)).length;
+      allPass = finitePassCount === passChecks.length && satisfiedCount === passChecks.length;
+      const decisionStatusText = anyHardDisq
+        ? "Decision Status: Non-Compliance"
+        : allPass
+        ? "Decision Status: Full Compliance"
+        : satisfiedCount === 0
+        ? "Decision Status: Non-Compliance"
+        : `Decision Status: Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`;
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
     }
-    if (effectiveReportMode === "screening_v1" && screeningHasSufficientData && passChecks.length === 3 && disqualifierChecks.length === 3) {
-      const anyHardDisqualifierTriggered = disqualifierChecks.some(
-        (row) => Number.isFinite(row.value) && row.test(row.value)
-      );
-      const allPassConditionsSatisfied = passChecks.every(
-        (row) => Number.isFinite(row.value) && row.test(row.value)
-      );
-      if (anyHardDisqualifierTriggered) {
+    if (
+      effectiveReportMode === "screening_v1" &&
+      screeningHasSufficientData &&
+      decisionContextInputs.some((v) => Number.isFinite(v))
+    ) {
+      if (anyHardDisq) {
         screeningClass = "Fragile";
-      } else if (allPassConditionsSatisfied) {
+      } else if (allPass) {
         screeningClass = "Stable";
       } else {
         screeningClass = "Sensitized";
@@ -3136,10 +3151,10 @@ export default async function handler(req, res) {
         `<p class="exec-kpis">${escapeHtml(`Expense Ratio: ${execOpexRatio}`)}</p>`
       );
     }
-    if (Number.isFinite(noiMargin)) {
+    if (Number.isFinite(noiMarginR)) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(
-          `NOI Margin: ${formatPercent1(noiMargin)}`
+          `NOI Margin: ${formatPercent1(noiMarginR)}`
         )}</p>`
       );
     }
@@ -3171,24 +3186,24 @@ export default async function handler(req, res) {
       );
     }
     const riskBullets = [];
-    if (Number.isFinite(expenseRatio) && expenseRatio > 0.55) {
+    if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) {
       riskBullets.push(
         `Expense ratio is ${formatPercent1(
-          expenseRatio
+          expenseRatioR
         )}, pressuring NOI margin.`
       );
     }
-    if (Number.isFinite(noiMargin) && noiMargin < 0.45) {
+    if (Number.isFinite(noiMarginR) && noiMarginR < 0.45) {
       riskBullets.push(
         `NOI margin is ${formatPercent1(
-          noiMargin
+          noiMarginR
         )}, leaving limited buffer for shocks.`
       );
     }
-    if (Number.isFinite(breakEvenOccupancy) && breakEvenOccupancy > 0.75) {
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75) {
       riskBullets.push(
         `Break-even occupancy is ${formatPercent1(
-          breakEvenOccupancy
+          breakEvenOccR
         )}, increasing sensitivity to vacancy and income disruption.`
       );
     }
