@@ -576,6 +576,7 @@ function stripMarkedSection(html, key) {
   if (!html.includes(end)) {
     console.warn(`Section marker missing END for ${token}`);
     return html;
+  }
   const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(
     `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
