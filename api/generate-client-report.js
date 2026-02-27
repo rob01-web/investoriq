@@ -924,12 +924,12 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
         addRow(key, value);
       }
     });
+  }
 
   if (rows.length < 3) return "";
   return rows.join("");
 }
 
-}
 function buildRenovationBudgetRows(rows, formatValue) {
   if (!Array.isArray(rows) || rows.length === 0) return "";
   return rows
