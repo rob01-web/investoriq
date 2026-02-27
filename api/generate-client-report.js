@@ -869,11 +869,11 @@ function buildT12IncomeRows(t12Payload, formatValue) {
       }
     });
 
+  }
   if (rows.length < 3) return "";
   return rows.join("");
 }
 
-}
 function buildT12ExpenseRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
   const candidateCollection = Array.isArray(t12Payload.expense_lines)
@@ -2590,8 +2590,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
-  } finally {
-}
+  }
 }
 
 
