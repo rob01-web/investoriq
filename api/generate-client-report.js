@@ -857,6 +857,7 @@ function buildT12IncomeRows(t12Payload, formatValue) {
   return rows.join("");
 }
 
+}
 function buildT12ExpenseRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
   const candidateCollection = Array.isArray(t12Payload.expense_lines)
@@ -912,6 +913,7 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
   return rows.join("");
 }
 
+}
 function buildRenovationBudgetRows(rows, formatValue) {
   if (!Array.isArray(rows) || rows.length === 0) return "";
   return rows
@@ -1173,6 +1175,9 @@ function buildScreeningDataCoverageSummary({
   )}</td></tr></tbody></table>${missingHtml ? `<ul>${missingHtml}</ul>` : ""}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 
+}
+}
+}
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
   computedRentRoll,
@@ -1375,6 +1380,12 @@ function buildScreeningIncomeForensicsHtml({
   return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
 
+}
+}
+}
+}
+}
+}
 function buildScreeningExpenseStructureHtml({
   t12Payload,
   computedRentRoll,
@@ -1513,6 +1524,11 @@ function buildScreeningExpenseStructureHtml({
   return `${metricsCard}${flagsCard}`;
 }
 
+}
+}
+}
+}
+}
 function buildScreeningNoiStabilityHtml({
   t12Payload,
   computedRentRoll,
@@ -1697,6 +1713,19 @@ function buildScreeningNoiStabilityHtml({
   )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
 }
 
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
@@ -1918,6 +1947,25 @@ function buildScreeningRentRollDistributionHtml({
   return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}`;
 }
 
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -1965,6 +2013,7 @@ function buildUnitMixTable(rows = []) {
   return html;
 }
 
+}
 function buildRenovationTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2005,6 +2054,7 @@ function buildRenovationTable(rows = []) {
   return html;
 }
 
+}
 function buildScenarioTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2033,6 +2083,7 @@ function buildScenarioTable(rows = []) {
   return html;
 }
 
+}
 function buildReturnSummaryTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2068,6 +2119,7 @@ function buildReturnSummaryTable(rows = []) {
   return html;
 }
 
+}
 function buildCapitalPlanTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2094,6 +2146,7 @@ function buildCapitalPlanTable(rows = []) {
   return html;
 }
 
+}
 function buildDealScoreTable(rows = [], totalScore) {
   if (!rows.length) return "";
   let html = `
@@ -2153,6 +2206,7 @@ function buildDealScoreTable(rows = [], totalScore) {
   return html;
 }
 
+}
 function buildCompsTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2197,6 +2251,7 @@ const INLINE_CHARTS =
     ? true
     : process.env.INLINE_CHARTS === "true";
 
+}
 function chartVersion(filename) {
   try {
     const stat = fs.statSync(
@@ -2207,6 +2262,7 @@ function chartVersion(filename) {
     return String(Date.now());
 }
 
+}
 function chartUrl(filename) {
   const version = chartVersion(filename);
   return `${CHART_BASE_URL}/charts/institutional/${filename}?v=${version}`;
@@ -2229,6 +2285,7 @@ function inlineChart(filename, fallbackUrl) {
     return fallbackUrl;
 }
 
+}
 function applyChartPlaceholders(html, charts = {}) {
   const defaults = {
     renovationChartUrl: inlineChart("renovation_roi.png", chartUrl("renovation_roi.png")),
@@ -2493,6 +2550,7 @@ export default async function handler(req, res) {
     console.error("Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
+}
 }
 
 
