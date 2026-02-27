@@ -183,13 +183,14 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     ? stressRateBpsRaw.map((v) => coerceNumber(v))
     : null;
 
+  const capRateBaseR = toCapRatio(capRateBase);
   const requiredScalars = [
     debtBalance,
     ltvMax,
     dscrMin,
     interestRate,
     amortYears,
-    capRateBase,
+    capRateBaseR,
     noiBase,
   ];
   const hasValidScalars =
@@ -198,7 +199,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     ltvMax > 0 &&
     dscrMin > 0 &&
     amortYears > 0 &&
-    capRateBase > 0 &&
+    capRateBaseR > 0 &&
     noiBase > 0;
   const hasValidStressArrays =
     Array.isArray(stressNoiShocks) &&
@@ -216,11 +217,10 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   }
 
   const baseMc = computeMortgageConstant(interestRate, amortYears);
-  const baseCap = capRateBase;
+  const baseCap = capRateBaseR;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
     return { tier: null, evidence: null, html: "" };
   }
-  const baseValue = noiBase / baseCap;
   const baseLoanLtv = baseValue * ltvMax;
   const baseLoanDscr = noiBase / (dscrMin * baseMc);
   const baseMaxProceeds = Math.min(baseLoanLtv, baseLoanDscr);
@@ -236,7 +236,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     for (const capBps of stressCapRateBps) {
       for (const rateBps of stressRateBps) {
         const noi = noiBase * (1 + noiShock);
-        const cap = capRateBase + capBps / 10000;
+        const cap = capRateBaseR + capBps / 10000;
         const rate = interestRate + rateBps / 10000;
         const mc = computeMortgageConstant(rate, amortYears);
         let maxProceeds = 0;
@@ -297,7 +297,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
 
   if (worstPoint && Number.isFinite(worstPoint.noiShock)) {
     worstNoi = noiBase * (1 + worstPoint.noiShock);
-    worstCap = capRateBase + worstPoint.capBps / 10000;
+    worstCap = capRateBaseR + worstPoint.capBps / 10000;
     worstRate = interestRate + worstPoint.rateBps / 10000;
     worstMc = computeMortgageConstant(worstRate, amortYears);
 
@@ -370,11 +370,16 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
           maximumFractionDigits: 1,
         })}%`
       : DATA_NOT_AVAILABLE;
-  const toRateRatio = (x) => {
+  function toRateRatio(x) {
     const n = Number(x);
     if (!Number.isFinite(n)) return null;
     return n > 1.5 ? n / 100 : n;
-  };
+  }
+  function toCapRatio(x) {
+    const n = Number(x);
+    if (!Number.isFinite(n)) return null;
+    return n > 1 ? n / 100 : n;
+  }
   const pmtAnnual = (principal, rateRatio, years) => {
     const p = Number(principal);
     const r = toRateRatio(rateRatio);
@@ -406,7 +411,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
 </div>`;
   const rate0 = toRateRatio(interestRate);
-  const capRate0 = toRateRatio(capRateBase);
+  const capRate0 = capRateBaseR;
   const ltvMaxR = toRateRatio(ltvMax);
   const value0 =
     coerceNumber(f.appraisedValue) ??
