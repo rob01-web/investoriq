@@ -1272,7 +1272,7 @@ function buildScreeningExpenseStructureHtml({
   const flagsHtml = flags
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
-  const rankedExpenseDrivers = expenseDriverRows.map((row) => ({
+  const rankedExpenseDrivers = allExpenseRows.map((row) => ({
     label: row.label,
     pct: totalOpEx > 0 ? (row.amount / totalOpEx) * 100 : NaN,
   }));
