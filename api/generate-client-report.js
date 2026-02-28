@@ -1462,7 +1462,7 @@ function buildScreeningNoiStabilityHtml({
     : "";
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
-  )}</tbody></table></div>${sensitivityCard}`;
+  )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}`;
 }
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
