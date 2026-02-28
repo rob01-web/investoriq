@@ -384,7 +384,7 @@ function sanitizeDisplayText(s) {
   if (!s) return s;
   return String(s)
     .replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "")
-    .replace(/\s+,/g, ",")
+    .replace(/\s+([,.])/g, "$1")
     .trim();
 }
 function sanitizeTypography(html) {
