@@ -1,5 +1,4 @@
 // api/generate-client-report.js
-
 import dotenv from "dotenv";
 dotenv.config();
 import { ensureSentenceIntegrity } from "../src/lib/sentenceIntegrity.js";
@@ -9,9 +8,6 @@ import { fileURLToPath } from "url";
 import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
-
-
-
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,13 +15,10 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
 // ---------- Formatting Helpers ----------
-
 function isNil(value) {
   return value === undefined || value === null;
 }
-
 function formatCurrency(value, options = {}) {
   const { decimals = 0, prefix = "$", suffix = "" } = options;
   if (isNil(value) || isNaN(Number(value))) return "";
@@ -39,7 +32,6 @@ function formatCurrency(value, options = {}) {
     suffix
   );
 }
-
 function formatPercent(value, decimals = 1) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value) * 100;
@@ -50,14 +42,12 @@ function formatPercent(value, decimals = 1) {
     }) + "%"
   );
 }
-
 function formatPercent1(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   const pct = n > 1.5 ? n : n * 100;
   return `${pct.toFixed(1)}%`;
 }
-
 function formatMultiple(value, decimals = 2) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -68,7 +58,6 @@ function formatMultiple(value, decimals = 2) {
     }) + "x"
   );
 }
-
 function formatYears(value, decimals = 1) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -79,7 +68,6 @@ function formatYears(value, decimals = 1) {
     }) + " yrs"
   );
 }
-
 function formatDistanceKm(value) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -90,16 +78,13 @@ function formatDistanceKm(value) {
     }) + " km"
   );
 }
-
 // Helper to safely replace all occurrences of a token
 function replaceAll(str, token, value) {
   if (!str || !token) return str;
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
 }
-
 const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
-
 const coerceNumber = (value) => {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -108,42 +93,34 @@ const coerceNumber = (value) => {
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 };
-
 function isFiniteNumber(x) {
   const n = Number(x);
   return Number.isFinite(n);
 }
-
 function isFinitePositive(x) {
   const n = Number(x);
   return Number.isFinite(n) && n > 0;
 }
-
 function hasMinimumScreeningCoverage(t12Payload) {
   const gpr =
     t12Payload?.gross_potential_rent ??
     t12Payload?.gross_scheduled_rent ??
     t12Payload?.gross_income ??
     t12Payload?.total_income;
-
   const totalExp =
     t12Payload?.total_operating_expenses ??
     t12Payload?.total_expenses ??
     t12Payload?.expenses_total;
-
   const expenseLines =
     t12Payload?.expense_lines_found ??
     t12Payload?.expense_lines_count ??
     t12Payload?.expense_line_count;
-
   const hasCore = isFinitePositive(gpr) && isFiniteNumber(totalExp);
   const hasExpenseDetail = Number.isFinite(Number(expenseLines))
     ? Number(expenseLines) >= 3
     : isFinitePositive(totalExp);
-
   return hasCore && hasExpenseDetail;
 }
-
 function computeMortgageConstant(rateAnnual, amortYears) {
   const r = Number(rateAnnual);
   const years = Number(amortYears);
@@ -157,19 +134,16 @@ function computeMortgageConstant(rateAnnual, amortYears) {
   const mc = pm * 12;
   return Number.isFinite(mc) && mc > 0 ? mc : null;
 }
-
 function toRateRatio(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n > 1.5 ? n / 100 : n; // treat 5.25 as 5.25% => 0.0525
 }
-
 function toCapRatio(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n > 1.5 ? n / 100 : n; // treat 6.0 as 6.0% => 0.06
 }
-
 function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const f = financials && typeof financials === "object" ? financials : {};
   const debtBalance = coerceNumber(f.refi_debt_balance);
@@ -183,7 +157,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const explicitNoiBase = coerceNumber(f.noi_base);
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
   const noiBase = Number.isFinite(explicitNoiBase) ? explicitNoiBase : noiFromT12;
-
   const stressNoiShocksRaw = f.stress_noi_shocks;
   const stressCapRateBpsRaw = f.stress_cap_rate_bps;
   const stressRateBpsRaw = f.stress_rate_bps;
@@ -196,7 +169,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const stressRateBps = Array.isArray(stressRateBpsRaw)
     ? stressRateBpsRaw.map((v) => coerceNumber(v))
     : null;
-
   const requiredScalars = [
     debtBalance,
     ltvMax,
@@ -224,11 +196,9 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     Array.isArray(stressRateBps) &&
     stressRateBps.length > 0 &&
     stressRateBps.every((v) => Number.isFinite(v));
-
   if (!hasValidScalars || !hasValidStressArrays) {
     return { tier: null, evidence: null, html: "" };
   }
-
   const baseMc = computeMortgageConstant(interestRate, amortYears);
   const baseCap = capRateBase;
   if (!Number.isFinite(baseMc) || !Number.isFinite(baseCap) || baseCap <= 0) {
@@ -244,7 +214,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   if (!Number.isFinite(coverageBase)) {
     return { tier: null, evidence: null, html: "" };
   }
-
   const stressPoints = [];
   for (const noiShock of stressNoiShocks) {
     for (const capBps of stressCapRateBps) {
@@ -272,7 +241,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       }
     }
   }
-
   const coverageWorst = stressPoints.reduce(
     (minCoverage, point) =>
       point.coverage < minCoverage ? point.coverage : minCoverage,
@@ -297,7 +265,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       ? `${Math.round(Number(worstPoint.rateBps))} bps`
       : DATA_NOT_AVAILABLE;
   const worstDriverTripleText = `${worstNoiShockText} | ${worstCapBpsText} | ${worstRateBpsText}`;
-
   let worstNoi = null;
   let worstCap = null;
   let worstRate = null;
@@ -308,13 +275,11 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   let worstMaxProceeds = null;
   let worstCoverage = worstFiniteCoverage;
   let worstBinding = null;
-
   if (worstPoint && Number.isFinite(worstPoint.noiShock)) {
     worstNoi = noiBase * (1 + worstPoint.noiShock);
     worstCap = capRateBase + worstPoint.capBps / 10000;
     worstRate = interestRate + worstPoint.rateBps / 10000;
     worstMc = computeMortgageConstant(worstRate, amortYears);
-
     if (
       Number.isFinite(worstNoi) && worstNoi > 0 &&
       Number.isFinite(worstCap) && worstCap > 0 &&
@@ -329,7 +294,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
         worstLoanLtv <= worstLoanDscr ? "LTV-limited" : "DSCR-limited";
     }
   }
-
   let refiTier = "Stable";
   if (coverageBase < 1.0) {
     refiTier = "Refinance Failure Under Stress";
@@ -340,7 +304,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   } else if (worstFiniteCoverage < 1.1) {
     refiTier = "Sensitized";
   }
-
   const formatCoverage = (value) =>
     Number.isFinite(value) ? formatMultiple(value, 2) : DATA_NOT_AVAILABLE;
   const evidence = `base_coverage=${formatCoverage(
@@ -399,10 +362,8 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   )}</p><p class="small">${escapeHtml(
     evidence
   )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
-
   return { tier: refiTier, evidence, html: refiHtml };
 }
-
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -411,19 +372,16 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
 function hasMeaningfulNarrative(html) {
   if (!html || typeof html !== "string") return false;
   if (html.includes(DATA_NOT_AVAILABLE)) return false;
   if (!html.replace(/<[^>]*>/g, "").trim()) return false;
   return true;
 }
-
 function sanitizeDisplayText(s) {
   if (!s) return s;
   return String(s).replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "").trim();
 }
-
 function sanitizeTypography(html) {
   if (typeof html !== "string") return html;
   return html
@@ -432,7 +390,6 @@ function sanitizeTypography(html) {
     .replace(/[\u201C\u201D]/g, '"')      // smart quotes
     .replace(/&(?:ndash|mdash);/g, "-");
 }
-
 function stripMarkedSection(html, key) {
   const token = String(key || "");
   if (!token) return html;
@@ -450,29 +407,24 @@ function stripMarkedSection(html, key) {
   );
   return html.replace(re, "");
 }
-
 function stripT12DetailSubsection(html, headingText) {
   if (!html) return html;
   const escapedHeading = String(headingText || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (!escapedHeading) return html;
-
   // Pattern A: heading is <h3> or similar + the next table
   const patternA = new RegExp(
     String.raw`<h[1-6][^>]*>\s*${escapedHeading}\s*<\/h[1-6]>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
     "i"
   );
-
   // Pattern B: heading is a div/span label + the next table (common in templates)
   const patternB = new RegExp(
     String.raw`<(div|span)[^>]*>\s*${escapedHeading}\s*<\/\1>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
     "i"
   );
-
   let out = html.replace(patternA, "");
   out = out.replace(patternB, "");
   return out;
 }
-
 function stripChartBlockByAlt(html, altText) {
   if (!altText) return html;
   const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -482,7 +434,6 @@ function stripChartBlockByAlt(html, altText) {
   );
   return html.replace(re, "");
 }
-
 function constantTimeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
   if (a.length !== b.length) return false;
@@ -492,7 +443,6 @@ function constantTimeEqual(a, b) {
   }
   return result === 0;
 }
-
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   const toNum = (v) => {
     if (v === null || v === undefined) return NaN;
@@ -509,7 +459,6 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
     const absParsed = Math.abs(parsed);
     return parenNeg ? -absParsed : parsed;
   };
-
   if (!Array.isArray(unitMix) || unitMix.length === 0) return "";
   const rows = unitMix
     .map((row) => {
@@ -546,10 +495,8 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
           </tr>`;
     })
     .join("");
-
   const totalNum = toNum(totalUnits);
   const total = Number.isFinite(totalNum) ? String(Math.round(totalNum)) : "";
-
   const totalRow = `<tr>
             <td><strong>Blended / Total</strong></td>
             <td><strong>${total}</strong></td>
@@ -558,10 +505,8 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
             <td><strong></strong></td>
             <td><strong></strong></td>
           </tr>`;
-
   return `${rows}${totalRow}`;
 }
-
 function injectUnitMixTable(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -569,7 +514,6 @@ function injectUnitMixTable(html, rowsHtml) {
   if (!regex.test(html)) return html;
   return html.replace(regex, `$1${rowsHtml}$3`);
 }
-
 function injectOccupancyNote(html, occupancy) {
   if (occupancy === null || occupancy === undefined) return html;
   const occupancyPercent =
@@ -584,7 +528,6 @@ function injectOccupancyNote(html, occupancy) {
   if (!regex.test(html)) return html;
   return html.replace(regex, `$1${note}`);
 }
-
 function deriveOccFromRentRollUnits(rentRollPayload) {
   const rrRowsRaw =
     rentRollPayload?.units ||
@@ -594,7 +537,6 @@ function deriveOccFromRentRollUnits(rentRollPayload) {
     [];
   const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
   if (rrRows.length === 0) return null;
-
   const unitRows = rrRows.filter((u) => {
     const id =
       u?.unit ??
@@ -608,7 +550,6 @@ function deriveOccFromRentRollUnits(rentRollPayload) {
     return String(id ?? "").trim().length > 0;
   });
   if (unitRows.length === 0) return null;
-
   const total = unitRows.length;
   const occupied = unitRows.reduce((acc, u) => {
     const s = String(u?.status || u?.unit_status || "").toLowerCase();
@@ -616,10 +557,8 @@ function deriveOccFromRentRollUnits(rentRollPayload) {
     const r = coerceNumber(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
     return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
   }, 0);
-
   return total > 0 ? occupied / total : null;
 }
-
 function buildT12SummaryHtml(t12Payload, formatValue) {
   if (!t12Payload) return "";
   const rows = [
@@ -628,17 +567,14 @@ function buildT12SummaryHtml(t12Payload, formatValue) {
     ["Total Operating Expenses", t12Payload.total_operating_expenses],
     ["Net Operating Income", t12Payload.net_operating_income],
   ];
-
   const rowHtml = rows
     .map(([label, value]) => {
       const display = Number.isFinite(Number(value)) ? formatValue(value) : "";
       return `<tr><td>${label}</td><td>${display}</td></tr>`;
     })
     .join("");
-
   const hasAny = rows.some(([, value]) => Number.isFinite(Number(value)));
   if (!hasAny) return "";
-
   return `<table>
         <tr>
           <th>Metric</th>
@@ -647,7 +583,6 @@ function buildT12SummaryHtml(t12Payload, formatValue) {
         ${rowHtml}
       </table>`;
 }
-
 function buildT12KeyMetricRows(t12Payload, formatValue) {
   if (!t12Payload) return "";
   const rows = [
@@ -656,7 +591,6 @@ function buildT12KeyMetricRows(t12Payload, formatValue) {
     ["Operating Expenses (TTM)", t12Payload.total_operating_expenses],
     ["Net Operating Income (TTM)", t12Payload.net_operating_income],
   ];
-
   return rows
     .map(([label, value]) => {
       const display = Number.isFinite(Number(value)) ? formatValue(value) : "";
@@ -667,7 +601,6 @@ function buildT12KeyMetricRows(t12Payload, formatValue) {
     })
     .join("");
 }
-
 function buildT12IncomeRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
   const candidateCollection = Array.isArray(t12Payload.income_lines)
@@ -682,7 +615,6 @@ function buildT12IncomeRows(t12Payload, formatValue) {
       )
     : null;
   if (!candidateCollection) return "";
-
   const rows = [];
   const seen = new Set();
   const addRow = (labelRaw, amountRaw) => {
@@ -696,7 +628,6 @@ function buildT12IncomeRows(t12Payload, formatValue) {
       `<tr><td>${escapeHtml(label)}</td><td>${formatValue(amountNum)}</td></tr>`
     );
   };
-
   if (Array.isArray(candidateCollection)) {
     candidateCollection.forEach((entry) => {
       if (entry && typeof entry === "object") {
@@ -719,11 +650,9 @@ function buildT12IncomeRows(t12Payload, formatValue) {
       }
     });
   }
-
   if (rows.length < 3) return "";
   return rows.join("");
 }
-
 function buildT12ExpenseRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
   const candidateCollection = Array.isArray(t12Payload.expense_lines)
@@ -738,7 +667,6 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
       )
     : null;
   if (!candidateCollection) return "";
-
   const rows = [];
   const seen = new Set();
   const addRow = (labelRaw, amountRaw) => {
@@ -752,7 +680,6 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
       `<tr><td>${escapeHtml(label)}</td><td>${formatValue(amountNum)}</td></tr>`
     );
   };
-
   if (Array.isArray(candidateCollection)) {
     candidateCollection.forEach((entry) => {
       if (entry && typeof entry === "object") {
@@ -775,11 +702,9 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
       }
     });
   }
-
   if (rows.length < 3) return "";
   return rows.join("");
 }
-
 function buildRenovationBudgetRows(rows, formatValue) {
   if (!Array.isArray(rows) || rows.length === 0) return "";
   return rows
@@ -808,7 +733,6 @@ function buildRenovationBudgetRows(rows, formatValue) {
     .filter(Boolean)
     .join("");
 }
-
 function buildRenovationExecutionRows(rows, formatValue) {
   if (!Array.isArray(rows) || rows.length === 0) return "";
   return rows
@@ -826,7 +750,6 @@ function buildRenovationExecutionRows(rows, formatValue) {
     .filter(Boolean)
     .join("");
 }
-
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
@@ -837,13 +760,11 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     `[${arr.map((entry) => formatPercent1(coerceNumber(entry))).join(", ")}]`;
   const formatBpsArray = (arr) =>
     `[${arr.map((entry) => formatBps(coerceNumber(entry))).join(", ")}]`;
-
   const isPresentScalar = (value) => Number.isFinite(value) && value > 0;
   const isPresentArray = (value) =>
     Array.isArray(value) &&
     value.length > 0 &&
     value.every((entry) => Number.isFinite(coerceNumber(entry)));
-
   const rows = [
     {
       label: "NOI (base)",
@@ -914,7 +835,6 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
         : " - ",
     },
   ];
-
   const rowsHtml = rows
     .map(
       (row) =>
@@ -923,10 +843,8 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
         }</td><td>${row.value}</td></tr>`
     )
     .join("");
-
   return `<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
 }
-
 function buildScreeningDataCoverageSummary({
   t12Payload,
   computedRentRoll,
@@ -959,7 +877,6 @@ function buildScreeningDataCoverageSummary({
   const t12Missing = t12Checks
     .filter((entry) => !entry.present)
     .map((entry) => entry.label);
-
   const rentRollRows = Array.isArray(rentRollPayload?.units) && rentRollPayload.units.length > 0
     ? rentRollPayload.units
     : Array.isArray(computedRentRoll?.unit_mix)
@@ -1014,7 +931,6 @@ function buildScreeningDataCoverageSummary({
   const rrMissing = rentRollChecks
     .filter((entry) => !entry.present)
     .map((entry) => entry.label);
-
   const missingInputs = [...t12Missing, ...rrMissing];
   const missingHtml = missingInputs.length
     ? missingInputs.map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")
@@ -1036,14 +952,12 @@ function buildScreeningDataCoverageSummary({
   const nextBestUploadsHtml = suggestionHtml
     ? `<p class="subsection-title" style="margin-top:12px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
     : "";
-
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
   )}</td></tr></tbody></table>${missingHtml ? `<ul>${missingHtml}</ul>` : ""}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
-
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
   computedRentRoll,
@@ -1089,7 +1003,6 @@ function buildScreeningIncomeForensicsHtml({
     }
     return [];
   };
-
   const incomeLinesRaw = Array.isArray(t12Payload?.income_lines)
     ? t12Payload.income_lines
     : t12Payload?.income_breakdown
@@ -1114,19 +1027,15 @@ function buildScreeningIncomeForensicsHtml({
         (entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense"
       )
     : [];
-
   const incomeLines = toRows(incomeLinesRaw)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
   const expenseLines = toRows(expenseLinesRaw)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
-
   if (incomeLines.length < 2 || expenseLines.length < 2) return "";
-
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
-
   const incomeRowsHtml = incomeLines
     .map((row) => {
       const share =
@@ -1136,7 +1045,6 @@ function buildScreeningIncomeForensicsHtml({
       )}${escapeHtml(share)}</td></tr>`;
     })
     .join("");
-
   const expenseRowsHtml = expenseLines
     .map((row) => {
       const share =
@@ -1146,7 +1054,6 @@ function buildScreeningIncomeForensicsHtml({
       )}${escapeHtml(share)}</td></tr>`;
     })
     .join("");
-
   const topIncomeLineConcentration =
     Number.isFinite(egi) &&
     egi > 0 &&
@@ -1159,7 +1066,6 @@ function buildScreeningIncomeForensicsHtml({
         formatPercent1(topIncomeLineConcentration)
       )}</p></div>`
     : "";
-
   let marketPremiumPct = null;
   const avgInPlace = coerceNumber(
     computedRentRoll?.avg_in_place_rent ?? rentRollPayload?.avg_in_place_rent
@@ -1181,7 +1087,6 @@ function buildScreeningIncomeForensicsHtml({
     Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
       ? (rrAnnual - gpr) / gpr
       : null;
-
   const bullets = [];
   if (Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration >= 0.85) {
     bullets.push(
@@ -1228,19 +1133,14 @@ function buildScreeningIncomeForensicsHtml({
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
       bullets.push(
-        `Rent roll annualized rent is +${formatPercent1(
-          rrVsGprPct
-        )} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is +${formatPercent1(rrVsGprPct)} vs T12 GPR (reconciliation flag).`
       );
     } else {
       bullets.push(
-        `Rent roll annualized rent is -${formatPercent1(
-          Math.abs(rrVsGprPct)
-        )} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR (reconciliation flag).`
       );
     }
   }
-
   const bulletsHtml = [...new Set(bullets)]
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
@@ -1248,10 +1148,8 @@ function buildScreeningIncomeForensicsHtml({
   const bulletsCard = bulletsHtml
     ? `<div class="card no-break" style="margin-top:12px;"><ul>${bulletsHtml}</ul></div>`
     : "";
-
   return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
-
 function buildScreeningExpenseStructureHtml({
   t12Payload,
   computedRentRoll,
@@ -1264,7 +1162,6 @@ function buildScreeningExpenseStructureHtml({
   const units = coerceNumber(
     computedRentRoll?.total_units ?? rentRollPayload?.total_units
   );
-
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) {
     const expenseRatio = opex / egi;
@@ -1286,12 +1183,10 @@ function buildScreeningExpenseStructureHtml({
       `<tr><td>NOI per Unit</td><td>${formatCurrency(noi / units)}</td></tr>`
     );
   }
-
   if (rows.length === 0) return "";
   const metricsCard = `<div class="card no-break"><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>`;
-
   const toExpenseRows = (source) => {
     if (Array.isArray(source)) {
       return source
@@ -1363,7 +1258,6 @@ function buildScreeningExpenseStructureHtml({
     .slice()
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
-
   const flags = [];
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
@@ -1393,10 +1287,8 @@ function buildScreeningExpenseStructureHtml({
   const flagsCard = (flagsHtml || top3Html)
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
-
   return `${metricsCard}${flagsCard}`;
 }
-
 function buildScreeningNoiStabilityHtml({
   t12Payload,
   computedRentRoll,
@@ -1410,7 +1302,6 @@ function buildScreeningNoiStabilityHtml({
     computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
   );
   const gpr = coerceNumber(t12Payload?.gross_potential_rent);
-
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) {
     const noiMargin = noi / egi;
@@ -1444,7 +1335,6 @@ function buildScreeningNoiStabilityHtml({
       )}</td></tr>`
     );
   }
-
   if (rows.length === 0) return "";
   const rrVsGprPct =
     Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
@@ -1454,7 +1344,6 @@ function buildScreeningNoiStabilityHtml({
     Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
-
   const flags = [];
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
@@ -1465,9 +1354,7 @@ function buildScreeningNoiStabilityHtml({
       );
     } else {
       flags.push(
-        `Rent roll annualized rent is ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢${formatPercent1(
-          Math.abs(rrVsGprPct)
-        )} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR (reconciliation flag).`
       );
     }
   }
@@ -1479,7 +1366,6 @@ function buildScreeningNoiStabilityHtml({
       `Expense ratio is ${formatPercent1(expenseRatio)} (high expense load flag).`
     );
   }
-
   const stabilityDrivers = [];
   if (Number.isFinite(noiMargin)) {
     stabilityDrivers.push({
@@ -1505,11 +1391,10 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((d) => d.label);
   const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Best)</p><ol>${rankedDrivers
+    ? `<p class="subsection-title">Stability Drivers (Worst 3)</p><ol>${rankedDrivers
         .map((line) => `<li>${escapeHtml(line)}</li>`)
         .join("")}</ol>`
     : "";
-
   const uniqueFlags = [...new Set(flags)];
   const flagsHtml = uniqueFlags
     .slice(0, 3)
@@ -1521,7 +1406,6 @@ function buildScreeningNoiStabilityHtml({
           flagsHtml ? `<p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul>` : ""
         }</div>`
       : "";
-
   const rrTotalUnits = coerceNumber(
     computedRentRoll?.total_units ?? rentRollPayload?.total_units
   );
@@ -1542,7 +1426,6 @@ function buildScreeningNoiStabilityHtml({
   if (!Number.isFinite(occupancy)) {
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
   }
-
   const sensitivityRows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
     const noiRevenueShock = noi - 0.05 * egi;
@@ -1570,12 +1453,10 @@ function buildScreeningNoiStabilityHtml({
         ""
       )}</tbody></table></div>`
     : "";
-
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
   )}</tbody></table></div>${flagsCard}${sensitivityCard}`;
 }
-
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
@@ -1588,7 +1469,6 @@ function buildScreeningRentRollDistributionHtml({
       ? rentRollPayload
       : null;
   if (!source) return "";
-
   const totalUnits = coerceNumber(source.total_units);
   const occupiedUnits = coerceNumber(source.occupied_units);
   let occupancy = coerceNumber(source.occupancy);
@@ -1600,7 +1480,6 @@ function buildScreeningRentRollDistributionHtml({
   ) {
     occupancy = occupiedUnits / totalUnits;
   }
-
   let totalInPlaceAnnual = coerceNumber(source.total_in_place_annual);
   if (!Number.isFinite(totalInPlaceAnnual)) {
     const inPlaceMonthly = coerceNumber(source.total_in_place_monthly);
@@ -1611,7 +1490,6 @@ function buildScreeningRentRollDistributionHtml({
     const marketMonthly = coerceNumber(source.total_market_monthly);
     if (Number.isFinite(marketMonthly)) totalMarketAnnual = marketMonthly * 12;
   }
-
   const unitMix = Array.isArray(source.unit_mix) ? source.unit_mix : [];
   let weightedInPlace = null;
   let weightedMarket = null;
@@ -1653,7 +1531,6 @@ function buildScreeningRentRollDistributionHtml({
   ) {
     weightedMarket = totalMarketAnnual / totalUnits / 12;
   }
-
   const metricsRows = [];
   if (Number.isFinite(totalUnits)) {
     metricsRows.push(`<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>`);
@@ -1712,7 +1589,6 @@ function buildScreeningRentRollDistributionHtml({
       )}</td></tr>`
     );
   }
-
   const rentBandRows = unitMix
     .map((row) => {
       const units = coerceNumber(row?.count);
@@ -1745,7 +1621,6 @@ function buildScreeningRentRollDistributionHtml({
     })
     .filter(Boolean)
     .join("");
-
   let largestUnitType = "";
   let largestUnitTypeConcentration = null;
   if (unitMix.length > 0 && Number.isFinite(totalUnits) && totalUnits > 0) {
@@ -1768,9 +1643,7 @@ function buildScreeningRentRollDistributionHtml({
       )}</td></tr>`
     );
   }
-
   if (metricsRows.length === 0 && !rentBandRows) return "";
-
   const metricsHtml =
     metricsRows.length > 0
       ? `<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${metricsRows.join(
@@ -1780,7 +1653,6 @@ function buildScreeningRentRollDistributionHtml({
   const bandsHtml = rentBandRows
     ? `<p class="subsection-title" style="margin-top:12px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
     : "";
-
   const marketPremiumRatio =
     Number.isFinite(weightedInPlace) &&
     Number.isFinite(weightedMarket) &&
@@ -1812,10 +1684,8 @@ function buildScreeningRentRollDistributionHtml({
   const flagsCard = flagsHtml
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
     : "";
-
   return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}`;
 }
-
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
   const regex =
@@ -1823,9 +1693,7 @@ function injectKeyMetricsRows(html, rowsHtml) {
   if (!regex.test(html)) return html;
   return html.replace(regex, `$1$2${rowsHtml}$3`);
 }
-
 // ---------- Dynamic Table Builders ----------
-
 function buildUnitMixTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -1846,7 +1714,6 @@ function buildUnitMixTable(rows = []) {
         : !isNil(row.targetRent) && !isNil(row.currentRent)
         ? Number(row.targetRent) - Number(row.currentRent)
         : null;
-
     html += `
   <tr>
     <td>${row.type ?? ""}</td>
@@ -1863,7 +1730,6 @@ function buildUnitMixTable(rows = []) {
 `;
   return html;
 }
-
 function buildRenovationTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -1885,7 +1751,6 @@ function buildRenovationTable(rows = []) {
           Number(monthlyLift) !== 0
         ? Number(row.costPerSuite) / (Number(monthlyLift) * 12)
         : null;
-
     html += `
   <tr>
     <td>${row.scope ?? ""}</td>
@@ -1904,7 +1769,6 @@ function buildRenovationTable(rows = []) {
 `;
   return html;
 }
-
 function buildScenarioTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -1933,7 +1797,6 @@ function buildScenarioTable(rows = []) {
 `;
   return html;
 }
-
 function buildReturnSummaryTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -1969,7 +1832,6 @@ function buildReturnSummaryTable(rows = []) {
 `;
   return html;
 }
-
 function buildCapitalPlanTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -1996,7 +1858,6 @@ function buildCapitalPlanTable(rows = []) {
 `;
   return html;
 }
-
 function buildDealScoreTable(rows = [], totalScore) {
   if (!rows.length) return "";
   let html = `
@@ -2015,9 +1876,7 @@ function buildDealScoreTable(rows = [], totalScore) {
       : !isNil(row.score) && !isNil(row.weight)
       ? (Number(row.score) * Number(row.weight)) / 10
       : null;
-
     if (!isNil(weighted)) total += Number(weighted);
-
     html += `
   <tr>
     <td>${row.factor ?? ""}</td>
@@ -2038,12 +1897,10 @@ function buildDealScoreTable(rows = [], totalScore) {
   </tr>
 `;
   }
-
   const finalScore =
     !isNil(totalScore) && !isNaN(Number(totalScore))
       ? Number(totalScore)
       : total;
-
   html += `
   <tr>
     <th colspan="3">Total Deal Score</th>
@@ -2056,7 +1913,6 @@ function buildDealScoreTable(rows = [], totalScore) {
 `;
   return html;
 }
-
 function buildCompsTable(rows = []) {
   if (!rows.length) return "";
   let html = `
@@ -2087,21 +1943,18 @@ function buildCompsTable(rows = []) {
 `;
   return html;
 }
-
 // ---------- Chart Helper ----------
 const CHART_BASE_URL =
   process.env.CHART_BASE_URL ||
   (process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
     : "https://investoriq.tech");
-
 // Default to inlining charts so the report always picks up the latest PNGs.
 // Set INLINE_CHARTS=false in environments where you serve charts from a CDN.
 const INLINE_CHARTS =
   process.env.INLINE_CHARTS === undefined
     ? true
     : process.env.INLINE_CHARTS === "true";
-
 function chartVersion(filename) {
   try {
     const stat = fs.statSync(
@@ -2112,12 +1965,10 @@ function chartVersion(filename) {
     return String(Date.now());
   }
 }
-
 function chartUrl(filename) {
   const version = chartVersion(filename);
   return `${CHART_BASE_URL}/charts/institutional/${filename}?v=${version}`;
 }
-
 function inlineChart(filename, fallbackUrl) {
   if (!INLINE_CHARTS) return fallbackUrl;
   const imgPath = path.join(
@@ -2135,7 +1986,6 @@ function inlineChart(filename, fallbackUrl) {
     return fallbackUrl;
   }
 }
-
 function applyChartPlaceholders(html, charts = {}) {
   const defaults = {
     renovationChartUrl: inlineChart("renovation_roi.png", chartUrl("renovation_roi.png")),
@@ -2158,9 +2008,7 @@ function applyChartPlaceholders(html, charts = {}) {
       chartUrl("break_even_occupancy.png")
     ),
   };
-
   const merged = { ...defaults, ...(charts || {}) };
-
   let out = html;
   out = replaceAll(out, "{{RENOVATION_CHART_URL}}", merged.renovationChartUrl);
   out = replaceAll(out, "{{CASHFLOW_CHART_URL}}", merged.cashflowChartUrl);
@@ -2198,9 +2046,7 @@ function applyChartPlaceholders(html, charts = {}) {
   out = replaceAll(out, "{{BREAKEVEN_CHART_URL}}", merged.breakevenChartUrl);
   return out;
 }
-
 // ---------- Main Handler ----------
-
 export default async function handler(req, res) {
   let effectiveUserId = null;
   try {
@@ -2222,19 +2068,16 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Unauthorized" });
       }
     }
-
     const adminRunKey = (process.env.ADMIN_RUN_KEY || "").trim();
     let headerKey = req.headers["x-admin-run-key"];
     if (Array.isArray(headerKey)) headerKey = headerKey[0];
     headerKey = (typeof headerKey === "string" ? headerKey : "").trim();
-
     if (!isAdminRegen) {
       if (!adminRunKey) {
         return res
           .status(500)
           .json({ error: "Server misconfigured: missing ADMIN_RUN_KEY" });
       }
-
       if (!headerKey || headerKey !== adminRunKey) {
         return res.status(401).json({
           error: "Unauthorized",
@@ -2245,7 +2088,6 @@ export default async function handler(req, res) {
         });
       }
     }
-
     // 1. Parse input JSON (structured)
     const {
       userId: bodyUserId,
@@ -2305,11 +2147,9 @@ export default async function handler(req, res) {
       INVESTORIQ_MASTER_PROMPT_V71,
       ...(Array.isArray(body.instructions) ? body.instructions : []),
     ];
-
     if (!effectiveUserId) {
       return res.status(400).json({ error: "Missing userId" });
     }
-
     const sections = body.sections || {};
     if (promptInstructions.length > 0) {
       const safeTimestamp = nowIso.replace(/:/g, "-");
@@ -2328,7 +2168,6 @@ export default async function handler(req, res) {
             timestamp: nowIso,
           },
         });
-
       if (promptEventErr) {
         console.error("Failed to log prompt_version_applied:", promptEventErr);
       }
@@ -2339,16 +2178,13 @@ export default async function handler(req, res) {
     
     const tables = body.tables || {};
     const charts = body.charts || {};
-
     // Optional financials payload; falls back to sample values
     const financials = body.financials || {};
-
     const getSection = (key) => sections[key] || "";
     const getNarrativeHtml = (key) => {
       const html = sections?.[key] || "";
       return typeof html === "string" ? html : "";
     };
-
     let documentSourcesHtml = "";
     let documentSources = [];
     let rentRollPayload = null;
@@ -2362,9 +2198,7 @@ export default async function handler(req, res) {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-
       rentRollPayload = rentRollArtifact?.payload || null;
-
       const { data: t12Artifact } = await supabase
         .from("analysis_artifacts")
         .select("payload")
@@ -2373,16 +2207,12 @@ export default async function handler(req, res) {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-
       t12Payload = t12Artifact?.payload || null;
-
-
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
         .select("original_filename, created_at")
         .eq("job_id", jobId)
         .order("created_at", { ascending: true });
-
       if (!sourceErr && sourceRows && sourceRows.length > 0) {
         documentSources = sourceRows;
         const items = sourceRows
@@ -2397,7 +2227,6 @@ export default async function handler(req, res) {
         documentSourcesHtml = `<ul>${items}</ul>`;
       }
     }
-
     let computedRentRoll = null;
     const rentRollUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : null;
     if (rentRollUnits && rentRollUnits.length > 0) {
@@ -2410,7 +2239,6 @@ export default async function handler(req, res) {
       const rentByBeds = {};
       const marketRentByBeds = {};
       const sqftByBeds = {};
-
       for (const unit of rentRollUnits) {
         const statusText = String(unit?.status || "").toLowerCase();
         if (statusText) {
@@ -2422,19 +2250,16 @@ export default async function handler(req, res) {
         } else if (Number(unit?.in_place_rent) > 0) {
           occupiedUnits += 1;
         }
-
         const beds = coerceNumber(unit?.beds);
         const inPlaceRent = coerceNumber(unit?.in_place_rent);
         const marketRent = coerceNumber(unit?.market_rent);
         const sqft = coerceNumber(unit?.sqft);
-
         if (Number.isFinite(inPlaceRent)) {
           inPlaceRents.push(inPlaceRent);
         }
         if (Number.isFinite(marketRent)) {
           marketRents.push(marketRent);
         }
-
         const unitKey = Number.isFinite(beds)
           ? String(beds)
           : String(unit?.unit_type || "").trim() || null;
@@ -2460,12 +2285,10 @@ export default async function handler(req, res) {
           }
         }
       }
-
       const occupancy =
         totalUnits > 0 && (occupiedUnits + vacantUnits > 0)
           ? occupiedUnits / totalUnits
           : null;
-
       const avgInPlaceRent =
         inPlaceRents.length > 0
           ? inPlaceRents.reduce((sum, value) => sum + value, 0) / inPlaceRents.length
@@ -2482,7 +2305,6 @@ export default async function handler(req, res) {
         totalInPlaceMonthly !== null ? totalInPlaceMonthly * 12 : null;
       const totalMarketAnnual =
         totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
-
       const unitMix = Object.entries(unitMixMap)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
         .map(([bedKey, count]) => {
@@ -2509,7 +2331,6 @@ export default async function handler(req, res) {
             avg_sqft: Number.isFinite(avgSqft) ? Math.round(avgSqft) : null,
           };
         });
-
       computedRentRoll = {
         total_units: totalUnits,
         occupied_units: occupiedUnits,
@@ -2524,7 +2345,6 @@ export default async function handler(req, res) {
         unit_mix: unitMix,
       };
     }
-
     const rentRollUnitMixRows =
       computedRentRoll?.unit_mix && computedRentRoll.unit_mix.length > 0
         ? computedRentRoll.unit_mix.map((row) => ({
@@ -2535,11 +2355,9 @@ export default async function handler(req, res) {
             targetRent: row.market_rent,
           }))
         : null;
-
     // 2. Load the HTML template (SACRED MASTER COPY)
     const templatePath = path.join(__dirname, "report-template-runtime.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
-
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
     const propertyName = property_name || jobPropertyName || "";
@@ -2566,7 +2384,6 @@ export default async function handler(req, res) {
       ""
     );
     finalHtml = finalHtml.replace(/\(\s*,\s*\)/g, "");
-
     // 4. Inject key financial metrics
     finalHtml = replaceAll(
       finalHtml,
@@ -2644,7 +2461,6 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
     }
-
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
       finalHtml,
@@ -2681,10 +2497,8 @@ export default async function handler(req, res) {
       "{{COMPARABLES_TABLE}}",
       buildCompsTable(tables.comps || [])
     );
-
     // 6. Inject charts (URLs  -  can be overridden by caller)
     finalHtml = applyChartPlaceholders(finalHtml, charts);
-
     // 7. Inject ALL narrative sections (12)
     const execMetricsParts = [];
     const execUnits = coerceNumber(
@@ -2731,7 +2545,6 @@ export default async function handler(req, res) {
       Number.isFinite(rrOccupiedFromRows)
         ? rrOccupiedFromRows / rrTotalUnitsFromRows
         : null;
-
     const rrAnnualInPlaceFromRows = rrUnitRows.length
       ? rrUnitRows.reduce((acc, u) => {
           const rent = Number(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
@@ -2754,7 +2567,6 @@ export default async function handler(req, res) {
           if (hasStatus) return status.includes("occupied");
           return Number(u.in_place_rent) > 0;
         }).length;
-
         if (totalUnits > 0 && occupiedUnits >= 0) {
           const derivedOcc = occupiedUnits / totalUnits;
           if (Number.isFinite(derivedOcc)) {
@@ -2868,7 +2680,6 @@ export default async function handler(req, res) {
         ? "Sensitized"
         : "Stable"
       : null;
-
     const execOpexRatioText = Number.isFinite(expenseRatioR)
       ? `${formatPercent1(expenseRatioR)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
       : DATA_NOT_AVAILABLE;
@@ -3295,7 +3106,6 @@ export default async function handler(req, res) {
       .slice(0, 3)
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
-
     const execRentRollSource =
       computedRentRoll && typeof computedRentRoll === "object"
         ? computedRentRoll
@@ -3314,7 +3124,6 @@ export default async function handler(req, res) {
     const execOccupancyTokenText = Number.isFinite(execOccupancy)
       ? formatPercent1(execOccupancy)
       : DATA_NOT_AVAILABLE;
-
     const execUnitMix = Array.isArray(execRentRollSource?.unit_mix)
       ? execRentRollSource.unit_mix
       : [];
@@ -3351,7 +3160,6 @@ export default async function handler(req, res) {
     const execAnnualInPlaceTokenText = Number.isFinite(execAnnualInPlaceTokenValue)
       ? formatCurrency(execAnnualInPlaceTokenValue)
       : DATA_NOT_AVAILABLE;
-
     finalHtml = replaceAll(finalHtml, "{{EXEC_UNITS}}", execUnitsText);
     finalHtml = replaceAll(finalHtml, "{{EXEC_OCCUPANCY}}", execOccupancyTokenText);
     finalHtml = replaceAll(
@@ -3494,7 +3302,6 @@ export default async function handler(req, res) {
       "{{FINAL_RECOMMENDATION}}",
       getNarrativeHtml("finalRecommendation")
     );
-
     const unitMix = computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
     const unitMixRows = buildUnitMixRows(
       unitMix,
@@ -3535,7 +3342,6 @@ export default async function handler(req, res) {
         ? DATA_NOT_AVAILABLE
         : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
     finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
-
     const t12IncomeRows = buildT12IncomeRows(t12Payload, formatCurrency);
     const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatCurrency);
     const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
@@ -3789,7 +3595,6 @@ export default async function handler(req, res) {
     if (!showRenovationSection) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-
     if (!documentSourcesHtml) {
       finalHtml = finalHtml.replace(
         /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES_TABLE\}\}[\s\S]*?<\/div>\s*/m,
@@ -3803,7 +3608,6 @@ export default async function handler(req, res) {
     if (!hasDocSources || effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
-
     const showExec =
       effectiveReportMode === "screening_v1"
         ? true
@@ -3861,7 +3665,6 @@ export default async function handler(req, res) {
     if (!showFinalRecommendation) {
       finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
     }
-
     const hasRentRollUnitMix =
       (Array.isArray(rentRollUnits) && rentRollUnits.length > 0) ||
       (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0);
@@ -3885,7 +3688,6 @@ export default async function handler(req, res) {
       "total_operating_expenses",
       "net_operating_income",
     ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
-
     const marketRentPremiumAvg =
       Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
       Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
@@ -3921,13 +3723,11 @@ export default async function handler(req, res) {
     if (!showSection2) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
     }
-
     const showSection2Roi =
       Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
     if (!showSection2Roi) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
     }
-
     const showSection3 =
       hasRentRollData &&
       hasT12Data &&
@@ -3936,50 +3736,42 @@ export default async function handler(req, res) {
     if (!showSection3) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
     }
-
     const showSection4 =
       hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis")) ||
       hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!showSection4) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
     }
-
     const showSection4Table = hasMeaningfulNarrative(
       getNarrativeHtml("neighborhoodAnalysis")
     );
     if (!showSection4Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
     }
-
     const showSection5 = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!showSection5) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
     }
-
     const showSection5Matrix =
       Array.isArray(tables.riskMatrix) && tables.riskMatrix.length > 0;
     if (!showSection5Matrix) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
-
     const showSection6 =
       showRenovationSection ||
       (Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0);
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-
     const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
     if (!showSection7) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
-
     const showSection7Tables =
       Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0;
     if (!showSection7Tables) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
     }
-
     const showSection8 =
       (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
       hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
@@ -3987,39 +3779,32 @@ export default async function handler(req, res) {
     if (!showSection8) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
     }
-
     const showSection9 =
       Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
     }
-
     const showSection9Table =
       Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
     if (!showSection9Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
     }
-
     const showSection10 =
       (Array.isArray(tables.comps) && tables.comps.length > 0) ||
       hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro"));
     if (!showSection10) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
     }
-
     const showSection11 = hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation"));
     if (!showSection11) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
-
     finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
-
     const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
     const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!hasRiskMatrixRows && !hasRiskNarrative) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
-
     const dcfRow =
       Array.isArray(tables?.returnSummary) && tables.returnSummary.length > 0
         ? tables.returnSummary[0] || {}
@@ -4032,7 +3817,6 @@ export default async function handler(req, res) {
     if (!hasDcfMetric) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
     }
-
     if (reportTier === 1) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
@@ -4045,7 +3829,6 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
-
     const allowCharts = reportTier >= 3;
     if (!allowCharts) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RENOVATION");
@@ -4059,7 +3842,6 @@ export default async function handler(req, res) {
     if (!allowAssumptions) {
       finalHtml = stripMarkedSection(finalHtml, "ASSUMPTIONS_ONLY");
     }
-
     finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "IRR by Scenario");
     finalHtml = stripChartBlockByAlt(finalHtml, "Risk Factor Radar Chart");
@@ -4068,7 +3850,6 @@ export default async function handler(req, res) {
     finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Factor Breakdown Bar Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Equity Return Components");
-
     const dataCoverageToken = finalHtml.includes("<!-- BEGIN SECTION_7_DATA_COVERAGE -->")
       ? "SECTION_7_DATA_COVERAGE"
       : "SECTION_S7_DATA_COVERAGE_GAPS";
@@ -4087,7 +3868,6 @@ export default async function handler(req, res) {
         finalHtml = stripMarkedSection(finalHtml, dataCoverageToken);
       }
     }
-
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
     finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
     finalHtml = finalHtml.replace(/(\d+)-Unit Multifamily\./g, "$1-Unit Multifamily");
@@ -4114,7 +3894,6 @@ export default async function handler(req, res) {
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
-
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
     finalHtml = finalHtml.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
@@ -4122,7 +3901,6 @@ export default async function handler(req, res) {
     leftoverTokens.forEach((t) => {
       finalHtml = finalHtml.replaceAll(t, "");
     });
-
     // Optional: log which narrative sections are missing for debugging
     const missingKeys = [
       "execSummary",
@@ -4138,25 +3916,20 @@ export default async function handler(req, res) {
       "dcfInterpretation",
       "finalRecommendation",
     ].filter((k) => !sections[k]);
-
     if (missingKeys.length > 0) {
       console.warn("WARN Missing narrative sections:", missingKeys.join(", "));
     }
-
     // 8. Sentence integrity with safe fallback
     let safeHtml = finalHtml;
     let warnings = [];
-
     try {
       safeHtml = ensureSentenceIntegrity(finalHtml);
     } catch (err) {
       warnings.push(err?.message || "Sentence integrity validation failed");
     }
-
     if (warnings.length > 0) {
       console.warn("WARN Sentence Integrity Warnings:");
       warnings.forEach((w) => console.warn(" - " + w));
-
       const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
       const { error: warnErr } = await supabase
         .from("analysis_artifacts")
@@ -4173,12 +3946,10 @@ export default async function handler(req, res) {
             },
           },
         ]);
-
       if (warnErr) {
         console.error("Failed to write sentence_integrity_warning artifact:", warnErr);
       }
     }
-
 // 9. Send to DocRaptor (STILL IN TEST MODE)
 const htmlStringRaw =
   typeof safeHtml === "string"
@@ -4193,7 +3964,6 @@ const hasFinalRecommendation =
   htmlString.includes("11.0") && htmlString.includes("Final Recommendations");
 const hasSectionTwelve =
   htmlString.includes("12.0") && htmlString.includes("Methodology & Data Transparency");
-
 const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
 try {
   const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
@@ -4222,7 +3992,6 @@ try {
 } catch (err) {
   console.error("Failed to log report_html_integrity:", err);
 }
-
 if (!hasClosingHtml) {
   const truncatedTimestamp = new Date().toISOString().replace(/:/g, "-");
   try {
@@ -4247,7 +4016,6 @@ if (!hasClosingHtml) {
   } catch (err) {
     console.error("Failed to write report_html_truncated artifact:", err);
   }
-
   if (jobId) {
     await supabase
       .from("analysis_jobs")
@@ -4259,10 +4027,8 @@ if (!hasClosingHtml) {
       })
       .eq("id", jobId);
   }
-
   return res.status(500).json({ error: "report_html_truncated" });
 }
-
 const templateLength = typeof htmlTemplate === "string" ? htmlTemplate.length : null;
 if (!hasSectionTwelve) {
   const incompleteTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -4290,7 +4056,6 @@ if (!hasSectionTwelve) {
   } catch (err) {
     console.error("Failed to write report_html_incomplete artifact:", err);
   }
-
   if (jobId) {
     await supabase
       .from("analysis_jobs")
@@ -4302,11 +4067,9 @@ if (!hasSectionTwelve) {
       })
       .eq("id", jobId);
   }
-
   return res.status(500).json({ error: "report_html_incomplete" });
 }
 let pdfResponse;
-
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 const docHtml = htmlString;
@@ -4329,7 +4092,6 @@ if (docraptorMode === "production" && !allowProductionPdf) {
   }
   throw new Error("PRODUCTION_PDF_DISABLED");
 }
-
 try {
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",
@@ -4355,7 +4117,6 @@ try {
   console.error(err.response?.data?.toString());
   throw err;
 }
-
         // 10. Create DB row first so we have a deterministic report_id for storage
     const { data: reportRow, error: reportCreateError } = await supabase
       .from("reports")
@@ -4366,17 +4127,13 @@ try {
 })
       .select("id")
       .single();
-
     if (reportCreateError || !reportRow?.id) {
       console.error("Report DB Create Error:", reportCreateError);
       throw new Error("Failed to create report record");
     }
-
     const reportId = reportRow.id;
-
     // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
     const storagePath = `${effectiveUserId}/${reportId}.pdf`;
-
     const { error: uploadError } = await supabase.storage
       .from("generated_reports")
       .upload(storagePath, pdfResponse.data, {
@@ -4384,48 +4141,36 @@ try {
         cacheControl: "3600",
         upsert: false,
       });
-
     if (uploadError) {
       console.error("Storage Upload Error:", uploadError);
       throw new Error("Failed to upload report to storage");
     }
-
     // 12. Update DB row with final storage_path
     const { error: reportUpdateError } = await supabase
       .from("reports")
       .update({ storage_path: storagePath })
       .eq("id", reportId);
-
     if (reportUpdateError) {
       console.error("Report DB Update Error:", reportUpdateError);
       // Do not throw. The PDF is stored and we can still return the signed URL.
     }
-
     // 13. Generate Signed URL for immediate viewing (valid for 1 hour)
     const { data: signedData, error: signedError } = await supabase.storage
       .from("generated_reports")
       .createSignedUrl(storagePath, 3600);
-
     if (signedError) {
       console.error("Signed URL Error:", signedError);
       throw new Error("Failed to generate access link");
     }
-
     // 14. Return JSON with the report URL and report_id
     res.status(200).json({
       success: true,
       reportId,
       url: signedData.signedUrl,
     });
-
   } catch (err) {
     console.error("Error generating report:", err);
     res.status(500).json({ error: err?.message || "Failed to generate report" });
   } finally {
   }
 }
-
-
-
-
-
