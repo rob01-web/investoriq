@@ -2358,7 +2358,7 @@ export default async function handler(req, res) {
     const propertyTitle = property_title || "";
     const displayPropertyName =
       sanitizeDisplayText(propertyName)?.trim() || "Property";
-    const displayPropertyAddress = sanitizeDisplayText(propertyAddress) || "";
+    const displayPropertyAddress = (sanitizeDisplayText(propertyAddress) || "").replace(/\s+,/g, ",");
     const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
     const propertyNameDisplay = displayPropertyName
       .replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
