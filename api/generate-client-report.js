@@ -1323,8 +1323,9 @@ function buildScreeningNoiStabilityHtml({
       );
     }
   }
+  let rrVsGprPct = null;
   if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
-    const rrVsGprPct = (rrAnnual - gpr) / gpr;
+    rrVsGprPct = (rrAnnual - gpr) / gpr;
     rows.push(
       `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${formatPercent1(
         rrVsGprPct
