@@ -1278,6 +1278,8 @@ function buildScreeningExpenseStructureHtml({
   }));
   const top3 = (rankedExpenseDrivers || [])
     .filter((x) => x && x.label && Number.isFinite(x.pct))
+    .slice()
+    .sort((a, b) => b.pct - a.pct)
     .slice(0, 3);
   const top3Html = top3.length
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
