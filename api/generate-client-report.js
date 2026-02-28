@@ -275,6 +275,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   let worstMaxProceeds = null;
   let worstCoverage = worstFiniteCoverage;
   let worstBinding = null;
+  let capIsBinding = null;
   if (worstPoint && Number.isFinite(worstPoint.noiShock)) {
     worstNoi = noiBase * (1 + worstPoint.noiShock);
     worstCap = capRateBase + worstPoint.capBps / 10000;
@@ -288,6 +289,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       worstValue = worstNoi / worstCap;
       worstLoanLtv = worstValue * ltvMax;
       worstLoanDscr = worstNoi / (dscrMin * worstMc);
+      capIsBinding = worstLoanLtv <= worstLoanDscr;
       worstMaxProceeds = Math.min(worstLoanLtv, worstLoanDscr);
       worstCoverage = worstMaxProceeds / debtBalance;
       worstBinding =
