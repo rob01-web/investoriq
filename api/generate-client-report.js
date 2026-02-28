@@ -500,16 +500,6 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
           </tr>`;
     })
     .join("");
-  const totalNum = toNum(totalUnits);
-  const total = Number.isFinite(totalNum) ? String(Math.round(totalNum)) : "";
-  const totalRow = `<tr>
-            <td><strong>Blended / Total</strong></td>
-            <td><strong>${total}</strong></td>
-            <td><strong></strong></td>
-            <td><strong></strong></td>
-            <td><strong></strong></td>
-            <td><strong></strong></td>
-          </tr>`;
   return rows;
 }
 function injectUnitMixTable(html, rowsHtml) {
@@ -1342,10 +1332,6 @@ function buildScreeningNoiStabilityHtml({
     );
   }
   if (rows.length === 0) return "";
-  const rrVsGprPct =
-    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
-      ? (rrAnnual - gpr) / gpr
-      : null;
   const noiMargin =
     Number.isFinite(noi) && Number.isFinite(egi) && egi > 0 ? noi / egi : null;
   const expenseRatio =
