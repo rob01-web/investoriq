@@ -1257,7 +1257,7 @@ function buildScreeningExpenseStructureHtml({
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
   if (Number.isFinite(expenseRatio) && expenseRatio >= 0.60) {
-    flags.push("Operating expense ratio is elevated (> 60%).");
+    flags.push("Operating expense ratio is sensitized (>= 55%) and elevated (> 60%).");
   }
   if (totalOpEx > 0 && expenseDriverRows.some((r) => r.amount / totalOpEx >= 0.30)) {
     flags.push("Top expense line exceeds 30% of OpEx (concentration risk).");
