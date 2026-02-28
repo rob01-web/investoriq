@@ -310,7 +310,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     coverageBase
   )}; worst_coverage=${formatCoverage(
     worstFiniteCoverage
-  )}; thresholds: fail<0.90x, fragile<1.00x, sensitized<1.10x`;
+  )}; thresholds: fail<1.00x (base) or worst<0.90x; fragile<1.00x; sensitized<1.10x`;
   const worstRows = stressPoints
     .slice()
     .sort((a, b) => a.coverage - b.coverage)
@@ -320,8 +320,8 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       })}%`;
-      const capBpsLabel = `${Math.round(point.capBps)}`;
-      const rateBpsLabel = `${Math.round(point.rateBps)}`;
+      const capBpsLabel = `${Math.round(point.capBps)} bps`;
+      const rateBpsLabel = `${Math.round(point.rateBps)} bps`;
       const proceedsLabel = Number.isFinite(point.proceeds)
         ? formatValue(point.proceeds)
         : DATA_NOT_AVAILABLE;
@@ -345,7 +345,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Implied Value (NOI / Cap)</td><td>${fmtMoney(baseValue)}</td><td>${fmtMoney(worstValue)}</td></tr>
       <tr><td>LTV-Limited Proceeds</td><td>${fmtMoney(baseLoanLtv)}</td><td>${fmtMoney(worstLoanLtv)}</td></tr>
       <tr><td>DSCR-Limited Proceeds</td><td>${fmtMoney(baseLoanDscr)}</td><td>${fmtMoney(worstLoanDscr)}</td></tr>
-      <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}</td></tr>
+      <tr><td>Binding Constraint</td><td>${escapeHtml(baseBinding)}</td><td>${escapeHtml(worstBinding || DATA_NOT_AVAILABLE)}${capIsBinding === null ? "" : capIsBinding ? " (Cap/LTV binding)" : " (Rate/DSCR binding)"}</td></tr>
       <tr><td>Max Proceeds (min of above)</td><td>${fmtMoney(baseMaxProceeds)}</td><td>${fmtMoney(worstMaxProceeds)}</td></tr>
       <tr><td>Coverage (Max Proceeds / Debt Balance)</td><td>${fmtX(coverageBase)}</td><td>${fmtX(worstCoverage)}</td></tr>
       <tr><td>Worst-Case Drivers (NOI shock | Cap expansion | Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
