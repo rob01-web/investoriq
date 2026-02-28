@@ -1,0 +1,238 @@
+INVESTORIQ
+INSTITUTIONAL GRADE PROPERTY INTELLIGENCE
+
+
+
+
+124 Richmond Street , London, ON
+
+
+INVESTORIQ VERDICT
+
+
+
+
+SENSITIZED
+
+Confidential - InvestorIQ Technologies Inc.   February 28, 2026
+INVESTORIQ                                                                         Property Intelligence Report
+INSTITUTIONAL GRADE PROPERTY INTELLIGENCE                                        124 Richmond Street , London, ON ·
+
+
+
+
+EXECUTIVE SUMMARY
+
+12-Unit Multifamily.
+
+
+     INVESTORIQ VERDICT
+
+
+
+     SENSITIZED
+     Primary Pressure Point - Expense Ratio
+
+
+
+
+Key Metrics Snapshot.
+
+   UNITS                                  O C C U PA N C Y                   A N N U A L I N - P L AC E R E N T
+
+   12                                     100.0%                             $186,780
+
+
+   EFFECTIVE GROSS INCOME                 O P E R AT I N G E X P E N S E S   N E T O P E R AT I N G I N C O M E
+
+   $192,960                               $120,790                           $72,170
+
+
+   E X P E N S E R AT I O                 NOI MARGIN                         B R E A K- E V E N O C C U PA N C Y
+
+   62.6% (Sensitized)                     37.4% (Sensitized)                 65.3% (Stable)
+
+
+Key Upside Drivers.
+
+• In-place rents trail market by ~17.4% (document-backed upside).
+• Occupancy is 100.0%, supporting cash flow stability.
+• Operating cushion is approximately 34.7% above break-even occupancy.
+
+Key Risks and Constraints.
+
+• Expense ratio is 62.6%, pressuring NOI margin.
+• NOI margin is 37.4%, leaving limited buffer for shocks.
+Ranked Drivers (Worst → Best).
+
+1. Expense Ratio: 62.6% (trigger: >= 55.0% sensitized threshold breached)
+2. NOI Margin: 37.4% (trigger: <= 45.0% sensitized threshold breached)
+3. Break-even Occupancy: 65.3% (trigger: < 75.0% within stable range)
+UNIT-LEVEL VALUE ADD ANALYSIS
+
+Illustrative Unit Mix and Rent Lift
+
+ Unit Type          Count    Avg Sq Ft   Avg In-Place Rent   Target Rent (Post-Reno)   Monthly Lift
+
+ 1 Bed              6        613         $1,173              $1,395                    $223
+
+ 2 Bed              6        823         $1,422              $1,650                    $228
+
+ Blended / Total    12
+OPERATING STATEMENT (TRAILING TWELVE MONTHS)
+
+Net Operating Income Summary
+
+EFFECTIVE GROSS INCOME (TTM)                        $192,960
+TOTA L O P E R AT I N G E X P E N S E S ( T T M )   $120,790
+N E T O P E R AT I N G I N C O M E ( T T M )        $72,170
+O P E R AT I N G E X P E N S E R AT I O             62.6%
+EXPENSE STRUCTURE ANALYSIS - EXPENSE RATIO,
+DRIVERS, AND INTENSITY FLAGS
+
+
+  Metric                                               Value
+
+  Operating Expense Ratio                              62.6%
+
+  Operating Expense per Unit                           $10,066
+
+  NOI per Unit                                         $6,014
+
+
+
+
+ Expense Flags (Deterministic)
+
+      • Operating expense ratio is elevated (> 60%).
+NOI STABILITY REVIEW - MARGIN, VOLATILITY, AND
+OPERATING LEVERAGE INDICATORS
+
+
+  Indicator                                                     Value
+
+  NOI Margin                                                    37.4%
+
+  Expense Sensitivity                                           37.4%
+
+  Break-even Occupancy                                          65.3%
+
+  Rent Roll vs T12 GPR Variance                                 1.0%
+
+
+
+
+ NOI Sensitivity (Deterministic)
+
+  Scenario                         Implied NOI   NOI Margin (Implied)
+
+  EGI -5% (revenue shock)          $62,522       34.1%
+
+  OpEx +5% (cost shock)            $66,131       34.3%
+RENT ROLL DISTRIBUTION - OCCUPANCY, RENT
+DISPERSION, AND UNIT MIX PROFILE
+
+
+  Metric                                                                   Value
+
+  Total Units                                                              12
+
+  Occupied Units                                                           12
+
+  Occupancy                                                                100.0%
+
+  Weighted Avg In-Place Rent                                               $1,297
+
+  Weighted Avg Market Rent                                                 $1,523
+
+  Market Rent Premium (Avg)                                                17.4%
+
+  Annual In-Place Rent (Total)                                             $186,780
+
+  Annual Market Rent (Total)                                               $219,240
+
+  Largest Unit Type Concentration                                          50.0%
+
+
+ Rent Bands (In-Place)
+
+  Unit Type          Units          Avg In-Place   Avg Market        Gap ($)          Gap (%)
+
+  1 Bed              6              $1,173         $1,395            $223             19.0%
+
+  2 Bed              6              $1,422         $1,650            $228             16.1%
+
+
+
+
+ Rent Roll Flags (Deterministic)
+
+       • In-place rents trail market by ~17.4% (document-backed upside).
+DATA COVERAGE & UNDERWRITING GAPS - MISSING
+INPUTS AND OMITTED SECTIONS
+
+Coverage is measured deterministically from uploaded T12 and rent roll inputs only.
+
+ Dataset                   Fields Present                          Coverage       Missing
+
+ T12                       4/4                                     100.0%         None
+
+ Rent Roll                 4/4                                     100.0%         None
+
+Sections were omitted where minimum source coverage was not met.
+REFINANCE DATA SUFFICIENCY - ELIGIBILITY FOR
+REFINANCE STABILITY CLASSIFICATION
+
+Refinance Stability Classification not produced due to insufficient refinance inputs.
+
+ Input                                                       Status                   Provided Value
+
+ NOI (base)                                                  Present                  $72,170
+
+ Current loan balance                                        Missing                  -
+
+ Max LTV                                                     Missing                  -
+
+ Minimum DSCR                                                Missing                  -
+
+ Interest rate                                               Missing                  -
+
+ Amortization (years)                                        Missing                  -
+
+ Refinance cap rate                                          Missing                  -
+
+ NOI stress shocks                                           Missing                  -
+
+ Cap rate stress (bps)                                       Missing                  -
+
+ Rate stress (bps)                                           Missing                  -
+
+This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing
+required inputs prevent refinance stability scoring.
+   METHODOLOGY & DATA TRANSPARENCY
+
+   InvestorIQ does not assume or gap-fill missing data. Outputs are driven by uploaded documents and
+   defined modeling frameworks, with transparency and auditability as core design principles.
+
+   This report contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred.
+
+
+   12.1 InvestorIQ Estimates
+   InvestorIQ estimates are derived from uploaded documents and standardized underwriting
+   frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+
+   12.2 Methodology Notes
+   Metrics and tables reflect document-backed inputs and deterministic calculations. No manual
+   adjustments or external assumptions are introduced when source data is incomplete.
+
+
+   12.3 Data Limitations & Missing Inputs
+   This report is limited to the documents provided and the fields that could be verified. Missing values
+   are disclosed and excluded from analysis.
+
+
+
+
+InvestorIQ Property Intelligence Report · Confidential                                                     © InvestorIQ Technologies Inc.
+

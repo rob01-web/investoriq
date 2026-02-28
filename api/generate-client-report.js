@@ -510,7 +510,7 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
             <td><strong></strong></td>
             <td><strong></strong></td>
           </tr>`;
-  return `${rows}${totalRow}`;
+  return rows;
 }
 function injectUnitMixTable(html, rowsHtml) {
   if (!rowsHtml) return html;
