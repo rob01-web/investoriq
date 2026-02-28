@@ -382,7 +382,10 @@ function hasMeaningfulNarrative(html) {
 }
 function sanitizeDisplayText(s) {
   if (!s) return s;
-  return String(s).replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "").trim();
+  return String(s)
+    .replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "")
+    .replace(/\s+,/g, ",")
+    .trim();
 }
 function sanitizeTypography(html) {
   if (typeof html !== "string") return html;
