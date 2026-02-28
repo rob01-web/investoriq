@@ -1420,25 +1420,29 @@ function buildScreeningNoiStabilityHtml({
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
   }
   const sensitivityRows = [];
-  if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(occupancy)) {
-    const noiRevenueShock = noi - 0.05 * egi;
-    const egiRevenueShock = egi * 0.95;
-    if (Number.isFinite(noiRevenueShock) && Number.isFinite(egiRevenueShock) && egiRevenueShock > 0) {
+  if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(opex)) {
+    sensitivityRows.push(
+      `<tr><td>Base Case</td><td>${formatCurrency(noi)}</td><td>${formatPercent1(noi / egi)}</td></tr>`
+    );
+    const noiCostShock = noi - 0.05 * opex;
+    if (Number.isFinite(noiCostShock) && egi > 0) {
       sensitivityRows.push(
-        `<tr><td>EGI -5% (revenue shock)</td><td>${formatCurrency(
-          noiRevenueShock
-        )}</td><td>${formatPercent1(noiRevenueShock / egiRevenueShock)}</td></tr>`
+        `<tr><td>Expenses +5% (cost shock)</td><td>${formatCurrency(noiCostShock)}</td><td>${formatPercent1(noiCostShock / egi)}</td></tr>`
       );
     }
-    if (Number.isFinite(opex)) {
-      const noiCostShock = noi - 0.05 * opex;
-      if (Number.isFinite(noiCostShock) && egi > 0) {
-        sensitivityRows.push(
-          `<tr><td>OpEx +5% (cost shock)</td><td>${formatCurrency(
-            noiCostShock
-          )}</td><td>${formatPercent1(noiCostShock / egi)}</td></tr>`
-        );
-      }
+    const noiRevenueShock = noi - 0.05 * egi;
+    const egiRevenueShock = egi * 0.95;
+    if (Number.isFinite(noiRevenueShock) && egiRevenueShock > 0) {
+      sensitivityRows.push(
+        `<tr><td>Income -5% (revenue shock)</td><td>${formatCurrency(noiRevenueShock)}</td><td>${formatPercent1(noiRevenueShock / egiRevenueShock)}</td></tr>`
+      );
+    }
+    const noiCombined = noi - 0.05 * opex - 0.05 * egi;
+    const egiCombined = egi * 0.95;
+    if (Number.isFinite(noiCombined) && egiCombined > 0) {
+      sensitivityRows.push(
+        `<tr><td>Combined Shock (-5% income, +5% expenses)</td><td>${formatCurrency(noiCombined)}</td><td>${formatPercent1(noiCombined / egiCombined)}</td></tr>`
+      );
     }
   }
   const sensitivityCard = sensitivityRows.length
