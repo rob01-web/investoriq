@@ -1285,11 +1285,6 @@ function buildScreeningExpenseStructureHtml({
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
-    : `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><div class="small">${escapeHtml(
-        DATA_NOT_AVAILABLE
-      )}</div>`;
-  const flagsCard = (flagsHtml || top3Html)
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
   return `${metricsCard}${flagsCard}`;
 }
