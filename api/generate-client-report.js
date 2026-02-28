@@ -1287,10 +1287,10 @@ function buildScreeningExpenseStructureHtml({
         .join("")}</ol>`
     : "";
   const hasExpenseFlagsCard = Boolean(flagsHtml) || Boolean(top3Html);
-  const flagsCard = hasExpenseFlagsCard
+  const expenseFlagsCard = hasExpenseFlagsCard
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
-  return `${metricsCard}${flagsCard}`;
+  return `${metricsCard}${expenseFlagsCard}`;
 }
 function buildScreeningNoiStabilityHtml({
   t12Payload,
