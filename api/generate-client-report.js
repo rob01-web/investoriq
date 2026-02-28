@@ -1286,6 +1286,10 @@ function buildScreeningExpenseStructureHtml({
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
     : "";
+  const hasExpenseFlagsCard = Boolean(flagsHtml) || Boolean(top3Html);
+  const flagsCard = hasExpenseFlagsCard
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
+    : "";
   return `${metricsCard}${flagsCard}`;
 }
 function buildScreeningNoiStabilityHtml({
