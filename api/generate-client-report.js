@@ -1403,7 +1403,7 @@ function buildScreeningNoiStabilityHtml({
     .slice(0, 3)
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
-  const flagsCard =
+  const screeningFlagsCard =
     driverRankHtml || flagsHtml
       ? `<div class="card no-break" style="margin-top:12px;">${driverRankHtml}${
           flagsHtml ? `<p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul>` : ""
