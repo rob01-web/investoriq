@@ -1393,11 +1393,9 @@ function buildScreeningNoiStabilityHtml({
     .sort((a, b) => b.severity - a.severity)
     .slice(0, 3)
     .map((d) => d.label);
-  const driverRankHtml = rankedDrivers.length
-    ? `<p class="subsection-title">Stability Drivers (Worst 3)</p><ol>${rankedDrivers
-        .map((line) => `<li>${escapeHtml(line)}</li>`)
-        .join("")}</ol>`
-    : "";
+  const stabilityWorstThree = Array.isArray(rankedDrivers)
+    ? rankedDrivers.slice(0, 3)
+    : [];
   const uniqueFlags = [...new Set(flags)];
   const flagsHtml = uniqueFlags
     .slice(0, 3)
