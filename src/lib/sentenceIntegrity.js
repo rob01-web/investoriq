@@ -22,7 +22,9 @@ const WHITELISTED_P_CLASSES = [
   "subsection-title",
   "section-intro",
   "section-number",
-  "summary-header"
+  "summary-header",
+  "exec-major-heading",
+  "small"
 ];
 
 // Strip HTML tags for clean text analysis

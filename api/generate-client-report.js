@@ -951,7 +951,7 @@ function buildScreeningDataCoverageSummary({
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
-  )}</td></tr></tbody></table>${missingHtml ? `<ul>${missingHtml}</ul>` : ""}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+  )}</td></tr></tbody></table>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
 }
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
