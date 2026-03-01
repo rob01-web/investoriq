@@ -1762,6 +1762,11 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${completedTransitionErr.message}`);
           }
 
+          const creditResult = await consumeCreditOnce(job);
+          if (creditResult.error) {
+            throw new Error(`Credit deduction failed: ${creditResult.error.message}`);
+          }
+
           const { data: publishedEmail } = await supabaseAdmin
             .from('analysis_artifacts')
             .select('id')
