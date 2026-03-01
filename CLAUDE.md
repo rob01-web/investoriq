@@ -62,9 +62,16 @@ Failure paths: `rendering → needs_documents` (missing docs), any stage → `fa
 ### Artifact Logging
 `analysis_artifacts` is the audit trail for everything — parser output, status transitions, worker events, email sends, HTML integrity checks. Querying it by `job_id` + `type` is how the report generator retrieves parsed document data (e.g. `.eq("type", "rent_roll_parsed")`).
 
-## Active Bugs (Priority Order)
+## Active Work
 
-No active bugs. All three previously tracked issues are resolved.
+Full elite roadmap is in `ELITE_ROADMAP.md`. Execution order: Block A (cosmetic) → Block B (rationale) → Block C (content fallbacks) → Block D/E (underwriting moat).
+
+**Fixes applied 2026-03-01:**
+- `text-transform: uppercase` removed from `.section-header` CSS
+- `exec-major-heading` and `small` added to `sentenceIntegrity.js` whitelist
+- `Primary Pressure Point:` (colon, not mdash) in template
+- `${missingHtml}` duplicate bullet removed from refi sufficiency return
+- Brand-nowrap span on cover verdict label
 
 ## Established Patterns (Do Not Regress)
 

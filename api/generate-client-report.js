@@ -2368,6 +2368,7 @@ export default async function handler(req, res) {
     const propertyNameDisplay = displayPropertyName
       .replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
       .replace(/\s{2,}/g, " ")
+      .replace(/\s+,/g, ",")
       .trim();
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_NAME}}", propertyNameDisplay);
     finalHtml = replaceAll(finalHtml, "{{REPORT_DATE}}", new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }));
@@ -2376,11 +2377,9 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);
     finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{PROPERTY_SUBMARKET}}",
-      ""
-    );
+    // Strip the preceding &middot; separator together with the token when submarket is empty
+    finalHtml = finalHtml.replace(/\s*&middot;\s*\{\{PROPERTY_SUBMARKET\}\}/g, "");
+    finalHtml = replaceAll(finalHtml, "{{PROPERTY_SUBMARKET}}", "");
     finalHtml = finalHtml.replace(/\(\s*,\s*\)/g, "");
     // 4. Inject key financial metrics
     finalHtml = replaceAll(
@@ -3892,7 +3891,10 @@ export default async function handler(req, res) {
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
-    finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", "");
+    const execRationale = (screeningClass && screeningExplanation)
+      ? `${screeningExplanation}${whyLine ? " " + whyLine : ""}`
+      : "";
+    finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", execRationale);
     finalHtml = finalHtml.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
     const leftoverTokens = finalHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
     leftoverTokens.forEach((t) => {
