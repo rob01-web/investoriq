@@ -2781,8 +2781,11 @@ export default async function handler(req, res) {
     const driver1 = rankedDrivers[0] || null;
     const driver2 = rankedDrivers[1] || null;
     const driver3 = rankedDrivers[2] || null;
-    const primaryPressurePoint =
-      driver1?.label || DATA_NOT_AVAILABLE;
+    const primaryPressurePoint = driver1?.label
+      ? driver1.value
+        ? `${driver1.label} (${driver1.value})`
+        : driver1.label
+      : DATA_NOT_AVAILABLE;
     const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
     if (effectiveReportMode === "screening_v1") {
       if (!screeningHasSufficientData) {

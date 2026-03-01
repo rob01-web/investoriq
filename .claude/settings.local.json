@@ -5,7 +5,9 @@
       "Bash(du -sh /c/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/*)",
       "Bash(node --check \"c:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/api/generate-client-report.js\")",
       "Bash(ls *.pdf)",
-      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\generate-client-report.js\")"
+      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\generate-client-report.js\")",
+      "Bash(node --check api/admin-run-worker.js)",
+      "Bash(node --check api/generate-client-report.js)"
     ]
   }
 }
