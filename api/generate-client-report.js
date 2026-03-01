@@ -1546,9 +1546,27 @@ function buildScreeningNoiStabilityHtml({
         ""
       )}</tbody></table></div>`
     : "";
+  let vacancyBufferCard = "";
+  if (
+    Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0 &&
+    Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(occupancy)
+  ) {
+    const beOcc = opex / gpr;
+    const cushion = occupancy - beOcc;
+    if (Number.isFinite(cushion) && cushion > 0) {
+      const cushionUnits = Math.floor(cushion * rrTotalUnits);
+      const vbRows = [
+        `<tr><td>Break-even Occupancy</td><td>${formatPercent1(beOcc)}</td></tr>`,
+        `<tr><td>Current Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>`,
+        `<tr><td>Occupancy Cushion</td><td>${(cushion * 100).toFixed(1)} pts</td></tr>`,
+        `<tr><td>Units That Can Become Vacant</td><td>${cushionUnits} of ${Math.round(rrTotalUnits)}</td></tr>`,
+      ].join("");
+      vacancyBufferCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Vacancy Buffer</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${vbRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">At current occupancy, the property can absorb ${cushionUnits} vacant unit${cushionUnits !== 1 ? "s" : ""} before reaching neutral cash flow. Break-even derived from document-verified T12 totals.</p></div>`;
+    }
+  }
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
     ""
-  )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}`;
+  )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}${vacancyBufferCard}`;
 }
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
@@ -1777,7 +1795,21 @@ function buildScreeningRentRollDistributionHtml({
   const flagsCard = flagsHtml
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
     : "";
-  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}`;
+  let upsideValueCard = "";
+  if (
+    Number.isFinite(totalInPlaceAnnual) && Number.isFinite(totalMarketAnnual) &&
+    totalMarketAnnual > totalInPlaceAnnual && totalInPlaceAnnual > 0
+  ) {
+    const annualUpside = totalMarketAnnual - totalInPlaceAnnual;
+    const uvRows = [
+      `<tr><td>Annual Gross Rent Upside</td><td>${formatCurrency(annualUpside)}</td></tr>`,
+      ...[0.05, 0.06, 0.07].map((r) =>
+        `<tr><td>Implied Value at ${(r * 100).toFixed(0)}% Cap Rate</td><td>${formatCurrency(annualUpside / r)}</td></tr>`
+      ),
+    ].join("");
+    upsideValueCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Upside &mdash; Implied Value Creation</p><table><thead><tr><th>Metric</th><th>Amount</th></tr></thead><tbody>${uvRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Annual upside from document-verified rent roll. Implied value = annual upside &divide; cap rate. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
+  }
+  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}${upsideValueCard}`;
 }
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
@@ -3334,6 +3366,46 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+    // Build exec verdict expansion: classification framework + investment thesis
+    let execVerdictExpansionHtml = "";
+    if (effectiveReportMode === "screening_v1" && screeningClass && screeningClass !== "Insufficient Data") {
+      const tierDefs = [
+        { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
+        { name: "Sensitized", er: "55\u201365%", nm: "35\u201345%", beo: "75\u201385%" },
+        { name: "Fragile",    er: "> 65%",   nm: "< 35%",  beo: "> 85%" },
+      ];
+      const tierRows = tierDefs.map((t) => {
+        const isCurrent = t.name === screeningClass;
+        const rowStyle = isCurrent ? ` style="font-weight:600;background:#f0f9ff;"` : "";
+        const marker = isCurrent ? " \u25B6" : "";
+        return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
+      }).join("");
+      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
+      // Investment thesis — fully deterministic
+      const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
+      const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
+      const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
+      const rrUpsidePct = (Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrInPlace > 0)
+        ? (rrMarket - rrInPlace) / rrInPlace : null;
+      const erPctStr  = Number.isFinite(expenseRatioR) ? `${(expenseRatioR * 100).toFixed(1)}%` : null;
+      const nmPctStr  = Number.isFinite(noiMarginR)    ? `${(noiMarginR * 100).toFixed(1)}%`    : null;
+      const parts = [];
+      if (Number.isFinite(rrOccNow)) parts.push(`The property is ${formatPercent1(rrOccNow)} occupied`);
+      if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries document-verified rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
+      let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
+      if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
+        thesisText += `NOI margin compression to ${nmPctStr}, driven by a ${erPctStr} expense ratio, supports a Sensitized classification. The primary return path is operational efficiency improvement and captured rent upside through lease renewal.`;
+      } else if (screeningClass === "Fragile" && erPctStr) {
+        thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the operating profile as Fragile. Significant operational improvement is required before debt serviceability can be fully assessed.`;
+      } else if (screeningClass === "Stable") {
+        thesisText += `Operating performance is within stable thresholds. The profile supports further underwriting with additional document coverage.`;
+      }
+      const thesisCard = thesisText
+        ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
+        : "";
+      execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
+    }
+    finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
     if (!String(upsideHtml || "").trim()) {
