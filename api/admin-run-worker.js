@@ -201,42 +201,11 @@ export default async function handler(req, res) {
 
       const currentCredits = Number(profileRow.report_credits ?? 0);
       if (currentCredits < 1) {
-        const failUpdate = { status: 'failed' };
-        if (supportsFailedAt) {
-          failUpdate.failed_at = nowIso;
-        }
-
-        const { error: failErr } = await supabaseAdmin
-          .from('analysis_jobs')
-          .update(failUpdate)
-          .eq('id', job.id);
-
-        if (failErr) {
-          return { error: failErr };
-        }
-
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          'publishing',
-          'failed',
-          { user_id: job.user_id, error: 'Insufficient credits' }
-        );
-
-        if (transitionErr) {
-          return { error: transitionErr };
-        }
-
-        const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'credit_failed', {
-          reason: 'Insufficient credits',
-          credits_available: currentCredits,
-          timestamp: nowIso,
-        });
-
-        if (workerEventErr) {
-          return { error: workerEventErr };
-        }
-
-        return { failed: true };
+        // Entitlement is already consumed via report_purchases.consumed_at at job creation.
+        // profiles.report_credits is a secondary counter that is never auto-incremented;
+        // failing a successfully-published job here is wrong. Skip silently.
+        console.warn(`[worker] report_credits=0 for user ${job.user_id} on job ${job.id}; entitlement pre-consumed via purchase. Skipping decrement.`);
+        return { skipped: true };
       }
 
       const { data: creditRow, error: creditErr } = await supabaseAdmin
