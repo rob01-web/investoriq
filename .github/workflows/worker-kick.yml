@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: worker-kick
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   kick:

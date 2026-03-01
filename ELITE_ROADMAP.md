@@ -146,6 +146,16 @@ Before any report goes to a paying customer, it must pass all of these:
 
 ---
 
+## FINAL SWEEP — Required Before Any Public Launch
+
+**Do this as the very last step before going live:**
+
+- [ ] **No em dashes anywhere.** Em dashes are a widely-recognized AI writing signature. InvestorIQ is proprietary and deterministic — never AI. Sweep every file: `report-template-runtime.html`, `generate-client-report.js`, all frontend copy in `src/`. Replace `&mdash;`, `—`, `–` with `:` or `,` as appropriate.
+- [ ] **No mention of "AI" visible to users.** No "AI-generated", "AI analysis", "AI-powered" in reports, dashboard copy, or emails. The product is document-driven — let the output speak for itself.
+- [ ] Audit command when ready: `grep -rn "mdash\|&ndash;\| — \| – \|AI-\| AI " api/report-template-runtime.html api/generate-client-report.js src/`
+
+---
+
 ## KNOWN UNFIXED ITEMS (as of session 2026-03-01)
 
 These were identified but not yet patched:
