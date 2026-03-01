@@ -3220,7 +3220,7 @@ export default async function handler(req, res) {
       primaryPressurePoint
     );
     if (whyLine || decisionContextHtml || miniSensitivityHtml) {
-      const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>`;
+      const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`;
       const pressureReplacement = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>${
         whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
       }${decisionContextHtml}${miniSensitivityHtml}`;
