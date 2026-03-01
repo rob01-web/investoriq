@@ -745,6 +745,45 @@ function buildRenovationExecutionRows(rows, formatValue) {
     .filter(Boolean)
     .join("");
 }
+function buildCapRateValueTable(noi, units) {
+  if (!Number.isFinite(noi) || noi <= 0) return "";
+  const capRates = [0.05, 0.06, 0.07];
+  const rows = capRates
+    .map((r) => {
+      const val = noi / r;
+      const perUnit = Number.isFinite(units) && units > 0 ? val / units : null;
+      return `<tr><td>${(r * 100).toFixed(1)}%</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
+    })
+    .join("");
+  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
+}
+function buildFinancingEnvelopeGrid(noi, units) {
+  if (!Number.isFinite(noi) || noi <= 0) return "";
+  const dscrTargets = [
+    { label: "1.10x (CMHC / Insured)", value: 1.10 },
+    { label: "1.20x (Conventional)", value: 1.20 },
+    { label: "1.35x (Conservative)", value: 1.35 },
+  ];
+  const rateScenarios = [5.50, 6.50, 7.50];
+  const n = 25 * 12; // 25-year amortization
+  function maxLoanAtRate(annualRatePct, dscrTarget) {
+    const monthlyDS = noi / dscrTarget / 12;
+    const r = annualRatePct / 100 / 12;
+    return monthlyDS * (1 - Math.pow(1 + r, -n)) / r;
+  }
+  const headerCells = rateScenarios.map((r) => `<th>${r.toFixed(2)}% Rate</th>`).join("");
+  const bodyRows = dscrTargets
+    .map(({ label, value }) => {
+      const cells = rateScenarios
+        .map((r) => `<td>${formatCurrency(maxLoanAtRate(r, value))}</td>`)
+        .join("");
+      return `<tr><td><strong>${escapeHtml(label)}</strong></td>${cells}</tr>`;
+    })
+    .join("");
+  const unitsNote =
+    Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
+  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
+}
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
@@ -1028,6 +1067,15 @@ function buildScreeningIncomeForensicsHtml({
   const expenseLines = toRows(expenseLinesRaw)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
+  const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
+  const annualMarket = coerceNumber(computedRentRoll?.total_market_annual);
+  const upsideCard =
+    Number.isFinite(annualInPlace) &&
+    Number.isFinite(annualMarket) &&
+    annualMarket > annualInPlace &&
+    annualInPlace > 0
+      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
+      : "";
   if (incomeLines.length < 2 || expenseLines.length < 2) {
     // Lump-sum T12: no line items — return summary-level fallback card
     const egi = coerceNumber(t12Payload?.effective_gross_income);
@@ -1042,7 +1090,7 @@ function buildScreeningIncomeForensicsHtml({
       .map(([label, v]) => `<tr><td>${label}</td><td>${formatCurrency(v)}</td></tr>`)
       .join("");
     if (!summaryRows) return "";
-    return `<div class="card no-break"><p class="subsection-title">Income &amp; Expense Summary (Lump-Sum T12)</p><table><thead><tr><th>Line Item</th><th>Amount (TTM)</th></tr></thead><tbody>${summaryRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">No line-item detail available for this T12 format. All values are document-verified totals.</p></div>`;
+    return `<div class="card no-break"><p class="subsection-title">Income &amp; Expense Summary (Lump-Sum T12)</p><table><thead><tr><th>Line Item</th><th>Amount (TTM)</th></tr></thead><tbody>${summaryRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">No line-item detail available for this T12 format. All values are document-verified totals.</p></div>${upsideCard}`;
   }
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
@@ -1158,7 +1206,7 @@ function buildScreeningIncomeForensicsHtml({
   const bulletsCard = bulletsHtml
     ? `<div class="card no-break" style="margin-top:12px;"><ul>${bulletsHtml}</ul></div>`
     : "";
-  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
+  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}${upsideCard}`;
 }
 function buildScreeningExpenseStructureHtml({
   t12Payload,
@@ -3338,6 +3386,11 @@ export default async function handler(req, res) {
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}",
+      buildCapRateValueTable(coerceNumber(t12Payload?.net_operating_income), rrUnits)
+    );
     const hasAnyAvgSqft =
       Array.isArray(unitMix) &&
       unitMix.some((r) => Number.isFinite(Number(r?.avg_sqft)) && Number(r.avg_sqft) > 0);
@@ -3460,10 +3513,12 @@ export default async function handler(req, res) {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
       }
     }
-    const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
-      financials,
-      t12Payload,
-    });
+    const screeningRefiSufficiencyHtml =
+      buildScreeningRefiSufficiencyTable({ financials, t12Payload }) +
+      buildFinancingEnvelopeGrid(
+        coerceNumber(t12Payload?.net_operating_income),
+        Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
+      );
     const screeningCoverageHtml = buildScreeningDataCoverageSummary({
       t12Payload,
       computedRentRoll,
