@@ -3220,14 +3220,13 @@ export default async function handler(req, res) {
       primaryPressurePoint
     );
     if (whyLine || decisionContextHtml || miniSensitivityHtml) {
-      finalHtml = finalHtml.replace(
-        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>`,
-        `<p class="exec-signal-line">Primary Pressure Point: ${primaryPressurePoint}</p>${
-          whyLine
-            ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>`
-            : ""
-        }${decisionContextHtml}${miniSensitivityHtml}`
-      );
+      const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>`;
+      const pressureReplacement = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>${
+        whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
+      }${decisionContextHtml}${miniSensitivityHtml}`;
+      if (finalHtml.includes(pressureAnchor)) {
+        finalHtml = finalHtml.replace(pressureAnchor, pressureReplacement);
+      }
     }
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_LABEL}}", driver1?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_1_VALUE}}", driver1?.value || "");
