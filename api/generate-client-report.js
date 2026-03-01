@@ -745,6 +745,22 @@ function buildRenovationExecutionRows(rows, formatValue) {
     .filter(Boolean)
     .join("");
 }
+function buildT12PerUnitCard(egi, opex, noi, units) {
+  if (!Number.isFinite(units) || units <= 0) return "";
+  const rows = [
+    ["EGI per Unit (TTM)", egi],
+    ["OpEx per Unit (TTM)", opex],
+    ["NOI per Unit (TTM)", noi],
+  ]
+    .filter(([, v]) => Number.isFinite(v))
+    .map(
+      ([label, v]) =>
+        `<tr><td>${label}</td><td>${formatCurrency(v / units)}</td></tr>`
+    )
+    .join("");
+  if (!rows) return "";
+  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Per-Unit Efficiency</p><table><thead><tr><th>Metric</th><th>Per Unit (Annual)</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified T12 totals across ${units} units.</p></div>`;
+}
 function buildCapRateValueTable(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
   const capRates = [0.05, 0.06, 0.07];
@@ -986,11 +1002,12 @@ function buildScreeningDataCoverageSummary({
   const nextBestUploadsHtml = suggestionHtml
     ? `<p class="subsection-title" style="margin-top:12px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
     : "";
+  const unlocksCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Additional Analysis Available With More Documents</p><table><thead><tr><th>Document</th><th>Unlocks</th></tr></thead><tbody><tr><td>Mortgage Statement</td><td>Debt structure table, live DSCR verification, refinance stability scoring</td></tr><tr><td>Appraisal Report</td><td>Cap rate confirmation, value-per-unit benchmarking, LTV calculation</td></tr><tr><td>Property Tax Statements</td><td>Expense line verification, normalized OpEx recalculation</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Upgrade to the Underwriting Report to include all available document types.</p></div>`;
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
     rrMissing.join(", ") || "None"
-  )}</td></tr></tbody></table>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>`;
+  )}</td></tr></tbody></table>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
@@ -1348,7 +1365,20 @@ function buildScreeningExpenseStructureHtml({
   const expenseFlagsCard = hasExpenseFlagsCard
     ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
-  return `${metricsCard}${expenseFlagsCard}`;
+  const expenseSensRows =
+    Number.isFinite(egi) && egi > 0
+      ? [0.50, 0.55, 0.60, 0.65, 0.70]
+          .map((r) => {
+            const impliedOpex = egi * r;
+            const impliedNoi = egi - impliedOpex;
+            return `<tr><td>${(r * 100).toFixed(0)}%</td><td>${formatCurrency(impliedOpex)}</td><td>${formatCurrency(impliedNoi)}</td></tr>`;
+          })
+          .join("")
+      : "";
+  const expenseSensCard = expenseSensRows
+    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Ratio Sensitivity</p><table><thead><tr><th>Expense Ratio</th><th>Implied OpEx</th><th>Implied NOI</th></tr></thead><tbody>${expenseSensRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Anchored to document-verified EGI of ${formatCurrency(egi)}. Standardized threshold scenarios.</p></div>`
+    : "";
+  return `${metricsCard}${expenseFlagsCard}${expenseSensCard}`;
 }
 function buildScreeningNoiStabilityHtml({
   t12Payload,
@@ -3460,6 +3490,11 @@ export default async function handler(req, res) {
       Number.isFinite(t12NoiValue) ? formatCurrency(t12NoiValue) : DATA_NOT_AVAILABLE
     );
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{T12_PER_UNIT_BLOCK}}",
+      buildT12PerUnitCard(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
+    );
     const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
       t12Payload,
       computedRentRoll,
