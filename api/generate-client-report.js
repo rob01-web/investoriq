@@ -1028,7 +1028,22 @@ function buildScreeningIncomeForensicsHtml({
   const expenseLines = toRows(expenseLinesRaw)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
-  if (incomeLines.length < 2 || expenseLines.length < 2) return "";
+  if (incomeLines.length < 2 || expenseLines.length < 2) {
+    // Lump-sum T12: no line items — return summary-level fallback card
+    const egi = coerceNumber(t12Payload?.effective_gross_income);
+    const opex = coerceNumber(t12Payload?.total_operating_expenses);
+    const noi = coerceNumber(t12Payload?.net_operating_income);
+    const summaryRows = [
+      ["Effective Gross Income (TTM)", egi],
+      ["Total Operating Expenses (TTM)", opex],
+      ["Net Operating Income (TTM)", noi],
+    ]
+      .filter(([, v]) => Number.isFinite(v))
+      .map(([label, v]) => `<tr><td>${label}</td><td>${formatCurrency(v)}</td></tr>`)
+      .join("");
+    if (!summaryRows) return "";
+    return `<div class="card no-break"><p class="subsection-title">Income &amp; Expense Summary (Lump-Sum T12)</p><table><thead><tr><th>Line Item</th><th>Amount (TTM)</th></tr></thead><tbody>${summaryRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">No line-item detail available for this T12 format. All values are document-verified totals.</p></div>`;
+  }
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
   const incomeRowsHtml = incomeLines
@@ -1278,6 +1293,8 @@ function buildScreeningExpenseStructureHtml({
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
+    : Number.isFinite(opex) && opex > 0
+    ? `<div class="subsection-title" style="margin-top:10px;">Expense Drivers</div><p class="small" style="color:#64748b;font-style:italic;">No line-item expense detail available. Total Operating Expenses: ${formatCurrency(opex)}.</p>`
     : "";
   const hasExpenseFlagsCard = Boolean(flagsHtml) || Boolean(top3Html);
   const expenseFlagsCard = hasExpenseFlagsCard
@@ -3341,8 +3358,6 @@ export default async function handler(req, res) {
         ? DATA_NOT_AVAILABLE
         : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
     finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
-    const t12IncomeRows = buildT12IncomeRows(t12Payload, formatCurrency);
-    const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatCurrency);
     const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
     const t12TotalExpensesValue = coerceNumber(t12Payload?.total_operating_expenses);
     const t12NoiValue = coerceNumber(t12Payload?.net_operating_income);
@@ -3352,15 +3367,25 @@ export default async function handler(req, res) {
       t12EgiValue > 0
         ? formatPercent1(t12TotalExpensesValue / t12EgiValue)
         : DATA_NOT_AVAILABLE;
+    const t12IncomeRowsRaw = buildT12IncomeRows(t12Payload, formatCurrency);
+    const t12ExpenseRowsRaw = buildT12ExpenseRows(t12Payload, formatCurrency);
+    const t12IncomeRows = String(t12IncomeRowsRaw || "").trim()
+      ? t12IncomeRowsRaw
+      : Number.isFinite(t12EgiValue)
+      ? `<tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Effective Gross Income (TTM): ${formatCurrency(t12EgiValue)}.</td></tr>`
+      : "";
+    const t12ExpenseRows = String(t12ExpenseRowsRaw || "").trim()
+      ? t12ExpenseRowsRaw
+      : Number.isFinite(t12TotalExpensesValue)
+      ? `<tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Total Operating Expenses (TTM): ${formatCurrency(t12TotalExpensesValue)}.</td></tr>`
+      : "";
     finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
     if (!String(t12IncomeRows || "").trim()) {
-      finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", "");
       finalHtml = stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Income Reconstruction (TTM)");
     }
     if (!String(t12ExpenseRows || "").trim()) {
-      finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", "");
       finalHtml = stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
     }
