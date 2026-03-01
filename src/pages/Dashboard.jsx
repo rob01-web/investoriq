@@ -1946,7 +1946,7 @@ if (!stagedBatchId) {
                     </div>
                     <div className="mt-1 text-sm text-red-700">
                       {job.failure_reason ||
-                        'Document requirements not met. This credit has been consumed.'}
+                        'Analysis failed due to a system error. Your credit has been automatically reviewed — contact support if it was not restored.'}
                     </div>
                   </div>
                 </div>

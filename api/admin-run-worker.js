@@ -1665,6 +1665,49 @@ export default async function handler(req, res) {
               );
             }
 
+            // Best-effort entitlement restore on report generation failure (system fault)
+            try {
+              const { data: failedJobRow } = await supabaseAdmin
+                .from('analysis_jobs')
+                .select('purchase_id')
+                .eq('id', job.id)
+                .maybeSingle();
+              let restoreFailedPurchaseId = failedJobRow?.purchase_id || null;
+              if (!restoreFailedPurchaseId) {
+                const { data: purchaseByJobRow } = await supabaseAdmin
+                  .from('report_purchases')
+                  .select('id')
+                  .eq('job_id', job.id)
+                  .not('consumed_at', 'is', null)
+                  .limit(1)
+                  .maybeSingle();
+                restoreFailedPurchaseId = purchaseByJobRow?.id || null;
+              }
+              if (restoreFailedPurchaseId) {
+                const { data: restoredPurchase } = await supabaseAdmin
+                  .from('report_purchases')
+                  .update({ consumed_at: null })
+                  .eq('id', restoreFailedPurchaseId)
+                  .not('consumed_at', 'is', null)
+                  .select('id')
+                  .maybeSingle();
+                if (restoredPurchase?.id) {
+                  await supabaseAdmin
+                    .from('analysis_jobs')
+                    .update({ purchase_id: null })
+                    .eq('id', job.id)
+                    .eq('status', 'failed');
+                  await writeWorkerEventArtifact(job.id, job.user_id, 'entitlement_restored', {
+                    reason: 'report_generation_failed',
+                    purchase_id: restoreFailedPurchaseId,
+                    timestamp: nowIso,
+                  });
+                }
+              }
+            } catch (restoreErr) {
+              console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
+            }
+
             continue;
           }
 
