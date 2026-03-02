@@ -1000,7 +1000,7 @@ function buildScreeningDataCoverageSummary({
   const nextBestUploadsHtml = suggestionHtml
     ? `<p class="subsection-title" style="margin-top:6px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
     : "";
-  const unlocksCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Additional Analysis Available With More Documents</p><table><thead><tr><th>Document</th><th>Unlocks</th></tr></thead><tbody><tr><td>Mortgage Statement</td><td>Debt structure table, live DSCR verification, refinance stability scoring</td></tr><tr><td>Appraisal Report</td><td>Cap rate confirmation, value-per-unit benchmarking, LTV calculation</td></tr><tr><td>Property Tax Statements</td><td>Expense line verification, normalized OpEx recalculation</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Upgrade to the Underwriting Report to include all available document types.</p></div>`;
+  const unlocksCard = "";
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
     t12Missing.join(", ") || "None"
   )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
@@ -1092,7 +1092,7 @@ function buildScreeningIncomeForensicsHtml({
       ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
       : "";
   if (incomeLines.length < 2 || expenseLines.length < 2) {
-    // Lump-sum T12: no line items — return summary-level fallback card
+    // Lump-sum T12: no line items â€” return summary-level fallback card
     const egi = coerceNumber(t12Payload?.effective_gross_income);
     const opex = coerceNumber(t12Payload?.total_operating_expenses);
     const noi = coerceNumber(t12Payload?.net_operating_income);
@@ -3371,7 +3371,7 @@ export default async function handler(req, res) {
       : screeningClass === "Insufficient Data" ? "verdict-insufficient"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
-    // Cover metric strip (screening only — strip when values unavailable)
+    // Cover metric strip (screening only â€” strip when values unavailable)
     if (effectiveReportMode === "screening_v1") {
       const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
       const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
@@ -3426,7 +3426,7 @@ export default async function handler(req, res) {
         return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
       }).join("");
       const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
-      // Investment thesis — fully deterministic
+      // Investment thesis â€” fully deterministic
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
       const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
@@ -3994,7 +3994,7 @@ export default async function handler(req, res) {
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-    // ── Build deterministic underwriting blocks from parsed supporting docs ──
+    // â”€â”€ Build deterministic underwriting blocks from parsed supporting docs â”€â”€
     // Debt Capital Structure rows (from mortgage_statement_parsed)
     let debtCapitalRowsHtml = "";
     if (mortgagePayload && effectiveReportMode === "v1_core") {
@@ -4102,8 +4102,8 @@ export default async function handler(req, res) {
       const rawExitCapPct = coerceNumber(appraisalPayload?.cap_rate);
       const exitCapPct = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? rawExitCapPct : 5.5;
       const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "assumed 5.5%";
-      const GROWTH = 0.03; // 3% annual NOI growth — stated assumption
-      const DISCOUNT = 0.08; // 8% discount rate — stated assumption
+      const GROWTH = 0.03; // 3% annual NOI growth â€” stated assumption
+      const DISCOUNT = 0.08; // 8% discount rate â€” stated assumption
 
       if (Number.isFinite(noiYear0) && noiYear0 > 0) {
         const exitCapDec = exitCapPct / 100;
@@ -4141,7 +4141,7 @@ export default async function handler(req, res) {
         dcfTableHtml = tableHtml;
       }
     }
-    // ── End underwriting block builders ─────────────────────────────────────
+    // â”€â”€ End underwriting block builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) || debtCapitalRowsHtml.length > 0;
     if (!showSection7) {
