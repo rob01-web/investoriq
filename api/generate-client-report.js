@@ -1517,9 +1517,6 @@ function buildScreeningNoiStabilityHtml({
   }
   const sensitivityRows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && Number.isFinite(opex)) {
-    sensitivityRows.push(
-      `<tr><td>Base Case</td><td>${formatCurrency(noi)}</td><td>${formatPercent1(noi / egi)}</td></tr>`
-    );
     const noiCostShock = noi - 0.05 * opex;
     if (Number.isFinite(noiCostShock) && egi > 0) {
       sensitivityRows.push(
@@ -1746,13 +1743,6 @@ function buildScreeningRentRollDistributionHtml({
       largestUnitType = largestMixRow.unitType;
       largestUnitTypeConcentration = largestMixRow.count / totalUnits;
     }
-  }
-  if (Number.isFinite(largestUnitTypeConcentration)) {
-    metricsRows.push(
-      `<tr><td>Largest Unit Type Concentration</td><td>${formatPercent1(
-        largestUnitTypeConcentration
-      )}</td></tr>`
-    );
   }
   if (metricsRows.length === 0 && !rentBandRows) return "";
   const metricsHtml =
@@ -3381,6 +3371,23 @@ export default async function handler(req, res) {
       : screeningClass === "Insufficient Data" ? "verdict-insufficient"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
+    // Cover metric strip (screening only — strip when values unavailable)
+    if (effectiveReportMode === "screening_v1") {
+      const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
+      const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
+      const coverNM = Number.isFinite(noiMarginR) ? formatPercent1(noiMarginR) : "";
+      const coverUnits = execUnitsText !== DATA_NOT_AVAILABLE ? execUnitsText : "";
+      if (coverUnits && coverNoi && coverER && coverNM) {
+        finalHtml = replaceAll(finalHtml, "{{COVER_UNITS}}", coverUnits);
+        finalHtml = replaceAll(finalHtml, "{{COVER_NOI}}", coverNoi);
+        finalHtml = replaceAll(finalHtml, "{{COVER_EXPENSE_RATIO}}", coverER);
+        finalHtml = replaceAll(finalHtml, "{{COVER_NOI_MARGIN}}", coverNM);
+      } else {
+        finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
+      }
+    } else {
+      finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{PRIMARY_PRESSURE_POINT}}",

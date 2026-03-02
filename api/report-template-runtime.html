@@ -158,6 +158,23 @@
   .cover-verdict-value.verdict-fragile    { color: #EF4444; }
   .cover-verdict-value.verdict-insufficient { color: #9CA3AF; }
 
+  .cover-metric-strip {
+    margin-top: 36px;
+  }
+  .cover-metric-rule {
+    border: none;
+    border-top: 1px solid rgba(201, 168, 76, 0.55);
+    margin: 10px 0;
+  }
+  .cover-metric-row {
+    color: #D1D5DB;
+    font-family: "Inter", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+
   .cover-footer-row {
     display: flex;
     justify-content: space-between;
@@ -839,6 +856,14 @@ ul, ol {
 
           <div class="cover-verdict-label">INVESTORIQ<br/>VERDICT</div>
           <div class="cover-verdict-value {{VERDICT_CSS_CLASS}}">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+
+<!-- BEGIN COVER_METRIC_STRIP -->
+          <div class="cover-metric-strip">
+            <hr class="cover-metric-rule">
+            <div class="cover-metric-row">{{COVER_UNITS}} Units &nbsp;&nbsp;|&nbsp;&nbsp; NOI {{COVER_NOI}} &nbsp;&nbsp;|&nbsp;&nbsp; Expense Ratio {{COVER_EXPENSE_RATIO}} &nbsp;&nbsp;|&nbsp;&nbsp; NOI Margin {{COVER_NOI_MARGIN}}</div>
+            <hr class="cover-metric-rule">
+          </div>
+<!-- END COVER_METRIC_STRIP -->
 
           <div class="cover-footer-row">
             <span class="cover-footer-text">Confidential &mdash; InvestorIQ Technologies Inc.</span>
