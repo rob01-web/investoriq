@@ -758,6 +758,40 @@ export default async function handler(req, res) {
       }
     }
 
+    // Text-based inference for supporting_documents PDFs
+    function inferDocTypeFromText(text) {
+      const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
+      const has = (terms) => terms.some((t) => norm.includes(t));
+      if (has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
+      if (has(['TERM SHEET', 'LOAN AMOUNT', 'INTEREST ONLY', 'AMORTIZATION', 'DSCR', 'LTV'])) return 'loan_term_sheet';
+      if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
+      if (has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
+      return 'supporting_documents_unclassified';
+    }
+
+    if (declaredDocType === 'supporting_documents' && !isTabularInput) {
+      try {
+        const { data: textArtifact } = await supabaseAdmin
+          .from('analysis_artifacts')
+          .select('payload')
+          .eq('job_id', jobId)
+          .eq('type', 'document_text_extracted')
+          .eq('payload->>file_id', String(fileRow.id))
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const fullText = String(textArtifact?.payload?.excerpt || textArtifact?.payload?.text || '');
+        if (fullText.length > 20) {
+          const inferred = inferDocTypeFromText(fullText);
+          effectiveDocType = inferred;
+          detectedDocType = inferred;
+          console.log('[parse-doc] supporting_documents inferred as', inferred);
+        }
+      } catch (_inferErr) {
+        // fail-closed: leave effectiveDocType as 'supporting_documents'
+      }
+    }
+
     if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
       await supabaseAdmin
         .from('analysis_job_files')
@@ -1448,7 +1482,35 @@ export default async function handler(req, res) {
     }
 
     // ── Mortgage Statement ──────────────────────────────────────────────────
-    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax') {
+    if (effectiveDocType === 'supporting_documents_unclassified') {
+      const { error: unclassifiedArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+        {
+          job_id: jobId,
+          user_id: fileRow.user_id || null,
+          type: 'supporting_doc_unclassified',
+          bucket: 'system',
+          object_path: `analysis_jobs/${jobId}/supporting_doc_unclassified/${fileRow.id}/${safeTimestamp(nowIso)}.json`,
+          payload: {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            mime_type: fileRow.mime_type,
+            bytes: fileRow.bytes,
+            declared_doc_type: declaredDocType,
+            effective_doc_type: effectiveDocType,
+          },
+        },
+      ]);
+      if (unclassifiedArtifactErr) {
+        return res.status(500).json({ error: 'Failed to write unclassified artifact', details: unclassifiedArtifactErr.message });
+      }
+      await supabaseAdmin
+        .from('analysis_job_files')
+        .update({ parse_status: 'parsed_with_warnings', parse_error: 'doc_type_unclassified' })
+        .eq('id', fileRow.id);
+      return res.status(200).json({ ok: true, inferred: 'supporting_documents_unclassified' });
+    }
+
+    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'loan_term_sheet' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax') {
       const artifactType = `${effectiveDocType}_parsed`;
       const parserName = effectiveDocType;
 
@@ -1515,7 +1577,35 @@ export default async function handler(req, res) {
         let payload = null;
         const parse_warnings = [];
 
-        if (effectiveDocType === 'mortgage_statement') {
+        if (effectiveDocType === 'loan_term_sheet') {
+          const loan_amount = extractDollarNear(rawText, [
+            'loan amount', 'principal amount', 'total loan', 'facility amount',
+          ]);
+          const interest_rate = extractPercentNear(rawText, [
+            'interest rate', 'rate:', 'note rate', 'coupon rate',
+          ]);
+          const ltv = extractPercentNear(rawText, [
+            'loan to value', 'ltv', 'loan-to-value',
+          ]);
+          const amort_years = (() => {
+            const idx = lowerText.search(/amortiz/);
+            if (idx === -1) return null;
+            const snippet = rawText.slice(idx, idx + 80);
+            const m = snippet.match(/(\d+)\s*(?:year|yr)/i);
+            return m ? parseInt(m[1], 10) : null;
+          })();
+          if (!loan_amount) parse_warnings.push('missing_loan_amount');
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            loan_amount,
+            interest_rate,
+            ltv,
+            amort_years,
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'mortgage_statement') {
           const outstanding_balance = extractDollarNear(rawText, [
             'outstanding balance', 'principal balance', 'loan balance', 'outstanding loan',
             'remaining balance', 'balance outstanding',
