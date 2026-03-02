@@ -528,6 +528,10 @@ export default async function handler(req, res) {
             throw new Error(`Failed to fetch job files: ${jobFilesErr.message}`);
           }
 
+          const supportingDocs = (jobFiles || []).filter(
+            (f) => !['rent_roll', 't12'].includes(f.doc_type)
+          );
+
           const startedCheck = await hasWorkerEvent(job.id, 'extracting_started');
           if (startedCheck?.error) {
             throw new Error(`Failed to check extracting_started event: ${startedCheck.error.message}`);
@@ -1572,6 +1576,7 @@ export default async function handler(req, res) {
                   userId: job.user_id,
                   property_name: job.property_name,
                   jobId: job.id,
+                  supporting_documents: supportingDocs,
                 }),
               });
 

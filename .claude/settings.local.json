@@ -11,7 +11,9 @@
       "Bash(node --check api/parse/parse-doc.js)",
       "Bash(node --check api/parse/classify-documents.js)",
       "Bash(python3 -c \":*)",
-      "Bash(node --check \"c:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/api/parse/parse-doc.js\")"
+      "Bash(node --check \"c:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/api/parse/parse-doc.js\")",
+      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\src\\\\pages\\\\Dashboard.jsx\")",
+      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\admin-run-worker.js\")"
     ]
   }
 }

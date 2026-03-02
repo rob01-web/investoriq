@@ -2207,6 +2207,7 @@ export default async function handler(req, res) {
       property_name,
       property_address,
       property_title,
+      supporting_documents = [],
     } = body;
     const jobId = body?.job_id || body?.jobId;
     effectiveUserId = bodyUserId || null;

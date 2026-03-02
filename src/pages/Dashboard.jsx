@@ -913,7 +913,12 @@ if (!stagedBatchId) {
       };
 
       const stagedFilesPayload = (uploadedFiles || [])
-        .filter((file) => ['rent_roll', 't12'].includes(file.docType))
+        .filter(
+          (file) =>
+            ['rent_roll', 't12'].includes(file.docType) ||
+            file.docType === 'supporting_documents_ui' ||
+            supportingDocTypes.some((t) => t.docType === file.docType)
+        )
         .map((file) => ({
           storage_path: file.storage_path || file.path,
           original_name: file.original_name || file.file?.name || 'file',
