@@ -755,7 +755,7 @@ function buildT12PerUnitRows(egi, opex, noi, units) {
     .filter(([, v]) => Number.isFinite(v))
     .map(
       ([label, v]) =>
-        `<tr><td class="metric-label">${label}</td><td class="metric-value">${formatCurrency(v / units)}</td></tr>`
+        `<tr><td>${label}</td><td>${formatCurrency(v / units)}</td></tr>`
     )
     .join("");
 }
