@@ -408,6 +408,30 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   if (Number.isFinite(total_operating_expenses)) column_map.total_operating_expenses = totalOpexDirect?.label || 'expense_lines_sum';
   if (Number.isFinite(net_operating_income)) column_map.net_operating_income = noiDirect?.label || null;
 
+  // Build income_lines array for the report renderer
+  const income_lines = [
+    ...(Number.isFinite(grossRental?.value) ? [{ label: 'Gross Rental Income', amount: grossRental.value }] : []),
+    ...(Number.isFinite(laundryIncomeTotal) && laundryIncomeTotal > 0 ? [{ label: 'Laundry Income', amount: laundryIncomeTotal }] : []),
+    ...(Number.isFinite(parkingIncomeTotal) && parkingIncomeTotal > 0 ? [{ label: 'Parking Income', amount: parkingIncomeTotal }] : []),
+    ...(Number.isFinite(otherIncomeTotal) && otherIncomeTotal > 0 ? [{ label: 'Other Income', amount: otherIncomeTotal }] : []),
+  ];
+
+  // Build expense_lines array for the report renderer
+  const expenseDisplayLabels = {
+    property_taxes: 'Property Taxes',
+    insurance: 'Insurance',
+    repairs_maintenance: 'Repairs & Maintenance',
+    landscaping_snow: 'Landscaping & Snow Removal',
+    utilities: 'Utilities',
+    management: 'Property Management',
+    administrative: 'Administrative',
+    garbage_misc: 'Garbage & Miscellaneous',
+  };
+  const expense_lines = Object.entries(expenseValues).map(([key, value]) => ({
+    label: expenseDisplayLabels[key] || key,
+    amount: value,
+  }));
+
   return {
     gross_potential_rent: Number.isFinite(gross_potential_rent) ? gross_potential_rent : null,
     effective_gross_income: Number.isFinite(effective_gross_income) ? effective_gross_income : null,
@@ -416,6 +440,8 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     expense_lines_found: expenseLinesFound,
     has_gross_rental_income: Number.isFinite(grossRental?.value),
     has_minimum_t12_coverage: hasMinimumT12Coverage,
+    income_lines,
+    expense_lines,
     column_map,
   };
 };
@@ -1311,6 +1337,8 @@ export default async function handler(req, res) {
               method: 'xlsx',
               confidence,
               ...found,
+              income_lines: parsedT12.income_lines || [],
+              expense_lines: parsedT12.expense_lines || [],
               column_map: parsedT12.column_map,
               parse_warnings,
             };

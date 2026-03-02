@@ -168,9 +168,16 @@ Before any report goes to a paying customer, it must pass all of these:
 - REFI_SENSITIVITY_MATRIX_BLOCK: 3x3 DSCR sensitivity grid (rate +0/+100/+200bps × cap +0/+50/+100bps) — THE MOAT
 - DCF_TABLE_BLOCK: deterministic 5-year DCF from T12 NOI (3% growth, 8% discount, exit cap from appraisal or 5.5% stated)
 
+### 2026-03-02 Session 2 — DONE
+
+- **T12 line items now in artifact payload**: `parseT12FromRowMatrices` now returns `income_lines` and `expense_lines` arrays; XLSX payload includes them. Income Forensics and Expense Structure will now show full breakdown (3 income rows, 8 expense rows) instead of fallback card.
+- **Orphan pages 9/11**: Data Coverage (S7) + Refi Sufficiency (S6) now share one page (removed `page-break` from S6). Global table cell padding reduced 5px → 4px.
+- **EXEC_CLASSIFICATION_RATIONALE**: Rebuilt as deterministic institutional sentence with threshold values. E.g.: "Classified SENSITIZED: expense ratio of 62.6% exceeds the 55.0% sensitized threshold; NOI margin of 37.4% provides limited operating buffer."
+- **PROPERTY_SUBMARKET**: Middot stripping confirmed working. Added graceful neighborhood subtitle fallback ("Location Overview") when submarket is empty.
+
 ### Still Pending (next session)
 
-- PROPERTY_SUBMARKET hardcoded empty
-- EXEC_CLASSIFICATION_RATIONALE never computed
-- Ranked Drivers orphan page layout
-- Income Forensics / Expense Drivers no-line-item fallback
+- Ranked Drivers orphan page layout (S0-4) — still on its own page
+- PROPERTY_SUBMARKET still hardcoded empty (no value derived from job metadata)
+- S2-3: KPI flagging should be dynamic (only flag cards that breach thresholds)
+- S2-4: Driver trigger language formatting

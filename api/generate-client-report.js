@@ -2528,6 +2528,8 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
     // Strip the preceding &middot; separator together with the token when submarket is empty
     finalHtml = finalHtml.replace(/\s*&middot;\s*\{\{PROPERTY_SUBMARKET\}\}/g, "");
+    // Strip "{{PROPERTY_SUBMARKET}} Location Review" subtitle when submarket is empty
+    finalHtml = finalHtml.replace(/\{\{PROPERTY_SUBMARKET\}\}\s+Location Review/g, "Location Overview");
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_SUBMARKET}}", "");
     finalHtml = finalHtml.replace(/\(\s*,\s*\)/g, "");
     // 4. Inject key financial metrics
@@ -4283,9 +4285,46 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{DCF_TABLE_BLOCK}}", dcfTableHtml);
     }
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
-    const execRationale = (screeningClass && screeningExplanation)
-      ? `${screeningExplanation}${whyLine ? " " + whyLine : ""}`
-      : "";
+    // Build a deterministic institutional-grade rationale sentence from computed metrics
+    let execRationale = "";
+    if (screeningClass && screeningClass !== "Insufficient Data" && effectiveReportMode === "screening_v1") {
+      const erStr  = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
+      const nmStr  = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
+      const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
+      if (screeningClass === "Stable") {
+        const parts = [];
+        if (erStr)  parts.push(`expense ratio of ${erStr}`);
+        if (nmStr)  parts.push(`NOI margin of ${nmStr}`);
+        if (beoStr) parts.push(`break-even occupancy of ${beoStr}`);
+        execRationale = parts.length > 0
+          ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
+          : "Classified STABLE: operating metrics are within institutional thresholds.";
+      } else if (screeningClass === "Sensitized") {
+        const breaches = [];
+        if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr)
+          breaches.push(`expense ratio of ${erStr} exceeds the 55.0% sensitized threshold`);
+        if (Number.isFinite(noiMarginR) && noiMarginR < 0.45 && nmStr)
+          breaches.push(`NOI margin of ${nmStr} provides limited operating buffer`);
+        if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr)
+          breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
+        execRationale = breaches.length > 0
+          ? `Classified SENSITIZED: ${breaches.join("; ")}.`
+          : `Classified SENSITIZED: ${screeningExplanation}`;
+      } else if (screeningClass === "Fragile") {
+        const breaches = [];
+        if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65 && erStr)
+          breaches.push(`expense ratio of ${erStr} breaches the 65.0% fragile threshold`);
+        if (Number.isFinite(noiMarginR) && noiMarginR < 0.35 && nmStr)
+          breaches.push(`NOI margin of ${nmStr} is critically compressed`);
+        if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85 && beoStr)
+          breaches.push(`break-even occupancy of ${beoStr} breaches the 85.0% fragile threshold`);
+        execRationale = breaches.length > 0
+          ? `Classified FRAGILE: ${breaches.join("; ")}.`
+          : `Classified FRAGILE: ${screeningExplanation}`;
+      }
+    } else if (screeningClass === "Insufficient Data") {
+      execRationale = "Insufficient operating data to determine classification.";
+    }
     finalHtml = replaceAll(finalHtml, "{{EXEC_CLASSIFICATION_RATIONALE}}", execRationale);
     finalHtml = finalHtml.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
     const leftoverTokens = finalHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
