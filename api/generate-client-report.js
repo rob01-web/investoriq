@@ -796,7 +796,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     .join("");
   const unitsNote =
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.20x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.2))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.20x DSCR, the document-verified NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1092,7 +1092,7 @@ function buildScreeningIncomeForensicsHtml({
       ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
       : "";
   if (incomeLines.length < 2 || expenseLines.length < 2) {
-    // Lump-sum T12: no line items â€” return summary-level fallback card
+    // Lump-sum T12: no line items Ã¢â‚¬â€ return summary-level fallback card
     const egi = coerceNumber(t12Payload?.effective_gross_income);
     const opex = coerceNumber(t12Payload?.total_operating_expenses);
     const noi = coerceNumber(t12Payload?.net_operating_income);
@@ -3371,7 +3371,7 @@ export default async function handler(req, res) {
       : screeningClass === "Insufficient Data" ? "verdict-insufficient"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
-    // Cover metric strip (screening only â€” strip when values unavailable)
+    // Cover metric strip (screening only Ã¢â‚¬â€ strip when values unavailable)
     if (effectiveReportMode === "screening_v1") {
       const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
       const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
@@ -3426,7 +3426,7 @@ export default async function handler(req, res) {
         return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
       }).join("");
       const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
-      // Investment thesis â€” fully deterministic
+      // Investment thesis Ã¢â‚¬â€ fully deterministic
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
       const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
@@ -3994,7 +3994,7 @@ export default async function handler(req, res) {
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-    // â”€â”€ Build deterministic underwriting blocks from parsed supporting docs â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Build deterministic underwriting blocks from parsed supporting docs Ã¢â€â‚¬Ã¢â€â‚¬
     // Debt Capital Structure rows (from mortgage_statement_parsed)
     let debtCapitalRowsHtml = "";
     if (mortgagePayload && effectiveReportMode === "v1_core") {
@@ -4102,8 +4102,8 @@ export default async function handler(req, res) {
       const rawExitCapPct = coerceNumber(appraisalPayload?.cap_rate);
       const exitCapPct = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? rawExitCapPct : 5.5;
       const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "assumed 5.5%";
-      const GROWTH = 0.03; // 3% annual NOI growth â€” stated assumption
-      const DISCOUNT = 0.08; // 8% discount rate â€” stated assumption
+      const GROWTH = 0.03; // 3% annual NOI growth Ã¢â‚¬â€ stated assumption
+      const DISCOUNT = 0.08; // 8% discount rate Ã¢â‚¬â€ stated assumption
 
       if (Number.isFinite(noiYear0) && noiYear0 > 0) {
         const exitCapDec = exitCapPct / 100;
@@ -4141,7 +4141,7 @@ export default async function handler(req, res) {
         dcfTableHtml = tableHtml;
       }
     }
-    // â”€â”€ End underwriting block builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ End underwriting block builders Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) || debtCapitalRowsHtml.length > 0;
     if (!showSection7) {
