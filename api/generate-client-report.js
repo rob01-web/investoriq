@@ -3343,6 +3343,12 @@ export default async function handler(req, res) {
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
       screeningClass || ""
     );
+    const verdictCssClass = screeningClass === "Stable" ? "verdict-stable"
+      : screeningClass === "Sensitized" ? "verdict-sensitized"
+      : screeningClass === "Fragile" ? "verdict-fragile"
+      : screeningClass === "Insufficient Data" ? "verdict-insufficient"
+      : "";
+    finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
     finalHtml = replaceAll(
       finalHtml,
       "{{PRIMARY_PRESSURE_POINT}}",
