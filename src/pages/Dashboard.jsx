@@ -1544,40 +1544,12 @@ if (!stagedBatchId) {
                   </div>
                 </div>
             {selectedReportType === 'underwriting' && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-[#0F172A]">
-                    Supporting documents (recommended)
-                  </h4>
-                  <div className="relative group">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500">
-                      i
-                    </span>
-                    <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                      <div className="text-xs font-semibold text-[#0F172A]">
-                        Supporting documents (recommended)
-                      </div>
-                      <ul className="mt-2 list-disc pl-4 text-slate-600">
-                        <li>
-                          Upload any available supporting materials to improve coverage and
-                          reduce DATA NOT AVAILABLE sections.
-                        </li>
-                        <li>
-                          InvestorIQ does not assume missing information.
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Upload what you have. Missing inputs render as DATA NOT AVAILABLE.
-                </p>
+              <>
                 {!requiredDocsReady && (
                   <div className="mt-2 text-xs text-slate-500">
                     Upload Rent Roll and T12 to unlock supporting documents.
                   </div>
                 )}
-
                 <div className="mt-4">
                   {(() => {
                     const supportingFiles = uploadedFiles.filter(
@@ -1679,7 +1651,7 @@ if (!stagedBatchId) {
                     );
                   })()}
                 </div>
-              </div>
+              </>
             )}
               </div>
 
