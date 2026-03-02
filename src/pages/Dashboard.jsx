@@ -488,6 +488,11 @@ const hasPurchase = uploadedFiles.some((item) =>
 const hasCapex = uploadedFiles.some((item) =>
   ['capex_budget', 'renovation_scope', 'contractor_bid'].includes(item.docType)
 );
+const hasUnderwritingSupportDocs = uploadedFiles.some(
+  (f) =>
+    f.docType === 'supporting_documents_ui' ||
+    supportingDocTypes.some((t) => t.docType === f.docType)
+);
 const hasDebt = uploadedFiles.some((item) =>
   ['debt_term_sheet', 'lender_quote'].includes(item.docType)
 );
@@ -1573,120 +1578,106 @@ if (!stagedBatchId) {
                   </div>
                 )}
 
-                <div className="mt-4 space-y-5">
-                  {supportingDocGroups.map((group) => (
-                    <div key={group.title}>
-                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                        {group.title}
-                      </div>
-                      <div className="mt-2 space-y-3">
-                        {group.docs.map((doc) => {
-                          const docFiles = uploadedFiles.filter(
-                            (entry) => entry.docType === doc.slug
-                          );
-                          return (
-                            <div
-                              key={doc.slug}
-                              className="rounded-lg border border-slate-200 bg-white p-3"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="text-sm font-semibold text-[#0F172A]">
-                                  {doc.label}
+                <div className="mt-4">
+                  {(() => {
+                    const supportingFiles = uploadedFiles.filter(
+                      (f) =>
+                        f.docType === 'supporting_documents_ui' ||
+                        supportingDocTypes.some((t) => t.docType === f.docType)
+                    );
+                    return (
+                      <div className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-semibold text-[#0F172A]">
+                              Financing / Supporting Documents
+                            </div>
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              Upload mortgage statements, loan terms, appraisals, tax bills, or other supporting documents.
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!hasAvailableReport) {
+                                toast({
+                                  title: 'No reports available',
+                                  description: 'Purchase a report to upload documents.',
+                                  variant: 'destructive',
+                                });
+                                return;
+                              }
+                              if (!requiredDocsReady) return;
+                              if (!profile) {
+                                window.location.href = '/pricing';
+                                return;
+                              }
+                              if (!acknowledged) {
+                                toast({
+                                  title: 'Acknowledgement required',
+                                  description:
+                                    'Please acknowledge the document-based limitations before uploading files.',
+                                  variant: 'destructive',
+                                });
+                                return;
+                              }
+                              document.getElementById('supporting-docs-input')?.click();
+                            }}
+                            disabled={!hasAvailableReport || !requiredDocsReady}
+                            className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold flex-shrink-0 ${
+                              hasAvailableReport && requiredDocsReady
+                                ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
+                                : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            <UploadCloud className="h-4 w-4" />
+                            {supportingFiles.length > 0 ? 'Replace' : 'Upload'}
+                          </button>
+                        </div>
+                        <div className="mt-2 space-y-2">
+                          {supportingFiles.length === 0 ? (
+                            <div className="text-xs text-slate-500">No files uploaded.</div>
+                          ) : (
+                            supportingFiles.map((entry, index) => (
+                              <div
+                                key={`${entry.file.name}-${index}`}
+                                className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="truncate text-xs font-semibold text-[#0F172A]">
+                                    {entry.file.name}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">
+                                    {entry.file.size < 1024 * 1024
+                                      ? `${(entry.file.size / 1024).toFixed(2)} KB`
+                                      : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
+                                  </div>
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={async () => {
-                                    if (!hasAvailableReport) {
-                                      toast({
-                                        title: 'No reports available',
-                                        description: 'Purchase a report to upload documents.',
-                                        variant: 'destructive',
-                                      });
-                                      return;
-                                    }
-                                    if (!requiredDocsReady) {
-                                      return;
-                                    }
-
-                                    if (!profile) {
-                                      window.location.href = '/pricing';
-                                      return;
-                                    }
-
-                                    if (!acknowledged) {
-                                      toast({
-                                        title: 'Acknowledgement required',
-                                        description:
-                                          'Please acknowledge the document-based limitations before uploading files.',
-                                        variant: 'destructive',
-                                      });
-                                      return;
-                                    }
-
-                                    document
-                                      .getElementById(`supporting-${doc.slug}-input`)
-                                      ?.click();
-                                  }}
-                                  disabled={!hasAvailableReport || !requiredDocsReady}
-                                  className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold
-                                    ${
-                                      hasAvailableReport && requiredDocsReady
-                                        ? 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
-                                        : 'border-slate-300 bg-slate-200 text-slate-400 cursor-not-allowed'
-                                    }`}
+                                  onClick={() =>
+                                    setUploadedFiles((prev) =>
+                                      prev.filter(
+                                        (item) =>
+                                          !(
+                                            item.docType === entry.docType &&
+                                            item.file?.name === entry.file.name &&
+                                            item.file?.size === entry.file.size
+                                          )
+                                      )
+                                    )
+                                  }
+                                  className="text-xs font-bold text-red-700 hover:text-red-900"
                                 >
-                                  <UploadCloud className="h-4 w-4" />
-                                  {docFiles.length > 0 ? 'Replace' : 'Upload'}
+                                  X
                                 </button>
                               </div>
-
-                              <div className="mt-2 space-y-2">
-                                {docFiles.length === 0 ? (
-                                  <div className="text-xs text-slate-500">No file uploaded.</div>
-                                ) : (
-                                  docFiles.map((entry, index) => (
-                                    <div
-                                      key={`${entry.file.name}-${index}`}
-                                      className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                                    >
-                                      <div className="min-w-0">
-                                        <div className="truncate text-xs font-semibold text-[#0F172A]">
-                                          {entry.file.name}
-                                        </div>
-                                        <div className="text-[10px] text-slate-500">
-                                          {entry.file.size < 1024 * 1024
-                                            ? `${(entry.file.size / 1024).toFixed(2)} KB`
-                                            : `${(entry.file.size / 1024 / 1024).toFixed(2)} MB`}
-                                        </div>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setUploadedFiles((prev) =>
-                                            prev.filter(
-                                              (item) =>
-                                                !(
-                                                  item.docType === doc.slug &&
-                                                  item.file?.name === entry.file.name &&
-                                                  item.file?.size === entry.file.size
-                                                )
-                                            )
-                                          )
-                                        }
-                                        className="text-xs font-bold text-red-700 hover:text-red-900"
-                                      >
-                                        ??
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1781,17 +1772,14 @@ if (!stagedBatchId) {
               className="hidden"
             />
 
-            {supportingDocTypes.map((doc) => (
-              <input
-                key={doc.slug}
-                id={`supporting-${doc.slug}-input`}
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-                onChange={(e) => handleUpload(e, doc.slug)}
-                className="hidden"
-              />
-            ))}
+            <input
+              id="supporting-docs-input"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
+              onChange={(e) => handleUpload(e, 'supporting_documents_ui')}
+              className="hidden"
+            />
             </motion.div>
             </div>
           </div>
@@ -1826,6 +1814,12 @@ if (!stagedBatchId) {
                   {needsDocumentsMessage}
                 </div>
               ) : null}
+              {selectedReportType === 'underwriting' && !hasUnderwritingSupportDocs ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Underwriting requires at least one financing or supporting document.
+                  If you only have a T12 and rent roll, a Screening report may be more appropriate.
+                </div>
+              ) : null}
               <div className="mt-5 space-y-2">
                 <button
                   type="button"
@@ -1836,6 +1830,7 @@ if (!stagedBatchId) {
                     !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
+                    (selectedReportType === 'underwriting' && !hasUnderwritingSupportDocs) ||
                     ['queued', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
                       activeJobForRuns?.status
                     )
@@ -1846,6 +1841,7 @@ if (!stagedBatchId) {
                     !hasAvailableReport ||
                     !hasRequiredUploads ||
                     !acknowledged ||
+                    (selectedReportType === 'underwriting' && !hasUnderwritingSupportDocs) ||
                     ['queued', 'extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(
                       activeJobForRuns?.status
                     )
