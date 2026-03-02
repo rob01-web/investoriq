@@ -745,9 +745,9 @@ function buildRenovationExecutionRows(rows, formatValue) {
     .filter(Boolean)
     .join("");
 }
-function buildT12PerUnitCard(egi, opex, noi, units) {
+function buildT12PerUnitRows(egi, opex, noi, units) {
   if (!Number.isFinite(units) || units <= 0) return "";
-  const rows = [
+  return [
     ["EGI per Unit (TTM)", egi],
     ["OpEx per Unit (TTM)", opex],
     ["NOI per Unit (TTM)", noi],
@@ -755,11 +755,9 @@ function buildT12PerUnitCard(egi, opex, noi, units) {
     .filter(([, v]) => Number.isFinite(v))
     .map(
       ([label, v]) =>
-        `<tr><td>${label}</td><td>${formatCurrency(v / units)}</td></tr>`
+        `<tr><td class="metric-label">${label}</td><td class="metric-value">${formatCurrency(v / units)}</td></tr>`
     )
     .join("");
-  if (!rows) return "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Per-Unit Efficiency</p><table><thead><tr><th>Metric</th><th>Per Unit (Annual)</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified T12 totals across ${units} units.</p></div>`;
 }
 function buildCapRateValueTable(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -1223,7 +1221,7 @@ function buildScreeningIncomeForensicsHtml({
   const bulletsCard = bulletsHtml
     ? `<div class="card no-break" style="margin-top:6px;"><ul>${bulletsHtml}</ul></div>`
     : "";
-  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}${upsideCard}`;
+  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
 function buildScreeningExpenseStructureHtml({
   t12Payload,
@@ -3611,8 +3609,8 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
     finalHtml = replaceAll(
       finalHtml,
-      "{{T12_PER_UNIT_BLOCK}}",
-      buildT12PerUnitCard(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
+      "{{T12_PER_UNIT_ROWS}}",
+      buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
     );
     const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
       t12Payload,
