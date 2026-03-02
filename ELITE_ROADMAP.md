@@ -156,13 +156,21 @@ Before any report goes to a paying customer, it must pass all of these:
 
 ---
 
-## KNOWN UNFIXED ITEMS (as of session 2026-03-01)
+## SESSION LOG
 
-These were identified but not yet patched:
+### 2026-03-02 — DONE THIS SESSION
+
+- Orphan cards pages 9/11 — `margin-top:12px` → `margin-top:6px` (16 occurrences in JS builders)
+- `mortgage_statement`, `appraisal`, `property_tax` added to classify-documents.js keywords
+- parse-doc.js: new handlers for `mortgage_statement`, `appraisal`, `property_tax` (text-extraction based)
+- admin-run-worker.js: dispatches parse-doc for 3 new doc types; updated `.in('doc_type', ...)` filter
+- DEBT_CAPITAL_STRUCTURE_ROWS: built from `mortgage_statement_parsed` artifact (lender, balance, rate, P&I, amort, DSCR)
+- REFI_SENSITIVITY_MATRIX_BLOCK: 3x3 DSCR sensitivity grid (rate +0/+100/+200bps × cap +0/+50/+100bps) — THE MOAT
+- DCF_TABLE_BLOCK: deterministic 5-year DCF from T12 NOI (3% growth, 8% discount, exit cap from appraisal or 5.5% stated)
+
+### Still Pending (next session)
+
 - PROPERTY_SUBMARKET hardcoded empty
 - EXEC_CLASSIFICATION_RATIONALE never computed
 - Ranked Drivers orphan page layout
 - Income Forensics / Expense Drivers no-line-item fallback
-- DEBT_CAPITAL_STRUCTURE_ROWS never built
-- DCF_TABLE_BLOCK never built
-- REFI_SENSITIVITY_MATRIX_BLOCK never built (this IS the moat)

@@ -1419,6 +1419,200 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── Mortgage Statement ──────────────────────────────────────────────────
+    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax') {
+      const artifactType = `${effectiveDocType}_parsed`;
+      const parserName = effectiveDocType;
+
+      try {
+        // Attempt to read the document_text_extracted artifact for text-based parsing
+        const { data: textArtifact } = await supabaseAdmin
+          .from('analysis_artifacts')
+          .select('payload')
+          .eq('job_id', jobId)
+          .eq('type', 'document_text_extracted')
+          .eq('payload->>file_id', String(fileRow.id))
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const rawText = String(textArtifact?.payload?.excerpt || '');
+        const lowerText = rawText.toLowerCase();
+
+        // Helper: extract dollar value near a label in raw text
+        const extractDollarNear = (text, labels) => {
+          for (const label of labels) {
+            const idx = text.toLowerCase().indexOf(label);
+            if (idx === -1) continue;
+            const snippet = text.slice(idx, idx + 120);
+            const match = snippet.match(/\$?\s*([\d,]+(?:\.\d{1,2})?)/);
+            if (match) {
+              const val = parseFloat(match[1].replace(/,/g, ''));
+              if (Number.isFinite(val) && val > 0) return val;
+            }
+          }
+          return null;
+        };
+
+        // Helper: extract percentage near a label
+        const extractPercentNear = (text, labels) => {
+          for (const label of labels) {
+            const idx = text.toLowerCase().indexOf(label);
+            if (idx === -1) continue;
+            const snippet = text.slice(idx, idx + 80);
+            const match = snippet.match(/([\d]+(?:\.\d{1,4})?)\s*%/);
+            if (match) {
+              const val = parseFloat(match[1]);
+              if (Number.isFinite(val) && val > 0) return val;
+            }
+          }
+          return null;
+        };
+
+        // Helper: extract integer years near a label
+        const extractYearsNear = (text, labels) => {
+          for (const label of labels) {
+            const idx = text.toLowerCase().indexOf(label);
+            if (idx === -1) continue;
+            const snippet = text.slice(idx, idx + 80);
+            const match = snippet.match(/(\d{1,2})\s*(?:years?|yr)/i);
+            if (match) {
+              const val = parseInt(match[1], 10);
+              if (Number.isFinite(val) && val > 0) return val;
+            }
+          }
+          return null;
+        };
+
+        let payload = null;
+        const parse_warnings = [];
+
+        if (effectiveDocType === 'mortgage_statement') {
+          const outstanding_balance = extractDollarNear(rawText, [
+            'outstanding balance', 'principal balance', 'loan balance', 'outstanding loan',
+            'remaining balance', 'balance outstanding',
+          ]);
+          const interest_rate = extractPercentNear(rawText, [
+            'interest rate', 'rate:', 'annual rate', 'note rate',
+          ]);
+          const monthly_payment = extractDollarNear(rawText, [
+            'monthly payment', 'regular payment', 'payment amount', 'principal and interest',
+            'p&i payment', 'total payment',
+          ]);
+          const amort_years = extractYearsNear(rawText, [
+            'amortization', 'amortization period', 'amort period',
+          ]);
+          const lender_name_match = rawText.match(/(?:lender|bank|mortgagee)[:\s]+([A-Za-z0-9 &.,'-]{3,60})/i);
+          const lender_name = lender_name_match ? lender_name_match[1].trim() : null;
+
+          if (!outstanding_balance) parse_warnings.push('missing_outstanding_balance');
+          if (!interest_rate) parse_warnings.push('missing_interest_rate');
+          if (!monthly_payment) parse_warnings.push('missing_monthly_payment');
+
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            lender_name,
+            outstanding_balance,
+            interest_rate,
+            monthly_payment,
+            amort_years,
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'appraisal') {
+          const appraised_value = extractDollarNear(rawText, [
+            'appraised value', 'as-is value', 'market value', 'estimated value',
+            'opinion of value', 'value conclusion',
+          ]);
+          const cap_rate = extractPercentNear(rawText, [
+            'capitalization rate', 'cap rate', 'overall rate', 'overall capitalization',
+          ]);
+          const effective_gross_income = extractDollarNear(rawText, [
+            'effective gross income', 'egi', 'effective gross revenue',
+          ]);
+
+          if (!appraised_value) parse_warnings.push('missing_appraised_value');
+
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            appraised_value,
+            cap_rate,
+            effective_gross_income,
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'property_tax') {
+          const annual_tax = extractDollarNear(rawText, [
+            'property tax', 'annual tax', 'total tax', 'taxes owing',
+            'tax amount', 'tax due', 'realty tax', 'municipal tax',
+          ]);
+          const assessed_value = extractDollarNear(rawText, [
+            'assessed value', 'assessment value', 'property assessment',
+            'phased-in assessment', 'current value assessment',
+          ]);
+
+          if (!annual_tax) parse_warnings.push('missing_annual_tax');
+
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            annual_tax,
+            assessed_value,
+            parse_warnings,
+          };
+        }
+
+        const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+          {
+            job_id: jobId,
+            user_id: fileRow.user_id || null,
+            type: artifactType,
+            bucket: 'system',
+            object_path: `analysis_jobs/${jobId}/${parserName}/${fileRow.id}.json`,
+            payload,
+          },
+        ]);
+
+        if (artifactErr) {
+          throw new Error(artifactErr.message || `Failed to write ${artifactType} artifact`);
+        }
+
+        await supabaseAdmin
+          .from('analysis_job_files')
+          .update({ parse_status: 'parsed', parse_error: null })
+          .eq('id', fileRow.id);
+
+        await supabaseAdmin.from('analysis_artifacts').insert([
+          {
+            job_id: jobId,
+            user_id: fileRow.user_id || null,
+            type: 'worker_event',
+            bucket: 'internal',
+            object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${fileRow.id}/${safeTimestamp(nowIso)}.json`,
+            payload: {
+              event: 'parser_completed',
+              parser: parserName,
+              result: 'parsed',
+              job_id: jobId,
+              timestamp: nowIso,
+            },
+          },
+        ]);
+
+        return res.status(200).json({ ok: true, jobId, parsed: 1 });
+      } catch (err) {
+        const errorMessage = err?.message || 'Unknown error';
+        await supabaseAdmin.from('analysis_job_files').update({
+          parse_status: 'failed',
+          parse_error: errorMessage,
+        }).eq('id', fileRow.id);
+        return res.status(200).json({ ok: true, jobId, parsed: 0, failed: 1, error: errorMessage });
+      }
+    }
+
     return res.status(400).json({ error: 'Unsupported doc_type' });
   } catch (err) {
     console.error('parse-doc error:', err);

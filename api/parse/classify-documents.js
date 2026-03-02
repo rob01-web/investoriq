@@ -69,12 +69,46 @@ const classifyDocType = (combinedText) => {
     'contractor bid',
     'estimate',
   ];
+  const mortgageKeywords = [
+    'mortgage statement',
+    'loan statement',
+    'outstanding balance',
+    'principal balance',
+    'loan balance',
+    'monthly payment',
+    'principal and interest',
+    'mortgage account',
+    'loan account',
+  ];
+  const appraisalKeywords = [
+    'appraisal report',
+    'appraised value',
+    'as-is value',
+    'market value',
+    'capitalization rate',
+    'income approach',
+    'sales comparison approach',
+    'appraisal',
+  ];
+  const propertyTaxKeywords = [
+    'property tax',
+    'tax assessment',
+    'assessed value',
+    'municipal tax',
+    'realty tax',
+    'property taxes',
+    'tax bill',
+    'mill rate',
+  ];
 
   const rentRollCount = countMatches(text, rentRollKeywords);
   const t12Count = countMatches(text, t12Keywords);
   const offeringCount = countMatches(text, offeringKeywords);
   const debtCount = countMatches(text, debtKeywords);
   const capexCount = countMatches(text, capexKeywords);
+  const mortgageCount = countMatches(text, mortgageKeywords);
+  const appraisalCount = countMatches(text, appraisalKeywords);
+  const propertyTaxCount = countMatches(text, propertyTaxKeywords);
 
   const candidates = [
     { type: 'rent_roll', count: rentRollCount },
@@ -82,6 +116,9 @@ const classifyDocType = (combinedText) => {
     { type: 'offering_memo', count: offeringCount },
     { type: 'debt_term_sheet', count: debtCount },
     { type: 'capex_scope', count: capexCount },
+    { type: 'mortgage_statement', count: mortgageCount },
+    { type: 'appraisal', count: appraisalCount },
+    { type: 'property_tax', count: propertyTaxCount },
   ];
 
   candidates.sort((a, b) => b.count - a.count);

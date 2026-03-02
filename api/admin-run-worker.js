@@ -605,7 +605,7 @@ export default async function handler(req, res) {
             .select('doc_type')
             .eq('job_id', job.id)
             .eq('parse_status', 'parsed')
-            .in('doc_type', ['rent_roll', 't12']);
+            .in('doc_type', ['rent_roll', 't12', 'mortgage_statement', 'appraisal', 'property_tax']);
 
           if (parsedStructuredFilesErr) {
             throw new Error(`Failed to check parsed structured files: ${parsedStructuredFilesErr.message}`);
@@ -883,6 +883,30 @@ export default async function handler(req, res) {
                     });
                     if (!t12Res.ok) {
                       console.error('parse-doc failed (t12):', t12Res.status);
+                    }
+                  }
+                }
+
+                // Dispatch supporting document parsers (mortgage_statement, appraisal, property_tax)
+                for (const supportingDocType of ['mortgage_statement', 'appraisal', 'property_tax']) {
+                  const pendingSupportingFiles = (relevantFiles || []).filter((item) => {
+                    const dt = String(item.doc_type || '').toLowerCase();
+                    const isPending = String(item.parse_status || '').toLowerCase() === 'pending' ||
+                      String(item.parse_status || '').toLowerCase() === 'extracted';
+                    return dt === supportingDocType && isPending;
+                  });
+                  for (const pendingFile of pendingSupportingFiles) {
+                    const supportRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                      method: 'POST',
+                      headers: parserHeaders,
+                      body: JSON.stringify({
+                        job_id: job.id,
+                        file_id: pendingFile.id,
+                        doc_type: supportingDocType,
+                      }),
+                    });
+                    if (!supportRes.ok) {
+                      console.error(`parse-doc failed (${supportingDocType}):`, supportRes.status);
                     }
                   }
                 }

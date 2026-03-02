@@ -335,7 +335,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
-  const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:12px;">
+  const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:6px;">
   <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
   <table>
     <thead>
@@ -759,7 +759,7 @@ function buildT12PerUnitCard(egi, opex, noi, units) {
     )
     .join("");
   if (!rows) return "";
-  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Per-Unit Efficiency</p><table><thead><tr><th>Metric</th><th>Per Unit (Annual)</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified T12 totals across ${units} units.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Per-Unit Efficiency</p><table><thead><tr><th>Metric</th><th>Per Unit (Annual)</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified T12 totals across ${units} units.</p></div>`;
 }
 function buildCapRateValueTable(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -798,7 +798,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     .join("");
   const unitsNote =
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
-  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1000,7 +1000,7 @@ function buildScreeningDataCoverageSummary({
     .map((entry) => `<li>${escapeHtml(entry)}</li>`)
     .join("");
   const nextBestUploadsHtml = suggestionHtml
-    ? `<p class="subsection-title" style="margin-top:12px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
+    ? `<p class="subsection-title" style="margin-top:6px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
     : "";
   const unlocksCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Additional Analysis Available With More Documents</p><table><thead><tr><th>Document</th><th>Unlocks</th></tr></thead><tbody><tr><td>Mortgage Statement</td><td>Debt structure table, live DSCR verification, refinance stability scoring</td></tr><tr><td>Appraisal Report</td><td>Cap rate confirmation, value-per-unit benchmarking, LTV calculation</td></tr><tr><td>Property Tax Statements</td><td>Expense line verification, normalized OpEx recalculation</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Upgrade to the Underwriting Report to include all available document types.</p></div>`;
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
@@ -1091,7 +1091,7 @@ function buildScreeningIncomeForensicsHtml({
     Number.isFinite(annualMarket) &&
     annualMarket > annualInPlace &&
     annualInPlace > 0
-      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
+      ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
       : "";
   if (incomeLines.length < 2 || expenseLines.length < 2) {
     // Lump-sum T12: no line items — return summary-level fallback card
@@ -1137,7 +1137,7 @@ function buildScreeningIncomeForensicsHtml({
       ? incomeLines[0].amount / egi
       : null;
   const concentrationLineHtml = Number.isFinite(topIncomeLineConcentration)
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Top Income Line Concentration</p><p>${escapeHtml(
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Concentration</p><p>${escapeHtml(
         formatPercent1(topIncomeLineConcentration)
       )}</p></div>`
     : "";
@@ -1221,7 +1221,7 @@ function buildScreeningIncomeForensicsHtml({
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
   const bulletsCard = bulletsHtml
-    ? `<div class="card no-break" style="margin-top:12px;"><ul>${bulletsHtml}</ul></div>`
+    ? `<div class="card no-break" style="margin-top:6px;"><ul>${bulletsHtml}</ul></div>`
     : "";
   return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}${upsideCard}`;
 }
@@ -1363,7 +1363,7 @@ function buildScreeningExpenseStructureHtml({
     : "";
   const hasExpenseFlagsCard = Boolean(flagsHtml) || Boolean(top3Html);
   const expenseFlagsCard = hasExpenseFlagsCard
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Expense Flags (Deterministic)</p>${flagsHtml ? `<ul>${flagsHtml}</ul>` : ""}${top3Html}</div>`
     : "";
   const expenseSensRows =
     Number.isFinite(egi) && egi > 0
@@ -1376,7 +1376,7 @@ function buildScreeningExpenseStructureHtml({
           .join("")
       : "";
   const expenseSensCard = expenseSensRows
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Expense Ratio Sensitivity</p><table><thead><tr><th>Expense Ratio</th><th>Implied OpEx</th><th>Implied NOI</th></tr></thead><tbody>${expenseSensRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Anchored to document-verified EGI of ${formatCurrency(egi)}. Standardized threshold scenarios.</p></div>`
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Expense Ratio Sensitivity</p><table><thead><tr><th>Expense Ratio</th><th>Implied OpEx</th><th>Implied NOI</th></tr></thead><tbody>${expenseSensRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Anchored to document-verified EGI of ${formatCurrency(egi)}. Standardized threshold scenarios.</p></div>`
     : "";
   return `${metricsCard}${expenseFlagsCard}${expenseSensCard}`;
 }
@@ -1491,7 +1491,7 @@ function buildScreeningNoiStabilityHtml({
     .join("");
   const screeningFlagsCard =
     driverRankHtml || flagsHtml
-      ? `<div class="card no-break" style="margin-top:12px;">${driverRankHtml}${
+      ? `<div class="card no-break" style="margin-top:6px;">${driverRankHtml}${
           flagsHtml ? `<p class="subsection-title">Variance Flags (Deterministic)</p><ul>${flagsHtml}</ul>` : ""
         }</div>`
       : "";
@@ -1542,7 +1542,7 @@ function buildScreeningNoiStabilityHtml({
     }
   }
   const sensitivityCard = sensitivityRows.length
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">NOI Sensitivity (Deterministic)</p><table><thead><tr><th>Scenario</th><th>Implied NOI</th><th>NOI Margin (Implied)</th></tr></thead><tbody>${sensitivityRows.join(
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">NOI Sensitivity (Deterministic)</p><table><thead><tr><th>Scenario</th><th>Implied NOI</th><th>NOI Margin (Implied)</th></tr></thead><tbody>${sensitivityRows.join(
         ""
       )}</tbody></table></div>`
     : "";
@@ -1561,7 +1561,7 @@ function buildScreeningNoiStabilityHtml({
         `<tr><td>Occupancy Cushion</td><td>${(cushion * 100).toFixed(1)} pts</td></tr>`,
         `<tr><td>Units That Can Become Vacant</td><td>${cushionUnits} of ${Math.round(rrTotalUnits)}</td></tr>`,
       ].join("");
-      vacancyBufferCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Vacancy Buffer</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${vbRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">At current occupancy, the property can absorb ${cushionUnits} vacant unit${cushionUnits !== 1 ? "s" : ""} before reaching neutral cash flow. Break-even derived from document-verified T12 totals.</p></div>`;
+      vacancyBufferCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Vacancy Buffer</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${vbRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">At current occupancy, the property can absorb ${cushionUnits} vacant unit${cushionUnits !== 1 ? "s" : ""} before reaching neutral cash flow. Break-even derived from document-verified T12 totals.</p></div>`;
     }
   }
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
@@ -1762,7 +1762,7 @@ function buildScreeningRentRollDistributionHtml({
         )}</tbody></table>`
       : "";
   const bandsHtml = rentBandRows
-    ? `<p class="subsection-title" style="margin-top:12px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
+    ? `<p class="subsection-title" style="margin-top:6px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
     : "";
   const marketPremiumRatio =
     Number.isFinite(weightedInPlace) &&
@@ -1793,7 +1793,7 @@ function buildScreeningRentRollDistributionHtml({
     .map((line) => `<li>${escapeHtml(line)}</li>`)
     .join("");
   const flagsCard = flagsHtml
-    ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
     : "";
   let upsideValueCard = "";
   if (
@@ -1807,7 +1807,7 @@ function buildScreeningRentRollDistributionHtml({
         `<tr><td>Implied Value at ${(r * 100).toFixed(0)}% Cap Rate</td><td>${formatCurrency(annualUpside / r)}</td></tr>`
       ),
     ].join("");
-    upsideValueCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Rent Upside &mdash; Implied Value Creation</p><table><thead><tr><th>Metric</th><th>Amount</th></tr></thead><tbody>${uvRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Annual upside from document-verified rent roll. Implied value = annual upside &divide; cap rate. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
+    upsideValueCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Upside &mdash; Implied Value Creation</p><table><thead><tr><th>Metric</th><th>Amount</th></tr></thead><tbody>${uvRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Annual upside from document-verified rent roll. Implied value = annual upside &divide; cap rate. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
   }
   return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}${upsideValueCard}`;
 }
@@ -2314,6 +2314,9 @@ export default async function handler(req, res) {
     let documentSources = [];
     let rentRollPayload = null;
     let t12Payload = null;
+    let mortgagePayload = null;
+    let appraisalPayload = null;
+    let propertyTaxPayload = null;
     if (jobId) {
       const { data: rentRollArtifact } = await supabase
         .from("analysis_artifacts")
@@ -2333,6 +2336,35 @@ export default async function handler(req, res) {
         .limit(1)
         .maybeSingle();
       t12Payload = t12Artifact?.payload || null;
+      if (effectiveReportMode === "v1_core") {
+        const { data: mortgageArtifact } = await supabase
+          .from("analysis_artifacts")
+          .select("payload")
+          .eq("job_id", jobId)
+          .eq("type", "mortgage_statement_parsed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        mortgagePayload = mortgageArtifact?.payload || null;
+        const { data: appraisalArtifact } = await supabase
+          .from("analysis_artifacts")
+          .select("payload")
+          .eq("job_id", jobId)
+          .eq("type", "appraisal_parsed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        appraisalPayload = appraisalArtifact?.payload || null;
+        const { data: propertyTaxArtifact } = await supabase
+          .from("analysis_artifacts")
+          .select("payload")
+          .eq("job_id", jobId)
+          .eq("type", "property_tax_parsed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        propertyTaxPayload = propertyTaxArtifact?.payload || null;
+      }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
         .select("original_filename, created_at")
@@ -3407,7 +3439,7 @@ export default async function handler(req, res) {
         thesisText += `Operating performance is within stable thresholds. The profile supports further underwriting with additional document coverage.`;
       }
       const thesisCard = thesisText
-        ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
+        ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
         : "";
       execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
     }
@@ -3955,12 +3987,163 @@ export default async function handler(req, res) {
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-    const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    // ── Build deterministic underwriting blocks from parsed supporting docs ──
+    // Debt Capital Structure rows (from mortgage_statement_parsed)
+    let debtCapitalRowsHtml = "";
+    if (mortgagePayload && effectiveReportMode === "v1_core") {
+      const dcRows = [];
+      if (mortgagePayload.lender_name) {
+        dcRows.push(`<tr><td>Lender</td><td>${escapeHtml(String(mortgagePayload.lender_name))}</td></tr>`);
+      }
+      const bal = coerceNumber(mortgagePayload.outstanding_balance);
+      if (Number.isFinite(bal) && bal > 0) {
+        dcRows.push(`<tr><td>Outstanding Balance</td><td>${formatCurrency(bal)}</td></tr>`);
+      }
+      const ratePct = coerceNumber(mortgagePayload.interest_rate);
+      if (Number.isFinite(ratePct) && ratePct > 0) {
+        dcRows.push(`<tr><td>Interest Rate</td><td>${ratePct.toFixed(2)}%</td></tr>`);
+      }
+      const pni = coerceNumber(mortgagePayload.monthly_payment);
+      if (Number.isFinite(pni) && pni > 0) {
+        dcRows.push(`<tr><td>Monthly P&I</td><td>${formatCurrency(pni)}</td></tr>`);
+        if (Number.isFinite(bal) && bal > 0) {
+          const annualDs = pni * 12;
+          const t12Noi = coerceNumber(t12Payload?.net_operating_income);
+          if (Number.isFinite(t12Noi) && t12Noi > 0 && annualDs > 0) {
+            dcRows.push(`<tr><td>DSCR (T12 NOI)</td><td>${(t12Noi / annualDs).toFixed(2)}x</td></tr>`);
+          }
+        }
+      }
+      const amort = coerceNumber(mortgagePayload.amort_years);
+      if (Number.isFinite(amort) && amort > 0) {
+        dcRows.push(`<tr><td>Amortization</td><td>${amort} years</td></tr>`);
+      }
+      if (dcRows.length > 0) debtCapitalRowsHtml = dcRows.join("");
+    }
+
+    // Refi Collapse Risk Grid (3x3 DSCR sensitivity matrix)
+    let refiCollapseGridHtml = "";
+    if (mortgagePayload && t12Payload && effectiveReportMode === "v1_core") {
+      const noiBase = coerceNumber(t12Payload.net_operating_income);
+      const baseRatePct = coerceNumber(mortgagePayload.interest_rate); // e.g. 4.5
+      const debtBal = coerceNumber(mortgagePayload.outstanding_balance);
+      const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
+      const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
+      const baseCapPct = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? rawCapPct : 5.5;
+      const capSource = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? "appraisal" : "assumed 5.5%";
+
+      if (Number.isFinite(noiBase) && noiBase > 0 && Number.isFinite(baseRatePct) && baseRatePct > 0 && Number.isFinite(debtBal) && debtBal > 0) {
+        const LTV = 0.75;
+        const MIN_DSCR_QUAL = 1.25;
+        const rateScenarios = [
+          { label: `Base (${baseRatePct.toFixed(1)}%)`, addPct: 0 },
+          { label: `+100 bps (${(baseRatePct + 1).toFixed(1)}%)`, addPct: 1 },
+          { label: `+200 bps (${(baseRatePct + 2).toFixed(1)}%)`, addPct: 2 },
+        ];
+        const capScenarios = [
+          { label: `${baseCapPct.toFixed(1)}%`, addPct: 0 },
+          { label: `${(baseCapPct + 0.5).toFixed(1)}%`, addPct: 0.5 },
+          { label: `${(baseCapPct + 1.0).toFixed(1)}%`, addPct: 1.0 },
+        ];
+
+        let grid = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
+        grid += `<thead><tr>`;
+        grid += `<th style="text-align:left;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Rate Scenario</th>`;
+        for (const cs of capScenarios) {
+          grid += `<th style="text-align:center;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Cap: ${escapeHtml(cs.label)}</th>`;
+        }
+        grid += `</tr></thead><tbody>`;
+
+        for (const rs of rateScenarios) {
+          const newRateDec = (baseRatePct + rs.addPct) / 100;
+          const mc = computeMortgageConstant(newRateDec, amortYrs);
+          grid += `<tr>`;
+          grid += `<td style="padding:4px 8px;font-weight:600;background:#F9FAFB;border:1px solid #E5E7EB;">${escapeHtml(rs.label)}</td>`;
+          for (const cs of capScenarios) {
+            const capDec = (baseCapPct + cs.addPct) / 100;
+            let dscrDisplay = "N/A";
+            let bg = "#F9FAFB";
+            let fc = "#374151";
+            if (mc && mc > 0 && capDec > 0) {
+              const propValue = noiBase / capDec;
+              const maxLoanLtv = propValue * LTV;
+              const maxLoanDscr = (MIN_DSCR_QUAL * mc) > 0 ? noiBase / (MIN_DSCR_QUAL * mc) : 0;
+              const newLoan = Math.min(maxLoanLtv, maxLoanDscr);
+              const annualDs = newLoan * mc;
+              const dscr = annualDs > 0 ? noiBase / annualDs : 0;
+              if (dscr > 0 && Number.isFinite(dscr)) {
+                dscrDisplay = `${dscr.toFixed(2)}x`;
+                if (dscr < 1.00) { bg = "#FEE2E2"; fc = "#B91C1C"; }
+                else if (dscr < 1.20) { bg = "#FEF9C3"; fc = "#854D0E"; }
+                else { bg = "#F0FDF4"; fc = "#15803D"; }
+              }
+            }
+            grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${dscrDisplay}</td>`;
+          }
+          grid += `</tr>`;
+        }
+        grid += `</tbody></table>`;
+        grid += `<p class="small" style="margin-top:6px;">Assumes 75% LTV | Min DSCR qualifier: ${MIN_DSCR_QUAL}x | Cap rate source: ${escapeHtml(capSource)} | Green = DSCR >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
+        refiCollapseGridHtml = grid;
+      }
+    }
+
+    // Deterministic 5-Year DCF from T12 NOI
+    let dcfTableHtml = "";
+    if (t12Payload && effectiveReportMode === "v1_core") {
+      const noiYear0 = coerceNumber(t12Payload.net_operating_income);
+      const rawExitCapPct = coerceNumber(appraisalPayload?.cap_rate);
+      const exitCapPct = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? rawExitCapPct : 5.5;
+      const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "assumed 5.5%";
+      const GROWTH = 0.03; // 3% annual NOI growth — stated assumption
+      const DISCOUNT = 0.08; // 8% discount rate — stated assumption
+
+      if (Number.isFinite(noiYear0) && noiYear0 > 0) {
+        const exitCapDec = exitCapPct / 100;
+        let tableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
+        tableHtml += `<thead><tr>`;
+        for (const h of ["Year", "NOI", "Exit Value", "Total Cash Flow", "PV Factor", "Present Value"]) {
+          tableHtml += `<th style="text-align:right;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">${h}</th>`;
+        }
+        tableHtml += `</tr></thead><tbody>`;
+
+        let totalPv = 0;
+        for (let yr = 1; yr <= 5; yr++) {
+          const noi = noiYear0 * Math.pow(1 + GROWTH, yr);
+          const exitValue = yr === 5 ? noi / exitCapDec : 0;
+          const totalCf = noi + exitValue;
+          const pvFactor = 1 / Math.pow(1 + DISCOUNT, yr);
+          const pv = totalCf * pvFactor;
+          totalPv += pv;
+          const exitDisplay = yr === 5 ? formatCurrency(exitValue) : "-";
+          tableHtml += `<tr>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">Year ${yr}</td>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi)}</td>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${exitDisplay}</td>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalCf)}</td>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${pvFactor.toFixed(4)}</td>`;
+          tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pv)}</td>`;
+          tableHtml += `</tr>`;
+        }
+        tableHtml += `<tr style="background:#F3F4F6;font-weight:700;">`;
+        tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;" colspan="5">Estimated Intrinsic Value (Sum of PVs)</td>`;
+        tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalPv)}</td>`;
+        tableHtml += `</tr>`;
+        tableHtml += `</tbody></table>`;
+        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)})</p>`;
+        dcfTableHtml = tableHtml;
+      }
+    }
+    // ── End underwriting block builders ─────────────────────────────────────
+
+    const showSection7 = hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) || debtCapitalRowsHtml.length > 0;
     if (!showSection7) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
     const showSection7Tables =
-      Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0;
+      (Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0) ||
+      debtCapitalRowsHtml.length > 0 ||
+      refiCollapseGridHtml.length > 0;
     if (!showSection7Tables) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
     }
@@ -3972,12 +4155,12 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
     }
     const showSection9 =
-      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
+      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0;
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
     }
     const showSection9Table =
-      Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0;
+      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0;
     if (!showSection9Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
     }
@@ -4086,6 +4269,12 @@ export default async function handler(req, res) {
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
     );
+    // Underwriting token replacements (before leftover cleanup)
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = replaceAll(finalHtml, "{{DEBT_CAPITAL_STRUCTURE_ROWS}}", debtCapitalRowsHtml);
+      finalHtml = replaceAll(finalHtml, "{{REFI_SENSITIVITY_MATRIX_BLOCK}}", refiCollapseGridHtml);
+      finalHtml = replaceAll(finalHtml, "{{DCF_TABLE_BLOCK}}", dcfTableHtml);
+    }
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     const execRationale = (screeningClass && screeningExplanation)
       ? `${screeningExplanation}${whyLine ? " " + whyLine : ""}`
