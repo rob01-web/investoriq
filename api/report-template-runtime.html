@@ -135,7 +135,7 @@
     font-size: 9px;
     font-weight: 600;
     color: #6B7280;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     margin-bottom: 10px;
     white-space: nowrap;
@@ -222,8 +222,17 @@
       font-weight: 700;
       color: #1a2744;
       letter-spacing: 0.04em;
-      margin-bottom: 8px;
+      margin-bottom: 2px;
       margin-top: 40px;
+    }
+
+    .section-header-sub {
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      color: #6B7280;
+      letter-spacing: 0.02em;
+      margin: 2px 0 8px 0;
     }
 
     .section-header-rule {
@@ -1074,7 +1083,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S2_INCOME_FORENSICS -->
 <section class="section page-break">
-  <div class="section-header">Income &amp; Revenue Forensics &mdash; Income Composition, Concentration, and Stability</div>
+  <div class="section-header">Income &amp; Revenue Forensics</div>
+  <div class="section-header-sub">Income Composition, Concentration, and Stability</div>
   <hr class="section-header-rule">
 
   {{SCREENING_INCOME_FORENSICS_BLOCK}}
@@ -1083,7 +1093,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->
 <section class="section page-break">
-  <div class="section-header">Expense Structure Analysis &mdash; Expense Ratio, Drivers, and Intensity Flags</div>
+  <div class="section-header">Expense Structure Analysis</div>
+  <div class="section-header-sub">Expense Ratio, Drivers, and Intensity Flags</div>
   <hr class="section-header-rule">
 
   {{SCREENING_EXPENSE_STRUCTURE_BLOCK}}
@@ -1092,7 +1103,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S4_NOI_STABILITY -->
 <section class="section page-break">
-  <div class="section-header">NOI Stability Review &mdash; Margin, Volatility, and Operating Leverage Indicators</div>
+  <div class="section-header">NOI Stability Review</div>
+  <div class="section-header-sub">Margin, Volatility, and Operating Leverage Indicators</div>
   <hr class="section-header-rule">
 
   {{SCREENING_NOI_STABILITY_BLOCK}}
@@ -1101,7 +1113,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S5_RENT_ROLL_DISTRIBUTION -->
 <section class="section page-break">
-  <div class="section-header">Rent Roll Distribution &mdash; Occupancy, Rent Dispersion, and Unit Mix Profile</div>
+  <div class="section-header">Rent Roll Distribution</div>
+  <div class="section-header-sub">Occupancy, Rent Dispersion, and Unit Mix Profile</div>
   <hr class="section-header-rule">
 
   {{SCREENING_RENT_ROLL_BLOCK}}
@@ -1110,7 +1123,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S7_DATA_COVERAGE_GAPS -->
 <section class="section page-break">
-  <div class="section-header">Data Coverage &amp; Underwriting Gaps &mdash; Missing Inputs and Omitted Sections</div>
+  <div class="section-header">Data Coverage &amp; Underwriting Gaps</div>
+  <div class="section-header-sub">Missing Inputs and Omitted Sections</div>
   <hr class="section-header-rule">
 
   {{SCREENING_DATA_COVERAGE_BLOCK}}
@@ -1119,7 +1133,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
 <section class="section page-break">
-  <div class="section-header">Refinance Data Sufficiency &mdash; Eligibility for Refinance Stability Classification</div>
+  <div class="section-header">Refinance Data Sufficiency</div>
+  <div class="section-header-sub">Eligibility for Refinance Stability Classification</div>
   <hr class="section-header-rule">
 
   {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
@@ -1131,7 +1146,8 @@ ul, ol {
 <!-- 3.0 Scenario Analysis & Five-Year Outlook -->
 <!-- BEGIN SECTION_3 -->
 <section class="section page-break">
-  <div class="section-header">Scenario Analysis &amp; Five-Year Outlook &mdash; Cash Flow Projections and Return Sensitivities</div>
+  <div class="section-header">Scenario Analysis &amp; Five-Year Outlook</div>
+  <div class="section-header-sub">Cash Flow Projections and Return Sensitivities</div>
   <hr class="section-header-rule">
 
   <!-- BEGIN CASH_FLOW_PROJECTIONS -->
@@ -1190,7 +1206,8 @@ ul, ol {
 
 <!-- BEGIN SECTION_4_NEIGHBORHOOD -->
 <section class="section page-break">
-  <div class="section-header">Neighborhood Fundamentals &mdash; {{PROPERTY_SUBMARKET}} Location Review</div>
+  <div class="section-header">Neighborhood Fundamentals</div>
+  <div class="section-header-sub">{{PROPERTY_SUBMARKET}} Location Review</div>
   <hr class="section-header-rule">
   </section>
 <!-- END SECTION_4_NEIGHBORHOOD -->
@@ -1201,7 +1218,8 @@ ul, ol {
 <!-- 5.0 Risk Scoring & Sensitivities -->
 <!-- BEGIN SECTION_5 -->
 <section class="section page-break">
-  <div class="section-header">Risk Scoring &amp; Sensitivities &mdash; Risk Matrix and Mitigation Framework</div>
+  <div class="section-header">Risk Scoring &amp; Sensitivities</div>
+  <div class="section-header-sub">Risk Matrix and Mitigation Framework</div>
   <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC RISK ASSESSMENT GOES HERE -->
@@ -1231,7 +1249,8 @@ ul, ol {
 <!-- 6.0 Renovation Strategy & Capital Plan -->
 <!-- BEGIN SECTION_6 -->
 <section class="section page-break">
-  <div class="section-header">Renovation Strategy &amp; Capital Plan &mdash; Scope, Budget Allocation, and Value Creation Drivers</div>
+  <div class="section-header">Renovation Strategy &amp; Capital Plan</div>
+  <div class="section-header-sub">Scope, Budget Allocation, and Value Creation Drivers</div>
   <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC RENOVATION INTRO -->
@@ -1314,7 +1333,8 @@ ul, ol {
 <!-- 7.0 Debt Structure & Financing -->
 <!-- BEGIN SECTION_7 -->
 <section class="section page-break">
-  <div class="section-header">Debt Structure &amp; Financing &mdash; Leverage, DSCR, and Refinance Considerations</div>
+  <div class="section-header">Debt Structure &amp; Financing</div>
+  <div class="section-header-sub">Leverage, DSCR, and Refinance Considerations</div>
   <hr class="section-header-rule">
 
   <!-- BEGIN DEBT_STRUCTURE -->
@@ -1385,7 +1405,8 @@ ul, ol {
 <!-- 8.0 Deal Scorecard & Radar -->
 <!-- BEGIN SECTION_8 -->
 <section class="section page-break">
-  <div class="section-header">Deal Scorecard &amp; Radar &mdash; InvestorIQ Deal Score Components</div>
+  <div class="section-header">Deal Scorecard &amp; Radar</div>
+  <div class="section-header-sub">InvestorIQ Deal Score Components</div>
   <hr class="section-header-rule">
 
   <!-- 🔥 DYNAMIC DEAL SCORE SUMMARY -->
@@ -1440,7 +1461,8 @@ ul, ol {
 <!-- 9.0 Discounted Cash Flow (DCF) -->
 <!-- BEGIN SECTION_9 -->
 <section class="section page-break">
-  <div class="section-header">Discounted Cash Flow (DCF) &mdash; Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)</div>
+  <div class="section-header">Discounted Cash Flow (DCF)</div>
+  <div class="section-header-sub">Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)</div>
   <hr class="section-header-rule">
 
   <p class="section-intro">
@@ -1468,7 +1490,8 @@ ul, ol {
 <!-- 10.0 Advanced Financial Modeling -->
 <!-- BEGIN SECTION_10 -->
 <section class="section page-break">
-  <div class="section-header">Advanced Financial Modeling &mdash; Expense Profile, DCF Outcomes, and Comparable Positioning</div>
+  <div class="section-header">Advanced Financial Modeling</div>
+  <div class="section-header-sub">Expense Profile, DCF Outcomes, and Comparable Positioning</div>
   <hr class="section-header-rule">
 
   <!-- BEGIN ADVANCED_MODELING_INTRO -->
@@ -1542,7 +1565,8 @@ ul, ol {
 <!-- 11.0 Final Recommendations -->
 <!-- BEGIN SECTION_11 -->
 <section class="section page-break">
-  <div class="section-header">Final Recommendations &mdash; Action Plan, Negotiation Strategy, and Deal Breakers</div>
+  <div class="section-header">Final Recommendations</div>
+  <div class="section-header-sub">Action Plan, Negotiation Strategy, and Deal Breakers</div>
   <hr class="section-header-rule">
 
   <!-- BEGIN FINAL_RECOMMENDATIONS -->
