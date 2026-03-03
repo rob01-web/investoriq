@@ -34,3 +34,4 @@ Thumbs.db
 coverage/
 *.lcov
 Project file.zip
+.vercel
