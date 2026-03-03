@@ -2353,6 +2353,20 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         propertyTaxPayload = propertyTaxArtifact?.payload || null;
+        // Fetch loan term sheet — used as fallback when no full mortgage statement was uploaded
+        const { data: loanTermSheetArtifact } = await supabase
+          .from("analysis_artifacts")
+          .select("payload")
+          .eq("job_id", jobId)
+          .eq("type", "loan_term_sheet_parsed")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const loanTermSheetPayload = loanTermSheetArtifact?.payload || null;
+        // Fall back to loan term sheet when no mortgage statement was parsed
+        if (!mortgagePayload && loanTermSheetPayload) {
+          mortgagePayload = loanTermSheetPayload;
+        }
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
