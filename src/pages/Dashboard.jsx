@@ -490,6 +490,7 @@ const hasCapex = uploadedFiles.some((item) =>
 );
 const hasUnderwritingSupportDocs = uploadedFiles.some(
   (f) =>
+    f.docType === 'supporting_documents' ||
     f.docType === 'supporting_documents_ui' ||
     supportingDocTypes.some((t) => t.docType === f.docType)
 );
@@ -503,17 +504,17 @@ const hasMarket = uploadedFiles.some((item) =>
 );
 // Underwriting preflight — derived from staged files (display-only, no state)
 const preflightDebtTerms = uploadedFiles.some((f) => {
-  if (f.docType !== 'supporting_documents_ui') return false;
+  if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
   const n = String(f.original_name || f.file?.name || '').toLowerCase();
   return n.includes('term') || n.includes('debt') || n.includes('loan');
 });
 const preflightPropertyTax = uploadedFiles.some((f) => {
-  if (f.docType !== 'supporting_documents_ui') return false;
+  if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
   const n = String(f.original_name || f.file?.name || '').toLowerCase();
   return n.includes('tax');
 });
 const preflightAppraisal = uploadedFiles.some((f) => {
-  if (f.docType !== 'supporting_documents_ui') return false;
+  if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
   const n = String(f.original_name || f.file?.name || '').toLowerCase();
   return n.includes('appraisal');
 });
@@ -842,12 +843,17 @@ if (!stagedBatchId) {
       return;
     }
 
+    const rawDt = String(slotDocType || '').toLowerCase().trim();
+    const normalizedSlotDocType =
+      rawDt === 'supporting' || rawDt === 'supporting_documents_ui'
+        ? 'supporting_documents'
+        : rawDt;
     stagedEntries.push({
       storage_path: objectPath,
       original_name: safeName,
       content_type: file.type || 'application/octet-stream',
       size: file.size,
-      docType: slotDocType,
+      docType: normalizedSlotDocType,
       file,
     });
   }
@@ -1594,6 +1600,7 @@ if (!stagedBatchId) {
                   {(() => {
                     const supportingFiles = uploadedFiles.filter(
                       (f) =>
+                        f.docType === 'supporting_documents' ||
                         f.docType === 'supporting_documents_ui' ||
                         supportingDocTypes.some((t) => t.docType === f.docType)
                     );
@@ -1829,7 +1836,7 @@ if (!stagedBatchId) {
               type="file"
               multiple
               accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt"
-              onChange={(e) => handleUpload(e, 'supporting_documents_ui')}
+              onChange={(e) => handleUpload(e, 'supporting_documents')}
               className="hidden"
             />
             </motion.div>
