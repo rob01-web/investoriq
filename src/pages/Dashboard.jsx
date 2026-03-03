@@ -912,7 +912,7 @@ if (!stagedBatchId) {
         staged_files: uploadedFiles,
       };
 
-      const stagedFilesPayload = (uploadedFiles || [])
+            const stagedFilesPayload = (uploadedFiles || [])
         .filter((file) => {
           const dt = String(file?.docType || '').toLowerCase();
           if (reportType === 'underwriting') return dt.length > 0; // include all staged docs
@@ -929,7 +929,6 @@ if (!stagedBatchId) {
             size: file.size || file.file?.size || 0,
             doc_type: normalizedDocType,
           };
-        });
         });
 
       console.log('[Generate] RPC consume_purchase_and_create_job request', {
