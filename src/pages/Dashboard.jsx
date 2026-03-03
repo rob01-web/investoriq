@@ -535,6 +535,12 @@ const showNeedsDocsWarning =
   activeJobForRuns?.status === 'needs_documents' &&
   Boolean(activeNeedsDocumentsEvent);
 const safeName = (s) => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
+const normalizeDocType = (s) => {
+  const dt = String(s || '').toLowerCase().trim();
+  if (!dt) return '';
+  if (dt === 'supporting' || dt === 'supporting_documents_ui') return 'supporting_documents';
+  return dt;
+};
 const formatDocLabel = (label) => {
   const normalized = String(label || '').trim().toLowerCase();
   if (normalized === 't12_or_operating_statement' || normalized === 't12') {
@@ -843,17 +849,12 @@ if (!stagedBatchId) {
       return;
     }
 
-    const rawDt = String(slotDocType || '').toLowerCase().trim();
-    const normalizedSlotDocType =
-      rawDt === 'supporting' || rawDt === 'supporting_documents_ui'
-        ? 'supporting_documents'
-        : rawDt;
     stagedEntries.push({
       storage_path: objectPath,
       original_name: safeName,
       content_type: file.type || 'application/octet-stream',
       size: file.size,
-      docType: normalizedSlotDocType,
+      docType: normalizeDocType(slotDocType),
       file,
     });
   }
@@ -948,11 +949,7 @@ if (!stagedBatchId) {
           return dt === 'rent_roll' || dt === 't12'; // screening-style only
         })
         .map((file) => {
-          const dt = String(file?.docType || '').toLowerCase().trim();
-          const normalizedDocType =
-            dt === 'supporting_documents_ui' || dt === 'supporting'
-              ? 'supporting_documents'
-              : dt;
+          const normalizedDocType = normalizeDocType(file?.docType);
 
           return {
             storage_path: file.storage_path || file.path,
