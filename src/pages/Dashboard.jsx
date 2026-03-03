@@ -913,19 +913,24 @@ if (!stagedBatchId) {
       };
 
       const stagedFilesPayload = (uploadedFiles || [])
-        .filter(
-          (file) =>
-            ['rent_roll', 't12'].includes(file.docType) ||
-            file.docType === 'supporting_documents_ui' ||
-            supportingDocTypes.some((t) => t.docType === file.docType)
-        )
-        .map((file) => ({
-          storage_path: file.storage_path || file.path,
-          original_name: file.original_name || file.file?.name || 'file',
-          content_type: file.content_type || file.file?.type || 'application/octet-stream',
-          size: file.size || file.file?.size || 0,
-          doc_type: file.docType,
-        }));
+        .filter((file) => {
+          const dt = String(file?.docType || '').toLowerCase();
+          if (reportType === 'underwriting') return dt.length > 0; // include all staged docs
+          return dt === 'rent_roll' || dt === 't12'; // screening-style only
+        })
+        .map((file) => {
+          const dt = String(file?.docType || '').toLowerCase();
+          const normalizedDocType = dt === 'supporting_documents_ui' ? 'supporting_documents' : dt;
+
+          return {
+            storage_path: file.storage_path || file.path,
+            original_name: file.original_name || file.file?.name || 'file',
+            content_type: file.content_type || file.file?.type || 'application/octet-stream',
+            size: file.size || file.file?.size || 0,
+            doc_type: normalizedDocType,
+          };
+        });
+        });
 
       console.log('[Generate] RPC consume_purchase_and_create_job request', {
         p_report_type: reportType,
@@ -1452,7 +1457,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              � - 
+                              Ã¯Â¿Â½ - 
                             </button>
                           </div>
                         ))
@@ -1540,7 +1545,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              � - 
+                              Ã¯Â¿Â½ - 
                             </button>
                           </div>
                         ))
@@ -1826,7 +1831,7 @@ if (!stagedBatchId) {
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
                 >
-                  {loading ? 'Working…' : 'Generate Report'}
+                  {loading ? 'WorkingÃ¢â‚¬Â¦' : 'Generate Report'}
                 </button>
                 <div className="text-xs leading-relaxed text-slate-500">
                   Each purchase allows a single generation. Once generation begins, refunds are not available.
@@ -2276,7 +2281,7 @@ if (!stagedBatchId) {
                 }}
                 className="rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
               >
-                {issueSubmitting ? 'Submitting…' : 'Submit'}
+                {issueSubmitting ? 'SubmittingÃ¢â‚¬Â¦' : 'Submit'}
               </button>
             </div>
           </div>
