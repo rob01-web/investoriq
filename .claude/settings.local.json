@@ -14,7 +14,8 @@
       "Bash(node --check \"c:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/api/parse/parse-doc.js\")",
       "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\src\\\\pages\\\\Dashboard.jsx\")",
       "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\admin-run-worker.js\")",
-      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\parse\\\\parse-doc.js\")"
+      "Bash(node --check \"c:\\\\Users\\\\robmc\\\\Desktop\\\\InvestorIQ\\\\InvestorIQ-Empire-v1\\\\api\\\\parse\\\\parse-doc.js\")",
+      "Bash(npm run build)"
     ]
   }
 }

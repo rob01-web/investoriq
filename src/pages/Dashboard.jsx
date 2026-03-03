@@ -501,6 +501,25 @@ const hasMarket = uploadedFiles.some((item) =>
     item.docType
   )
 );
+// Underwriting preflight — derived from staged files (display-only, no state)
+const preflightDebtTerms = uploadedFiles.some((f) => {
+  if (f.docType !== 'supporting_documents_ui') return false;
+  const n = String(f.original_name || f.file?.name || '').toLowerCase();
+  return n.includes('term') || n.includes('debt') || n.includes('loan');
+});
+const preflightPropertyTax = uploadedFiles.some((f) => {
+  if (f.docType !== 'supporting_documents_ui') return false;
+  const n = String(f.original_name || f.file?.name || '').toLowerCase();
+  return n.includes('tax');
+});
+const preflightAppraisal = uploadedFiles.some((f) => {
+  if (f.docType !== 'supporting_documents_ui') return false;
+  const n = String(f.original_name || f.file?.name || '').toLowerCase();
+  return n.includes('appraisal');
+});
+const preflightHardMissing =
+  selectedReportType === 'underwriting' &&
+  (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
 const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
 const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
 const activeJobForRuns =
@@ -514,6 +533,7 @@ const showNeedsDocsWarning =
   activeJobForRuns?.id === jobId &&
   activeJobForRuns?.status === 'needs_documents' &&
   Boolean(activeNeedsDocumentsEvent);
+const safeName = (s) => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
 const formatDocLabel = (label) => {
   const normalized = String(label || '').trim().toLowerCase();
   if (normalized === 't12_or_operating_statement' || normalized === 't12') {
@@ -900,6 +920,9 @@ if (!stagedBatchId) {
       return;
     }
 
+    // Snapshot entitlement count before spending so we can compare on failure
+    const preRunEntitlementCount = entitlements[selectedReportType] ?? 0;
+
     // ELITE UX: Trigger the "Working" state immediately
     analyzeInFlightRef.current = true;
     setLoading(true);
@@ -919,8 +942,11 @@ if (!stagedBatchId) {
           return dt === 'rent_roll' || dt === 't12'; // screening-style only
         })
         .map((file) => {
-          const dt = String(file?.docType || '').toLowerCase();
-          const normalizedDocType = dt === 'supporting_documents_ui' ? 'supporting_documents' : dt;
+          const dt = String(file?.docType || '').toLowerCase().trim();
+          const normalizedDocType =
+            dt === 'supporting_documents_ui' || dt === 'supporting'
+              ? 'supporting_documents'
+              : dt;
 
           return {
             storage_path: file.storage_path || file.path,
@@ -931,6 +957,7 @@ if (!stagedBatchId) {
           };
         });
 
+      console.log('[Generate] stagedFilesPayload', stagedFilesPayload);
       console.log('[Generate] RPC consume_purchase_and_create_job request', {
         p_report_type: reportType,
         p_job_payload: jobPayload,
@@ -1045,11 +1072,15 @@ if (!stagedBatchId) {
 
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
+      // Refresh entitlements and report whether credit was actually restored
+      await fetchEntitlements();
+      const postRunEntitlementCount = entitlements[selectedReportType] ?? 0;
+      const creditRestored = postRunEntitlementCount > preRunEntitlementCount;
       toast({
         title: 'Unable to queue report',
         description: `Generate failed at queue_job_for_processing: ${
           error.message || 'An error occurred while starting the underwriting run.'
-        }`,
+        }${creditRestored ? ' Credit restored.' : ' If this failure was system-caused, your credit will be restored automatically after verification.'}`,
         variant: 'destructive',
       });
     } finally {
@@ -1432,7 +1463,7 @@ if (!stagedBatchId) {
                           >
                             <div className="min-w-0">
                               <div className="truncate text-xs font-semibold text-[#0F172A]">
-                                {entry.file.name}
+                                {safeName(entry.file.name)}
                               </div>
                               <div className="text-[10px] text-slate-500">
                                 {entry.file.size < 1024 * 1024
@@ -1520,7 +1551,7 @@ if (!stagedBatchId) {
                           >
                             <div className="min-w-0">
                               <div className="truncate text-xs font-semibold text-[#0F172A]">
-                                {entry.file.name}
+                                {safeName(entry.file.name)}
                               </div>
                               <div className="text-[10px] text-slate-500">
                                 {entry.file.size < 1024 * 1024
@@ -1612,7 +1643,7 @@ if (!stagedBatchId) {
                             }`}
                           >
                             <UploadCloud className="h-4 w-4" />
-                            {supportingFiles.length > 0 ? 'Replace' : 'Upload'}
+                            Upload
                           </button>
                         </div>
                         <div className="mt-2 space-y-2">
@@ -1626,7 +1657,7 @@ if (!stagedBatchId) {
                               >
                                 <div className="min-w-0">
                                   <div className="truncate text-xs font-semibold text-[#0F172A]">
-                                    {entry.file.name}
+                                    {safeName(entry.file.name)}
                                   </div>
                                   <div className="text-[10px] text-slate-500">
                                     {entry.file.size < 1024 * 1024
@@ -1659,6 +1690,46 @@ if (!stagedBatchId) {
                       </div>
                     );
                   })()}
+                </div>
+                {/* Underwriting preflight checklist */}
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Document Preflight</div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-600">Rent Roll</span>
+                      <span className={`font-semibold ${hasRentRoll ? 'text-green-700' : 'text-red-700'}`}>{hasRentRoll ? 'Present' : 'Missing'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-600">T12 (Operating Statement)</span>
+                      <span className={`font-semibold ${hasT12 ? 'text-green-700' : 'text-red-700'}`}>{hasT12 ? 'Present' : 'Missing'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-600">Supporting Docs (Financing / Diligence)</span>
+                      <span className={`font-semibold ${hasUnderwritingSupportDocs ? 'text-green-700' : 'text-red-700'}`}>{hasUnderwritingSupportDocs ? 'Present' : 'Missing'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-400">Debt Terms (term sheet / mortgage)</span>
+                      <span className={`font-medium ${preflightDebtTerms ? 'text-green-700' : 'text-amber-600'}`}>{preflightDebtTerms ? 'Found' : 'Recommended'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-400">Property Tax</span>
+                      <span className={`font-medium ${preflightPropertyTax ? 'text-green-700' : 'text-slate-400'}`}>{preflightPropertyTax ? 'Found' : 'Optional'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-400">Appraisal</span>
+                      <span className={`font-medium ${preflightAppraisal ? 'text-green-700' : 'text-slate-400'}`}>{preflightAppraisal ? 'Found' : 'Optional'}</span>
+                    </div>
+                  </div>
+                  {preflightHardMissing && (
+                    <div className="mt-2 pt-2 border-t border-slate-200 text-xs font-semibold text-red-700">
+                      Missing required documents. Underwriting generation is blocked until required items are uploaded.
+                    </div>
+                  )}
+                  {!preflightHardMissing && !preflightDebtTerms && (
+                    <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-amber-700">
+                      Some optional inputs are missing; related sections may be omitted fail-closed.
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -1923,7 +1994,7 @@ if (!stagedBatchId) {
                     </div>
                     <div className="mt-1 text-sm text-red-700">
                       {job.failure_reason ||
-                        'Analysis failed due to a system error. Your credit has been automatically restored. Please try again or contact support if the issue persists.'}
+                        'Analysis failed due to a system error. If this failure was system-caused, your credit will be restored automatically. Please try again or contact support if the issue persists.'}
                     </div>
                   </div>
                 </div>
