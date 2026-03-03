@@ -848,6 +848,7 @@ ul, ol {
 
           <div class="cover-brand-name">INVESTORIQ</div>
           <div class="cover-brand-sub">Institutional Grade Property Intelligence</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6B7280;margin-top:4px;">{{COVER_REPORT_TYPE_LABEL}}</div>
 
           <div class="cover-prop-name">{{PROPERTY_NAME}}</div>
           <div class="cover-prop-sub">{{PROPERTY_SUBMARKET}}</div>
@@ -890,7 +891,7 @@ ul, ol {
       </div>
       <div style="text-align:right;">
         <div style="font-size:13px; font-weight:600; color:var(--navy);">
-          Property Intelligence Report
+          {{REPORT_TYPE_LABEL}}
         </div>
         <div style="font-size:11px; color:#6B7280;">
   {{PROPERTY_NAME}} &middot; {{PROPERTY_SUBMARKET}}
@@ -964,6 +965,13 @@ ul, ol {
             <div class="kpi-label">Break-even Occupancy</div>
             <div class="kpi-value">{{EXEC_BREAK_EVEN_OCCUPANCY}}</div>
           </div>
+
+          <!-- BEGIN EXEC_DSCR_CARD -->
+          <div class="kpi-card">
+            <div class="kpi-label">DSCR (Computed)</div>
+            <div class="kpi-value">{{EXEC_DSCR_COMPUTED}}</div>
+          </div>
+          <!-- END EXEC_DSCR_CARD -->
 
         </div>
 
@@ -1206,6 +1214,7 @@ ul, ol {
   {{SCENARIO_TABLE}}
 
 
+<!-- BEGIN RETURN_SUMMARY_SUBSECTION -->
   <!-- Five-Year Return Summary -->
   <p class="subsection-title" style="margin-top:18px;">Five-Year Return Summary</p>
 
@@ -1217,7 +1226,8 @@ ul, ol {
       across scenarios. Exit values are derived from stabilized NOI and scenario-specific exit
       capitalization rates.
     </p>
-  
+<!-- END RETURN_SUMMARY_SUBSECTION -->
+
 
   <!-- Interpretation -->
 <!-- BEGIN CASH_FLOW_PROJECTIONS -->

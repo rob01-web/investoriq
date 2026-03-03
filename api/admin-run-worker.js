@@ -162,6 +162,48 @@ export default async function handler(req, res) {
           },
         },
       ]);
+
+      // Best-effort entitlement restore — always return the credit on any hard failure
+      try {
+        const { data: failedJobRow } = await supabaseAdmin
+          .from('analysis_jobs')
+          .select('purchase_id')
+          .eq('id', job.id)
+          .maybeSingle();
+        let restorePurchaseId = failedJobRow?.purchase_id || null;
+        if (!restorePurchaseId) {
+          const { data: purchaseByJobRow } = await supabaseAdmin
+            .from('report_purchases')
+            .select('id')
+            .eq('job_id', job.id)
+            .not('consumed_at', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          restorePurchaseId = purchaseByJobRow?.id || null;
+        }
+        if (restorePurchaseId) {
+          const { data: restoredPurchase } = await supabaseAdmin
+            .from('report_purchases')
+            .update({ consumed_at: null })
+            .eq('id', restorePurchaseId)
+            .not('consumed_at', 'is', null)
+            .select('id')
+            .maybeSingle();
+          if (restoredPurchase?.id) {
+            await supabaseAdmin
+              .from('analysis_jobs')
+              .update({ purchase_id: null })
+              .eq('id', job.id);
+            await writeWorkerEventArtifact(job.id, job.user_id, 'entitlement_restored', {
+              reason: `job_failed_${stage}`,
+              purchase_id: restorePurchaseId,
+              timestamp: nowIso,
+            });
+          }
+        }
+      } catch (restoreErr) {
+        console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
+      }
     };
 
     const hasCreditConsumed = async (jobId) => {
@@ -554,16 +596,26 @@ export default async function handler(req, res) {
           const otherPendingFiles = (jobFiles || []).filter((file) => {
             const docType = String(file.doc_type || '').toLowerCase();
             const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-            return docType === 'other' && isPending;
+            return (
+              docType === 'other' ||
+              docType === 'supporting_documents' ||
+              docType === 'supporting_documents_ui'
+            ) && isPending;
           });
 
           if (otherPendingFiles.length > 0) {
             for (const file of otherPendingFiles) {
               try {
+                // Normalize supporting_documents_ui → supporting_documents so parse-doc
+                // can apply inferDocTypeFromText() to auto-classify the file
+                const dispatchDocType =
+                  String(file.doc_type || '').toLowerCase() === 'supporting_documents_ui'
+                    ? 'supporting_documents'
+                    : file.doc_type;
                 const supportingRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                   method: 'POST',
                   headers: parserHeaders,
-                  body: JSON.stringify({ job_id: job.id, file_id: file.id, doc_type: file.doc_type }),
+                  body: JSON.stringify({ job_id: job.id, file_id: file.id, doc_type: dispatchDocType }),
                 });
                 if (!supportingRes.ok) {
                   const workerEventErr = await writeWorkerEventArtifact(
@@ -1562,6 +1614,19 @@ export default async function handler(req, res) {
             if (!baseUrl) {
               generatorError = 'Missing base URL for report generation.';
             } else {
+              // Fetch supporting docs fresh for this job (supportingDocs from the extracting
+              // loop is block-scoped there and not accessible here)
+              const { data: renderJobFiles, error: renderJobFilesErr } = await supabaseAdmin
+                .from('analysis_job_files')
+                .select('id, doc_type, original_filename, object_path, mime_type, parse_status')
+                .eq('job_id', job.id);
+              if (renderJobFilesErr) {
+                throw new Error(`Failed to fetch job files for rendering: ${renderJobFilesErr.message}`);
+              }
+              const renderSupportingDocs = (renderJobFiles || []).filter(
+                (f) => !['rent_roll', 't12'].includes(f.doc_type)
+              );
+
               const headers = { 'Content-Type': 'application/json' };
               const forwardedKey = req.headers['x-admin-run-key'];
               headers['x-admin-run-key'] = Array.isArray(forwardedKey)
@@ -1576,7 +1641,7 @@ export default async function handler(req, res) {
                   userId: job.user_id,
                   property_name: job.property_name,
                   jobId: job.id,
-                  supporting_documents: supportingDocs,
+                  supporting_documents: renderSupportingDocs,
                 }),
               });
 
