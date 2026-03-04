@@ -403,6 +403,23 @@ function sanitizeTypography(html) {
     .replace(/[â€”]/g, "-")
     .replace(/Â/g, "");
 }
+
+function dedupeDataNotAvailableBySection(html) {
+  if (typeof html !== "string") return html;
+  const sectionPattern = /<!-- BEGIN ([A-Z0-9_]+) -->([\s\S]*?)<!-- END \1 -->/g;
+  const shortDna = "DATA NOT AVAILABLE";
+  return html.replace(sectionPattern, (full, token, body) => {
+    if (typeof body !== "string" || !body.includes(DATA_NOT_AVAILABLE)) return full;
+    const note =
+      `<p class="small data-gap-note">${DATA_NOT_AVAILABLE}. ` +
+      "Metrics that depend on missing source inputs are shown as unavailable.</p>";
+    let nextBody = body.split(DATA_NOT_AVAILABLE).join(shortDna);
+    if (!/class="small data-gap-note"/.test(nextBody)) {
+      nextBody = `${note}${nextBody}`;
+    }
+    return `<!-- BEGIN ${token} -->${nextBody}<!-- END ${token} -->`;
+  });
+}
 function stripMarkedSection(html, key) {
   const token = String(key || "");
   if (!token) return html;
@@ -5110,7 +5127,7 @@ if (!hasSectionTwelve) {
 let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
-const docHtml = htmlString;
+let docHtml = dedupeDataNotAvailableBySection(htmlString);
 const docraptorMode =
   process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
 const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
