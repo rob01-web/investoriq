@@ -2982,32 +2982,33 @@ export default async function handler(req, res) {
       }
     }
     const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
+    // Operating profile classification — computed for both modes (deterministic threshold math)
+    if (!screeningHasSufficientData) {
+      screeningClass = "Insufficient Data";
+      screeningExplanation =
+        "Insufficient operating data to assess acquisition viability.";
+    } else if (
+      (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
+      (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
+      (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85)
+    ) {
+      screeningClass = "Fragile";
+      screeningExplanation =
+        "Operating margin is thin and vulnerable to modest income or expense shocks.";
+    } else if (
+      (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
+      (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
+      (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75)
+    ) {
+      screeningClass = "Sensitized";
+      screeningExplanation =
+        "Cash flow performance is viable but sensitive to revenue disruption or expense inflation.";
+    } else {
+      screeningClass = "Stable";
+      screeningExplanation =
+        "Operating profile demonstrates margin resilience under current income structure.";
+    }
     if (effectiveReportMode === "screening_v1") {
-      if (!screeningHasSufficientData) {
-        screeningClass = "Insufficient Data";
-        screeningExplanation =
-          "Insufficient operating data to assess acquisition viability.";
-      } else if (
-        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
-        (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
-        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85)
-      ) {
-        screeningClass = "Fragile";
-        screeningExplanation =
-          "Operating margin is thin and vulnerable to modest income or expense shocks.";
-      } else if (
-        (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
-        (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
-        (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75)
-      ) {
-        screeningClass = "Sensitized";
-        screeningExplanation =
-          "Cash flow performance is viable but sensitive to revenue disruption or expense inflation.";
-      } else {
-        screeningClass = "Stable";
-        screeningExplanation =
-          "Operating profile demonstrates margin resilience under current income structure.";
-      }
       execScreeningLines.push(
         `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningClass}`)}</p>`
       );
@@ -3901,11 +3902,9 @@ export default async function handler(req, res) {
     if (!hasDocSources || effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
-    const showExec =
-      effectiveReportMode === "screening_v1"
-        ? true
-        : hasMeaningfulNarrative(getNarrativeHtml("execSummary"));
-    if (!showExec) {
+    // Exec summary always shows — both modes have computed KPI grid + verdict block
+    // (v1_core previously gated on AI narrative "execSummary" which is never populated)
+    if (false) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
     }
     const showUnitValueAdd = hasMeaningfulNarrative(getNarrativeHtml("unitValueAdd"));
@@ -4025,9 +4024,11 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
     }
     let scenarioTableHtml = "";
+    // Note: scenarioTableHtml is built later in the v1_core block (~line 4210+).
+    // Do NOT check scenarioTableHtml.length here — it's always "" at this point.
     const showSection3 =
       (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
-      (effectiveReportMode === "v1_core" && scenarioTableHtml.length > 0);
+      (effectiveReportMode === "v1_core" && hasT12Data); // v1_core always builds scenario table from T12
     if (!showSection3) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
     }
@@ -4101,7 +4102,7 @@ export default async function handler(req, res) {
       const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
       const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
       const baseCapPct = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? rawCapPct : 5.5;
-      const capSource = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? "appraisal" : "assumed 5.5%";
+      const capSource = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? "appraisal" : "stated default";
 
       if (Number.isFinite(noiBase) && noiBase > 0 && Number.isFinite(baseRatePct) && baseRatePct > 0 && Number.isFinite(debtBal) && debtBal > 0) {
         const LTV = 0.75;
@@ -4165,7 +4166,7 @@ export default async function handler(req, res) {
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
       const rawExitCapPct = coerceNumber(appraisalPayload?.cap_rate);
       const exitCapPct = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? rawExitCapPct : 5.5;
-      const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "assumed 5.5%";
+      const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "stated default";
       const GROWTH = 0.03; // 3% annual NOI growth ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â stated assumption
       const DISCOUNT = 0.08; // 8% discount rate ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â stated assumption
 
