@@ -4829,8 +4829,14 @@ export default async function handler(req, res) {
     // Chart 3: Rent Distribution (in-place vs market by unit type)
     {
       let html = "";
+      const avgInplaceRent = coerceNumber(computedRentRoll?.avg_in_place_rent);
+      const avgMarketRent = coerceNumber(computedRentRoll?.avg_market_rent);
+      const inplace = avgInplaceRent;
+      const market = avgMarketRent;
       const unitMixData = Array.isArray(computedRentRoll?.unit_mix) ? computedRentRoll.unit_mix : [];
-      if (unitMixData.length > 0) {
+      if (!inplace || !market) {
+        finalHtml = replaceAll(finalHtml, "{{RENT_DISTRIBUTION_CHART}}", "");
+      } else if (unitMixData.length > 0) {
         const maxRent = Math.max(...unitMixData.flatMap(u => [
           coerceNumber(u.avg_market_rent ?? u.market_rent) || 0,
           coerceNumber(u.avg_in_place_rent ?? u.in_place_rent) || 0,
