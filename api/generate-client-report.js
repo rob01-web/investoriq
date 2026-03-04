@@ -2681,6 +2681,17 @@ export default async function handler(req, res) {
     );
     // 6. Inject charts (URLs  -  can be overridden by caller)
     finalHtml = applyChartPlaceholders(finalHtml, charts);
+    const radarMatch = finalHtml.match(
+      /<img[^>]*class="chart-img chart-img--deal-score-radar"[^>]*src="([^"]*)"/i
+    );
+    const radarHtml = radarMatch?.[1] || "";
+    let radarSectionHtml = "present";
+    if (!radarHtml || radarHtml.trim() === "") {
+      radarSectionHtml = "";
+    }
+    if (radarSectionHtml === "") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+    }
     // 7. Inject ALL narrative sections (12)
     const execMetricsParts = [];
     const execUnits = coerceNumber(
