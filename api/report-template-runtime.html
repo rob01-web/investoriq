@@ -864,6 +864,8 @@ ul, ol {
           </div>
 <!-- END COVER_METRIC_STRIP -->
 
+          {{COVER_ASSET_SNAPSHOT}}
+
           <div class="cover-footer-row">
             <span class="cover-footer-text">Confidential &mdash; InvestorIQ Technologies Inc.</span>
             <span class="cover-footer-text">{{REPORT_DATE}}</span>
@@ -1022,6 +1024,89 @@ ul, ol {
 </section>
 <!-- END SECTION_0_5 -->
 
+<!-- BEGIN SECTION_7_REFI_STABILITY -->
+<section class="section page-break">
+  <div class="section-header">Refinance Stability Classification</div>
+  <hr class="section-header-rule">
+  <p class="small">
+    Deterministic refinance capacity under explicit stress inputs. If required inputs are not present in uploaded documents, this section is omitted.
+  </p>
+  {{REFI_STABILITY_BLOCK}}
+</section>
+<!-- END SECTION_7_REFI_STABILITY -->
+
+
+    <!-- BEGIN SECTION_7_DEBT -->
+<!-- 7.0 Debt Structure & Financing -->
+<!-- BEGIN SECTION_7 -->
+<section class="section page-break">
+  <div class="section-header">Debt Structure &amp; Financing</div>
+  <div class="section-header-sub">Leverage, DSCR, and Refinance Considerations</div>
+  <hr class="section-header-rule">
+
+  <!-- BEGIN DEBT_STRUCTURE -->
+<!-- Narrative Bridge for Smoother Flow -->
+  <p class="section-intro">
+  </p>
+<!-- END DEBT_STRUCTURE -->
+
+  <!-- 🔥 DYNAMIC DEBT SECTION -->
+  <p class="section-intro">
+    {{DEBT_STRUCTURE}}
+  </p>
+
+  <div class="grid-2-balanced">
+<!-- BEGIN SECTION_7_DEBT_TABLES -->
+
+    <div class="no-break">
+      <p class="subsection-title">Illustrative Capital Structure (Acquisition)</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Terms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{DEBT_CAPITAL_STRUCTURE_ROWS}}
+        </tbody>
+      </table>
+    </div>
+<!-- END SECTION_7_DEBT_TABLES -->
+
+
+    <div class="no-break">
+      <p class="subsection-title">DSCR and Break-Even Sensitivity</p>
+
+      <div class="chart-block chart-large">
+        <img
+          src="{{BREAKEVEN_CHART_URL}}"
+          alt="Break-Even Occupancy Analysis"
+        />
+      </div>
+<!-- END SECTION_CHART_BREAKEVEN -->
+
+      <p class="small" style="margin-top:16px;">
+        <strong>InvestorIQ:</strong> {{DEBT_DSCR_NOTE}}
+      </p>
+    </div>
+  </div>
+
+  <p class="subsection-title">Refinance Considerations</p>
+  <p>
+    {{DEBT_REFI_CONSIDERATIONS}}
+  </p>
+<!-- BEGIN SECTION_7_DEBT_TABLES -->
+
+
+  <p class="subsection-title">Refinance Sensitivity Matrix</p>
+{{REFI_SENSITIVITY_MATRIX_BLOCK}}
+<!-- END SECTION_7_DEBT_TABLES -->
+
+</section>
+<!-- END SECTION_7 -->
+<!-- END SECTION_7_DEBT -->
+
     <!-- BEGIN SECTION_2_UNIT_VALUE_ADD -->
 <!-- 2.0 Unit-Level Value Add Analysis -->
 <!-- BEGIN SECTION_2 -->
@@ -1051,6 +1136,8 @@ ul, ol {
     </div>
     <div class="no-break">{{UNIT_VALUE_ADD_RIGHT_COLUMN}}</div>
   </div>
+
+  {{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}
 
   </section>
 <!-- END SECTION_2 -->
@@ -1127,6 +1214,9 @@ ul, ol {
       </tbody>
     </table>
   </div>
+
+  {{NOI_WATERFALL_CHART}}
+
 </section>
 <!-- END SECTION_3_OPERATING_STATEMENT -->
 
@@ -1147,6 +1237,7 @@ ul, ol {
   <hr class="section-header-rule">
 
   {{SCREENING_EXPENSE_STRUCTURE_BLOCK}}
+  {{EXPENSE_BREAKDOWN_CHART}}
 </section>
 <!-- END SECTION_S3_EXPENSE_STRUCTURE -->
 
@@ -1157,6 +1248,7 @@ ul, ol {
   <hr class="section-header-rule">
 
   {{SCREENING_NOI_STABILITY_BLOCK}}
+  {{OCCUPANCY_BUFFER_VISUAL}}
 </section>
 <!-- END SECTION_S4_NOI_STABILITY -->
 
@@ -1167,6 +1259,7 @@ ul, ol {
   <hr class="section-header-rule">
 
   {{SCREENING_RENT_ROLL_BLOCK}}
+  {{RENT_DISTRIBUTION_CHART}}
 </section>
 <!-- END SECTION_S5_RENT_ROLL_DISTRIBUTION -->
 
@@ -1212,6 +1305,7 @@ ul, ol {
   <p class="subsection-title">Scenario Assumptions</p>
 
   {{SCENARIO_TABLE}}
+  {{SCENARIO_TRAJECTORY_CHART}}
 
 
 <!-- BEGIN RETURN_SUMMARY_SUBSECTION -->
@@ -1368,89 +1462,6 @@ ul, ol {
 <!-- END SECTION_6 -->
 <!-- END SECTION_6_RENOVATION -->
 
-<!-- BEGIN SECTION_7_REFI_STABILITY -->
-<section class="section page-break">
-  <div class="section-header">Refinance Stability Classification</div>
-  <hr class="section-header-rule">
-  <p class="small">
-    Deterministic refinance capacity under explicit stress inputs. If required inputs are not present in uploaded documents, this section is omitted.
-  </p>
-  {{REFI_STABILITY_BLOCK}}
-</section>
-<!-- END SECTION_7_REFI_STABILITY -->
-
-
-    <!-- BEGIN SECTION_7_DEBT -->
-<!-- 7.0 Debt Structure & Financing -->
-<!-- BEGIN SECTION_7 -->
-<section class="section page-break">
-  <div class="section-header">Debt Structure &amp; Financing</div>
-  <div class="section-header-sub">Leverage, DSCR, and Refinance Considerations</div>
-  <hr class="section-header-rule">
-
-  <!-- BEGIN DEBT_STRUCTURE -->
-<!-- Narrative Bridge for Smoother Flow -->
-  <p class="section-intro">
-  </p>
-<!-- END DEBT_STRUCTURE -->
-
-  <!-- 🔥 DYNAMIC DEBT SECTION -->
-  <p class="section-intro">
-    {{DEBT_STRUCTURE}}
-  </p>
-
-  <div class="grid-2-balanced">
-<!-- BEGIN SECTION_7_DEBT_TABLES -->
-
-    <div class="no-break">
-      <p class="subsection-title">Illustrative Capital Structure (Acquisition)</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Component</th>
-            <th>Terms</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{DEBT_CAPITAL_STRUCTURE_ROWS}}
-        </tbody>
-      </table>
-    </div>
-<!-- END SECTION_7_DEBT_TABLES -->
-
-
-    <div class="no-break">
-      <p class="subsection-title">DSCR and Break-Even Sensitivity</p>
-
-      <div class="chart-block chart-large">
-        <img
-          src="{{BREAKEVEN_CHART_URL}}"
-          alt="Break-Even Occupancy Analysis"
-        />
-      </div>
-<!-- END SECTION_CHART_BREAKEVEN -->
-
-      <p class="small" style="margin-top:16px;">
-        <strong>InvestorIQ:</strong> {{DEBT_DSCR_NOTE}}
-      </p>
-    </div>
-  </div>
-
-  <p class="subsection-title">Refinance Considerations</p>
-  <p>
-    {{DEBT_REFI_CONSIDERATIONS}}
-  </p>
-<!-- BEGIN SECTION_7_DEBT_TABLES -->
-
-
-  <p class="subsection-title">Refinance Sensitivity Matrix</p>
-{{REFI_SENSITIVITY_MATRIX_BLOCK}}
-<!-- END SECTION_7_DEBT_TABLES -->
-
-</section>
-<!-- END SECTION_7 -->
-<!-- END SECTION_7_DEBT -->
-
 
 <!-- BEGIN SECTION_8_DEAL_SCORE -->
 <!-- 8.0 Deal Scorecard & Radar -->
@@ -1504,6 +1515,9 @@ ul, ol {
     {{DEAL_SCORE_INTERPRETATION_HTML}}
   </div>
 <!-- END SECTION_8_INTERPRETATION -->
+
+  {{RISK_REGISTER_TABLE}}
+
 </section>
 <!-- END SECTION_8 -->
 <!-- END SECTION_8_DEAL_SCORE -->

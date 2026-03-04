@@ -1001,11 +1001,12 @@ function buildScreeningDataCoverageSummary({
     ? `<p class="subsection-title" style="margin-top:6px;">Next Best Document Uploads</p><ul>${suggestionHtml}</ul>`
     : "";
   const unlocksCard = "";
-  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table><thead><tr><th>Dataset</th><th>Fields Present</th><th>Coverage</th><th>Missing</th></tr></thead><tbody><tr><td>T12</td><td>${t12PresentCount}/${t12Checks.length}</td><td>${t12CoveragePct}%</td><td>${escapeHtml(
-    t12Missing.join(", ") || "None"
-  )}</td></tr><tr><td>Rent Roll</td><td>${rrPresentCount}/${rentRollChecks.length}</td><td>${rrCoveragePct}%</td><td>${escapeHtml(
-    rrMissing.join(", ") || "None"
-  )}</td></tr></tbody></table>${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
+  const allPresent = missingInputs.length === 0;
+  const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${t12PresentCount === t12Checks.length ? "#16a34a" : "#dc2626"};">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${rrPresentCount === rentRollChecks.length ? "#16a34a" : "#dc2626"};">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
+  if (allPresent) {
+    return `<div style="background:#F0FDF4;border:2px solid #16a34a;border-radius:6px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#15803d;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
+  }
+  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
@@ -2367,6 +2368,10 @@ export default async function handler(req, res) {
         if (!mortgagePayload && loanTermSheetPayload) {
           mortgagePayload = loanTermSheetPayload;
         }
+        // Normalize: loan_term_sheet uses `loan_amount`; MOAT builder reads `outstanding_balance`
+        if (mortgagePayload && !mortgagePayload.outstanding_balance && mortgagePayload.loan_amount) {
+          mortgagePayload = { ...mortgagePayload, outstanding_balance: mortgagePayload.loan_amount };
+        }
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -3292,6 +3297,37 @@ export default async function handler(req, res) {
         )}, increasing sensitivity to vacancy and income disruption.`
       );
     }
+    // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
+    if (effectiveReportMode === "v1_core") {
+      if (mortgagePayload) {
+        const _la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
+        const _rp = coerceNumber(mortgagePayload.interest_rate);
+        const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
+        const _an = coerceNumber(t12Payload?.net_operating_income);
+        if (_la > 0 && _rp > 0 && _an > 0) {
+          const _mr = (_rp / 100) / 12;
+          const _n = _ay * 12;
+          const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
+          const _dscr = _an / (_mp * 12);
+          if (Number.isFinite(_dscr) && _dscr > 0) {
+            const _ds = `${formatMultiple(_dscr, 2)}x`;
+            if (_dscr >= 1.35) {
+              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum — debt service is well-covered by T12 NOI.`);
+            } else if (_dscr >= 1.20) {
+              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold — limited coverage cushion.`);
+            } else {
+              riskBullets.push(`DSCR of ${_ds} falls below 1.20x — debt service coverage is stressed at current NOI levels.`);
+            }
+          }
+        }
+        const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
+          ? `Operating profile classified ${screeningClass} — impacts refinance viability under stress scenarios.`
+          : null;
+        if (_refiClass) riskBullets.push(_refiClass);
+      } else {
+        riskBullets.push("No debt terms uploaded — DSCR and refinance risk cannot be quantified. Upload mortgage statement or term sheet.");
+      }
+    }
     const upsideHtml = upsideBullets
       .slice(0, 3)
       .map((line) => `<li>${escapeHtml(line)}</li>`)
@@ -3442,6 +3478,22 @@ export default async function handler(req, res) {
     } else {
       finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
     }
+    // Cover asset snapshot — fills the bottom of the cover page
+    {
+      const snapRows = [];
+      const unitCount = Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : null;
+      if (unitCount) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;font-weight:600;">Multifamily &mdash; ${unitCount} Units</td></tr>`);
+      const docLabels = Array.isArray(documentSources) && documentSources.length > 0
+        ? documentSources.map(r => escapeHtml(r.original_filename || "")).filter(Boolean).join(" &nbsp;&middot;&nbsp; ")
+        : null;
+      if (docLabels) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;">${docLabels}</td></tr>`);
+      const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Screening";
+      snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;font-weight:600;">${modeLabel}</td></tr>`);
+      const snapHtml = snapRows.length > 0
+        ? `<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;"><table style="width:100%;border-collapse:collapse;">${snapRows.join("")}</table></div>`
+        : "";
+      finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
+    }
     const reportTypeLabel = effectiveReportMode === "v1_core" ? "Underwriting Report" : "Screening Report";
     finalHtml = replaceAll(finalHtml, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
@@ -3510,6 +3562,18 @@ export default async function handler(req, res) {
         ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
         : "";
       execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
+    } else if (effectiveReportMode === "v1_core" && screeningClass && screeningClass !== "Insufficient Data") {
+      // Underwriting: show capital risk profile card + DSCR note + operating classification
+      const erPctStr = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
+      const nmPctStr = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
+      const beoStr   = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
+      const classColor = screeningClass === "Stable" ? "#15803d" : screeningClass === "Sensitized" ? "#d97706" : "#dc2626";
+      let rows = "";
+      if (erPctStr) rows += `<tr><td>Expense Ratio</td><td style="font-weight:600;">${erPctStr}</td></tr>`;
+      if (nmPctStr) rows += `<tr><td>NOI Margin</td><td style="font-weight:600;">${nmPctStr}</td></tr>`;
+      if (beoStr)   rows += `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${beoStr}</td></tr>`;
+      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:4px solid ${classColor};"><p class="subsection-title">Capital Risk Profile: <span style="color:${classColor};">${screeningClass.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
+      execVerdictExpansionHtml = profileCard;
     }
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
@@ -3599,6 +3663,35 @@ export default async function handler(req, res) {
       "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}",
       buildCapRateValueTable(coerceNumber(t12Payload?.net_operating_income), rrUnits)
     );
+    // Rent Upside Pathway card — full-width below the grid
+    {
+      let upsideHtml = "";
+      const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
+      const annualMarket  = coerceNumber(computedRentRoll?.total_market_annual   ?? computedRentRoll?.total_annual_market);
+      if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
+        const annualGap = annualMarket - annualInPlace;
+        const capRates = [5.0, 6.0, 7.0];
+        const capRows = capRates.map(cap => {
+          const impliedLift = annualGap / (cap / 100);
+          return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td>` +
+            `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
+        }).join("");
+        upsideHtml = `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
+          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway — Mark-to-Market Analysis</p>` +
+          `<div class="grid-2">` +
+          `<div><table style="width:100%;border-collapse:collapse;font-size:11px;">` +
+          `<tbody>` +
+          `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr>` +
+          `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr>` +
+          `<tr style="background:#F0FDF4;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#15803d;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#15803d;">${formatCurrency(annualGap)}</td></tr>` +
+          `</tbody></table></div>` +
+          `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Lift at Stabilization</p>` +
+          `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
+          `<p class="small" style="margin-top:6px;">Value lift = annual rent upside capitalized at stated cap rate. Assumes full occupancy at market rents.</p></div>` +
+          `</div></div>`;
+      }
+      finalHtml = replaceAll(finalHtml, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", upsideHtml);
+    }
     const hasAnyAvgSqft =
       Array.isArray(unitMix) &&
       unitMix.some((r) => Number.isFinite(Number(r?.avg_sqft)) && Number(r.avg_sqft) > 0);
@@ -3857,15 +3950,11 @@ export default async function handler(req, res) {
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else {
-        const refiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
-          financials: body?.financials || financials,
-          t12Payload,
-        });
-        finalHtml = replaceAll(
-          finalHtml,
-          "{{REFI_STABILITY_BLOCK}}",
-          refiSufficiencyHtml || ""
-        );
+        // v1_core but no deterministic refi model — strip section entirely.
+        // The Refi Collapse Risk Grid in SECTION_7_DEBT covers debt/refi analysis.
+        // A diagnostic "all missing" table is not appropriate for a $999 report.
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
       }
     }
     const showOperatingStatement = Boolean(
@@ -4173,7 +4262,7 @@ export default async function handler(req, res) {
         let tableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
         tableHtml += `<thead><tr>`;
         for (const h of ["Year", "NOI", "Exit Value", "Total Cash Flow", "PV Factor", "Present Value"]) {
-          tableHtml += `<th style="text-align:right;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">${h}</th>`;
+          tableHtml += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${h}</th>`;
         }
         tableHtml += `</tr></thead><tbody>`;
 
@@ -4201,12 +4290,32 @@ export default async function handler(req, res) {
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
         tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)})</p>`;
+        // Cap rate sensitivity on intrinsic value
+        const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
+        const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
+        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value — Exit Cap Rate Sensitivity</p>`;
+        tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
+        tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
+        for (const cap of capRatesDcf) {
+          const exitV = noi5dcf / (cap / 100);
+          const pvSum = [1,2,3,4,5].reduce((sum, yr) => {
+            const noiYr = noiYear0 * Math.pow(1 + GROWTH, yr);
+            const ev = yr === 5 ? exitV : 0;
+            return sum + (noiYr + ev) / Math.pow(1 + DISCOUNT, yr);
+          }, 0);
+          const isBase = Math.abs(cap - exitCapPct) < 0.01;
+          const rowBg = isBase ? ` style="background:#F0FDF4;font-weight:700;"` : ``;
+          const vs = isBase ? "—" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#16a34a" : "#dc2626"};">${vs}</td></tr>`;
+        }
+        tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
       }
     }
     // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ End underwriting block builders ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 
     // Deterministic 5-Year NOI Scenario Table (Conservative / Base / Optimistic)
+    let scenarioTrajectoryChartHtml = "";
     if (effectiveReportMode === "v1_core" && t12Payload) {
       const noiBasis = coerceNumber(t12Payload.net_operating_income);
       const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
@@ -4221,9 +4330,9 @@ export default async function handler(req, res) {
         ];
         let sTbl = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
         sTbl += `<thead><tr>`;
-        sTbl += `<th style="text-align:left;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Year</th>`;
+        sTbl += `<th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Year</th>`;
         for (const s of growthRates) {
-          sTbl += `<th style="text-align:right;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">${s.label} (${(s.rate * 100).toFixed(0)}% growth)</th>`;
+          sTbl += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${s.label} (${(s.rate * 100).toFixed(0)}% growth)</th>`;
         }
         sTbl += `</tr></thead><tbody>`;
         for (let yr = 1; yr <= 5; yr++) {
@@ -4243,7 +4352,41 @@ export default async function handler(req, res) {
         }
         sTbl += `</tr></tbody></table>`;
         sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
+        // Cap rate exit value sensitivity sub-table
+        const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
+        sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value — Cap Rate Sensitivity</p>`;
+        sTbl += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
+        sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th>`;
+        for (const s of growthRates) {
+          sTbl += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${s.label}</th>`;
+        }
+        sTbl += `</tr></thead><tbody>`;
+        for (const cap of capRateRows) {
+          const isBase = Math.abs(cap - exitCapPct) < 0.01;
+          const rowStyle = isBase ? ` style="background:#F0FDF4;font-weight:700;"` : ``;
+          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td>`;
+          for (const s of growthRates) {
+            const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
+            sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / (cap / 100))}</td>`;
+          }
+          sTbl += `</tr>`;
+        }
+        sTbl += `</tbody></table>`;
         scenarioTableHtml = sTbl;
+        // Scenario trajectory chart — 5-year NOI bars per scenario
+        const maxNoi5 = noiBasis * Math.pow(1.04, 5);
+        const trajRows = growthRates.map((s, idx) => {
+          const colors = ["#64748b", "#1e40af", "#d97706"];
+          const color = colors[idx] || "#374151";
+          const bars = [1,2,3,4,5].map(yr => {
+            const noi = noiBasis * Math.pow(1 + s.rate, yr);
+            const w = maxNoi5 > 0 ? Math.round((noi / maxNoi5) * 90) : 10;
+            return `<td style="padding:2px 3px;width:14%;"><div style="background:${color};height:9px;border-radius:2px;width:${w}%;min-width:3px;"></div></td>`;
+          }).join("");
+          const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
+          return `<tr><td style="padding:3px 8px;font-size:10px;font-weight:600;color:${color};width:20%;">${escapeHtml(s.label)}</td>${bars}<td style="padding:3px 8px;font-size:10px;font-weight:700;text-align:right;">${formatCurrency(noi5)}</td></tr>`;
+        }).join("");
+        scenarioTrajectoryChartHtml = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">5-Year NOI Trajectory</p><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="text-align:left;padding:2px 8px;font-size:9px;color:#6B7280;font-weight:600;text-transform:uppercase;width:20%;">Scenario</th><th colspan="5" style="text-align:center;padding:2px 4px;font-size:9px;color:#6B7280;font-weight:600;text-transform:uppercase;">Year 1 &rarr; Year 5</th><th style="text-align:right;padding:2px 8px;font-size:9px;color:#6B7280;font-weight:600;text-transform:uppercase;">Year 5 NOI</th></tr></thead><tbody>${trajRows}</tbody></table></div>`;
       }
     }
 
@@ -4474,6 +4617,7 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{REFI_SENSITIVITY_MATRIX_BLOCK}}", refiCollapseGridHtml);
       finalHtml = replaceAll(finalHtml, "{{DCF_TABLE_BLOCK}}", dcfTableHtml);
       finalHtml = replaceAll(finalHtml, "{{SCENARIO_TABLE}}", scenarioTableHtml);
+      finalHtml = replaceAll(finalHtml, "{{SCENARIO_TRAJECTORY_CHART}}", scenarioTrajectoryChartHtml);
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_TABLE}}", dealScoreTableHtml);
       // Return Summary and Comparables have no data source Ã¢â‚¬â€ strip their subsections cleanly
       // Strip fabricated PNG charts (pre-built images with baked-in axes, not document-derived)
@@ -4519,6 +4663,74 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", dealScoreInlineChartHtml);
       // Deal score interpretation: strip the section — inline chart IS the visual interpretation
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_INTERPRETATION");
+      // Risk Register — deterministic from computed metrics
+      {
+        const riskRows = [];
+        const addRisk = (factor, reading, threshold, flag, color) => {
+          riskRows.push(`<tr><td style="padding:5px 8px;border:1px solid #E5E7EB;font-weight:600;font-size:11px;">${escapeHtml(factor)}</td>` +
+            `<td style="padding:5px 8px;border:1px solid #E5E7EB;font-size:11px;">${escapeHtml(reading)}</td>` +
+            `<td style="padding:5px 8px;border:1px solid #E5E7EB;font-size:10px;color:#6B7280;">${escapeHtml(threshold)}</td>` +
+            `<td style="padding:5px 8px;border:1px solid #E5E7EB;text-align:center;"><span style="background:${color};color:#ffffff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">${escapeHtml(flag)}</span></td></tr>`);
+        };
+        if (Number.isFinite(expenseRatioR)) {
+          const flag = expenseRatioR > 0.65 ? "ELEVATED" : expenseRatioR > 0.55 ? "WATCH" : "CLEAR";
+          const color = expenseRatioR > 0.65 ? "#dc2626" : expenseRatioR > 0.55 ? "#d97706" : "#16a34a";
+          addRisk("Expense Ratio", formatPercent1(expenseRatioR), "CLEAR < 55% · WATCH 55-65% · ELEVATED > 65%", flag, color);
+        }
+        if (Number.isFinite(noiMarginR)) {
+          const flag = noiMarginR < 0.35 ? "LOW" : noiMarginR < 0.45 ? "WATCH" : "STRONG";
+          const color = noiMarginR < 0.35 ? "#dc2626" : noiMarginR < 0.45 ? "#d97706" : "#16a34a";
+          addRisk("NOI Margin", formatPercent1(noiMarginR), "STRONG > 45% · WATCH 35-45% · LOW < 35%", flag, color);
+        }
+        if (Number.isFinite(execOccupancy)) {
+          const flag = execOccupancy < 0.85 ? "LOW" : execOccupancy < 0.95 ? "WATCH" : "CLEAR";
+          const color = execOccupancy < 0.85 ? "#dc2626" : execOccupancy < 0.95 ? "#d97706" : "#16a34a";
+          addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% · WATCH 85-95% · LOW < 85%", flag, color);
+        }
+        if (Number.isFinite(breakEvenOccR)) {
+          const flag = breakEvenOccR > 0.80 ? "ELEVATED" : breakEvenOccR > 0.70 ? "WATCH" : "CLEAR";
+          const color = breakEvenOccR > 0.80 ? "#dc2626" : breakEvenOccR > 0.70 ? "#d97706" : "#16a34a";
+          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% · WATCH 70-80% · ELEVATED > 80%", flag, color);
+        }
+        if (Number.isFinite(marketRentPremiumRatio)) {
+          const flag = marketRentPremiumRatio > 0.15 ? "UPSIDE" : marketRentPremiumRatio > 0.05 ? "MODERATE" : "MINIMAL";
+          const color = marketRentPremiumRatio > 0.15 ? "#16a34a" : marketRentPremiumRatio > 0.05 ? "#1e40af" : "#6B7280";
+          addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside · 5-15% = moderate · < 5% = minimal", flag, color);
+        }
+        if (mortgagePayload) {
+          const la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
+          const rp = coerceNumber(mortgagePayload.interest_rate);
+          const ay = coerceNumber(mortgagePayload.amort_years) || 25;
+          const an = coerceNumber(t12Payload?.net_operating_income);
+          if (la > 0 && rp > 0 && an > 0) {
+            const mr = (rp / 100) / 12;
+            const n = ay * 12;
+            const mp = la * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
+            const dscr = an / (mp * 12);
+            if (Number.isFinite(dscr) && dscr > 0) {
+              const flag = dscr < 1.20 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
+              const color = dscr < 1.20 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
+              addRisk("DSCR (Current Debt)", `${dscr.toFixed(2)}x`, "STRONG > 1.35x · ADEQUATE 1.20-1.35x · STRESSED < 1.20x", flag, color);
+            }
+          } else {
+            addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
+          }
+        } else {
+          addRisk("DSCR", "No debt doc uploaded", "Upload mortgage statement or term sheet", "NOT ASSESSED", "#9CA3AF");
+        }
+        const riskRegisterHtml = riskRows.length > 0
+          ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
+            `<p class="subsection-title" style="margin-bottom:8px;">Risk Register — Deterministic Signal Summary</p>` +
+            `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
+            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Risk Factor</th>` +
+            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Current Reading</th>` +
+            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Threshold</th>` +
+            `<th style="text-align:center;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Flag</th>` +
+            `</tr></thead><tbody>${riskRows.join("")}</tbody></table>` +
+            `<p class="small" style="margin-top:6px;">All signals derived deterministically from uploaded documents. No inferences or estimates.</p></div>`
+          : "";
+        finalHtml = replaceAll(finalHtml, "{{RISK_REGISTER_TABLE}}", riskRegisterHtml);
+      }
       // Return Summary and Comparables have no data source — strip cleanly
       finalHtml = replaceAll(finalHtml, "{{RETURN_SUMMARY_TABLE}}", "");
       finalHtml = stripMarkedSection(finalHtml, "RETURN_SUMMARY_SUBSECTION");
@@ -4548,6 +4760,112 @@ export default async function handler(req, res) {
         }
       }
     }
+    // ── HTML/CSS Charts (shared: both screening_v1 and v1_core) ─────────────────────────────────
+    // Chart 1: NOI Waterfall
+    {
+      let html = "";
+      const egi = t12EgiValue, opex = t12TotalExpensesValue, noi = t12NoiValue;
+      if (Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
+        const rows = [
+          { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e40af" },
+          { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#dc2626" },
+          { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#16a34a" },
+        ];
+        const trs = rows.map(r =>
+          `<tr><td style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
+          `<td style="padding:5px 8px;width:44%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;">${formatCurrency(r.val)}</td>` +
+          `<td style="padding:5px 8px;font-size:10px;text-align:right;color:#6B7280;">${r.pct}%</td></tr>`
+        ).join("");
+        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Waterfall</p><table style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
+      }
+      finalHtml = replaceAll(finalHtml, "{{NOI_WATERFALL_CHART}}", html);
+    }
+    // Chart 2: Expense Breakdown bar chart
+    {
+      let html = "";
+      const expLines = Array.isArray(t12Payload?.expense_lines) ? t12Payload.expense_lines : [];
+      const totalOpEx = Number.isFinite(t12TotalExpensesValue) && t12TotalExpensesValue > 0
+        ? t12TotalExpensesValue
+        : expLines.reduce((s, l) => s + (coerceNumber(l.amount ?? l.value ?? l.ttm_amount) || 0), 0);
+      if (expLines.length > 0 && totalOpEx > 0) {
+        const sorted = [...expLines]
+          .map(l => ({ label: String(l.label || l.name || l.line_item || ""), amt: coerceNumber(l.amount ?? l.value ?? l.ttm_amount) || 0 }))
+          .filter(l => l.amt > 0)
+          .sort((a, b) => b.amt - a.amt)
+          .slice(0, 8);
+        const trs = sorted.map(l => {
+          const pct = (l.amt / totalOpEx) * 100;
+          const w = Math.max(1, Math.round(pct));
+          return `<tr><td style="padding:3px 8px;font-size:10px;width:30%;white-space:nowrap;overflow:hidden;">${escapeHtml(l.label)}</td>` +
+            `<td style="padding:3px 8px;width:44%;"><div style="background:#E5E7EB;height:10px;border-radius:3px;overflow:hidden;"><div style="background:#1e40af;height:100%;width:${w}%;border-radius:3px;"></div></div></td>` +
+            `<td style="padding:3px 8px;font-size:10px;font-weight:700;text-align:right;">${pct.toFixed(1)}%</td>` +
+            `<td style="padding:3px 8px;font-size:10px;text-align:right;color:#6B7280;">${formatCurrency(l.amt)}</td></tr>`;
+        }).join("");
+        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Expense Composition (% of Total OpEx)</p><table style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
+      }
+      finalHtml = replaceAll(finalHtml, "{{EXPENSE_BREAKDOWN_CHART}}", html);
+    }
+    // Chart 3: Rent Distribution (in-place vs market by unit type)
+    {
+      let html = "";
+      const unitMixData = Array.isArray(computedRentRoll?.unit_mix) ? computedRentRoll.unit_mix : [];
+      if (unitMixData.length > 0) {
+        const maxRent = Math.max(...unitMixData.flatMap(u => [
+          coerceNumber(u.avg_market_rent ?? u.market_rent) || 0,
+          coerceNumber(u.avg_in_place_rent ?? u.in_place_rent) || 0,
+        ]));
+        if (maxRent > 0) {
+          const trs = unitMixData.map(u => {
+            const inPlace = coerceNumber(u.avg_in_place_rent ?? u.in_place_rent) || 0;
+            const market = coerceNumber(u.avg_market_rent ?? u.market_rent) || 0;
+            const label = u.unit_type || (Number.isFinite(u.beds) ? `${u.beds} Bed` : "Unit");
+            const ipW = Math.round((inPlace / maxRent) * 90);
+            const mktW = Math.round((market / maxRent) * 90);
+            const gapPct = inPlace > 0 && market > inPlace ? ((market - inPlace) / inPlace * 100).toFixed(1) : null;
+            return `<tr>` +
+              `<td style="padding:4px 8px;font-size:10px;font-weight:600;width:18%;">${escapeHtml(label)}</td>` +
+              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#1e40af;height:100%;width:${ipW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(inPlace)}</span></td>` +
+              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#16a34a;height:100%;width:${mktW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(market)}</span></td>` +
+              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#16a34a" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "—"}</td></tr>`;
+          }).join("");
+          html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:4px;">In-Place vs. Market Rent by Unit Type</p>` +
+            `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
+            `<th style="text-align:left;padding:2px 8px;font-size:9px;color:#6B7280;text-transform:uppercase;">Unit Type</th>` +
+            `<th style="padding:2px 6px;font-size:9px;color:#1e40af;text-transform:uppercase;">&#9646; In-Place</th>` +
+            `<th style="padding:2px 6px;font-size:9px;color:#16a34a;text-transform:uppercase;">&#9646; Market</th>` +
+            `<th style="text-align:right;padding:2px 8px;font-size:9px;color:#6B7280;text-transform:uppercase;">Upside Gap</th>` +
+            `</tr></thead><tbody>${trs}</tbody></table></div>`;
+        }
+      }
+      finalHtml = replaceAll(finalHtml, "{{RENT_DISTRIBUTION_CHART}}", html);
+    }
+    // Chart 4: Occupancy buffer gauge
+    {
+      let html = "";
+      if (Number.isFinite(breakEvenOccR) && Number.isFinite(execOccupancy) && breakEvenOccR > 0 && execOccupancy > 0) {
+        const beoFmt = formatPercent1(breakEvenOccR);
+        const currFmt = formatPercent1(execOccupancy);
+        const bufPts = ((execOccupancy - breakEvenOccR) * 100).toFixed(1);
+        const beoW = Math.round(breakEvenOccR * 100);
+        const bufColor = (execOccupancy - breakEvenOccR) >= 0.20 ? "#16a34a" : (execOccupancy - breakEvenOccR) >= 0.10 ? "#d97706" : "#dc2626";
+        const bufLabel = (execOccupancy - breakEvenOccR) >= 0.20 ? "Strong cushion" : (execOccupancy - breakEvenOccR) >= 0.10 ? "Adequate cushion" : "Limited cushion";
+        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Break-Even Occupancy Buffer</p>` +
+          `<div style="background:#E5E7EB;height:20px;border-radius:4px;overflow:hidden;position:relative;">` +
+          `<div style="background:#fde68a;height:100%;width:${beoW}%;border-radius:4px 0 0 4px;"></div>` +
+          `</div>` +
+          `<div style="display:flex;justify-content:space-between;margin-top:5px;">` +
+          `<span style="font-size:10px;color:#92400e;font-weight:600;">Break-even: ${beoFmt}</span>` +
+          `<span style="font-size:10px;color:#16a34a;font-weight:600;">Current occupancy: ${currFmt}</span>` +
+          `</div>` +
+          `<p class="small" style="margin-top:4px;color:${bufColor};font-weight:700;">Buffer: ${bufPts} percentage points &mdash; ${bufLabel}</p></div>`;
+      }
+      finalHtml = replaceAll(finalHtml, "{{OCCUPANCY_BUFFER_VISUAL}}", html);
+    }
+    // Safety: clear chart tokens for screening mode (scenario section is stripped, so token won't be in HTML, but be safe)
+    finalHtml = replaceAll(finalHtml, "{{SCENARIO_TRAJECTORY_CHART}}", "");
+    // ── End HTML/CSS Charts ───────────────────────────────────────────────────────────────────────
+
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     // Build a deterministic institutional-grade rationale sentence from computed metrics
     let execRationale = "";
