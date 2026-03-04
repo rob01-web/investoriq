@@ -2616,12 +2616,10 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
       finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
     } else {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
+      // v1_core: keep S2-S5 and S7 — they contain computed T12/rent roll data equally
+      // relevant for underwriting. Only strip S6 (screening-specific refi sufficiency
+      // check, replaced by the full Refi Stability Classification section).
       finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S7_DATA_COVERAGE_GAPS");
     }
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
