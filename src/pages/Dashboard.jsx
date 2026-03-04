@@ -2167,14 +2167,14 @@ if (!stagedBatchId) {
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4 text-red-600" />
               <div>
-                {latestFailedJob.error_code === 'REPORT_GENERATION_FAILED' ? (
-                  <>
+                {latestFailedJob.error_code === 'REPORT_GENERATION_FAILED' ? (                  <>
                     <div className="text-xs font-bold uppercase tracking-wide text-red-700">
                       Report could not be generated
                     </div>
                     <div className="mt-1">
-                      We could not generate your report due to a system error. Please try again in a few minutes. If
-                      the issue persists, contact support and provide Reference ID: {latestFailedJob.id}.
+                      This report failed due to a system error. Your credit will be restored automatically. Once
+                      restored, you can generate a new report. If the issue persists, contact support and provide
+                      Reference ID: {latestFailedJob.id}.
                     </div>
                   </>
                 ) : (
