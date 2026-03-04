@@ -393,7 +393,15 @@ function sanitizeTypography(html) {
     .replace(/[\u2013\u2014]/g, "-")      // en/em dash
     .replace(/[\u2018\u2019]/g, "'")      // smart apostrophes
     .replace(/[\u201C\u201D]/g, '"')      // smart quotes
-    .replace(/&(?:ndash|mdash);/g, "-");
+    .replace(/&(?:ndash|mdash);/g, "-")
+    .replace(/ÃƒÂ¢/g, "")
+    .replace(/ÃƒÂ£/g, "")
+    .replace(/ÃƒÂ¢Ã¢/g, "")
+    .replace(/Ãƒâ€šÃ‚Â·/g, " · ")
+    .replace(/Â·/g, " · ")
+    .replace(/[â€“]/g, "-")
+    .replace(/[â€”]/g, "-")
+    .replace(/Â/g, "");
 }
 function stripMarkedSection(html, key) {
   const token = String(key || "");
@@ -5106,6 +5114,7 @@ if (docraptorMode === "production" && !allowProductionPdf) {
   throw new Error("PRODUCTION_PDF_DISABLED");
 }
 try {
+  docHtml = sanitizeTypography(docHtml);
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",
     {
