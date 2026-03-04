@@ -855,7 +855,7 @@ ul, ol {
 
           <hr class="cover-divider">
 
-          <div class="cover-verdict-label">INVESTORIQ<br/>VERDICT</div>
+          <div class="cover-verdict-label">{{COVER_VERDICT_LABEL}}</div>
           <div class="cover-verdict-value {{VERDICT_CSS_CLASS}}">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
 
 <!-- BEGIN COVER_METRIC_STRIP -->
@@ -912,7 +912,7 @@ ul, ol {
       <!-- BEGIN EXEC_SUMMARY -->
       <div class="exec-summary-block">
         <div class="verdict-block">
-          <div class="verdict-label">INVESTORIQ VERDICT</div>
+          <div class="verdict-label">{{EXEC_VERDICT_LABEL}}</div>
           <div class="verdict-classification">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
           <div class="verdict-pressure">Primary Pressure Point: {{PRIMARY_PRESSURE_POINT}}</div>
           <div class="verdict-rationale">{{EXEC_CLASSIFICATION_RATIONALE}}</div>
@@ -998,6 +998,7 @@ ul, ol {
     </div>
 
   </div>
+<!-- BEGIN EXEC_RANKED_DRIVERS -->
   <div style="margin-top: 12px;">
     <p class="exec-major-heading">Ranked Drivers (Worst &rarr; Best)</p>
     <ol class="exec-signal-drivers">
@@ -1006,6 +1007,7 @@ ul, ol {
       <li>{{DRIVER_3_LABEL}}: {{DRIVER_3_VALUE}} (trigger: {{DRIVER_3_TRIGGER}})</li>
     </ol>
   </div>
+<!-- END EXEC_RANKED_DRIVERS -->
   {{EXEC_VERDICT_EXPANSION}}
 
   <!-- BEGIN SECTION_DOC_SOURCES -->
@@ -1467,6 +1469,7 @@ ul, ol {
     <!-- END DEAL_SCORE_SUMMARY -->
   </p>
 
+<!-- BEGIN SECTION_CHART_DEAL_SCORE_RADAR -->
   <!-- RADAR CHART -->
   <div class="chart-block chart-large no-break">
     <div class="chart-title">Deal Quality Radar  -  {{PROPERTY_NAME}}</div>
@@ -1485,8 +1488,9 @@ ul, ol {
     <p class="subsection-title">Factor-Level Scores</p>
 
   {{DEAL_SCORE_TABLE}}
+  {{DEAL_SCORE_INLINE_CHART}}
 
-
+<!-- BEGIN SECTION_CHART_DEAL_SCORE_BAR -->
   <!-- BAR CHART -->
   <div class="chart-block chart-large no-break" style="margin-top:18px;">
     <img
@@ -1496,13 +1500,12 @@ ul, ol {
   </div>
 <!-- END SECTION_CHART_DEAL_SCORE_BAR -->
 
-  <!-- INTERPRETATION -->
+<!-- BEGIN SECTION_8_INTERPRETATION -->
   <p class="subsection-title" style="margin-top:16px;">Interpretation</p>
-
   <div class="no-break" style="margin-top:12px;">
-    <p>
-    </p>
+    {{DEAL_SCORE_INTERPRETATION_HTML}}
   </div>
+<!-- END SECTION_8_INTERPRETATION -->
 </section>
 <!-- END SECTION_8 -->
 <!-- END SECTION_8_DEAL_SCORE -->
@@ -1527,8 +1530,8 @@ ul, ol {
 <!-- END SECTION_9_DCF_TABLE -->
 
 
-  <p class="subsection-title">DCF Interpretation</p>
   <!-- BEGIN DCF_INTERPRETATION -->
+  <p class="subsection-title">DCF Interpretation</p>
 {{DCF_INTERPRETATION}}
   <!-- END DCF_INTERPRETATION -->
 

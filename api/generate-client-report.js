@@ -2659,6 +2659,9 @@ export default async function handler(req, res) {
         "{{DEAL_SCORE_TABLE}}",
         buildDealScoreTable(tables.dealScore || [], tables.totalDealScore)
       );
+      // These tokens are only populated in v1_core; clear for screening
+      finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", "");
+      finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INTERPRETATION_HTML}}", "");
     }
     finalHtml = replaceAll(
       finalHtml,
@@ -3414,6 +3417,15 @@ export default async function handler(req, res) {
       : screeningClass === "Insufficient Data" ? "verdict-insufficient"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
+    // Verdict label tokens — differentiate screening triage vs underwriting capital profile
+    const coverVerdictLabel = effectiveReportMode === "v1_core"
+      ? "CAPITAL RISK<br/>PROFILE"
+      : "TRIAGE<br/>SIGNAL";
+    finalHtml = replaceAll(finalHtml, "{{COVER_VERDICT_LABEL}}", coverVerdictLabel);
+    const execVerdictLabel = effectiveReportMode === "v1_core"
+      ? "CAPITAL RISK PROFILE"
+      : "TRIAGE SIGNAL";
+    finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_LABEL}}", execVerdictLabel);
     // Cover metric strip (screening only ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â strip when values unavailable)
     if (effectiveReportMode === "screening_v1") {
       const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
@@ -3457,6 +3469,10 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+    // Ranked drivers are screening-only — suppress for underwriting mode
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_RANKED_DRIVERS");
+    }
     // Build exec verdict expansion: classification framework + investment thesis
     let execVerdictExpansionHtml = "";
     if (effectiveReportMode === "screening_v1" && screeningClass && screeningClass !== "Insufficient Data") {
@@ -3926,6 +3942,9 @@ export default async function handler(req, res) {
     if (!showDealScoreInterpretation) {
       finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_INTERPRETATION");
     }
+    // SECTION_8_INTERPRETATION strip is deferred to the v1_core block
+    // For screening mode, the token is already cleared (empty string) by the early replacement,
+    // so the section will be stripped by the DNA safety pass → section strip cascade.
     const showAdvancedModeling = hasMeaningfulNarrative(
       getNarrativeHtml("advancedModelingIntro")
     );
@@ -4231,6 +4250,7 @@ export default async function handler(req, res) {
 
     // Deal Score Ã¢â‚¬â€ weighted composite from document-verified metrics only
     let dealScoreTableHtml = "";
+    let dealScoreRows = [];
     if (effectiveReportMode === "v1_core") {
       const scoreRows = [];
       let totalPoints = 0;
@@ -4311,6 +4331,7 @@ export default async function handler(req, res) {
           `</table>` +
           `<p class="small" style="margin-top:8px;color:#888;">Scored from document-verified metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
           `</div>`;
+        dealScoreRows = scoreRows;
       }
     }
 
@@ -4456,6 +4477,50 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{SCENARIO_TABLE}}", scenarioTableHtml);
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_TABLE}}", dealScoreTableHtml);
       // Return Summary and Comparables have no data source Ã¢â‚¬â€ strip their subsections cleanly
+      // Strip fabricated PNG charts (pre-built images with baked-in axes, not document-derived)
+      // Replace with inline HTML/CSS bar chart built from actual dealScoreRows
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_BAR");
+      let dealScoreInlineChartHtml = "";
+      if (dealScoreRows.length > 0) {
+        const iChartRows = dealScoreRows.map((r) => {
+          const ratio = r.max > 0 ? r.pts / r.max : 0;
+          const barColor = ratio >= 0.8 ? "#16a34a" : ratio >= 0.5 ? "#d97706" : "#dc2626";
+          const barWidth = Math.round(ratio * 100);
+          return (
+            `<tr style="border-bottom:1px solid #F3F4F6;">` +
+            `<td style="padding:5px 8px;font-size:11px;width:28%;white-space:nowrap;">${escapeHtml(r.label)}</td>` +
+            `<td style="padding:5px 8px;font-size:11px;width:12%;text-align:right;font-weight:600;">${escapeHtml(r.value)}</td>` +
+            `<td style="padding:5px 8px;width:40%;">` +
+            `<div style="background:#E5E7EB;height:10px;border-radius:5px;overflow:hidden;">` +
+            `<div style="background:${barColor};height:100%;width:${barWidth}%;border-radius:5px;"></div>` +
+            `</div>` +
+            `</td>` +
+            `<td style="padding:5px 8px;font-size:11px;width:8%;text-align:center;font-weight:700;color:${barColor};">${r.pts}/${r.max}</td>` +
+            `<td style="padding:5px 8px;font-size:10px;width:12%;color:#6B7280;">${escapeHtml(r.band)}</td>` +
+            `</tr>`
+          );
+        }).join("");
+        dealScoreInlineChartHtml =
+          `<div class="no-break" style="margin-top:16px;">` +
+          `<p class="subsection-title" style="margin-bottom:8px;">Score Factor Breakdown</p>` +
+          `<table style="width:100%;border-collapse:collapse;">` +
+          `<thead><tr style="background:#F3F4F6;">` +
+          `<th style="text-align:left;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;">Factor</th>` +
+          `<th style="text-align:right;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;">Value</th>` +
+          `<th style="padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;">Performance Bar</th>` +
+          `<th style="text-align:center;padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;">Pts</th>` +
+          `<th style="padding:5px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6B7280;">Band</th>` +
+          `</tr></thead>` +
+          `<tbody>${iChartRows}</tbody>` +
+          `</table>` +
+          `<p class="small" style="margin-top:6px;color:#9CA3AF;">All data derived exclusively from uploaded documents. No estimates or inferences.</p>` +
+          `</div>`;
+      }
+      finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", dealScoreInlineChartHtml);
+      // Deal score interpretation: strip the section — inline chart IS the visual interpretation
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_INTERPRETATION");
+      // Return Summary and Comparables have no data source — strip cleanly
       finalHtml = replaceAll(finalHtml, "{{RETURN_SUMMARY_TABLE}}", "");
       finalHtml = stripMarkedSection(finalHtml, "RETURN_SUMMARY_SUBSECTION");
       finalHtml = replaceAll(finalHtml, "{{COMPARABLES_TABLE}}", "");
