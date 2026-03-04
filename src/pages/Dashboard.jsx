@@ -11,6 +11,36 @@ import AnalysisScopePreview from '../components/AnalysisScopePreview';
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
+  const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
+  const loadDismissedJobs = () => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem(DISMISSED_JOBS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const ids = Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+      return new Set(ids.filter((id) => id.length > 0));
+    } catch (err) {
+      return new Set();
+    }
+  };
+  const saveDismissedJobs = (set) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(DISMISSED_JOBS_KEY, JSON.stringify(Array.from(set)));
+    } catch (err) {
+      // ignore storage failures
+    }
+  };
+  const [dismissedJobIds, setDismissedJobIds] = useState(() => loadDismissedJobs());
+  const dismissJob = (jobId) => {
+    if (!jobId) return;
+    setDismissedJobIds((prev) => {
+      const next = new Set(prev);
+      next.add(String(jobId));
+      saveDismissedJobs(next);
+      return next;
+    });
+  };
   const [propertyName, setPropertyName] = useState('');
   const propertyNameRef = useRef('');
   const analyzeInFlightRef = useRef(false);
@@ -56,6 +86,14 @@ export default function Dashboard() {
       'publishing',
     ].includes(job.status)
   );
+  const visibleInProgressJobs = inProgressJobs.filter((job) => {
+    const dismissed = dismissedJobIds.has(String(job.id));
+    return job.status !== 'failed' && !dismissed;
+  });
+  const failedJobsForDisplay = inProgressJobs.filter((job) => {
+    const dismissed = dismissedJobIds.has(String(job.id));
+    return job.status === 'failed' && !dismissed;
+  });
 
   const fetchReports = async () => {
     if (!profile?.id) return;
@@ -502,7 +540,7 @@ const hasMarket = uploadedFiles.some((item) =>
     item.docType
   )
 );
-// Underwriting preflight — derived from staged files (display-only, no state)
+// Underwriting preflight ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â derived from staged files (display-only, no state)
 const preflightDebtTerms = uploadedFiles.some((f) => {
   if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
   const n = String(f.original_name || f.file?.name || '').toLowerCase();
@@ -1490,7 +1528,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              Ã¯Â¿Â½ - 
+                              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ - 
                             </button>
                           </div>
                         ))
@@ -1578,7 +1616,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              Ã¯Â¿Â½ - 
+                              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ - 
                             </button>
                           </div>
                         ))
@@ -1905,7 +1943,7 @@ if (!stagedBatchId) {
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
                 >
-                  {loading ? 'WorkingÃ¢â‚¬Â¦' : 'Generate Report'}
+                  {loading ? 'WorkingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦' : 'Generate Report'}
                 </button>
                 <div className="text-xs leading-relaxed text-slate-500">
                   Each purchase allows a single generation. Once generation begins, refunds are not available.
@@ -1942,7 +1980,7 @@ if (!stagedBatchId) {
           )}
 
           {/* IN-PROGRESS ANALYSIS JOBS */}
-{inProgressJobs.length > 0 && (
+{visibleInProgressJobs.length > 0 && (
   <div className="mt-12">
     <h2 className="text-xl font-bold text-[#0F172A] mb-6">
       In Progress
@@ -1953,7 +1991,7 @@ if (!stagedBatchId) {
       </div>
     )}
 
-    {inProgressJobs.some((job) =>
+    {visibleInProgressJobs.some((job) =>
       ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(job.status)
     ) && (
       <div className="mb-4 text-sm font-medium text-[#334155]">
@@ -1962,7 +2000,7 @@ if (!stagedBatchId) {
     )}
 
     <div className="overflow-hidden border border-slate-200 rounded-xl divide-y">
-      {inProgressJobs.map((job) => {
+      {visibleInProgressJobs.map((job) => {
         const jobEvent = jobEvents[job.id];
         const eventName = jobEvent?.payload?.event || '';
         const errorMessage = jobEvent?.payload?.error_message || '';
@@ -1998,7 +2036,7 @@ if (!stagedBatchId) {
                     </div>
                     <div className="mt-1 text-sm text-red-700">
                       {job.failure_reason ||
-                        'Analysis failed due to a system error. If this failure was system-caused, your credit will be restored automatically. Please try again or contact support if the issue persists.'}
+                        'This run failed due to a system error. Your credit will be restored automatically. Once restored, you can generate a new report.'}
                     </div>
                   </div>
                 </div>
@@ -2056,6 +2094,74 @@ if (!stagedBatchId) {
     </div>
   </div>
 )}
+
+          {failedJobsForDisplay.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-xl font-bold text-[#0F172A] mb-6">
+                Failed Runs
+              </h2>
+              <div className="overflow-hidden border border-slate-200 rounded-xl divide-y">
+                {failedJobsForDisplay.map((job) => {
+                  const jobEvent = jobEvents[job.id];
+                  const errorMessage =
+                    job.failure_reason ||
+                    job.error_message ||
+                    jobEvent?.payload?.error_message ||
+                    'System error';
+                  const failedAt =
+                    job.failed_at || job.updated_at || job.created_at;
+                  return (
+                    <div
+                      key={job.id}
+                      className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-[#0F172A]">
+                          {job.property_name && job.property_name.trim() !== ''
+                            ? job.property_name
+                            : 'Address not provided'}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Failed:{' '}
+                          {failedAt
+                            ? new Date(failedAt).toLocaleString()
+                            : 'Unknown'}
+                        </div>
+                        {errorMessage ? (
+                          <div className="text-xs text-slate-600 mt-1">
+                            {errorMessage}
+                          </div>
+                        ) : null}
+                        <div className="text-xs text-slate-500 mt-1">
+                          Reference ID: {job.id}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => {
+                            setIssueReport(job);
+                            setIssueMessage('');
+                            setIssueFile(null);
+                            setIssueModalOpen(true);
+                          }}
+                          className="text-[#0F172A] hover:text-[#1F8A8A] font-bold text-sm"
+                        >
+                          Report an issue
+                        </button>
+                        <button
+                          onClick={() => dismissJob(job.id)}
+                          className="text-slate-600 hover:text-[#0F172A] font-semibold text-sm"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {latestFailedJob?.id && (
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -2355,7 +2461,7 @@ if (!stagedBatchId) {
                 }}
                 className="rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
               >
-                {issueSubmitting ? 'SubmittingÃ¢â‚¬Â¦' : 'Submit'}
+                {issueSubmitting ? 'SubmittingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦' : 'Submit'}
               </button>
             </div>
           </div>
