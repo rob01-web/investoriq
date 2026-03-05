@@ -1,0 +1,623 @@
+INVESTORIQ
+INSTITUTIONAL GRADE PROPERTY INTELLIGENCE
+
+
+
+
+UNDERWRITING REPORT
+
+
+124 Richmond Street (Underwriting
+test10)
+
+
+CAPITAL RISK
+PROFILE
+
+
+
+
+SENSITIZED
+
+
+  ASSET CLASS                                 Multifamily - 12 Units
+  REPORT TIER                                 Full Underwriting
+
+
+
+
+Confidential - InvestorIQ Technologies Inc.                            March 4, 2026
+INVESTORIQ                                                                                         Underwriting Report
+INSTITUTIONAL GRADE PROPERTY INTELLIGENCE                                    124 Richmond Street (Underwriting test10)
+
+
+
+
+Executive Summary
+12-Unit Multifamily
+
+
+     C A P I TA L R I S K P R O F I L E
+
+
+
+     SENSITIZED
+     Primary Pressure Point: Expense Ratio (62.6%)
+
+
+
+
+Key Metrics Snapshot
+
+  UNITS                                   O C C U PA N C Y                      A N N U A L I N - P L AC E R E N T
+
+  12                                      100.0%                                $186,780
+
+
+  EFFECTIVE GROSS INCOME                  O P E R AT I N G E X P E N S E S      N E T O P E R AT I N G I N C O M E
+
+  $192,960                                $120,790                              $72,170
+
+
+  E X P E N S E R AT I O                  NOI MARGIN                            B R E A K- E V E N O C C U PA N C Y
+
+  62.6% (Sensitized)                      37.4% (Sensitized)                    65.3% (Stable)
+
+
+Key Upside Drivers
+
+• In-place rents trail market by ~17.4% (document-backed upside).
+• Occupancy is 100.0%, supporting cash flow stability.
+• Operating cushion is approximately 34.7% above break-even occupancy.
+
+Key Risks and Constraints
+
+• Expense ratio is 62.6%, pressuring NOI margin.
+• NOI margin is 37.4%, leaving limited buffer for shocks.
+• No debt terms uploaded Ã¢--š¬Ã¢-‚¬⯑ DSCR and refinance risk cannot be quantified. Upload
+  mortgage statement or term sheet.
+CAPITAL RISK PROFILE: SENSITIZED
+
+
+ Expense Ratio                                                                            62.6%
+
+ NOI Margin                                                                               37.4%
+
+ Break-Even Occupancy                                                                     65.3%
+
+Operating profile classification based on standardized underwriting thresholds from uploaded documents only.
+Unit-Level Value Add Analysis
+ILLUSTRATIVE UNIT MIX AND RENT LIFT
+
+ Unit Type               Count      Avg Sq Ft    Avg In-Place Rent         Target Rent (Post-Reno)        Monthly Lift
+
+ 1 Bed                   6          613          $1,173                    $1,395                         $223
+
+ 2 Bed                   6          823          $1,422                    $1,650                         $228
+
+
+
+    CAP RATE VALUE INDICATION
+
+
+      Cap Rate                             Implied Value                                      Per Unit
+
+      5.0%                                 $1,443,400                                         $120,283
+
+      6.0%                                 $1,202,833                                         $100,236
+
+      7.0%                                 $1,031,000                                         $85,917
+
+    Derived from document-verified NOI of $72,170. Cap rates are standardized framework benchmarks, not document-
+    sourced.
+
+
+
+
+RENT UPSIDE PATHWAY Ã¢--Š¬Ã¢-‚¬⯑ MARK-TO-MARKET ANALYSIS
+
+
+ Annual In-Place Rent                                                                                                    $186,780
+
+ Annual Market Rent                                                                                                      $219,240
+
+ Annual Gross Rent Upside                                                                                                 $32,460
+
+IMPLIED VALUE LIFT AT STABILIZATION.
+
+ 5.0% cap rate                                                                                                           $649,200
+
+ 6.0% cap rate                                                                                                           $541,000
+
+ 7.0% cap rate                                                                                                           $463,714
+
+Value lift = annual rent upside capitalized at stated cap rate. Assumes full occupancy at market rents.
+Operating Statement (Trailing Twelve Months)
+INCOME RECONSTRUCTION (TTM)
+
+
+ Income Line Item                 TTM Amount
+
+ Gross Rental Income              $184,920
+
+ Laundry Income                   $3,240
+
+ Parking Income                   $4,800
+
+OPERATING EXPENSES (TTM)
+
+
+ Expense Line Item                           TTM Amount
+
+ Property Taxes                              $38,400
+
+ Insurance                                   $9,850
+
+ Repairs & Maintenance                       $22,640
+
+ Landscaping & Snow Removal                  $8,300
+
+ Utilities                                   $27,950
+
+ Property Management                         $6,000
+
+ Administrative                              $3,200
+
+ Garbage & Miscellaneous                     $4,450
+
+
+NET OPERATING INCOME SUMMARY
+
+
+ Metric                                                Value
+
+ Effective Gross Income (TTM)                          $192,960
+
+ Total Operating Expenses (TTM)                        $120,790
+
+ Net Operating Income (TTM)                            $72,170
+
+ Operating Expense Ratio                               62.6%
+
+ EGI per Unit (TTM)                                    $16,080
+
+ OpEx per Unit (TTM)                                   $10,066
+
+ NOI per Unit (TTM)                                    $6,014
+NOI WATERFALL
+
+
+ Effective Gross Income               $192,960   100%
+
+ Operating Expenses (Ã‹-- Ã¢-‚¬-„¢)   $120,790   63%
+
+ Net Operating Income                  $72,170   37%
+Income & Revenue Forensics
+Income Composition, Concentration, and Stability
+
+
+
+   TOP INCOME DRIVERS (SHARE OF EGI)
+
+
+    Line Item                                          Amount
+
+    Gross Rental Income                                $184,920 (95.8%)
+
+    Parking Income                                     $4,800 (2.5%)
+
+    Laundry Income                                     $3,240 (1.7%)
+
+
+
+   TOP EXPENSE DRIVERS (SHARE OF OPEX)
+
+
+    Line Item                                              Amount
+
+    Property Taxes                                         $38,400 (31.8%)
+
+    Utilities                                              $27,950 (23.1%)
+
+    Repairs & Maintenance                                  $22,640 (18.7%)
+
+
+
+   TOP INCOME LINE CONCENTRATION
+
+   95.8%.
+
+
+
+         • Top income line concentration is 95.8% of EGI (concentration flag).
+         • Largest operating expense line item is Property Taxes at 31.8% of OpEx (concentration
+                flag).
+         • In-place rents trail market by approximately 17.4% (document-backed upside).
+Expense Structure Analysis
+Expense Ratio, Drivers, and Intensity Flags
+
+
+
+
+    Metric                                                                                Value
+
+    Operating Expense Ratio                                                               62.6%
+
+    Operating Expense per Unit                                                            $10,066
+
+    NOI per Unit                                                                          $6,014
+
+
+
+   EXPENSE FLAGS (DETERMINISTIC)
+
+          • Operating expense ratio is sensitized (>= 55%) and elevated (> 60%).
+          • Top expense line exceeds 30% of OpEx (concentration risk).
+
+   TOP 3 EXPENSE DRIVERS
+
+          1. Property Taxes: 31.8%
+        2. Utilities: 23.1%
+        3. Repairs & Maintenance: 18.7%
+
+
+
+   EXPENSE RATIO SENSITIVIT Y
+
+
+    Expense Ratio                             Implied OpEx                            Implied NOI
+
+    50%                                       $96,480                                 $96,480
+
+    55%                                       $106,128                                $86,832
+
+    60%                                       $115,776                                $77,184
+
+    65%                                       $125,424                                $67,536
+
+    70%                                       $135,072                                $57,888
+
+   Anchored to document-verified EGI of $192,960. Standardized threshold scenarios.
+EXPENSE COMPOSITION (% OF TOTAL OPEX)
+
+ Property Taxes                         31.8%   $38,400
+
+ Utilities                              23.1%   $27,950
+
+ Repairs & Maintenance                  18.7%   $22,640
+
+ Insurance                              8.2%     $9,850
+
+ Landscaping & Snow Removal             6.9%     $8,300
+
+ Property Management                    5.0%     $6,000
+
+ Garbage & Miscellaneous                3.7%     $4,450
+
+ Administrative                         2.6%     $3,200
+NOI Stability Review
+Margin, Volatility, and Operating Leverage Indicators
+
+
+
+
+    Indicator                                                                                       Value
+
+    NOI Margin                                                                                      37.4%
+
+    Expense Sensitivity                                                                             37.4%
+
+    Break-even Occupancy                                                                            65.3%
+
+    Rent Roll vs T12 GPR Variance                                                                   1.0%
+
+
+
+   STABILITY DRIVERS (WORST 3)
+
+         1. NOI Margin 37.4%
+        2. Expense Ratio 62.6%
+        3. Rent Roll vs T12 GPR 1.0%
+
+
+
+   NOI SENSITIVIT Y (DETERMINISTIC)
+
+
+    Scenario                                                             Implied NOI        NOI Margin (Implied)
+
+    Expenses +5% (cost shock)                                            $66,131            34.3%
+
+    Income -5% (revenue shock)                                           $62,522            34.1%
+
+    Combined Shock (-5% income, +5% expenses)                            $56,483            30.8%
+
+
+
+   VACANCY BUFFER
+
+
+    Metric                                                                                      Value
+
+    Break-even Occupancy                                                                        65.3%
+
+    Current Occupancy                                                                           100.0%
+
+    Occupancy Cushion                                                                           34.7 pts
+
+    Units That Can Become Vacant                                                                4 of 12
+
+   At current occupancy, the property can absorb 4 vacant units before reaching neutral cash flow. Break-even derived from
+   document-verified T12 totals.
+BREAK-EVEN OCCUPANCY BUFFER
+
+
+
+
+Break-even: 65.3%                                 Current occupancy: 100.0%
+
+Buffer: 34.7 percentage points - Strong cushion
+Rent Roll Distribution
+Occupancy, Rent Dispersion, and Unit Mix Profile
+
+
+
+
+    Metric                                                                                  Value
+
+    Total Units                                                                             12
+
+    Occupied Units                                                                          12
+
+    Occupancy                                                                               100.0%
+
+    Weighted Avg In-Place Rent                                                              $1,297
+
+    Weighted Avg Market Rent                                                                $1,523
+
+    Market Rent Premium (Avg)                                                               17.4%
+
+    Annual In-Place Rent (Total)                                                            $186,780
+
+    Annual Market Rent (Total)                                                              $219,240
+
+   RENT BANDS (IN-PLACE)
+
+
+    Unit Type            Units        Avg In-Place               Avg Market               Gap ($)          Gap (%)
+
+    1 Bed                6            $1,173                     $1,395                   $223             19.0%
+
+    2 Bed                6            $1,422                     $1,650                   $228             16.1%
+
+
+
+   RENT ROLL FLAGS (DETERMINISTIC)
+
+         • In-place rents trail market by ~17.4% (document-backed upside).
+
+
+
+   RENT UPSIDE - IMPLIED VALUE CREATION
+
+
+    Metric                                                                                  Amount
+
+    Annual Gross Rent Upside                                                                $32,460
+
+    Implied Value at 5% Cap Rate                                                            $649,200
+
+    Implied Value at 6% Cap Rate                                                            $541,000
+
+    Implied Value at 7% Cap Rate                                                            $463,714
+
+   Annual upside from document-verified rent roll. Implied value = annual upside ÷ cap rate. Cap rates are standardized
+   framework benchmarks, not document-sourced.
+IN-PLACE VS. MARKET RENT BY UNIT T YPE
+
+ UNIT TYPE            ▮ IN-PLACE         ▮ MARKET     UPSIDE GAP
+
+ 1 Bed                                              Ã¢--š¬Ã¢-‚¬⯑
+                      $0                 $1,395
+
+ 2 Bed                                              Ã¢--š¬Ã¢-‚¬⯑
+                      $0                 $1,650
+Data Coverage & Underwriting Gaps
+Missing Inputs and Omitted Sections
+
+
+
+    ✓ DATA INTEGRITY CONFIRMED Ã¢--š¬Ã¢-‚¬⯑ All Required Inputs Verified.
+    All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.
+
+        Dataset                                            Fields Present               Coverage         Missing
+
+        T12 Operating Statement                                 4/4                      100.0%          None
+
+        Rent Roll                                               4/4                      100.0%          None
+
+
+
+Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report
+tier.
+Scenario Analysis & Five-Year Outlook
+Cash Flow Projections and Return Sensitivities
+
+
+SCENARIO ASSUMPTIONS
+
+
+ Year                                Conservative (2% growth)             Base (3% growth)              Optimistic (4% growth)
+
+ Year 1                                                 $73,613                     $74,335                               $75,057
+
+ Year 2                                                 $75,086                     $76,565                              $78,059
+
+ Year 3                                                 $76,587                     $78,862                                $81,181
+
+ Year 4                                                  $78,119                    $81,228                              $84,429
+
+ Year 5                                                 $79,682                     $83,665                               $87,806
+
+ Year 5 Exit Value                                   $1,448,755                   $1,521,178                           $1,596,470
+
+Basis: T12 NOI = $72,170 | Exit cap: 5.5% (5.5% stated). Projections are deterministic from uploaded documents only.
+
+YEAR 5 EXIT VALUE Ã¢--Š¬Ã¢-‚¬⯑ CAP RATE SENSITIVITY
+
+
+ Exit Cap Rate                                           Conservative                          Base                    Optimistic
+
+ 4.5%                                                       $1,770,700                  $1,859,218                      $1,951,241
+
+ 5.0%                                                       $1,593,630                  $1,673,296                      $1,756,117
+
+ 5.5% (5.5% stated)                                        $1,448,755                    $1,521,178                    $1,596,470
+
+ 6.0%                                                       $1,328,025                  $1,394,413                     $1,463,431
+
+ 6.5%                                                       $1,225,869                   $1,287,151                    $1,350,859
+
+
+5-YEAR NOI TRAJECTORY
+
+ SCENARIO                                                       YEAR 1 → YEAR 5                                         YEAR 5 NOI
+
+ Conservative                                                                                                             $79,682
+
+ Base                                                                                                                     $83,665
+
+ Optimistic                                                                                                               $87,806
+Deal Scorecard & Radar
+InvestorIQ Deal Score Components
+FACTOR-LEVEL SCORES
+
+
+
+
+                                                    PROCEED
+                                                   Composite Score: 84 / 100
+
+
+
+      Factor                                                       Value    Threshold              Score
+
+      Expense Ratio                                               62.6%     55-65%                  6/10
+
+      NOI Margin                                                   37.4%    35-45%                  6/10
+
+      Occupancy Rate                                              100.0%    Above 95%              10/10
+
+      Break-Even Occupancy                                         65.3%    Below 70%              10/10
+
+      Rent-to-Market Gap                                           17.4%    >15% upside            10/10
+
+      Composite Score (normalized)                                                                 84/100
+
+    Scored from document-verified metrics only. PROCEED ≥ 70 | REVIEW 50-69 | PASS < 50.
+
+
+
+SCORE FACTOR BREAKDOWN
+
+
+ FACTOR                                   VALUE     PERFORMANCE BAR                        PTS       BAND
+
+ Expense Ratio                            62.6%                                            6/10      55-65%
+
+ NOI Margin                                37.4%                                           6/10      35-45%
+
+ Occupancy Rate                           100.0%                                           10/10     Above 95%
+
+ Break-Even Occupancy                      65.3%                                           10/10     Below 70%
+
+ Rent-to-Market Gap                        17.4%                                           10/10     >15% upside
+
+All data derived exclusively from uploaded documents. No estimates or inferences.
+RISK REGISTER Ã¢--Š¬Ã¢-‚¬⯑ DETERMINISTIC SIGNAL SUMMARY
+
+
+ RISK FACTOR               CURRENT READING         THRESHOLD                                                 FLAG
+
+ Expense Ratio             62.6%                   CLEAR < 55% · WATCH 55-65% · ELEVATED > 65%              WATCH
+
+ NOI Margin                37.4%                   STRONG > 45% · WATCH 35-45% · LOW < 35%                  WATCH
+
+ Occupancy Rate            100.0%                  CLEAR > 95% · WATCH 85-95% · LOW < 85%                    CLEAR
+
+ Break-Even                65.3%                   CLEAR < 70% · WATCH 70-80% · ELEVATED > 80%               CLEAR
+ Occupancy
+
+ Rent-to-Market Gap        17.4% below market      > 15% = meaningful upside · 5-15% = moderate · < 5% =    UPSIDE
+                                                   minimal
+
+ DSCR                      No debt doc             Upload mortgage statement or term sheet                    NOT
+                           uploaded                                                                        ASSESSED
+
+All signals derived deterministically from uploaded documents. No inferences or estimates.
+Discounted Cash Flow (DCF)
+Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)
+
+
+The DCF analysis estimates the intrinsic value of the property by projecting annual net cash flows and
+discounting them at a risk-adjusted rate reflecting investor return requirements. This method is
+preferred by institutional underwriters because it reveals the true economic value of an investment
+independent of market noise or temporary performance fluctuations.
+
+         Year               NOI           Exit Value                  Total Cash Flow           PV Factor           Present Value
+
+        Year 1           $74,335                   -                          $74,335              0.9259                 $68,829
+
+        Year 2           $76,565                   -                          $76,565              0.8573                 $65,642
+
+        Year 3           $78,862                   -                          $78,862              0.7938                 $62,603
+
+        Year 4           $81,228                   -                          $81,228              0.7350                 $59,705
+
+        Year 5           $83,665          $1,521,178                       $1,604,843              0.6806              $1,092,229
+
+                                                                    Estimated Intrinsic Value (Sum of PVs)             $1,349,009
+
+Basis: T12 NOI = $72,170 | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: 5.5% (stated default)
+
+INTRINSIC VALUE Ã¢--Š¬Ã¢-‚¬⯑ EXIT CAP RATE SENSITIVITY
+
+
+ Exit Cap Rate                                Year 5 Exit Value                    Implied Intrinsic Value                vs. Base
+
+ 4.5%                                               $1,859,218                                $1,579,073                        17.1%
+
+ 5.0%                                               $1,673,296                                $1,452,537                        7.7%
+
+ 5.5% (stated default)                                 $1,521,178                             $1,349,009           Ã¢--š¬Ã¢-‚¬⯑
+
+ 6.0%                                               $1,394,413                                $1,262,735                       -6.4%
+
+ 6.5%                                                  $1,287,151                              $1,189,733                      -11.8%
+   Methodology & Data Transparency
+   InvestorIQ does not assume or gap-fill missing data. Outputs are driven by uploaded documents and
+   defined modeling frameworks, with transparency and auditability as core design principles.
+
+   Assumptions in this report are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or
+   fabricate market inputs.
+
+
+   12.1 InvestorIQ Estimates
+   InvestorIQ estimates are derived from uploaded documents and standardized underwriting
+   frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+
+   12.2 Methodology Notes
+   Metrics and tables reflect document-backed inputs and deterministic calculations. No manual
+   adjustments or external assumptions are introduced when source data is incomplete.
+
+
+   12.3 Data Limitations & Missing Inputs
+   This report is limited to the documents provided and the fields that could be verified. Missing values
+   are disclosed and excluded from analysis.
+
+
+
+
+InvestorIQ Property Intelligence Report · Confidential                                                   © InvestorIQ Technologies Inc.
+

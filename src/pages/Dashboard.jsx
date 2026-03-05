@@ -1528,7 +1528,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ - 
+                              Remove
                             </button>
                           </div>
                         ))
@@ -1616,7 +1616,7 @@ if (!stagedBatchId) {
                               }
                               className="text-xs font-bold text-red-700 hover:text-red-900"
                             >
-                              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ - 
+                              Remove
                             </button>
                           </div>
                         ))
@@ -1943,7 +1943,7 @@ if (!stagedBatchId) {
                       : 'border-[#0F172A] bg-[#0F172A] text-white hover:bg-[#0d1326]'
                   }`}
                 >
-                  {loading ? 'WorkingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦' : 'Generate Report'}
+                  {loading ? 'Working...' : 'Generate Report'}
                 </button>
                 <div className="text-xs leading-relaxed text-slate-500">
                   Each purchase allows a single generation. Once generation begins, refunds are not available.
@@ -2461,7 +2461,7 @@ if (!stagedBatchId) {
                 }}
                 className="rounded-md border border-[#0F172A] bg-[#0F172A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1326] disabled:opacity-60"
               >
-                {issueSubmitting ? 'SubmittingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦' : 'Submit'}
+                {issueSubmitting ? 'Submitting...' : 'Submit'}
               </button>
             </div>
           </div>
