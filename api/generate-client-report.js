@@ -397,7 +397,7 @@ function sanitizeTypography(html) {
     .replace(/ÃƒÂ¢/g, "")
     .replace(/ÃƒÂ£/g, "")
     .replace(/ÃƒÂ¢Ã¢/g, "")
-    .replace(/Ãƒâ€šÃ‚Â·/g, " · ")
+    .replace(/·/g, " · ")
     .replace(/Â·/g, " · ")
     .replace(/[â€“]/g, "-")
     .replace(/[â€”]/g, "-")
@@ -1029,7 +1029,7 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${t12PresentCount === t12Checks.length ? "#16a34a" : "#dc2626"};">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${rrPresentCount === rentRollChecks.length ? "#16a34a" : "#dc2626"};">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#F0FDF4;border:2px solid #16a34a;border-radius:6px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#15803d;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
+    return `<div style="background:#F0FDF4;border:2px solid #16a34a;border-radius:6px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#15803d;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -2379,7 +2379,7 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         propertyTaxPayload = propertyTaxArtifact?.payload || null;
-        // Fetch loan term sheet ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â used as fallback when no full mortgage statement was uploaded
+        // Fetch loan term sheet — used as fallback when no full mortgage statement was uploaded
         const { data: loanTermSheetArtifact } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -2646,7 +2646,7 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
       finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
     } else {
-      // v1_core: keep S2-S5 and S7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â they contain computed T12/rent roll data equally
+      // v1_core: keep S2-S5 and S7 — they contain computed T12/rent roll data equally
       // relevant for underwriting. Only strip S6 (screening-specific refi sufficiency
       // check, replaced by the full Refi Stability Classification section).
       finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
@@ -3013,15 +3013,15 @@ export default async function handler(req, res) {
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = `${formatMultiple(_dscr, 2)}x`;
           primaryPressurePoint = _dscr < 1.20
-            ? `DSCR of ${_ds} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â below 1.20x institutional threshold`
+            ? `DSCR of ${_ds} — below 1.20x institutional threshold`
             : _dscr < 1.35
-            ? `DSCR of ${_ds} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â moderate debt coverage, review refinance risk`
-            : `DSCR of ${_ds} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â meets institutional debt coverage thresholds`;
+            ? `DSCR of ${_ds} — moderate debt coverage, review refinance risk`
+            : `DSCR of ${_ds} — meets institutional debt coverage thresholds`;
         }
       }
     }
     const screeningHasSufficientData = hasMinimumScreeningCoverage(t12Payload);
-    // Operating profile classification ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â computed for both modes (deterministic threshold math)
+    // Operating profile classification — computed for both modes (deterministic threshold math)
     if (!screeningHasSufficientData) {
       screeningClass = "Insufficient Data";
       screeningExplanation =
@@ -3348,20 +3348,20 @@ export default async function handler(req, res) {
           if (Number.isFinite(_dscr) && _dscr > 0) {
             const _ds = `${formatMultiple(_dscr, 2)}x`;
             if (_dscr >= 1.35) {
-              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â debt service is well-covered by T12 NOI.`);
+              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum — debt service is well-covered by T12 NOI.`);
             } else if (_dscr >= 1.20) {
-              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â limited coverage cushion.`);
+              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold — limited coverage cushion.`);
             } else {
-              riskBullets.push(`DSCR of ${_ds} falls below 1.20x ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â debt service coverage is stressed at current NOI levels.`);
+              riskBullets.push(`DSCR of ${_ds} falls below 1.20x — debt service coverage is stressed at current NOI levels.`);
             }
           }
         }
         const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
-          ? `Operating profile classified ${screeningClass} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â impacts refinance viability under stress scenarios.`
+          ? `Operating profile classified ${screeningClass} — impacts refinance viability under stress scenarios.`
           : null;
         if (_refiClass) riskBullets.push(_refiClass);
       } else {
-        riskBullets.push("No debt terms uploaded ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DSCR and refinance risk cannot be quantified. Upload mortgage statement or term sheet.");
+        riskBullets.push("No debt terms uploaded — DSCR and refinance risk cannot be quantified. Upload mortgage statement or term sheet.");
       }
     }
     const upsideHtml = upsideBullets
@@ -3488,7 +3488,7 @@ export default async function handler(req, res) {
       : screeningClass === "Insufficient Data" ? "verdict-insufficient"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
-    // Verdict label tokens ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â differentiate screening triage vs underwriting capital profile
+    // Verdict label tokens — differentiate screening triage vs underwriting capital profile
     const coverVerdictLabel = effectiveReportMode === "v1_core"
       ? "CAPITAL RISK<br/>PROFILE"
       : "TRIAGE<br/>SIGNAL";
@@ -3514,7 +3514,7 @@ export default async function handler(req, res) {
     } else {
       finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
     }
-    // Cover asset snapshot ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â fills the bottom of the cover page
+    // Cover asset snapshot — fills the bottom of the cover page
     {
       const snapRows = [];
       const _coverRrUnits = Number(computedRentRoll?.total_units);
@@ -3557,7 +3557,7 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
-    // Ranked drivers are screening-only ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â suppress for underwriting mode
+    // Ranked drivers are screening-only — suppress for underwriting mode
     if (effectiveReportMode === "v1_core") {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_RANKED_DRIVERS");
     }
@@ -3700,7 +3700,7 @@ export default async function handler(req, res) {
       "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}",
       buildCapRateValueTable(coerceNumber(t12Payload?.net_operating_income), rrUnits)
     );
-    // Rent Upside Pathway card ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â full-width below the grid
+    // Rent Upside Pathway card — full-width below the grid
     {
       let upsideHtml = "";
       const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
@@ -3714,7 +3714,7 @@ export default async function handler(req, res) {
             `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
         }).join("");
         upsideHtml = `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
-          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Mark-to-Market Analysis</p>` +
+          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway — Mark-to-Market Analysis</p>` +
           `<div class="grid-2">` +
           `<div><table style="width:100%;border-collapse:collapse;font-size:11px;">` +
           `<tbody>` +
@@ -3987,7 +3987,7 @@ export default async function handler(req, res) {
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else {
-        // v1_core but no deterministic refi model ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â strip section entirely.
+        // v1_core but no deterministic refi model — strip section entirely.
         // The Refi Collapse Risk Grid in SECTION_7_DEBT covers debt/refi analysis.
         // A diagnostic "all missing" table is not appropriate for a $999 report.
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
@@ -4026,7 +4026,7 @@ export default async function handler(req, res) {
     if (!hasDocSources || effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
-    // Exec summary always shows ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â both modes have computed KPI grid + verdict block
+    // Exec summary always shows — both modes have computed KPI grid + verdict block
     // (v1_core previously gated on AI narrative "execSummary" which is never populated)
     if (false) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
@@ -4149,7 +4149,7 @@ export default async function handler(req, res) {
     }
     let scenarioTableHtml = "";
     // Note: scenarioTableHtml is built later in the v1_core block (~line 4210+).
-    // Do NOT check scenarioTableHtml.length here ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â it's always "" at this point.
+    // Do NOT check scenarioTableHtml.length here — it's always "" at this point.
     const showSection3 =
       (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
       (effectiveReportMode === "v1_core" && hasT12Data); // v1_core always builds scenario table from T12
@@ -4330,7 +4330,7 @@ export default async function handler(req, res) {
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
-        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Exit Cap Rate Sensitivity</p>`;
+        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value — Exit Cap Rate Sensitivity</p>`;
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
         for (const cap of capRatesDcf) {
@@ -4342,8 +4342,8 @@ export default async function handler(req, res) {
           }, 0);
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowBg = isBase ? ` style="background:#F0FDF4;font-weight:700;"` : ``;
-          const vs = isBase ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" ? "#374151" : pvSum > totalPv ? "#16a34a" : "#dc2626"};">${vs}</td></tr>`;
+          const vs = isBase ? "—" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#16a34a" : "#dc2626"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -4391,7 +4391,7 @@ export default async function handler(req, res) {
         sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
-        sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Cap Rate Sensitivity</p>`;
+        sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value — Cap Rate Sensitivity</p>`;
         sTbl += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th>`;
         for (const s of growthRates) {
@@ -4410,7 +4410,7 @@ export default async function handler(req, res) {
         }
         sTbl += `</tbody></table>`;
         scenarioTableHtml = sTbl;
-        // Scenario trajectory chart ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 5-year NOI bars per scenario
+        // Scenario trajectory chart — 5-year NOI bars per scenario
         const maxNoi5 = noiBasis * Math.pow(1.04, 5);
         const trajRows = growthRates.map((s, idx) => {
           const colors = ["#64748b", "#1e40af", "#d97706"];
@@ -4427,7 +4427,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // Deal Score ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â weighted composite from document-verified metrics only
+    // Deal Score — weighted composite from document-verified metrics only
     let dealScoreTableHtml = "";
     let dealScoreRows = [];
     if (effectiveReportMode === "v1_core") {
@@ -4656,7 +4656,7 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{SCENARIO_TABLE}}", scenarioTableHtml);
       finalHtml = replaceAll(finalHtml, "{{SCENARIO_TRAJECTORY_CHART}}", scenarioTrajectoryChartHtml);
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_TABLE}}", dealScoreTableHtml);
-      // Return Summary and Comparables have no data source ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â strip their subsections cleanly
+      // Return Summary and Comparables have no data source — strip their subsections cleanly
       // Strip fabricated PNG charts (pre-built images with baked-in axes, not document-derived)
       // Replace with inline HTML/CSS bar chart built from actual dealScoreRows
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
@@ -4698,9 +4698,9 @@ export default async function handler(req, res) {
           `</div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", dealScoreInlineChartHtml);
-      // Deal score interpretation: strip the section ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â inline chart IS the visual interpretation
+      // Deal score interpretation: strip the section — inline chart IS the visual interpretation
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_INTERPRETATION");
-      // Risk Register ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â deterministic from computed metrics
+      // Risk Register — deterministic from computed metrics
       {
         const riskRows = [];
         const addRisk = (factor, reading, threshold, flag, color) => {
@@ -4712,27 +4712,27 @@ export default async function handler(req, res) {
         if (Number.isFinite(expenseRatioR)) {
           const flag = expenseRatioR > 0.65 ? "ELEVATED" : expenseRatioR > 0.55 ? "WATCH" : "CLEAR";
           const color = expenseRatioR > 0.65 ? "#dc2626" : expenseRatioR > 0.55 ? "#d97706" : "#16a34a";
-          addRisk("Expense Ratio", formatPercent1(expenseRatioR), "CLEAR < 55% Ãƒâ€šÃ‚Â· WATCH 55-65% Ãƒâ€šÃ‚Â· ELEVATED > 65%", flag, color);
+          addRisk("Expense Ratio", formatPercent1(expenseRatioR), "CLEAR < 55% · WATCH 55-65% · ELEVATED > 65%", flag, color);
         }
         if (Number.isFinite(noiMarginR)) {
           const flag = noiMarginR < 0.35 ? "LOW" : noiMarginR < 0.45 ? "WATCH" : "STRONG";
           const color = noiMarginR < 0.35 ? "#dc2626" : noiMarginR < 0.45 ? "#d97706" : "#16a34a";
-          addRisk("NOI Margin", formatPercent1(noiMarginR), "STRONG > 45% Ãƒâ€šÃ‚Â· WATCH 35-45% Ãƒâ€šÃ‚Â· LOW < 35%", flag, color);
+          addRisk("NOI Margin", formatPercent1(noiMarginR), "STRONG > 45% · WATCH 35-45% · LOW < 35%", flag, color);
         }
         if (Number.isFinite(execOccupancy)) {
           const flag = execOccupancy < 0.85 ? "LOW" : execOccupancy < 0.95 ? "WATCH" : "CLEAR";
           const color = execOccupancy < 0.85 ? "#dc2626" : execOccupancy < 0.95 ? "#d97706" : "#16a34a";
-          addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% Ãƒâ€šÃ‚Â· WATCH 85-95% Ãƒâ€šÃ‚Â· LOW < 85%", flag, color);
+          addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% · WATCH 85-95% · LOW < 85%", flag, color);
         }
         if (Number.isFinite(breakEvenOccR)) {
           const flag = breakEvenOccR > 0.80 ? "ELEVATED" : breakEvenOccR > 0.70 ? "WATCH" : "CLEAR";
           const color = breakEvenOccR > 0.80 ? "#dc2626" : breakEvenOccR > 0.70 ? "#d97706" : "#16a34a";
-          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% Ãƒâ€šÃ‚Â· WATCH 70-80% Ãƒâ€šÃ‚Â· ELEVATED > 80%", flag, color);
+          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% · WATCH 70-80% · ELEVATED > 80%", flag, color);
         }
         if (Number.isFinite(marketRentPremiumRatio)) {
           const flag = marketRentPremiumRatio > 0.15 ? "UPSIDE" : marketRentPremiumRatio > 0.05 ? "MODERATE" : "MINIMAL";
           const color = marketRentPremiumRatio > 0.15 ? "#16a34a" : marketRentPremiumRatio > 0.05 ? "#1e40af" : "#6B7280";
-          addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside Ãƒâ€šÃ‚Â· 5-15% = moderate Ãƒâ€šÃ‚Â· < 5% = minimal", flag, color);
+          addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside · 5-15% = moderate · < 5% = minimal", flag, color);
         }
         if (mortgagePayload) {
           const la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
@@ -4747,7 +4747,7 @@ export default async function handler(req, res) {
             if (Number.isFinite(dscr) && dscr > 0) {
               const flag = dscr < 1.20 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
               const color = dscr < 1.20 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-              addRisk("DSCR (Current Debt)", `${dscr.toFixed(2)}x`, "STRONG > 1.35x Ãƒâ€šÃ‚Â· ADEQUATE 1.20-1.35x Ãƒâ€šÃ‚Â· STRESSED < 1.20x", flag, color);
+              addRisk("DSCR (Current Debt)", `${dscr.toFixed(2)}x`, "STRONG > 1.35x · ADEQUATE 1.20-1.35x · STRESSED < 1.20x", flag, color);
             }
           } else {
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
@@ -4757,7 +4757,7 @@ export default async function handler(req, res) {
         }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
-            `<p class="subsection-title" style="margin-bottom:8px;">Risk Register ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Deterministic Signal Summary</p>` +
+            `<p class="subsection-title" style="margin-bottom:8px;">Risk Register — Deterministic Signal Summary</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
             `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Risk Factor</th>` +
             `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Current Reading</th>` +
@@ -4768,7 +4768,7 @@ export default async function handler(req, res) {
           : "";
         finalHtml = replaceAll(finalHtml, "{{RISK_REGISTER_TABLE}}", riskRegisterHtml);
       }
-      // Return Summary and Comparables have no data source ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â strip cleanly
+      // Return Summary and Comparables have no data source — strip cleanly
       finalHtml = replaceAll(finalHtml, "{{RETURN_SUMMARY_TABLE}}", "");
       finalHtml = stripMarkedSection(finalHtml, "RETURN_SUMMARY_SUBSECTION");
       finalHtml = replaceAll(finalHtml, "{{COMPARABLES_TABLE}}", "");
@@ -4805,7 +4805,7 @@ export default async function handler(req, res) {
       if (Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
         const rows = [
           { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e40af" },
-          { label: "Operating Expenses (ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢)", val: opex, pct: Math.round((opex / egi) * 100), color: "#dc2626" },
+          { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#dc2626" },
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#16a34a" },
         ];
         const trs = rows.map(r =>
@@ -4870,7 +4870,7 @@ export default async function handler(req, res) {
               `<td style="padding:4px 8px;font-size:10px;font-weight:600;width:18%;">${escapeHtml(label)}</td>` +
               `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#1e40af;height:100%;width:${ipW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(inPlace)}</span></td>` +
               `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#16a34a;height:100%;width:${mktW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(market)}</span></td>` +
-              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#16a34a" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}</td></tr>`;
+              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#16a34a" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "—"}</td></tr>`;
           }).join("");
           html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:4px;">In-Place vs. Market Rent by Unit Type</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
