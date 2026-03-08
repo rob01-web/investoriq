@@ -1027,9 +1027,9 @@ function buildScreeningDataCoverageSummary({
     : "";
   const unlocksCard = "";
   const allPresent = missingInputs.length === 0;
-  const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${t12PresentCount === t12Checks.length ? "#16a34a" : "#dc2626"};">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:${rrPresentCount === rentRollChecks.length ? "#16a34a" : "#dc2626"};">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
+  const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#F0FDF4;border:2px solid #16a34a;border-radius:6px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#15803d;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -3604,12 +3604,11 @@ export default async function handler(req, res) {
       const erPctStr = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
       const nmPctStr = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
       const beoStr   = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
-      const classColor = screeningClass === "Stable" ? "#15803d" : screeningClass === "Sensitized" ? "#d97706" : "#dc2626";
       let rows = "";
       if (erPctStr) rows += `<tr><td>Expense Ratio</td><td style="font-weight:600;">${erPctStr}</td></tr>`;
       if (nmPctStr) rows += `<tr><td>NOI Margin</td><td style="font-weight:600;">${nmPctStr}</td></tr>`;
       if (beoStr)   rows += `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${beoStr}</td></tr>`;
-      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:4px solid ${classColor};"><p class="subsection-title">Capital Risk Profile: <span style="color:${classColor};">${screeningClass.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
+      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${screeningClass.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
       execVerdictExpansionHtml = profileCard;
     }
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
@@ -4299,7 +4298,7 @@ export default async function handler(req, res) {
         let tableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
         tableHtml += `<thead><tr>`;
         for (const h of ["Year", "NOI", "Exit Value", "Total Cash Flow", "PV Factor", "Present Value"]) {
-          tableHtml += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${h}</th>`;
+          tableHtml += `<th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">${h}</th>`;
         }
         tableHtml += `</tr></thead><tbody>`;
 
@@ -4332,7 +4331,7 @@ export default async function handler(req, res) {
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
         tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value — Exit Cap Rate Sensitivity</p>`;
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
-        tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
+        tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
         for (const cap of capRatesDcf) {
           const exitV = noi5dcf / (cap / 100);
           const pvSum = [1,2,3,4,5].reduce((sum, yr) => {
@@ -4367,9 +4366,9 @@ export default async function handler(req, res) {
         ];
         let sTbl = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
         sTbl += `<thead><tr>`;
-        sTbl += `<th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Year</th>`;
+        sTbl += `<th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year</th>`;
         for (const s of growthRates) {
-          sTbl += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${s.label} (${(s.rate * 100).toFixed(0)}% growth)</th>`;
+          sTbl += `<th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">${s.label} (${(s.rate * 100).toFixed(0)}% growth)</th>`;
         }
         sTbl += `</tr></thead><tbody>`;
         for (let yr = 1; yr <= 5; yr++) {
@@ -4393,9 +4392,9 @@ export default async function handler(req, res) {
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value — Cap Rate Sensitivity</p>`;
         sTbl += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
-        sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">Exit Cap Rate</th>`;
+        sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th>`;
         for (const s of growthRates) {
-          sTbl += `<th style="text-align:right;padding:4px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-weight:600;">${s.label}</th>`;
+          sTbl += `<th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">${s.label}</th>`;
         }
         sTbl += `</tr></thead><tbody>`;
         for (const cap of capRateRows) {
@@ -4804,9 +4803,9 @@ export default async function handler(req, res) {
       const egi = t12EgiValue, opex = t12TotalExpensesValue, noi = t12NoiValue;
       if (Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
         const rows = [
-          { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e40af" },
-          { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#dc2626" },
-          { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#16a34a" },
+          { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e293b" },
+          { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#94A3B8" },
+          { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
           `<tr><td style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
@@ -4835,7 +4834,7 @@ export default async function handler(req, res) {
           const pct = (l.amt / totalOpEx) * 100;
           const w = Math.max(1, Math.round(pct));
           return `<tr><td style="padding:3px 8px;font-size:10px;width:30%;white-space:nowrap;overflow:hidden;">${escapeHtml(l.label)}</td>` +
-            `<td style="padding:3px 8px;width:44%;"><div style="background:#E5E7EB;height:10px;border-radius:3px;overflow:hidden;"><div style="background:#1e40af;height:100%;width:${w}%;border-radius:3px;"></div></div></td>` +
+            `<td style="padding:3px 8px;width:44%;"><div style="background:#E5E7EB;height:10px;border-radius:3px;overflow:hidden;"><div style="background:#94A3B8;height:100%;width:${w}%;border-radius:3px;"></div></div></td>` +
             `<td style="padding:3px 8px;font-size:10px;font-weight:700;text-align:right;">${pct.toFixed(1)}%</td>` +
             `<td style="padding:3px 8px;font-size:10px;text-align:right;color:#6B7280;">${formatCurrency(l.amt)}</td></tr>`;
         }).join("");
@@ -4868,15 +4867,15 @@ export default async function handler(req, res) {
             const gapPct = inPlace > 0 && market > inPlace ? ((market - inPlace) / inPlace * 100).toFixed(1) : null;
             return `<tr>` +
               `<td style="padding:4px 8px;font-size:10px;font-weight:600;width:18%;">${escapeHtml(label)}</td>` +
-              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#1e40af;height:100%;width:${ipW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(inPlace)}</span></td>` +
-              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#16a34a;height:100%;width:${mktW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(market)}</span></td>` +
-              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#16a34a" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "—"}</td></tr>`;
+              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#1e293b;height:100%;width:${ipW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(inPlace)}</span></td>` +
+              `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#94A3B8;height:100%;width:${mktW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(market)}</span></td>` +
+              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#B8860B" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "—"}</td></tr>`;
           }).join("");
           html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:4px;">In-Place vs. Market Rent by Unit Type</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
             `<th style="text-align:left;padding:2px 8px;font-size:9px;color:#6B7280;text-transform:uppercase;">Unit Type</th>` +
-            `<th style="padding:2px 6px;font-size:9px;color:#1e40af;text-transform:uppercase;">&#9646; In-Place</th>` +
-            `<th style="padding:2px 6px;font-size:9px;color:#16a34a;text-transform:uppercase;">&#9646; Market</th>` +
+            `<th style="padding:2px 6px;font-size:9px;color:#64748B;text-transform:uppercase;">In-Place</th>` +
+            `<th style="padding:2px 6px;font-size:9px;color:#64748B;text-transform:uppercase;">Market</th>` +
             `<th style="text-align:right;padding:2px 8px;font-size:9px;color:#6B7280;text-transform:uppercase;">Upside Gap</th>` +
             `</tr></thead><tbody>${trs}</tbody></table></div>`;
         }
@@ -4891,15 +4890,15 @@ export default async function handler(req, res) {
         const currFmt = formatPercent1(execOccupancy);
         const bufPts = ((execOccupancy - breakEvenOccR) * 100).toFixed(1);
         const beoW = Math.round(breakEvenOccR * 100);
-        const bufColor = (execOccupancy - breakEvenOccR) >= 0.20 ? "#16a34a" : (execOccupancy - breakEvenOccR) >= 0.10 ? "#d97706" : "#dc2626";
+        const bufColor = "#B8860B";
         const bufLabel = (execOccupancy - breakEvenOccR) >= 0.20 ? "Strong cushion" : (execOccupancy - breakEvenOccR) >= 0.10 ? "Adequate cushion" : "Limited cushion";
         html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Break-Even Occupancy Buffer</p>` +
           `<div style="background:#E5E7EB;height:20px;border-radius:4px;overflow:hidden;position:relative;">` +
-          `<div style="background:#fde68a;height:100%;width:${beoW}%;border-radius:4px 0 0 4px;"></div>` +
+          `<div style="background:#B8860B;height:100%;width:${beoW}%;border-radius:4px 0 0 4px;"></div>` +
           `</div>` +
           `<div style="display:flex;justify-content:space-between;margin-top:5px;">` +
-          `<span style="font-size:10px;color:#92400e;font-weight:600;">Break-even: ${beoFmt}</span>` +
-          `<span style="font-size:10px;color:#16a34a;font-weight:600;">Current occupancy: ${currFmt}</span>` +
+          `<span style="font-size:10px;color:#1e293b;font-weight:600;">Break-even: ${beoFmt}</span>` +
+          `<span style="font-size:10px;color:#1e293b;font-weight:600;">Current occupancy: ${currFmt}</span>` +
           `</div>` +
           `<p class="small" style="margin-top:4px;color:${bufColor};font-weight:700;">Buffer: ${bufPts} percentage points &mdash; ${bufLabel}</p></div>`;
       }
