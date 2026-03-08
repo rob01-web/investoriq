@@ -4480,12 +4480,12 @@ export default async function handler(req, res) {
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
         const verdictLabel = score >= 70 ? "PROCEED" : score >= 50 ? "REVIEW" : "PASS";
-        const verdictColor = score >= 70 ? "#1b5e20" : score >= 50 ? "#e65100" : "#b71c1c";
+        const verdictColor = "#1F3A5F";
         const rows = scoreRows.map((r) =>
           `<tr>` +
           `<td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.label)}</td>` +
           `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.value)}</td>` +
-          `<td style="padding:4px 8px;border:1px solid #E5E7EB;color:#555;">${escapeHtml(r.band)}</td>` +
+          `<td style="padding:4px 8px;border:1px solid #E5E7EB;color:#3F5E84;">${escapeHtml(r.band)}</td>` +
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${r.pts}/${r.max}</td>` +
           `</tr>`
         ).join("");
@@ -4493,22 +4493,22 @@ export default async function handler(req, res) {
           `<div class="card no-break" style="margin-top:12px;">` +
           `<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;">` +
           `<span style="font-size:24px;font-weight:800;color:${verdictColor};letter-spacing:2px;">${verdictLabel}</span>` +
-          `<span style="display:block;font-size:12px;color:#666;margin-top:4px;">Composite Score: ${score} / 100</span>` +
+          `<span style="display:block;font-size:12px;color:#3F5E84;margin-top:4px;">Composite Score: ${score} / 100</span>` +
           `</div>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
           `<thead><tr>` +
-          `<th style="text-align:left;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Factor</th>` +
-          `<th style="text-align:right;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Value</th>` +
-          `<th style="padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Threshold</th>` +
-          `<th style="text-align:center;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Score</th>` +
+          `<th style="text-align:left;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Factor</th>` +
+          `<th style="text-align:right;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Value</th>` +
+          `<th style="padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Threshold</th>` +
+          `<th style="text-align:center;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Score</th>` +
           `</tr></thead>` +
           `<tbody>${rows}</tbody>` +
-          `<tfoot><tr style="background:#F3F4F6;font-weight:700;">` +
+          `<tfoot><tr style="background:#FFFFFF;font-weight:700;">` +
           `<td colspan="3" style="padding:4px 8px;border:1px solid #E5E7EB;">Composite Score (normalized)</td>` +
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#888;">Scored from document-verified metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from document-verified metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
