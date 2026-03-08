@@ -331,7 +331,7 @@
       text-transform: uppercase;
       font-size: 9px;
       letter-spacing: 0.08em;
-      color: #C9A227;
+      color: #1F3A5F;
       font-weight: 700;
       margin: 0 0 6px 0;
     }
@@ -413,7 +413,7 @@
     }
 
     .highlight {
-      color: var(--gold);
+      color: #1F3A5F;
       font-weight: 600;
     }
 
@@ -442,7 +442,7 @@
     .verdict-block {
       background: #FFFFFF;
       border: 1px solid #E9EEF5;
-      border-top: 1px solid #C9A227;
+      border-top: 1px solid #E9EEF5;
       border-radius: 3px;
       padding: 12px 14px;
       margin-bottom: 12px;
@@ -527,7 +527,7 @@
     }
 
     .kpi-card--flagged {
-      border-top: 1px solid #C9A227;
+      border-top: 1px solid #E9EEF5;
     }
 
     .kpi-label {
@@ -579,7 +579,7 @@
     .brand-mark {
       font-size: 18px;
       font-weight: 700;
-      color: var(--gold);
+      color: #1F3A5F;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       white-space: nowrap;
@@ -626,7 +626,7 @@
     }
 
     .risk-negative {
-      color: #3F5E84;
+      color: #1F3A5F;
       font-weight: 600;
     }
 
@@ -1512,17 +1512,6 @@ ul, ol {
     <p class="subsection-title">Factor-Level Scores</p>
 
   {{DEAL_SCORE_TABLE}}
-  {{DEAL_SCORE_INLINE_CHART}}
-
-<!-- BEGIN SECTION_CHART_DEAL_SCORE_BAR -->
-  <!-- BAR CHART -->
-  <div class="chart-block chart-large no-break" style="margin-top:18px;">
-    <img
-      src="{{DEAL_SCORE_BAR_CHART_URL}}"
-      alt="Deal Score Factor Breakdown Bar Chart"
-    />
-  </div>
-<!-- END SECTION_CHART_DEAL_SCORE_BAR -->
 
 <!-- BEGIN SECTION_8_INTERPRETATION -->
   <p class="subsection-title" style="margin-top:16px;">Interpretation</p>
