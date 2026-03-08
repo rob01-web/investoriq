@@ -4706,8 +4706,8 @@ export default async function handler(req, res) {
         const addRisk = (factor, reading, threshold, flag, color) => {
           riskRows.push(`<tr><td style="padding:5px 8px;border:1px solid #E5E7EB;font-weight:600;font-size:11px;">${escapeHtml(factor)}</td>` +
             `<td style="padding:5px 8px;border:1px solid #E5E7EB;font-size:11px;">${escapeHtml(reading)}</td>` +
-            `<td style="padding:5px 8px;border:1px solid #E5E7EB;font-size:10px;color:#6B7280;">${escapeHtml(threshold)}</td>` +
-            `<td style="padding:5px 8px;border:1px solid #E5E7EB;text-align:center;"><span style="background:${color};color:#ffffff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">${escapeHtml(flag)}</span></td></tr>`);
+            `<td style="padding:5px 8px;border:1px solid #E5E7EB;font-size:10px;color:#3F5E84;">${escapeHtml(threshold)}</td>` +
+            `<td style="padding:5px 8px;border:1px solid #E5E7EB;text-align:center;"><span style="background:#FFFFFF;color:#1F3A5F;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;border:1px solid #E9EEF5;">${escapeHtml(flag)}</span></td></tr>`);
         };
         if (Number.isFinite(expenseRatioR)) {
           const flag = expenseRatioR > 0.65 ? "ELEVATED" : expenseRatioR > 0.55 ? "WATCH" : "CLEAR";
@@ -4759,10 +4759,10 @@ export default async function handler(req, res) {
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
             `<p class="subsection-title" style="margin-bottom:8px;">Risk Register — Deterministic Signal Summary</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
-            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Risk Factor</th>` +
-            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Current Reading</th>` +
-            `<th style="text-align:left;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Threshold</th>` +
-            `<th style="text-align:center;padding:5px 8px;background:#1e293b;color:#ffffff;border:1px solid #334155;font-size:10px;text-transform:uppercase;">Flag</th>` +
+            `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Risk Factor</th>` +
+            `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Current Reading</th>` +
+            `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Threshold</th>` +
+            `<th style="text-align:center;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Flag</th>` +
             `</tr></thead><tbody>${riskRows.join("")}</tbody></table>` +
             `<p class="small" style="margin-top:6px;">All signals derived deterministically from uploaded documents. No inferences or estimates.</p></div>`
           : "";
