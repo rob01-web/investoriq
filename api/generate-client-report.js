@@ -1029,7 +1029,7 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents (mortgage statement, appraisal, property tax) may unlock supplemental sections in the Underwriting Report tier.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may unlock supplemental underwriting sections not included in this report.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -2624,14 +2624,14 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(
       finalHtml,
       "{{LIMITATIONS_NOTES}}",
-      "This report is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
+      "This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{ASSUMPTIONS_DISCLOSURE}}",
       allowAssumptions
-        ? "Assumptions in this report are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
-        : "This report contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
+        ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
+        : "This memorandum contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
     );
     if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
@@ -3531,7 +3531,7 @@ export default async function handler(req, res) {
         : "";
       finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
     }
-    const reportTypeLabel = effectiveReportMode === "v1_core" ? "Underwriting Report" : "Screening Report";
+    const reportTypeLabel = effectiveReportMode === "v1_core" ? "Underwriting Memorandum" : "Capital Triage Memo";
     finalHtml = replaceAll(finalHtml, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(
@@ -3719,7 +3719,7 @@ export default async function handler(req, res) {
           `<tbody>` +
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr>` +
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr>` +
-          `<tr style="background:#F0FDF4;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#15803d;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#15803d;">${formatCurrency(annualGap)}</td></tr>` +
+          `<tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr>` +
           `</tbody></table></div>` +
           `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Lift at Stabilization</p>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
@@ -4268,9 +4268,9 @@ export default async function handler(req, res) {
               const dscr = annualDs > 0 ? noiBase / annualDs : 0;
               if (dscr > 0 && Number.isFinite(dscr)) {
                 dscrDisplay = `${dscr.toFixed(2)}x`;
-                if (dscr < 1.00) { bg = "#FEE2E2"; fc = "#B91C1C"; }
-                else if (dscr < 1.20) { bg = "#FEF9C3"; fc = "#854D0E"; }
-                else { bg = "#F0FDF4"; fc = "#15803D"; }
+                if (dscr < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
+                else if (dscr < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
+                else { bg = "#FEFCE8"; fc = "#B8860B"; }
               }
             }
             grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${dscrDisplay}</td>`;
@@ -4340,9 +4340,9 @@ export default async function handler(req, res) {
             return sum + (noiYr + ev) / Math.pow(1 + DISCOUNT, yr);
           }, 0);
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
-          const rowBg = isBase ? ` style="background:#F0FDF4;font-weight:700;"` : ``;
+          const rowBg = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
           const vs = isBase ? "—" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#16a34a" : "#dc2626"};">${vs}</td></tr>`;
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -4399,7 +4399,7 @@ export default async function handler(req, res) {
         sTbl += `</tr></thead><tbody>`;
         for (const cap of capRateRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
-          const rowStyle = isBase ? ` style="background:#F0FDF4;font-weight:700;"` : ``;
+          const rowStyle = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
           sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td>`;
           for (const s of growthRates) {
             const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
@@ -4664,7 +4664,7 @@ export default async function handler(req, res) {
       if (dealScoreRows.length > 0) {
         const iChartRows = dealScoreRows.map((r) => {
           const ratio = r.max > 0 ? r.pts / r.max : 0;
-          const barColor = ratio >= 0.8 ? "#16a34a" : ratio >= 0.5 ? "#d97706" : "#dc2626";
+          const barColor = "#B8860B";
           const barWidth = Math.round(ratio * 100);
           return (
             `<tr style="border-bottom:1px solid #F3F4F6;">` +
