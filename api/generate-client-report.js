@@ -1029,7 +1029,7 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may unlock supplemental underwriting sections not included in this report.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -3361,7 +3361,7 @@ export default async function handler(req, res) {
           : null;
         if (_refiClass) riskBullets.push(_refiClass);
       } else {
-        riskBullets.push("No debt terms uploaded — DSCR and refinance risk cannot be quantified. Upload mortgage statement or term sheet.");
+        riskBullets.push("Debt terms were not included in the uploaded documents; DSCR and refinance risk are not assessed in this report.");
       }
     }
     const upsideHtml = upsideBullets
@@ -4752,7 +4752,7 @@ export default async function handler(req, res) {
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
           }
         } else {
-          addRisk("DSCR", "No debt doc uploaded", "Upload mortgage statement or term sheet", "NOT ASSESSED", "#9CA3AF");
+          addRisk("DSCR", "No debt doc uploaded", "Debt terms were not included in the uploaded documents", "NOT ASSESSED", "#9CA3AF");
         }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
