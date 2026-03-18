@@ -414,14 +414,20 @@
 
     th {
       background: #FFFFFF;
-      color: #1F3A5F;
+      color: var(--ink-3);
+      font-family: var(--font-body);
+      font-size: 10px;
       font-weight: 600;
-      border-top: 1px solid #E9EEF5;
-      border-bottom: 1px solid #1F3A5F;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-top: 1px solid var(--hairline);
+      border-bottom: 1px solid var(--hairline-mid);
+      padding-top: 0;
+      padding-bottom: 6px;
     }
 
     tr:nth-child(even) td {
-      background: #FFFFFF;
+      background: var(--row-alt);
     }
 
     .label {
