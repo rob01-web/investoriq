@@ -169,46 +169,49 @@ Result:
 
 ---
 
+### PATCH 5 — TABLE SYSTEM
+- Removed UI table feel
+- Introduced bottom hairline borders only
+- Improved row spacing
+- Refined header hierarchy
+- Added subtle striping
+- Table presentation now reads more like a financial statement / IC memo
+
+---
+
+### PATCH 6 — EXECUTIVE TEXT / NARRATIVE
+- Cleaned executive headings
+- Removed old Inter / Merriweather residue in core narrative components
+- Restyled verdict block, verdict label, verdict classification, verdict supporting text
+- Updated major headings, h1/h2/h4, h3, and data-not-available styling
+- Executive summary now aligns with locked display/body/mono system
+
+---
+
 ## 🚧 CURRENT PRIORITY (ACTIVE WORK)
 
-We are redesigning the report to achieve:
-
-👉 **CRISP / AIRY / LUXURY / ELITE**
-👉 “Written with authority”
-👉 Lender-grade visual trust
+### PATCH 7 — COVER PAGE
+Goal:
+- Remove old navy-era / Inter-based cover styling
+- Align cover with locked white / ink / gold / green system
+- Make cover feel minimal, premium, and institutional
+- Ensure cover matches the new landing page / report preview standard
 
 ---
 
 ## ⏭️ NEXT PATCHES (IN ORDER)
 
-### PATCH 5 — TABLE SYSTEM (NEXT — HIGH IMPACT)
-Goal:
-- Remove UI table feel
-- Introduce:
-  - ink hierarchy
-  - refined spacing
-  - subtle striping
-  - financial statement aesthetic
-
----
-
-### PATCH 6 — EXECUTIVE TEXT / NARRATIVE
-Goal:
-- Remove generic block feel
-- Introduce:
-  - editorial tone
-  - better line spacing
-  - typographic hierarchy
-
----
-
-### PATCH 7 — COVER PAGE (FINAL)
+### PATCH 7 — COVER PAGE (NEXT — CRITICAL)
 Goal:
 - Align with new system
 - Keep green/gold but:
   - more minimal
   - more premium
-  - less “template”
+  - less template-like
+  - fully consistent with the rest of the report
+
+POST-DESIGN RETURN:
+- Return immediately to debt/refinance recognition and rendering reliability
 
 ---
 
@@ -230,19 +233,21 @@ File:
 `api/generate-client-report.js`
 
 Focus:
-- Ensure debt inputs are ALWAYS correctly recognized
-- Ensure refinance model runs deterministically
+- This is still the next engineering priority after visual redesign
+- Ensure debt artifact recognition is deterministic
+- Ensure `mortgagePayload` fallback reliability
+- Ensure refinance triggering remains deterministic
 
 ---
 
 ## 🧠 CURRENT STATUS
 
-You are:
-
-✅ Days from launch  
-✅ Core engine working  
-✅ Design now approaching institutional level  
-⚠️ Final polish + debt model fix remaining  
+- Core engine working
+- Patch 5 complete
+- Patch 6 complete
+- Patch 7 remaining
+- Debt/refinance bug remains next after design
+- Product now visually approaching launch standard
 
 ---
 
