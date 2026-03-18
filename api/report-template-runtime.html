@@ -206,13 +206,15 @@
     h1,
     h2,
     h4 {
-      font-family: "Merriweather", "Times New Roman", serif;
+      font-family: var(--font-display);
       margin: 0;
     }
     h3 {
-      font-family: "Inter", sans-serif;
+      font-family: var(--font-body);
       font-size: 13px;
       font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--ink-2);
     }
 
     h1 {
@@ -235,7 +237,7 @@
     }
 
     .data-not-available {
-      color: #3F5E84;
+      color: var(--ink-3);
       font-weight: 500;
     }
 
@@ -693,14 +695,14 @@
 
     /* Executive verdict */
     .verdict-leftbar {
-      border-left: 1px solid #E9EEF5;
+      border-left: 1px solid var(--hairline-mid);
       padding: 4px 0 4px 10px;
-      font-family: "Merriweather", serif;
+      font-family: var(--font-display);
       font-size: 18px;
-      font-weight: 700;
-      color: var(--navy);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-weight: 500;
+      color: var(--ink);
+      text-transform: none;
+      letter-spacing: 0;
       margin-bottom: 16px;
       max-width: 520px;
     }
