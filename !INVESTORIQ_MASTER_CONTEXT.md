@@ -1,376 +1,269 @@
-INVESTORIQ — MASTER CONTEXT (PRE-LAUNCH)
-0. SYSTEM IDENTITY
+# INVESTORIQ — MASTER CONTEXT (UPDATED)
 
-InvestorIQ = Document-Driven, Deterministic Real Estate Underwriting Engine
+## 🎯 PRODUCT OVERVIEW
 
-Positioning:
+InvestorIQ is a **document-driven real estate underwriting platform**.
 
-Institutional-grade (Blackstone / Brookfield quality bar)
+Core positioning:
+- “The only underwriting tool that models refinance collapse risk”
+- Institutional-grade
+- Deterministic only (no AI hallucination)
+- Fail-closed system
+- One purchase = one report (no reruns unless system fault)
 
-No AI fluff
+---
 
-No speculation
+## 🧱 PRODUCT TIERS
 
-No BUY/SELL language
+### 1. Screening Report (~$299)
+- Decision memo style
+- Ranked deterministic drivers
+- No empty sections
+- No speculation
+- Fast triage
 
-Fail-closed system
+### 2. Underwriting Report (~$999)
+- Full lender-grade analysis
+- Refinance risk modeling
+- DCF + scenario analysis
+- Institutional output (NO BUY/SELL language)
 
-Every output must be traceable to documents
+---
 
-Core Differentiator:
-👉 Refinance Collapse Risk Modeling (deterministic, document-derived)
-
-1. PRODUCT STRUCTURE
-1. Screening Report (~$299)
-
-Decision memo style
-
-Ranked deterministic drivers
-
-No empty sections
-
-No filler text
-
-Fail-closed gating
-
-Fast insight layer
-
-2. Underwriting Report (~$999)
-
-Lender-grade analysis
-
-Full financial reconstruction
-
-Refinance Stability Classification:
-
-Stable
-
-Sensitized
-
-Fragile
-
-Refinance Failure Under Stress
-
-Rules:
-
-ONE purchase = ONE generation
-
-No reruns unless system fault
-
-Deterministic math only
-
-Document-backed only
-
-2. CORE SYSTEM ARCHITECTURE
+## ⚙️ CORE ENGINE
 
 Pipeline:
 
-Upload → Parse → Classify → Extract → Analyze → Score → Render → PDF
+uploads → analysis_job_files → parsing → analysis_artifacts → underwriting → scoring → rendering → PDF
 
 Statuses:
+- needs_documents
+- queued
+- extracting
+- underwriting
+- scoring
+- rendering
+- pdf_generating
+- publishing
+- published
 
-needs_documents
-→ queued
-→ extracting
-→ underwriting
-→ scoring
-→ rendering
-→ pdf_generating
-→ publishing
-→ published
-Key Backend Files
+---
 
-api/generate-client-report.js → MAIN ENGINE
+## 🔐 PRODUCT RULES (NON-NEGOTIABLE)
 
-report-template-runtime.html → HTML → PDF template
+- Deterministic math only
+- Fail-closed gating
+- No fabricated narratives
+- No AI tone
+- No BUY/SELL recommendations
+- ASCII-only output
+- NCO repo (no duplication / no residue)
 
-Dashboard.jsx → upload + trigger UI
+---
 
-Supabase → storage + job state + artifacts
+## 🎨 NEW DESIGN SYSTEM (LOCKED — CRITICAL)
 
-Critical Tables
+### Core Philosophy
 
-analysis_jobs
+Reports must feel like:
+- Glossy white paper
+- Black ink precision
+- Institutional memo
+- Editorial / annual report quality
 
-analysis_job_files
+NOT:
+- SaaS dashboard
+- UI export
+- Dark/navy-heavy design
 
-analysis_artifacts
+---
 
-Key Artifact Types
+### 🎨 COLOR SYSTEM
 
-rent_roll_parsed
 
-t12_parsed
+White: #FFFFFF
+Ink: #0C0C0C
+Ink-2: #363636
+Ink-3: #606060
+Ink-4: #9A9A9A
+Hairline: #E8E5DF
+Warm paper: #FAFAF8
 
-mortgage_statement_parsed
+Gold: #C9A84C
+Gold dark: #9A7A2C
+Cover green: #0F2318
 
-loan_term_sheet_parsed
 
-3. CURRENT CRITICAL ISSUE (DO NOT FORGET)
-🚨 Debt / Refinance Bridge Issue
+---
 
-Problem:
+### 🔤 TYPOGRAPHY SYSTEM (LOCKED)
 
-Mortgage / debt data not reliably flowing into underwriting
 
-Term sheets not always becoming mortgage_statement_parsed
+Display: Cormorant Garamond (authority / headings / KPI values)
+Body: DM Sans (clarity / paragraphs / tables)
+Mono: DM Mono (metadata / dates / IDs)
 
-Fallback logic inconsistent
 
-Location:
+Usage rules:
+- Serif = authority
+- Sans = clarity
+- Mono = system/data feel
 
-api/generate-client-report.js
+---
 
-~lines 2332–2398
+## 🧩 REPORT TEMPLATE — CURRENT STATE
 
-Behavior:
+File:
+`api/report-template-runtime.html`
 
-Tries:
+---
 
-mortgage_statement_parsed
+## ✅ COMPLETED PATCHES
 
-fallback → loan_term_sheet_parsed
+### PATCH 1 — Design Tokens + Fonts
+- Replaced Inter/Merriweather
+- Introduced full ink + gold system
 
-If classification fails upstream → report behaves as if NO debt exists
+---
 
-🔥 THIS IS WHAT WE RETURN TO AFTER DESIGN
-4. REPORT ENGINE RULES
+### PATCH 2 — Layout + Header System
+- Removed heavy header strip
+- Introduced clean running header
+- Removed REPORT_TYPE_LABEL
+- Introduced refined spacing + bleed
+- Footer system cleaned
 
-ASCII only
+---
 
-No mojibake (Â· etc.)
+### PATCH 3 — Section Header System
+- Introduced:
+  - eyebrow (Section XX)
+  - title (serif)
+  - subtext (sans)
+  - gold rule
+- Removed legacy `<hr>` usage
+- Applied across ALL sections (01–20)
 
-No fabricated narrative
+---
 
-Collapse sections with no data
+### PATCH 4 — KPI SYSTEM (CRITICAL)
 
-No "DATA NOT AVAILABLE" spam
+TRANSFORMATION:
 
-Deterministic outputs only
+Before:
+- Card UI
+- Background boxes
+- Borders
+- SaaS dashboard feel
 
-Fail closed if missing critical inputs
+After:
+- No boxes
+- No shadows
+- Hairline separators only
+- Serif KPI values
+- Ink-based hierarchy
+- Grid layout (3-column)
 
-5. DESIGN TRANSFORMATION (CURRENT PHASE)
-❌ OLD PROBLEM
+Result:
+→ **Institutional financial presentation**
 
-Too dark (navy heavy)
+---
 
-Feels heavy / dated
+## 🚧 CURRENT PRIORITY (ACTIVE WORK)
 
-Not “institutional luxury”
+We are redesigning the report to achieve:
 
-Not crisp or breathable
-
-✅ NEW DESIGN DIRECTION (LOCKED)
-🎯 FEELING
-
-Glossy white paper
-
-Black ink authority
-
-Editorial / annual report quality
-
-Minimal, restrained luxury
-
-🎨 COLOR SYSTEM (LOCKED)
-White:        #FFFFFF
-Paper Warm:   #FAFAF8
-
-Primary Ink:  #111111 / #0C0C0C
-Secondary:    #4A4A4A
-Tertiary:     #6F6F6F
-Light:        #9A9A9A
-
-Hairline:     #E8E5DF
-Hairline Mid: #D0CCC4
-
-Gold:         #C9A84C
-Gold Dark:    #9A7A2C
-✍️ TYPOGRAPHY (LOCKED)
-Display: Cormorant Garamond → authority / editorial
-Body:    DM Sans → clean / modern
-Mono:    DM Mono → labels / metadata
-
-Tone:
+👉 **CRISP / AIRY / LUXURY / ELITE**
 👉 “Written with authority”
+👉 Lender-grade visual trust
 
-6. DESIGN SYSTEM PRINCIPLES
+---
 
-Typography > color
+## ⏭️ NEXT PATCHES (IN ORDER)
 
-Minimal color usage
+### PATCH 5 — TABLE SYSTEM (NEXT — HIGH IMPACT)
+Goal:
+- Remove UI table feel
+- Introduce:
+  - ink hierarchy
+  - refined spacing
+  - subtle striping
+  - financial statement aesthetic
 
-Gold = accent only (never dominant)
+---
 
-Thin rules > boxes
+### PATCH 6 — EXECUTIVE TEXT / NARRATIVE
+Goal:
+- Remove generic block feel
+- Introduce:
+  - editorial tone
+  - better line spacing
+  - typographic hierarchy
 
-Air > density
+---
 
-No heavy fills
+### PATCH 7 — COVER PAGE (FINAL)
+Goal:
+- Align with new system
+- Keep green/gold but:
+  - more minimal
+  - more premium
+  - less “template”
 
-No dark backgrounds inside report body
+---
 
-7. CURRENT TEMPLATE STATUS
-✅ Completed
+## ⚠️ AFTER DESIGN — RETURN TO CORE BUG
 
-Font system replaced
+Once visual redesign is complete:
 
-Root variables replaced
+👉 RETURN TO:
 
-Header strip redesigned
+### ❗ Debt / Refinance Bridge Issue
 
-Footer cleaned
+Context:
+- Mortgage / loan term sheet parsing
+- `mortgagePayload` fallback logic
+- Missing or misclassified debt artifacts
+- Refinance model not triggering correctly
 
-Section header system being redesigned (Patch 3)
+File:
+`api/generate-client-report.js`
 
-⚠️ NOT YET UPDATED
+Focus:
+- Ensure debt inputs are ALWAYS correctly recognized
+- Ensure refinance model runs deterministically
 
-Still using old system:
+---
 
-KPI cards
+## 🧠 CURRENT STATUS
 
-Tables
+You are:
 
-Verdict blocks
+✅ Days from launch  
+✅ Core engine working  
+✅ Design now approaching institutional level  
+⚠️ Final polish + debt model fix remaining  
 
-Section interiors
+---
 
-Cover page
+## 🚀 MISSION
 
-Remaining navy / teal usage
+Transform InvestorIQ from:
 
-8. NEXT DESIGN PATCHES (ORDER MATTERS)
+“working product”
 
-✅ Patch 2 — base layout (DONE)
+→ into
 
-🔄 Patch 3 — section headers (IN PROGRESS)
+👉 **institutional-grade underwriting platform trusted by lenders**
 
-⏭ Patch 4 — Executive Summary redesign
+---
 
-⏭ Patch 5 — KPI system (critical)
+## 🔥 WORKING STYLE (CRITICAL)
 
-⏭ Patch 6 — tables (major visual impact)
-
-⏭ Patch 7 — verdict blocks
-
-⏭ Patch 8 — cover page (LAST)
-
-9. PRODUCT PHILOSOPHY
-
-InvestorIQ is NOT:
-
-AI-generated narrative fluff
-
-Pretty dashboards
-
-Opinion-based
-
-InvestorIQ IS:
-
-Document truth → structured → modeled → scored
-
-Deterministic underwriting engine
-
-Institutional decision support
-
-10. BRAND POSITIONING (FOR SITE + REPORTS)
-
-Primary message:
-👉 “The only document-driven underwriting system that models refinance collapse risk.”
-
-Tone:
-
-Institutional
-
-Precise
-
-Calm authority
-
-No hype
-
-11. UX / SYSTEM BEHAVIOR RULES
-
-Upload does NOT imply processing
-
-User must click Generate
-
-Clear states:
-
-Upload received
-
-Processing started
-
-No ambiguity
-
-12. ENTITLEMENT LOGIC
-
-1 purchase = 1 report
-
-No reruns
-
-Exception:
-
-system failure → auto restore credit
-
-13. KNOWN UX ISSUES
-
-Upload toast implies auto-processing (misleading)
-
-Jobs sometimes stuck in "queued"
-
-Need better failure messaging (partially fixed)
-
-14. IMMEDIATE PRIORITIES (IN ORDER)
-1. Finish report redesign (CURRENT)
-
-Section headers → KPI → tables → cover
-
-2. RETURN TO:
-
-🚨 Debt / refinance bridge fix
-
-3. Then:
-
-Stabilize pipeline (no stuck jobs)
-
-Improve UX clarity
-
-Final polish
-
-4. Then:
-
-🚀 LAUNCH
-
-15. CODING RULES (CRITICAL)
-
-Anchor-locked patches ONLY
-
-Replace EXACT blocks only
-
-If mismatch → STOP
-
-No global replace
-
-No regex across file
-
-No refactors
-
-One file at a time
-
-Must pass:
-
-node --check api/generate-client-report.js
-16. FINAL NOTE
-
-We are in final pre-launch phase.
-
-DO NOT:
-
-introduce new features
-
-refactor core engine
-
-change logic unnecessarily
-
-FOCUS:
-👉 visual authority + pipeline reliability
+- Anchor-locked patches ONLY
+- One file at a time
+- No global replace
+- No guessing
+- No refactors unless approved
+- Fail on mismatch
+- Deterministic changes only
