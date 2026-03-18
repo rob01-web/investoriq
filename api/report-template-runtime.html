@@ -358,11 +358,8 @@
     }
 
     .card {
-      background: #FFFFFF;
-      border-radius: 3px;
-      border: 1px solid #E9EEF5;
-      border-left: 1px solid #E9EEF5;
-      padding: 7px 10px;
+      border-top: 1px solid var(--hairline);
+      padding: 6px 0;
     }
 
     .subsection-title {
@@ -542,46 +539,39 @@
     }
 
     .kpi-grid {
-      font-size: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 10px;
       margin-bottom: 14px;
     }
 
     .kpi-card {
-      display: inline-block;
-      vertical-align: top;
-      width: 32%;
-      margin-right: 2%;
-      margin-bottom: 8px;
-      box-sizing: border-box;
-      background: #FFFFFF;
-      border-radius: 3px;
-      padding: 8px 10px;
-      border: 1px solid #E9EEF5;
+      padding: 6px 0;
+      border-top: 1px solid var(--hairline);
       font-size: 10px;
     }
 
-    .kpi-card:nth-child(3n) {
-      margin-right: 0;
-    }
+    .kpi-card:nth-child(3n) {}
 
     .kpi-card--flagged {
-      border-top: 1px solid #E9EEF5;
+      border-top: 1px solid var(--hairline);
     }
 
     .kpi-label {
-      font-size: 9px;
-      font-family: "Inter", sans-serif;
+      font-family: var(--font-body);
+      font-size: 7px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #3F5E84;
-      margin-bottom: 4px;
+      color: var(--ink-4);
+      margin-bottom: 2px;
     }
 
     .kpi-value {
-      font-size: 15px;
-      font-family: "Inter", sans-serif;
-      font-weight: 700;
-      color: #1F3A5F;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ink);
     }
 
     .exec-bullet-block ul {
@@ -713,30 +703,31 @@
 
     .metric-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 10px;
     }
 
     .metric {
-      background: #FFFFFF;
-      color: #1F3A5F;
-      border-radius: 3px;
-      padding: 8px 10px;
-      border: 1px solid #E9EEF5;
+      color: var(--ink);
+      padding: 6px 0;
+      border-top: 1px solid var(--hairline);
     }
 
     .metric-label {
-      font-size: 11px;
-      font-weight: 500;
+      font-family: var(--font-body);
+      font-size: 7px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #3F5E84;
-      margin-bottom: 4px;
+      color: var(--ink-4);
+      margin-bottom: 2px;
     }
 
     .metric-value {
+      font-family: var(--font-display);
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 500;
+      color: var(--ink);
     }
 
     .methodology-section p {
@@ -744,8 +735,9 @@
     }
 
     .metric-sub {
-      font-size: 11px;
-      color: #3F5E84;
+      font-family: var(--font-body);
+      font-size: 7px;
+      color: var(--ink-3);
       margin-top: 2px;
     }
 
