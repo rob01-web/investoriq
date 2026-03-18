@@ -39,27 +39,28 @@
     body {
       margin: 0;
       padding: 0;
-      background: #ffffff;
-      color: var(--navy);
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--white);
+      color: var(--ink);
+      font-family: var(--font-body);
       font-size: 11px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
 
     body {
   margin: 0;
   padding: 0;
-  background: #ffffff;
-  color: var(--navy);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-body);
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
     .report-container {
   width: 100%;
-  padding: 18px 24px 56px 24px;
+  padding: 0.5in 0.55in 0.52in 0.55in;
   box-sizing: border-box;
+  background: var(--white);
 }
 
 .cover-wrap {
@@ -239,10 +240,7 @@
     }
 
     .tagline {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #3F5E84;
+      display: none;
     }
 
     .section {
@@ -252,29 +250,59 @@
 }
 
     .section-header {
-      font-family: "Inter", sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      color: #1F3A5F;
-      letter-spacing: 0.01em;
-      margin-bottom: 1px;
-      margin-top: 10px;
+      position: relative;
+      margin-top: 0;
+      margin-bottom: 0.38in;
+      padding-bottom: 0.14in;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .section-header::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 0.28in;
+      height: 1.5px;
+      background: var(--gold);
+      opacity: 0.8;
+    }
+
+    .section-header-eyebrow {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 6.5pt;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--ink-4);
+      margin-bottom: 6pt;
+    }
+
+    .section-header-title {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 18pt;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      line-height: 1.05;
+      margin-bottom: 4pt;
     }
 
     .section-header-sub {
-      font-family: "Inter", sans-serif;
-      font-size: 12px;
-      font-weight: 400;
-      color: #3F5E84;
-      letter-spacing: 0.01em;
-      margin: 1px 0 5px 0;
+      display: block;
+      font-family: var(--font-body);
+      font-size: 8pt;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--ink-3);
+      letter-spacing: 0;
+      margin: 0;
     }
 
     .section-header-rule {
-      border: none;
-      border-top: 1px solid #E9EEF5;
-      margin-bottom: 10px;
-      width: 100%;
+      display: none;
     }
 
 
@@ -574,9 +602,22 @@
     }
 
     .header-strip {
-      border-top: 1px solid #E9EEF5;
-      padding-top: 8px;
-      margin-bottom: 12px;
+      position: relative;
+      border-top: none;
+      border-bottom: 1px solid var(--hairline);
+      padding: 0 0 0.12in 0;
+      margin: -0.5in -0.55in 0.34in -0.55in;
+    }
+
+    .header-strip::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: var(--gold);
+      opacity: 0.55;
     }
 
     .header-top {
@@ -584,13 +625,15 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      padding: 0.12in 0.55in 0 0.55in;
     }
 
     .brand-mark {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1F3A5F;
-      letter-spacing: 0.02em;
+      font-family: var(--font-display);
+      font-size: 8pt;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       white-space: nowrap;
       hyphens: none;
@@ -600,7 +643,7 @@
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      color: #3F5E84;
+      color: var(--ink-4);
       margin-top: 6px;
     }
 
@@ -783,7 +826,7 @@
       .report-footer {
       margin-top: 18px;
       font-size: 10px;
-      color: #3F5E84;
+      color: var(--ink-4);
       text-align: center;
     }
   
@@ -808,19 +851,38 @@ ul, ol {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 6px 18px;
+  height: 0.34in;
+  padding: 0 0.55in;
   font-size: 10px;
   line-height: 1.2;
-  color: #3F5E84;
-  border-top: 1px solid #E9EEF5;
-  background: #FFFFFF;
+  color: var(--ink-4);
+  border-top: 1px solid var(--hairline);
+  background: var(--white);
   z-index: 9999;
+  display: flex;
+  align-items: center;
 }
 
 .report-footer-inner {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  align-items: center;
+}
+
+.report-footer-inner span:first-child {
+  font-family: var(--font-mono);
+  font-size: 6pt;
+  color: var(--ink-4);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.report-footer-inner span:last-child {
+  font-family: var(--font-body);
+  font-size: 6.5pt;
+  color: var(--ink-4);
 }
 
 .section-intro {
@@ -930,19 +992,20 @@ ul, ol {
         <div class="brand-mark">INVESTORIQ</div>
         <div class="tagline">Institutional Grade Property Intelligence</div>
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:13px; font-weight:600; color:var(--navy);">
-          {{REPORT_TYPE_LABEL}}
-        </div>
-        <div style="font-size:11px; color:#3F5E84;">
-  {{PROPERTY_NAME}} &middot; {{PROPERTY_SUBMARKET}}
-</div>
-      </div> <!-- close the right-side text-align:right div -->
-    </div>   <!-- close .header-top -->
-  </div>     <!-- close .header-strip -->
+      <div style="text-align:center; font-family: var(--font-body); font-size:7.5pt; font-weight:300; color:var(--ink-3);">
+        {{PROPERTY_NAME}} &middot; {{PROPERTY_SUBMARKET}}
+      </div>
+      <div style="text-align:right; font-family: var(--font-mono); font-size:6.5pt; font-weight:400; color:var(--ink-4); letter-spacing:0.08em;">
+        {{REPORT_DATE}}
+      </div>
+    </div>
+  </div>
 
-  <div class="section-header">Executive Summary</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 01</span>
+    <span class="section-header-title">Executive Summary</span>
+    <span class="section-header-sub">Deal overview, return profile, and acquisition recommendation</span>
+  </div>
   <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
   <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
   <!-- END PROPERTY_DESCRIPTOR_LINE -->
@@ -1067,8 +1130,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_7_REFI_STABILITY -->
 <section class="section page-break">
-  <div class="section-header">Refinance Stability Classification</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 02</span>
+    <span class="section-header-title">Refinance Stability Classification</span>
+    <span class="section-header-sub">Deterministic refinance capacity under documented stress inputs</span>
+  </div>
   <p class="small">
     Deterministic refinance capacity under explicit stress inputs. If required inputs are not present in uploaded documents, this section is omitted.
   </p>
@@ -1081,9 +1147,11 @@ ul, ol {
 <!-- 7.0 Debt Structure & Financing -->
 <!-- BEGIN SECTION_7 -->
 <section class="section page-break">
-  <div class="section-header">Debt Structure &amp; Financing</div>
-  <div class="section-header-sub">Leverage, DSCR, and Refinance Considerations</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 03</span>
+    <span class="section-header-title">Debt Structure &amp; Financing</span>
+    <span class="section-header-sub">Leverage, DSCR, and refinance considerations</span>
+  </div>
 
   <!-- BEGIN DEBT_STRUCTURE -->
 <!-- Narrative Bridge for Smoother Flow -->
@@ -1152,8 +1220,11 @@ ul, ol {
 <!-- 2.0 Unit-Level Value Add Analysis -->
 <!-- BEGIN SECTION_2 -->
 <section class="section page-break">
-  <div class="section-header">Unit-Level Value Add Analysis</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 04</span>
+    <span class="section-header-title">Unit-Level Value Add Analysis</span>
+    <span class="section-header-sub">Rent lift, renovation potential, and implied value creation</span>
+  </div>
 
   <div class="grid-2">
     <!-- LEFT COLUMN -->
@@ -1186,8 +1257,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_3_OPERATING_STATEMENT -->
 <section class="section page-break">
-  <div class="section-header">Operating Statement (Trailing Twelve Months)</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 05</span>
+    <span class="section-header-title">Operating Statement (Trailing Twelve Months)</span>
+    <span class="section-header-sub">Document-backed income reconstruction and NOI profile</span>
+  </div>
 
   <div class="grid-2">
     <!-- BEGIN T12_INCOME_TABLE -->
@@ -1263,9 +1337,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S2_INCOME_FORENSICS -->
 <section class="section page-break">
-  <div class="section-header">Income &amp; Revenue Forensics</div>
-  <div class="section-header-sub">Income Composition, Concentration, and Stability</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 06</span>
+    <span class="section-header-title">Income &amp; Revenue Forensics</span>
+    <span class="section-header-sub">Income composition, concentration, and stability</span>
+  </div>
 
   {{SCREENING_INCOME_FORENSICS_BLOCK}}
 </section>
@@ -1273,9 +1349,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->
 <section class="section page-break">
-  <div class="section-header">Expense Structure Analysis</div>
-  <div class="section-header-sub">Expense Ratio, Drivers, and Intensity Flags</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 07</span>
+    <span class="section-header-title">Expense Structure Analysis</span>
+    <span class="section-header-sub">Expense ratio, drivers, and intensity flags</span>
+  </div>
 
   {{SCREENING_EXPENSE_STRUCTURE_BLOCK}}
   {{EXPENSE_BREAKDOWN_CHART}}
@@ -1284,9 +1362,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S4_NOI_STABILITY -->
 <section class="section page-break">
-  <div class="section-header">NOI Stability Review</div>
-  <div class="section-header-sub">Margin, Volatility, and Operating Leverage Indicators</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 08</span>
+    <span class="section-header-title">NOI Stability Review</span>
+    <span class="section-header-sub">Margin, volatility, and operating leverage indicators</span>
+  </div>
 
   {{SCREENING_NOI_STABILITY_BLOCK}}
   {{OCCUPANCY_BUFFER_VISUAL}}
@@ -1295,9 +1375,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S5_RENT_ROLL_DISTRIBUTION -->
 <section class="section page-break">
-  <div class="section-header">Rent Roll Distribution</div>
-  <div class="section-header-sub">Occupancy, Rent Dispersion, and Unit Mix Profile</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 09</span>
+    <span class="section-header-title">Rent Roll Distribution</span>
+    <span class="section-header-sub">Occupancy, rent dispersion, and unit mix profile</span>
+  </div>
 
   {{SCREENING_RENT_ROLL_BLOCK}}
 </section>
@@ -1305,9 +1387,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S7_DATA_COVERAGE_GAPS -->
 <section class="section page-break">
-  <div class="section-header">Data Coverage &amp; Underwriting Gaps</div>
-  <div class="section-header-sub">Missing Inputs and Omitted Sections</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 10</span>
+    <span class="section-header-title">Data Coverage &amp; Underwriting Gaps</span>
+    <span class="section-header-sub">Missing inputs and omitted sections</span>
+  </div>
 
   {{SCREENING_DATA_COVERAGE_BLOCK}}
 </section>
@@ -1315,9 +1399,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_S6_REFI_DATA_SUFFICIENCY -->
 <section class="section">
-  <div class="section-header">Refinance Data Sufficiency</div>
-  <div class="section-header-sub">Eligibility for Refinance Stability Classification</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 11</span>
+    <span class="section-header-title">Refinance Data Sufficiency</span>
+    <span class="section-header-sub">Eligibility for refinance stability classification</span>
+  </div>
 
   {{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}
 </section>
@@ -1328,9 +1414,11 @@ ul, ol {
 <!-- 3.0 Scenario Analysis & Five-Year Outlook -->
 <!-- BEGIN SECTION_3 -->
 <section class="section page-break">
-  <div class="section-header">Scenario Analysis &amp; Five-Year Outlook</div>
-  <div class="section-header-sub">Cash Flow Projections and Return Sensitivities</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 12</span>
+    <span class="section-header-title">Scenario Analysis &amp; Five-Year Outlook</span>
+    <span class="section-header-sub">Cash flow projections and return sensitivities</span>
+  </div>
 
   <!-- BEGIN CASH_FLOW_PROJECTIONS -->
   <p class="section-intro">
@@ -1390,9 +1478,11 @@ ul, ol {
 
 <!-- BEGIN SECTION_4_NEIGHBORHOOD -->
 <section class="section page-break">
-  <div class="section-header">Neighborhood Fundamentals</div>
-  <div class="section-header-sub">{{PROPERTY_SUBMARKET}} Location Review</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 13</span>
+    <span class="section-header-title">Neighborhood Fundamentals</span>
+    <span class="section-header-sub">{{PROPERTY_SUBMARKET}} location review</span>
+  </div>
   </section>
 <!-- END SECTION_4_NEIGHBORHOOD -->
 
@@ -1402,9 +1492,11 @@ ul, ol {
 <!-- 5.0 Risk Scoring & Sensitivities -->
 <!-- BEGIN SECTION_5 -->
 <section class="section page-break">
-  <div class="section-header">Risk Scoring &amp; Sensitivities</div>
-  <div class="section-header-sub">Risk Matrix and Mitigation Framework</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 14</span>
+    <span class="section-header-title">Risk Scoring &amp; Sensitivities</span>
+    <span class="section-header-sub">Risk matrix and mitigation framework</span>
+  </div>
 
   <!-- 🔥 DYNAMIC RISK ASSESSMENT GOES HERE -->
   <!-- BEGIN RISK_ASSESSMENT -->
@@ -1433,9 +1525,11 @@ ul, ol {
 <!-- 6.0 Renovation Strategy & Capital Plan -->
 <!-- BEGIN SECTION_6 -->
 <section class="section page-break">
-  <div class="section-header">Renovation Strategy &amp; Capital Plan</div>
-  <div class="section-header-sub">Scope, Budget Allocation, and Value Creation Drivers</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 15</span>
+    <span class="section-header-title">Renovation Strategy &amp; Capital Plan</span>
+    <span class="section-header-sub">Scope, budget allocation, and value creation drivers</span>
+  </div>
 
   <!-- 🔥 DYNAMIC RENOVATION INTRO -->
   <!-- BEGIN RENOVATION_NARRATIVE -->
@@ -1506,9 +1600,11 @@ ul, ol {
 <!-- 8.0 Deal Scorecard & Radar -->
 <!-- BEGIN SECTION_8 -->
 <section class="section page-break">
-  <div class="section-header">Deal Scorecard &amp; Radar</div>
-  <div class="section-header-sub">InvestorIQ Deal Score Components</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 16</span>
+    <span class="section-header-title">Deal Scorecard &amp; Radar</span>
+    <span class="section-header-sub">InvestorIQ deal score components</span>
+  </div>
 
   <!-- 🔥 DYNAMIC DEAL SCORE SUMMARY -->
   <p class="section-intro">
@@ -1541,9 +1637,11 @@ ul, ol {
 <!-- 9.0 Discounted Cash Flow (DCF) -->
 <!-- BEGIN SECTION_9 -->
 <section class="section page-break">
-  <div class="section-header">Discounted Cash Flow (DCF)</div>
-  <div class="section-header-sub">Intrinsic Valuation via Discounted Cash Flow (5-Year Hold)</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 17</span>
+    <span class="section-header-title">Discounted Cash Flow (DCF)</span>
+    <span class="section-header-sub">Intrinsic valuation via discounted cash flow (5-year hold)</span>
+  </div>
 
   <p class="section-intro">
     The DCF analysis estimates the intrinsic value of the property by projecting annual net cash flows and discounting
@@ -1570,9 +1668,11 @@ ul, ol {
 <!-- 10.0 Advanced Financial Modeling -->
 <!-- BEGIN SECTION_10 -->
 <section class="section page-break">
-  <div class="section-header">Advanced Financial Modeling</div>
-  <div class="section-header-sub">Expense Profile, DCF Outcomes, and Comparable Positioning</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 18</span>
+    <span class="section-header-title">Advanced Financial Modeling</span>
+    <span class="section-header-sub">Expense profile, DCF outcomes, and comparable positioning</span>
+  </div>
 
   <!-- BEGIN ADVANCED_MODELING_INTRO -->
   <p class="section-intro">
@@ -1645,9 +1745,11 @@ ul, ol {
 <!-- 11.0 Final Recommendations -->
 <!-- BEGIN SECTION_11 -->
 <section class="section page-break">
-  <div class="section-header">Final Recommendations</div>
-  <div class="section-header-sub">Action Plan, Negotiation Strategy, and Deal Breakers</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 19</span>
+    <span class="section-header-title">Final Recommendations</span>
+    <span class="section-header-sub">Action plan, negotiation strategy, and deal breakers</span>
+  </div>
 
   <!-- BEGIN FINAL_RECOMMENDATIONS -->
   <p>
@@ -1662,8 +1764,11 @@ ul, ol {
 <!-- 12.0 Methodology & Data Transparency -->
 <!-- BEGIN SECTION_12 -->
 <section class="section page-break">
-  <div class="section-header">Methodology &amp; Data Transparency</div>
-  <hr class="section-header-rule">
+  <div class="section-header">
+    <span class="section-header-eyebrow">Section 20</span>
+    <span class="section-header-title">Methodology &amp; Data Transparency</span>
+    <span class="section-header-sub">Assumptions, methodology notes, and data limitations</span>
+  </div>
   <div class="methodology-section">
 
   <p class="section-intro">
