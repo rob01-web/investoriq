@@ -272,3 +272,235 @@ Transform InvestorIQ from:
 - No refactors unless approved
 - Fail on mismatch
 - Deterministic changes only
+
+🎨 PATCH 7 — COVER SYSTEM (IN PROGRESS)
+Objective
+
+Transform cover from:
+
+light / blue / template feel
+
+→ into:
+
+👉 dark green + gold institutional cover
+
+cinematic
+
+high-contrast
+
+zero SaaS feel
+
+zero template feel
+
+“investment committee memo cover”
+
+✅ PATCH 7A — COVER CSS (COMPLETE)
+
+Changes:
+
+Introduced var(--cover-bg) (deep green)
+
+Full typography shift to display/body/mono system
+
+Removed blue (#1F3A5F / #3F5E84) dependency
+
+Added:
+
+vertical gold thread (left)
+
+subtle top-right corner frame
+
+dark footer bar
+
+Converted spacing to inch-based layout (print precision)
+
+Result:
+→ Cover now uses locked design system
+→ Interior styles untouched (critical separation maintained)
+
+🚧 PATCH 7B — COVER HTML (IN PROGRESS)
+
+Purpose:
+
+Remove legacy inline styling + blue-era artifacts
+
+Align content hierarchy with new cover system
+
+Key fixes:
+
+Remove inline styled COVER_REPORT_TYPE_LABEL
+
+Remove duplicate verdict label layer
+
+Replace | with · separators
+
+Remove unnecessary <hr> remnants
+
+Update brand subtitle:
+
+FROM: “Institutional Grade Property Intelligence”
+
+TO: “Institutional Real Estate Analysis”
+
+Result (expected):
+→ Cover becomes fully system-aligned
+→ No legacy styling conflicts
+
+⏭️ PATCH 7C / 7D — INTERIOR ALIGNMENT (PENDING)
+
+Scope:
+
+Minor spacing + polish only
+
+Header strip alignment
+
+Footer typography refinement
+
+⚠️ Constraint:
+
+DO NOT alter interior design system
+
+Only micro-adjust spacing/consistency
+
+🧠 DESIGN STATE (CRITICAL LOCK)
+
+InvestorIQ is now a dual-mode report system:
+
+🟩 COVER
+
+Dark
+
+Emotional
+
+High contrast
+
+Gold + green
+
+“Investment decision moment”
+
+⬜ INTERIOR
+
+White
+
+Analytical
+
+Ink-based
+
+Financial statement feel
+
+“Underwriting memo”
+
+🔒 THIS CONTRAST IS INTENTIONAL
+
+DO NOT:
+
+make interior dark
+
+make cover white
+
+blend the two systems
+
+This contrast = institutional quality
+
+🚨 NEXT PRIORITY AFTER PATCH 7
+
+Once cover is complete:
+
+👉 IMMEDIATELY RETURN TO ENGINE FIXES
+
+❗ CRITICAL ENGINE ISSUE — BLOCKING LAUNCH
+Debt / Refinance Recognition Failure
+
+Symptoms:
+
+Mortgage docs not consistently recognized
+
+mortgagePayload sometimes null
+
+Loan term sheet fallback unreliable
+
+Refinance model not triggering correctly
+
+Location:
+api/generate-client-report.js
+
+Focus Areas:
+
+Parsed artifact detection:
+
+mortgage_statement_parsed
+
+loan term sheet fallback
+
+Ensure deterministic assignment:
+
+if (!mortgagePayload && loanTermSheetPayload) {
+  mortgagePayload = loanTermSheetPayload;
+}
+
+- Validate:
+  - outstanding_balance normalization
+  - loan_amount fallback logic
+  - downstream refinance triggers
+
+---
+
+### 🎯 REQUIRED OUTCOME
+
+- Debt ALWAYS recognized when present
+- Fallback ALWAYS works
+- Refinance model ALWAYS deterministic
+- No silent failures
+- No partial states
+
+---
+
+## 🚀 LAUNCH READINESS CHECK
+
+To launch, ALL must be true:
+
+### Visual
+- [ ] Cover = institutional green/gold
+- [ ] Interior = white/ink/gold
+- [ ] No legacy blue styles
+- [ ] No UI/card artifacts
+
+### Product
+- [ ] One-run entitlement enforced
+- [ ] Error messaging correct
+- [ ] No stuck jobs
+- [ ] No “DATA NOT AVAILABLE” spam
+
+### Engine
+- [ ] Debt recognition fixed
+- [ ] Refinance modeling deterministic
+- [ ] No missing artifacts
+- [ ] No silent failures
+
+---
+
+## 🔥 CURRENT STATUS
+
+- Patch 5 ✅
+- Patch 6 ✅
+- Patch 7A ✅
+- Patch 7B 🚧 (in progress)
+- Engine bug ❗ (next critical step)
+
+---
+
+# 🎯 TLDR FOR NEXT CHAT
+
+You are:
+- finishing Patch 7 (cover)
+- then immediately switching back to **core underwriting reliability**
+
+---
+
+If you want, next I’ll give you:
+
+👉 **Fresh Chat Starter Prompt (ELITE, Codex-safe, zero drift)**  
+that drops you EXACTLY back into this state with no context loss.
+
+Just say:
+**“new chat prompt”** and I’ll wire it perfectly.

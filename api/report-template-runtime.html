@@ -71,137 +71,190 @@
   width: 100%;
   height: 10.5in;
   overflow: hidden;
+  position: relative;
+  background: var(--cover-bg);
 }
 
-  .cover-table {
-    width: 100%;
-    border-collapse: collapse;
-    height: 100%;
-    table-layout: fixed;
-  }
+.cover-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.6in;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(201,168,76,0.45) 12%,
+    rgba(201,168,76,0.45) 88%,
+    transparent 100%
+  );
+}
 
-  .cover-cell {
-    background: #FFFFFF;
-    padding: 60px 56px;
-    vertical-align: top;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
-  }
+.cover-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0.6in;
+  right: 0.52in;
+  width: 1in;
+  height: 1in;
+  border-top: 1px solid rgba(201,168,76,0.1);
+  border-right: 1px solid rgba(201,168,76,0.1);
+}
 
-  .cover-brand-name {
-    font-family: "Inter", sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: #1F3A5F;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    word-spacing: 0;
-    hyphens: none;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
+.cover-table {
+  width: 100%;
+  border-collapse: collapse;
+  height: 100%;
+  table-layout: fixed;
+}
 
-  .cover-brand-sub {
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    font-weight: 500;
-    color: #3F5E84;
-    letter-spacing: 0.02em;
-    word-spacing: 0;
-    white-space: normal;
-    overflow-wrap: normal;
-    hyphens: none;
-    text-transform: uppercase;
-    margin-bottom: 140px;
-  }
+.cover-cell {
+  background: var(--cover-bg);
+  padding: 1.6in 0.52in 0.72in 0.92in;
+  vertical-align: top;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
 
-  .cover-prop-name {
-    font-family: "Inter", sans-serif;
-    font-size: 36px;
-    font-weight: 700;
-    color: #1F3A5F;
-    word-break: break-word;
-    margin-bottom: 10px;
-  }
+.cover-brand-name {
+  position: absolute;
+  top: 0.2in;
+  left: 0.52in;
+  font-family: var(--font-display);
+  font-size: 13pt;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+  hyphens: none;
+  text-transform: uppercase;
+  margin: 0;
+}
 
-  .cover-prop-sub {
-    font-family: "Inter", sans-serif;
-    font-size: 14px;
-    font-weight: 400;
-    color: #3F5E84;
-    margin-bottom: 60px;
-  }
+.cover-brand-sub {
+  position: absolute;
+  top: 0.24in;
+  right: 0.52in;
+  font-family: var(--font-mono);
+  font-size: 6pt;
+  font-weight: 400;
+  color: rgba(201,168,76,0.28);
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  hyphens: none;
+  text-transform: uppercase;
+  margin: 0;
+}
 
-  .cover-divider {
-    border: none;
-    border-top: 1px solid #E9EEF5;
-    margin: 0 0 28px 0;
-  }
+.cover-prop-name {
+  font-family: var(--font-display);
+  font-size: 38pt;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+  margin: 0 0 0.1in 0;
+}
 
-  .cover-verdict-label {
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    font-weight: 600;
-    color: #3F5E84;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    white-space: nowrap;
-    hyphens: none;
-  }
+.cover-prop-sub {
+  font-family: var(--font-body);
+  font-size: 9pt;
+  font-weight: 300;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.07em;
+  margin: 0 0 0.52in 0;
+}
 
-  .cover-verdict-value {
-    font-family: "Inter", sans-serif;
-    font-size: 32px;
-    font-weight: 700;
-    color: #1F3A5F;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 60px;
-  }
+.cover-divider {
+  border: none;
+  width: 0.52in;
+  height: 1.5px;
+  background: var(--gold);
+  opacity: 0.65;
+  margin: 0 0 0.42in 0;
+}
 
-  .cover-verdict-value.verdict-stable     { color: #1F3A5F; }
-  .cover-verdict-value.verdict-sensitized { color: #1F3A5F; }
-  .cover-verdict-value.verdict-fragile    { color: #3F5E84; }
-  .cover-verdict-value.verdict-insufficient { color: #3F5E84; }
+.cover-verdict-label {
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  font-weight: 400;
+  color: rgba(201,168,76,0.5);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  margin: 0 0 0.24in 0;
+  white-space: nowrap;
+  hyphens: none;
+}
 
-  .cover-metric-strip {
-    margin-top: 36px;
-  }
-  .cover-metric-rule {
-    border: none;
-    border-top: 1px solid #E9EEF5;
-    margin: 10px 0;
-  }
-  .cover-metric-row {
-    color: #3F5E84;
-    font-family: "Inter", sans-serif;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-align: center;
-  }
+.cover-verdict-value {
+  font-family: var(--font-display);
+  font-size: 22pt;
+  font-weight: 500;
+  color: var(--gold);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.26in 0;
+  line-height: 1.05;
+}
 
-  .cover-footer-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    position: absolute;
-    bottom: 60px;
-    left: 56px;
-    right: 56px;
-  }
+.cover-verdict-value.verdict-stable { color: var(--gold); }
+.cover-verdict-value.verdict-sensitized { color: var(--gold); }
+.cover-verdict-value.verdict-fragile { color: var(--gold); }
+.cover-verdict-value.verdict-insufficient { color: rgba(255,255,255,0.55); }
 
-  .cover-footer-text {
-    font-family: "Inter", sans-serif;
-    font-size: 9px;
-    color: #3F5E84;
-    letter-spacing: 0.08em;
-  }
+.cover-metric-strip {
+  margin: 0 0 0.44in 0;
+  padding: 0.2in 0;
+  border-top: 1px solid rgba(201,168,76,0.15);
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+}
 
-  .brand-nowrap { white-space: nowrap; }
+.cover-metric-rule {
+  display: none;
+}
+
+.cover-metric-row {
+  color: rgba(255,255,255,0.52);
+  font-family: var(--font-body);
+  font-size: 8pt;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  text-align: left;
+  line-height: 1.7;
+}
+
+.cover-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: absolute;
+  bottom: 0;
+  left: -0.92in;
+  right: -0.52in;
+  height: 0.46in;
+  padding: 0 0.52in;
+  background: rgba(0,0,0,0.2);
+  border-top: 1px solid rgba(201,168,76,0.07);
+}
+
+.cover-footer-text {
+  font-family: var(--font-mono);
+  font-size: 6pt;
+  color: rgba(255,255,255,0.12);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cover-footer-row .cover-footer-text:last-child {
+  color: rgba(201,168,76,0.25);
+  letter-spacing: 0.14em;
+}
+
+.brand-nowrap { white-space: nowrap; }
 
     h1,
     h2,
@@ -602,12 +655,13 @@
       text-align: right;
     }
 
-    .header-strip {
+     .header-strip {
       position: relative;
       border-top: none;
       border-bottom: 1px solid var(--hairline);
       padding: 0 0 0.12in 0;
-      margin: -0.5in -0.55in 0.34in -0.55in;
+      margin: -0.5in -0.55in 0.38in -0.55in;
+      background: var(--white);
     }
 
     .header-strip::before {
@@ -881,6 +935,7 @@ ul, ol {
   font-family: var(--font-body);
   font-size: 6.5pt;
   color: var(--ink-4);
+  letter-spacing: 0.02em;
 }
 
 .section-intro {
@@ -946,22 +1001,20 @@ ul, ol {
         <td class="cover-cell">
 
           <div class="cover-brand-name">INVESTORIQ</div>
-          <div class="cover-brand-sub">Institutional Grade Property Intelligence</div>
-          <div style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#3F5E84;margin-top:4px;">{{COVER_REPORT_TYPE_LABEL}}</div>
+          <div class="cover-brand-sub">Institutional Real Estate Analysis</div>
+
+          <div class="cover-verdict-label">{{COVER_REPORT_TYPE_LABEL}}</div>
 
           <div class="cover-prop-name">{{PROPERTY_NAME}}</div>
           <div class="cover-prop-sub">{{PROPERTY_SUBMARKET}}</div>
 
           <hr class="cover-divider">
 
-          <div class="cover-verdict-label">{{COVER_VERDICT_LABEL}}</div>
           <div class="cover-verdict-value {{VERDICT_CSS_CLASS}}">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
 
 <!-- BEGIN COVER_METRIC_STRIP -->
           <div class="cover-metric-strip">
-            <hr class="cover-metric-rule">
-            <div class="cover-metric-row">{{COVER_UNITS}} Units &nbsp;&nbsp;|&nbsp;&nbsp; NOI {{COVER_NOI}} &nbsp;&nbsp;|&nbsp;&nbsp; Expense Ratio {{COVER_EXPENSE_RATIO}} &nbsp;&nbsp;|&nbsp;&nbsp; NOI Margin {{COVER_NOI_MARGIN}}</div>
-            <hr class="cover-metric-rule">
+            <div class="cover-metric-row">{{COVER_UNITS}} Units &nbsp;&nbsp;·&nbsp;&nbsp; NOI {{COVER_NOI}} &nbsp;&nbsp;·&nbsp;&nbsp; Expense Ratio {{COVER_EXPENSE_RATIO}} &nbsp;&nbsp;·&nbsp;&nbsp; NOI Margin {{COVER_NOI_MARGIN}}</div>
           </div>
 <!-- END COVER_METRIC_STRIP -->
 
