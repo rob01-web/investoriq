@@ -21,20 +21,31 @@
 */
 
 const PALETTE = {
-  ink: "#0F172A", // deep navy
-  subInk: "#334155", // slate-700
-  midInk: "#475569", // slate-600
-  lightInk: "#64748B", // slate-500
-  faintInk: "#94A3B8", // slate-400
-  line: "#E2E8F0", // slate-200
-  paper: "#FFFFFF",
-  paperAlt: "#F9FAFB",
-  teal: "#1F8A8A",
-  tealDim: "#177272",
-  gold: "#0F172A", // reserved: avoid gold accents in body content
-  green: "#16A34A",
+  // ── InvestorIQ Hybrid Design System ──────────────────────────
+  // Ink scale (was slate/navy)
+  ink:      "#0C0C0C",   // primary ink — replaces deepNavy
+  subInk:   "#363636",   // ink2
+  midInk:   "#606060",   // ink3
+  lightInk: "#9A9A9A",   // ink4
+  faintInk: "#D0CCC4",   // hairline-mid
+  line:     "#E8E5DF",   // hairline
+
+  // Surface
+  paper:    "#FFFFFF",
+  paperAlt: "#FAFAF8",   // warm
+
+  // Brand accents — Forest Green replaces teal/navy
+  teal:     "#C9A84C",   // → Gold (was teal accent)
+  tealDim:  "#9A7A2C",   // → Gold Dark (was teal hover)
+  gold:     "#C9A84C",   // Gold accent
+  green:    "#16A34A",   // semantic ok-green (keep for positive values)
+
+  // Cover — Forest Green
+  cover:    "#0F2318",   // Forest Green for cover page background
+
+  // Semantic
   amber: "#F59E0B",
-  red: "#DC2626",
+  red:   "#DC2626",
 };
 
 const IS_SAMPLE_REPORT = false;
