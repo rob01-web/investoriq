@@ -19,15 +19,51 @@ export const BRAND = {
   email: "hello@investoriq.tech",
 };
 
+// ─── INVESTORIQ DESIGN SYSTEM — Hybrid Palette ───────────────
+// Forest Green on cover/hero only. Ink + Gold on interiors.
+// Rule: green = brand moments. gold = signal. ink = authority.
 export const PALETTE = {
-  deepNavy: "#0F172A", // core background / headers
-  teal: "#1F8A8A", // primary accent
-  aqua: "#94D9D9", // secondary accent
-  gold: "#0F172A", // reserved for wordmark only; keep UI accents navy/teal
-  grayDark: "#374151",
-  grayMid: "#6B7280",
-  grayLight: "#E5E7EB",
-  paper: "#F9FAFB",
+  // Primary brand — Forest Green
+  green:       "#0F2318",   // cover, hero bands, nav, CTAs
+  greenMid:    "#163320",   // hover states on green backgrounds
+
+  // Accent — Gold
+  gold:        "#C9A84C",   // primary accent, CTA text on green
+  goldDark:    "#9A7A2C",   // labels, eyebrows, secondary gold
+
+  // Interior ink scale
+  ink:         "#0C0C0C",   // primary body text
+  ink2:        "#363636",   // secondary body text
+  ink3:        "#606060",   // tertiary / muted text
+  ink4:        "#9A9A9A",   // ghost / placeholder text
+
+  // Surface scale
+  white:       "#FFFFFF",   // page canvas
+  warm:        "#FAFAF8",   // card backgrounds, section tints
+  hairline:    "#E8E5DF",   // borders, dividers
+  hairlineMid: "#D0CCC4",   // stronger borders, underlines
+
+  // Semantic
+  okGreen:     "#1A4A22",
+  okBg:        "#F2F8F3",
+  okBorder:    "#B8D4BC",
+  errRed:      "#7A1A1A",
+  errBg:       "#FDF4F4",
+  errBorder:   "#E8C0C0",
+  warnAmber:   "#7A4A00",
+  warnBg:      "#FDF8EE",
+  warnBorder:  "#E8D4A0",
+
+  // ── Legacy aliases — kept for backward compat while migrating ──
+  // Any old component referencing PALETTE.teal gets gold.
+  // Any old component referencing PALETTE.deepNavy gets green.
+  deepNavy:    "#0F2318",   // → maps to green
+  teal:        "#C9A84C",   // → maps to gold
+  aqua:        "#C9A84C",   // → maps to gold
+  paper:       "#FAFAF8",   // → maps to warm
+  grayDark:    "#363636",   // → maps to ink2
+  grayMid:     "#606060",   // → maps to ink3
+  grayLight:   "#E8E5DF",   // → maps to hairline
 };
 
 // ------------------------------------------------------------
@@ -139,7 +175,7 @@ export const PCT = fmt.percent;
 // PDFMAKE HELPERS (used by generatePDF and pdfSections.js)
 // ------------------------------------------------------------
 export const pdf = {
-  header(text, color = PALETTE.deepNavy) {
+  header(text, color = PALETTE.green) {
     return {
       text: sanitize(text),
       style: "header",

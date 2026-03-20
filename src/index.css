@@ -2,130 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------------------------------
-   INVESTORIQ  -  GLOBAL BRAND BASELINE
-   Palette: Deep Navy (#0F172A), Teal (#1F8A8A), Gold (#D4AF37)
---------------------------------------- */
+/* ─────────────────────────────────────────────────────────────
+   INVESTORIQ — GLOBAL BRAND BASELINE
+   Hybrid Design System: Forest Green + Ink + Whisper Gold
+   "A document someone would trust with money."
+───────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    /* --- Color Palette --- */
+    /* ── Surface ── */
     --background: 0 0% 100%;
-    --foreground: 220 15% 20%;
+    --foreground: 0 0% 5%;           /* #0C0C0C ink */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 20%;
+    --card-foreground: 0 0% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 20%;
+    --popover-foreground: 0 0% 5%;
 
-    /* Brand Colors */
-    --primary: 221 39% 11%; /* Deep Navy as default */
-    --primary-foreground: 0 0% 100%;
+    /* ── Brand: Forest Green as primary ── */
+    --primary: 150 40% 9%;           /* #0F2318 Forest Green */
+    --primary-foreground: 43 48% 55%; /* #C9A84C Gold */
 
-    --secondary: 188 64% 33%; /* Teal as accent */
-    --secondary-foreground: 210 40% 98%;
+    /* ── Gold as secondary/accent ── */
+    --secondary: 43 48% 55%;         /* #C9A84C Gold */
+    --secondary-foreground: 150 40% 9%; /* Forest Green on gold */
 
-    --accent: 188 64% 33%; /* Keep accent aligned with teal */
-    --accent-foreground: 221 39% 11%;
+    --accent: 43 48% 55%;
+    --accent-foreground: 150 40% 9%;
 
-    /* Neutrals */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* ── Neutrals — Ink scale ── */
+    --muted: 40 11% 97%;             /* #FAFAF8 warm */
+    --muted-foreground: 0 0% 38%;    /* #606060 ink3 */
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 39% 11%;
-    --focus-ring-color: #D4AF37;
+    --border: 38 15% 90%;            /* #E8E5DF hairline */
+    --input:  38 15% 90%;
+    --ring:   150 40% 9%;            /* Focus = Forest Green */
+
+    /* Focus ring — gold */
+    --focus-ring-color: #C9A84C;
     --focus-ring-offset: 2px;
 
-    /* Alerts */
+    /* ── Alerts ── */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Border Radius */
-    --radius: 0.75rem;
+    /* ── Radius — zero for institutional feel ── */
+    --radius: 0rem;
   }
 
-  /* --- Dark Mode --- */
+  /* ── Dark mode — not actively used but defined for completeness ── */
   .dark {
-    --background: 221 39% 11%;
-    --foreground: 210 40% 98%;
-
-    --card: 221 39% 11%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 221 39% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 188 64% 45%;
-    --primary-foreground: 221 39% 11%;
-
-    --secondary: 188 64% 33%;
-    --secondary-foreground: 210 40% 98%;
-
-    --accent: 188 64% 33%;
-    --accent-foreground: 221 39% 11%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 188 64% 45%;
-    --focus-ring-color: #D4AF37;
-    --focus-ring-offset: 2px;
+    --background: 150 40% 9%;
+    --foreground: 43 48% 55%;
+    --card: 150 40% 9%;
+    --card-foreground: 43 48% 55%;
+    --popover: 150 40% 9%;
+    --popover-foreground: 43 48% 55%;
+    --primary: 43 48% 55%;
+    --primary-foreground: 150 40% 9%;
+    --secondary: 150 35% 14%;
+    --secondary-foreground: 43 48% 55%;
+    --accent: 150 35% 14%;
+    --accent-foreground: 43 48% 55%;
+    --muted: 150 35% 14%;
+    --muted-foreground: 0 0% 60%;
+    --border: 150 35% 14%;
+    --input: 150 35% 14%;
+    --ring: 43 48% 55%;
+    --focus-ring-color: #C9A84C;
   }
 
-  /* --- Global Layout & Typography --- */
+  /* ── Global layout ── */
   html {
     scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-[#F9FAFB];
-    color: #334155;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background-color: #FFFFFF;
+    color: #0C0C0C;
+    /* Cormorant Garamond for display, DM Sans for body, DM Mono for labels */
+    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-weight: 300;
   }
 
   * {
     @apply border-border;
   }
 
-  /* --- Headings --- */
+  /* ── Headings — editorial authority ── */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight text-[#0F172A];
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #0C0C0C;
   }
 
-  h1 {
-    @apply text-4xl md:text-5xl font-extrabold;
-  }
+  h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; }
+  h2 { font-size: clamp(24px, 3.5vw, 36px); line-height: 1.1; }
+  h3 { font-size: clamp(20px, 2.5vw, 26px); line-height: 1.15; }
 
-  h2 {
-    @apply text-3xl md:text-4xl font-bold;
-  }
-
-  h3 {
-    @apply text-2xl font-semibold;
-  }
-
-  /* --- Links & Buttons --- */
+  /* ── Links ── */
   a {
-    @apply transition-colors duration-200;
-    color: #0F172A;
+    @apply transition-colors duration-150;
+    color: #0C0C0C;
+    text-decoration: none;
   }
 
   a:hover {
-    color: #0d1326;
+    color: #9A7A2C; /* gold-dark on hover */
   }
 
-  a,
-  button,
-  input,
-  textarea,
-  select {
+  /* ── Focus rings — gold ── */
+  a, button, input, textarea, select {
     outline: none;
   }
 
@@ -136,43 +127,45 @@
   select:focus-visible {
     box-shadow:
       0 0 0 var(--focus-ring-offset, 2px) #ffffff,
-      0 0 0 calc(var(--focus-ring-offset, 2px) + 2px) rgba(212, 175, 55, 0.4) !important;
+      0 0 0 calc(var(--focus-ring-offset, 2px) + 2px) rgba(201, 168, 76, 0.5) !important;
     outline: none !important;
   }
 
   button {
-    @apply transition-all duration-200;
+    @apply transition-all duration-150;
   }
 
-  /* --- Inputs & Forms --- */
+  /* ── Inputs — no rounding (institutional) ── */
   input,
   textarea,
   select {
-    @apply rounded-lg;
+    border-radius: 0;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 300;
   }
 
-  /* --- Scrollbars --- */
+  /* ── Scrollbars — subtle ── */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 9999px;
+    background-color: #D0CCC4;  /* hairline-mid */
+    border-radius: 0;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8;
+    background-color: #9A7A2C;  /* gold-dark */
   }
 
-  /* --- Selection Highlight --- */
+  /* ── Selection — Forest Green ── */
   ::selection {
-    background-color: #1F8A8A;
-    color: white;
+    background-color: #0F2318;
+    color: #C9A84C;
   }
 
-  /* --- Accessibility --- */
+  /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.001ms !important;
@@ -182,13 +175,99 @@
     }
   }
 
-  /* --- Dialogs & Modals --- */
+  /* ── Dialogs & Modals — flat, no rounding ── */
   [data-reach-dialog-content] {
-    @apply rounded-2xl shadow-xl border border-slate-200;
+    border: 1px solid #E8E5DF;
+    border-radius: 0;
+    box-shadow: 0 8px 32px rgba(15, 35, 24, 0.12);
   }
 
-  /* --- Utility Enhancements --- */
+  /* ── Utility classes ── */
+
+  /* Base card — white canvas, hairline border */
   .iq-card {
-    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
+    background: #FFFFFF;
+    border: 1px solid #E8E5DF;
+    padding: 28px 32px;
+  }
+
+  /* Warm card — for section backgrounds */
+  .iq-card-warm {
+    background: #FAFAF8;
+    border: 1px solid #E8E5DF;
+    padding: 28px 32px;
+  }
+
+  /* Primary button — Forest Green / Gold */
+  .iq-btn-primary {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 11px 24px;
+    background: #0F2318;
+    color: #C9A84C;
+    border: 1px solid #0F2318;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .iq-btn-primary:hover {
+    background: #C9A84C;
+    color: #0F2318;
+  }
+
+  /* Ghost button */
+  .iq-btn-ghost {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    background: transparent;
+    color: #606060;
+    border: 1px solid #E8E5DF;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .iq-btn-ghost:hover {
+    border-color: #D0CCC4;
+    color: #0C0C0C;
+  }
+
+  /* Section eyebrow label */
+  .iq-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #9A7A2C;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* Gold hairline rule */
+  .iq-gold-rule {
+    width: 28px;
+    height: 1.5px;
+    background: #C9A84C;
+    opacity: 0.7;
+    display: block;
+  }
+
+  /* Progress animation (used in loading overlays) */
+  @keyframes iq-progress {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+
+  .iq-progress-bar {
+    animation: iq-progress 1.8s ease-in-out infinite;
   }
 }
