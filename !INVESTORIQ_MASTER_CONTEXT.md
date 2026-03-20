@@ -504,3 +504,227 @@ that drops you EXACTLY back into this state with no context loss.
 
 Just say:
 **“new chat prompt”** and I’ll wire it perfectly.
+
+✅ INVESTORIQ STATUS UPDATE — MARCH 19, 2026 (END OF DAY)
+PATCH 7 — DESIGN / COVER SYSTEM
+
+STATUS: COMPLETE AND LOCKED
+
+Today’s work confirmed that the new report design direction is the correct one and is now considered locked:
+
+Hybrid system is now intentional and approved:
+
+Cover = dark forest green + gold + cinematic institutional tone
+
+Interior = white + ink + restrained gold + underwriting memo feel
+
+This contrast is now a core design principle, not an experiment
+
+User is extremely happy with this direction and does not want to drift away from it
+
+PATCH 7A
+
+Verified as correctly applied:
+
+deep green cover background
+
+gold accent system
+
+Cormorant / DM Sans / DM Mono typography
+
+vertical gold thread
+
+top-right corner frame
+
+refined footer bar
+
+inch-based cover spacing
+
+PATCH 7B
+
+Completed successfully:
+
+removed duplicate cover report-type / verdict label from HTML
+
+cleaned cover hierarchy
+
+cover now reads:
+
+brand
+
+property
+
+verdict
+
+metric strip
+
+footer
+
+Result:
+
+stronger institutional hierarchy
+
+less template feel
+
+cleaner “investment committee memo” presentation
+
+NCO CLEANUP PASS
+
+Completed successfully after integrity scan:
+
+removed unused .cover-verdict-label CSS
+
+removed legacy blue-era utility CSS blocks:
+
+.pill
+
+.pill.bad
+
+.pill.neutral
+
+.label
+
+.highlight
+
+.disclaimer
+
+.footer-note
+
+.chip-row
+
+.chip
+
+.dscr-tag
+
+.risk-positive
+
+.risk-negative
+
+Result:
+
+file is materially cleaner
+
+legacy blue residue removed
+
+active design system preserved
+
+report template now aligns much better with NCO / no residue standard
+
+FINAL DESIGN VERDICT
+
+api/report-template-runtime.html is now effectively design-locked.
+
+Notable conclusion:
+
+visual work should now STOP
+
+no more redesign / restyling unless a real defect appears
+
+current report design is the first version the user feels genuinely proud of
+
+this is now the benchmark visual standard for InvestorIQ reports
+
+🔍 INTEGRITY SCAN RESULT
+
+Post-clean scan passed:
+
+cover structure intact
+
+interior institutional styling intact
+
+KPI system intact
+
+table system intact
+
+running header intact
+
+fixed footer intact
+
+no obvious Codex collateral damage
+
+Non-blocking residue may still exist in tiny placeholder/empty elements, but nothing currently justifies additional visual work.
+
+🚨 NEXT PRIORITY — RETURN TO ENGINE / LAUNCH-CRITICAL BUG
+
+Now that Patch 7 is complete, the next task is to return immediately to:
+
+api/generate-client-report.js
+CRITICAL ISSUE
+
+Debt / Refinance Recognition Failure
+
+Symptoms:
+
+mortgage docs not consistently recognized
+
+mortgagePayload sometimes null
+
+loan term sheet fallback unreliable
+
+refinance model not always triggering
+
+Focus Areas Tomorrow
+
+verify parsed artifact detection for:
+
+mortgage_statement_parsed
+
+loan term sheet parsed fallback
+
+verify deterministic assignment:
+
+if (!mortgagePayload && loanTermSheetPayload) {
+  mortgagePayload = loanTermSheetPayload;
+}
+
+validate:
+
+outstanding_balance normalization
+
+loan_amount fallback logic
+
+downstream refinance trigger conditions
+
+confirm no silent failure path where debt exists but refinance block is skipped
+
+Required Outcome
+
+debt ALWAYS recognized when present
+
+fallback ALWAYS works
+
+refinance model ALWAYS deterministic
+
+no silent failures
+
+no partial states
+
+🚀 CURRENT TRUE STATUS
+Visual
+
+Patch 5 ✅
+
+Patch 6 ✅
+
+Patch 7 ✅ COMPLETE
+
+New hybrid report design ✅ LOCKED
+
+No legacy blue residue in active design system ✅
+
+Product / Engine
+
+debt recognition bug ❗ NEXT
+
+refinance triggering bug ❗ NEXT
+
+launch path now depends more on engine reliability than visuals
+
+🎯 STARTING POINT FOR TOMORROW
+
+When work resumes, do not continue visual design.
+
+Start immediately with:
+
+File: api/generate-client-report.js
+Mission: fix deterministic debt recognition and refinance triggering reliability.
