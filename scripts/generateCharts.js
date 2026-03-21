@@ -32,11 +32,11 @@ const __dirname = path.dirname(__filename);
 // Brand palette
 // ------------------------
 const BRAND = {
-  navy: "#0F172A",
-  teal: "#1F8A8A",
-  gold: "#D4AF37",
-  slate: "#64748B",
-  grid: "#E2E8F0"
+  navy:  "#0F2318",  // Forest Green (was deep navy)
+  teal:  "#C9A84C",  // Gold (was teal — all teal chart elements become gold)
+  gold:  "#C9A84C",  // Gold accent
+  slate: "#9A9A9A",  // ink4 (was slate-500)
+  grid:  "#E8E5DF"   // hairline (was slate-200)
 };
 
 // ------------------------
@@ -127,10 +127,10 @@ async function generateIrrScenarioChart() {
           data,
           borderRadius: 6, // ⬅ slightly tighter
           backgroundColor: [
-            "rgba(15, 23, 42, 0.80)",
-            "rgba(31, 138, 138, 0.85)",
-            "rgba(212, 175, 55, 0.90)",
-            "rgba(15, 23, 42, 0.60)"
+            "rgba(15, 35, 24, 0.80)",
+            "rgba(201, 168, 76, 0.85)",
+            "rgba(201, 168, 76, 0.90)",
+            "rgba(15, 35, 24, 0.60)"
           ]
         }
       ]
@@ -212,7 +212,7 @@ async function generateCashFlowChart() {
           label: "Annual Levered Cash Flow (Millions, InvestorIQ Estimate)",
           data: cashFlows,
           borderRadius: 6,
-          backgroundColor: "rgba(15, 23, 42, 0.90)"
+          backgroundColor: "rgba(15, 35, 24, 0.90)"
         }
       ]
     },
@@ -273,7 +273,7 @@ async function generateCashFlow5yrChart() {
           borderWidth: 4,
           tension: 0.3,
           borderColor: BRAND.teal,
-          backgroundColor: "rgba(31, 138, 138, 0.12)",
+          backgroundColor: "rgba(201, 168, 76, 0.12)",
           pointRadius: 5,
           pointBackgroundColor: "#FFFFFF",
           pointBorderColor: BRAND.teal
@@ -341,9 +341,9 @@ async function generateExpenseRatioChart() {
         {
           data,
           backgroundColor: [
-            "rgba(15, 23, 42, 0.90)",
-            "rgba(31, 138, 138, 0.85)",
-            "rgba(212, 175, 55, 0.90)"
+            "rgba(15, 35, 24, 0.90)",
+            "rgba(201, 168, 76, 0.85)",
+            "rgba(201, 168, 76, 0.90)"
           ],
           borderWidth: 1,
           borderColor: "#FFFFFF"
@@ -392,7 +392,7 @@ async function generateBreakEvenOccupancyChart() {
           borderWidth: 4,
           tension: 0.3,
           borderColor: BRAND.gold,
-          backgroundColor: "rgba(212, 175, 55, 0.14)",
+          backgroundColor: "rgba(201, 168, 76, 0.14)",
           pointRadius: 5,
           pointBackgroundColor: "#FFFFFF",
           pointBorderColor: BRAND.gold
@@ -461,8 +461,8 @@ async function generateBreakEvenDscrChart() {
           data: dscrValues,
           borderRadius: 6,
           backgroundColor: [
-            "rgba(31, 138, 138, 0.90)",
-            "rgba(15, 23, 42, 0.75)"
+            "rgba(201, 168, 76, 0.90)",
+            "rgba(15, 35, 24, 0.75)"
           ]
         }
       ]
@@ -524,7 +524,7 @@ async function generateNoiWaterfallChart() {
   ];
 
   const colors = values.map((v) =>
-    v >= 0 ? "rgba(31, 138, 138, 0.90)" : "rgba(15, 23, 42, 0.85)"
+    v >= 0 ? "rgba(201, 168, 76, 0.90)" : "rgba(15, 35, 24, 0.85)"
   );
 
   const config = {
@@ -586,8 +586,8 @@ async function generateRenovationRoiChart() {
     barThickness: 140,
     maxBarThickness: 180,
     backgroundColor: [
-      "rgba(15, 23, 42, 0.90)",
-      "rgba(212, 175, 55, 0.90)"
+      "rgba(15, 35, 24, 0.90)",
+      "rgba(201, 168, 76, 0.90)"
     ]
   }
 ]
@@ -663,12 +663,12 @@ async function generateDealScoreBarChart() {
           data: values,
           borderRadius: 6,
           backgroundColor: [
-            "rgba(31, 138, 138, 0.90)", // Location
-            "rgba(31, 138, 138, 0.90)", // Market
-            "rgba(15, 23, 42, 0.88)",   // Asset Quality (navy)
-            "rgba(212, 175, 55, 0.92)", // Financials (gold accent)
-            "rgba(31, 138, 138, 0.90)", // Value-Add
-            "rgba(15, 23, 42, 0.82)"    // Risk (inverse) in navy
+            "rgba(201, 168, 76, 0.90)", // Location
+            "rgba(201, 168, 76, 0.90)", // Market
+            "rgba(15, 35, 24, 0.88)",   // Asset Quality (navy)
+            "rgba(201, 168, 76, 0.92)", // Financials (gold accent)
+            "rgba(201, 168, 76, 0.90)", // Value-Add
+            "rgba(15, 35, 24, 0.82)"    // Risk (inverse) in navy
           ]
         }
       ]
@@ -739,7 +739,7 @@ async function generateDealScoreRadarChart() {
           label: "InvestorIQ Deal Profile",
           data: values,
           borderColor: BRAND.teal,
-          backgroundColor: "rgba(31, 138, 138, 0.15)",
+          backgroundColor: "rgba(201, 168, 76, 0.15)",
           borderWidth: 3,
           pointBackgroundColor: "#FFFFFF",
           pointBorderColor: BRAND.teal,
@@ -816,7 +816,7 @@ async function generateRiskRadarChart() {
           label: "Risk Profile (0-10, Higher = More Risk)",
           data: values,
           borderColor: BRAND.navy,
-          backgroundColor: "rgba(15, 23, 42, 0.12)",
+          backgroundColor: "rgba(15, 35, 24, 0.12)",
           borderWidth: 3,
           pointBackgroundColor: "#FFFFFF",
           pointBorderColor: BRAND.navy,
@@ -881,7 +881,7 @@ async function generateCashflowWaterfallChart() {
   ];
 
   const colors = values.map((v) =>
-    v >= 0 ? "rgba(31, 138, 138, 0.90)" : "rgba(15, 23, 42, 0.85)"
+    v >= 0 ? "rgba(201, 168, 76, 0.90)" : "rgba(15, 35, 24, 0.85)"
   );
 
   const config = {

@@ -101,6 +101,16 @@ function isFinitePositive(x) {
   const n = Number(x);
   return Number.isFinite(n) && n > 0;
 }
+// Returns true only when a parsed debt payload contains at least one numeric
+// field required for DSCR / refinance computation.
+// Prevents an empty {} payload from being treated as valid debt data and
+// silently blocking the loan_term_sheet fallback.
+function hasUsableDebtPayload(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  const bal  = Number(payload.outstanding_balance ?? payload.loan_amount ?? "");
+  const rate = Number(payload.interest_rate ?? "");
+  return (Number.isFinite(bal) && bal > 0) || (Number.isFinite(rate) && rate > 0);
+}
 function hasMinimumScreeningCoverage(t12Payload) {
   const gpr =
     t12Payload?.gross_potential_rent ??
@@ -2360,7 +2370,12 @@ export default async function handler(req, res) {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        mortgagePayload = mortgageArtifact?.payload || null;
+        // ── Mortgage statement ──────────────────────────────────────────────────
+        // Only accept payload if it contains at least one usable numeric debt
+        // field. An empty {} would be truthy and block the loan_term_sheet
+        // fallback, causing silent debt recognition failure.
+        const rawMortgagePayload = mortgageArtifact?.payload || null;
+        mortgagePayload = hasUsableDebtPayload(rawMortgagePayload) ? rawMortgagePayload : null;
         const { data: appraisalArtifact } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -2379,7 +2394,10 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         propertyTaxPayload = propertyTaxArtifact?.payload || null;
-        // Fetch loan term sheet — used as fallback when no full mortgage statement was uploaded
+        // ── Loan term sheet fallback ─────────────────────────────────────────
+        // Used when no full mortgage statement was uploaded or parsed.
+        // Same usability guard applied — prevents empty payload from being
+        // treated as valid and producing silent downstream null values.
         const { data: loanTermSheetArtifact } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -2388,14 +2406,27 @@ export default async function handler(req, res) {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        const loanTermSheetPayload = loanTermSheetArtifact?.payload || null;
-        // Fall back to loan term sheet when no mortgage statement was parsed
+        const rawLoanTermSheetPayload = loanTermSheetArtifact?.payload || null;
+        const loanTermSheetPayload = hasUsableDebtPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
+        // Fallback: use loan term sheet when mortgage statement was absent or unusable
         if (!mortgagePayload && loanTermSheetPayload) {
           mortgagePayload = loanTermSheetPayload;
         }
-        // Normalize: loan_term_sheet uses `loan_amount`; MOAT builder reads `outstanding_balance`
-        if (mortgagePayload && !mortgagePayload.outstanding_balance && mortgagePayload.loan_amount) {
-          mortgagePayload = { ...mortgagePayload, outstanding_balance: mortgagePayload.loan_amount };
+        // ── Normalize field names — BIDIRECTIONAL ────────────────────────────
+        // mortgage_statement_parsed  → uses outstanding_balance
+        // loan_term_sheet_parsed     → uses loan_amount
+        // Downstream DSCR blocks must be able to use either field.
+        // Copy whichever is missing so both fields are always present when one is.
+        if (mortgagePayload) {
+          const hasBal  = isFinitePositive(Number(mortgagePayload.outstanding_balance ?? ""));
+          const hasLoan = isFinitePositive(Number(mortgagePayload.loan_amount ?? ""));
+          if (!hasBal && hasLoan) {
+            // loan_term_sheet case: populate outstanding_balance from loan_amount
+            mortgagePayload = { ...mortgagePayload, outstanding_balance: mortgagePayload.loan_amount };
+          } else if (hasBal && !hasLoan) {
+            // mortgage_statement case: populate loan_amount from outstanding_balance
+            mortgagePayload = { ...mortgagePayload, loan_amount: mortgagePayload.outstanding_balance };
+          }
         }
       }
       const { data: sourceRows, error: sourceErr } = await supabase
@@ -3001,7 +3032,7 @@ export default async function handler(req, res) {
       : DATA_NOT_AVAILABLE;
     // For underwriting, override pressure point with DSCR-based language if mortgage available
     if (effectiveReportMode === "v1_core" && mortgagePayload) {
-      const _la = coerceNumber(mortgagePayload.loan_amount);
+      const _la = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
       const _rp = coerceNumber(mortgagePayload.interest_rate);
       const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
       const _an = coerceNumber(t12Payload?.net_operating_income);
@@ -4460,7 +4491,7 @@ export default async function handler(req, res) {
         scoreRows.push({ label: "Rent-to-Market Gap", value: formatPercent1(marketRentPremiumRatio), pts, max: 10, band: pct > 15 ? ">15% upside" : pct >= 5 ? "5\u201315% upside" : "<5% upside" });
       }
       if (mortgagePayload) {
-        const loanAmt = coerceNumber(mortgagePayload.loan_amount);
+        const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
         const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
         const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
         const annualNOI = coerceNumber(t12Payload?.net_operating_income);
@@ -4775,7 +4806,7 @@ export default async function handler(req, res) {
       {
         let execDscrText = null;
         if (mortgagePayload) {
-          const _la = coerceNumber(mortgagePayload.loan_amount);
+          const _la = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
           const _rp = coerceNumber(mortgagePayload.interest_rate);
           const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
           const _an = coerceNumber(t12Payload?.net_operating_income);
