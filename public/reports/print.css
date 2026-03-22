@@ -1,14 +1,19 @@
 /* ================================
-   INVESTORIQ  -  PRINT STYLES (V1)
-   Balanced Institutional Format
+   INVESTORIQ — PRINT STYLES (V2)
+   Institutional Format
+   Fonts: DM Sans / Cormorant Garamond
+   Color: Forest Green #0F2318 / Gold #C9A84C
    ================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
 /* BASE */
 body {
-  font-family: Inter, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 300;
   margin: 0;
   padding: 0;
-  color: #0F172A;
+  color: #0C0C0C;
   line-height: 1.4;
 }
 
@@ -23,10 +28,13 @@ h1, h2, h3, h4, h5,
 .section-number,
 .section-header,
 .subsection-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
   page-break-after: avoid;
   margin-top: 0;
   margin-bottom: 10px;
   line-height: 1.25;
+  color: #0C0C0C;
 }
 
 /* PARAGRAPH / TEXT SPACING */
@@ -41,6 +49,8 @@ table {
   border-collapse: collapse;
   margin: 12px 0 20px 0 !important;
   page-break-inside: avoid;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 12px;
 }
 
 th, td {
@@ -48,7 +58,13 @@ th, td {
 }
 
 th {
-  background: #F3F4F6;
+  background: #FAFAF8;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #606060;
+  font-weight: 400;
 }
 
 tr {
@@ -106,7 +122,7 @@ ul, ol {
   page-break-inside: avoid;
 }
 
-/* AVOID PAGE-BREAK ORPHANS/WEIRD GAPS */
+/* AVOID PAGE-BREAK ORPHANS */
 .section-header {
   margin-bottom: 8px !important;
   page-break-after: avoid;
@@ -119,8 +135,10 @@ ul, ol {
 /* WATERMARK */
 .watermark {
   margin-top: 18px !important;
-  font-size: 11px;
-  color: #64748B;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #9A9A9A;
   text-align: center;
   page-break-inside: avoid;
 }

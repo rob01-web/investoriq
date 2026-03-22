@@ -1,6 +1,34 @@
+/* ─────────────────────────────────────────────────────────
+   INVESTORIQ — SCREEN MODE
+   Report viewer stylesheet (browser / screen rendering)
+   Fonts: DM Sans body, Cormorant Garamond display
+   ───────────────────────────────────────────────────────── */
 
-/* SCREEN MODE (modern, airy) */
-body { font-family: Inter, sans-serif; background:#f6f7f9; margin:0; padding:0; }
-.report-container { max-width:1100px; margin:0 auto; padding:32px; background:white; box-shadow:0 0 40px rgba(0,0,0,0.06); }
-.chart-waterfall img { max-width:85% !important; margin:24px auto !important; display:block; }
-.chart-block img { margin:16px auto; display:block; }
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+body {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  background: #FAFAF8;
+  margin: 0;
+  padding: 0;
+  color: #0C0C0C;
+}
+
+.report-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px;
+  background: white;
+  box-shadow: 0 0 40px rgba(15, 35, 24, 0.06);
+}
+
+.chart-waterfall img {
+  max-width: 85% !important;
+  margin: 24px auto !important;
+  display: block;
+}
+
+.chart-block img {
+  margin: 16px auto;
+  display: block;
+}
