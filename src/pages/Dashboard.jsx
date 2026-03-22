@@ -655,27 +655,35 @@ export default function Dashboard() {
       if (rentRolls.length === 0 || t12s.length === 0) { toast({ title: 'Required documents missing', description: 'Upload a Rent Roll and T12 to proceed.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
       if (selectedReportType === 'underwriting' && !hasUnderwritingSupportDocs) { toast({ title: 'Supporting documents required', description: 'Underwriting reports require at least one supporting document.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
 
-      let targetJobId = lockedJobIdForUploads;
       const batchId = stagedBatchId || crypto.randomUUID();
       if (!stagedBatchId) setStagedBatchId(batchId);
 
       const allFiles = [...rentRolls, ...t12s, ...uploadedFiles.filter((f) => f.docType !== 'rent_roll' && f.docType !== 't12' && f.docType !== 't12_or_operating_statement')];
 
+      const stagedFiles = [];
       for (const entry of allFiles) {
         const { file, docType } = entry;
         const ext = file.name.split('.').pop() || 'bin';
-        const storagePath = `${profile.id}/${batchId}/${normalizeDocType(docType)}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('analysis-uploads').upload(storagePath, file, { upsert: false });
+        const normalizedDocType = normalizeDocType(docType);
+        const safeOriginalName = safeName(file.name);
+        const storagePath = `staged/${profile.id}/${batchId}/${normalizedDocType}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('staged_uploads').upload(storagePath, file, { upsert: false });
         if (uploadError) { toast({ title: 'Upload failed', description: `${file.name}: ${uploadError.message}`, variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
-        const { error: artifactError } = await supabase.from('analysis_artifacts').insert({ type: 'uploaded_document', job_id: targetJobId, payload: { storage_path: storagePath, original_name: safeName(file.name), doc_type: normalizeDocType(docType), batch_id: batchId } });
-        if (artifactError) { console.error('Artifact insert error:', artifactError); }
+        stagedFiles.push({
+          storage_path: storagePath,
+          original_name: safeOriginalName,
+          content_type: file.type || 'application/octet-stream',
+          size: file.size,
+          doc_type: normalizedDocType,
+        });
       }
 
       propertyNameRef.current = propertyName.trim();
 
       const { data: rpcData, error: rpcError } = await supabase.rpc('consume_purchase_and_create_job', {
-        p_user_id: profile.id, p_product_type: selectedReportType, p_property_name: propertyName.trim(), p_batch_id: batchId,
-        p_ack_policy_text: policyText, p_ack_policy_hash: await computePolicyTextHash(), p_ack_accepted_at: ackAcceptedAtLocal || new Date().toISOString(),
+        p_report_type: selectedReportType,
+        p_job_payload: { property_name: propertyName.trim() },
+        p_staged_files: stagedFiles,
       });
 
       if (rpcError) { toast({ title: 'Unable to start analysis', description: rpcError.message, variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }

@@ -646,6 +646,175 @@ Non-blocking residue may still exist in tiny placeholder/empty elements, but not
 
 🚨 NEXT PRIORITY — RETURN TO ENGINE / LAUNCH-CRITICAL BUG
 
+✅ INVESTORIQ STATUS UPDATE — MARCH 20, 2026 (ENGINE INTEGRATION PHASE)
+
+🎯 CONTEXT SHIFT (CRITICAL)
+
+InvestorIQ has now fully exited design phase.
+
+Patch 7 (cover + system alignment) = ✅ COMPLETE
+
+Report visuals = 🔒 LOCKED (institutional-grade)
+
+No further visual work unless a real defect appears
+
+👉 All effort now moves to engine reliability + pipeline execution
+
+🚨 CURRENT BLOCKER — GENERATE REPORT FAILURE
+ROOT CAUSE IDENTIFIED
+
+The issue was NOT Stripe, NOT pricing, NOT UI
+
+It was a Supabase RPC contract mismatch
+
+🔴 PROBLEM
+
+Frontend was calling:
+
+consume_purchase_and_create_job(
+  p_user_id,
+  p_product_type,
+  p_property_name,
+  p_batch_id,
+  ...
+)
+
+But production DB expects:
+
+consume_purchase_and_create_job(
+  p_report_type text,
+  p_job_payload jsonb,
+  p_staged_files jsonb
+)
+
+Result:
+
+404 RPC error
+
+“function not found” (misleading)
+
+analysis never started
+
+✅ FIX (IN PROGRESS — DASHBOARD PATCH)
+File:
+
+src/pages/Dashboard.jsx
+
+Changes:
+
+Removed legacy RPC payload
+
+Aligned to production RPC signature
+
+Rebuilt stagedFiles payload
+
+Fixed storage path contract
+
+REQUIRED: staged/${userId}/...
+
+Updated storage bucket
+
+FROM: analysis-uploads
+
+TO: staged_uploads
+
+Removed invalid pre-job artifact insert
+
+analysis_artifacts insert removed (job_id not yet created)
+
+✅ NEW FLOW
+
+Upload → staged_uploads bucket
+→ build stagedFiles array
+→ call RPC with correct signature
+→ DB creates job + files
+→ queue_job_for_processing
+→ pipeline continues
+
+⚠️ CRITICAL CONTRACTS (NOW ENFORCED)
+Storage path MUST match:
+staged/${auth.uid()}/...
+RPC payload MUST be:
+{
+  p_report_type: 'screening' | 'underwriting',
+  p_job_payload: { property_name },
+  p_staged_files: [...]
+}
+stagedFiles object shape:
+{
+  storage_path,
+  original_name,
+  content_type,
+  size,
+  doc_type
+}
+🚨 SECONDARY ISSUE (PENDING)
+RLS BLOCKING:
+analysis_artifacts → row-level security violation
+
+Status:
+
+NOT addressed yet
+
+deferred until RPC + pipeline confirmed working
+
+🧠 CURRENT SYSTEM STATE
+✅ WORKING
+
+Stripe pricing (USD) ✅
+
+Vercel env alignment ✅
+
+Checkout flow ✅
+
+Webhook credit assignment ✅
+
+Design system ✅
+
+🚧 IN PROGRESS
+
+Dashboard RPC alignment (this patch)
+
+❗ NEXT
+
+Validate full pipeline execution
+
+Then return to:
+👉 api/generate-client-report.js
+(debt/refinance deterministic fix)
+
+🎯 NEXT TEST (FIRST THING NEXT SESSION)
+
+Run full E2E:
+
+Upload Rent Roll + T12
+
+Click Generate Screening Report
+
+Verify:
+
+no RPC error
+
+job created
+
+files accepted
+
+status transitions:
+
+needs_documents → queued → extracting → underwriting…
+
+🚀 TRUE POSITION
+
+InvestorIQ is now:
+
+visually launch-ready ✅
+
+pricing aligned with product value ✅
+
+checkout + credits working ✅
+
+entering final pipeline stabilization phase
+
 Now that Patch 7 is complete, the next task is to return immediately to:
 
 api/generate-client-report.js
