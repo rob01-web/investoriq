@@ -103,7 +103,7 @@ export default function Contact() {
               fontWeight: 300, color: 'rgba(255,255,255,0.45)',
               maxWidth: 420, lineHeight: 1.65,
             }}>
-              For product, billing, or report-related questions — we're here.
+              For product, billing, or report-related questions. We're here.
             </motion.p>
           </motion.div>
         </section>

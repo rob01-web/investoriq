@@ -46,7 +46,7 @@ const WelcomeMessage = () => {
         }}>
           InvestorIQ
         </span>
-        {' '}— the document-based underwriting platform delivering
+        {' '}- the document-based underwriting platform delivering
         institutional-grade real estate analysis. Upload your documents.
         Receive a report a committee would trust.
       </motion.p>

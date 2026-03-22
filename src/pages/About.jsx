@@ -38,7 +38,7 @@ const pipeline = [
 const notList = [
   'Not investment advice',
   'Not an appraisal',
-  'No assumptions — missing inputs shown as DATA NOT AVAILABLE',
+  'No assumptions. Missing inputs disclosed as not present in source documents.',
 ];
 
 export default function About() {
@@ -120,7 +120,7 @@ export default function About() {
                 {[
                   'InvestorIQ produces institutional-format underwriting reports from the documents you provide. Outputs are document-based and deterministic.',
                   'Missing inputs are never assumed or filled. Where data is absent or unreadable, InvestorIQ displays DATA NOT AVAILABLE. Every gap is disclosed, not papered over.',
-                  'Outputs are formatted for Investment Committee review — not marketing, not pitch decks. The same inputs always produce the same outputs, with a complete and auditable trail.',
+                  'Outputs are formatted for Investment Committee review. Not marketing, not pitch decks. The same inputs always produce the same outputs, with a complete and auditable trail.',
                 ].map((para, i) => (
                   <p key={i} style={{
                     fontFamily: "'DM Sans', sans-serif", fontSize: 14,

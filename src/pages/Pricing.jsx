@@ -41,7 +41,7 @@ const stagger = {
 const tiers = [
   {
     title:       'Screening Report',
-    price:       '$399',
+    price:       '$249',
     productType: 'screening',
     eyebrow:     'Entry-level analysis',
     description: 'Document-based screening report for initial investment review.',
@@ -56,7 +56,7 @@ const tiers = [
   },
   {
     title:       'Underwriting Report',
-    price:       '$1,499',
+    price:       '$699',
     productType: 'underwriting',
     eyebrow:     'Full institutional analysis',
     description: 'Comprehensive, property-specific underwriting report suitable for investment committee review.',
@@ -612,7 +612,7 @@ export default function PricingPage() {
                       { label: 'Rent roll analysis',                    screening: true,  underwriting: true  },
                       { label: 'Supporting due diligence documents',    screening: false, underwriting: true  },
                       { label: 'Institutional format PDF output',       screening: true,  underwriting: true  },
-                      { label: 'No assumptions — DATA NOT AVAILABLE',  screening: true,  underwriting: true  },
+                      { label: 'No assumptions. Missing inputs disclosed.',  screening: true,  underwriting: true  },
                       { label: 'Investment committee-ready depth',      screening: false, underwriting: true  },
                       { label: 'Full underwriting artifact',            screening: false, underwriting: true  },
                       { label: 'One generation per purchase',           screening: true,  underwriting: true  },

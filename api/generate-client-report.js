@@ -1039,7 +1039,7 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED — All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED: All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -3044,10 +3044,10 @@ export default async function handler(req, res) {
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = `${formatMultiple(_dscr, 2)}x`;
           primaryPressurePoint = _dscr < 1.20
-            ? `DSCR of ${_ds} — below 1.20x institutional threshold`
+            ? `DSCR of ${_ds}: below 1.20x institutional threshold`
             : _dscr < 1.35
-            ? `DSCR of ${_ds} — moderate debt coverage, review refinance risk`
-            : `DSCR of ${_ds} — meets institutional debt coverage thresholds`;
+            ? `DSCR of ${_ds}: moderate debt coverage, review refinance risk`
+            : `DSCR of ${_ds}: meets institutional debt coverage thresholds`;
         }
       }
     }
@@ -3379,16 +3379,16 @@ export default async function handler(req, res) {
           if (Number.isFinite(_dscr) && _dscr > 0) {
             const _ds = `${formatMultiple(_dscr, 2)}x`;
             if (_dscr >= 1.35) {
-              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum — debt service is well-covered by T12 NOI.`);
+              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum. Debt service is well-covered by T12 NOI.`);
             } else if (_dscr >= 1.20) {
-              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold — limited coverage cushion.`);
+              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
-              riskBullets.push(`DSCR of ${_ds} falls below 1.20x — debt service coverage is stressed at current NOI levels.`);
+              riskBullets.push(`DSCR of ${_ds} falls below 1.20x. Debt service coverage is stressed at current NOI levels.`);
             }
           }
         }
         const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
-          ? `Operating profile classified ${screeningClass} — impacts refinance viability under stress scenarios.`
+          ? `Operating profile classified ${screeningClass}. Impacts refinance viability under stress scenarios.`
           : null;
         if (_refiClass) riskBullets.push(_refiClass);
       } else {
@@ -3744,7 +3744,7 @@ export default async function handler(req, res) {
             `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
         }).join("");
         upsideHtml = `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
-          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway — Mark-to-Market Analysis</p>` +
+          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway: Mark-to-Market Analysis</p>` +
           `<div class="grid-2">` +
           `<div><table style="width:100%;border-collapse:collapse;font-size:11px;">` +
           `<tbody>` +
@@ -4360,7 +4360,7 @@ export default async function handler(req, res) {
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
-        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value — Exit Cap Rate Sensitivity</p>`;
+        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value: Exit Cap Rate Sensitivity</p>`;
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
         for (const cap of capRatesDcf) {
@@ -4421,7 +4421,7 @@ export default async function handler(req, res) {
         sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
-        sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value — Cap Rate Sensitivity</p>`;
+        sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value: Cap Rate Sensitivity</p>`;
         sTbl += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th>`;
         for (const s of growthRates) {
@@ -4787,7 +4787,7 @@ export default async function handler(req, res) {
         }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
-            `<p class="subsection-title" style="margin-bottom:8px;">Risk Register — Deterministic Signal Summary</p>` +
+            `<p class="subsection-title" style="margin-bottom:8px;">Risk Register: Deterministic Signal Summary</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
             `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Risk Factor</th>` +
             `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Current Reading</th>` +
