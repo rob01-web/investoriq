@@ -1,5 +1,121 @@
 import React from "react";
 
+// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+const T = {
+  green:       '#0F2318',
+  gold:        '#C9A84C',
+  goldDark:    '#9A7A2C',
+  ink:         '#0C0C0C',
+  ink2:        '#363636',
+  ink3:        '#606060',
+  ink4:        '#9A9A9A',
+  white:       '#FFFFFF',
+  warm:        '#FAFAF8',
+  hairline:    '#E8E5DF',
+  hairlineMid: '#D0CCC4',
+  okGreen:     '#1A4A22',
+  okBg:        '#F2F8F3',
+  okBorder:    '#B8D4BC',
+  warnAmber:   '#7A4A00',
+  warnBg:      '#FDF8EE',
+  warnBorder:  '#E8D4A0',
+};
+
+const FONTS = `
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+`;
+
+// Included / Not Included badge
+function StatusBadge({ included }) {
+  return included ? (
+    <span style={{
+      fontFamily:   "'DM Mono', monospace",
+      fontSize:     9,
+      letterSpacing:'0.14em',
+      textTransform:'uppercase',
+      fontWeight:   500,
+      padding:      '2px 10px',
+      background:   T.okBg,
+      border:       `1px solid ${T.okBorder}`,
+      color:        T.okGreen,
+      whiteSpace:   'nowrap',
+    }}>
+      Included
+    </span>
+  ) : (
+    <span style={{
+      fontFamily:   "'DM Mono', monospace",
+      fontSize:     9,
+      letterSpacing:'0.14em',
+      textTransform:'uppercase',
+      fontWeight:   500,
+      padding:      '2px 10px',
+      background:   T.warm,
+      border:       `1px solid ${T.hairline}`,
+      color:        T.ink4,
+      whiteSpace:   'nowrap',
+    }}>
+      Not Included
+    </span>
+  );
+}
+
+// Scope tier card
+function ScopeTier({ title, requires, items, included }) {
+  return (
+    <div style={{
+      border:     `1px solid ${included ? T.okBorder : T.hairline}`,
+      background: included ? T.okBg : T.white,
+      padding:    '16px 18px',
+    }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:6 }}>
+        <h4 style={{
+          fontFamily:   "'DM Sans', sans-serif",
+          fontSize:     13,
+          fontWeight:   500,
+          color:        T.ink,
+          lineHeight:   1.3,
+        }}>
+          {title}
+        </h4>
+        <StatusBadge included={included} />
+      </div>
+      <p style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize:   9,
+        letterSpacing:'0.1em',
+        color:      T.ink4,
+        marginBottom: 10,
+      }}>
+        Requires: {requires}
+      </p>
+      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+        {items.map((item) => (
+          <div key={item} style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize:   9,
+              color:      included ? T.goldDark : T.ink4,
+              opacity:    included ? 0.8 : 0.5,
+              flexShrink: 0,
+            }}>—</span>
+            <span style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize:   12,
+              fontWeight: 300,
+              color:      included ? T.ink2 : T.ink4,
+              lineHeight: 1.55,
+            }}>
+              {item}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const AnalysisScopePreview = ({
   hasRentRoll,
   hasT12,
@@ -9,112 +125,115 @@ const AnalysisScopePreview = ({
   hasMarket,
   rentRollCoverage = null,
 }) => {
+  // All original logic preserved exactly
   const operatingIncluded = Boolean(hasRentRoll && hasT12);
   const dealIncluded = Boolean(operatingIncluded && hasPurchase && hasCapex && hasDebt);
   const icIncluded = Boolean(dealIncluded && hasMarket);
 
-  const statusBadge = (included) =>
-    included ? (
-      <span className="text-xs font-semibold text-[#1F8A8A] bg-[#1F8A8A]/10 border border-[#1F8A8A] rounded-full px-2 py-0.5">
-        INCLUDED
-      </span>
-    ) : (
-      <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
-        NOT INCLUDED
-      </span>
-    );
-
-  const hasProvidedUnits =
-    rentRollCoverage && Number.isFinite(rentRollCoverage.provided);
-  const hasTotalUnits =
-    rentRollCoverage && Number.isFinite(rentRollCoverage.total);
-  const hasPercent =
-    rentRollCoverage && Number.isFinite(rentRollCoverage.percent);
+  const hasProvidedUnits = rentRollCoverage && Number.isFinite(rentRollCoverage.provided);
+  const hasTotalUnits    = rentRollCoverage && Number.isFinite(rentRollCoverage.total);
+  const hasPercent       = rentRollCoverage && Number.isFinite(rentRollCoverage.percent);
   const showCoverageWarning = hasPercent && rentRollCoverage.percent < 70;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">
+    <>
+      <style>{FONTS}</style>
+
+      <div style={{
+        background:  T.white,
+        border:      `1px solid ${T.hairline}`,
+        padding:     '24px 28px',
+        fontFamily:  "'DM Sans', sans-serif",
+      }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 16 }}>
+          <p style={{
+            fontFamily:   "'DM Mono', monospace",
+            fontSize:     9,
+            letterSpacing:'0.2em',
+            textTransform:'uppercase',
+            color:        T.goldDark,
+            marginBottom: 6,
+          }}>
             Analysis Scope Preview
-          </h3>
-          <p className="text-sm text-slate-600">
+          </p>
+          <p style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize:   13,
+            fontWeight: 300,
+            color:      T.ink3,
+            lineHeight: 1.6,
+          }}>
             Summary of what will be included based on the documents provided.
           </p>
         </div>
+
+        {/* Rent roll coverage notice */}
+        {hasProvidedUnits && (
+          <div style={{
+            padding:      '10px 14px',
+            background:   T.warnBg,
+            border:       `1px solid ${T.warnBorder}`,
+            borderLeft:   `3px solid ${T.warnBorder}`,
+            marginBottom: 16,
+            fontFamily:   "'DM Sans', sans-serif",
+            fontSize:     13,
+            fontWeight:   300,
+            color:        T.warnAmber,
+            lineHeight:   1.6,
+          }}>
+            {hasPercent && hasTotalUnits ? (
+              <>
+                Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
+                units ({Math.round(rentRollCoverage.percent)}%).
+                {showCoverageWarning ? ' Analysis reflects only the units provided.' : ''}
+              </>
+            ) : (
+              <>
+                Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
+                provided in uploaded documents.
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Scope tiers */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <ScopeTier
+            title="First-Look Operating Snapshot"
+            requires="Rent Roll + T12 / Operating Statement"
+            included={operatingIncluded}
+            items={[
+              'Unit count, occupancy, and rent roll summary',
+              'Trailing 12 income and expense snapshot',
+              'Document source summary',
+            ]}
+          />
+          <ScopeTier
+            title="Deal Underwriting"
+            requires="Operating Snapshot + Purchase, Capex, Debt"
+            included={dealIncluded}
+            items={[
+              'Underwriting inputs for price, capex, and debt',
+              'Base-case return summary',
+              'Scenario highlights from provided inputs',
+            ]}
+          />
+          <ScopeTier
+            title="IC-Ready Investment Memo"
+            requires="Deal Underwriting + Market Data"
+            included={icIncluded}
+            items={[
+              'Market positioning and location summary',
+              'Risk and sensitivity highlights',
+              'Institutional report formatting',
+            ]}
+          />
+        </div>
+
       </div>
-
-      {hasProvidedUnits && (
-        <div className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          {hasPercent && hasTotalUnits ? (
-            <>
-              Rent Roll Coverage: {rentRollCoverage.provided} / {rentRollCoverage.total}{' '}
-              units ({Math.round(rentRollCoverage.percent)}%).
-              {showCoverageWarning ? ' Analysis reflects only the units provided.' : ''}
-            </>
-          ) : (
-            <>
-              Rent Roll Units Provided: {rentRollCoverage.provided}. Total unit count not
-              provided in uploaded documents.
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="mt-6 space-y-6">
-        <div className="border border-slate-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">
-              First-Look Operating Snapshot
-            </h4>
-            {statusBadge(operatingIncluded)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Requires: Rent Roll + T12/Operating Statement
-          </p>
-          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-            <li>Unit count, occupancy, and rent roll summary</li>
-            <li>Trailing 12 income and expense snapshot</li>
-            <li>Document source summary</li>
-          </ul>
-        </div>
-
-        <div className="border border-slate-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">
-              Deal Underwriting
-            </h4>
-            {statusBadge(dealIncluded)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Requires: Operating Snapshot + Purchase, Capex, Debt
-          </p>
-          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-            <li>Underwriting inputs for price, capex, and debt</li>
-            <li>Base-case return summary</li>
-            <li>Scenario highlights from provided inputs</li>
-          </ul>
-        </div>
-
-        <div className="border border-slate-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">
-              IC-Ready Investment Memo
-            </h4>
-            {statusBadge(icIncluded)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Requires: Deal Underwriting + Market Data
-          </p>
-          <ul className="mt-3 text-sm text-slate-700 list-disc list-inside space-y-1">
-            <li>Market positioning and location summary</li>
-            <li>Risk and sensitivity highlights</li>
-            <li>Institutional report formatting</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 
