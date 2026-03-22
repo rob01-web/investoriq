@@ -593,6 +593,29 @@ export default async function handler(req, res) {
             ? forwardedKey[0]
             : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
+          const extractTextRes = await fetch(`${baseUrl}/api/parse/extract-job-text`, {
+            method: 'POST',
+            headers: parserHeaders,
+            body: JSON.stringify({ jobId: job.id }),
+          });
+          if (!extractTextRes.ok) {
+            const workerEventErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'document_text_extract_failed',
+              {
+                status: extractTextRes.status,
+                timestamp: nowIso,
+              }
+            );
+            if (workerEventErr) {
+              console.error(
+                'Failed to write document_text_extract_failed event:',
+                workerEventErr.message
+              );
+            }
+          }
+
           const otherPendingFiles = (jobFiles || []).filter((file) => {
             const docType = String(file.doc_type || '').toLowerCase();
             const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
