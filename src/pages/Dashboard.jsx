@@ -543,6 +543,18 @@ export default function Dashboard() {
     if (dt === 'supporting' || dt === 'supporting_documents_ui') return 'supporting_documents';
     return dt;
   };
+
+  const extractJobId = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value?.job_id === 'string') return value.job_id;
+    if (Array.isArray(value) && value.length > 0) {
+      const first = value[0];
+      if (typeof first === 'string') return first;
+      if (typeof first?.job_id === 'string') return first.job_id;
+    }
+    return null;
+  };
   const formatDocLabel = (label) => {
     const normalized = String(label || '').trim().toLowerCase();
     if (normalized === 't12_or_operating_statement' || normalized === 't12') return 'T12 (Operating Statement)';
@@ -687,8 +699,14 @@ export default function Dashboard() {
       });
 
       if (rpcError) { toast({ title: 'Unable to start analysis', description: rpcError.message, variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
-      const newJobId = rpcData?.job_id || rpcData;
-      if (!newJobId) { toast({ title: 'Unable to start analysis', description: 'Job id not returned.', variant: 'destructive' }); setLoading(false); return; }
+      const newJobId = extractJobId(rpcData);
+      if (!newJobId) {
+        console.error('consume_purchase_and_create_job returned unexpected shape:', rpcData);
+        toast({ title: 'Unable to start analysis', description: 'Job id not returned.', variant: 'destructive' });
+        setLoading(false);
+        analyzeInFlightRef.current = false;
+        return;
+      }
       setJobId(newJobId);
 
       const { data: queueData, error: queueErr } = await supabase.rpc('queue_job_for_processing', { p_job_id: newJobId });
