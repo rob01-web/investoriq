@@ -41,7 +41,7 @@ const stagger = {
 const tiers = [
   {
     title:       'Screening Report',
-    price:       '$249',
+    price:       '$399',
     productType: 'screening',
     eyebrow:     'Entry-level analysis',
     description: 'Document-based screening report for initial investment review.',
@@ -56,7 +56,7 @@ const tiers = [
   },
   {
     title:       'Underwriting Report',
-    price:       '$699',
+    price:       '$1,499',
     productType: 'underwriting',
     eyebrow:     'Full institutional analysis',
     description: 'Comprehensive, property-specific underwriting report suitable for investment committee review.',
