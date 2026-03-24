@@ -1132,6 +1132,185 @@ Fallback behavior:
 
 ## ENGINE FIX - SUPPORTING DOCUMENT PARSING (MARCH 2026)
 
+## 🚨 ENGINE FAILURE — SUPPORTING DOC PARSE 400 (ROOT CAUSE — MARCH 2026)
+
+### ❗ WHAT HAPPENED
+
+During a full underwriting test:
+
+- Rent Roll parsed ✅
+- T12 parsed ✅
+- ALL supporting PDFs failed ❌
+
+Observed symptoms:
+
+- DSCR → NOT ASSESSED
+- Debt narrative missing
+- Refinance model (MOAT) did not render
+- Report still completed successfully (silent degradation)
+
+---
+
+### 🔍 ARTIFACT EVIDENCE
+
+From `analysis_artifacts`:
+
+- `t12_parsed` ✅
+- `rent_roll_parsed` ✅
+- `loan_term_sheet_parsed` ❌ (missing)
+- `mortgage_statement_parsed` ❌ (missing)
+- `property_tax_parsed` ❌ (missing)
+
+Repeated worker events:
+
+- `supporting_doc_parse_failed`
+- status: 400
+
+---
+
+### 🎯 ROOT CAUSE (CONFIRMED)
+
+Mismatch between:
+
+- `analysis_job_files.doc_type`
+  → "supporting"
+
+AND
+
+- `parse-doc.js` expected input
+  → "supporting_documents"
+
+Because of this:
+
+- supporting PDFs NEVER entered the inference block:
+  - `inferDocTypeFromText()`
+- parser fell through to:
+  - `return 400 Unsupported doc_type`
+- no parsed artifacts were created
+
+---
+
+### 🔥 WHY THIS MATTERS
+
+This is a **silent failure mode**:
+
+- Report renders successfully
+- BUT critical underwriting data is missing
+- Violates fail-closed principle
+
+Impact:
+
+- DSCR not computed
+- Debt not recognized
+- Refinance model not triggered
+- Deal scoring becomes incomplete
+
+---
+
+### 🛠 REQUIRED FIX
+
+File:
+`api/parse/parse-doc.js`
+
+Fix:
+
+Expand supporting-doc condition to include ALL valid upstream types:
+
+FROM:
+
+```js
+if (declaredDocType === 'supporting_documents' && !isTabularInput) {
+```
+
+TO:
+
+```js
+if (
+  ['supporting', 'supporting_documents', 'supporting_documents_ui'].includes(declaredDocType) &&
+  !isTabularInput
+) {
+```
+
+### 🎯 EXPECTED RESULT AFTER FIX
+
+Supporting PDFs enter inference pipeline
+
+document_text_extracted → used correctly
+
+loan_term_sheet_parsed created
+
+mortgagePayload populated
+
+DSCR computed
+
+Refinance model (MOAT) renders
+
+No silent degradation
+
+### ⚠️ SECONDARY WATCH ITEMS
+
+`extract-job-text.js`
+
+Some PDFs logged:
+
+`document_text_extract_failed`
+
+May indicate:
+
+- `pdf-parse` edge cases
+- or file handling inconsistencies
+
+XLSX supporting docs
+
+Currently skipped in extraction layer
+
+may remain at pending
+
+### 🚨 SYSTEM PRINCIPLE REINFORCED
+
+InvestorIQ must NEVER:
+
+- silently drop supporting documents
+- continue underwriting with missing critical artifacts
+- produce “complete-looking” reports with incomplete intelligence
+
+Required behavior:
+
+EITHER:
+
+- fully process supporting docs
+
+OR:
+
+- fail closed with explicit error
+
+### 🧠 CURRENT ENGINE STATE
+
+Core parsing engine: ✅ stable
+
+Supporting doc ingestion: ❌ broken (this issue)
+
+Debt recognition: ❌ blocked upstream
+
+Refinance modeling: ❌ blocked upstream
+
+### 🎯 NEXT STEP
+
+Apply fix in:
+
+`api/parse/parse-doc.js`
+
+THEN:
+
+- rerun identical underwriting test
+
+confirm:
+
+- `loan_term_sheet_parsed` exists
+- DSCR renders
+- MOAT renders
+
+
 Problem:
 - supporting PDFs never parsed correctly
 - no `document_text_extracted` artifact existed

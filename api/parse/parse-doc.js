@@ -769,7 +769,10 @@ export default async function handler(req, res) {
       return 'supporting_documents_unclassified';
     }
 
-    if (declaredDocType === 'supporting_documents' && !isTabularInput) {
+if (
+  ['supporting', 'supporting_documents', 'supporting_documents_ui'].includes(declaredDocType) &&
+  !isTabularInput
+) {
       try {
         const { data: textArtifact } = await supabaseAdmin
           .from('analysis_artifacts')
