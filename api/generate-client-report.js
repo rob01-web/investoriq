@@ -2959,7 +2959,7 @@ export default async function handler(req, res) {
     let execRefiLine = "";
     if (effectiveReportMode === "v1_core") {
       const refiTier = buildRefiStabilityModel({
-        financials: body?.financials,
+        financials: refiFinancials,
         t12Payload,
         formatValue: formatCurrency,
       })?.tier;
@@ -4040,12 +4040,17 @@ export default async function handler(req, res) {
       const refiHtml = String(refiResult?.html || "").trim();
       const canRenderRefi =
         validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
+      const hasDebtButIncompleteRefiInputs =
+        Boolean(mortgagePayload) && !canRenderRefi;
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
+      } else if (hasDebtButIncompleteRefiInputs) {
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{REFI_STABILITY_BLOCK}}",
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Produced</strong></p><p>Debt was identified from uploaded documents, but deterministic refinance classification was not produced because one or more required debt terms were incomplete.</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
+        );
       } else {
-        // v1_core but no deterministic refi model — strip section entirely.
-        // The Refi Collapse Risk Grid in SECTION_7_DEBT covers debt/refi analysis.
-        // A diagnostic "all missing" table is not appropriate for a $999 report.
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
       }
