@@ -2429,31 +2429,6 @@ export default async function handler(req, res) {
           }
         }
 
-        const rawFinancials = body?.financials || {};
-        const refiFinancials = {
-          ...rawFinancials,
-          refi_debt_balance:
-            rawFinancials?.refi_debt_balance ??
-            mortgagePayload?.outstanding_balance ??
-            mortgagePayload?.loan_amount ??
-            null,
-          refi_interest_rate:
-            rawFinancials?.refi_interest_rate ??
-            mortgagePayload?.interest_rate ??
-            null,
-          refi_amort_years:
-            rawFinancials?.refi_amort_years ??
-            mortgagePayload?.amort_years ??
-            null,
-          refi_cap_rate_base:
-            rawFinancials?.refi_cap_rate_base ??
-            appraisalPayload?.cap_rate ??
-            null,
-          noi_base:
-            rawFinancials?.noi_base ??
-            t12Payload?.net_operating_income ??
-            null,
-        };
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -2956,6 +2931,31 @@ export default async function handler(req, res) {
     const execBreakEvenText = Number.isFinite(breakEvenOccRatio)
       ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
       : DATA_NOT_AVAILABLE;
+    const rawFinancials = body?.financials || {};
+    const refiFinancials = {
+      ...rawFinancials,
+      refi_debt_balance:
+        rawFinancials?.refi_debt_balance ??
+        mortgagePayload?.outstanding_balance ??
+        mortgagePayload?.loan_amount ??
+        null,
+      refi_interest_rate:
+        rawFinancials?.refi_interest_rate ??
+        mortgagePayload?.interest_rate ??
+        null,
+      refi_amort_years:
+        rawFinancials?.refi_amort_years ??
+        mortgagePayload?.amort_years ??
+        null,
+      refi_cap_rate_base:
+        rawFinancials?.refi_cap_rate_base ??
+        appraisalPayload?.cap_rate ??
+        null,
+      noi_base:
+        rawFinancials?.noi_base ??
+        t12Payload?.net_operating_income ??
+        null,
+    };
     let execRefiLine = "";
     if (effectiveReportMode === "v1_core") {
       const refiTier = buildRefiStabilityModel({
