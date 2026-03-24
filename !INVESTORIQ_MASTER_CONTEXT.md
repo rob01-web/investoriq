@@ -897,3 +897,786 @@ Start immediately with:
 
 File: api/generate-client-report.js
 Mission: fix deterministic debt recognition and refinance triggering reliability.
+
+---
+
+## SYSTEM EXECUTION FLOW (REAL)
+
+End-to-end path:
+
+1. Frontend upload
+- File: `src/pages/Dashboard.jsx`
+- User uploads source files from the dashboard
+- Files are uploaded into Supabase Storage bucket:
+  - `staged_uploads`
+- Required path contract:
+  - `staged/${userId}/${batchId}/${docType}/...`
+
+2. Job creation RPC
+- File: `src/pages/Dashboard.jsx`
+- RPC called:
+  - `consume_purchase_and_create_job`
+- Current production signature:
+```js
+{
+  p_report_type: 'screening' | 'underwriting',
+  p_job_payload: { property_name },
+  p_staged_files: [...]
+}
+```
+- DB contract source:
+  - `supabase/migrations/20260210100140_consume_purchase_and_create_job.sql`
+
+3. DB objects created
+- `consume_purchase_and_create_job` creates:
+  - one row in `analysis_jobs`
+  - one or more rows in `analysis_job_files`
+- `analysis_job_files` is the source-of-truth manifest for every uploaded file
+
+4. Queue trigger
+- File: `src/pages/Dashboard.jsx`
+- RPC called:
+  - `queue_job_for_processing`
+- DB contract source:
+  - `supabase/migrations/20260214_0930_queue_job_for_processing.sql`
+
+5. Worker trigger
+- Manual or admin trigger:
+  - `api/admin/run-eligible-jobs-once.js`
+- Main worker:
+  - `api/admin-run-worker.js`
+
+6. Worker pipeline stages
+- `extracting`
+  - file inspection
+  - text extraction
+  - parser dispatch
+  - artifact creation
+- `underwriting`
+  - deterministic metric build
+  - report data assembly
+- `scoring`
+  - deterministic KPI / decision layer
+- `rendering`
+  - HTML report assembly
+- `pdf_generating`
+  - PDF generation
+- `publishing`
+  - final report artifact / delivery state
+
+7. Final report generation
+- File:
+  - `api/generate-client-report.js`
+- Template:
+  - `api/report-template-runtime.html`
+- This stage consumes parsed artifacts, builds deterministic report payloads, renders HTML, and generates the final PDF
+
+8. Internal endpoints involved
+- `api/admin/run-eligible-jobs-once.js`
+- `api/admin-run-worker.js`
+- `api/parse/extract-job-text.js`
+- `api/parse/parse-doc.js`
+- `api/generate-client-report.js`
+
+---
+
+## WORKER ARCHITECTURE
+
+Primary file:
+- `api/admin-run-worker.js`
+
+How jobs are selected:
+- `api/admin/run-eligible-jobs-once.js` can:
+  - force a specific job path
+  - or claim the next queued job
+- `api/admin-run-worker.js` scans active jobs by status and advances them through the pipeline
+
+How `status = extracting` is used:
+- `extracting` is the parser / artifact-production stage
+- When a job is in `extracting`, the worker reads `analysis_job_files` and decides which parser or extraction path to run next
+
+Parser dispatch logic:
+
+Rent roll
+- handled through `api/parse/parse-doc.js`
+- structured spreadsheet logic
+- output artifact:
+  - `rent_roll_parsed`
+
+T12
+- handled through `api/parse/parse-doc.js`
+- structured spreadsheet logic
+- output artifact:
+  - `t12_parsed`
+
+Supporting documents
+- handled through:
+  - `api/parse/extract-job-text.js`
+  - then `api/parse/parse-doc.js`
+- current supported dispatch normalization includes:
+  - `supporting`
+  - `supporting_documents`
+  - `supporting_documents_ui`
+
+NEW FIX:
+- supporting docs were originally not dispatched correctly
+- worker now includes:
+  - `supporting`
+  - `supporting_documents`
+  - `supporting_documents_ui`
+- worker normalizes these to:
+  - `supporting_documents`
+- worker now calls text extraction before parser inference
+
+---
+
+## TEXT EXTRACTION LAYER (CRITICAL)
+
+Primary file:
+- `api/parse/extract-job-text.js`
+
+Purpose:
+- creates artifact:
+  - `document_text_extracted`
+- uses:
+  - `pdf-parse`
+- also performs table extraction support work where applicable
+
+Why it exists:
+- `parse-doc` does not have enough context to infer supporting document type from a PDF unless extracted text already exists
+- this layer must run before supporting PDF classification
+
+Required for:
+- loan term sheet inference
+- supporting document classification
+- mortgage / debt fallback detection
+
+CRITICAL RULE:
+- `parse-doc` will fail or remain blocked for supporting PDF inference if `document_text_extracted` does not exist
+
+Artifact created:
+- type:
+  - `document_text_extracted`
+- file:
+  - `api/parse/extract-job-text.js`
+
+---
+
+## PARSER SYSTEM
+
+Primary file:
+- `api/parse/parse-doc.js`
+
+Key model:
+- `declaredDocType`
+  - what the worker dispatches into the parser
+- `effectiveDocType`
+  - what the parser actually decides the file is after classification / inference
+
+Supporting document flow:
+1. Worker dispatches supporting PDFs as:
+   - `supporting_documents`
+2. `parse-doc` looks for:
+   - `document_text_extracted`
+3. `parse-doc` runs:
+   - `inferDocTypeFromText()`
+4. `effectiveDocType` becomes one of:
+   - `loan_term_sheet`
+   - `mortgage_statement`
+   - `appraisal`
+   - `property_tax`
+   - or `supporting_documents_unclassified`
+
+Parser outputs include:
+- `rent_roll_parsed`
+- `t12_parsed`
+- `loan_term_sheet_parsed`
+- `mortgage_statement_parsed`
+- `appraisal_parsed`
+- `property_tax_parsed`
+
+Important rule:
+- parser classification is deterministic
+- no LLM is involved in artifact creation
+
+---
+
+## ARTIFACT CONTRACT (VERY IMPORTANT)
+
+Core artifact types:
+
+| Artifact Type | Required vs Optional | Produced By | Used For |
+|---|---|---|---|
+| `rent_roll_parsed` | Required | `api/parse/parse-doc.js` | unit mix, rents, occupancy, screening + underwriting |
+| `t12_parsed` | Required | `api/parse/parse-doc.js` | income, expenses, NOI, screening + underwriting |
+| `document_text_extracted` | Required for supporting PDF inference | `api/parse/extract-job-text.js` | upstream text source for supporting-doc classification |
+| `loan_term_sheet_parsed` | Optional but critical when debt docs are term-sheet-only | `api/parse/parse-doc.js` | debt fallback, refinance / underwriting logic |
+| `mortgage_statement_parsed` | Optional but preferred when available | `api/parse/parse-doc.js` | primary debt input for underwriting / refinance |
+
+Required vs optional:
+- Required to produce a real report:
+  - `rent_roll_parsed`
+  - `t12_parsed`
+- Required for supporting PDF debt inference:
+  - `document_text_extracted`
+- Optional but important for debt-aware underwriting:
+  - `loan_term_sheet_parsed`
+  - `mortgage_statement_parsed`
+
+Fallback behavior:
+- `loan_term_sheet_parsed` can be used as fallback debt input when `mortgage_statement_parsed` is absent or unusable
+- this fallback is consumed in:
+  - `api/generate-client-report.js`
+
+---
+
+## ENGINE FIX - SUPPORTING DOCUMENT PARSING (MARCH 2026)
+
+Problem:
+- supporting PDFs never parsed correctly
+- no `document_text_extracted` artifact existed
+- `parse_status` stayed at `pending`
+- debt artifacts were missing
+
+Root cause:
+- worker did not dispatch supporting docs consistently
+- worker did not call `extract-job-text` before `parse-doc`
+- `parse-doc` depended on a missing `document_text_extracted` artifact
+
+Fix:
+- worker now dispatches supporting doc types:
+  - `supporting`
+  - `supporting_documents`
+  - `supporting_documents_ui`
+- worker normalizes them to:
+  - `supporting_documents`
+- worker now calls:
+  - `api/parse/extract-job-text`
+  - before
+  - `api/parse/parse-doc`
+
+Result:
+- loan term sheets can now be classified correctly
+- debt artifacts can now be created deterministically
+- supporting PDFs no longer remain stuck at `pending` when the pipeline is healthy
+
+---
+
+## FAILURE MODES (FAIL-CLOSED LOGIC)
+
+InvestorIQ must never silently pass bad or incomplete state.
+
+Missing rent roll
+- block deterministic underwriting
+- do not fabricate unit data
+- fail closed or return a deterministic degraded output only where explicitly designed
+
+Missing T12
+- block deterministic underwriting
+- do not fabricate NOI / expense data
+- fail closed
+
+Missing debt
+- screening may still run if debt is not required
+- underwriting must degrade explicitly and deterministically
+- no refinance logic may be fabricated
+
+Parse failure
+- job must block or fail with explicit artifact / parse status evidence
+- never silently continue as if parsing succeeded
+
+Non-negotiable behavior:
+- no silent pass
+- no hidden assumptions
+- no fabricated numbers
+- either:
+  - block
+  - or clearly degrade deterministically
+
+---
+
+## DEBUG PLAYBOOK (GOLD)
+
+How to debug a failed job:
+
+1. Check `analysis_job_files`
+- verify every expected file row exists
+- verify `doc_type`
+- verify storage path and object path
+
+2. Check `parse_status`
+- `pending`
+- `extracted`
+- `parsed`
+- `failed`
+- `parsed_with_warnings`
+
+3. Check `analysis_artifacts`
+- list artifact types actually produced for the job
+- confirm whether required artifacts exist
+
+4. Check missing artifact types
+- missing `rent_roll_parsed`
+- missing `t12_parsed`
+- missing `document_text_extracted`
+- missing `loan_term_sheet_parsed`
+- missing `mortgage_statement_parsed`
+
+5. Check worker execution
+- was the job queued
+- did worker move it into `extracting`
+- did text extraction run
+- did parser dispatch run
+- did `api/generate-client-report.js` run
+
+Fast debug order:
+1. `analysis_job_files`
+2. `parse_status`
+3. `analysis_artifacts`
+4. missing artifact types
+5. worker execution
+
+---
+
+## AI / LLM ARCHITECTURE (LOCKED)
+
+## 🧠 LLM EXECUTION LAYER (CRITICAL — LOCKED)
+
+### 📍 WHERE LLM IS CALLED
+
+The LLM is invoked ONLY inside:
+
+File:
+`api/generate-client-report.js`
+
+Stage:
+AFTER underwriting + scoring
+BEFORE HTML assembly
+
+Pipeline position:
+
+deterministic metrics
+→ deterministic scoring
+→ structured report JSON built
+→ 🧠 LLM narrative generation (THIS STEP)
+→ inject narratives into template
+→ render HTML
+→ generate PDF
+
+---
+
+### 🧠 PROMPT SYSTEM (LOCKED)
+
+The system uses:
+
+👉 "Golden Elite Master Prompt"
+
+Rules:
+- Prompt is injected at runtime
+- Prompt receives ONLY structured JSON
+- Prompt NEVER receives raw documents
+- Prompt NEVER computes numbers
+
+---
+
+### 📦 LLM INPUT CONTRACT (STRICT)
+
+LLM must receive:
+
+{
+  executive_data,
+  risk_flags,
+  refinance_classification,
+  kpi_metrics,
+  missing_data_flags,
+  scenario_outputs,
+  property_metadata
+}
+
+NO:
+- raw text
+- PDFs
+- partial data
+- undefined fields
+
+---
+
+### 🎯 LLM OUTPUT CONTRACT
+
+LLM returns ONLY:
+
+{
+  execSummary,
+  riskAssessment,
+  renovationNarrative,
+  neighborhoodAnalysis,
+  debtStructureNarrative,
+  dcfInterpretation,
+  dealScoreSummary,
+  finalRecommendation
+}
+
+Rules:
+- Must not fabricate
+- Must not infer missing numbers
+- Must explicitly state missing data
+- Must follow institutional tone
+
+---
+
+### ⚙️ MODEL STRATEGY (HARD LOCK)
+
+Production model:
+
+👉 OpenAI API (GPT-5.x)
+
+Used for:
+- ALL narrative generation
+
+Reason:
+- deterministic control
+- cost efficiency
+- already integrated
+- sufficient quality with Golden Prompt
+
+---
+
+### 🧪 NON-PRODUCTION MODEL
+
+Anthropic Claude:
+
+- NOT used in production pipeline
+- ONLY used for:
+  - internal benchmarking
+  - optional future premium tier
+
+---
+
+### 🚨 FAIL CONDITIONS
+
+If any of the following occur:
+
+- missing required input fields
+- undefined metrics
+- incomplete underwriting outputs
+
+THEN:
+
+❌ DO NOT CALL LLM
+
+Instead:
+- fail closed
+OR
+- inject deterministic "DATA NOT AVAILABLE" logic
+
+---
+
+### 🔒 SYSTEM IDENTITY
+
+InvestorIQ is:
+
+NOT an AI underwriting system
+
+It is:
+
+👉 a deterministic underwriting engine  
+👉 with AI used ONLY for narrative presentation
+
+InvestorIQ is a hybrid deterministic + LLM system, with strict separation of responsibilities.
+
+### NON-NEGOTIABLE RULE
+
+LLMs must never be used for:
+- underwriting math
+- financial calculations
+- NOI
+- DSCR
+- IRR
+- debt recognition
+- refinance modeling
+- deal scoring
+- artifact creation
+- pass/fail gating
+
+All of the above must be:
+- deterministic
+- code-driven
+- artifact-driven
+
+### WHERE LLMs ARE USED
+
+LLMs are only used for:
+- narrative generation
+- executive summary writing
+- risk explanation
+- renovation narrative
+- debt structure narrative based on parsed data only
+- DCF interpretation, not calculation
+- final recommendation language for tone only, never decision logic
+
+### INPUT CONTRACT FOR LLM
+
+LLM input must be:
+- structured JSON only
+- fully computed metrics
+- flags and classifications
+- no raw documents
+- no missing fields disguised as assumptions
+
+LLM must:
+- never infer missing data
+- never fabricate numbers
+- explicitly state when data is missing
+
+### MODEL STRATEGY
+
+Production:
+- OpenAI API
+- primary model:
+  - GPT-5.1 or GPT-5.4 depending on cost / performance
+- used for:
+  - narrative generation only
+
+### BENCHMARK STRATEGY
+
+Anthropic / Claude:
+- used for A/B testing narrative quality
+- not used in the core production pipeline initially
+
+Evaluation criteria:
+- factual discipline
+- tone consistency
+- verbosity control
+- handling of missing data
+- adherence to structure
+
+### COST PRINCIPLE
+
+- do not use premium models unless:
+  - output is measurably better
+  - and users would notice the difference
+
+### DESIGN PRINCIPLE
+
+InvestorIQ is not an "AI underwriting tool".
+
+It is:
+- a deterministic underwriting engine
+- with AI used only as a presentation layer
+
+---
+
+## QUALITY INVARIANCE AT SCALE (NON-NEGOTIABLE)
+
+InvestorIQ must produce materially consistent report quality from the first production report through the 1,000th+ report.
+
+This means:
+
+- same deterministic engine
+- same artifact contracts
+- same underwriting logic
+- same refinance logic
+- same fail-closed behavior
+- same report structure
+- same visual template
+- same narrative prompt
+- same model policy
+- same output standards
+
+### RULES
+
+1. No silent prompt changes
+- The Golden Elite Master Prompt is versioned and locked.
+- Any prompt change must be deliberate, documented, and tested.
+
+2. No silent model changes
+- Production model changes are controlled.
+- Changing model/provider requires benchmark comparison against the current production baseline.
+
+3. No runtime improvisation
+- LLM receives only structured JSON.
+- LLM may not invent structure, numbers, or missing facts.
+
+4. No template drift
+- Report template changes must preserve institutional formatting and section hierarchy.
+- Visual or structural edits must be explicitly approved.
+
+5. No logic drift
+- Underwriting math, scoring, debt recognition, and refinance classification remain deterministic and code-driven.
+
+6. Identical standards at scale
+- A report generated today and one generated months later must meet the same quality bar if given equivalent inputs.
+
+### REQUIRED CONTROL MECHANISMS
+
+- versioned prompt
+- versioned model policy
+- locked report template
+- deterministic input contract
+- deterministic output schema
+- benchmark regression testing before major changes
+
+### DESIGN PRINCIPLE
+
+InvestorIQ is not allowed to become worse as it scales.
+
+Scale must increase volume only, not variance in quality.
+
+---
+
+## ARTIFACT CONTRACTS (STRICT)
+
+All downstream systems depend on structured artifacts.
+
+Each artifact type must:
+- have a fixed schema
+- never change shape without versioning
+- never include null/undefined critical fields
+- never include fabricated values
+
+Core artifacts:
+- rent_roll_parsed
+- t12_parsed
+- loan_term_sheet_parsed
+- document_text_extracted
+
+LLM input MUST come only from these artifacts.
+
+No raw text. No guessing.
+
+---
+
+## LLM ROLE (STRICTLY LIMITED)
+
+The LLM is a formatting and synthesis layer only.
+
+It is NOT allowed to:
+- create financial values
+- infer missing numbers
+- fill gaps with assumptions
+- override deterministic outputs
+
+It is ONLY allowed to:
+- translate structured data into narrative
+- organize sections
+- explain deterministic outputs
+
+If required data is missing → section is omitted or flagged.
+
+---
+
+## FAILURE HANDLING (TRUST FIRST)
+
+If the system cannot produce a complete, accurate report:
+
+- DO NOT degrade quality
+- DO NOT fabricate
+- DO NOT partially guess
+
+Instead:
+- fail the run
+- restore user credit
+- provide clear reason:
+  - missing documents
+  - parse failure
+  - system error
+
+InvestorIQ prioritizes trust over output completion.
+
+---
+
+## VERSION CONTROL (CRITICAL)
+
+All core system components must be versioned:
+
+### 1. Prompt Versioning
+- Golden Prompt must have a version tag (e.g., v1.0, v1.1)
+- Prompt changes must:
+  - be documented
+  - be tested against baseline outputs
+  - never overwrite previous versions silently
+
+### 2. Model Versioning
+- Production model must be explicitly defined:
+  - e.g., "gpt-5.1"
+- Any model upgrade must:
+  - be benchmarked against current production
+  - pass quality invariance checks
+  - be manually approved
+
+### 3. Template Versioning
+- Report template must be treated as a locked artifact
+- Changes must:
+  - preserve section structure
+  - preserve institutional formatting
+  - not introduce UI artifacts
+
+### 4. Regression Requirement
+Before any change:
+- generate baseline report
+- generate new report
+- compare:
+  - structure
+  - tone
+  - completeness
+  - correctness
+
+If degradation exists → change is rejected
+
+# 🚨 EXECUTION CONTRACT (MANDATORY)
+
+You are working on InvestorIQ.
+
+This file is the SINGLE SOURCE OF TRUTH.
+
+You MUST follow ALL rules in this document EXACTLY.
+
+## NON-NEGOTIABLE RULES
+
+1. NO REFACTORING
+- Do not restructure code
+- Do not rename variables
+- Do not “clean up” anything
+
+2. ANCHOR-LOCKED PATCHES ONLY
+- Every change must be:
+  - "REPLACE ONLY THIS EXACT BLOCK"
+  - with "THIS EXACT BLOCK"
+- If the anchor is not found:
+  - output EXACTLY: ANCHOR_MISMATCH
+  - STOP immediately
+
+3. MINIMAL DIFFS ONLY
+- Change ONLY what is required
+- No extra edits
+- No formatting changes
+
+4. NO GUESSING
+- If unsure → STOP
+- Ask for clarification
+
+5. FAIL-CLOSED
+- Never introduce fallback logic unless explicitly defined
+- Never silently skip logic
+
+6. NO DUPLICATION
+- Do not create duplicate logic blocks
+- Do not leave old code behind
+
+7. VERIFY BEFORE CONTINUING
+After EVERY patch:
+- confirm patch applied cleanly
+- show exact old block
+- show exact new block
+- run syntax check
+
+8. THIS DOCUMENT IS LAW
+- If code conflicts with this document → FOLLOW THIS DOCUMENT
+
+9. NO PARTIAL PATCHES
+- If a patch cannot be completed fully and cleanly → STOP
+- Do not return partial implementations
+
+Failure to follow ANY rule = INVALID OUTPUT
+
+***If you violate ANY rule in the execution contract, STOP and explain why.***

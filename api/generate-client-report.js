@@ -2428,6 +2428,32 @@ export default async function handler(req, res) {
             mortgagePayload = { ...mortgagePayload, loan_amount: mortgagePayload.outstanding_balance };
           }
         }
+
+        const rawFinancials = body?.financials || {};
+        const refiFinancials = {
+          ...rawFinancials,
+          refi_debt_balance:
+            rawFinancials?.refi_debt_balance ??
+            mortgagePayload?.outstanding_balance ??
+            mortgagePayload?.loan_amount ??
+            null,
+          refi_interest_rate:
+            rawFinancials?.refi_interest_rate ??
+            mortgagePayload?.interest_rate ??
+            null,
+          refi_amort_years:
+            rawFinancials?.refi_amort_years ??
+            mortgagePayload?.amort_years ??
+            null,
+          refi_cap_rate_base:
+            rawFinancials?.refi_cap_rate_base ??
+            appraisalPayload?.cap_rate ??
+            null,
+          noi_base:
+            rawFinancials?.noi_base ??
+            t12Payload?.net_operating_income ??
+            null,
+        };
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -4001,7 +4027,7 @@ export default async function handler(req, res) {
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
     } else {
       const refiResult = buildRefiStabilityModel({
-        financials: body?.financials,
+        financials: refiFinancials,
         t12Payload,
         formatValue: formatCurrency,
       });
@@ -4221,7 +4247,7 @@ export default async function handler(req, res) {
       if (mortgagePayload.lender_name) {
         dcRows.push(`<tr><td>Lender</td><td>${escapeHtml(String(mortgagePayload.lender_name))}</td></tr>`);
       }
-      const bal = coerceNumber(mortgagePayload.outstanding_balance);
+      const bal = coerceNumber(mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount);
       if (Number.isFinite(bal) && bal > 0) {
         dcRows.push(`<tr><td>Outstanding Balance</td><td>${formatCurrency(bal)}</td></tr>`);
       }
@@ -4229,18 +4255,28 @@ export default async function handler(req, res) {
       if (Number.isFinite(ratePct) && ratePct > 0) {
         dcRows.push(`<tr><td>Interest Rate</td><td>${ratePct.toFixed(2)}%</td></tr>`);
       }
+      const amort = coerceNumber(mortgagePayload.amort_years);
       const pni = coerceNumber(mortgagePayload.monthly_payment);
       if (Number.isFinite(pni) && pni > 0) {
         dcRows.push(`<tr><td>Monthly P&I</td><td>${formatCurrency(pni)}</td></tr>`);
-        if (Number.isFinite(bal) && bal > 0) {
-          const annualDs = pni * 12;
-          const t12Noi = coerceNumber(t12Payload?.net_operating_income);
-          if (Number.isFinite(t12Noi) && t12Noi > 0 && annualDs > 0) {
-            dcRows.push(`<tr><td>DSCR (T12 NOI)</td><td>${(t12Noi / annualDs).toFixed(2)}x</td></tr>`);
-          }
+      }
+      const t12Noi = coerceNumber(t12Payload?.net_operating_income);
+      let annualDs = null;
+      if (Number.isFinite(pni) && pni > 0) {
+        annualDs = pni * 12;
+      } else if (
+        Number.isFinite(bal) && bal > 0 &&
+        Number.isFinite(ratePct) && ratePct > 0 &&
+        Number.isFinite(amort) && amort > 0
+      ) {
+        const mc = computeMortgageConstant(ratePct / 100, amort);
+        if (Number.isFinite(mc) && mc > 0) {
+          annualDs = bal * mc;
         }
       }
-      const amort = coerceNumber(mortgagePayload.amort_years);
+      if (Number.isFinite(t12Noi) && t12Noi > 0 && Number.isFinite(annualDs) && annualDs > 0) {
+        dcRows.push(`<tr><td>DSCR (T12 NOI)</td><td>${(t12Noi / annualDs).toFixed(2)}x</td></tr>`);
+      }
       if (Number.isFinite(amort) && amort > 0) {
         dcRows.push(`<tr><td>Amortization</td><td>${amort} years</td></tr>`);
       }
