@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     const { data: jobFiles, error: filesErr } = await supabaseAdmin
       .from('analysis_job_files')
-      .select('id, job_id, user_id, bucket, object_path, original_filename, mime_type, created_at, doc_type')
+      .select('id, job_id, user_id, bucket, object_path, original_filename, mime_type, uploaded_at, doc_type')
       .eq('job_id', jobId)
       .order('uploaded_at', { ascending: true });
 
