@@ -4288,7 +4288,9 @@ export default async function handler(req, res) {
     if (mortgagePayload && t12Payload && effectiveReportMode === "v1_core") {
       const noiBase = coerceNumber(t12Payload.net_operating_income);
       const baseRatePct = coerceNumber(mortgagePayload.interest_rate); // e.g. 4.5
-      const debtBal = coerceNumber(mortgagePayload.outstanding_balance);
+      const debtBal = coerceNumber(
+        mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount
+      );
       const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
       const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
       const baseCapPct = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? rawCapPct : 5.5;
