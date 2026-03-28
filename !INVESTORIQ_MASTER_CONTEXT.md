@@ -757,6 +757,35 @@ Status:
 NOT addressed yet
 
 deferred until RPC + pipeline confirmed working
+UPDATE - SUPERSEDED BY VERIFIED SECURITY STATE (MARCH 2026)
+
+Supabase REST warning reviewed:
+- no direct `/rest/v1/` root usage found anywhere in the codebase
+- no direct REST root exposure risk was found from the April 8 change
+
+Key handling verified:
+- anon key is client-side only
+- service role key is server-side only
+
+Live DB security state confirmed:
+- RLS enabled on `analysis_jobs`
+- RLS enabled on `analysis_job_files`
+- RLS enabled on `analysis_artifacts`
+- RLS enabled on `reports`
+
+Repo gap identified:
+- checked-in migrations did not contain the live RLS / policy truth for these four tables
+
+Sync action completed:
+- new migration created:
+  - `supabase/migrations/20260328_0001_sync_rls_policies_for_analysis_and_reports.sql`
+- migration codifies the observed live RLS enabled-state and policies
+
+Policy notes:
+- `reports` INSERT / UPDATE user policies were intentionally not added
+- report writes remain service-role-only
+- overlapping live policies were preserved intentionally for sync accuracy
+- policy cleanup can be handled later as a separate task
 
 🧠 CURRENT SYSTEM STATE
 ✅ WORKING
@@ -1188,6 +1217,18 @@ Because of this:
   - `return 400 Unsupported doc_type`
 - no parsed artifacts were created
 
+Second upstream schema failure:
+
+- `extract-job-text.js` queried:
+  - `analysis_job_files.created_at`
+- live schema uses:
+  - `analysis_job_files.uploaded_at`
+
+Because of this:
+
+- `extract-job-text` returned 500 before supporting PDF text extraction completed
+- `document_text_extracted` was not created for supporting PDFs
+
 ---
 
 ### 🔥 WHY THIS MATTERS
@@ -1246,6 +1287,21 @@ DSCR computed
 Refinance model (MOAT) renders
 
 No silent degradation
+
+### âœ… VALIDATED RERUN RESULT
+
+Successful rerun confirmed:
+
+- supporting PDFs now produce `document_text_extracted`
+- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` parsed successfully
+- successful parsed artifact type on rerun:
+  - `mortgage_statement_parsed`
+- `analysis_job_files` for the debt PDF now shows:
+  - `parse_status = parsed`
+  - `parse_error = null`
+- no new `supporting_doc_parse_failed` events occurred on the successful rerun
+- final report no longer says debt terms were missing or DSCR was not assessed
+- final report now contains DSCR and debt/refinance content
 
 ### ⚠️ SECONDARY WATCH ITEMS
 
@@ -1309,6 +1365,29 @@ confirm:
 - `loan_term_sheet_parsed` exists
 - DSCR renders
 - MOAT renders
+
+Validated final stabilization result:
+
+- supporting-doc pipeline root cause 1 fixed:
+  - `api/parse/parse-doc.js` now accepts `supporting`, `supporting_documents`, and `supporting_documents_ui`
+- supporting-doc pipeline root cause 2 fixed:
+  - `api/parse/extract-job-text.js` now queries `uploaded_at` instead of `created_at`
+- supporting PDFs now produce `document_text_extracted`
+- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` parsed successfully
+- successful parsed artifact type on rerun:
+  - `mortgage_statement_parsed`
+- `analysis_job_files` for the debt PDF now shows:
+  - `parse_status = parsed`
+  - `parse_error = null`
+- no new `supporting_doc_parse_failed` events occurred on the successful rerun
+- final report no longer says debt terms were missing or DSCR was not assessed
+- final report now contains DSCR and debt/refinance content
+- debt -> parse -> artifact -> report chain is restored
+
+Current non-blocking follow-up:
+
+- investigate whether debt term sheets should classify as `loan_term_sheet_parsed` instead of `mortgage_statement_parsed` when appropriate
+- this is not blocking the current pipeline
 
 
 Problem:
