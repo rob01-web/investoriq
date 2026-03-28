@@ -766,6 +766,8 @@ export default async function handler(req, res) {
       if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
       if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
       if (has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
+      if (has(['POLICY NUMBER', 'NAMED INSURED']) && has(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE'])) return 'insurance_policy';
+      if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && has(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD'])) return 'bank_statement';
       return 'supporting_documents_unclassified';
     }
 
@@ -1513,7 +1515,7 @@ if (
       return res.status(200).json({ ok: true, inferred: 'supporting_documents_unclassified' });
     }
 
-    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'loan_term_sheet' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax') {
+    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'loan_term_sheet' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax' || effectiveDocType === 'insurance_policy' || effectiveDocType === 'bank_statement') {
       const artifactType = `${effectiveDocType}_parsed`;
       const parserName = effectiveDocType;
 
@@ -1682,6 +1684,20 @@ if (
             method: 'text_excerpt',
             annual_tax,
             assessed_value,
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'insurance_policy') {
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'bank_statement') {
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
             parse_warnings,
           };
         }
