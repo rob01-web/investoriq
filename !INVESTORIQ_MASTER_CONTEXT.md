@@ -1368,10 +1368,21 @@ confirm:
 
 Validated final stabilization result:
 
+- supporting-doc pipeline is now restored end-to-end
+- debt recognition is restored
+- refinance modeling is restored
 - supporting-doc pipeline root cause 1 fixed:
   - `api/parse/parse-doc.js` now accepts `supporting`, `supporting_documents`, and `supporting_documents_ui`
 - supporting-doc pipeline root cause 2 fixed:
   - `api/parse/extract-job-text.js` now queries `uploaded_at` instead of `created_at`
+- supporting-doc pipeline root cause 3 fixed:
+  - `parse-doc.js` supporting inference previously allowed overlapping keyword collisions between `loan_term_sheet` and `mortgage_statement`
+  - `inferDocTypeFromText(text)` now evaluates `loan_term_sheet` before `mortgage_statement`
+  - `loan_term_sheet` now requires anchor terms:
+    - `TERM SHEET` or `LOAN AMOUNT`
+  - `mortgage_statement` now requires anchor terms:
+    - `OUTSTANDING BALANCE` or `MONTHLY PAYMENT`
+  - both debt types now also require broader supporting debt terms
 - supporting PDFs now produce `document_text_extracted`
 - `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` parsed successfully
 - successful parsed artifact type on rerun:
@@ -1382,12 +1393,15 @@ Validated final stabilization result:
 - no new `supporting_doc_parse_failed` events occurred on the successful rerun
 - final report no longer says debt terms were missing or DSCR was not assessed
 - final report now contains DSCR and debt/refinance content
+- `node --check api/parse/parse-doc.js` passed after the classifier tightening
 - debt -> parse -> artifact -> report chain is restored
+- current debt-doc collision risk is reduced without changing downstream artifact or report contracts
 
 Current non-blocking follow-up:
 
-- investigate whether debt term sheets should classify as `loan_term_sheet_parsed` instead of `mortgage_statement_parsed` when appropriate
-- this is not blocking the current pipeline
+- broaden supporting-document intelligence beyond the current narrow parsed types
+- do not rely on filenames or brittle single-keyword matching
+- keep the current debt artifact and report contracts stable while broadening classification coverage
 
 
 Problem:
