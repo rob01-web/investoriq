@@ -762,12 +762,13 @@ export default async function handler(req, res) {
     function inferDocTypeFromText(text) {
       const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
       const has = (terms) => terms.some((t) => norm.includes(t));
+      const countMatches = (terms) => terms.filter((t) => norm.includes(t)).length;
       if (has(['TERM SHEET', 'LOAN AMOUNT']) && has(['INTEREST ONLY', 'AMORTIZATION', 'DSCR', 'LTV'])) return 'loan_term_sheet';
       if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
       if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
       if (has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
-      if (has(['POLICY NUMBER', 'NAMED INSURED']) && has(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE'])) return 'insurance_policy';
-      if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && has(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD'])) return 'bank_statement';
+      if (has(['POLICY NUMBER', 'NAMED INSURED']) && countMatches(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE']) >= 2) return 'insurance_policy';
+      if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && countMatches(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD']) >= 2) return 'bank_statement';
       return 'supporting_documents_unclassified';
     }
 
