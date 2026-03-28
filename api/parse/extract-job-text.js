@@ -348,10 +348,42 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const parsed = await pdfParse(buffer);
-        const text = String(parsed?.text || '').trim();
+        const extractPdfStringFallback = (pdfBuffer) => {
+          const rawPdf = pdfBuffer.toString('latin1');
+          const matches = [...rawPdf.matchAll(/\(([^()\\]*(?:\\.[^()\\]*)*)\)/g)];
+          const text = matches
+            .map((match) => String(match[1] || '')
+              .replace(/\\([()\\])/g, '$1')
+              .replace(/\\r/g, ' ')
+              .replace(/\\n/g, ' ')
+              .replace(/\\t/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim())
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+          return text;
+        };
+
+        let parsed = null;
+        let text = '';
+        let pages = null;
+        try {
+          parsed = await pdfParse(buffer);
+          text = String(parsed?.text || '').trim();
+          pages = parsed?.numpages || parsed?.numPages || null;
+        } catch (pdfErr) {
+          const errorMessage = pdfErr?.message || 'Unknown PDF parse error';
+          const isMalformedPdfStructureError = /xref|startxref|trailer|bad xref|invalid xref|pdf structure/i.test(errorMessage);
+          if (!isMalformedPdfStructureError) {
+            throw pdfErr;
+          }
+          text = extractPdfStringFallback(buffer);
+          if (!text) {
+            throw pdfErr;
+          }
+        }
         const excerpt = text.slice(0, 1200).trim();
-        const pages = parsed?.numpages || parsed?.numPages || null;
         const chars = text.length;
 
         const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
