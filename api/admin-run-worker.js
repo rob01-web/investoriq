@@ -1212,6 +1212,42 @@ export default async function handler(req, res) {
             continue;
           }
 
+          const { data: supportingStatusRows, error: supportingStatusErr } = await supabaseAdmin
+            .from('analysis_job_files')
+            .select('id, doc_type, original_filename, parse_status, parse_error')
+            .eq('job_id', job.id);
+
+          if (supportingStatusErr) {
+            throw new Error(`Failed to fetch supporting doc status rows: ${supportingStatusErr.message}`);
+          }
+
+          const degradedSupportingDocs = (supportingStatusRows || []).filter((file) => {
+            const docType = String(file.doc_type || '').toLowerCase();
+            const parseStatus = String(file.parse_status || '').toLowerCase();
+            return !['rent_roll', 't12'].includes(docType) && parseStatus !== 'parsed';
+          });
+
+          if (degradedSupportingDocs.length > 0) {
+            const degradedSupportingErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'supporting_docs_degraded',
+              {
+                timestamp: nowIso,
+                files: degradedSupportingDocs.map((file) => ({
+                  file_id: file.id,
+                  doc_type: file.doc_type,
+                  original_filename: file.original_filename,
+                  parse_status: file.parse_status,
+                  parse_error: file.parse_error || null,
+                })),
+              }
+            );
+            if (degradedSupportingErr) {
+              throw new Error(`Failed to write supporting_docs_degraded event: ${degradedSupportingErr.message}`);
+            }
+          }
+
           const completedCheck = await hasWorkerEvent(job.id, 'extracting_completed');
           if (completedCheck?.error) {
             throw new Error(`Failed to check extracting_completed event: ${completedCheck.error.message}`);

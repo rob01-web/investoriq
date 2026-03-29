@@ -127,6 +127,13 @@ export default async function handler(req, res) {
         try {
           const textractResponse = await analyzeTables({ bytes: buffer, mimeType });
           const { tables } = textractTablesToMatrix(textractResponse?.Blocks || []);
+          const textractTextPreview = (textractResponse?.Blocks || [])
+            .filter((block) => (block?.BlockType === 'LINE' || block?.BlockType === 'WORD') && block?.Text)
+            .map((block) => String(block.Text || '').trim())
+            .filter(Boolean)
+            .join(' ')
+            .slice(0, 1500);
+          console.log('TEXTRACT_TEXT_PREVIEW', textractTextPreview);
           let maxRows = 0;
           let maxCols = 0;
           for (const table of tables) {

@@ -101,15 +101,21 @@ function isFinitePositive(x) {
   const n = Number(x);
   return Number.isFinite(n) && n > 0;
 }
-// Returns true only when a parsed debt payload contains at least one numeric
-// field required for DSCR / refinance computation.
-// Prevents an empty {} payload from being treated as valid debt data and
-// silently blocking the loan_term_sheet fallback.
+// Returns true only when a parsed debt payload contains the minimum
+// field set required to support debt-aware underwriting analysis.
+// Prevents weak partial debt payloads from being treated as valid debt data
+// and silently rendering DSCR / refinance content as if complete.
 function hasUsableDebtPayload(payload) {
   if (!payload || typeof payload !== "object") return false;
-  const bal  = Number(payload.outstanding_balance ?? payload.loan_amount ?? "");
+  const bal = Number(payload.outstanding_balance ?? payload.loan_amount ?? "");
   const rate = Number(payload.interest_rate ?? "");
-  return (Number.isFinite(bal) && bal > 0) || (Number.isFinite(rate) && rate > 0);
+  const amort = Number(payload.amort_years ?? "");
+  const monthlyPayment = Number(payload.monthly_payment ?? "");
+  const hasBalance = Number.isFinite(bal) && bal > 0;
+  const hasRate = Number.isFinite(rate) && rate > 0;
+  const hasAmort = Number.isFinite(amort) && amort > 0;
+  const hasMonthlyPayment = Number.isFinite(monthlyPayment) && monthlyPayment > 0;
+  return hasBalance && (hasMonthlyPayment || (hasRate && hasAmort));
 }
 function hasMinimumScreeningCoverage(t12Payload) {
   const gpr =

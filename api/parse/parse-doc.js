@@ -787,7 +787,14 @@ if (
           .limit(1)
           .maybeSingle();
         const fullText = String(textArtifact?.payload?.excerpt || textArtifact?.payload?.text || '');
-        if (fullText.length > 20) {
+        const normalizedText = fullText.replace(/\s+/g, ' ').trim();
+        const readableWordCount = (normalizedText.match(/[A-Za-z]{3,}/g) || []).length;
+        const looksGarbageLike =
+          /stream|endstream|obj|endobj/.test(normalizedText.toLowerCase()) && readableWordCount < 20;
+        if (!normalizedText || normalizedText.length <= 40 || readableWordCount < 8 || looksGarbageLike) {
+          effectiveDocType = 'supporting_documents_unclassified';
+          detectedDocType = 'supporting_documents_unclassified';
+        } else {
           const inferred = inferDocTypeFromText(fullText);
           effectiveDocType = inferred;
           detectedDocType = inferred;

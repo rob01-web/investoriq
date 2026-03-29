@@ -447,11 +447,12 @@ if (!mortgagePayload && loanTermSheetPayload) {
 
 ### 🎯 REQUIRED OUTCOME
 
-- Debt ALWAYS recognized when present
-- Fallback ALWAYS works
-- Refinance model ALWAYS deterministic
-- No silent failures
-- No partial states
+- InvestorIQ is no longer in visual-polish phase
+- InvestorIQ is now in final launch-stabilization phase
+- single most important next action:
+  - fix Textract
+  - rerun the same debt test pack
+  - verify typed debt artifacts and refinance rendering end-to-end
 
 ---
 
@@ -460,22 +461,24 @@ if (!mortgagePayload && loanTermSheetPayload) {
 To launch, ALL must be true:
 
 ### Visual
-- [ ] Cover = institutional green/gold
-- [ ] Interior = white/ink/gold
-- [ ] No legacy blue styles
-- [ ] No UI/card artifacts
+- [x] report design is launch-ready / locked
+- [x] product positioning is strong
+- [x] deterministic philosophy remains core strength
 
 ### Product
-- [ ] One-run entitlement enforced
-- [ ] Error messaging correct
-- [ ] No stuck jobs
+- [x] one-run entitlement architecture exists
+- [x] fail-closed / no-hallucination philosophy remains intact
+- [ ] do not email Ken Dunn until engine blockers below are cleared
 - [ ] No “DATA NOT AVAILABLE” spam
 
 ### Engine
-- [ ] Debt recognition fixed
-- [ ] Refinance modeling deterministic
-- [ ] No missing artifacts
-- [ ] No silent failures
+- [x] core rent roll + T12 path works
+- [x] supporting-doc dispatch improved
+- [x] debt classifier logic improved
+- [x] malformed PDF fallback improved
+- [ ] Textract must be functioning live
+- [ ] supporting PDFs must extract as readable text for debt / property-tax classification
+- [ ] no silent degradation may remain on debt-aware underwriting runs
 
 ---
 
@@ -1368,9 +1371,9 @@ confirm:
 
 Validated final stabilization result:
 
-- supporting-doc pipeline is now restored end-to-end
-- debt recognition is restored
-- refinance modeling is restored
+- supporting-doc pipeline is now restored at the dispatch / extraction / parse handoff level
+- debt recognition logic is restored, but still depends on readable supporting-doc text
+- refinance modeling logic is restored, but still depends on typed debt artifacts being produced
 - supporting-doc pipeline root cause 1 fixed:
   - `api/parse/parse-doc.js` now accepts `supporting`, `supporting_documents`, and `supporting_documents_ui`
 - supporting-doc pipeline root cause 2 fixed:
@@ -1396,12 +1399,103 @@ Validated final stabilization result:
 - `node --check api/parse/parse-doc.js` passed after the classifier tightening
 - debt -> parse -> artifact -> report chain is restored
 - current debt-doc collision risk is reduced without changing downstream artifact or report contracts
+- supporting-doc dispatch gate in `api/admin-run-worker.js` now includes:
+  - `pending`
+  - `extracted`
+- non-debt supporting-doc intelligence expanded cautiously:
+  - `insurance_policy`
+  - `bank_statement`
+- non-debt recognizers now require:
+  - at least 1 anchor
+  - at least 2 corroborating terms
+- these additions were intentionally minimal and did not change downstream report contracts
+- `extract-job-text.js` now includes a malformed-PDF fallback for xref / startxref / trailer-style failures
+- earlier `bad XRef entry` failures no longer represent the primary blocker
 
-Current non-blocking follow-up:
+## CRITICAL CURRENT BLOCKER
 
-- broaden supporting-document intelligence beyond the current narrow parsed types
-- do not rely on filenames or brittle single-keyword matching
-- keep the current debt artifact and report contracts stable while broadening classification coverage
+The current launch blocker is NOT the old worker gate anymore.
+
+The current launch blocker is:
+
+- Textract is not functioning in the current AWS environment
+- local PDF extraction is unreliable for some uploaded supporting PDFs
+- some uploaded PDFs appear to contain ReportLab-generated stream text patterns in extracted artifacts
+- `document_text_extracted` for several supporting docs contains garbage / unreadable stream text instead of real readable text
+- because of that, `inferDocTypeFromText()` fails and those files fall to:
+  - `supporting_documents_unclassified`
+
+Verified examples:
+
+- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` ended as:
+  - `supporting_documents_unclassified`
+  - `extracted`
+- `Property_Tax_Bill_2025_124_Richmond_Test.pdf` also ended:
+  - `supporting_documents_unclassified`
+  - `extracted`
+- unsupported appraisal extracted cleanly and did produce:
+  - `appraisal_parsed`
+
+This proves:
+
+- parser dispatch is running
+- extraction quality is now the primary blocker for some PDFs
+
+## TEXTRACT STATE (CRITICAL)
+
+Textract is currently failing live.
+
+Observed worker events show:
+
+- `textract_failed`
+- error_message:
+  - `The AWS Access Key Id needs a subscription for the service`
+
+Current diagnosis:
+
+- Textract appears not to be activated / subscribed / permitted correctly for the current AWS account / key / region
+- this is now the real launch blocker for robust supporting-PDF classification
+- until Textract is fixed, some debt / property-tax / supporting docs may remain unreadable to the classifier even though the pipeline executes
+
+## PRODUCT RULE (LOCKED)
+
+InvestorIQ must NOT rely on filenames for production document classification.
+
+- filename fallback may be discussed only as an emergency debugging idea
+- it is NOT approved as launch architecture
+- production classification must remain content-first and deterministic
+- no fabricated values
+- no hallucination
+- no silent assumptions
+- no fake debt recognition from bad evidence
+
+## FINAL PRE-LAUNCH BLOCKERS
+
+A. Fix Textract fully
+
+- activate / subscribe / permission the AWS account / key / region correctly
+- confirm `textract_failed` no longer appears for supporting PDFs
+
+B. Re-run the same underwriting test pack
+
+Using the same Richmond test docs, verify that:
+
+- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` becomes a typed parsed debt artifact
+- `Property_Tax_Bill_2025_124_Richmond_Test.pdf` becomes `property_tax_parsed`
+- debt is no longer omitted from the report
+- DSCR renders
+- refinance / MOAT content renders
+- no silent degradation remains
+
+C. Confirm fail-closed credibility
+
+- if a supporting document cannot be read, InvestorIQ must degrade explicitly and honestly
+- it must never pretend a debt-aware underwriting run is complete when debt extraction failed
+
+D. Only after the above is verified should we:
+
+- email Ken Dunn
+- treat InvestorIQ as truly launch-ready
 
 
 Problem:
