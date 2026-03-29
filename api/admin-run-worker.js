@@ -618,7 +618,7 @@ export default async function handler(req, res) {
 
           const otherPendingFiles = (jobFiles || []).filter((file) => {
             const docType = String(file.doc_type || '').toLowerCase();
-            const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
+            const isPending = ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase());
             return (
               docType === 'other' ||
               docType === 'supporting' ||
