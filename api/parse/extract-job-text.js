@@ -124,9 +124,16 @@ export default async function handler(req, res) {
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        let textractLineText = '';
         try {
           const textractResponse = await analyzeTables({ bytes: buffer, mimeType });
-          const { tables } = textractTablesToMatrix(textractResponse?.Blocks || []);
+          const _textractBlocks = textractResponse?.Blocks || [];
+          textractLineText = _textractBlocks
+            .filter((b) => b.BlockType === 'LINE')
+            .map((b) => String(b.Text || ''))
+            .join(' ')
+            .trim();
+          const { tables } = textractTablesToMatrix(_textractBlocks);
           const textractTextPreview = (textractResponse?.Blocks || [])
             .filter((block) => (block?.BlockType === 'LINE' || block?.BlockType === 'WORD') && block?.Text)
             .map((block) => String(block.Text || '').trim())
@@ -381,13 +388,18 @@ export default async function handler(req, res) {
           pages = parsed?.numpages || parsed?.numPages || null;
         } catch (pdfErr) {
           const errorMessage = pdfErr?.message || 'Unknown PDF parse error';
-          const isMalformedPdfStructureError = /xref|startxref|trailer|bad xref|invalid xref|pdf structure/i.test(errorMessage);
+          const isMalformedPdfStructureError = /xref|startxref|trailer|bad xref|invalid xref|pdf structure|command token too long/i.test(errorMessage);
           if (!isMalformedPdfStructureError) {
-            throw pdfErr;
-          }
-          text = extractPdfStringFallback(buffer);
-          if (!text) {
-            throw pdfErr;
+            if (textractLineText) {
+              text = textractLineText;
+            } else {
+              throw pdfErr;
+            }
+          } else {
+            text = textractLineText || extractPdfStringFallback(buffer);
+            if (!text) {
+              throw pdfErr;
+            }
           }
         }
         const excerpt = text.slice(0, 1200).trim();
