@@ -150,7 +150,7 @@ export default async function handler(req, res) {
             maxCols,
           };
 
-          const tablesBucket = 'system';
+          const tablesBucket = 'generated_reports';
           const tablesObjectPath = `analysis_jobs/${jobId}/document_tables_extracted/${file.id}/${safeTimestamp(
             nowIso
           )}.json`;

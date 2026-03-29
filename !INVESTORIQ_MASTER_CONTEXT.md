@@ -1443,7 +1443,21 @@ This proves:
 
 ## TEXTRACT STATE (CRITICAL)
 
-Textract is currently failing live.
+Current status (as of today):
+
+- AWS billing is active
+- IAM user created:
+  - `investoriq-textract`
+- access keys are active and verified in Vercel
+- region confirmed:
+  - `us-east-1`
+- IAM permissions were corrected:
+  - previous custom policy was insufficient
+  - updated to `AmazonTextractFullAccess`
+
+Despite correct setup, the AWS Textract console still redirects to:
+
+- `Complete your account setup`
 
 Observed worker events show:
 
@@ -1451,11 +1465,56 @@ Observed worker events show:
 - error_message:
   - `The AWS Access Key Id needs a subscription for the service`
 
-Current diagnosis:
+Root issue confirmed:
 
+- account-level Textract activation problem
+- NOT IAM-related
 - Textract appears not to be activated / subscribed / permitted correctly for the current AWS account / key / region
 - this is now the real launch blocker for robust supporting-PDF classification
 - until Textract is fixed, some debt / property-tax / supporting docs may remain unreadable to the classifier even though the pipeline executes
+
+AWS support case:
+
+- Case ID:
+  - `177479919700445`
+- support level:
+  - Basic
+- case type:
+  - Account and Billing -> Account Activation -> Account Verification
+- status:
+  - submitted
+- expected response:
+  - within 24 hours
+
+Engineering stabilization completed:
+
+1. Textract debug visibility
+- added `TEXTRACT_TEXT_PREVIEW` logging
+- logs first ~1500 chars of Textract output
+- no impact to control flow or artifacts
+
+2. Fail-closed supporting-doc classification
+- supporting docs now require readable extracted text
+- garbage / short / malformed text is rejected
+- routed to:
+  - `supporting_documents_unclassified`
+- prevents false-positive classification
+
+3. Debt payload hardening
+- debt is now considered valid only if:
+  - balance present:
+    - `loan_amount`
+    - or `outstanding_balance`
+  - and:
+    - `monthly_payment`
+    - or (`interest_rate` + `amort_years`)
+- prevents fake DSCR / refinance outputs
+
+4. Worker-level degradation visibility
+- new event:
+  - `supporting_docs_degraded`
+- triggered when supporting docs fail extraction or parsing
+- makes failures explicit instead of silent
 
 ## PRODUCT RULE (LOCKED)
 
@@ -1473,7 +1532,7 @@ InvestorIQ must NOT rely on filenames for production document classification.
 
 A. Fix Textract fully
 
-- activate / subscribe / permission the AWS account / key / region correctly
+- wait for AWS account-level Textract activation / verification to complete
 - confirm `textract_failed` no longer appears for supporting PDFs
 
 B. Re-run the same underwriting test pack
@@ -1487,15 +1546,64 @@ Using the same Richmond test docs, verify that:
 - refinance / MOAT content renders
 - no silent degradation remains
 
+Pass criteria:
+
+- no `textract_failed` events
+- supporting docs classified correctly
+- `loan_term_sheet_parsed` artifact created
+- `property_tax_parsed` artifact created
+- debt payload passes the new minimum-field gate
+- DSCR renders
+- Refinance Stability section renders
+- MOAT section renders
+- no silent degradation remains
+
 C. Confirm fail-closed credibility
 
 - if a supporting document cannot be read, InvestorIQ must degrade explicitly and honestly
 - it must never pretend a debt-aware underwriting run is complete when debt extraction failed
 
-D. Only after the above is verified should we:
+D. Final pre-launch checks
+
+- run 1 additional non-Richmond deal through the pipeline
+- confirm no regression in:
+  - rent roll parsing
+  - T12 parsing
+- verify `supporting_docs_degraded` only appears when expected
+- spot check report output formatting for broken sections
+
+E. Only after the above is verified should we:
 
 - email Ken Dunn
 - treat InvestorIQ as truly launch-ready
+
+Launch trigger condition:
+
+We are ready to email Ken Dunn and launch when:
+
+- Textract is activated
+- Richmond test passes fully
+- at least 1 additional deal runs clean
+- no fake or partial debt rendering
+- no silent failures in supporting docs
+
+Final reality check:
+
+- we are no longer debugging unknowns
+- we are waiting on:
+  - AWS flipping Textract on
+- everything else is now:
+  - deterministic
+  - fail-closed
+  - observable
+
+Next action:
+
+- wait for AWS support response
+- activate Textract
+- run Richmond
+- verify
+- launch
 
 
 Problem:
