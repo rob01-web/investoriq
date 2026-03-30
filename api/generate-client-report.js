@@ -4902,12 +4902,12 @@ export default async function handler(req, res) {
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
-          `<tr><td style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
+          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
           `<td style="padding:5px 8px;width:44%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;">${formatCurrency(r.val)}</td>` +
-          `<td style="padding:5px 8px;font-size:10px;text-align:right;color:#6B7280;">${r.pct}%</td></tr>`
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;"><span class="analysis-chart-table-value">${formatCurrency(r.val)}</span></td>` +
+          `<td style="padding:5px 8px;font-size:10px;text-align:right;color:#6B7280;"><span class="analysis-chart-table-pct">${r.pct}%</span></td></tr>`
         ).join("");
-        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Waterfall</p><table style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
+        html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Waterfall</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{NOI_WATERFALL_CHART}}", html);
     }
@@ -4927,12 +4927,12 @@ export default async function handler(req, res) {
         const trs = sorted.map(l => {
           const pct = (l.amt / totalOpEx) * 100;
           const w = Math.max(1, Math.round(pct));
-          return `<tr><td style="padding:3px 8px;font-size:10px;width:30%;white-space:nowrap;overflow:hidden;">${escapeHtml(l.label)}</td>` +
+          return `<tr><td class="analysis-chart-table-label" style="padding:3px 8px;font-size:10px;width:30%;">${escapeHtml(l.label)}</td>` +
             `<td style="padding:3px 8px;width:44%;"><div style="background:#E5E7EB;height:10px;border-radius:3px;overflow:hidden;"><div style="background:#94A3B8;height:100%;width:${w}%;border-radius:3px;"></div></div></td>` +
-            `<td style="padding:3px 8px;font-size:10px;font-weight:700;text-align:right;">${pct.toFixed(1)}%</td>` +
-            `<td style="padding:3px 8px;font-size:10px;text-align:right;color:#6B7280;">${formatCurrency(l.amt)}</td></tr>`;
+            `<td style="padding:3px 8px;font-size:10px;font-weight:700;text-align:right;"><span class="analysis-chart-table-pct">${pct.toFixed(1)}%</span></td>` +
+            `<td style="padding:3px 8px;font-size:10px;text-align:right;color:#6B7280;"><span class="analysis-chart-table-value">${formatCurrency(l.amt)}</span></td></tr>`;
         }).join("");
-        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Expense Composition (% of Total OpEx)</p><table style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
+        html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Expense Composition (% of Total OpEx)</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{EXPENSE_BREAKDOWN_CHART}}", html);
     }

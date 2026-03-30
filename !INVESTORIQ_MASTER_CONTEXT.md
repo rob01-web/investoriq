@@ -477,8 +477,10 @@ To launch, ALL must be true:
 - [x] debt classifier logic improved
 - [x] malformed PDF fallback improved
 - [x] Textract is functioning live
-- [ ] supporting PDFs must extract as readable text for debt / property-tax classification
-- [ ] no silent degradation may remain on debt-aware underwriting runs
+- [x] Richmond underwriting rerun is effectively passed
+- [x] Refinance Stability Classification renders on the validated Richmond path
+- [ ] worker single-trigger automation remains outstanding
+- [ ] 1 additional clean deal still required before launch
 
 CURRENT STATUS:
 
@@ -486,8 +488,10 @@ CURRENT STATUS:
 - Classification: STABLE
 - Debt parsing: STABLE
 - Loan amount extraction: FIXED
-- Worker execution: PARTIALLY MANUAL (loop not yet implemented)
-- Refinance model: PATCHED - pending validation (Test 11)
+- Worker execution: PARTIALLY MANUAL (queued -> extracting continuation gap still pending)
+- Refinance model: STABLE on validated Richmond path
+- Report polish: INSTITUTIONALLY CREDIBLE
+- Launch phase: FINAL POLISH / OPERATIONAL HARDENING
 
 ---
 
@@ -1070,22 +1074,16 @@ NEW FIX:
 - worker now calls text extraction before parser inference
 
 Current worker pipeline note:
-- identified friction:
-  - manual double-trigger required
-    1. after Generate Report
-    2. after status moves to `extracting`
-- root cause:
-  - pipeline does not yet self-continue cleanly after extraction phase
-- planned fix:
-  - introduce internal loop / continuation mechanism
-  - worker should automatically progress:
-    - `queued` -> `extracting` -> `parsing` -> `underwriting` -> `report generation` -> `publish`
-- goal:
-  - single trigger per report
-  - fully continuous pipeline execution
-- status:
-  - not yet implemented
-  - tracked as pre-launch polish
+- previous extraction-handoff early-return issue is already patched
+- however, the latest validation path still required two manual worker runs
+- current suspected gap:
+  - job lists are fetched too early in the pass
+  - a job promoted from `queued` to `extracting` is not re-seen by the `extracting` loop until the next invocation
+- active pre-launch task:
+  - remove the remaining second-kick requirement in `api/admin-run-worker.js`
+- tomorrow's first engineering task:
+  - inspect `queuedJobs` vs `extractingJobs` fetch / control flow
+  - patch with a minimal anchor-locked diff only
 
 ---
 
@@ -1414,183 +1412,74 @@ confirm:
 - MOAT renders
 
 Validated final stabilization result:
+- Richmond underwriting rerun passed cleanly
+- Refinance Stability Classification now renders correctly
+- DSCR now renders consistently as `1.09x`
+- the LTV-limited proceeds bug is fixed
+- the `Data Integrity Confirmed / All Required Inputs Verified` overstatement was corrected
+- current wording now limits confirmation to T12 + Rent Roll core coverage
+- the core report-level launch blocker is resolved
 
-- supporting-doc pipeline is now restored at the dispatch / extraction / parse handoff level
-- debt recognition logic is restored, but still depends on readable supporting-doc text
-- refinance modeling logic is restored, but still depends on typed debt artifacts being produced
-- supporting-doc pipeline root cause 1 fixed:
-  - `api/parse/parse-doc.js` now accepts `supporting`, `supporting_documents`, and `supporting_documents_ui`
-- supporting-doc pipeline root cause 2 fixed:
-  - `api/parse/extract-job-text.js` now queries `uploaded_at` instead of `created_at`
-- supporting-doc pipeline root cause 3 fixed:
-  - `parse-doc.js` supporting inference previously allowed overlapping keyword collisions between `loan_term_sheet` and `mortgage_statement`
-  - `inferDocTypeFromText(text)` now evaluates `loan_term_sheet` before `mortgage_statement`
-  - `loan_term_sheet` now requires anchor terms:
-    - `TERM SHEET` or `LOAN AMOUNT`
-  - `mortgage_statement` now requires anchor terms:
-    - `OUTSTANDING BALANCE` or `MONTHLY PAYMENT`
-  - both debt types now also require broader supporting debt terms
-- supporting PDFs now produce `document_text_extracted`
-- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` parsed successfully
-- successful parsed artifact type on rerun:
-  - `mortgage_statement_parsed`
-- `analysis_job_files` for the debt PDF now shows:
-  - `parse_status = parsed`
-  - `parse_error = null`
-- no new `supporting_doc_parse_failed` events occurred on the successful rerun
-- final report no longer says debt terms were missing or DSCR was not assessed
-- final report now contains DSCR and debt/refinance content
-- `node --check api/parse/parse-doc.js` passed after the classifier tightening
-- debt -> parse -> artifact -> report chain is restored
-- current debt-doc collision risk is reduced without changing downstream artifact or report contracts
-- supporting-doc dispatch gate in `api/admin-run-worker.js` now includes:
+Refi / debt engine state:
+
+- deterministic defaults for the refinance model are now in place and validated:
+  - `refi_ltv_max`
+  - `refi_dscr_min`
+  - `stress_noi_shocks`
+  - `stress_cap_rate_bps`
+  - `stress_rate_bps`
+- the LTV normalization fix is present in `buildRefiStabilityModel`
+- refinance now renders when debt is present in the validated Richmond path
+- debt recognition -> DSCR -> refinance is now considered stable on the validated Richmond path
+
+Report / PDF polish completed today:
+
+- global tables now use fixed layout and proper horizontal cell padding
+- table alignment improved materially
+- Unit Mix now uses balanced columns
+- Operating Statement income / expense tables now use balanced columns
+- Section 03 matrix heading now reads:
+  - `Current Debt Coverage Sensitivity`
+- current-debt coverage sensitivity logic no longer flat-lines at `1.25x`
+- duplicate checkmark removed from the Data Coverage section
+- chart-table polish added for:
+  - NOI Waterfall value nowrap
+  - Expense Composition label / title anti-word-break behavior
+
+Supporting-doc and extraction chain retained:
+
+- `api/parse/parse-doc.js` accepts:
+  - `supporting`
+  - `supporting_documents`
+  - `supporting_documents_ui`
+- `api/parse/extract-job-text.js` uses `uploaded_at`
+- `extract-job-text.js` captures Textract LINE text and uses fallback text when `pdf-parse` fails
+- supporting-doc dispatch gate in `api/admin-run-worker.js` includes:
   - `pending`
   - `extracted`
-- non-debt supporting-doc intelligence expanded cautiously:
-  - `insurance_policy`
-  - `bank_statement`
-- non-debt recognizers now require:
-  - at least 1 anchor
-  - at least 2 corroborating terms
-- these additions were intentionally minimal and did not change downstream report contracts
-- `extract-job-text.js` now includes a malformed-PDF fallback for xref / startxref / trailer-style failures
-- earlier `bad XRef entry` failures no longer represent the primary blocker
-- refinance model blocker identified:
-  - Refinance Stability Classification could fail required-input gate despite debt being present
-- symptoms observed:
-  - `Refinance Stability Classification: Not Produced`
-  - DSCR rendered but refinance was suppressed
-  - internal inconsistency appeared in report output
-- cause:
-  - missing required inputs:
-    - `refi_ltv_max`
-    - `refi_dscr_min`
-    - stress arrays
-- fix implemented in `api/generate-client-report.js`:
-  - deterministic defaults added for:
-    - `refi_ltv_max` (fallback to `mortgagePayload.ltv` if available)
-    - `refi_dscr_min` (fixed institutional default)
-    - `stress_noi_shocks`
-    - `stress_cap_rate_bps`
-    - `stress_rate_bps`
-  - all existing field mappings and contracts preserved
-- result:
-  - refinance model should now execute whenever debt is present
-  - false-negative refinance suppression should be eliminated
+- debt classifier collision hardening remains in place
+- non-debt supporting recognizers remain intentionally minimal and do not change downstream report contracts
 
-## CRITICAL CURRENT BLOCKER
+## CURRENT PRIMARY BLOCKER
 
-The current launch blocker is NOT the old worker gate anymore.
+The current blocker is no longer report logic, Textract, or the old extraction -> underwriting return.
 
-The current launch blocker is:
+The remaining operational blocker is worker continuation:
 
-- Textract is not functioning in the current AWS environment
-- local PDF extraction is unreliable for some uploaded supporting PDFs
-- some uploaded PDFs appear to contain ReportLab-generated stream text patterns in extracted artifacts
-- `document_text_extracted` for several supporting docs contains garbage / unreadable stream text instead of real readable text
-- because of that, `inferDocTypeFromText()` fails and those files fall to:
-  - `supporting_documents_unclassified`
+- latest validation still required two manual worker runs
+- current suspected gap:
+  - job lists are fetched too early in the pass
+  - a job promoted from `queued` to `extracting` is not re-seen by the `extracting` loop until the next invocation
+- this is now the primary pre-launch engineering task in:
+  - `api/admin-run-worker.js`
 
-Verified examples:
+## TODAY'S VALIDATED ENGINE STATE
 
-- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` ended as:
-  - `supporting_documents_unclassified`
-  - `extracted`
-- `Property_Tax_Bill_2025_124_Richmond_Test.pdf` also ended:
-  - `supporting_documents_unclassified`
-  - `extracted`
-- unsupported appraisal extracted cleanly and did produce:
-  - `appraisal_parsed`
-
-This proves:
-
-- parser dispatch is running
-- extraction quality is now the primary blocker for some PDFs
-
-## TEXTRACT STATE (CRITICAL)
-
-Textract is confirmed working.
-
-Current state:
-
-- AWS setup is complete
-- Textract successfully extracts:
-  - tables
-  - readable LINE text
-- Textract is no longer the blocker
-
-New root issue:
-
-- Textract output is not being used as a fallback text source everywhere it needs to be
-- `document_text_extracted` still depended on `pdf-parse` success in the failing path
-- when `pdf-parse` failed:
-  - no usable text was persisted
-  - supporting-doc classification broke
-
-Engineering stabilization completed:
-
-1. Textract debug visibility
-- added `TEXTRACT_TEXT_PREVIEW` logging
-- logs first ~1500 chars of Textract output
-- no impact to control flow or artifacts
-
-2. Fail-closed supporting-doc classification
-- supporting docs now require readable extracted text
-- garbage / short / malformed text is rejected
-- routed to:
-  - `supporting_documents_unclassified`
-- prevents false-positive classification
-
-3. Debt payload hardening
-- debt is now considered valid only if:
-  - balance present:
-    - `loan_amount`
-    - or `outstanding_balance`
-  - and:
-    - `monthly_payment`
-    - or (`interest_rate` + `amort_years`)
-- prevents fake DSCR / refinance outputs
-
-4. Worker-level degradation visibility
-- new event:
-  - `supporting_docs_degraded`
-- triggered when supporting docs fail extraction or parsing
-- makes failures explicit instead of silent
-
-## CURRENT PRIMARY BLOCKER - TEXT HANDOFF FAILURE
-
-The current primary blocker is text handoff failure between Textract success and `document_text_extracted`.
-
-Current failure chain:
-
-- `pdf-parse` throws:
-  - `Command token too long: 128`
-- this error was not previously treated as recoverable
-- the system rethrew instead of falling back
-- Textract text was lost after extraction
-- no `document_text_extracted` artifact was written
-
-Downstream impact:
-
-- `inferDocTypeFromText()` could not run
-- `loan_term_sheet_parsed` was never created
-- the debt pipeline failed
-- DSCR and refinance content did not render
-
-## ENGINE FIX - TEXTRACT FALLBACK INTEGRATION (MARCH 2026)
-
-Two changes were implemented in `extract-job-text.js`:
-
-A. Capture Textract LINE text
-
-- store all LINE blocks into `textractLineText`
-
-B. Fallback logic
-
-- treat `Command token too long` as recoverable
-- if `pdf-parse` fails:
-  - use Textract LINE text instead
-- ensure `document_text_extracted` is written when Textract succeeds and fallback text is available
+- Richmond validation is effectively passed
+- report output is now institutionally credible
+- deterministic refinance rendering is validated on the Richmond path
+- fail-closed debt handling remains intact
+- launch is now in final polish / operational hardening rather than core report debugging
 
 ## PRODUCT RULE (LOCKED)
 
@@ -1606,90 +1495,63 @@ InvestorIQ must NOT rely on filenames for production document classification.
 
 ## FINAL PRE-LAUNCH BLOCKERS
 
-A. Fix Textract fully
+A. Worker continuation fix
 
-- validate Textract fallback integration
-- debt term sheet must:
-  - produce `document_text_extracted`
-  - produce `loan_term_sheet_parsed`
-- no `parse_status: failed` allowed for valid PDFs
+- inspect `api/admin-run-worker.js`
+- focus on `queuedJobs` vs `extractingJobs` fetch / control flow
+- remove the remaining need for a second manual worker kick
 
-B. Re-run the same underwriting test pack
+B. Validate 1 additional clean deal
 
-Using the same Richmond test docs, verify that:
+- confirm no regression outside the Richmond path
+- confirm refinance still renders correctly when debt is present
+- confirm worker progression is clean on a single trigger after the worker fix
 
-- debt doc classified correctly
-- DSCR renders
-- refinance model renders
-- no:
-  - `Debt terms were not included`
-  - `supporting_documents_unclassified` for valid debt docs
+C. Website micro-polish
 
-C. Confirm fail-closed credibility
+- minor website polish items were noticed
+- defer them until after worker stabilization
+- do not expand scope before the worker loop issue is fixed
 
-- if a supporting document cannot be read, InvestorIQ must degrade explicitly and honestly
-- it must never pretend a debt-aware underwriting run is complete when debt extraction failed
+D. Only after the above is verified should we:
 
-D. Final pre-launch checks
-
-- run 1 additional non-Richmond deal through the pipeline
-- confirm no regression in:
-  - rent roll parsing
-  - T12 parsing
-- verify `supporting_docs_degraded` only appears when expected
-- spot check report output formatting for broken sections
-
-E. Only after the above is verified should we:
-
-- email Ken Dunn
+- do final go / no-go for the Ken Dunn email
 - treat InvestorIQ as truly launch-ready
-
-REMAINING ITEMS BEFORE LAUNCH:
-
-1. Validate Test 11
-- Refinance Stability Classification must render
-- no `Not Produced` when debt is present
-
-2. Validate 1 additional deal
-- confirm no edge-case regression
-
-3. Worker automation
-- implement single-trigger loop
-- remove double kick requirement
-
-4. Messaging polish
-- adjust:
-  - `Data Integrity Confirmed`
-  - `All Required Inputs Verified`
-- ensure statements do not overstate completeness when only partial documents are present
-- this is a presentation-layer fix only
 
 Launch trigger condition:
 
 We are ready to email Ken Dunn and launch when:
 
-- Textract fallback integration is validated
-- Richmond test passes fully
+- Richmond validation remains clean
 - at least 1 additional deal runs clean
-- no fake or partial debt rendering
-- no silent failures in supporting docs
+- worker single-trigger automation is working
+- website micro-polish is complete
 
 Final reality check:
 
 - we are no longer debugging unknowns
-- the final blocker is:
-  - fallback text handoff into `document_text_extracted`
+- report-level engine issues are no longer the blocker
+- the remaining blocker is:
+  - worker single-trigger continuation
 - everything else is now:
   - deterministic
   - fail-closed
   - observable
 
-Next action:
+START HERE TOMORROW:
 
-- validate fallback text handoff
-- run Richmond
-- verify
-- launch
+- file:
+  - `api/admin-run-worker.js`
+- mission:
+  - remove the remaining need for a second manual worker kick
+- inspect:
+  - `queuedJobs` vs `extractingJobs` fetch / control flow
+- patch:
+  - minimal anchor-locked diff only
+- after worker fix:
+  - run 1 additional clean deal validation
+  - do website polish pass
+  - make final go / no-go decision for the Ken Dunn email
 
 ## DOCUMENT MAINTENANCE NOTES
 
