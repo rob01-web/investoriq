@@ -4354,29 +4354,25 @@ export default async function handler(req, res) {
           grid += `<td style="padding:4px 8px;font-weight:600;background:#F9FAFB;border:1px solid #E5E7EB;">${escapeHtml(rs.label)}</td>`;
           for (const cs of capScenarios) {
             const capDec = (baseCapPct + cs.addPct) / 100;
-            let dscrDisplay = "N/A";
+            let coverageDisplay = "N/A";
             let bg = "#F9FAFB";
             let fc = "#374151";
             if (mc && mc > 0 && capDec > 0) {
-              const propValue = noiBase / capDec;
-              const maxLoanLtv = propValue * LTV;
-              const maxLoanDscr = (MIN_DSCR_QUAL * mc) > 0 ? noiBase / (MIN_DSCR_QUAL * mc) : 0;
-              const newLoan = Math.min(maxLoanLtv, maxLoanDscr);
-              const annualDs = newLoan * mc;
-              const dscr = annualDs > 0 ? noiBase / annualDs : 0;
-              if (dscr > 0 && Number.isFinite(dscr)) {
-                dscrDisplay = `${dscr.toFixed(2)}x`;
-                if (dscr < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
-                else if (dscr < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
+              const annualDs = debtBal * mc;
+              const coverage = annualDs > 0 ? noiBase / annualDs : 0;
+              if (coverage > 0 && Number.isFinite(coverage)) {
+                coverageDisplay = formatMultiple(coverage, 2);
+                if (coverage < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
+                else if (coverage < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
                 else { bg = "#FEFCE8"; fc = "#B8860B"; }
               }
             }
-            grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${dscrDisplay}</td>`;
+            grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${coverageDisplay}</td>`;
           }
           grid += `</tr>`;
         }
         grid += `</tbody></table>`;
-        grid += `<p class="small" style="margin-top:6px;">Assumes 75% LTV | Min DSCR qualifier: ${MIN_DSCR_QUAL}x | Cap rate source: ${escapeHtml(capSource)} | Green = DSCR >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
+        grid += `<p class="small" style="margin-top:6px;">Current debt coverage sensitivity using current debt balance under rate and cap scenarios | Cap rate source: ${escapeHtml(capSource)} | Green = coverage >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
         refiCollapseGridHtml = grid;
       }
     }
