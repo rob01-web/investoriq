@@ -163,7 +163,8 @@ function toCapRatio(value) {
 function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const f = financials && typeof financials === "object" ? financials : {};
   const debtBalance = coerceNumber(f.refi_debt_balance);
-  const ltvMax = coerceNumber(f.refi_ltv_max);
+  const ltvMaxRaw = coerceNumber(f.refi_ltv_max);
+  const ltvMax = Number.isFinite(ltvMaxRaw) && ltvMaxRaw > 1.5 ? ltvMaxRaw / 100 : ltvMaxRaw;
   const dscrMin = coerceNumber(f.refi_dscr_min);
   const interestRateRaw = coerceNumber(f.refi_interest_rate);
   const amortYears = coerceNumber(f.refi_amort_years);
@@ -1045,7 +1046,7 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; DATA INTEGRITY CONFIRMED: All Required Inputs Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required fields were extracted from uploaded documents. No sections were suppressed due to missing data.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">&#10003; CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -3091,7 +3092,7 @@ export default async function handler(req, res) {
         const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
         const _dscr = _an / (_mp * 12);
         if (Number.isFinite(_dscr) && _dscr > 0) {
-          const _ds = `${formatMultiple(_dscr, 2)}x`;
+          const _ds = formatMultiple(_dscr, 2);
           primaryPressurePoint = _dscr < 1.20
             ? `DSCR of ${_ds}: below 1.20x institutional threshold`
             : _dscr < 1.35
@@ -3426,7 +3427,7 @@ export default async function handler(req, res) {
           const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
           const _dscr = _an / (_mp * 12);
           if (Number.isFinite(_dscr) && _dscr > 0) {
-            const _ds = `${formatMultiple(_dscr, 2)}x`;
+            const _ds = formatMultiple(_dscr, 2);
             if (_dscr >= 1.35) {
               upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum. Debt service is well-covered by T12 NOI.`);
             } else if (_dscr >= 1.20) {
@@ -4303,7 +4304,7 @@ export default async function handler(req, res) {
         }
       }
       if (Number.isFinite(t12Noi) && t12Noi > 0 && Number.isFinite(annualDs) && annualDs > 0) {
-        dcRows.push(`<tr><td>DSCR (T12 NOI)</td><td>${(t12Noi / annualDs).toFixed(2)}x</td></tr>`);
+        dcRows.push(`<tr><td>DSCR (T12 NOI)</td><td>${formatMultiple(t12Noi / annualDs, 2)}</td></tr>`);
       }
       if (Number.isFinite(amort) && amort > 0) {
         dcRows.push(`<tr><td>Amortization</td><td>${amort} years</td></tr>`);
@@ -4569,7 +4570,7 @@ export default async function handler(req, res) {
           if (Number.isFinite(dscr) && dscr > 0) {
             const pts = dscr > 1.35 ? 10 : dscr >= 1.20 ? 7 : 3;
             totalPoints += pts; maxPoints += 10;
-            scoreRows.push({ label: "DSCR (Computed)", value: `${formatMultiple(dscr, 2)}x`, pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.20 ? "1.20\u20131.35x" : "Below 1.20x" });
+            scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.20 ? "1.20\u20131.35x" : "Below 1.20x" });
           }
         }
       }
@@ -4843,7 +4844,7 @@ export default async function handler(req, res) {
             if (Number.isFinite(dscr) && dscr > 0) {
               const flag = dscr < 1.20 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
               const color = dscr < 1.20 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-              addRisk("DSCR (Current Debt)", `${dscr.toFixed(2)}x`, "STRONG > 1.35x · ADEQUATE 1.20-1.35x · STRESSED < 1.20x", flag, color);
+              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x · ADEQUATE 1.20-1.35x · STRESSED < 1.20x", flag, color);
             }
           } else {
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
@@ -4882,7 +4883,7 @@ export default async function handler(req, res) {
             const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
             const _dscr = _an / (_mp * 12);
             if (Number.isFinite(_dscr) && _dscr > 0) {
-              execDscrText = `${formatMultiple(_dscr, 2)}x`;
+              execDscrText = formatMultiple(_dscr, 2);
             }
           }
         }
