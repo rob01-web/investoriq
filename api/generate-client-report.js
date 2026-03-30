@@ -2958,6 +2958,22 @@ export default async function handler(req, res) {
         mortgagePayload?.refi_cap_rate ??
         appraisalPayload?.cap_rate ??
         null,
+      refi_ltv_max:
+        rawFinancials?.refi_ltv_max ??
+        mortgagePayload?.ltv ??
+        0.75,
+      refi_dscr_min:
+        rawFinancials?.refi_dscr_min ??
+        1.25,
+      stress_noi_shocks:
+        rawFinancials?.stress_noi_shocks ??
+        [-0.05, -0.10, -0.15],
+      stress_cap_rate_bps:
+        rawFinancials?.stress_cap_rate_bps ??
+        [0, 50, 100],
+      stress_rate_bps:
+        rawFinancials?.stress_rate_bps ??
+        [0, 100, 200],
       noi_base:
         rawFinancials?.noi_base ??
         t12Payload?.net_operating_income ??

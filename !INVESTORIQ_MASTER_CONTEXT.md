@@ -480,6 +480,15 @@ To launch, ALL must be true:
 - [ ] supporting PDFs must extract as readable text for debt / property-tax classification
 - [ ] no silent degradation may remain on debt-aware underwriting runs
 
+CURRENT STATUS:
+
+- Extraction: STABLE
+- Classification: STABLE
+- Debt parsing: STABLE
+- Loan amount extraction: FIXED
+- Worker execution: PARTIALLY MANUAL (loop not yet implemented)
+- Refinance model: PATCHED - pending validation (Test 11)
+
 ---
 
 ## 🔥 CURRENT STATUS
@@ -1060,6 +1069,24 @@ NEW FIX:
   - `supporting_documents`
 - worker now calls text extraction before parser inference
 
+Current worker pipeline note:
+- identified friction:
+  - manual double-trigger required
+    1. after Generate Report
+    2. after status moves to `extracting`
+- root cause:
+  - pipeline does not yet self-continue cleanly after extraction phase
+- planned fix:
+  - introduce internal loop / continuation mechanism
+  - worker should automatically progress:
+    - `queued` -> `extracting` -> `parsing` -> `underwriting` -> `report generation` -> `publish`
+- goal:
+  - single trigger per report
+  - fully continuous pipeline execution
+- status:
+  - not yet implemented
+  - tracked as pre-launch polish
+
 ---
 
 ## TEXT EXTRACTION LAYER (CRITICAL)
@@ -1091,6 +1118,23 @@ Artifact created:
   - `document_text_extracted`
 - file:
   - `api/parse/extract-job-text.js`
+
+Current extraction status:
+- Textract is now fully active and confirmed working
+  - TABLE extraction working
+  - LINE text extraction working
+- `pdf-parse` failure case identified:
+  - `Command token too long: 128`
+- previous failure behavior:
+  - `parse_status = failed`
+  - `document_text_extracted` not written
+  - downstream classification failed
+- fix implemented:
+  - Textract LINE text is now captured and persisted
+  - Textract text is used as fallback when `pdf-parse` fails
+- result:
+  - no more silent text loss
+  - `document_text_extracted` is present whenever extractable content exists
 
 ---
 
@@ -1411,6 +1455,28 @@ Validated final stabilization result:
 - these additions were intentionally minimal and did not change downstream report contracts
 - `extract-job-text.js` now includes a malformed-PDF fallback for xref / startxref / trailer-style failures
 - earlier `bad XRef entry` failures no longer represent the primary blocker
+- refinance model blocker identified:
+  - Refinance Stability Classification could fail required-input gate despite debt being present
+- symptoms observed:
+  - `Refinance Stability Classification: Not Produced`
+  - DSCR rendered but refinance was suppressed
+  - internal inconsistency appeared in report output
+- cause:
+  - missing required inputs:
+    - `refi_ltv_max`
+    - `refi_dscr_min`
+    - stress arrays
+- fix implemented in `api/generate-client-report.js`:
+  - deterministic defaults added for:
+    - `refi_ltv_max` (fallback to `mortgagePayload.ltv` if available)
+    - `refi_dscr_min` (fixed institutional default)
+    - `stress_noi_shocks`
+    - `stress_cap_rate_bps`
+    - `stress_rate_bps`
+  - all existing field mappings and contracts preserved
+- result:
+  - refinance model should now execute whenever debt is present
+  - false-negative refinance suppression should be eliminated
 
 ## CRITICAL CURRENT BLOCKER
 
@@ -1578,6 +1644,26 @@ E. Only after the above is verified should we:
 - email Ken Dunn
 - treat InvestorIQ as truly launch-ready
 
+REMAINING ITEMS BEFORE LAUNCH:
+
+1. Validate Test 11
+- Refinance Stability Classification must render
+- no `Not Produced` when debt is present
+
+2. Validate 1 additional deal
+- confirm no edge-case regression
+
+3. Worker automation
+- implement single-trigger loop
+- remove double kick requirement
+
+4. Messaging polish
+- adjust:
+  - `Data Integrity Confirmed`
+  - `All Required Inputs Verified`
+- ensure statements do not overstate completeness when only partial documents are present
+- this is a presentation-layer fix only
+
 Launch trigger condition:
 
 We are ready to email Ken Dunn and launch when:
@@ -1604,6 +1690,17 @@ Next action:
 - run Richmond
 - verify
 - launch
+
+## DOCUMENT MAINTENANCE NOTES
+
+- `MASTER_CONTEXT.md` is approaching high length / density
+- going forward:
+  - avoid duplication
+  - consolidate repeated logic descriptions
+  - prefer updating existing sections over appending new ones
+- goal:
+  - maintain clarity and fast parseability for future sessions
+  - prevent context bloat
 
 
 Problem:
