@@ -418,6 +418,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
       font-size: 10.5px;
       margin-top: 8px;
     }
@@ -428,10 +429,11 @@
       border-bottom: 1px solid var(--hairline);
       border-left: none;
       border-right: none;
-      padding: 6px 0;
+      padding: 6px 8px;
       text-align: left;
       vertical-align: top;
       line-height: 1.35;
+      white-space: normal;
     }
 
     th {
@@ -966,7 +968,7 @@ ul, ol {
   <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
   <!-- END PROPERTY_DESCRIPTOR_LINE -->
 
-  <div class="grid-2">
+  <div class="grid-2-balanced">
     <div>
       <!-- EXEC SUMMARY PLACEHOLDER -->
       <!-- BEGIN EXEC_SUMMARY -->
@@ -1163,7 +1165,7 @@ ul, ol {
 <!-- BEGIN SECTION_7_DEBT_TABLES -->
 
 
-  <p class="subsection-title">Refinance Sensitivity Matrix</p>
+  <p class="subsection-title">Current Debt Coverage Sensitivity</p>
 {{REFI_SENSITIVITY_MATRIX_BLOCK}}
 <!-- END SECTION_7_DEBT_TABLES -->
 
@@ -1181,7 +1183,7 @@ ul, ol {
     <span class="section-header-sub">Rent lift, renovation potential, and implied value creation</span>
   </div>
 
-  <div class="grid-2">
+  <div class="grid-2-balanced">
     <!-- LEFT COLUMN -->
     <div class="no-break">
       <p class="subsection-title">Illustrative Unit Mix and Rent Lift</p>
@@ -1218,7 +1220,7 @@ ul, ol {
     <span class="section-header-sub">Document-backed income reconstruction and NOI profile</span>
   </div>
 
-  <div class="grid-2">
+  <div class="grid-2-balanced">
     <!-- BEGIN T12_INCOME_TABLE -->
     <div class="no-break">
       <p class="subsection-title">Income Reconstruction (TTM)</p>
