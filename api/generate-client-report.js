@@ -2955,6 +2955,7 @@ export default async function handler(req, res) {
         null,
       refi_cap_rate_base:
         rawFinancials?.refi_cap_rate_base ??
+        mortgagePayload?.refi_cap_rate ??
         appraisalPayload?.cap_rate ??
         null,
       noi_base:
