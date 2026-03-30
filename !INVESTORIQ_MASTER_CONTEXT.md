@@ -450,7 +450,7 @@ if (!mortgagePayload && loanTermSheetPayload) {
 - InvestorIQ is no longer in visual-polish phase
 - InvestorIQ is now in final launch-stabilization phase
 - single most important next action:
-  - fix Textract
+  - validate fallback text handoff
   - rerun the same debt test pack
   - verify typed debt artifacts and refinance rendering end-to-end
 
@@ -476,7 +476,7 @@ To launch, ALL must be true:
 - [x] supporting-doc dispatch improved
 - [x] debt classifier logic improved
 - [x] malformed PDF fallback improved
-- [ ] Textract must be functioning live
+- [x] Textract is functioning live
 - [ ] supporting PDFs must extract as readable text for debt / property-tax classification
 - [ ] no silent degradation may remain on debt-aware underwriting runs
 
@@ -1443,48 +1443,23 @@ This proves:
 
 ## TEXTRACT STATE (CRITICAL)
 
-Current status (as of today):
+Textract is confirmed working.
 
-- AWS billing is active
-- IAM user created:
-  - `investoriq-textract`
-- access keys are active and verified in Vercel
-- region confirmed:
-  - `us-east-1`
-- IAM permissions were corrected:
-  - previous custom policy was insufficient
-  - updated to `AmazonTextractFullAccess`
+Current state:
 
-Despite correct setup, the AWS Textract console still redirects to:
+- AWS setup is complete
+- Textract successfully extracts:
+  - tables
+  - readable LINE text
+- Textract is no longer the blocker
 
-- `Complete your account setup`
+New root issue:
 
-Observed worker events show:
-
-- `textract_failed`
-- error_message:
-  - `The AWS Access Key Id needs a subscription for the service`
-
-Root issue confirmed:
-
-- account-level Textract activation problem
-- NOT IAM-related
-- Textract appears not to be activated / subscribed / permitted correctly for the current AWS account / key / region
-- this is now the real launch blocker for robust supporting-PDF classification
-- until Textract is fixed, some debt / property-tax / supporting docs may remain unreadable to the classifier even though the pipeline executes
-
-AWS support case:
-
-- Case ID:
-  - `177479919700445`
-- support level:
-  - Basic
-- case type:
-  - Account and Billing -> Account Activation -> Account Verification
-- status:
-  - submitted
-- expected response:
-  - within 24 hours
+- Textract output is not being used as a fallback text source everywhere it needs to be
+- `document_text_extracted` still depended on `pdf-parse` success in the failing path
+- when `pdf-parse` failed:
+  - no usable text was persisted
+  - supporting-doc classification broke
 
 Engineering stabilization completed:
 
@@ -1516,6 +1491,41 @@ Engineering stabilization completed:
 - triggered when supporting docs fail extraction or parsing
 - makes failures explicit instead of silent
 
+## CURRENT PRIMARY BLOCKER - TEXT HANDOFF FAILURE
+
+The current primary blocker is text handoff failure between Textract success and `document_text_extracted`.
+
+Current failure chain:
+
+- `pdf-parse` throws:
+  - `Command token too long: 128`
+- this error was not previously treated as recoverable
+- the system rethrew instead of falling back
+- Textract text was lost after extraction
+- no `document_text_extracted` artifact was written
+
+Downstream impact:
+
+- `inferDocTypeFromText()` could not run
+- `loan_term_sheet_parsed` was never created
+- the debt pipeline failed
+- DSCR and refinance content did not render
+
+## ENGINE FIX - TEXTRACT FALLBACK INTEGRATION (MARCH 2026)
+
+Two changes were implemented in `extract-job-text.js`:
+
+A. Capture Textract LINE text
+
+- store all LINE blocks into `textractLineText`
+
+B. Fallback logic
+
+- treat `Command token too long` as recoverable
+- if `pdf-parse` fails:
+  - use Textract LINE text instead
+- ensure `document_text_extracted` is written when Textract succeeds and fallback text is available
+
 ## PRODUCT RULE (LOCKED)
 
 InvestorIQ must NOT rely on filenames for production document classification.
@@ -1532,31 +1542,22 @@ InvestorIQ must NOT rely on filenames for production document classification.
 
 A. Fix Textract fully
 
-- wait for AWS account-level Textract activation / verification to complete
-- confirm `textract_failed` no longer appears for supporting PDFs
+- validate Textract fallback integration
+- debt term sheet must:
+  - produce `document_text_extracted`
+  - produce `loan_term_sheet_parsed`
+- no `parse_status: failed` allowed for valid PDFs
 
 B. Re-run the same underwriting test pack
 
 Using the same Richmond test docs, verify that:
 
-- `CLEAN_Debt_Term_Sheet_124_Richmond.pdf` becomes a typed parsed debt artifact
-- `Property_Tax_Bill_2025_124_Richmond_Test.pdf` becomes `property_tax_parsed`
-- debt is no longer omitted from the report
+- debt doc classified correctly
 - DSCR renders
-- refinance / MOAT content renders
-- no silent degradation remains
-
-Pass criteria:
-
-- no `textract_failed` events
-- supporting docs classified correctly
-- `loan_term_sheet_parsed` artifact created
-- `property_tax_parsed` artifact created
-- debt payload passes the new minimum-field gate
-- DSCR renders
-- Refinance Stability section renders
-- MOAT section renders
-- no silent degradation remains
+- refinance model renders
+- no:
+  - `Debt terms were not included`
+  - `supporting_documents_unclassified` for valid debt docs
 
 C. Confirm fail-closed credibility
 
@@ -1581,7 +1582,7 @@ Launch trigger condition:
 
 We are ready to email Ken Dunn and launch when:
 
-- Textract is activated
+- Textract fallback integration is validated
 - Richmond test passes fully
 - at least 1 additional deal runs clean
 - no fake or partial debt rendering
@@ -1590,8 +1591,8 @@ We are ready to email Ken Dunn and launch when:
 Final reality check:
 
 - we are no longer debugging unknowns
-- we are waiting on:
-  - AWS flipping Textract on
+- the final blocker is:
+  - fallback text handoff into `document_text_extracted`
 - everything else is now:
   - deterministic
   - fail-closed
@@ -1599,8 +1600,7 @@ Final reality check:
 
 Next action:
 
-- wait for AWS support response
-- activate Textract
+- validate fallback text handoff
 - run Richmond
 - verify
 - launch

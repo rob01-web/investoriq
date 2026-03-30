@@ -1551,7 +1551,7 @@ if (
             const match = snippet.match(/\$?\s*([\d,]+(?:\.\d{1,2})?)/);
             if (match) {
               const val = parseFloat(match[1].replace(/,/g, ''));
-              if (Number.isFinite(val) && val > 0) return val;
+              if (Number.isFinite(val) && val > 500) return val;
             }
           }
           return null;
@@ -1592,7 +1592,7 @@ if (
 
         if (effectiveDocType === 'loan_term_sheet') {
           const loan_amount = extractDollarNear(rawText, [
-            'loan amount', 'principal amount', 'total loan', 'facility amount',
+            'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
           ]);
           const interest_rate = extractPercentNear(rawText, [
             'interest rate', 'rate:', 'note rate', 'coupon rate',
@@ -1607,6 +1607,9 @@ if (
             const m = snippet.match(/(\d+)\s*(?:year|yr)/i);
             return m ? parseInt(m[1], 10) : null;
           })();
+          const refi_cap_rate = extractPercentNear(rawText, [
+            'exit cap', 'refi cap', 'cap rate', 'exit cap rate', 'refi cap rate',
+          ]);
           if (!loan_amount) parse_warnings.push('missing_loan_amount');
           payload = {
             file_id: fileRow.id,
@@ -1616,6 +1619,7 @@ if (
             interest_rate,
             ltv,
             amort_years,
+            refi_cap_rate,
             parse_warnings,
           };
         } else if (effectiveDocType === 'mortgage_statement') {
