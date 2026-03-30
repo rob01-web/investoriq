@@ -1591,9 +1591,18 @@ if (
         const parse_warnings = [];
 
         if (effectiveDocType === 'loan_term_sheet') {
-          const loan_amount = extractDollarNear(rawText, [
-            'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
-          ]);
+          const loan_amount = (() => {
+            const explicitMatch = rawText.match(
+              /loan amount(?:\s*\([^)]*\))?\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/i
+            );
+            if (explicitMatch) {
+              const parsed = Number(String(explicitMatch[1]).replace(/,/g, ''));
+              if (Number.isFinite(parsed) && parsed > 0) return parsed;
+            }
+            return extractDollarNear(rawText, [
+              'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
+            ]);
+          })();
           const interest_rate = extractPercentNear(rawText, [
             'interest rate', 'rate:', 'note rate', 'coupon rate',
           ]);
