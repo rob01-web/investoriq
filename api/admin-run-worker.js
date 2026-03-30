@@ -1289,6 +1289,12 @@ export default async function handler(req, res) {
             'underwriting',
             { user_id: job.user_id }
           );
+          fetch(`${process.env.PUBLIC_SITE_URL}/api/admin-run-worker`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-run-key': process.env.ADMIN_RUN_KEY },
+            body: JSON.stringify({ triggered_by: 'extraction_handoff', job_id: job.id }),
+          }).catch(() => {});
+          return res.status(200).json({ ok: true, message: 'extraction_handoff_triggered', job_id: job.id });
 
           if (transitionErr) {
             throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
