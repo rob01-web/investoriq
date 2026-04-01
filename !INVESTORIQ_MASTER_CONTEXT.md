@@ -1,11 +1,125 @@
-# INVESTORIQ — MASTER CONTEXT (UPDATED)
+﻿## 🔒 V1 FINAL HARDENING — SCREENING COMPRESSION + WORKER STABILITY (LATEST)
 
-## 🎯 PRODUCT OVERVIEW
+### 🚀 SYSTEM STATUS (CURRENT)
+
+* Worker loop fix VERIFIED:
+
+  * Jobs now run end-to-end in a single trigger
+  * Root cause: 20s loop timeout vs long DocRaptor + LLM execution
+  * Fix: `maxSeconds = 55`
+* Parallel execution validated:
+
+  * Screening + Underwriting processed in same run
+  * No race conditions observed
+* Extraction reuse:
+
+  * Confirmed stable (no redundant Textract calls)
+* Report quality:
+
+  * Institutional level confirmed (Test 14 + 15)
+
+---
+
+### ⚠️ CURRENT FOCUS — SCREENING VS UNDERWRITING SEPARATION
+
+Problem identified:
+
+* Screening report (~13 pages) too close to Underwriting (~17 pages)
+* Pricing gap ($399 vs # INVESTORIQ â€” MASTER CONTEXT (UPDATED)
+
+,499) not visually justified
+* Risk: perceived overpricing / confusion at purchase level
+
+Strategy:
+
+* Preserve institutional tone
+* Remove depth, not credibility
+* Screening = decision-grade intake
+* Underwriting = full investment memo
+
+---
+
+### 🔧 PATCHES IN PROGRESS
+
+#### ✅ Patch 1 — Hide NOI Waterfall (Screening only)
+
+* Guard added:
+
+```js
+if (effectiveReportMode !== "screening_v1" && ...)
+```
+
+---
+
+#### ✅ Patch 2A — Remove detailed T12 rows (Screening)
+
+```js
+finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", effectiveReportMode === "screening_v1" ? "" : (t12IncomeRows || ""));
+finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", effectiveReportMode === "screening_v1" ? "" : (t12ExpenseRows || ""));
+```
+
+---
+
+#### ⏳ Patch 2B — Remove T12 table blocks (Screening)
+
+* Using:
+
+```js
+stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
+stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
+```
+
+* Status: pending validation
+
+---
+
+### 📌 REMAINING PATCHES (DO NOT IMPLEMENT YET)
+
+* Patch 3 — Compress Rent Roll detail
+* Patch 4 — Remove refinance sensitivity grid (Screening)
+* Patch 5 — Remove DSCR sensitivity grid (Screening)
+* Patch 6 — Collapse advanced modeling sections
+* Patch 7 — Add elite Screening positioning language
+* Patch 8 — Final narrative tightening
+
+---
+
+### 🎯 NEXT STEPS (LOCKED ORDER)
+
+1. Validate Patch 2B
+2. STOP
+3. Resume with Patch 3 (next session)
+4. Complete all 8 patches
+5. Run:
+
+   * 1 clean Screening test
+   * 1 clean Underwriting test (non-Richmond)
+6. Final website polish
+7. Prepare Ken Dunn demo
+
+---
+
+### 🧠 IMPORTANT POSITIONING UPDATE
+
+Replace:
+“triage-level screening”
+
+With:
+“Preliminary Investment Screening Memorandum”
+
+Tone requirement:
+
+* Institutional
+* Confident
+* No retail / casual language
+
+---
+## ðŸŽ¯ PRODUCT OVERVIEW
 
 InvestorIQ is a **document-driven real estate underwriting platform**.
 
 Core positioning:
-- “The only underwriting tool that models refinance collapse risk”
+- â€œThe only underwriting tool that models refinance collapse riskâ€
 - Institutional-grade
 - Deterministic only (no AI hallucination)
 - Fail-closed system
@@ -13,7 +127,7 @@ Core positioning:
 
 ---
 
-## 🧱 PRODUCT TIERS
+## ðŸ§± PRODUCT TIERS
 
 ### 1. Screening Report (~$299)
 - Decision memo style
@@ -30,11 +144,11 @@ Core positioning:
 
 ---
 
-## ⚙️ CORE ENGINE
+## âš™ï¸ CORE ENGINE
 
 Pipeline:
 
-uploads → analysis_job_files → parsing → analysis_artifacts → underwriting → scoring → rendering → PDF
+uploads â†’ analysis_job_files â†’ parsing â†’ analysis_artifacts â†’ underwriting â†’ scoring â†’ rendering â†’ PDF
 
 Statuses:
 - needs_documents
@@ -49,7 +163,7 @@ Statuses:
 
 ---
 
-## 🔐 PRODUCT RULES (NON-NEGOTIABLE)
+## ðŸ” PRODUCT RULES (NON-NEGOTIABLE)
 
 - Deterministic math only
 - Fail-closed gating
@@ -61,7 +175,7 @@ Statuses:
 
 ---
 
-## 🎨 NEW DESIGN SYSTEM (LOCKED — CRITICAL)
+## ðŸŽ¨ NEW DESIGN SYSTEM (LOCKED â€” CRITICAL)
 
 ### Core Philosophy
 
@@ -78,7 +192,7 @@ NOT:
 
 ---
 
-### 🎨 COLOR SYSTEM
+### ðŸŽ¨ COLOR SYSTEM
 
 
 White: #FFFFFF
@@ -96,7 +210,7 @@ Cover green: #0F2318
 
 ---
 
-### 🔤 TYPOGRAPHY SYSTEM (LOCKED)
+### ðŸ”¤ TYPOGRAPHY SYSTEM (LOCKED)
 
 
 Display: Cormorant Garamond (authority / headings / KPI values)
@@ -111,22 +225,22 @@ Usage rules:
 
 ---
 
-## 🧩 REPORT TEMPLATE — CURRENT STATE
+## ðŸ§© REPORT TEMPLATE â€” CURRENT STATE
 
 File:
 `api/report-template-runtime.html`
 
 ---
 
-## ✅ COMPLETED PATCHES
+## âœ… COMPLETED PATCHES
 
-### PATCH 1 — Design Tokens + Fonts
+### PATCH 1 â€” Design Tokens + Fonts
 - Replaced Inter/Merriweather
 - Introduced full ink + gold system
 
 ---
 
-### PATCH 2 — Layout + Header System
+### PATCH 2 â€” Layout + Header System
 - Removed heavy header strip
 - Introduced clean running header
 - Removed REPORT_TYPE_LABEL
@@ -135,18 +249,18 @@ File:
 
 ---
 
-### PATCH 3 — Section Header System
+### PATCH 3 â€” Section Header System
 - Introduced:
   - eyebrow (Section XX)
   - title (serif)
   - subtext (sans)
   - gold rule
 - Removed legacy `<hr>` usage
-- Applied across ALL sections (01–20)
+- Applied across ALL sections (01â€“20)
 
 ---
 
-### PATCH 4 — KPI SYSTEM (CRITICAL)
+### PATCH 4 â€” KPI SYSTEM (CRITICAL)
 
 TRANSFORMATION:
 
@@ -165,11 +279,11 @@ After:
 - Grid layout (3-column)
 
 Result:
-→ **Institutional financial presentation**
+â†’ **Institutional financial presentation**
 
 ---
 
-### PATCH 5 — TABLE SYSTEM
+### PATCH 5 â€” TABLE SYSTEM
 - Removed UI table feel
 - Introduced bottom hairline borders only
 - Improved row spacing
@@ -179,7 +293,7 @@ Result:
 
 ---
 
-### PATCH 6 — EXECUTIVE TEXT / NARRATIVE
+### PATCH 6 â€” EXECUTIVE TEXT / NARRATIVE
 - Cleaned executive headings
 - Removed old Inter / Merriweather residue in core narrative components
 - Restyled verdict block, verdict label, verdict classification, verdict supporting text
@@ -188,9 +302,9 @@ Result:
 
 ---
 
-## 🚧 CURRENT PRIORITY (ACTIVE WORK)
+## ðŸš§ CURRENT PRIORITY (ACTIVE WORK)
 
-### PATCH 7 — COVER PAGE
+### PATCH 7 â€” COVER PAGE
 Goal:
 - Remove old navy-era / Inter-based cover styling
 - Align cover with locked white / ink / gold / green system
@@ -199,9 +313,9 @@ Goal:
 
 ---
 
-## ⏭️ NEXT PATCHES (IN ORDER)
+## â­ï¸ NEXT PATCHES (IN ORDER)
 
-### PATCH 7 — COVER PAGE (NEXT — CRITICAL)
+### PATCH 7 â€” COVER PAGE (NEXT â€” CRITICAL)
 Goal:
 - Align with new system
 - Keep green/gold but:
@@ -215,13 +329,13 @@ POST-DESIGN RETURN:
 
 ---
 
-## ⚠️ AFTER DESIGN — RETURN TO CORE BUG
+## âš ï¸ AFTER DESIGN â€” RETURN TO CORE BUG
 
 Once visual redesign is complete:
 
-👉 RETURN TO:
+ðŸ‘‰ RETURN TO:
 
-### ❗ Debt / Refinance Bridge Issue
+### â— Debt / Refinance Bridge Issue
 
 Context:
 - Mortgage / loan term sheet parsing
@@ -240,7 +354,7 @@ Focus:
 
 ---
 
-## 🧠 CURRENT STATUS
+## ðŸ§  CURRENT STATUS
 
 - Core engine working
 - Patch 5 complete
@@ -251,19 +365,19 @@ Focus:
 
 ---
 
-## 🚀 MISSION
+## ðŸš€ MISSION
 
 Transform InvestorIQ from:
 
-“working product”
+â€œworking productâ€
 
-→ into
+â†’ into
 
-👉 **institutional-grade underwriting platform trusted by lenders**
+ðŸ‘‰ **institutional-grade underwriting platform trusted by lenders**
 
 ---
 
-## 🔥 WORKING STYLE (CRITICAL)
+## ðŸ”¥ WORKING STYLE (CRITICAL)
 
 - Anchor-locked patches ONLY
 - One file at a time
@@ -273,16 +387,16 @@ Transform InvestorIQ from:
 - Fail on mismatch
 - Deterministic changes only
 
-🎨 PATCH 7 — COVER SYSTEM (IN PROGRESS)
+ðŸŽ¨ PATCH 7 â€” COVER SYSTEM (IN PROGRESS)
 Objective
 
 Transform cover from:
 
 light / blue / template feel
 
-→ into:
+â†’ into:
 
-👉 dark green + gold institutional cover
+ðŸ‘‰ dark green + gold institutional cover
 
 cinematic
 
@@ -292,9 +406,9 @@ zero SaaS feel
 
 zero template feel
 
-“investment committee memo cover”
+â€œinvestment committee memo coverâ€
 
-✅ PATCH 7A — COVER CSS (COMPLETE)
+âœ… PATCH 7A â€” COVER CSS (COMPLETE)
 
 Changes:
 
@@ -315,10 +429,10 @@ dark footer bar
 Converted spacing to inch-based layout (print precision)
 
 Result:
-→ Cover now uses locked design system
-→ Interior styles untouched (critical separation maintained)
+â†’ Cover now uses locked design system
+â†’ Interior styles untouched (critical separation maintained)
 
-🚧 PATCH 7B — COVER HTML (IN PROGRESS)
+ðŸš§ PATCH 7B â€” COVER HTML (IN PROGRESS)
 
 Purpose:
 
@@ -332,21 +446,21 @@ Remove inline styled COVER_REPORT_TYPE_LABEL
 
 Remove duplicate verdict label layer
 
-Replace | with · separators
+Replace | with Â· separators
 
 Remove unnecessary <hr> remnants
 
 Update brand subtitle:
 
-FROM: “Institutional Grade Property Intelligence”
+FROM: â€œInstitutional Grade Property Intelligenceâ€
 
-TO: “Institutional Real Estate Analysis”
+TO: â€œInstitutional Real Estate Analysisâ€
 
 Result (expected):
-→ Cover becomes fully system-aligned
-→ No legacy styling conflicts
+â†’ Cover becomes fully system-aligned
+â†’ No legacy styling conflicts
 
-⏭️ PATCH 7C / 7D — INTERIOR ALIGNMENT (PENDING)
+â­ï¸ PATCH 7C / 7D â€” INTERIOR ALIGNMENT (PENDING)
 
 Scope:
 
@@ -356,17 +470,17 @@ Header strip alignment
 
 Footer typography refinement
 
-⚠️ Constraint:
+âš ï¸ Constraint:
 
 DO NOT alter interior design system
 
 Only micro-adjust spacing/consistency
 
-🧠 DESIGN STATE (CRITICAL LOCK)
+ðŸ§  DESIGN STATE (CRITICAL LOCK)
 
 InvestorIQ is now a dual-mode report system:
 
-🟩 COVER
+ðŸŸ© COVER
 
 Dark
 
@@ -376,9 +490,9 @@ High contrast
 
 Gold + green
 
-“Investment decision moment”
+â€œInvestment decision momentâ€
 
-⬜ INTERIOR
+â¬œ INTERIOR
 
 White
 
@@ -388,9 +502,9 @@ Ink-based
 
 Financial statement feel
 
-“Underwriting memo”
+â€œUnderwriting memoâ€
 
-🔒 THIS CONTRAST IS INTENTIONAL
+ðŸ”’ THIS CONTRAST IS INTENTIONAL
 
 DO NOT:
 
@@ -402,13 +516,13 @@ blend the two systems
 
 This contrast = institutional quality
 
-🚨 NEXT PRIORITY AFTER PATCH 7
+ðŸš¨ NEXT PRIORITY AFTER PATCH 7
 
 Once cover is complete:
 
-👉 IMMEDIATELY RETURN TO ENGINE FIXES
+ðŸ‘‰ IMMEDIATELY RETURN TO ENGINE FIXES
 
-❗ CRITICAL ENGINE ISSUE — BLOCKING LAUNCH
+â— CRITICAL ENGINE ISSUE â€” BLOCKING LAUNCH
 Debt / Refinance Recognition Failure
 
 Symptoms:
@@ -445,7 +559,7 @@ if (!mortgagePayload && loanTermSheetPayload) {
 
 ---
 
-### 🎯 REQUIRED OUTCOME
+### ðŸŽ¯ REQUIRED OUTCOME
 
 - InvestorIQ is no longer in visual-polish phase
 - InvestorIQ is now in final launch-stabilization phase
@@ -456,7 +570,7 @@ if (!mortgagePayload && loanTermSheetPayload) {
 
 ---
 
-## 🚀 LAUNCH READINESS CHECK
+## ðŸš€ LAUNCH READINESS CHECK
 
 To launch, ALL must be true:
 
@@ -469,7 +583,7 @@ To launch, ALL must be true:
 - [x] one-run entitlement architecture exists
 - [x] fail-closed / no-hallucination philosophy remains intact
 - [ ] do not email Ken Dunn until engine blockers below are cleared
-- [ ] No “DATA NOT AVAILABLE” spam
+- [ ] No â€œDATA NOT AVAILABLEâ€ spam
 
 ### Engine
 - [x] core rent roll + T12 path works
@@ -496,17 +610,17 @@ CURRENT STATUS:
 
 ---
 
-## 🔥 CURRENT STATUS
+## ðŸ”¥ CURRENT STATUS
 
-- Patch 5 ✅
-- Patch 6 ✅
-- Patch 7A ✅
-- Patch 7B 🚧 (in progress)
-- Engine bug ❗ (next critical step)
+- Patch 5 âœ…
+- Patch 6 âœ…
+- Patch 7A âœ…
+- Patch 7B ðŸš§ (in progress)
+- Engine bug â— (next critical step)
 
 ---
 
-# 🎯 TLDR FOR NEXT CHAT
+# ðŸŽ¯ TLDR FOR NEXT CHAT
 
 You are:
 - finishing Patch 7 (cover)
@@ -514,20 +628,20 @@ You are:
 
 ---
 
-If you want, next I’ll give you:
+If you want, next Iâ€™ll give you:
 
-👉 **Fresh Chat Starter Prompt (ELITE, Codex-safe, zero drift)**  
+ðŸ‘‰ **Fresh Chat Starter Prompt (ELITE, Codex-safe, zero drift)**  
 that drops you EXACTLY back into this state with no context loss.
 
 Just say:
-**“new chat prompt”** and I’ll wire it perfectly.
+**â€œnew chat promptâ€** and Iâ€™ll wire it perfectly.
 
-✅ INVESTORIQ STATUS UPDATE — MARCH 19, 2026 (END OF DAY)
-PATCH 7 — DESIGN / COVER SYSTEM
+âœ… INVESTORIQ STATUS UPDATE â€” MARCH 19, 2026 (END OF DAY)
+PATCH 7 â€” DESIGN / COVER SYSTEM
 
 STATUS: COMPLETE AND LOCKED
 
-Today’s work confirmed that the new report design direction is the correct one and is now considered locked:
+Todayâ€™s work confirmed that the new report design direction is the correct one and is now considered locked:
 
 Hybrid system is now intentional and approved:
 
@@ -583,7 +697,7 @@ stronger institutional hierarchy
 
 less template feel
 
-cleaner “investment committee memo” presentation
+cleaner â€œinvestment committee memoâ€ presentation
 
 NCO CLEANUP PASS
 
@@ -641,7 +755,7 @@ current report design is the first version the user feels genuinely proud of
 
 this is now the benchmark visual standard for InvestorIQ reports
 
-🔍 INTEGRITY SCAN RESULT
+ðŸ” INTEGRITY SCAN RESULT
 
 Post-clean scan passed:
 
@@ -661,30 +775,30 @@ no obvious Codex collateral damage
 
 Non-blocking residue may still exist in tiny placeholder/empty elements, but nothing currently justifies additional visual work.
 
-🚨 NEXT PRIORITY — RETURN TO ENGINE / LAUNCH-CRITICAL BUG
+ðŸš¨ NEXT PRIORITY â€” RETURN TO ENGINE / LAUNCH-CRITICAL BUG
 
-✅ INVESTORIQ STATUS UPDATE — MARCH 20, 2026 (ENGINE INTEGRATION PHASE)
+âœ… INVESTORIQ STATUS UPDATE â€” MARCH 20, 2026 (ENGINE INTEGRATION PHASE)
 
-🎯 CONTEXT SHIFT (CRITICAL)
+ðŸŽ¯ CONTEXT SHIFT (CRITICAL)
 
 InvestorIQ has now fully exited design phase.
 
-Patch 7 (cover + system alignment) = ✅ COMPLETE
+Patch 7 (cover + system alignment) = âœ… COMPLETE
 
-Report visuals = 🔒 LOCKED (institutional-grade)
+Report visuals = ðŸ”’ LOCKED (institutional-grade)
 
 No further visual work unless a real defect appears
 
-👉 All effort now moves to engine reliability + pipeline execution
+ðŸ‘‰ All effort now moves to engine reliability + pipeline execution
 
-🚨 CURRENT BLOCKER — GENERATE REPORT FAILURE
+ðŸš¨ CURRENT BLOCKER â€” GENERATE REPORT FAILURE
 ROOT CAUSE IDENTIFIED
 
 The issue was NOT Stripe, NOT pricing, NOT UI
 
 It was a Supabase RPC contract mismatch
 
-🔴 PROBLEM
+ðŸ”´ PROBLEM
 
 Frontend was calling:
 
@@ -708,11 +822,11 @@ Result:
 
 404 RPC error
 
-“function not found” (misleading)
+â€œfunction not foundâ€ (misleading)
 
 analysis never started
 
-✅ FIX (IN PROGRESS — DASHBOARD PATCH)
+âœ… FIX (IN PROGRESS â€” DASHBOARD PATCH)
 File:
 
 src/pages/Dashboard.jsx
@@ -739,16 +853,16 @@ Removed invalid pre-job artifact insert
 
 analysis_artifacts insert removed (job_id not yet created)
 
-✅ NEW FLOW
+âœ… NEW FLOW
 
-Upload → staged_uploads bucket
-→ build stagedFiles array
-→ call RPC with correct signature
-→ DB creates job + files
-→ queue_job_for_processing
-→ pipeline continues
+Upload â†’ staged_uploads bucket
+â†’ build stagedFiles array
+â†’ call RPC with correct signature
+â†’ DB creates job + files
+â†’ queue_job_for_processing
+â†’ pipeline continues
 
-⚠️ CRITICAL CONTRACTS (NOW ENFORCED)
+âš ï¸ CRITICAL CONTRACTS (NOW ENFORCED)
 Storage path MUST match:
 staged/${auth.uid()}/...
 RPC payload MUST be:
@@ -765,9 +879,9 @@ stagedFiles object shape:
   size,
   doc_type
 }
-🚨 SECONDARY ISSUE (PENDING)
+ðŸš¨ SECONDARY ISSUE (PENDING)
 RLS BLOCKING:
-analysis_artifacts → row-level security violation
+analysis_artifacts â†’ row-level security violation
 
 Status:
 
@@ -804,32 +918,32 @@ Policy notes:
 - overlapping live policies were preserved intentionally for sync accuracy
 - policy cleanup can be handled later as a separate task
 
-🧠 CURRENT SYSTEM STATE
-✅ WORKING
+ðŸ§  CURRENT SYSTEM STATE
+âœ… WORKING
 
-Stripe pricing (USD) ✅
+Stripe pricing (USD) âœ…
 
-Vercel env alignment ✅
+Vercel env alignment âœ…
 
-Checkout flow ✅
+Checkout flow âœ…
 
-Webhook credit assignment ✅
+Webhook credit assignment âœ…
 
-Design system ✅
+Design system âœ…
 
-🚧 IN PROGRESS
+ðŸš§ IN PROGRESS
 
 Dashboard RPC alignment (this patch)
 
-❗ NEXT
+â— NEXT
 
 Validate full pipeline execution
 
 Then return to:
-👉 api/generate-client-report.js
+ðŸ‘‰ api/generate-client-report.js
 (debt/refinance deterministic fix)
 
-🎯 NEXT TEST (FIRST THING NEXT SESSION)
+ðŸŽ¯ NEXT TEST (FIRST THING NEXT SESSION)
 
 Run full E2E:
 
@@ -847,17 +961,17 @@ files accepted
 
 status transitions:
 
-needs_documents → queued → extracting → underwriting…
+needs_documents â†’ queued â†’ extracting â†’ underwritingâ€¦
 
-🚀 TRUE POSITION
+ðŸš€ TRUE POSITION
 
 InvestorIQ is now:
 
-visually launch-ready ✅
+visually launch-ready âœ…
 
-pricing aligned with product value ✅
+pricing aligned with product value âœ…
 
-checkout + credits working ✅
+checkout + credits working âœ…
 
 entering final pipeline stabilization phase
 
@@ -914,28 +1028,28 @@ no silent failures
 
 no partial states
 
-🚀 CURRENT TRUE STATUS
+ðŸš€ CURRENT TRUE STATUS
 Visual
 
-Patch 5 ✅
+Patch 5 âœ…
 
-Patch 6 ✅
+Patch 6 âœ…
 
-Patch 7 ✅ COMPLETE
+Patch 7 âœ… COMPLETE
 
-New hybrid report design ✅ LOCKED
+New hybrid report design âœ… LOCKED
 
-No legacy blue residue in active design system ✅
+No legacy blue residue in active design system âœ…
 
 Product / Engine
 
-debt recognition bug ❗ NEXT
+debt recognition bug â— NEXT
 
-refinance triggering bug ❗ NEXT
+refinance triggering bug â— NEXT
 
 launch path now depends more on engine reliability than visuals
 
-🎯 STARTING POINT FOR TOMORROW
+ðŸŽ¯ STARTING POINT FOR TOMORROW
 
 When work resumes, do not continue visual design.
 
@@ -1230,34 +1344,34 @@ Fallback behavior:
 
 ## ENGINE FIX - SUPPORTING DOCUMENT PARSING (MARCH 2026)
 
-## 🚨 ENGINE FAILURE — SUPPORTING DOC PARSE 400 (ROOT CAUSE — MARCH 2026)
+## ðŸš¨ ENGINE FAILURE â€” SUPPORTING DOC PARSE 400 (ROOT CAUSE â€” MARCH 2026)
 
-### ❗ WHAT HAPPENED
+### â— WHAT HAPPENED
 
 During a full underwriting test:
 
-- Rent Roll parsed ✅
-- T12 parsed ✅
-- ALL supporting PDFs failed ❌
+- Rent Roll parsed âœ…
+- T12 parsed âœ…
+- ALL supporting PDFs failed âŒ
 
 Observed symptoms:
 
-- DSCR → NOT ASSESSED
+- DSCR â†’ NOT ASSESSED
 - Debt narrative missing
 - Refinance model (MOAT) did not render
 - Report still completed successfully (silent degradation)
 
 ---
 
-### 🔍 ARTIFACT EVIDENCE
+### ðŸ” ARTIFACT EVIDENCE
 
 From `analysis_artifacts`:
 
-- `t12_parsed` ✅
-- `rent_roll_parsed` ✅
-- `loan_term_sheet_parsed` ❌ (missing)
-- `mortgage_statement_parsed` ❌ (missing)
-- `property_tax_parsed` ❌ (missing)
+- `t12_parsed` âœ…
+- `rent_roll_parsed` âœ…
+- `loan_term_sheet_parsed` âŒ (missing)
+- `mortgage_statement_parsed` âŒ (missing)
+- `property_tax_parsed` âŒ (missing)
 
 Repeated worker events:
 
@@ -1266,17 +1380,17 @@ Repeated worker events:
 
 ---
 
-### 🎯 ROOT CAUSE (CONFIRMED)
+### ðŸŽ¯ ROOT CAUSE (CONFIRMED)
 
 Mismatch between:
 
 - `analysis_job_files.doc_type`
-  → "supporting"
+  â†’ "supporting"
 
 AND
 
 - `parse-doc.js` expected input
-  → "supporting_documents"
+  â†’ "supporting_documents"
 
 Because of this:
 
@@ -1300,7 +1414,7 @@ Because of this:
 
 ---
 
-### 🔥 WHY THIS MATTERS
+### ðŸ”¥ WHY THIS MATTERS
 
 This is a **silent failure mode**:
 
@@ -1317,7 +1431,7 @@ Impact:
 
 ---
 
-### 🛠 REQUIRED FIX
+### ðŸ›  REQUIRED FIX
 
 File:
 `api/parse/parse-doc.js`
@@ -1341,11 +1455,11 @@ if (
 ) {
 ```
 
-### 🎯 EXPECTED RESULT AFTER FIX
+### ðŸŽ¯ EXPECTED RESULT AFTER FIX
 
 Supporting PDFs enter inference pipeline
 
-document_text_extracted → used correctly
+document_text_extracted â†’ used correctly
 
 loan_term_sheet_parsed created
 
@@ -1357,7 +1471,7 @@ Refinance model (MOAT) renders
 
 No silent degradation
 
-### âœ… VALIDATED RERUN RESULT
+### Ã¢Å“â€¦ VALIDATED RERUN RESULT
 
 Successful rerun confirmed:
 
@@ -1372,7 +1486,7 @@ Successful rerun confirmed:
 - final report no longer says debt terms were missing or DSCR was not assessed
 - final report now contains DSCR and debt/refinance content
 
-### ⚠️ SECONDARY WATCH ITEMS
+### âš ï¸ SECONDARY WATCH ITEMS
 
 `extract-job-text.js`
 
@@ -1391,13 +1505,13 @@ Currently skipped in extraction layer
 
 may remain at pending
 
-### 🚨 SYSTEM PRINCIPLE REINFORCED
+### ðŸš¨ SYSTEM PRINCIPLE REINFORCED
 
 InvestorIQ must NEVER:
 
 - silently drop supporting documents
 - continue underwriting with missing critical artifacts
-- produce “complete-looking” reports with incomplete intelligence
+- produce â€œcomplete-lookingâ€ reports with incomplete intelligence
 
 Required behavior:
 
@@ -1409,17 +1523,17 @@ OR:
 
 - fail closed with explicit error
 
-### 🧠 CURRENT ENGINE STATE
+### ðŸ§  CURRENT ENGINE STATE
 
-Core parsing engine: ✅ stable
+Core parsing engine: âœ… stable
 
-Supporting doc ingestion: ❌ broken (this issue)
+Supporting doc ingestion: âŒ broken (this issue)
 
-Debt recognition: ❌ blocked upstream
+Debt recognition: âŒ blocked upstream
 
-Refinance modeling: ❌ blocked upstream
+Refinance modeling: âŒ blocked upstream
 
-### 🎯 NEXT STEP
+### ðŸŽ¯ NEXT STEP
 
 Apply fix in:
 
@@ -1676,9 +1790,9 @@ Fast debug order:
 
 ## AI / LLM ARCHITECTURE (LOCKED)
 
-## 🧠 LLM EXECUTION LAYER (CRITICAL — LOCKED)
+## ðŸ§  LLM EXECUTION LAYER (CRITICAL â€” LOCKED)
 
-### 📍 WHERE LLM IS CALLED
+### ðŸ“ WHERE LLM IS CALLED
 
 The LLM is invoked ONLY inside:
 
@@ -1692,20 +1806,20 @@ BEFORE HTML assembly
 Pipeline position:
 
 deterministic metrics
-→ deterministic scoring
-→ structured report JSON built
-→ 🧠 LLM narrative generation (THIS STEP)
-→ inject narratives into template
-→ render HTML
-→ generate PDF
+â†’ deterministic scoring
+â†’ structured report JSON built
+â†’ ðŸ§  LLM narrative generation (THIS STEP)
+â†’ inject narratives into template
+â†’ render HTML
+â†’ generate PDF
 
 ---
 
-### 🧠 PROMPT SYSTEM (LOCKED)
+### ðŸ§  PROMPT SYSTEM (LOCKED)
 
 The system uses:
 
-👉 "Golden Elite Master Prompt"
+ðŸ‘‰ "Golden Elite Master Prompt"
 
 Rules:
 - Prompt is injected at runtime
@@ -1715,7 +1829,7 @@ Rules:
 
 ---
 
-### 📦 LLM INPUT CONTRACT (STRICT)
+### ðŸ“¦ LLM INPUT CONTRACT (STRICT)
 
 LLM must receive:
 
@@ -1737,7 +1851,7 @@ NO:
 
 ---
 
-### 🎯 LLM OUTPUT CONTRACT
+### ðŸŽ¯ LLM OUTPUT CONTRACT
 
 LLM returns ONLY:
 
@@ -1760,11 +1874,11 @@ Rules:
 
 ---
 
-### ⚙️ MODEL STRATEGY (HARD LOCK)
+### âš™ï¸ MODEL STRATEGY (HARD LOCK)
 
 Production model:
 
-👉 OpenAI API (GPT-5.x)
+ðŸ‘‰ OpenAI API (GPT-5.x)
 
 Used for:
 - ALL narrative generation
@@ -1777,7 +1891,7 @@ Reason:
 
 ---
 
-### 🧪 NON-PRODUCTION MODEL
+### ðŸ§ª NON-PRODUCTION MODEL
 
 Anthropic Claude:
 
@@ -1788,7 +1902,7 @@ Anthropic Claude:
 
 ---
 
-### 🚨 FAIL CONDITIONS
+### ðŸš¨ FAIL CONDITIONS
 
 If any of the following occur:
 
@@ -1798,7 +1912,7 @@ If any of the following occur:
 
 THEN:
 
-❌ DO NOT CALL LLM
+âŒ DO NOT CALL LLM
 
 Instead:
 - fail closed
@@ -1807,7 +1921,7 @@ OR
 
 ---
 
-### 🔒 SYSTEM IDENTITY
+### ðŸ”’ SYSTEM IDENTITY
 
 InvestorIQ is:
 
@@ -1815,8 +1929,8 @@ NOT an AI underwriting system
 
 It is:
 
-👉 a deterministic underwriting engine  
-👉 with AI used ONLY for narrative presentation
+ðŸ‘‰ a deterministic underwriting engine  
+ðŸ‘‰ with AI used ONLY for narrative presentation
 
 InvestorIQ is a hybrid deterministic + LLM system, with strict separation of responsibilities.
 
@@ -1997,7 +2111,7 @@ It is ONLY allowed to:
 - organize sections
 - explain deterministic outputs
 
-If required data is missing → section is omitted or flagged.
+If required data is missing â†’ section is omitted or flagged.
 
 ---
 
@@ -2057,9 +2171,9 @@ Before any change:
   - completeness
   - correctness
 
-If degradation exists → change is rejected
+If degradation exists â†’ change is rejected
 
-# 🚨 EXECUTION CONTRACT (MANDATORY)
+# ðŸš¨ EXECUTION CONTRACT (MANDATORY)
 
 You are working on InvestorIQ.
 
@@ -2072,7 +2186,7 @@ You MUST follow ALL rules in this document EXACTLY.
 1. NO REFACTORING
 - Do not restructure code
 - Do not rename variables
-- Do not “clean up” anything
+- Do not â€œclean upâ€ anything
 
 2. ANCHOR-LOCKED PATCHES ONLY
 - Every change must be:
@@ -2088,7 +2202,7 @@ You MUST follow ALL rules in this document EXACTLY.
 - No formatting changes
 
 4. NO GUESSING
-- If unsure → STOP
+- If unsure â†’ STOP
 - Ask for clarification
 
 5. FAIL-CLOSED
@@ -2107,10 +2221,10 @@ After EVERY patch:
 - run syntax check
 
 8. THIS DOCUMENT IS LAW
-- If code conflicts with this document → FOLLOW THIS DOCUMENT
+- If code conflicts with this document â†’ FOLLOW THIS DOCUMENT
 
 9. NO PARTIAL PATCHES
-- If a patch cannot be completed fully and cleanly → STOP
+- If a patch cannot be completed fully and cleanly â†’ STOP
 - Do not return partial implementations
 
 Failure to follow ANY rule = INVALID OUTPUT

@@ -1793,52 +1793,7 @@ function buildScreeningRentRollDistributionHtml({
   const bandsHtml = rentBandRows
     ? `<p class="subsection-title" style="margin-top:6px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
     : "";
-  const marketPremiumRatio =
-    Number.isFinite(weightedInPlace) &&
-    Number.isFinite(weightedMarket) &&
-    weightedInPlace > 0
-      ? (weightedMarket - weightedInPlace) / weightedInPlace
-      : null;
-  const flags = [];
-  if (Number.isFinite(occupancy) && occupancy < 0.9) {
-    flags.push(`Occupancy is ${formatPercent1(occupancy)} (stabilization flag).`);
-  }
-  if (Number.isFinite(marketPremiumRatio) && marketPremiumRatio >= 0.1) {
-    flags.push(
-      `In-place rents trail market by ~${formatPercent1(
-        marketPremiumRatio
-      )} (document-backed upside).`
-    );
-  }
-  if (Number.isFinite(largestUnitTypeConcentration) && largestUnitTypeConcentration >= 0.6) {
-    flags.push(
-      `Unit mix concentration: ${largestUnitType || "Largest unit type"} represents ${formatPercent1(
-        largestUnitTypeConcentration
-      )} of units (concentration flag).`
-    );
-  }
-  const flagsHtml = flags
-    .slice(0, 3)
-    .map((line) => `<li>${escapeHtml(line)}</li>`)
-    .join("");
-  const flagsCard = flagsHtml
-    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Roll Flags (Deterministic)</p><ul>${flagsHtml}</ul></div>`
-    : "";
-  let upsideValueCard = "";
-  if (
-    Number.isFinite(totalInPlaceAnnual) && Number.isFinite(totalMarketAnnual) &&
-    totalMarketAnnual > totalInPlaceAnnual && totalInPlaceAnnual > 0
-  ) {
-    const annualUpside = totalMarketAnnual - totalInPlaceAnnual;
-    const uvRows = [
-      `<tr><td>Annual Gross Rent Upside</td><td>${formatCurrency(annualUpside)}</td></tr>`,
-      ...[0.05, 0.06, 0.07].map((r) =>
-        `<tr><td>Implied Value at ${(r * 100).toFixed(0)}% Cap Rate</td><td>${formatCurrency(annualUpside / r)}</td></tr>`
-      ),
-    ].join("");
-    upsideValueCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Upside &mdash; Implied Value Creation</p><table><thead><tr><th>Metric</th><th>Amount</th></tr></thead><tbody>${uvRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Annual upside from document-verified rent roll. Implied value = annual upside &divide; cap rate. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
-  }
-  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>${flagsCard}${upsideValueCard}`;
+  return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>`;
 }
 function injectKeyMetricsRows(html, rowsHtml) {
   if (!rowsHtml) return html;
