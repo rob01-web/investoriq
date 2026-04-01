@@ -378,8 +378,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     coverageBase
   )}</p><p>Worst-Case Coverage: ${formatCoverage(
     worstFiniteCoverage
-  )}</p><p class="small">${escapeHtml(
-    evidence
   )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
   return { tier: refiTier, evidence, html: refiHtml };
 }
