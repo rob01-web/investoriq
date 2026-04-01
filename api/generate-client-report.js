@@ -2682,6 +2682,8 @@ export default async function handler(req, res) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
       finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+      finalHtml = stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
+      finalHtml = stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
     } else {
       // v1_core: keep S2-S5 and S7 — they contain computed T12/rent roll data equally
       // relevant for underwriting. Only strip S6 (screening-specific refi sufficiency
