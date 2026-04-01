@@ -350,7 +350,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     .join("");
   const fmtMoney = (x) => (Number.isFinite(x) ? formatValue(x) : DATA_NOT_AVAILABLE);
   const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
-  const fmtCap = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
+  const fmtCap = (x) => (Number.isFinite(x) ? formatPercent(x, 2) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:6px;">
   <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
