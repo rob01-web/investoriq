@@ -398,7 +398,7 @@ export default async function handler(req, res) {
     const failedJobIds = [];
     let passesRun = 0;
     const maxPasses = 10;
-    const maxSeconds = 20;
+    const maxSeconds = 55;
     const startTime = Date.now();
     const baseUrl = (process.env.PUBLIC_SITE_URL || 'https://investoriq.tech').replace(/\/$/, '');
 
