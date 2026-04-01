@@ -112,6 +112,49 @@ export default async function handler(req, res) {
       }
 
       try {
+        const { data: existingTextArtifacts, error: existingTextErr } = await supabaseAdmin
+          .from('analysis_artifacts')
+          .select('id, payload')
+          .eq('job_id', jobId)
+          .eq('type', 'document_text_extracted')
+          .eq('payload->>file_id', String(file.id))
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (existingTextErr) {
+          throw new Error(existingTextErr.message || 'Failed to fetch existing extracted text artifacts');
+        }
+
+        const reusableTextArtifacts = (existingTextArtifacts || []).filter((artifact) => {
+          const payload = artifact?.payload || {};
+          const sameBucket = String(payload.bucket || '') === String(file.bucket || '');
+          const sameObjectPath = String(payload.object_path || '') === String(file.object_path || '');
+          const sameFilename = String(payload.original_filename || '') === String(file.original_filename || '');
+          const hasReusableText =
+            String(payload.excerpt || payload.text || '').trim().length > 0;
+          return sameBucket && sameObjectPath && sameFilename && hasReusableText;
+        });
+
+        if (reusableTextArtifacts.length > 1) {
+          throw new Error('Ambiguous existing document_text_extracted artifacts for file');
+        }
+
+        if (reusableTextArtifacts.length === 1) {
+          await supabaseAdmin
+            .from('analysis_job_files')
+            .update({ parse_status: 'extracted', parse_error: null })
+            .eq('id', file.id);
+
+          extractedCount += 1;
+          results.push({
+            file_id: file.id,
+            original_filename: file.original_filename,
+            status: 'extracted',
+            reused: true,
+          });
+          continue;
+        }
+
         let tablesArtifactInfo = null;
         const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
           .from(file.bucket)
