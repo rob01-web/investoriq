@@ -3848,8 +3848,8 @@ export default async function handler(req, res) {
       : Number.isFinite(t12TotalExpensesValue)
       ? `<tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Total Operating Expenses (TTM): ${formatCurrency(t12TotalExpensesValue)}.</td></tr>`
       : "";
-    finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", t12IncomeRows || "");
-    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", t12ExpenseRows || "");
+    finalHtml = replaceAll(finalHtml, "{{T12_INCOME_ROWS}}", effectiveReportMode === "screening_v1" ? "" : (t12IncomeRows || ""));
+    finalHtml = replaceAll(finalHtml, "{{T12_EXPENSE_ROWS}}", effectiveReportMode === "screening_v1" ? "" : (t12ExpenseRows || ""));
     if (!String(t12IncomeRows || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "T12_INCOME_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Income Reconstruction (TTM)");
@@ -4893,7 +4893,7 @@ export default async function handler(req, res) {
     {
       let html = "";
       const egi = t12EgiValue, opex = t12TotalExpensesValue, noi = t12NoiValue;
-      if (Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
+      if (effectiveReportMode !== "screening_v1" && Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
         const rows = [
           { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e293b" },
           { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#94A3B8" },
