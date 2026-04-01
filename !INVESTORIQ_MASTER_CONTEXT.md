@@ -484,14 +484,15 @@ To launch, ALL must be true:
 
 CURRENT STATUS:
 
-- Extraction: STABLE
+- Extraction: STABLE + REUSE ENABLED
 - Classification: STABLE
 - Debt parsing: STABLE
-- Loan amount extraction: FIXED
-- Worker execution: PARTIALLY MANUAL (queued -> extracting continuation gap still pending)
-- Refinance model: STABLE on validated Richmond path
-- Report polish: INSTITUTIONALLY CREDIBLE
-- Launch phase: FINAL POLISH / OPERATIONAL HARDENING
+- Refinance model: STABLE (validated on Richmond)
+- Report output: INSTITUTIONAL / LOCKED
+- Worker execution:
+  - functional but requires second trigger (fix in progress)
+- Launch phase:
+  - FINAL OPERATIONAL HARDENING
 
 ---
 
@@ -1134,6 +1135,29 @@ Current extraction status:
   - no more silent text loss
   - `document_text_extracted` is present whenever extractable content exists
 
+Extraction Reuse Optimization (NEW)
+
+- system now checks for existing `document_text_extracted` artifacts before running extraction
+- reuse conditions:
+  - same `file_id`
+  - same `bucket`
+  - same `object_path`
+  - same `original_filename`
+  - non-empty extracted text
+- if exactly one valid artifact exists:
+  - skip extraction, including Textract
+  - mark file as `parse_status = extracted`
+  - continue pipeline
+- if multiple matches:
+  - fail closed as ambiguous reuse
+- if none:
+  - proceed with normal extraction
+
+Impact:
+- eliminates duplicate Textract cost during testing and retries
+- production-safe optimization
+- no change to downstream parser or report contracts
+
 ---
 
 ## PARSER SYSTEM
@@ -1462,16 +1486,22 @@ Supporting-doc and extraction chain retained:
 
 ## CURRENT PRIMARY BLOCKER
 
-The current blocker is no longer report logic, Textract, or the old extraction -> underwriting return.
+The current blocker is worker loop continuation.
 
-The remaining operational blocker is worker continuation:
+Root cause confirmed:
 
-- latest validation still required two manual worker runs
-- current suspected gap:
-  - job lists are fetched too early in the pass
-  - a job promoted from `queued` to `extracting` is not re-seen by the `extracting` loop until the next invocation
-- this is now the primary pre-launch engineering task in:
-  - `api/admin-run-worker.js`
+- `queuedJobs` and `extractingJobs` are fetched before status mutations
+- jobs promoted from `queued` -> `extracting` are not visible to the extracting loop in the same pass
+
+Result:
+
+- still requires a second manual worker run
+
+Fix in progress:
+
+- re-fetch `extractingJobs` after the queued loop completes
+
+This is now the final operational blocker before launch.
 
 ## TODAY'S VALIDATED ENGINE STATE
 
@@ -1495,28 +1525,24 @@ InvestorIQ must NOT rely on filenames for production document classification.
 
 ## FINAL PRE-LAUNCH BLOCKERS
 
-A. Worker continuation fix
+A. Worker continuation fix (IN PROGRESS)
 
-- inspect `api/admin-run-worker.js`
-- focus on `queuedJobs` vs `extractingJobs` fetch / control flow
-- remove the remaining need for a second manual worker kick
+- eliminate second worker trigger requirement
+- ensure single-pass pipeline execution
 
 B. Validate 1 additional clean deal
 
-- confirm no regression outside the Richmond path
-- confirm refinance still renders correctly when debt is present
-- confirm worker progression is clean on a single trigger after the worker fix
+- confirm no regression outside Richmond path
+- confirm reuse + worker loop behave correctly
 
 C. Website micro-polish
 
-- minor website polish items were noticed
-- defer them until after worker stabilization
-- do not expand scope before the worker loop issue is fixed
+- minor UI / UX cleanup
+- non-blocking
 
-D. Only after the above is verified should we:
+D. Launch decision
 
-- do final go / no-go for the Ken Dunn email
-- treat InvestorIQ as truly launch-ready
+- only after A + B are confirmed
 
 Launch trigger condition:
 
@@ -1537,6 +1563,13 @@ Final reality check:
   - deterministic
   - fail-closed
   - observable
+
+## Cost Control Strategy (Testing Phase)
+
+- Textract cost is minimized via extraction reuse
+- repeated tests should not trigger re-extraction
+- no global Textract disable is required
+- production behavior is preserved
 
 START HERE TOMORROW:
 
@@ -1564,36 +1597,6 @@ START HERE TOMORROW:
   - maintain clarity and fast parseability for future sessions
   - prevent context bloat
 
-
-Problem:
-- supporting PDFs never parsed correctly
-- no `document_text_extracted` artifact existed
-- `parse_status` stayed at `pending`
-- debt artifacts were missing
-
-Root cause:
-- worker did not dispatch supporting docs consistently
-- worker did not call `extract-job-text` before `parse-doc`
-- `parse-doc` depended on a missing `document_text_extracted` artifact
-
-Fix:
-- worker now dispatches supporting doc types:
-  - `supporting`
-  - `supporting_documents`
-  - `supporting_documents_ui`
-- worker normalizes them to:
-  - `supporting_documents`
-- worker now calls:
-  - `api/parse/extract-job-text`
-  - before
-  - `api/parse/parse-doc`
-
-Result:
-- loan term sheets can now be classified correctly
-- debt artifacts can now be created deterministically
-- supporting PDFs no longer remain stuck at `pending` when the pipeline is healthy
-
----
 
 ## FAILURE MODES (FAIL-CLOSED LOGIC)
 

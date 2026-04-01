@@ -418,17 +418,6 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
       }
 
-      const { data: extractingJobs, error: extractingErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .select('id, user_id, status, started_at')
-        .eq('status', 'extracting')
-        .order('created_at', { ascending: true })
-        .limit(jobLimit);
-
-      if (extractingErr) {
-        return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
-      }
-
       if (queuedJobs && queuedJobs.length > 0) {
         for (const job of queuedJobs) {
           try {
@@ -515,6 +504,17 @@ export default async function handler(req, res) {
             continue;
           }
         }
+      }
+
+      const { data: extractingJobs, error: extractingErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .select('id, user_id, status, started_at')
+        .eq('status', 'extracting')
+        .order('created_at', { ascending: true })
+        .limit(jobLimit);
+
+      if (extractingErr) {
+        return res.status(500).json({ error: 'Failed to fetch extracting jobs', details: extractingErr.message });
       }
 
       if (extractingJobs && extractingJobs.length > 0) {
