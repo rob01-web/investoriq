@@ -3069,7 +3069,7 @@ export default async function handler(req, res) {
     ) {
       screeningClass = "Fragile";
       screeningExplanation =
-        "Operating margin is thin and vulnerable to modest income or expense shocks.";
+        "Thin operating margin with limited shock tolerance.";
     } else if (
       (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
       (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
@@ -3077,11 +3077,11 @@ export default async function handler(req, res) {
     ) {
       screeningClass = "Sensitized";
       screeningExplanation =
-        "Cash flow performance is viable but sensitive to revenue disruption or expense inflation.";
+        "Viable cash flow but sensitive to revenue or expense shocks.";
     } else {
       screeningClass = "Stable";
       screeningExplanation =
-        "Operating profile demonstrates margin resilience under current income structure.";
+        "Operating profile demonstrates margin resilience.";
     }
     if (effectiveReportMode === "screening_v1") {
       execScreeningLines.push(
@@ -3089,6 +3089,9 @@ export default async function handler(req, res) {
       );
       execScreeningLines.push(
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
+      );
+      execScreeningLines.push(
+        `<p class="small" style="color:#64748b;margin-top:4px;">This report is a Preliminary Investment Screening Memorandum. Full debt structuring, refinance modeling, and valuation analysis are included in the Underwriting Report.</p>`
       );
     }
     const classificationDrivers = [];
@@ -3109,7 +3112,7 @@ export default async function handler(req, res) {
     }
     const whyLine =
       classificationDrivers.length > 0
-        ? `Classification is driven primarily by ${classificationDrivers.join(" and ")}.`
+        ? `Driven by ${classificationDrivers.join(" and ")}.`
         : "";
     const toPercentMetric = (value) => {
       const n = Number(value);
@@ -3625,11 +3628,11 @@ export default async function handler(req, res) {
       if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries document-verified rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
       let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
       if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
-        thesisText += `NOI margin compression to ${nmPctStr}, driven by a ${erPctStr} expense ratio, supports a Sensitized classification. The primary return path is operational efficiency improvement and captured rent upside through lease renewal.`;
+        thesisText += `NOI margin compression to ${nmPctStr}, driven by a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation depends on efficiency gains and rent normalization.`;
       } else if (screeningClass === "Fragile" && erPctStr) {
-        thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the operating profile as Fragile. Significant operational improvement is required before debt serviceability can be fully assessed.`;
+        thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
-        thesisText += `Operating performance is within stable thresholds. The profile supports further underwriting with additional document coverage.`;
+        thesisText += `Operating performance is within stable thresholds. Suitable for further underwriting.`;
       }
       const thesisCard = thesisText
         ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
