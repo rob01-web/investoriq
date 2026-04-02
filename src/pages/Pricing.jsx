@@ -44,7 +44,7 @@ const tiers = [
     price:       '$399',
     productType: 'screening',
     eyebrow:     'Entry-level analysis',
-    description: 'Document-based screening report for initial investment review.',
+    description: 'Fast, document-driven acquisition screen for early investment decisions.',
     features: [
       'Based strictly on T12 + Rent Roll',
       'Formal, lightweight institutional snapshot',
@@ -59,10 +59,10 @@ const tiers = [
     price:       '$1,499',
     productType: 'underwriting',
     eyebrow:     'Full institutional analysis',
-    description: 'Comprehensive, property-specific underwriting report suitable for investment committee review.',
+    description: 'Institutional-grade underwriting memorandum with document-driven analysis for investment committee review.',
     features: [
       'Based on T12 + Rent Roll + supporting due diligence documents',
-      'Full institutional underwriting artifact',
+      'Identifies refinance failure risk under real-world rate and cap scenarios',
       'No assumptions, no invented data',
       'One generation per purchase',
     ],
@@ -389,7 +389,7 @@ export default function PricingPage() {
               marginBottom: 16,
               maxWidth:     600,
             }}>
-              Flat fee. One property.<br />One report.
+              Document-driven underwriting for real estate investors.
             </motion.h1>
 
             <motion.p variants={fadeUp} style={{
@@ -401,7 +401,7 @@ export default function PricingPage() {
               lineHeight:   1.65,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              Two report types. Transparent scope. No subscriptions.
+              Built from your T12, rent roll, and deal documents — not assumptions.
             </motion.p>
 
             {isAuthed && (

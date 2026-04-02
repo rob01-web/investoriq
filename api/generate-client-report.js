@@ -3741,7 +3741,7 @@ export default async function handler(req, res) {
             const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
             const annualMarket = coerceNumber(computedRentRoll?.total_market_annual ?? computedRentRoll?.total_annual_market);
             if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
-              return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates measurable revenue upside relative to current in-place rents.</p></div>`;
+              return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates in-place rents are below market across the current unit mix.</p></div>`;
             }
             return "";
           })()
