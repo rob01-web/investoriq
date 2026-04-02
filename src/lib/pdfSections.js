@@ -251,7 +251,7 @@ function seedData() {
         {
           cat: "Financial",
           impact: "Medium",
-          note: "Refinance risk is mitigated by DSCR above 1.30 under base case and moderate leverage.",
+          note: "Base-case DSCR remains above 1.30, supporting current refinance coverage.",
         },
       ],
       stressTests: [

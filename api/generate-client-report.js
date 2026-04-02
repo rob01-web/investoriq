@@ -3051,8 +3051,8 @@ export default async function handler(req, res) {
           primaryPressurePoint = _dscr < 1.20
             ? `DSCR of ${_ds}: below 1.20x institutional threshold`
             : _dscr < 1.35
-            ? `DSCR of ${_ds}: moderate debt coverage, review refinance risk`
-            : `DSCR of ${_ds}: meets institutional debt coverage thresholds`;
+            ? `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`
+            : `DSCR of ${_ds}: supports current debt service coverage`;
         }
       }
     }
@@ -3091,7 +3091,7 @@ export default async function handler(req, res) {
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
       );
       execScreeningLines.push(
-        `<p class="small" style="color:#64748b;margin-top:4px;">This report is a Preliminary Investment Screening Memorandum. Full debt structuring, refinance modeling, and valuation analysis are included in the Underwriting Report.</p>`
+        `<p class="small" style="color:#64748b;margin-top:4px;">This report is a Preliminary Investment Screening Memorandum built from uploaded operating documents.</p>`
       );
     }
     const classificationDrivers = [];
@@ -3206,7 +3206,7 @@ export default async function handler(req, res) {
         : satisfiedCount === 0
         ? "Decision Status: Non-Compliance"
         : `Decision Status: Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`;
-      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Acquisition Decision Context</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Operating Decision Summary</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
     }
     if (
       effectiveReportMode === "screening_v1" &&
@@ -3258,13 +3258,13 @@ export default async function handler(req, res) {
           Number.isFinite(baseMarginR) && Number.isFinite(marginC)
             ? Math.round((baseMarginR - marginC) * 10000)
             : null;
-        miniSensitivityHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Mini Sensitivity Grid - Operating Stress</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
+        miniSensitivityHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Operating Stress Summary</p><table><thead><tr><th>Stress Case</th><th>NOI Margin</th><th>Classification</th></tr></thead><tbody>${sensitivityRows}</tbody></table>${
           Number.isFinite(marginCompressionBps)
             ? `<p class="exec-signal-line">Under modest operating stress, NOI margin compresses by ${marginCompressionBps} bps.</p>`
             : ""
         }${
           Number.isFinite(marginC) && marginC <= 0.3
-            ? `<p class="exec-signal-line">Stress testing indicates fragility under modest operating deterioration.</p>`
+            ? `<p class="exec-signal-line">Modest operating deterioration would materially compress margin.</p>`
             : ""
         }</div>`;
       }
@@ -3638,10 +3638,10 @@ export default async function handler(req, res) {
       } else if (screeningClass === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
-        thesisText += `Operating performance is within stable thresholds. Suitable for further underwriting.`;
+        thesisText += `Operating performance is within stable thresholds. Operating performance remains within stable thresholds.`;
       }
       const thesisCard = thesisText
-        ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Investment Thesis Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
+        ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
         : "";
       execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
     } else if (effectiveReportMode === "v1_core" && screeningClass && screeningClass !== "Insufficient Data") {
@@ -5027,7 +5027,7 @@ export default async function handler(req, res) {
         if (beoStr) parts.push(`break-even occupancy of ${beoStr}`);
         execRationale = parts.length > 0
           ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
-          : "Classified STABLE: operating metrics are within institutional thresholds.";
+          : "Classified STABLE: operating metrics remain within defined screening thresholds.";
       } else if (screeningClass === "Sensitized") {
         const breaches = [];
         if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr)
