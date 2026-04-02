@@ -735,7 +735,7 @@ export default function LandingPage() {
                 },
                 {
                   label: "Institutional Format",
-                  body: "Outputs are formatted for Investment Committee review, not marketing presentation.",
+                  body: "Outputs are structured for investment committee review.",
                 },
               ].map(({ label, body }) => (
                 <motion.div
