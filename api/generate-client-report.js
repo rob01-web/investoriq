@@ -3638,7 +3638,7 @@ export default async function handler(req, res) {
       } else if (screeningClass === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
-        thesisText += `Operating performance is within stable thresholds. Operating performance remains within stable thresholds.`;
+        thesisText += `Operating performance remains within stable thresholds.`;
       }
       const thesisCard = thesisText
         ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`

@@ -1521,7 +1521,7 @@ function analystCommentaryPage(data) {
     return {
       stack: [
         { text: "", pageBreak: "before" },
-        sectionTitle("Commentary", "Framework-driven view for investment committees and partners."),
+        sectionTitle("Commentary", "Document-driven view for investment committees and partners."),
         dataNotAvailableBlock(),
       ],
     };
@@ -1530,7 +1530,7 @@ function analystCommentaryPage(data) {
   return {
     stack: [
       { text: "", pageBreak: "before" },
-      sectionTitle("Commentary", "Framework-driven view for investment committees and partners."),
+      sectionTitle("Commentary", "Document-driven view for investment committees and partners."),
       {
         text: "Core Highlights",
         style: "h2",
