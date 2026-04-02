@@ -43,11 +43,11 @@ const tiers = [
     title:       'Screening Report',
     price:       '$399',
     productType: 'screening',
-    eyebrow:     'Entry-level analysis',
-    description: 'Fast, document-driven screening memorandum for early acquisition decisions.',
+    eyebrow:     'Acquisition Screening',
+    description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
     features: [
       'Built strictly from T12 and rent roll documents',
-      'Fast, decision-grade acquisition screen',
+      'Clear, document-driven acquisition summary',
       'No assumptions, no invented data',
       'One generation per purchase',
     ],
@@ -58,12 +58,12 @@ const tiers = [
     title:       'Underwriting Report',
     price:       '$1,499',
     productType: 'underwriting',
-    eyebrow:     'Full institutional analysis',
+    eyebrow:     'Investment Committee Underwriting',
     description: 'Institutional-grade underwriting memorandum built for investment committee review.',
     features: [
       'Built from T12, rent roll, and supporting due diligence documents',
       'Identifies refinance failure risk under real-world rate and cap scenarios',
-      'Institutional memorandum depth for investment committee review',
+      'Structured for investment committee review',
       'One generation per purchase',
     ],
     cta: 'Purchase Underwriting',
@@ -499,7 +499,7 @@ export default function PricingPage() {
                 color:        T.goldDark,
                 textTransform:'uppercase',
               }}>
-                High-volume institutional usage available by request.
+                Portfolio and team usage available on request.
               </motion.p>
 
               <motion.p variants={fadeUp} style={{
@@ -544,7 +544,7 @@ export default function PricingPage() {
                 color:        T.goldDark,
                 marginBottom: 10,
               }}>
-                What's included
+                Report Scope
               </motion.p>
 
               <motion.h2 variants={fadeUp} style={{
@@ -556,7 +556,7 @@ export default function PricingPage() {
                 lineHeight:   1.1,
                 marginBottom: 4,
               }}>
-                Side-by-side comparison.
+                Report Comparison
               </motion.h2>
 
               <div style={{
@@ -588,7 +588,7 @@ export default function PricingPage() {
                         color:        T.ink4,
                         fontWeight:   400,
                       }}>
-                        Feature
+                        Report Element
                       </th>
                       {tiers.map((t) => (
                         <th key={t.title} style={{
@@ -613,8 +613,8 @@ export default function PricingPage() {
                       { label: 'Supporting due diligence documents',    screening: false, underwriting: true  },
                       { label: 'Institutional format PDF output',       screening: true,  underwriting: true  },
                       { label: 'No assumptions. Missing inputs disclosed.',  screening: true,  underwriting: true  },
-                      { label: 'Investment committee-ready depth',      screening: false, underwriting: true  },
-                      { label: 'Full underwriting artifact',            screening: false, underwriting: true  },
+                      { label: 'Investment committee depth',            screening: false, underwriting: true  },
+                      { label: 'Full underwriting memorandum',          screening: false, underwriting: true  },
                       { label: 'One generation per purchase',           screening: true,  underwriting: true  },
                     ].map((row, i) => (
                       <tr key={i} style={{
@@ -682,7 +682,7 @@ export default function PricingPage() {
                 color:        'rgba(201,168,76,0.45)',
                 marginBottom: 10,
               }}>
-                Ready to begin
+                Report Purchase
               </motion.p>
               <motion.p variants={fadeUp} style={{
                 fontFamily:   "'Cormorant Garamond', Georgia, serif",
@@ -693,7 +693,7 @@ export default function PricingPage() {
                 lineHeight:   1.1,
                 maxWidth:     480,
               }}>
-                One property. One report. No subscriptions required.
+                Property-specific pricing. No subscription.
               </motion.p>
             </div>
 

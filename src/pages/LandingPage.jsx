@@ -108,7 +108,7 @@ function SampleCarousel({ pages, label, sublabel, pdfPath }) {
             fontSize: 11,
             color: T.ink4,
           }}>
-            Preview not available
+            Sample preview unavailable
           </div>
         )}
       </div>
@@ -183,7 +183,7 @@ function SampleCarousel({ pages, label, sublabel, pdfPath }) {
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.gold; e.currentTarget.style.color = T.ink; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.hairlineMid; e.currentTarget.style.color = T.ink3; }}
         >
-          Open PDF
+          View PDF
         </a>
         <a
           href={pdfPath}
@@ -363,7 +363,7 @@ export default function LandingPage() {
                 color: "rgba(201,168,76,0.6)",
                 marginBottom: 20,
               }}>
-                Institutional Real Estate Analysis
+                Document-Driven Real Estate Analysis
               </motion.p>
 
               {/* Headline */}
@@ -377,7 +377,7 @@ export default function LandingPage() {
                 maxWidth: 760,
                 marginBottom: 24,
               }}>
-                Institutional underwriting reports for investment property analysis.
+                Document-driven underwriting reports built for real estate investment decisions.
               </motion.h1>
 
               {/* Sub */}
@@ -391,7 +391,7 @@ export default function LandingPage() {
                 marginBottom: 40,
                 letterSpacing: "0.01em",
               }}>
-                Built strictly from your documents. Document-based, deterministic outputs traceable to source inputs. Missing items displayed as DATA NOT AVAILABLE.
+                Built strictly from your documents, with outputs traceable to source inputs. Missing items are disclosed as DATA NOT AVAILABLE.
               </motion.p>
 
               {/* CTAs */}
@@ -438,7 +438,7 @@ export default function LandingPage() {
                     e.currentTarget.style.color = "rgba(255,255,255,0.55)";
                   }}
                 >
-                  View Sample Reports
+                  Review Sample Reports
                 </a>
               </motion.div>
 
@@ -520,7 +520,7 @@ export default function LandingPage() {
                 lineHeight: 1.1,
                 marginBottom: 4,
               }}>
-                Review the output before you purchase.
+                Review sample reports before purchase.
               </motion.h2>
               <div style={{
                 width: 36,
@@ -546,7 +546,7 @@ export default function LandingPage() {
                 <SampleCarousel
                   pages={screeningSamplePages}
                   label="Screening Report"
-                  sublabel="T12 + Rent Roll only"
+                  sublabel="Built from T12 and Rent Roll documents"
                   pdfPath="/samples/investoriq-screening-sample.pdf"
                 />
               </motion.div>
@@ -611,7 +611,7 @@ export default function LandingPage() {
                   lineHeight: 1.15,
                   marginBottom: 4,
                 }}>
-                  A locked analysis pipeline.
+                  A locked underwriting process.
                 </h2>
                 <div style={{
                   width: 28,
@@ -671,9 +671,9 @@ export default function LandingPage() {
 
                 {/* Body copy */}
                 {[
-                  "InvestorIQ operates a locked analysis pipeline. Outputs are generated strictly from extracted and computed data.",
+                  "InvestorIQ follows a locked underwriting process. Outputs are generated strictly from extracted and computed data.",
                   "The system does not infer missing values or introduce unsupported assumptions. Where inputs are absent, InvestorIQ displays DATA NOT AVAILABLE.",
-                  "Outputs are formatted for Investment Committee review. Each stage is logged and fail-closed.",
+                  "Outputs are structured for investment committee review. Each stage is logged and fail-closed.",
                 ].map((para, i) => (
                   <motion.p key={i} variants={fadeUp} style={{
                     fontFamily: "'DM Sans', sans-serif",
@@ -731,7 +731,7 @@ export default function LandingPage() {
                 },
                 {
                   label: "Deterministic",
-                  body: "The same inputs produce the same outputs, every time. With a complete and auditable trail.",
+                  body: "The same inputs produce the same outputs, with a complete audit trail.",
                 },
                 {
                   label: "Institutional Format",
@@ -813,7 +813,7 @@ export default function LandingPage() {
               textTransform: "uppercase",
               color: "rgba(201,168,76,0.5)",
             }}>
-              Get Started
+              Get Reports
             </motion.p>
 
             <motion.h2 variants={fadeUp} style={{
@@ -825,7 +825,7 @@ export default function LandingPage() {
               lineHeight: 1.1,
               maxWidth: 600,
             }}>
-              Flat fee. One property. One report. No subscriptions.
+              Flat-fee reports. One property per analysis. No subscription required.
             </motion.h2>
 
             <motion.div variants={fadeUp} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
