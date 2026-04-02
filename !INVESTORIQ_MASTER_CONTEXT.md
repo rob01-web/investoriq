@@ -1,4 +1,153 @@
-﻿## 🔒 V1 FINAL HARDENING — SCREENING COMPRESSION + WORKER STABILITY (LATEST)
+﻿## ✅ INVESTORIQ FINAL LAUNCH PHASE — APRIL 2026 UPDATE
+
+### CURRENT STATE
+
+InvestorIQ is now in final launch hardening.
+
+Core engine status:
+- worker loop / extraction / parallel execution previously validated
+- screening vs underwriting separation materially improved
+- pricing page positioning updated to match launch thesis
+- homepage wording materially strengthened
+- about page wording tightened
+- underwriting executive-summary wrong-report-type leakage fixed with hardened regex-based removal
+- verification passed: no underwriting path can render the screening-positioning sentence
+
+### SCREENING COMPRESSION STATUS
+
+Patch 9 completed in practice:
+
+- Patch 9A:
+  - removed screening cap-rate / implied valuation depth
+  - replaced with concise rent-positioning summary
+- Patch 9B:
+  - collapsed screening operating-analysis sprawl
+  - replaced separate forensics / expense / NOI blocks with one tighter Operating Profile Summary
+- Patch 9C:
+  - tightened screening summary wording to memo-style language
+  - removed overly padded / analytical phrasing
+
+Result:
+- screening now reads much closer to a clean IC-style screening memo
+- underwriting depth preserved
+
+### WEBSITE POSITIONING STATUS
+
+#### Pricing page
+Updated successfully:
+- headline:
+  - "Document-driven underwriting for real estate investors."
+- subline:
+  - "Built from your T12, rent roll, and deal documents — not assumptions."
+- screening / underwriting separation is now clearer
+- pricing remains:
+  - $399 screening
+  - $1,499 underwriting
+
+Additional pricing copy refinements completed:
+- stronger eyebrow labels
+- tighter feature lists
+- more premium CTA / comparison language
+- no layout / styling changes
+- branding remains locked
+
+#### Homepage
+Homepage wording pass completed:
+- stronger hero positioning
+- less SaaS / less robotic
+- method section improved
+- trust-pillar language improved
+- sample CTA improved
+- no branding drift
+- colors / fonts / layout remain locked
+
+#### About page
+About page wording tightened:
+- removed defensive / pitch-deck language
+- stronger investment-committee / audit-trail language
+- no structural changes
+
+### REPORT LANGUAGE HARDENING
+
+Inventory completed for user-facing report wording across:
+- api/generate-client-report.js
+- api/report-template-runtime.html
+- src/lib/pdfSections.js
+
+Approved next wording-fix wave includes:
+- weaker screening-vs-underwriting references
+- templated DSCR phrasing
+- generic finance jargon
+- promotional / self-validating template language
+- appraisal-like / pitch-like wording
+- institutional filler not clearly document-driven
+
+### CRITICAL BUG FIX COMPLETED
+
+Executive Summary wrong-report-type bug:
+- both test reports were showing the screening-positioning sentence
+- root cause narrowed to hardcoded screening sentence plus fragile underwriting cleanup
+- underwriting protection hardened with regex-based removal
+- verification result:
+  - remaining user-facing sentence = screening only
+  - underwriting cleanup pattern = non-renderable
+  - PASS: no underwriting path can render the screening sentence
+
+### BRAND / STYLE LOCKS (NON-NEGOTIABLE)
+
+Still locked:
+- colors
+- fonts
+- report visual system
+- website visual system
+
+Rules reinforced:
+- no global em-dash cleanup
+- no broad typography cleanup
+- no refactors
+- no layout drift
+- wording-only micro-patches unless explicitly approved
+
+### CURRENT REMAINING PRE-LAUNCH WORK
+
+1. Apply approved report wording cleanup wave
+   - generate-client-report.js
+   - report-template-runtime.html
+   - pdfSections.js
+
+2. Run one fresh production-grade Screening report
+
+3. Run one fresh production-grade Underwriting report
+
+4. Perform final manual QA on both reports:
+   - report type labels
+   - executive summary wording
+   - no wrong-report references
+   - no AI-sounding language
+   - no mojibake / encoding issues
+   - no em-dash regressions
+   - no overclaiming / non-document-driven narrative
+
+5. Put final production-grade Screening + Underwriting reports onto homepage sample area
+
+6. Final website deep dive if anything obvious remains
+
+7. Once all above is clean:
+   - InvestorIQ is launch-ready
+   - prepare and send Ken Dunn outreach email offering:
+     - 1 free Screening
+     - 1 free Underwriting
+
+### LAUNCH STANDARD
+
+InvestorIQ is launch-ready only when:
+- report language is fully hardened
+- fresh screening + underwriting PDFs pass final QA
+- homepage sample reports are replaced with final production-grade outputs
+- website wording is elite and consistent
+- no wrong-report leakage remains
+- no AI giveaway language remains
+## 🔒 V1 FINAL HARDENING — SCREENING COMPRESSION + WORKER STABILITY (LATEST)
 
 ### 🚀 SYSTEM STATUS (CURRENT)
 

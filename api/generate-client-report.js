@@ -1241,7 +1241,7 @@ function buildScreeningIncomeForensicsHtml({
     bullets.push(
       `In-place rents trail market by approximately ${formatPercent1(
         marketRentPremiumRatio
-      )} (document-backed upside).`
+      )} (document-supported rent gap).`
     );
   }
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
@@ -3049,7 +3049,7 @@ export default async function handler(req, res) {
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = formatMultiple(_dscr, 2);
           primaryPressurePoint = _dscr < 1.20
-            ? `DSCR of ${_ds}: below 1.20x institutional threshold`
+            ? `DSCR of ${_ds}: below 1.20x coverage threshold`
             : _dscr < 1.35
             ? `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`
             : `DSCR of ${_ds}: supports current debt service coverage`;
@@ -3335,7 +3335,7 @@ export default async function handler(req, res) {
       upsideBullets.push(
         `In-place rents trail market by ~${formatPercent1(
           marketRentPremiumRatio
-        )} (document-backed upside).`
+        )} (document-supported rent gap).`
       );
     }
     if (Number.isFinite(execOccupancy) && execOccupancy >= 0.95) {
