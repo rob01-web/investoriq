@@ -3850,24 +3850,62 @@ export default async function handler(req, res) {
       "{{T12_PER_UNIT_ROWS}}",
       buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
     );
-    const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
-      t12Payload,
-      computedRentRoll,
-      rentRollPayload,
-      formatCurrency,
-    });
+    const screeningIncomeForensicsHtml = effectiveReportMode === "screening_v1"
+      ? (() => {
+          const operatingSummaryLines = [];
+          const screeningOccupancy = coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy);
+          const screeningAnnualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual);
+          const screeningExpenseRatio = Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue) && t12EgiValue > 0
+            ? t12TotalExpensesValue / t12EgiValue
+            : null;
+          const screeningNoiMargin = Number.isFinite(t12EgiValue) && Number.isFinite(t12NoiValue) && t12EgiValue > 0
+            ? t12NoiValue / t12EgiValue
+            : null;
+          const screeningAvgInPlace = coerceNumber(computedRentRoll?.avg_in_place_rent ?? rentRollPayload?.avg_in_place_rent);
+          const screeningAvgMarket = coerceNumber(computedRentRoll?.avg_market_rent ?? rentRollPayload?.avg_market_rent);
+          if (Number.isFinite(screeningOccupancy) || Number.isFinite(screeningAnnualInPlace)) {
+            const incomeParts = [];
+            if (Number.isFinite(screeningOccupancy)) incomeParts.push(`occupancy of ${formatPercent1(screeningOccupancy)}`);
+            if (Number.isFinite(screeningAnnualInPlace)) incomeParts.push(`annual in-place rent of ${formatCurrency(screeningAnnualInPlace)}`);
+            if (incomeParts.length > 0) operatingSummaryLines.push(`${incomeParts[0].charAt(0).toUpperCase() + incomeParts[0].slice(1)}${incomeParts.length > 1 ? ` and ${incomeParts.slice(1).join(" and ")}` : ""}.`);
+          }
+          if (Number.isFinite(t12TotalExpensesValue) || Number.isFinite(screeningExpenseRatio)) {
+            const expenseParts = [];
+            if (Number.isFinite(t12TotalExpensesValue)) expenseParts.push(`total operating expenses of ${formatCurrency(t12TotalExpensesValue)}`);
+            if (Number.isFinite(screeningExpenseRatio)) expenseParts.push(`an expense ratio of ${formatPercent1(screeningExpenseRatio)}`);
+            if (expenseParts.length > 0) operatingSummaryLines.push(`${expenseParts[0].charAt(0).toUpperCase() + expenseParts[0].slice(1)}${expenseParts.length > 1 ? ` and ${expenseParts.slice(1).join(" and ")}` : ""}.`);
+          }
+          if (Number.isFinite(t12NoiValue) || Number.isFinite(screeningNoiMargin)) {
+            const noiParts = [];
+            if (Number.isFinite(t12NoiValue)) noiParts.push(`NOI of ${formatCurrency(t12NoiValue)}`);
+            if (Number.isFinite(screeningNoiMargin)) noiParts.push(`an NOI margin of ${formatPercent1(screeningNoiMargin)}`);
+            if (noiParts.length > 0) operatingSummaryLines.push(`${noiParts[0].charAt(0).toUpperCase() + noiParts[0].slice(1)}${noiParts.length > 1 ? `, reflecting ${noiParts.slice(1).join(" and ")}` : ""}.`);
+          }
+          if (Number.isFinite(screeningAvgInPlace) && Number.isFinite(screeningAvgMarket) && screeningAvgInPlace > 0 && screeningAvgMarket > screeningAvgInPlace) {
+            operatingSummaryLines.push("Rent roll data indicates in-place rents are below market across the current unit mix.");
+          }
+          return operatingSummaryLines.length > 0
+            ? `<div class="card no-break"><p class="subsection-title">Operating Profile Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(operatingSummaryLines.join(" "))}</p></div>`
+            : "";
+        })()
+      : buildScreeningIncomeForensicsHtml({
+          t12Payload,
+          computedRentRoll,
+          rentRollPayload,
+          formatCurrency,
+        });
     finalHtml = replaceAll(
       finalHtml,
       "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
       screeningIncomeForensicsHtml
     );
-    const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
+    const screeningExpenseHtml = effectiveReportMode === "screening_v1" ? "" : buildScreeningExpenseStructureHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
       formatCurrency,
     });
-    const screeningNoiHtml = buildScreeningNoiStabilityHtml({
+    const screeningNoiHtml = effectiveReportMode === "screening_v1" ? "" : buildScreeningNoiStabilityHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
