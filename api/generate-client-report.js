@@ -3575,9 +3575,7 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
     if (effectiveReportMode === "v1_core") {
       finalHtml = finalHtml.replace(
-        `<p class="small" style="margin-top:8px;">
-      This report is a preliminary investment screening memorandum. Full refinance, debt, and valuation modeling are provided in the Underwriting Report.
-    </p>`,
+        /<p class="small" style="margin-top:8px;">\s*This report is a preliminary investment screening memorandum\. Full refinance, debt, and valuation modeling are provided in the Underwriting Report\.\s*<\/p>/i,
         ""
       );
     }
