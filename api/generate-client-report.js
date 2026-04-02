@@ -3573,6 +3573,14 @@ export default async function handler(req, res) {
     const reportTypeLabel = effectiveReportMode === "v1_core" ? "Underwriting Memorandum" : "Preliminary Investment Screening Memorandum";
     finalHtml = replaceAll(finalHtml, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = finalHtml.replace(
+        `<p class="small" style="margin-top:8px;">
+      This report is a preliminary investment screening memorandum. Full refinance, debt, and valuation modeling are provided in the Underwriting Report.
+    </p>`,
+        ""
+      );
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{PRIMARY_PRESSURE_POINT}}",
