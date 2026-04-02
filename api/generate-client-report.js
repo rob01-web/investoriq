@@ -3077,11 +3077,11 @@ export default async function handler(req, res) {
     ) {
       screeningClass = "Sensitized";
       screeningExplanation =
-        "Viable cash flow but sensitive to revenue or expense shocks.";
+        "Cash flow remains positive but is sensitive to operating variance.";
     } else {
       screeningClass = "Stable";
       screeningExplanation =
-        "Operating profile demonstrates margin resilience.";
+        "Operating margins remain within stable screening thresholds.";
     }
     if (effectiveReportMode === "screening_v1") {
       execScreeningLines.push(

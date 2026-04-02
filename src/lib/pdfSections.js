@@ -1135,7 +1135,7 @@ function marketInsightsPage(data) {
                 layout: "lightHorizontalLines",
               },
               {
-                text: "This micro market is positioned in the core-plus range based on growth momentum and constrained new supply.",
+                text: "This micro market benefits from growth momentum and constrained new supply.",
                 style: "finePrint",
                 margin: [0, 8, 0, 0],
               },
@@ -1189,7 +1189,7 @@ function scenarioAnalysisPage(data) {
         "Five path view from downside protection to upside potential over the hold period."
       ),
       {
-        text: "The analysis applies rent, vacancy, and exit yield scenarios to evaluate downside protection and upside participation.",
+        text: "The analysis applies rent, vacancy, and exit yield scenarios to test operating outcomes across cases.",
         style: "body",
         margin: [0, 0, 0, 12],
       },
