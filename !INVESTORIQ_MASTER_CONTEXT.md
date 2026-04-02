@@ -114,6 +114,128 @@ Tone requirement:
 * No retail / casual language
 
 ---
+## 🔧 SCREENING COMPRESSION — PATCH STATUS (APRIL 1)
+
+### ✅ COMPLETED PATCHES
+
+**Patch 3 — Rent Roll Compression**
+- Removed:
+  - Rent roll flags card
+  - Implied value creation card
+- Retained:
+  - Unit mix summary
+  - Avg rent
+  - Occupancy
+  - Rent-to-market gap
+- Result:
+  - Clean summary, no audit-level detail
+
+**Patch 4 — Refinance Sensitivity Grid (Screening)**
+- Verified that refinance sensitivity grid is already gated by:
+  ```js
+  if (effectiveReportMode === "v1_core")
+  ```
+- Result:
+  - Removed from screening
+  - Preserved in underwriting
+
+**Patch 5 — DSCR / Sensitivity Tables**
+- Confirmed already implicitly covered by existing screening gating / section stripping
+- Result:
+  - No separate DSCR model grid remains in screening
+
+**Patch 6 — Advanced Modeling Collapse**
+- Confirmed removed in screening:
+  - DCF
+  - advanced modeling sections
+  - deep refinance / debt-heavy modeling sections
+- Result:
+  - Screening no longer includes deep valuation / modeling sections
+
+**Patch 7A — Positioning Language**
+- Replaced weak screening language:
+  - `"Triage"` -> `"Screening"`
+- Updated:
+  - Report Tier -> `"Preliminary Screening"`
+  - Report Type -> `"Preliminary Investment Screening Memorandum"`
+- Result:
+  - Institutional tier language now clean and intentional
+
+**Patch 7B — Executive Positioning Statement**
+- Added screening-only executive positioning sentence:
+  - `"This report is a Preliminary Investment Screening Memorandum. Full debt structuring, refinance modeling, and valuation analysis are included in the Underwriting Report."`
+- Result:
+  - Clear separation between screening and underwriting
+
+**Patch 8 — Narrative Tightening**
+- Tightened screening-only explanation / thesis language
+- Removed filler and reduced narrative padding
+- Result:
+  - Screening reads more like an IC memo and less like compressed underwriting prose
+
+### ⚠️ CURRENT TEST RESULT
+
+Latest validation:
+- Underwriting test passed and retained full modeling depth
+- Screening test passed functionally but is still approximately 12 pages
+
+### ❗CURRENT PROBLEM
+
+Screening is still too long because it still contains too much analytical density, especially:
+- Unit-Level Value Add Analysis (still includes cap-rate / implied value logic)
+- Income & Revenue Forensics
+- Expense Structure Analysis
+- NOI Stability Review
+- Refinance Data Sufficiency
+- Maximum Financing Envelope
+
+This means the obvious modeling was removed, but too much mid-depth analysis still remains, so screening still feels too close to underwriting.
+
+### 🎯 NEXT REQUIRED PATCH WAVE
+
+Next session should focus on a final screening compression wave:
+
+**Patch 9A — Compress / remove value-add valuation depth**
+- Remove cap-rate implied valuation logic from screening
+- Keep only concise value-add summary insight
+
+**Patch 9B — Collapse operating analysis density**
+- Consolidate or reduce:
+  - Income Forensics
+  - Expense Structure
+  - NOI Stability
+- Goal:
+  - one tighter operating profile section instead of several mid-depth sections
+
+**Patch 9C — Remove financing depth from screening**
+- Remove:
+  - Maximum Financing Envelope
+  - Refinance Data Sufficiency section
+- or compress refinance sufficiency to a very short note inside data coverage
+
+### 🎯 TARGET STATE REMAINS
+
+**Screening**
+- 8–10 pages
+- fast
+- clean
+- decision-grade
+- no deep or mid-depth analytical sprawl
+
+**Underwriting**
+- full depth retained
+- refinance / debt / DCF / scenario modeling preserved
+- institutional memo quality maintained
+
+### 🧠 KEY TAKEAWAY
+
+The first compression wave successfully removed explicit modeling depth.
+
+The next compression wave must remove implicit analytical density.
+
+That is now the final major step required to create a clear perceived value gap between screening and underwriting.
+
+---
 ## ðŸŽ¯ PRODUCT OVERVIEW
 
 InvestorIQ is a **document-driven real estate underwriting platform**.
