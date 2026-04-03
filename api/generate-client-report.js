@@ -3069,7 +3069,7 @@ export default async function handler(req, res) {
     ) {
       screeningClass = "Fragile";
       screeningExplanation =
-        "Thin operating margin with limited shock tolerance.";
+        "Operating margin is narrow relative to current expense load.";
     } else if (
       (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
       (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
@@ -3077,11 +3077,11 @@ export default async function handler(req, res) {
     ) {
       screeningClass = "Sensitized";
       screeningExplanation =
-        "Cash flow remains positive but is sensitive to operating variance.";
+        "Cash flow remains positive but is sensitive to changes in income and expenses.";
     } else {
       screeningClass = "Stable";
       screeningExplanation =
-        "Operating margins remain within stable screening thresholds.";
+        "Operating margins remain within a stable range based on uploaded operating results.";
     }
     if (effectiveReportMode === "screening_v1") {
       execScreeningLines.push(
