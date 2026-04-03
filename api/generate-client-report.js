@@ -370,7 +370,6 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Worst-Case Drivers (NOI shock | Cap expansion | Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
-  <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR.</p>
 </div>`;
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
@@ -3391,7 +3390,7 @@ export default async function handler(req, res) {
             } else if (_dscr >= 1.20) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
-              riskBullets.push(`DSCR of ${_ds} falls below the 1.20x threshold.`);
+              riskBullets.push(`DSCR of ${_ds} is below 1.20x based on reported income and debt service.`);
             }
           }
         }
