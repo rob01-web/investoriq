@@ -3964,25 +3964,11 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
               Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
             )
           );
-    const screeningCoverageHtml = buildScreeningDataCoverageSummary({
-      t12Payload,
-      computedRentRoll,
-      rentRollPayload,
-      financials,
-      effectiveReportMode,
-      supportingUnderwritingDocsUsed:
-        effectiveReportMode === "v1_core" &&
-        Boolean(mortgagePayload || loanTermSheetPayload || appraisalPayload || propertyTaxPayload),
-    });
+    let screeningCoverageHtml = "";
     finalHtml = replaceAll(
       finalHtml,
       "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
       screeningRefiSufficiencyHtml
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
-      screeningCoverageHtml
     );
     const screeningHasSufficientDataGate = hasMinimumScreeningCoverage(t12Payload);
     if (effectiveReportMode === "screening_v1") {
@@ -4072,6 +4058,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       "{{RENOVATION_INTERPRETATION}}",
       escapeHtml(renovationInterpretation)
     );
+    let canRenderRefi = false;
     if (effectiveReportMode !== "v1_core") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
@@ -4088,7 +4075,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         "Refinance Failure Under Stress",
       ]);
       const refiHtml = String(refiResult?.html || "").trim();
-      const canRenderRefi =
+      canRenderRefi =
         validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
       const hasDebtButIncompleteRefiInputs =
         Boolean(mortgagePayload) && !canRenderRefi;
@@ -4766,6 +4753,28 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     finalHtml = finalHtml.replace(
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
+    );
+    const supportingUnderwritingDocsUsed =
+      effectiveReportMode === "v1_core" &&
+      Boolean(
+        canRenderRefi ||
+        String(debtCapitalRowsHtml || "").trim().length > 0 ||
+        String(refiCollapseGridHtml || "").trim().length > 0 ||
+        String(dcfTableHtml || "").includes("(appraisal)") ||
+        String(scenarioTableHtml || "").includes("(appraisal)")
+      );
+    screeningCoverageHtml = buildScreeningDataCoverageSummary({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      financials,
+      effectiveReportMode,
+      supportingUnderwritingDocsUsed,
+    });
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{SCREENING_DATA_COVERAGE_BLOCK}}",
+      screeningCoverageHtml
     );
     // Underwriting token replacements (before leftover cleanup)
     if (effectiveReportMode === "v1_core") {
