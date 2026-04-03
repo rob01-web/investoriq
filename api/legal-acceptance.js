@@ -7,12 +7,10 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
+    if (!['GET', 'POST'].includes(req.method)) {
+      res.setHeader('Allow', 'GET, POST');
       return res.status(405).json({ error: 'Method not allowed' });
     }
-
-    const { userId } = req.body || {};
 
 // Policy identity must be server-defined and immutable
 const POLICY_KEY = 'analysis_disclosures';
@@ -24,11 +22,35 @@ const POLICY_VERSION = 'v2026-01-14';
 // For now, we require the client to send policyTextHash ONLY as a compatibility bridge,
 // but we validate that policyKey/policyVersion are not accepted from the client.
 
-const { policyTextHash } = req.body || {};
+const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
+const { userId, policyTextHash } = params;
 
 if (!userId || !policyTextHash) {
   return res.status(400).json({ error: 'Missing required fields' });
 }
+
+    if (req.method === 'GET') {
+      const { data: existingRow, error: readErr } = await supabase
+        .from('legal_acceptances')
+        .select('accepted_at')
+        .eq('user_id', userId)
+        .eq('policy_key', POLICY_KEY)
+        .eq('policy_version', POLICY_VERSION)
+        .eq('policy_text_hash', policyTextHash)
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (readErr) {
+        console.error('Supabase read error:', readErr);
+        return res.status(500).json({ error: 'Failed to read acceptance' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        accepted_at: existingRow?.accepted_at || null,
+      });
+    }
 
     // Server-derived identity (cannot be spoofed by client)
     const { data: userData, error: userErr } =

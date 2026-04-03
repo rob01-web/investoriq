@@ -6,7 +6,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
-import AnalysisScopePreview from '../components/AnalysisScopePreview';
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 const T = {
@@ -333,7 +332,6 @@ export default function Dashboard() {
   const [issueFile, setIssueFile] = useState(null);
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueReport, setIssueReport] = useState(null);
-  const [showScopePreview, setShowScopePreview] = useState(false);
   const [entitlements, setEntitlements] = useState({ screening: null, underwriting: null, error: false });
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
@@ -342,7 +340,7 @@ export default function Dashboard() {
   );
   const visibleInProgressJobs = inProgressJobs.filter((job) => {
     const dismissed = dismissedJobIds.has(String(job.id));
-    return job.status !== 'failed' && !dismissed;
+    return ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status) && !dismissed;
   });
   const failedJobsForDisplay = inProgressJobs.filter((job) => {
     const dismissed = dismissedJobIds.has(String(job.id));
@@ -390,7 +388,7 @@ export default function Dashboard() {
   const fetchInProgressJobs = async () => {
     if (!profile?.id) return;
     const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason').eq('user_id', profile.id)
-      .in('status', ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','failed'])
+      .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'])
       .order('created_at', { ascending: false }).limit(10);
     if (error) { console.error('Failed to fetch in-progress jobs:', error); return; }
     const rows = data || [];
@@ -450,6 +448,10 @@ export default function Dashboard() {
       await fetchLatestFailedJob();
       await fetchEntitlements();
       await fetchRecentJobs();
+      const acceptedAt = await fetchLegalAcceptance();
+      setAcknowledged(Boolean(acceptedAt));
+      setAckLocked(Boolean(acceptedAt));
+      setAckAcceptedAtLocal(acceptedAt);
     };
     if (profile?.id) syncEverything();
   }, [profile?.id]);
@@ -489,14 +491,6 @@ export default function Dashboard() {
 
   useEffect(() => { setScopeConfirmed(false); }, [`${uploadedFiles.map((file) => file.docType).sort().join('|')}::${uploadedFiles.length}`]);
 
-  useEffect(() => {
-    if (!profile?.id) return;
-    const pollableStatuses = ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'];
-    const hasActive = inProgressJobs.some((job) => pollableStatuses.includes(job.status));
-    if (!hasActive) return;
-    const intervalId = setInterval(() => { fetchInProgressJobs(); fetchReports(); }, 8000);
-    return () => clearInterval(intervalId);
-  }, [inProgressJobs, profile?.id]);
 
   // ── All the existing computed values and handlers (unchanged) ─────────────
   const supportingDocTypes = [
@@ -621,6 +615,17 @@ export default function Dashboard() {
       return { ok: true, acceptedAt };
     } catch (err) { console.error('Legal acceptance error:', err); return false; }
   };
+  const fetchLegalAcceptance = async () => {
+    if (!profile?.id) return null;
+    const policyTextHash = await computePolicyTextHash();
+    try {
+      const params = new URLSearchParams({ userId: profile.id, policyTextHash });
+      const res = await fetch(`/api/legal-acceptance?${params.toString()}`);
+      if (!res.ok) { console.error('Legal acceptance read failed:', await res.text()); return null; }
+      const data = await res.json().catch(() => ({}));
+      return data?.accepted_at || data?.acceptedAt || null;
+    } catch (err) { console.error('Legal acceptance read error:', err); return null; }
+  };
   const handleUploadSuccess = async () => {
     if (!profile?.id) return;
     toast({ title: 'Uploads received', description: 'Documents are stored and ready for review.' });
@@ -719,7 +724,10 @@ export default function Dashboard() {
       propertyNameRef.current = '';
       setPropertyName('');
       setUploadedFiles([]);
-      setAcknowledged(false);
+      const acceptedAt = await fetchLegalAcceptance();
+      setAcknowledged(Boolean(acceptedAt));
+      setAckLocked(Boolean(acceptedAt));
+      setAckAcceptedAtLocal(acceptedAt);
       setStagedBatchId(null);
       fetchEntitlements();
       fetchReports();
@@ -821,7 +829,7 @@ export default function Dashboard() {
                 {visibleInProgressJobs.map((job) => (
                   <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
                     <div>
-                      <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{job.property_name || 'Unnamed property'}</span>
+                      <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
                       <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
                     </div>
                     <div style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -1094,18 +1102,6 @@ export default function Dashboard() {
                   {!preflightHardMissing && !preflightDebtTerms && <div style={{ ...bodySmall, fontSize:12, color:T.warnAmber, marginTop:10 }}>Some optional inputs are missing. Related sections may be omitted and shown as DATA NOT AVAILABLE.</div>}
                 </div>
               </div>
-            )}
-
-            {/* Scope preview */}
-            {showScopePreview && jobId && (
-              <div style={{ marginBottom:16 }}>
-                <AnalysisScopePreview jobId={jobId} />
-              </div>
-            )}
-            {jobId && (
-              <button type="button" onClick={() => setShowScopePreview((v) => !v)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer', marginBottom:16 }}>
-                {showScopePreview ? 'Hide scope preview' : 'Show scope preview'}
-              </button>
             )}
 
             {/* Hidden file inputs */}

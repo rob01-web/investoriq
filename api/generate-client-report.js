@@ -937,6 +937,8 @@ function buildScreeningDataCoverageSummary({
   computedRentRoll,
   rentRollPayload,
   financials,
+  effectiveReportMode,
+  supportingUnderwritingDocsUsed = false,
 }) {
   const t12Checks = [
     {
@@ -1043,6 +1045,12 @@ function buildScreeningDataCoverageSummary({
   const allPresent = missingInputs.length === 0;
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
+    if (effectiveReportMode === "screening_v1") {
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were successfully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
+    }
+    if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All relevant supporting documents were successfully extracted and incorporated into underwriting analysis.</p>${coverageTableHtml}</div>`;
+    }
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
@@ -3619,7 +3627,7 @@ export default async function handler(req, res) {
         const marker = isCurrent ? " \u25B6" : "";
         return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
       }).join("");
-      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
+      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized investment thresholds. &#9654; = current classification.</p></div>`;
       // Investment thesis ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â fully deterministic
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
@@ -3961,6 +3969,10 @@ export default async function handler(req, res) {
       computedRentRoll,
       rentRollPayload,
       financials,
+      effectiveReportMode,
+      supportingUnderwritingDocsUsed:
+        effectiveReportMode === "v1_core" &&
+        Boolean(mortgagePayload || appraisalPayload || propertyTaxPayload),
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -5286,6 +5298,7 @@ try {
       .insert({
   user_id: effectiveUserId,
             property_name: property_name || "Property",
+  report_type: reportType,
   storage_path: "pending",
 })
       .select("id")

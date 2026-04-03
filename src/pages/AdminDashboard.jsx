@@ -5,7 +5,7 @@ import { FileText, Loader2, Users, BarChart3, RefreshCcw, Shield } from "lucide-
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 
-// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DESIGN TOKENS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -34,7 +34,7 @@ const FONTS = `
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 `;
 
-// ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ SHARED COMPONENTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function Card({ children, style = {} }) {
   return (
     <div style={{
@@ -108,7 +108,7 @@ function StatBadge({ status }) {
       border:       `1px solid ${s.border}`,
       color:        s.color,
       whiteSpace:   'nowrap',
-    }}>{status || '—'}</span>
+    }}>{status || 'Ã¢â‚¬â€'}</span>
   );
 }
 
@@ -209,7 +209,7 @@ function TblTd({ children, mono = false, right = false, style = {} }) {
   );
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MAIN COMPONENT Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [loading, setLoading]       = useState(true);
@@ -277,19 +277,19 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬ RENDER Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   return (
     <>
       <style>{FONTS}</style>
 
       <Helmet>
-        <title>Admin Console — InvestorIQ</title>
+        <title>Admin Console Ã¢â‚¬â€ InvestorIQ</title>
         <meta name="description" content="Administrative overview of user activity, report performance, and platform usage." />
       </Helmet>
 
       <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ PAGE HEADER Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position:'absolute', top:0, bottom:0, left:40, width:1, background:'linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.4) 20%, rgba(201,168,76,0.4) 80%, transparent 100%)', pointerEvents:'none' }} />
 
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
           >
             <div>
               <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(201,168,76,0.45)', marginBottom:8 }}>
-                InvestorIQ — Admin Console
+                InvestorIQ Ã¢â‚¬â€ Admin Console
               </p>
               <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(24px,3vw,34px)', fontWeight:500, letterSpacing:'-0.02em', color:'#FFFFFF', lineHeight:1.05, marginBottom:6 }}>
                 Operational Overview
@@ -321,7 +321,7 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
 
-        {/* ── MAIN CONTENT ────────────────────────────────────────────── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ MAIN CONTENT Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 48px 64px' }}>
 
           {/* Admin Run Key */}
@@ -360,7 +360,7 @@ export default function AdminDashboard() {
               </div>
               <PrimaryBtn onClick={fetchQueueMetrics} disabled={!adminRunKey.trim()} style={{ alignSelf:'flex-end', marginBottom:2 }}>
                 {queueLoading ? <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} /> : null}
-                {queueLoading ? 'Loading…' : 'Fetch metrics'}
+                {queueLoading ? 'LoadingÃ¢â‚¬Â¦' : 'Fetch metrics'}
               </PrimaryBtn>
             </div>
           </Card>
@@ -379,16 +379,16 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* ── LOADING ─────────────────────────────────────────────────── */}
+          {/* Ã¢â€â‚¬Ã¢â€â‚¬ LOADING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
           {loading ? (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'64px 0', gap:12 }}>
               <Loader2 style={{ width:20, height:20, color:T.gold, animation:'spin 1s linear infinite' }} />
-              <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink3 }}>Loading platform data…</span>
+              <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink3 }}>Loading platform dataÃ¢â‚¬Â¦</span>
             </div>
           ) : (
             <>
 
-              {/* ── JOB STATUS STRIP ───────────────────────────────────── */}
+              {/* Ã¢â€â‚¬Ã¢â€â‚¬ JOB STATUS STRIP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
               <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:12 }}>
                 {[
                   { label:'Queued',          val: jobSummary.queued },
@@ -407,7 +407,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              {/* ── PLATFORM STATS ─────────────────────────────────────── */}
+              {/* Ã¢â€â‚¬Ã¢â€â‚¬ PLATFORM STATS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:12 }}>
                 {[
                   { icon: Users,    label:'Total Users',   val: stats.totalUsers   },
@@ -427,7 +427,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              {/* ── QUEUE HEALTH ───────────────────────────────────────── */}
+              {/* Ã¢â€â‚¬Ã¢â€â‚¬ QUEUE HEALTH Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
               <Card>
                 <SectionHeader
                   eyebrow="Queue Health"
@@ -437,7 +437,7 @@ export default function AdminDashboard() {
                       {queueLoading
                         ? <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />
                         : <RefreshCcw style={{ width:11, height:11 }} />}
-                      {queueLoading ? 'Loading…' : 'Refresh'}
+                      {queueLoading ? 'LoadingÃ¢â‚¬Â¦' : 'Refresh'}
                     </GhostBtn>
                   }
                 />
@@ -474,10 +474,10 @@ export default function AdminDashboard() {
                           queueMetrics.recent_jobs.map((job, i) => (
                             <tr key={job.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
                               <TblTd mono>{job.id}</TblTd>
-                              <TblTd style={{ fontWeight:400, color:T.ink }}>{job.property_name || "—"}</TblTd>
+                              <TblTd style={{ fontWeight:400, color:T.ink }}>{job.property_name || "Ã¢â‚¬â€"}</TblTd>
                               <TblTd><StatBadge status={job.status} /></TblTd>
-                              <TblTd mono>{job.created_at ? new Date(job.created_at).toLocaleString() : '—'}</TblTd>
-                              <TblTd mono>{(job.started_at || job.created_at) ? new Date(job.started_at || job.created_at).toLocaleString() : '—'}</TblTd>
+                              <TblTd mono>{job.created_at ? new Date(job.created_at).toLocaleString() : 'Ã¢â‚¬â€'}</TblTd>
+                              <TblTd mono>{(job.started_at || job.created_at) ? new Date(job.started_at || job.created_at).toLocaleString() : 'Ã¢â‚¬â€'}</TblTd>
                               <TblTd mono>{job.user_id}</TblTd>
                             </tr>
                           ))
@@ -488,7 +488,7 @@ export default function AdminDashboard() {
                 )}
               </Card>
 
-              {/* ── ISSUE INBOX ────────────────────────────────────────── */}
+              {/* Ã¢â€â‚¬Ã¢â€â‚¬ ISSUE INBOX Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
               <Card>
                 <SectionHeader eyebrow="Support" title="Issue Inbox" />
 
@@ -513,26 +513,35 @@ export default function AdminDashboard() {
                       <tbody>
                         {(queueMetrics?.issues || []).map((issue, i) => {
                           const message    = issue?.message || "";
-                          const truncated  = message.length > 120 ? `${message.slice(0, 120)}…` : message;
+                          const truncated  = message.length > 120 ? `${message.slice(0, 120)}Ã¢â‚¬Â¦` : message;
                           const isUpdating = Boolean(issueUpdating[issue.id]);
                           const regenKey   = `regen-${issue.id}`;
                           const isRegen    = Boolean(issueUpdating[regenKey]);
                           return (
                             <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                              <TblTd mono>{issue.created_at ? new Date(issue.created_at).toLocaleString() : '—'}</TblTd>
+                              <TblTd mono>{issue.created_at ? new Date(issue.created_at).toLocaleString() : 'Ã¢â‚¬â€'}</TblTd>
                               <TblTd><StatBadge status={issue.status || 'open'} /></TblTd>
-                              <TblTd mono>{issue.job_id || '—'}</TblTd>
-                              <TblTd mono>{issue.user_id || '—'}</TblTd>
+                              <TblTd mono>
+                                <div>{issue.job_id || '-'}</div>
+                                {(issue.property_name || issue.report_type || issue.job_status) && (
+                                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, letterSpacing:'normal', marginTop:4, lineHeight:1.45 }}>
+                                    {issue.property_name || 'Property unavailable'}
+                                    {issue.report_type ? ` | ${issue.report_type}` : ''}
+                                    {issue.job_status ? ` | ${issue.job_status}` : ''}
+                                  </div>
+                                )}
+                              </TblTd>
+                              <TblTd mono>{issue.user_id || 'Ã¢â‚¬â€'}</TblTd>
                               <TblTd style={{ maxWidth:200, color:T.ink3, fontSize:12 }}>{truncated}</TblTd>
                               <TblTd>
                                 {issue.attachment_url ? (
                                   <a href={issue.attachment_url} target="_blank" rel="noreferrer"
                                     style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.goldDark, textDecoration:'none' }}>
-                                    View →
+                                    View Ã¢â€ â€™
                                   </a>
                                 ) : issue.attachment_path ? (
                                   <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>DATA NOT AVAILABLE</span>
-                                ) : '—'}
+                                ) : 'Ã¢â‚¬â€'}
                               </TblTd>
                               <TblTd right>
                                 <div style={{ display:'flex', gap:6, justifyContent:'flex-end', flexWrap:'wrap' }}>
@@ -583,10 +592,10 @@ export default function AdminDashboard() {
                                       if (!adminRunKey?.trim()) { toast({ title:"Admin Run Key required", variant:"destructive" }); return; }
                                       try {
                                         setIssueUpdating((p) => ({ ...p, [regenKey]: true }));
-                                        const res  = await fetch("/api/admin/run-eligible-jobs-once", { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${adminRunKey.trim()}`}, body:JSON.stringify({ job_id:issue.job_id }) });
+                                        const res  = await fetch("/api/admin/run-eligible-jobs-once", { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${adminRunKey.trim()}`}, body:JSON.stringify({ action:"regenerate_pdf", job_id:issue.job_id, reason:`admin_issue_${issue.id}` }) });
                                         const data = await res.json().catch(() => ({}));
                                         if (!res.ok || !data?.ok) throw new Error("Regeneration failed");
-                                        toast({ title:"Regeneration started", description:"Job queued for regeneration." });
+                                        toast({ title:"Regeneration started", description:"PDF regeneration started for the same job." });
                                         await fetchQueueMetrics();
                                       } catch { toast({ title:"Regeneration failed", description:"Unable to start regeneration.", variant:"destructive" }); }
                                       finally { setIssueUpdating((p) => ({ ...p, [regenKey]: false })); }
@@ -598,7 +607,7 @@ export default function AdminDashboard() {
                                   </button>
                                 </div>
                                 <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, textAlign:'right', marginTop:4, lineHeight:1.5 }}>
-                                  Regen re-queues the same job. No new job, no credit consumed.
+                                  Regen runs PDF generation against the same job. No new job, no credit consumed.
                                 </div>
                               </TblTd>
                             </tr>
@@ -610,7 +619,7 @@ export default function AdminDashboard() {
                 )}
               </Card>
 
-              {/* ── RECENT REPORTS ─────────────────────────────────────── */}
+              {/* Ã¢â€â‚¬Ã¢â€â‚¬ RECENT REPORTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
               <Card>
                 <SectionHeader
                   eyebrow="Properties"
@@ -640,8 +649,8 @@ export default function AdminDashboard() {
                       <tbody>
                         {recentReports.map((r, i) => (
                           <tr key={r.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                            <TblTd style={{ fontWeight:400, color:T.ink }}>{r.property_address || '—'}</TblTd>
-                            <TblTd mono>{r.user_email || '—'}</TblTd>
+                            <TblTd style={{ fontWeight:400, color:T.ink }}>{r.property_address || 'Ã¢â‚¬â€'}</TblTd>
+                            <TblTd mono>{r.user_email || 'Ã¢â‚¬â€'}</TblTd>
                             <TblTd mono>{new Date(r.created_at).toLocaleDateString()}</TblTd>
                             <TblTd><StatBadge status={r.status} /></TblTd>
                           </tr>

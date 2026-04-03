@@ -111,10 +111,37 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(50);
 
+    const issueJobIds = Array.from(
+      new Set(
+        (issuesRows || [])
+          .map((issue) => issue?.job_id)
+          .filter((jobId) => typeof jobId === 'string' && jobId.trim())
+      )
+    );
+
+    let relatedJobsById = {};
+    if (issueJobIds.length > 0) {
+      const { data: relatedJobs } = await supabaseAdmin
+        .from('analysis_jobs')
+        .select('id, property_name, report_type, status')
+        .in('id', issueJobIds);
+
+      relatedJobsById = Object.fromEntries(
+        (relatedJobs || []).map((job) => [job.id, job])
+      );
+    }
+
     const issuesWithUrls = await Promise.all(
       (issuesRows || []).map(async (issue) => {
+        const relatedJob = issue?.job_id ? relatedJobsById[issue.job_id] || null : null;
         if (!issue?.attachment_path) {
-          return { ...issue, attachment_url: null };
+          return {
+            ...issue,
+            attachment_url: null,
+            property_name: relatedJob?.property_name || null,
+            report_type: relatedJob?.report_type || null,
+            job_status: relatedJob?.status || null,
+          };
         }
         const { data: signed, error: signedErr } = await supabaseAdmin.storage
           .from('report-issues')
@@ -122,6 +149,9 @@ export default async function handler(req, res) {
         return {
           ...issue,
           attachment_url: signedErr ? null : signed?.signedUrl || null,
+          property_name: relatedJob?.property_name || null,
+          report_type: relatedJob?.report_type || null,
+          job_status: relatedJob?.status || null,
         };
       })
     );
