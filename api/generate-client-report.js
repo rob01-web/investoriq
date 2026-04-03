@@ -3888,7 +3888,7 @@ export default async function handler(req, res) {
             if (noiParts.length > 0) operatingSummaryLines.push(`${noiParts[0].charAt(0).toUpperCase() + noiParts[0].slice(1)}${noiParts.length > 1 ? `, reflecting ${noiParts.slice(1).join(" and ")}` : ""}.`);
           }
           if (Number.isFinite(screeningAvgInPlace) && Number.isFinite(screeningAvgMarket) && screeningAvgInPlace > 0 && screeningAvgMarket > screeningAvgInPlace) {
-            operatingSummaryLines.push("Rent roll data indicates in-place rents are below market across the current unit mix.");
+            operatingSummaryLines.push("Rent roll data supports below-market in-place rents across the current unit mix.");
           }
           return operatingSummaryLines.length > 0
             ? `<div class="card no-break"><p class="subsection-title">Operating Profile Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(operatingSummaryLines.join(" "))}</p></div>`
