@@ -721,7 +721,7 @@ function executiveSummaryPage(data) {
     return {
       stack: [
         { text: "", pageBreak: "before" },
-        sectionTitle("Executive Summary", "High level view of yield, risk, and strategy in one glance."),
+        sectionTitle("Executive Summary", "Summary of operating performance, risk, and positioning."),
         dataNotAvailableBlock(),
       ],
     };
@@ -733,7 +733,7 @@ function executiveSummaryPage(data) {
         text: "",
         pageBreak: "before",
       },
-      sectionTitle("Executive Summary", "High level view of yield, risk, and strategy in one glance."),
+      sectionTitle("Executive Summary", "Summary of operating performance, risk, and positioning."),
       {
         columns: [
           {
@@ -1174,7 +1174,7 @@ function scenarioAnalysisPage(data) {
         { text: "", pageBreak: "before" },
         sectionTitle(
           "Scenario Analysis",
-          "Five path view from downside protection to upside potential over the hold period."
+          "Scenario outcomes across downside, base, and upside operating cases."
         ),
         dataNotAvailableBlock(),
       ],
@@ -1186,7 +1186,7 @@ function scenarioAnalysisPage(data) {
       { text: "", pageBreak: "before" },
       sectionTitle(
         "Scenario Analysis",
-        "Five path view from downside protection to upside potential over the hold period."
+        "Scenario outcomes across downside, base, and upside operating cases."
       ),
       {
         text: "The analysis applies rent, vacancy, and exit yield scenarios to test operating outcomes across cases.",
@@ -1521,7 +1521,7 @@ function analystCommentaryPage(data) {
     return {
       stack: [
         { text: "", pageBreak: "before" },
-        sectionTitle("Commentary", "Document-based observations for investment committee review."),
+        sectionTitle("Commentary", "Observations derived from uploaded operating and supporting documents."),
         dataNotAvailableBlock(),
       ],
     };
@@ -1530,7 +1530,7 @@ function analystCommentaryPage(data) {
   return {
     stack: [
       { text: "", pageBreak: "before" },
-      sectionTitle("Commentary", "Document-based observations for investment committee review."),
+      sectionTitle("Commentary", "Observations derived from uploaded operating and supporting documents."),
       {
         text: "Core Highlights",
         style: "h2",
