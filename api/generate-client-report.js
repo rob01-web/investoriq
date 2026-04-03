@@ -3571,7 +3571,7 @@ export default async function handler(req, res) {
         : null;
       if (docLabels) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;">${docLabels}</td></tr>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
-      snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;font-weight:600;">${modeLabel}</td></tr>`);
+snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</td><td style="padding:3px 10px;color:#9CA3AF;font-size:11px;font-weight:600;">${modeLabel}</td></tr>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;"><table style="width:100%;border-collapse:collapse;">${snapRows.join("")}</table></div>`
         : "";
@@ -3972,7 +3972,7 @@ export default async function handler(req, res) {
       effectiveReportMode,
       supportingUnderwritingDocsUsed:
         effectiveReportMode === "v1_core" &&
-        Boolean(mortgagePayload || appraisalPayload || propertyTaxPayload),
+        Boolean(mortgagePayload || loanTermSheetPayload || appraisalPayload || propertyTaxPayload),
     });
     finalHtml = replaceAll(
       finalHtml,
