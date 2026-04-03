@@ -16,7 +16,7 @@ import { clsx } from "clsx";
 export const BRAND = {
   name: "InvestorIQ",
   domain: "investoriq.tech",
-  email: "hello@investoriq.tech",
+  email: "support@investoriq.tech",
 };
 
 // ─── INVESTORIQ DESIGN SYSTEM — Hybrid Palette ───────────────

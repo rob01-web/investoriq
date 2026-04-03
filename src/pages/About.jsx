@@ -194,7 +194,7 @@ export default function About() {
               fontWeight: 300, color: T.ink3, lineHeight: 1.7,
               maxWidth: 640,
             }}>
-              Each stage is logged and fail-closed. The system does not proceed past a failed stage — it surfaces the failure and stops. No partial outputs, no silent gaps.
+              Every stage is logged and fail-closed. The system does not proceed past a failed stage. It surfaces the failure and stops. No partial outputs, no silent gaps.
             </motion.p>
           </motion.div>
         </section>
@@ -285,7 +285,7 @@ export default function About() {
             </div>
             <motion.div variants={fadeUp} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <a
-                href="mailto:hello@investoriq.tech"
+                href="mailto:support@investoriq.tech"
                 style={{
                   fontFamily: "'DM Mono', monospace", fontSize: 11,
                   letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -295,7 +295,7 @@ export default function About() {
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
               >
-                hello@investoriq.tech
+                support@investoriq.tech
               </a>
               <Link
                 to="/contact"

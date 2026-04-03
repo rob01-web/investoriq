@@ -34,24 +34,23 @@ const contacts = [
   {
     label:   'General Inquiries',
     desc:    'Product questions, report scope, or anything else.',
-    value:   'hello@investoriq.tech',
-    href:    'mailto:hello@investoriq.tech',
+    value:   'support@investoriq.tech',
+    href:    'mailto:support@investoriq.tech',
     cta:     'Send email',
   },
   {
     label:   'Billing & Payments',
     desc:    'Questions about charges, receipts, or report credits.',
-    value:   'hello@investoriq.tech',
-    href:    'mailto:hello@investoriq.tech?subject=Billing inquiry',
+    value:   'billing@investoriq.tech',
+    href:    'mailto:billing@investoriq.tech?subject=Billing inquiry',
     cta:     'Contact billing',
   },
   {
     label:   'Report Issues',
     desc:    'System or processing errors with a generated report.',
-    value:   'Via dashboard',
-    href:    '/dashboard',
-    cta:     'Open dashboard',
-    isLink:  true,
+    value:   'reports@investoriq.tech',
+    href:    'mailto:reports@investoriq.tech?subject=Report issue',
+    cta:     'Report issue',
   },
 ];
 

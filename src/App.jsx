@@ -210,7 +210,7 @@ function TermsPage() {
       <h2>12. Governing law</h2>
       <p>These Terms are governed by the laws of Ontario and the federal laws of Canada applicable therein, without regard to conflict of laws principles.</p>
       <h2>13. Contact</h2>
-      <p>Questions about these Terms: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a></p>
+      <p>Questions about these Terms: <a href="mailto:support@investoriq.tech">support@investoriq.tech</a></p>
     </LegalShell>
   );
 }
@@ -242,7 +242,7 @@ function PrivacyPage() {
       <h2>6. Your choices</h2>
       <p>You may request access, correction, or deletion of your account information subject to legal and operational requirements, including audit and security log retention.</p>
       <h2>7. Contact</h2>
-      <p>Privacy questions: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a></p>
+      <p>Privacy questions: <a href="mailto:support@investoriq.tech">support@investoriq.tech</a></p>
     </LegalShell>
   );
 }
@@ -261,7 +261,7 @@ function DisclosuresPage() {
       <h2>5. Auditability and acceptance</h2>
       <p>InvestorIQ may maintain audit and security logs and may record acceptance of disclosures to support compliance, defensibility, and system integrity.</p>
       <h2>6. Contact</h2>
-      <p>Questions about disclosures: <a href="mailto:hello@investoriq.tech">hello@investoriq.tech</a></p>
+      <p>Questions about disclosures: <a href="mailto:support@investoriq.tech">support@investoriq.tech</a></p>
     </LegalShell>
   );
 }

@@ -339,7 +339,7 @@ export default function CheckoutSuccess() {
                   lineHeight: 1.65,
                   marginBottom: 28,
                 }}>
-                  We could not confirm payment details on this page. If your payment was completed, your report credit will appear in your dashboard shortly. If the issue persists, contact us at hello@investoriq.tech.
+                  We could not confirm payment details on this page. If your payment was completed, your report credit will appear in your dashboard shortly. If the issue persists, contact us at billing@investoriq.tech.
                 </p>
 
                 <PrimaryBtn onClick={() => { window.location.href = '/dashboard'; }}>

@@ -260,7 +260,7 @@ const PricingTiers = ({ title, description }) => {
       // Safety net — both current tiers have priceIds
       toast({
         title:       "Contact us",
-        description: "Please reach out to hello@investoriq.tech for pricing assistance.",
+        description: "Please reach out to support@investoriq.tech for pricing assistance.",
       });
     }
   };
