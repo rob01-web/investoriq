@@ -370,7 +370,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
       <tr><td>Worst-Case Drivers (NOI shock | Cap expansion | Rate shock)</td><td> - </td><td>${escapeHtml(worstDriverTripleText)}</td></tr>
     </tbody>
   </table>
-  <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR. Coverage below 1.00x indicates a refinance shortfall without paydown.</p>
+  <p class="small">Base and worst-case proceeds are constrained by the tighter of LTV and DSCR.</p>
 </div>`;
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
@@ -3091,7 +3091,7 @@ export default async function handler(req, res) {
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
       );
       execScreeningLines.push(
-        `<p class="small" style="color:#64748b;margin-top:4px;">This report is a Preliminary Investment Screening Memorandum built from uploaded operating documents.</p>`
+        ``
       );
     }
     const classificationDrivers = [];
@@ -3391,7 +3391,7 @@ export default async function handler(req, res) {
             } else if (_dscr >= 1.20) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
-              riskBullets.push(`DSCR of ${_ds} falls below 1.20x. Debt service coverage is stressed at current NOI levels.`);
+              riskBullets.push(`DSCR of ${_ds} falls below the 1.20x threshold.`);
             }
           }
         }
@@ -3948,11 +3948,15 @@ export default async function handler(req, res) {
       }
     }
     const screeningRefiSufficiencyHtml =
-      buildScreeningRefiSufficiencyTable({ financials, t12Payload }) +
-      buildFinancingEnvelopeGrid(
-        coerceNumber(t12Payload?.net_operating_income),
-        Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
-      );
+      effectiveReportMode === "screening_v1"
+        ? ""
+        : (
+            buildScreeningRefiSufficiencyTable({ financials, t12Payload }) +
+            buildFinancingEnvelopeGrid(
+              coerceNumber(t12Payload?.net_operating_income),
+              Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
+            )
+          );
     const screeningCoverageHtml = buildScreeningDataCoverageSummary({
       t12Payload,
       computedRentRoll,

@@ -2,6 +2,154 @@
 
 ### CURRENT STATE
 
+# 🔒 CURRENT STATE — PRE-LAUNCH STABILIZATION (LATEST)
+
+## Status: FINAL POLISH BEFORE UNDERWRITING TEST + SOFT LAUNCH
+
+We have successfully completed a full **Screening Report polish pass** focused on:
+- Eliminating generic / framework-driven language
+- Converting all narrative tone to **document-derived wording**
+- Removing duplication and promotional phrasing
+- Tightening institutional tone across all sections
+
+---
+
+## ✅ COMPLETED (THIS SESSION)
+
+### 1. Narrative Hardening (Document-Driven Language)
+Replaced remaining model/generic phrasing with grounded language tied to uploaded documents:
+
+- "Thin operating margin with limited shock tolerance."
+  → "Operating margin is narrow relative to current expense load."
+
+- "Cash flow remains positive but is sensitive to operating variance."
+  → "Cash flow remains positive but is sensitive to changes in income and expenses."
+
+- "Operating margins remain within stable screening thresholds."
+  → "Operating margins remain within a stable range based on uploaded operating results."
+
+- "Operating performance remains within stable thresholds."
+  → "Operating results remain stable based on uploaded operating data."
+
+---
+
+### 2. PDF Section Tone Fixes (`pdfSections.js`)
+Removed brochure / pitch language:
+
+- "High level view of yield, risk, and strategy in one glance."
+  → "Summary of operating performance, risk, and positioning."
+
+- "Five path view from downside protection to upside potential..."
+  → "Scenario outcomes across downside, base, and upside operating cases."
+
+- "Document-driven view for investment committees and partners."
+  → "Observations derived from uploaded operating and supporting documents."
+
+---
+
+### 3. Template / Visual Fixes
+- Fixed **INVESTORIQ spacing bug** (letter-spacing reduced)
+- Renamed:
+  - "Illustrative Unit Mix and Rent Lift"
+  → "Unit Mix and Rent Lift"
+- Removed weak duplicate rent statement while preserving strongest instance
+
+---
+
+### 4. Contact System Refactor (CRITICAL UX FIX)
+Moved from single inbox → structured routing:
+
+- support@investoriq.tech
+- billing@investoriq.tech
+- reports@investoriq.tech
+
+Applied across:
+- Contact page
+- Pricing page
+- Checkout success
+- Legal pages
+- Meta tags (index.html)
+- Shared utils
+- Public test files
+
+Confirmed:
+- ❌ No remaining `hello@investoriq.tech` in user-facing code
+- ✅ Internal `adminEmail` preserved (non-user-facing)
+
+---
+
+## ⚠️ INTENTIONAL NON-CHANGES
+
+These were reviewed and deliberately kept:
+
+- Financing Envelope section
+  → remains standardized but acceptable (institutional framing)
+
+- Single strongest rent positioning sentence
+  → preserved intentionally (not duplication anymore)
+
+- Internal regex anchors referencing old wording
+  → NOT user-facing, safe to keep
+
+---
+
+## 🧪 NEXT STEP (IMMEDIATE)
+
+Run:
+
+### → FULL UNDERWRITING REPORT TEST
+
+Goal:
+- Confirm tone consistency vs Screening
+- Ensure no regression into:
+  - generic language
+  - “framework-driven” phrasing
+  - promotional tone
+- Validate:
+  - refinance logic output
+  - debt structure clarity
+  - section collapses working properly
+
+---
+
+## 🎯 FINAL PRE-LAUNCH CHECKLIST (VERY CLOSE)
+
+Remaining before outreach (Ken Dunn):
+
+1. ✅ Screening report = COMPLETE
+2. ⏳ Underwriting report = FINAL VALIDATION
+3. ⏳ Website minor polish (if anything surfaces)
+4. ⏳ Final narrative consistency sweep (if needed)
+5. ⏳ Email outreach draft (Ken Dunn)
+
+---
+
+## 🧠 POSITIONING LOCKED
+
+InvestorIQ V1 is now positioned as:
+
+> "The only document-driven underwriting tool that models refinance collapse risk."
+
+- No BUY/SELL language
+- No speculation
+- No fabricated narratives
+- Fully deterministic + document-derived
+
+---
+
+## 🚨 IMPORTANT RULE (MAINTAIN GOING FORWARD)
+
+Every sentence in the report must pass:
+
+> "Could this sentence exist WITHOUT the uploaded documents?"
+
+If YES → it must be rewritten or removed.
+If NO → it stays.
+
+---
+
+# END CURRENT STATE
+
 InvestorIQ is now in final launch hardening.
 
 Core engine status:
