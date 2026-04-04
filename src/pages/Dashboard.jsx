@@ -448,10 +448,9 @@ export default function Dashboard() {
       await fetchLatestFailedJob();
       await fetchEntitlements();
       await fetchRecentJobs();
-      const acceptedAt = await fetchLegalAcceptance();
-      setAcknowledged(Boolean(acceptedAt));
-      setAckLocked(Boolean(acceptedAt));
-      setAckAcceptedAtLocal(acceptedAt);
+      setAcknowledged(false);
+      setAckLocked(false);
+      setAckAcceptedAtLocal(null);
     };
     if (profile?.id) syncEverything();
   }, [profile?.id]);
@@ -595,7 +594,7 @@ export default function Dashboard() {
   const availableReportsCount = entitlements.error ? 0 : Number(entitlements[selectedReportType] ?? 0);
   const hasAvailableReport = availableReportsCount >= 1;
   const step2Locked = !propertyName.trim();
-  const step3Locked = !propertyName.trim() || !hasAvailableReport || !hasRequiredUploads || !acknowledged || ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status);
+  const step3Locked = !propertyName.trim() || !hasAvailableReport || !hasRequiredUploads || !acknowledged;
   const policyText = 'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
   const computePolicyTextHash = async () => {
     const encoder = new TextEncoder();
@@ -724,10 +723,9 @@ export default function Dashboard() {
       propertyNameRef.current = '';
       setPropertyName('');
       setUploadedFiles([]);
-      const acceptedAt = await fetchLegalAcceptance();
-      setAcknowledged(Boolean(acceptedAt));
-      setAckLocked(Boolean(acceptedAt));
-      setAckAcceptedAtLocal(acceptedAt);
+      setAcknowledged(false);
+      setAckLocked(false);
+      setAckAcceptedAtLocal(null);
       setStagedBatchId(null);
       fetchEntitlements();
       fetchReports();
@@ -966,22 +964,22 @@ export default function Dashboard() {
 
             {/* Acknowledgement */}
             <div style={{ padding:'14px 16px', background:acknowledged ? T.okBg : T.warm, border:`1px solid ${acknowledged ? T.okBorder : T.hairlineMid}`, marginBottom:20 }}>
-              <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor: ackLocked ? 'default' : 'pointer' }}>
+              <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
                 <input
                   type="checkbox"
                   checked={acknowledged}
-                  disabled={ackLocked || ackSubmitting}
+                  disabled={ackSubmitting}
                   onChange={async (e) => {
                     const next = e.target.checked;
-                    if (!next) return;
-                    if (ackLocked || acknowledged || ackSubmitting) return;
+                    if (ackSubmitting) return;
+                    if (!next) { setAcknowledged(false); setAckLocked(false); setAckAcceptedAtLocal(null); return; }
                     setAckSubmitting(true);
                     const accepted = await recordLegalAcceptance();
                     if (!accepted?.ok) {
                       toast({ title: 'Unable to record acknowledgement', description: 'Please try again.', variant: 'destructive' });
                       setAcknowledged(false); setAckLocked(false); setAckSubmitting(false); return;
                     }
-                    setAcknowledged(true); setAckLocked(true); setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString()); setAckSubmitting(false);
+                    setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString()); setAckSubmitting(false);
                   }}
                   style={{ marginTop:2, flexShrink:0 }}
                 />
@@ -1137,7 +1135,7 @@ export default function Dashboard() {
               loading={loading}
               style={{ minWidth: 200 }}
             >
-              {loading ? 'Processing…' : hasBlockingJob ? 'Job in progress…' : `Generate ${selectedReportType} report`}
+              {loading ? 'Processing…' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
 
             {activeJobForRuns && (
