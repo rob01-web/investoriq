@@ -212,13 +212,12 @@ function TblTd({ children, mono = false, right = false, style = {} }) {
 // MAIN COMPONENT
 export default function AdminDashboard() {
   const { toast } = useToast();
-          {/* LOADING */}
   const [stats, setStats]           = useState({ totalUsers: 0, totalReports: 0, activeReports: 0 });
   const [jobSummary, setJobSummary] = useState({ queued: 0, inProgress: 0, published: 0, failed: 0, needsDocuments: 0 });
   const [recentReports, setRecentReports] = useState([]);
   const [isAdmin, setIsAdmin]       = useState(false);
   const [queueMetrics, setQueueMetrics]   = useState(null);
-          {/* LOADING */}
+  const [queueLoading, setQueueLoading]   = useState(false);
   const [queueError, setQueueError]       = useState(null);
   const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
   const [issueUpdating, setIssueUpdating] = useState({});
@@ -228,7 +227,7 @@ export default function AdminDashboard() {
 
   const fetchQueueMetrics = async () => {
     if (!adminRunKey?.trim()) { setQueueError("Admin Run Key required."); return; }
-          {/* LOADING */}
+    setQueueLoading(true);
     setQueueError(null);
     try {
       const res  = await fetch("/api/admin/queue-metrics", { method: "GET", headers: { Authorization: `Bearer ${adminRunKey.trim()}` } });
@@ -239,13 +238,12 @@ export default function AdminDashboard() {
     } catch (err) {
       setQueueError(err?.message || "Failed to load queue metrics.");
     } finally {
-          {/* LOADING */}
+      setQueueLoading(false);
     }
   };
 
   useEffect(() => {
     const fetchAdminData = async () => {
-          {/* LOADING */}
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const adminEmail = "hello@investoriq.tech";
@@ -267,7 +265,6 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error("Error fetching admin data:", err);
       } finally {
-          {/* LOADING */}
       }
     };
 
@@ -432,11 +429,11 @@ export default function AdminDashboard() {
                   eyebrow="Queue Health"
                   title="Recent Jobs"
                   action={
-          {/* LOADING */}
-          {/* LOADING */}
+                    <GhostBtn onClick={fetchQueueMetrics}>
+                      {queueLoading
                         ? <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />
                         : <RefreshCcw style={{ width:11, height:11 }} />}
-          {/* LOADING */}
+                      {queueLoading ? 'Loading...' : 'Refresh'}
                     </GhostBtn>
                   }
                 />
