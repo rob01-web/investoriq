@@ -7,7 +7,7 @@ import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 
-// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+// DESIGN TOKENS
 const T = {
   green:       '#0F2318',
   greenMid:    '#163320',
@@ -36,7 +36,7 @@ const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 `;
 
-// ─── SHARED STYLE HELPERS ───────────────────────────────────────────────────
+// SHARED STYLE HELPERS
 
 const sectionCard = {
   background:   T.white,
@@ -96,7 +96,7 @@ const hairlineRule = {
   margin:     '20px 0',
 };
 
-// Primary button — Forest Green / Gold hover
+// Primary button - Forest Green / Gold hover
 function PrimaryBtn({ children, onClick, disabled, style = {}, loading = false }) {
   const [hov, setHov] = useState(false);
   return (
@@ -277,7 +277,7 @@ function NoticeBox({ type = 'info', children }) {
   );
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+// MAIN COMPONENT
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
@@ -335,9 +335,6 @@ export default function Dashboard() {
   const [entitlements, setEntitlements] = useState({ screening: null, underwriting: null, error: false });
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
-  const hasBlockingJob = inProgressJobs.some((job) =>
-    ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
-  );
   const visibleInProgressJobs = inProgressJobs.filter((job) => {
     const dismissed = dismissedJobIds.has(String(job.id));
     return ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status) && !dismissed;
@@ -418,7 +415,7 @@ export default function Dashboard() {
 
   const fetchLatestFailedJob = async () => {
     if (!profile?.id) return;
-    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (error) { console.error('Failed to fetch failed job:', error); return; }
     setLatestFailedJob(data || null);
   };
@@ -476,6 +473,21 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    if (!profile?.id) return;
+    const hasActiveProcessingJob = inProgressJobs.some((job) =>
+      ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
+    );
+    if (!hasActiveProcessingJob) return;
+    const intervalId = window.setInterval(() => {
+      fetchInProgressJobs();
+      fetchReports();
+      fetchLatestFailedJob();
+      fetchRecentJobs();
+    }, 60000);
+    return () => { window.clearInterval(intervalId); };
+  }, [profile?.id, inProgressJobs]);
+
+  useEffect(() => {
     if (!jobId) { setRentRollCoverage(null); return; }
     fetchRentRollCoverage(jobId);
   }, [jobId]);
@@ -489,9 +501,7 @@ export default function Dashboard() {
   }, [profile?.id]);
 
   useEffect(() => { setScopeConfirmed(false); }, [`${uploadedFiles.map((file) => file.docType).sort().join('|')}::${uploadedFiles.length}`]);
-
-
-  // ── All the existing computed values and handlers (unchanged) ─────────────
+  // All the existing computed values and handlers (unchanged)
   const supportingDocTypes = [
     { docType: 'mortgage_statement', label: 'Mortgage Statement' },
     { docType: 'loan_terms',         label: 'Loan Terms / Term Sheet' },
@@ -529,6 +539,10 @@ export default function Dashboard() {
   const activeJobForRuns = jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = Boolean(jobId) && activeJobForRuns?.id === jobId && activeJobForRuns?.status === 'needs_documents' && Boolean(activeNeedsDocumentsEvent);
+  const activeFailedReason =
+    activeJobForRuns?.failure_reason ||
+    activeJobForRuns?.error_message ||
+    '';
   const safeName = (s) => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
   const normalizeDocType = (s) => {
     const dt = String(s || '').toLowerCase().trim();
@@ -624,6 +638,19 @@ export default function Dashboard() {
       const data = await res.json().catch(() => ({}));
       return data?.accepted_at || data?.acceptedAt || null;
     } catch (err) { console.error('Legal acceptance read error:', err); return null; }
+  };
+  const formatAcceptedAtLocal = (value) => {
+    if (!value) return '';
+    const acceptedDate = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(acceptedDate.getTime())) return '';
+    return acceptedDate.toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   };
   const handleUploadSuccess = async () => {
     if (!profile?.id) return;
@@ -739,20 +766,20 @@ export default function Dashboard() {
     } finally { setLoading(false); analyzeInFlightRef.current = false; }
   };
 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
+  // RENDER
   return (
     <>
       <style>{FONTS}</style>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       <Helmet>
-        <title>InvestorIQ — Dashboard</title>
+        <title>InvestorIQ - Dashboard</title>
         <meta name="description" content="Upload property documents and generate institutional-grade underwriting reports." />
       </Helmet>
 
       <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
+        {/* PAGE HEADER */}
         <div style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
           {/* Vertical thread */}
           <div style={{ position:'absolute', top:0, bottom:0, left:40, width:1, background:'linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.4) 20%, rgba(201,168,76,0.4) 80%, transparent 100%)', pointerEvents:'none' }} />
@@ -765,7 +792,7 @@ export default function Dashboard() {
           >
             <div>
               <p style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(201,168,76,0.45)', marginBottom:8 }}>
-                InvestorIQ — Dashboard
+                InvestorIQ - Dashboard
               </p>
               <h1 style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:'clamp(26px, 3.5vw, 36px)', fontWeight:500, letterSpacing:'-0.02em', color:'#FFFFFF', lineHeight:1.05, marginBottom:6 }}>
                 Welcome, {profile?.full_name || 'Investor'}.
@@ -783,7 +810,7 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
-        {/* ── MAIN CONTENT ────────────────────────────────────────────── */}
+        {/* MAIN CONTENT */}
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 48px 64px' }}>
 
           {/* Non-refundable notice */}
@@ -801,7 +828,7 @@ export default function Dashboard() {
                 onClick={() => { const t = document.getElementById('upload-section'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                 style={{ ...labelMono, color: T.okGreen, background: 'none', border: 'none', cursor: 'pointer', marginTop: 8, textDecoration: 'underline' }}
               >
-                Jump to upload ↓
+                Jump to upload ->
               </button>
             </NoticeBox>
           )}
@@ -811,7 +838,7 @@ export default function Dashboard() {
             <NoticeBox key={job.id} type="error">
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                 <div>
-                  <strong style={{ fontWeight:500 }}>Generation failed</strong> — {job.property_name || 'Unknown property'}
+                  <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
                   {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
                 </div>
                 <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
@@ -845,7 +872,7 @@ export default function Dashboard() {
             <NoticeBox type="warning">{needsDocumentsMessage}</NoticeBox>
           )}
 
-          {/* ── STEP 1 ────────────────────────────────────────────────── */}
+          {/* STEP 1 */}
           <div style={sectionCard}>
             <p style={stepEyebrow}>Step 01</p>
             <span style={stepTitle}>Report type and availability</span>
@@ -920,7 +947,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ── STEP 2 ────────────────────────────────────────────────── */}
+          {/* STEP 2 */}
           <motion.div
             id="upload-section"
             style={{ ...sectionCard, opacity: step2Locked && !hasAvailableReport ? 0.55 : 1, transition:'opacity 0.2s' }}
@@ -979,7 +1006,8 @@ export default function Dashboard() {
                       toast({ title: 'Unable to record acknowledgement', description: 'Please try again.', variant: 'destructive' });
                       setAcknowledged(false); setAckLocked(false); setAckSubmitting(false); return;
                     }
-                    setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(accepted?.acceptedAt || new Date().toISOString()); setAckSubmitting(false);
+                    const acceptedAtValue = accepted?.acceptedAt ? new Date(accepted.acceptedAt) : new Date();
+                    setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(acceptedAtValue); setAckSubmitting(false);
                   }}
                   style={{ marginTop:2, flexShrink:0 }}
                 />
@@ -988,7 +1016,7 @@ export default function Dashboard() {
                     I acknowledge that InvestorIQ provides document-based analysis only, makes no assumptions, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
                   </div>
                   <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
-                    Disclosures v2026-01-14{ackAcceptedAtLocal ? ` · Accepted ${new Date(ackAcceptedAtLocal).toLocaleString()}` : ''}
+                    Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
                   </div>
                 </div>
               </label>
@@ -1045,7 +1073,7 @@ export default function Dashboard() {
 
             </div>
 
-            {/* Supporting docs — underwriting only */}
+            {/* Supporting docs - underwriting only */}
             {selectedReportType === 'underwriting' && (
               <div style={{ marginBottom:16 }}>
                 {!requiredDocsReady && (
@@ -1108,7 +1136,7 @@ export default function Dashboard() {
             <input id="supporting-docs-input" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 'supporting_documents')} className="hidden" style={{ display:'none' }} />
           </motion.div>
 
-          {/* ── STEP 3 ────────────────────────────────────────────────── */}
+          {/* STEP 3 */}
           <div style={{ ...sectionCard, opacity: step3Locked ? 0.55 : 1, transition:'opacity 0.2s' }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
               <div>
@@ -1120,7 +1148,7 @@ export default function Dashboard() {
                     : activeJobForRuns?.status === 'queued' ? 'Queued for processing.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing in progress.'
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
-                    : activeJobForRuns?.status === 'failed' ? 'Previous job failed. Ready to retry.'
+                    : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
               </div>
@@ -1135,7 +1163,7 @@ export default function Dashboard() {
               loading={loading}
               style={{ minWidth: 200 }}
             >
-              {loading ? 'Processing…' : `Generate ${selectedReportType} report`}
+              {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
 
             {activeJobForRuns && (
@@ -1146,7 +1174,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ── REPORTS TABLE ─────────────────────────────────────────── */}
+          {/* REPORTS TABLE */}
           <div style={{ ...sectionCard, marginTop:8 }}>
             <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
               <div>
@@ -1159,11 +1187,11 @@ export default function Dashboard() {
             {reportsLoading ? (
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'20px 0' }}>
                 <Loader2 style={{ width:16, height:16, color:T.gold, animation:'spin 1s linear infinite' }} />
-                <span style={{ ...bodySmall, fontSize:12 }}>Loading reports…</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Loading reports...</span>
               </div>
             ) : reports.length === 0 ? (
               <div style={{ padding:'24px 0', textAlign:'center' }}>
-                <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1–3 above to generate your first report.</span>
+                <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1-3 above to generate your first report.</span>
               </div>
             ) : (
               <div style={{ overflowX:'auto' }}>
@@ -1179,13 +1207,13 @@ export default function Dashboard() {
                     {reports.map((report, i) => (
                       <tr key={report.id} style={{ borderBottom:`1px solid ${T.hairline}`, background: i % 2 === 1 ? T.warm : T.white }}>
                         <td style={{ padding:'10px 10px', color:T.ink2, fontWeight:400, maxWidth:200 }}>
-                          <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{report.property_name || '—'}</div>
+                          <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{report.property_name || '-'}</div>
                         </td>
                         <td style={{ padding:'10px 10px' }}>
-                          <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '—'}</span>
+                          <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '-'}</span>
                         </td>
                         <td style={{ padding:'10px 10px', color:T.ink4, whiteSpace:'nowrap' }}>
-                          {report.created_at ? new Date(report.created_at).toLocaleDateString() : '—'}
+                          {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
                         </td>
                         <td style={{ padding:'10px 10px' }}>
                           <StatusBadge status={report.status || 'published'} />
@@ -1240,7 +1268,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── LOADING OVERLAY ─────────────────────────────────────────── */}
+      {/* LOADING OVERLAY */}
       {loading && (
         <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.88)' }}>
           <div style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'40px 48px', maxWidth:360, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
@@ -1254,7 +1282,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── ISSUE MODAL ─────────────────────────────────────────────── */}
+      {/* ISSUE MODAL */}
       {issueModalOpen && (
         <div style={{ position:'fixed', inset:0, zIndex:120, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(12,12,12,0.4)' }}>
           <div style={{ width:'100%', maxWidth:520, background:T.white, border:`1px solid ${T.hairline}`, padding:'32px', margin:'0 16px' }}>
@@ -1305,7 +1333,7 @@ export default function Dashboard() {
                   } finally { setIssueSubmitting(false); }
                 }}
               >
-                {issueSubmitting ? 'Submitting…' : 'Submit'}
+                {issueSubmitting ? 'Submitting...' : 'Submit'}
               </PrimaryBtn>
             </div>
           </div>
@@ -1315,3 +1343,8 @@ export default function Dashboard() {
     </>
   );
 }
+
+
+
+
+

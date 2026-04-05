@@ -101,7 +101,7 @@ export default async function handler(req, res) {
 
     const { data: recentJobs, error: recentJobsErr } = await supabaseAdmin
       .from('analysis_jobs')
-      .select('id, property_name, status, created_at, started_at, user_id')
+      .select('id, property_name, status, created_at, started_at, user_id, failure_reason, error_message')
       .order('created_at', { ascending: false })
       .limit(10);
 
