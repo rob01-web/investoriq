@@ -199,7 +199,7 @@ const PricingTiers = ({ title, description }) => {
   const pricingTiers = [
     {
       name:        'Screening Report',
-      price:       '$399',
+      price:       '$499',
       priceId:     import.meta.env.VITE_STRIPE_SCREENING_PRICE_ID,
       credits:     1,
       description: 'Document-based screening report for initial investment review.',

@@ -41,7 +41,7 @@ const stagger = {
 const tiers = [
   {
     title:       'Screening Report',
-    price:       '$399',
+    price:       '$499',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
     description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
@@ -161,9 +161,20 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           letterSpacing:'-0.03em',
           color:        T.ink,
           lineHeight:   1,
-          display:      'block',
+          display:      'inline-block',
         }}>
           {tier.price}
+        </span>
+        <span style={{
+          fontFamily:   "'DM Mono', monospace",
+          fontSize:     11,
+          letterSpacing:'0.14em',
+          color:        T.ink4,
+          textTransform:'uppercase',
+          marginLeft:   8,
+          verticalAlign:'baseline',
+        }}>
+          USD
         </span>
         <span style={{
           fontFamily:   "'DM Mono', monospace",
