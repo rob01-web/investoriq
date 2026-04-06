@@ -3352,9 +3352,9 @@ export default async function handler(req, res) {
     }
     if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
       upsideBullets.push(
-        `Operating cushion is approximately ${formatPercent1(
+        `Operating cushion of ${formatPercent1(
           operatingCushionPct
-        )} above break-even occupancy.`
+        )} above break-even occupancy based on current performance.`
       );
     }
     const riskBullets = [];

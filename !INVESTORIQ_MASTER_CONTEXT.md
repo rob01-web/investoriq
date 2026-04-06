@@ -5,6 +5,7 @@
 - Screening report is materially compressed, document-driven, and positioned as a decision-grade screening memorandum.
 - Underwriting report retains full debt, refinance, valuation, and scenario depth with deterministic inputs only.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
+- Website copy and positioning have been hardened to remove all AI references and reinforce proprietary, document-driven positioning.
 - Launch phase status: final QA and sample-output replacement remain before outreach.
 
 ## 2. Locked Product Positioning
@@ -17,7 +18,7 @@
 - Fail closed when required inputs are missing.
 
 ## 3. Current Pricing
-- Screening Report: $399
+- Screening Report: $499
 - Underwriting Report: $1,499
 - One purchase = one report.
 - No subscription.
@@ -44,6 +45,9 @@
 - Wrong report-type leakage in the executive summary was fixed and hardened.
 - Screening compression removed valuation and refinance depth that belonged only in underwriting.
 - Report wording across generator, runtime template, and PDF sections was tightened toward institutional, document-driven language.
+- Pricing updated to $499 for Screening and aligned across frontend and Stripe.
+- Website copy fully cleaned of AI-related terminology and standardized to proprietary-system language.
+- Em dash usage removed from all user-facing copy to maintain institutional tone.
 - Public-facing contact routing has been migrated away from `hello@investoriq.tech` to department addresses.
 - Dashboard disclosure acceptance timestamp now reads from stored acceptance data.
 - Dashboard auto-refresh polling has been removed in favor of manual refresh/reload actions.
@@ -61,12 +65,13 @@
 - Underwriting support-doc detection for page-13 coverage messaging: completed.
 
 ### Real current punch list
+- Resolve Test 9 failure (first regression after recent stability streak) and confirm full screening pipeline integrity before final QA.
 - Run one fresh production-grade Screening PDF and one fresh production-grade Underwriting PDF.
 - Perform final manual QA on both outputs:
   - report type labels
   - executive summary wording
   - no wrong-report references
-  - no AI-sounding or padded phrasing
+  - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
 - Replace homepage sample reports with final production-grade outputs.
@@ -95,7 +100,7 @@
 
 ## 10. Launch Readiness Snapshot
 - Launch-ready now:
-  - pricing and positioning are aligned
+  - pricing and positioning are fully aligned with institutional positioning and proprietary-system messaging
   - screening vs underwriting separation is materially cleaner
   - contact routing is corrected
   - dashboard/admin support workflow is operational
