@@ -86,31 +86,15 @@ if (!userId || !policyTextHash) {
 
     if (error) {
       // Duplicate acceptance is OK (unique index hit)
-      if (error.code === '23505') {
-        const { data: existingRow, error: readErr } = await supabase
-          .from('legal_acceptances')
-          .select('accepted_at')
-          .eq('user_id', userId)
-          .eq('policy_key', POLICY_KEY)
-          .eq('policy_version', POLICY_VERSION)
-          .eq('policy_text_hash', policyTextHash)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .single();
+if (error.code === '23505') {
+  const nowIso = new Date().toISOString();
 
-        if (readErr) {
-          console.error('Supabase read-after-duplicate error:', readErr);
-          return res
-            .status(200)
-            .json({ success: true, alreadyAccepted: true });
-        }
-
-        return res.status(200).json({
-          success: true,
-          alreadyAccepted: true,
-          accepted_at: existingRow?.accepted_at || null,
-        });
-      }
+  return res.status(200).json({
+    success: true,
+    alreadyAccepted: true,
+    accepted_at: nowIso,
+  });
+}
 
       console.error('Supabase insert error:', error);
       return res.status(500).json({ error: 'Failed to record acceptance' });

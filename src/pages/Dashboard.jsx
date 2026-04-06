@@ -534,9 +534,10 @@ export default function Dashboard() {
     return String(f.original_name || f.file?.name || '').toLowerCase().includes('appraisal');
   });
   const preflightHardMissing = selectedReportType === 'underwriting' && (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
+  const visibleLatestFailedJob = latestFailedJob && !dismissedJobIds.has(String(latestFailedJob.id)) ? latestFailedJob : null;
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
-  const jobFromFailed = latestFailedJob?.id === jobId ? latestFailedJob : null;
-  const activeJobForRuns = jobFromInProgress || jobFromFailed || inProgressJobs[0] || latestFailedJob || null;
+  const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
+  const activeJobForRuns = jobFromInProgress || jobFromFailed || inProgressJobs[0] || visibleLatestFailedJob || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = Boolean(jobId) && activeJobForRuns?.id === jobId && activeJobForRuns?.status === 'needs_documents' && Boolean(activeNeedsDocumentsEvent);
   const activeFailedReason =
@@ -1152,7 +1153,18 @@ export default function Dashboard() {
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
               </div>
-              {step3Locked && <span style={{ ...labelMono, color:T.ink4 }}>Locked</span>}
+              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                {activeJobForRuns?.status === 'failed' && activeJobForRuns?.id && (
+                  <button
+                    type="button"
+                    onClick={() => dismissJob(activeJobForRuns.id)}
+                    style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer' }}
+                  >
+                    Dismiss
+                  </button>
+                )}
+                {step3Locked && <span style={{ ...labelMono, color:T.ink4 }}>Locked</span>}
+              </div>
             </div>
 
             <div style={hairlineRule} />
