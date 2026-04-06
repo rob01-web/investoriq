@@ -808,7 +808,7 @@ function buildCapRateValueTable(noi, units) {
       return `<tr><td>${(r * 100).toFixed(1)}%</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
     })
     .join("");
-  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from document-verified NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
+  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -835,7 +835,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     .join("");
   const unitsNote =
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: document-verified NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.20x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.2))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.20x DSCR, the document-verified NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the document-verified NOI at each scenario.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.20x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.2))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.20x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1153,7 +1153,7 @@ function buildScreeningIncomeForensicsHtml({
       .map(([label, v]) => `<tr><td>${label}</td><td>${formatCurrency(v)}</td></tr>`)
       .join("");
     if (!summaryRows) return "";
-    return `<div class="card no-break"><p class="subsection-title">Income &amp; Expense Summary (Lump-Sum T12)</p><table><thead><tr><th>Line Item</th><th>Amount (TTM)</th></tr></thead><tbody>${summaryRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">No line-item detail available for this T12 format. All values are document-verified totals.</p></div>${upsideCard}`;
+    return `<div class="card no-break"><p class="subsection-title">Income &amp; Expense Summary (Lump-Sum T12)</p><table><thead><tr><th>Line Item</th><th>Amount (TTM)</th></tr></thead><tbody>${summaryRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">No line-item detail available for this T12 format. All values are reported totals.</p></div>${upsideCard}`;
   }
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
@@ -1248,7 +1248,7 @@ function buildScreeningIncomeForensicsHtml({
     bullets.push(
       `In-place rents trail market by approximately ${formatPercent1(
         marketRentPremiumRatio
-      )} (document-supported rent gap).`
+      )} (observed rent gap).`
     );
   }
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
@@ -1422,7 +1422,7 @@ function buildScreeningExpenseStructureHtml({
           .join("")
       : "";
   const expenseSensCard = expenseSensRows
-    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Expense Ratio Sensitivity</p><table><thead><tr><th>Expense Ratio</th><th>Implied OpEx</th><th>Implied NOI</th></tr></thead><tbody>${expenseSensRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Anchored to document-verified EGI of ${formatCurrency(egi)}. Standardized threshold scenarios.</p></div>`
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Expense Ratio Sensitivity</p><table><thead><tr><th>Expense Ratio</th><th>Implied OpEx</th><th>Implied NOI</th></tr></thead><tbody>${expenseSensRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Anchored to reported EGI of ${formatCurrency(egi)}. Standardized threshold scenarios.</p></div>`
     : "";
   return `${metricsCard}${expenseFlagsCard}${expenseSensCard}`;
 }
@@ -1604,7 +1604,7 @@ function buildScreeningNoiStabilityHtml({
         `<tr><td>Occupancy Cushion</td><td>${(cushion * 100).toFixed(1)} pts</td></tr>`,
         `<tr><td>Units That Can Become Vacant</td><td>${cushionUnits} of ${Math.round(rrTotalUnits)}</td></tr>`,
       ].join("");
-      vacancyBufferCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Vacancy Buffer</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${vbRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">At current occupancy, the property can absorb ${cushionUnits} vacant unit${cushionUnits !== 1 ? "s" : ""} before reaching neutral cash flow. Break-even derived from document-verified T12 totals.</p></div>`;
+      vacancyBufferCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Vacancy Buffer</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${vbRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">At current occupancy, the property can absorb ${cushionUnits} vacant unit${cushionUnits !== 1 ? "s" : ""} before reaching neutral cash flow. Break-even derived from reported T12 totals.</p></div>`;
     }
   }
   return `<div class="card no-break"><table><thead><tr><th>Indicator</th><th>Value</th></tr></thead><tbody>${rows.join(
@@ -3056,7 +3056,7 @@ export default async function handler(req, res) {
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = formatMultiple(_dscr, 2);
           primaryPressurePoint = _dscr < 1.20
-            ? `DSCR of ${_ds}: below 1.20x coverage threshold`
+            ? `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`
             : _dscr < 1.35
             ? `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`
             : `DSCR of ${_ds}: supports current debt service coverage`;
@@ -3342,12 +3342,12 @@ export default async function handler(req, res) {
       upsideBullets.push(
         `In-place rents trail market by ~${formatPercent1(
           marketRentPremiumRatio
-        )} (document-supported rent gap).`
+        )} (observed rent gap).`
       );
     }
     if (Number.isFinite(execOccupancy) && execOccupancy >= 0.95) {
       upsideBullets.push(
-        `Occupancy is ${formatPercent1(execOccupancy)}, supporting cash flow stability.`
+        `Occupancy is ${formatPercent1(execOccupancy)}, reflecting fully stabilized in-place tenancy.`
       );
     }
     if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
@@ -3398,7 +3398,7 @@ export default async function handler(req, res) {
             } else if (_dscr >= 1.20) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
-              riskBullets.push(`Base case DSCR of ${_ds} indicates weak debt service coverage relative to standard lender thresholds.`);
+              riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
             }
           }
         }
@@ -3638,17 +3638,17 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       const nmPctStr  = Number.isFinite(noiMarginR)    ? `${(noiMarginR * 100).toFixed(1)}%`    : null;
       const parts = [];
       if (Number.isFinite(rrOccNow)) parts.push(`The property is ${formatPercent1(rrOccNow)} occupied`);
-      if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries document-verified rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
+      if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries reported rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
       let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
       if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
-        thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation depends on efficiency gains and rent normalization.`;
+        thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation is dependent on reducing the current 62.6% expense ratio and capturing the observed 17.4% rent-to-market gap.`;
       } else if (screeningClass === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
         thesisText += `Operating results remain stable based on uploaded operating data.`;
       }
       const thesisCard = thesisText
-        ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from document-verified metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
+        ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from reported metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
         : "";
       execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
     } else if (effectiveReportMode === "v1_core" && screeningClass && screeningClass !== "Insufficient Data") {
@@ -4614,7 +4614,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from document-verified metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
@@ -5061,8 +5061,8 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr)
           breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
         execRationale = breaches.length > 0
-          ? `Classified SENSITIZED: ${breaches.join("; ")}.`
-          : `Classified SENSITIZED: ${screeningExplanation}`;
+          ? `Operating profile classified as SENSITIZED: ${breaches.join("; ")}.`
+          : `Operating profile classified as SENSITIZED: ${screeningExplanation}`;
       } else if (screeningClass === "Fragile") {
         const breaches = [];
         if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65 && erStr)
