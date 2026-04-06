@@ -216,6 +216,7 @@ export default function AdminDashboard() {
   const [jobSummary, setJobSummary] = useState({ queued: 0, inProgress: 0, published: 0, failed: 0, needsDocuments: 0 });
   const [recentReports, setRecentReports] = useState([]);
   const [isAdmin, setIsAdmin]       = useState(false);
+  const [loading, setLoading]       = useState(false);
   const [queueMetrics, setQueueMetrics]   = useState(null);
   const [queueLoading, setQueueLoading]   = useState(false);
   const [queueError, setQueueError]       = useState(null);
@@ -244,6 +245,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchAdminData = async () => {
+      setLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const adminEmail = "hello@investoriq.tech";
@@ -265,6 +267,7 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error("Error fetching admin data:", err);
       } finally {
+        setLoading(false);
       }
     };
 
