@@ -5,7 +5,8 @@
 - Screening report is materially compressed, document-driven, and positioned as a decision-grade screening memorandum.
 - Underwriting report retains full debt, refinance, valuation, and scenario depth with deterministic inputs only.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
-- Website copy and positioning have been hardened to remove all AI references and reinforce proprietary, document-driven positioning.
+- Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
+- Test 9 returned to green after the live `public.reports` persistence issue was corrected.
 - Launch phase status: final QA and sample-output replacement remain before outreach.
 
 ## 2. Locked Product Positioning
@@ -46,34 +47,45 @@
 - Screening compression removed valuation and refinance depth that belonged only in underwriting.
 - Report wording across generator, runtime template, and PDF sections was tightened toward institutional, document-driven language.
 - Pricing updated to $499 for Screening and aligned across frontend and Stripe.
-- Website copy fully cleaned of AI-related terminology and standardized to proprietary-system language.
+- Website copy fully cleaned of legacy automation terminology and standardized to proprietary-system language.
 - Em dash usage removed from all user-facing copy to maintain institutional tone.
 - Public-facing contact routing has been migrated away from `hello@investoriq.tech` to department addresses.
-- Dashboard disclosure acceptance timestamp now reads from stored acceptance data.
+- Test 9 failure was confirmed as a backend persistence issue, not a parsing, classification, or rendering failure.
+- Live pipeline persistence was restored by adding the missing `report_type text` column to `public.reports`.
+- Admin dashboard blank-screen crash was fixed by restoring local `loading` state in `src/pages/AdminDashboard.jsx`.
+- Dashboard disclosure acceptance timestamp duplicate-response behavior now returns a fresh UI timestamp without altering stored `legal_acceptances` history.
 - Dashboard auto-refresh polling has been removed in favor of manual refresh/reload actions.
 - Analysis Scope Preview has been removed from the user dashboard UI.
+- Failed Step 03 dashboard state now supports UI-only dismissal through local storage, with no report, job, or credit changes.
+- Underwriting capability has been reconfirmed: refinance stress testing, DSCR, and cap-rate / valuation sensitivity are already present; remaining work is phrasing and final QA.
 
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
+- Test 9 pipeline failure: completed.
 - Dashboard disclosure accepted date/time fix: completed.
 - Dashboard auto-refresh removal: completed.
 - Analysis Scope Preview removal: completed.
 - Active Jobs filtering and property-name fallback: completed.
 - Report History `report_type` population for newly generated reports: completed.
 - Admin issue / regen workflow wiring: completed.
+- Admin dashboard blank-screen crash from missing `loading` state: completed.
 - Cover-page REPORT TIER visibility/color fix: completed.
 - Underwriting support-doc detection for page-13 coverage messaging: completed.
+- Failed Step 03 dashboard-state dismissal: completed.
+- Screening and Underwriting wording polish wave: substantially completed.
 
 ### Real current punch list
-- Resolve Test 9 failure (first regression after recent stability streak) and confirm full screening pipeline integrity before final QA.
+- Finalize the remaining `_refiClass` underwriting phrasing patch if still pending in the live output path.
 - Run one fresh production-grade Screening PDF and one fresh production-grade Underwriting PDF.
 - Perform final manual QA on both outputs:
   - report type labels
   - executive summary wording
+  - updated wording appearing in live PDFs
   - no wrong-report references
   - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
+- Verify admin dashboard stability, acknowledgement timestamp behavior, and failed-state dismissal in the current UI.
 - Replace homepage sample reports with final production-grade outputs.
 - Do one final website pass for any remaining user-facing copy or workflow rough edges.
 - Prepare Ken Dunn outreach only after final report QA and sample replacement are complete.
@@ -104,6 +116,7 @@
   - screening vs underwriting separation is materially cleaner
   - contact routing is corrected
   - dashboard/admin support workflow is operational
+  - Test 9 is back to green and pipeline/report creation is restored
   - core report engine is stable enough for final launch QA
 - Still needed before Ken Dunn outreach:
   - fresh final Screening and Underwriting PDFs

@@ -986,7 +986,7 @@ ul, ol {
   <div class="section-header">
     <span class="section-header-eyebrow">Section 01</span>
     <span class="section-header-title">Executive Summary</span>
-    <span class="section-header-sub">Deal overview, operating profile, and key risk factors</span>
+    <span class="section-header-sub">Deal overview, operating profile, and primary risk drivers</span>
   </div>
   <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
   <p class="small">{{PROPERTY_DESCRIPTOR_LINE}}</p>
@@ -1113,8 +1113,8 @@ ul, ol {
 <section class="section page-break">
   <div class="section-header">
     <span class="section-header-eyebrow">Section 02</span>
-    <span class="section-header-title">Refinance Stability Classification</span>
-    <span class="section-header-sub">Refinance capacity under documented inputs</span>
+    <span class="section-header-title">Refinance Stress Test &amp; Constraint Analysis</span>
+    <span class="section-header-sub">DSCR, LTV, and binding-constraint analysis under documented operating and capital constraints</span>
   </div>
   {{REFI_STABILITY_BLOCK}}
 </section>
@@ -1128,7 +1128,7 @@ ul, ol {
   <div class="section-header">
     <span class="section-header-eyebrow">Section 03</span>
     <span class="section-header-title">Debt Structure &amp; Financing</span>
-    <span class="section-header-sub">Leverage, DSCR, and refinance considerations</span>
+    <span class="section-header-sub">DSCR sensitivity, lender thresholds, and refinance constraint analysis</span>
   </div>
 
   <!-- BEGIN DEBT_STRUCTURE -->
@@ -1163,7 +1163,7 @@ ul, ol {
 
 
     <div class="no-break exhibit-side">
-      <p class="subsection-title">DSCR and Break-Even Sensitivity</p>
+      <p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis</p>
 
       <div class="chart-block chart-medium">
         <img
@@ -1177,19 +1177,19 @@ ul, ol {
         {{DEBT_DSCR_NOTE}}
       </p>
       <p class="small" style="margin-top:8px;">
-        Note: DSCR is based on current debt service and NOI and is not impacted by cap rate assumptions.
+        Note: DSCR is based on current debt service and NOI, and should be interpreted relative to standard lender thresholds and available coverage cushion. It is not impacted by cap rate assumptions.
       </p>
     </div>
   </div>
 
-  <p class="subsection-title">Refinance Considerations</p>
+  <p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis</p>
   <p>
     {{DEBT_REFI_CONSIDERATIONS}}
   </p>
 <!-- BEGIN SECTION_7_DEBT_TABLES -->
 
 
-  <p class="subsection-title">Current Debt Coverage Sensitivity</p>
+  <p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity</p>
 {{REFI_SENSITIVITY_MATRIX_BLOCK}}
 <!-- END SECTION_7_DEBT_TABLES -->
 
@@ -1608,7 +1608,7 @@ ul, ol {
   <div class="section-header">
     <span class="section-header-eyebrow">Section 17</span>
     <span class="section-header-title">Discounted Cash Flow (DCF)</span>
-    <span class="section-header-sub">Intrinsic valuation via discounted cash flow (5-year hold)</span>
+    <span class="section-header-sub">Cap rate expansion, exit sensitivity, and downside valuation pressure</span>
   </div>
 
 <!-- BEGIN SECTION_9_DCF_TABLE -->
@@ -1694,7 +1694,7 @@ ul, ol {
     The discounted cash flow is derived from projected cash flow and terminal value
     assumptions. Returns reflect the modeled value-add operating case and are driven primarily
     by operational improvements and disciplined capital execution rather than higher
-    leverage or favorable exit pricing assumptions.
+    leverage or favorable exit pricing assumptions, with explicit sensitivity to cap rate expansion and downside valuation pressure.
   </p>
 
   </section>
@@ -1733,7 +1733,7 @@ ul, ol {
   <div class="methodology-section">
 
   <p class="section-intro">
-    InvestorIQ does not assume or gap-fill missing data. Outputs are driven by uploaded documents and
+    InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and
     defined modeling frameworks, with transparency and auditability as core design principles.
   </p>
 

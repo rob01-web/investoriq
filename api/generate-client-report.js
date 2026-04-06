@@ -1046,7 +1046,7 @@ function buildScreeningDataCoverageSummary({
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were successfully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All relevant supporting documents were successfully extracted and incorporated into underwriting analysis.</p>${coverageTableHtml}</div>`;
@@ -3354,7 +3354,7 @@ export default async function handler(req, res) {
       upsideBullets.push(
         `Operating cushion of ${formatPercent1(
           operatingCushionPct
-        )} above break-even occupancy based on current performance.`
+        )} above break-even occupancy based on in-place performance.`
       );
     }
     const riskBullets = [];
@@ -3398,12 +3398,12 @@ export default async function handler(req, res) {
             } else if (_dscr >= 1.20) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
-              riskBullets.push(`DSCR of ${_ds} is below 1.20x based on reported income and debt service.`);
+              riskBullets.push(`Base case DSCR of ${_ds} indicates weak debt service coverage relative to standard lender thresholds.`);
             }
           }
         }
         const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
-          ? `Operating profile classified ${screeningClass}. Impacts refinance viability under stress scenarios.`
+          ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
           : null;
         if (_refiClass) riskBullets.push(_refiClass);
       } else {
@@ -3641,7 +3641,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries document-verified rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
       let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
       if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
-        thesisText += `NOI margin compression to ${nmPctStr}, driven by a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation depends on efficiency gains and rent normalization.`;
+        thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation depends on efficiency gains and rent normalization.`;
       } else if (screeningClass === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
@@ -3784,7 +3784,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `</tbody></table></div>` +
           `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Lift at Stabilization</p>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
-          `<p class="small" style="margin-top:6px;">Value lift = annual rent upside capitalized at stated cap rate. Assumes full occupancy at market rents.</p></div>` +
+          `<p class="small" style="margin-top:6px;">Implied value lift reflects annual rent upside capitalized at the stated cap rate, assuming full occupancy at market rents.</p></div>` +
           `</div></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", upsideHtml);
@@ -5055,9 +5055,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       } else if (screeningClass === "Sensitized") {
         const breaches = [];
         if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr)
-          breaches.push(`expense ratio of ${erStr} exceeds the 55.0% sensitized threshold`);
+          breaches.push(`elevated operating expense burden (${erStr}) breaches the sensitized threshold`);
         if (Number.isFinite(noiMarginR) && noiMarginR < 0.45 && nmStr)
-          breaches.push(`NOI margin of ${nmStr} provides limited operating buffer`);
+          breaches.push(`compressed NOI margin (${nmStr}) breaches the sensitized threshold`);
         if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr)
           breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
         execRationale = breaches.length > 0
