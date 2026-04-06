@@ -2,6 +2,6 @@
 
 - [Admin Dashboard - InvestorIQ](/admindashboard): Manage user reports, oversee performance metrics, and monitor platform insights in real time.
 - [Dashboard - InvestorIQ](/dashboard): Upload and manage your property analysis reports with ease.
-- [InvestorIQ - 360° Property Analysis for Real Estate Investors](/landing): Access institutional-grade property analysis powered by AI. Upload your deals and receive comprehensive IQ Reports with charts, graphs, and investment metrics.
+- [InvestorIQ - 360° Property Analysis for Real Estate Investors](/landing): Access institutional-grade property analysis generated from uploaded financial documents using InvestorIQ's proprietary system. Upload your deals and receive comprehensive IQ Reports with charts, graphs, and investment metrics.
 - [Login - InvestorIQ](/login): Securely access your InvestorIQ account.
-- [Sign Up - InvestorIQ](/signup): Create an account and start generating professional AI-powered IQ Reports.
+- [Sign Up - InvestorIQ](/signup): Create an account and start generating professional IQ Reports.

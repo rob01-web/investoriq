@@ -212,7 +212,7 @@ export default function SignUpPage() {
                     color:        T.gold,
                     opacity:      0.55,
                     flexShrink:   0,
-                  }}>—</span>
+                  }}>|</span>
                   <span style={{
                     fontFamily:   "'DM Sans', sans-serif",
                     fontSize:     12,

@@ -66,7 +66,7 @@ export default function About() {
               letterSpacing: '0.26em', textTransform: 'uppercase',
               color: 'rgba(201,168,76,0.5)', marginBottom: 14,
             }}>
-              InvestorIQ — About
+              InvestorIQ | About
             </motion.p>
             <motion.h1 variants={fadeUp} style={{
               fontFamily: "'Cormorant Garamond', Georgia, serif",
@@ -237,7 +237,7 @@ export default function About() {
                     fontFamily: "'DM Mono', monospace", fontSize: 10,
                     color: T.gold, opacity: 0.6, flexShrink: 0,
                   }}>
-                    —
+                    |
                   </span>
                   <span style={{
                     fontFamily: "'DM Sans', sans-serif", fontSize: 14,

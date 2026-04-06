@@ -87,7 +87,7 @@ export default function Contact() {
               letterSpacing: '0.26em', textTransform: 'uppercase',
               color: 'rgba(201,168,76,0.5)', marginBottom: 14,
             }}>
-              InvestorIQ — Contact
+              InvestorIQ | Contact
             </motion.p>
             <motion.h1 variants={fadeUp} style={{
               fontFamily: "'Cormorant Garamond', Georgia, serif",
@@ -258,7 +258,7 @@ export default function Contact() {
                       color: can ? T.goldDark : T.ink4,
                       flexShrink: 0, opacity: can ? 1 : 0.5,
                     }}>
-                      {can ? '✓' : '—'}
+                      {can ? '✓' : '-'}
                     </span>
                     <span style={{
                       fontFamily: "'DM Sans', sans-serif", fontSize: 13,

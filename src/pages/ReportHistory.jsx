@@ -51,7 +51,7 @@ function StatusBadge({ status }) {
       color,
       whiteSpace:   'nowrap',
     }}>
-      {status || '—'}
+      {status || '-'}
     </span>
   );
 }
@@ -152,7 +152,7 @@ export default function ReportHistory() {
       <style>{FONTS}</style>
 
       <Helmet>
-        <title>Report History — InvestorIQ</title>
+        <title>Report History | InvestorIQ</title>
         <meta
           name="description"
           content="Review, manage, and download your previously generated InvestorIQ Property IQ Reports."
@@ -184,7 +184,7 @@ export default function ReportHistory() {
               color:        'rgba(201,168,76,0.45)',
               marginBottom: 8,
             }}>
-              InvestorIQ — Report History
+              InvestorIQ | Report History
             </p>
             <h1 style={{
               fontFamily:   "'Cormorant Garamond', Georgia, serif",
@@ -314,7 +314,7 @@ export default function ReportHistory() {
                         }}
                       >
                         <td style={{ padding:'11px 12px', color:T.ink2, fontWeight:400 }}>
-                          {r.property_address || '—'}
+                          {r.property_address || '-'}
                         </td>
                         <td style={{
                           padding:    '11px 12px',

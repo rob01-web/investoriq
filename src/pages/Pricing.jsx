@@ -231,7 +231,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
               flexShrink:   0,
               lineHeight:   1.65,
             }}>
-              —
+              |
             </span>
             <span style={{
               fontFamily:   "'DM Sans', sans-serif",
@@ -345,7 +345,7 @@ export default function PricingPage() {
       <style>{FONTS}</style>
 
       <Helmet>
-        <title>Pricing — InvestorIQ</title>
+        <title>Pricing | InvestorIQ</title>
         <meta
           name="description"
           content="Flat-fee institutional reports with transparent scope. Screening and underwriting options."
@@ -389,7 +389,7 @@ export default function PricingPage() {
               color:        'rgba(201,168,76,0.5)',
               marginBottom: 14,
             }}>
-              InvestorIQ — Report Pricing
+              InvestorIQ | Report Pricing
             </motion.p>
 
             <motion.h1 variants={fadeUp} style={{
@@ -648,7 +648,7 @@ export default function PricingPage() {
                             color:     val ? T.gold : T.hairlineMid,
                             fontSize:  14,
                           }}>
-                            {val ? '✓' : '—'}
+                            {val ? '✓' : '-'}
                           </td>
                         ))}
                       </tr>
