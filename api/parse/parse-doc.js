@@ -772,7 +772,7 @@ export default async function handler(req, res) {
       return 'supporting_documents_unclassified';
     }
 
-if (
+    if (
   ['supporting', 'supporting_documents', 'supporting_documents_ui'].includes(declaredDocType) &&
   !isTabularInput
 ) {
@@ -803,6 +803,13 @@ if (
       } catch (_inferErr) {
         // fail-closed: leave effectiveDocType as 'supporting_documents'
       }
+    }
+
+    if (effectiveDocType === 'debt_term_sheet') {
+      effectiveDocType = 'loan_term_sheet';
+    }
+    if (detectedDocType === 'debt_term_sheet') {
+      detectedDocType = 'loan_term_sheet';
     }
 
     if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
@@ -1599,22 +1606,32 @@ if (
               const parsed = Number(String(explicitMatch[1]).replace(/,/g, ''));
               if (Number.isFinite(parsed) && parsed > 0) return parsed;
             }
+            const compactLoanMatch = rawText.match(
+              /(?:->\s*)?loan\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/i
+            );
+            if (compactLoanMatch) {
+              const parsed = Number(String(compactLoanMatch[1]).replace(/,/g, ''));
+              if (Number.isFinite(parsed) && parsed > 0) return parsed;
+            }
             return extractDollarNear(rawText, [
               'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
             ]);
           })();
           const interest_rate = extractPercentNear(rawText, [
-            'interest rate', 'rate:', 'note rate', 'coupon rate',
+            'interest rate', 'rate:', 'rate', 'note rate', 'coupon rate',
           ]);
           const ltv = extractPercentNear(rawText, [
             'loan to value', 'ltv', 'loan-to-value',
           ]);
           const amort_years = (() => {
             const idx = lowerText.search(/amortiz/);
-            if (idx === -1) return null;
-            const snippet = rawText.slice(idx, idx + 80);
-            const m = snippet.match(/(\d+)\s*(?:year|yr)/i);
-            return m ? parseInt(m[1], 10) : null;
+            if (idx !== -1) {
+              const snippet = rawText.slice(idx, idx + 80);
+              const m = snippet.match(/(\d+)\s*(?:year|yr)/i);
+              if (m) return parseInt(m[1], 10);
+            }
+            const compactAmMatch = rawText.match(/\bAM\s*[:\-]?\s*(\d+)\s*(?:years?|yrs?|yr)\b/i);
+            return compactAmMatch ? parseInt(compactAmMatch[1], 10) : null;
           })();
           const refi_cap_rate = extractPercentNear(rawText, [
             'exit cap', 'refi cap', 'cap rate', 'exit cap rate', 'refi cap rate',
