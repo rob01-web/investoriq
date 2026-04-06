@@ -44,6 +44,7 @@ const tiers = [
     price:       '$499',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
+    valueLine:   'Rapid risk screening from real documents. No assumptions.',
     description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
     features: [
       'Built strictly from T12 and rent roll documents',
@@ -51,7 +52,7 @@ const tiers = [
       'No assumptions, no invented data',
       'One generation per purchase',
     ],
-    cta: 'Purchase Screening',
+    cta: 'Start Screening',
     highlight: false,
   },
   {
@@ -59,6 +60,7 @@ const tiers = [
     price:       '$1,499',
     productType: 'underwriting',
     eyebrow:     'Investment Committee Underwriting',
+    valueLine:   'Full institutional-grade refinance and downside risk modeling.',
     description: 'Institutional-grade underwriting memorandum built for investment committee review.',
     features: [
       'Built from T12, rent roll, and supporting due diligence documents',
@@ -66,7 +68,7 @@ const tiers = [
       'Structured for investment committee review',
       'One generation per purchase',
     ],
-    cta: 'Purchase Underwriting',
+    cta: 'Run Full Underwriting',
     highlight: true,
   },
 ];
@@ -412,7 +414,7 @@ export default function PricingPage() {
               lineHeight:   1.65,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              Built from your T12, rent roll, and deal documents — not assumptions.
+              Built from your T12, rent roll, and deal documents - not assumptions.
             </motion.p>
 
             {isAuthed && (

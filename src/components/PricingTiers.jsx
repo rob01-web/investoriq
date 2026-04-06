@@ -185,8 +185,7 @@ const Tier = ({ tier, onAction, isLoading, activePriceId }) => {
 };
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-// ⚠️  NOTE: Pricing data and Stripe price IDs are UNCHANGED from original.
-//     If pricing has been updated in Pricing.jsx ($399/$1,499), verify these
+//     If pricing has been updated in Pricing.jsx ($499/$1,499), verify these
 //     tier definitions match the current Stripe products before deploying.
 const PricingTiers = ({ title, description }) => {
   const { toast }    = useToast();
@@ -194,8 +193,7 @@ const PricingTiers = ({ title, description }) => {
   const navigate     = useNavigate();
   const [isLoading, setIsLoading]       = useState(false);
   const [activePriceId, setActivePriceId] = useState(null);
-
-  // ── Pricing data — updated to current $399 / $1,499 two-tier model ────────
+  // ── Pricing data — updated to current $499 / $1,499 two-tier model ────────
   const pricingTiers = [
     {
       name:        'Screening Report',

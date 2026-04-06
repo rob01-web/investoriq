@@ -1,8 +1,7 @@
 // src/lib/pricingConfig.js
 // ─────────────────────────────────────────────────────────────────────────────
 // Validates that Stripe price IDs are present in the environment.
-// Used as a runtime guard before initiating checkout.
-// Pricing: $399 Screening / $1,499 Underwriting (updated March 2026)
+// Pricing: $499 Screening / $1,499 Underwriting (updated April 2026)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function getValidatedPriceConfig() {
@@ -18,8 +17,7 @@ export function getValidatedPriceConfig() {
     missing,
     prices: {
       screening: {
-        priceId:  screeningId    || null,
-        amount:   399,
+        amount:   499,
         currency: 'USD',
         label:    'Screening Report',
       },
