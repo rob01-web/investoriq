@@ -1683,8 +1683,6 @@ export default async function handler(req, res) {
             ]);
 
           if (!loan_amount) parse_warnings.push('missing_loan_amount');
-          if (!Number.isFinite(ltv)) parse_warnings.push('missing_ltv');
-
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
