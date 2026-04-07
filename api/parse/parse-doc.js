@@ -763,7 +763,13 @@ export default async function handler(req, res) {
       const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
       const has = (terms) => terms.some((t) => norm.includes(t));
       const countMatches = (terms) => terms.filter((t) => norm.includes(t)).length;
-      if (has(['TERM SHEET', 'LOAN AMOUNT']) && has(['INTEREST ONLY', 'AMORTIZATION', 'DSCR', 'LTV'])) return 'loan_term_sheet';
+      const hasDebtHeader = has(['TERM SHEET', 'REFI TERMS', 'LOAN TERMS']);
+      const compactDebtSignals = countMatches(['LTV', 'RATE', 'AM', 'LOAN', 'EXIT CAP', 'IO']);
+      const hasFinancingValuePattern =
+        /\d+(?:\.\d+)?\s*%/.test(norm) ||
+        /\$\s*[\d,]+(?:\.\d{2})?/.test(norm) ||
+        /\b\d+\s*(?:YRS|YR|YEARS)\b/.test(norm);
+      if (hasDebtHeader || (compactDebtSignals >= 3 && hasFinancingValuePattern)) return 'loan_term_sheet';
       if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
       if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
       if (has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
