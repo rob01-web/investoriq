@@ -1605,23 +1605,24 @@ export default async function handler(req, res) {
 
         if (effectiveDocType === 'loan_term_sheet') {
           const loan_amount = (() => {
-            const explicitMatch = rawText.match(
-              /loan amount(?:\s*\([^)]*\))?\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/i
+            const candidates = [];
+            const addCandidate = (value) => {
+              const parsed = Number(String(value || '').replace(/,/g, ''));
+              if (Number.isFinite(parsed) && parsed >= 10000) candidates.push(parsed);
+            };
+            const explicitMatches = rawText.matchAll(
+              /loan amount(?:\s*\([^)]*\))?\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
             );
-            if (explicitMatch) {
-              const parsed = Number(String(explicitMatch[1]).replace(/,/g, ''));
-              if (Number.isFinite(parsed) && parsed > 0) return parsed;
-            }
-            const compactLoanMatch = rawText.match(
-              /(?:->\s*)?loan\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/i
+            for (const match of explicitMatches) addCandidate(match[1]);
+            const compactLoanMatches = rawText.matchAll(
+              /(?:->\s*)?loan\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
             );
-            if (compactLoanMatch) {
-              const parsed = Number(String(compactLoanMatch[1]).replace(/,/g, ''));
-              if (Number.isFinite(parsed) && parsed > 0) return parsed;
-            }
-            return extractDollarNear(rawText, [
+            for (const match of compactLoanMatches) addCandidate(match[1]);
+            const fallbackAmount = extractDollarNear(rawText, [
               'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
             ]);
+            addCandidate(fallbackAmount);
+            return candidates.length > 0 ? Math.max(...candidates) : null;
           })();
           const interest_rate = extractPercentNear(rawText, [
             'interest rate', 'rate:', 'rate', 'note rate', 'coupon rate',
