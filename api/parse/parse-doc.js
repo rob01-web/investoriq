@@ -1624,26 +1624,67 @@ export default async function handler(req, res) {
             addCandidate(fallbackAmount);
             return candidates.length > 0 ? Math.max(...candidates) : null;
           })();
-          const interest_rate = extractPercentNear(rawText, [
-            'interest rate', 'rate:', 'rate', 'note rate', 'coupon rate',
-          ]);
-          const ltv = extractPercentNear(rawText, [
-            'loan to value', 'ltv', 'loan-to-value',
-          ]);
-          const amort_years = (() => {
+
+          const compact_interest_rate = (() => {
+            const m = rawText.match(/\b(?:interest\s*rate|note\s*rate|coupon\s*rate|rate)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
+            return m ? Number(m[1]) : null;
+          })();
+
+          const compact_ltv = (() => {
+            const beforeLabel = rawText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:loan\s*to\s*value|loan-to-value|ltv)\b/i);
+            if (beforeLabel) return Number(beforeLabel[1]);
+            const afterLabel = rawText.match(/\b(?:loan\s*to\s*value|loan-to-value|ltv)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
+            return afterLabel ? Number(afterLabel[1]) : null;
+          })();
+
+          const compact_amort_years = (() => {
+            const compactAmMatch = rawText.match(/\bAM\s*[:\-]?\s*(\d+)\s*(?:years?|yrs?|yr)\b/i);
+            if (compactAmMatch) return parseInt(compactAmMatch[1], 10);
             const idx = lowerText.search(/amortiz/);
             if (idx !== -1) {
               const snippet = rawText.slice(idx, idx + 80);
               const m = snippet.match(/(\d+)\s*(?:year|yr)/i);
               if (m) return parseInt(m[1], 10);
             }
-            const compactAmMatch = rawText.match(/\bAM\s*[:\-]?\s*(\d+)\s*(?:years?|yrs?|yr)\b/i);
-            return compactAmMatch ? parseInt(compactAmMatch[1], 10) : null;
+            return null;
           })();
-          const refi_cap_rate = extractPercentNear(rawText, [
-            'exit cap', 'refi cap', 'cap rate', 'exit cap rate', 'refi cap rate',
-          ]);
+
+          const compact_refi_cap_rate = (() => {
+            const m = rawText.match(/\b(?:exit\s*cap(?:\s*rate)?|refi\s*cap(?:\s*rate)?|cap\s*rate)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
+            return m ? Number(m[1]) : null;
+          })();
+
+          const interest_rate =
+            compact_interest_rate ??
+            extractPercentNear(rawText, [
+              'interest rate', 'rate:', 'rate', 'note rate', 'coupon rate',
+            ]);
+
+          let ltv =
+            compact_ltv ??
+            extractPercentNear(rawText, [
+              'loan to value', 'ltv', 'loan-to-value',
+            ]);
+
+          if (
+            Number.isFinite(ltv) &&
+            Number.isFinite(interest_rate) &&
+            ltv === interest_rate
+          ) {
+            ltv = null;
+          }
+
+          const amort_years = compact_amort_years;
+
+          const refi_cap_rate =
+            compact_refi_cap_rate ??
+            extractPercentNear(rawText, [
+              'exit cap', 'refi cap', 'cap rate', 'exit cap rate', 'refi cap rate',
+            ]);
+
           if (!loan_amount) parse_warnings.push('missing_loan_amount');
+          if (!Number.isFinite(ltv)) parse_warnings.push('missing_ltv');
+
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,

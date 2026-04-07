@@ -59,6 +59,22 @@
 - Failed Step 03 dashboard state now supports UI-only dismissal through local storage, with no report, job, or credit changes.
 - Underwriting capability has been reconfirmed: refinance stress testing, DSCR, and cap-rate / valuation sensitivity are already present; remaining work is phrasing and final QA.
 
+### Recent Parsing & Underwriting Hardening (April 2026)
+
+- Debt document routing hardened:
+  - Normalized `debt_term_sheet` -> `loan_term_sheet` in `parse-doc.js` to ensure consistent extraction path and artifact generation.
+- Loan term sheet inference expanded:
+  - `inferDocTypeFromText(...)` now supports compact lender-style debt summaries (e.g., "REFI TERMS", "Rate", "AM", "LTV") using signal-count + financing-pattern gating.
+  - Prevents valid debt documents from falling into `supporting_documents_unclassified`.
+- Loan amount extraction hardened:
+  - Replaced single-match parsing with multi-candidate collection using `matchAll(...)`.
+  - Added plausibility filter (`>= 10,000`) to eliminate OCR noise and small-value miscaptures (e.g., `$75`).
+  - Deterministic selection now returns the largest valid candidate.
+- Result:
+  - Messy debt documents now correctly produce `loan_term_sheet_parsed` artifacts.
+  - Underwriting debt inputs (loan balance, rate, amortization, LTV) reliably populate from compact or non-standard lender formats.
+  - DSCR and refinance outputs no longer break due to invalid small-value parses.
+
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
 - Test 9 pipeline failure: completed.
