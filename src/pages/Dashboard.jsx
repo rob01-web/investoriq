@@ -352,7 +352,11 @@ export default function Dashboard() {
     if (!profile?.id) return;
     try {
       setReportsLoading(true);
-      const { data, error } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('reports')
+        .select('id, property_name, report_type, created_at, status, storage_path, job_id, artifact_id')
+        .order('created_at', { ascending: false })
+        .limit(25);
       if (error) throw error;
       setReports(data || []);
     } catch (err) { console.error('Error fetching reports:', err); }
