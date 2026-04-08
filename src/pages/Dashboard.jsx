@@ -355,6 +355,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('reports')
         .select('id, property_name, report_type, created_at, status, storage_path')
+        .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(25);
       if (error) throw error;
