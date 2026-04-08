@@ -354,7 +354,7 @@ export default function Dashboard() {
       setReportsLoading(true);
       const { data, error } = await supabase
         .from('reports')
-        .select('id, property_name, report_type, created_at, status, storage_path, job_id, artifact_id')
+        .select('id, property_name, report_type, created_at, status, storage_path')
         .order('created_at', { ascending: false })
         .limit(25);
       if (error) throw error;
