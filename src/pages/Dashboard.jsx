@@ -307,6 +307,7 @@ export default function Dashboard() {
   };
   const [propertyName, setPropertyName] = useState('');
   const propertyNameRef = useRef('');
+  const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
@@ -343,6 +344,9 @@ export default function Dashboard() {
     const dismissed = dismissedJobIds.has(String(job.id));
     return job.status === 'failed' && !dismissed;
   });
+  const hasActiveProcessingJob = inProgressJobs.some((job) =>
+    ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
+  );
 
   const fetchReports = async () => {
     if (!profile?.id) return;
@@ -460,7 +464,11 @@ export default function Dashboard() {
     if (preferredJob?.id && preferredJob.id !== jobId) {
       setJobId(preferredJob.id);
       setLockedJobIdForUploads(preferredJob.id);
-      if (preferredJob.status === 'needs_documents' && !propertyName.trim() && preferredJob.property_name) setPropertyName(preferredJob.property_name);
+      if (preferredJob.status === 'needs_documents' && !propertyName.trim() && preferredJob.property_name) {
+        setPropertyName(preferredJob.property_name);
+        propertyNameRef.current = preferredJob.property_name;
+        if (propertyInputRef.current) propertyInputRef.current.value = preferredJob.property_name;
+      }
     }
   }, [recentJobs, selectedReportType]);
 
@@ -474,9 +482,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    const hasActiveProcessingJob = inProgressJobs.some((job) =>
-      ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
-    );
     if (!hasActiveProcessingJob) return;
     const intervalId = window.setInterval(() => {
       fetchInProgressJobs();
@@ -485,7 +490,7 @@ export default function Dashboard() {
       fetchRecentJobs();
     }, 60000);
     return () => { window.clearInterval(intervalId); };
-  }, [profile?.id, inProgressJobs]);
+  }, [profile?.id, hasActiveProcessingJob]);
 
   useEffect(() => {
     if (!jobId) { setRentRollCoverage(null); return; }
@@ -693,7 +698,8 @@ export default function Dashboard() {
       setLoading(true);
       if (!profile?.id) { toast({ title: 'Not authenticated', description: 'Please log in.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
       if (!acknowledged) { toast({ title: 'Acknowledgement required', description: 'Please acknowledge the disclosures before generating.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
-      if (!propertyName.trim()) { toast({ title: 'Property name required', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
+      const effectivePropertyName = propertyNameRef.current.trim();
+      if (!effectivePropertyName) { toast({ title: 'Property name required', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
       const rentRolls = uploadedFiles.filter((f) => f.docType === 'rent_roll');
       const t12s = uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement');
       if (rentRolls.length === 0 || t12s.length === 0) { toast({ title: 'Required documents missing', description: 'Upload a Rent Roll and T12 to proceed.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
@@ -722,11 +728,9 @@ export default function Dashboard() {
         });
       }
 
-      propertyNameRef.current = propertyName.trim();
-
       const { data: rpcData, error: rpcError } = await supabase.rpc('consume_purchase_and_create_job', {
         p_report_type: selectedReportType,
-        p_job_payload: { property_name: propertyName.trim() },
+        p_job_payload: { property_name: effectivePropertyName },
         p_staged_files: stagedFiles,
       });
 
@@ -750,6 +754,7 @@ export default function Dashboard() {
       toast({ title: 'Report queued', description: 'Your report has started. You may safely close this page and return later.' });
       propertyNameRef.current = '';
       setPropertyName('');
+      if (propertyInputRef.current) propertyInputRef.current.value = '';
       setUploadedFiles([]);
       setAcknowledged(false);
       setAckLocked(false);
@@ -963,13 +968,16 @@ export default function Dashboard() {
             <div style={{ marginBottom: 20 }}>
               <label style={{ ...labelMono, display:'block', marginBottom:8 }}>Property Name or Address</label>
               <input
+                ref={propertyInputRef}
                 type="text"
-                value={propertyName}
-                onChange={(e) => { setPropertyName(e.target.value); propertyNameRef.current = e.target.value; }}
+                defaultValue={propertyName}
+                onChange={(e) => { propertyNameRef.current = e.target.value; }}
                 onKeyDown={async (e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (!jobId && propertyName.trim() && hasAvailableReport) { fetchReports(); }
+                    const nextValue = propertyNameRef.current.trim();
+                    setPropertyName(nextValue);
+                    if (!jobId && nextValue && hasAvailableReport) { fetchReports(); }
                   }
                 }}
                 placeholder="e.g. 4200 Commerce Drive, Austin TX"
@@ -986,7 +994,11 @@ export default function Dashboard() {
                   boxSizing:    'border-box',
                 }}
                 onFocus={(e) => { e.target.style.borderColor = T.gold; }}
-                onBlur={(e)  => { e.target.style.borderColor = T.hairlineMid; }}
+                onBlur={(e)  => {
+                  propertyNameRef.current = e.target.value;
+                  setPropertyName(e.target.value.trim());
+                  e.target.style.borderColor = T.hairlineMid;
+                }}
               />
             </div>
 
