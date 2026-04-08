@@ -943,12 +943,10 @@ export default function Dashboard() {
                     {availableReportsCount}
                   </div>
                 </div>
-                {!hasAvailableReport && (
-                  <a href="/pricing" style={{ fontFamily:"'DM Mono', monospace", fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', padding:'9px 18px', background:T.green, color:T.gold, border:`1px solid ${T.green}`, textDecoration:'none', fontWeight:500, transition:'opacity 0.15s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.opacity='0.88'; }} onMouseLeave={(e) => { e.currentTarget.style.opacity='1'; }}>
-                    Purchase Report
-                  </a>
-                )}
+                <a href="/pricing" style={{ fontFamily:"'DM Mono', monospace", fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', padding:'9px 18px', background:T.green, color:T.gold, border:`1px solid ${T.green}`, textDecoration:'none', fontWeight:500, transition:'opacity 0.15s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity='0.88'; }} onMouseLeave={(e) => { e.currentTarget.style.opacity='1'; }}>
+                  Purchase Report
+                </a>
               </div>
             )}
           </div>
