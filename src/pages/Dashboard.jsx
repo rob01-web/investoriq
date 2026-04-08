@@ -499,10 +499,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    const channel = supabase.channel('schema-db-changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analysis_jobs', filter: `user_id=eq.${profile.id}` }, () => { fetchInProgressJobs(); fetchReports(); fetchLatestFailedJob(); })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return undefined;
   }, [profile?.id]);
 
   useEffect(() => { setScopeConfirmed(false); }, [`${uploadedFiles.map((file) => file.docType).sort().join('|')}::${uploadedFiles.length}`]);
