@@ -464,7 +464,7 @@ export default function Dashboard() {
     if (preferredJob?.id && preferredJob.id !== jobId) {
       setJobId(preferredJob.id);
       setLockedJobIdForUploads(preferredJob.id);
-      if (preferredJob.status === 'needs_documents' && !propertyName.trim() && preferredJob.property_name) {
+      if (preferredJob.status === 'needs_documents' && !propertyNameRef.current.trim() && preferredJob.property_name) {
         setPropertyName(preferredJob.property_name);
         propertyNameRef.current = preferredJob.property_name;
         if (propertyInputRef.current) propertyInputRef.current.value = preferredJob.property_name;
