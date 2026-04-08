@@ -2922,8 +2922,8 @@ export default async function handler(req, res) {
         appraisalPayload?.cap_rate ??
         null,
       refi_ltv_max:
-        rawFinancials?.refi_ltv_max ??
         mortgagePayload?.ltv ??
+        rawFinancials?.refi_ltv_max ??
         0.75,
       refi_dscr_min:
         rawFinancials?.refi_dscr_min ??

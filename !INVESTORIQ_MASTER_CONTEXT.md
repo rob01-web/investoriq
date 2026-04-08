@@ -75,6 +75,43 @@
   - Underwriting debt inputs (loan balance, rate, amortization, LTV) reliably populate from compact or non-standard lender formats.
   - DSCR and refinance outputs no longer break due to invalid small-value parses.
 
+### Dashboard Performance Hardening (April 2026)
+
+- Critical frontend freeze identified on Dashboard page during property name input.
+- Issue was isolated to main-thread blocking caused by React re-render cycles on every keystroke.
+- Root causes:
+  - Controlled input (`useState`) triggering full dashboard re-render per keypress.
+  - Large `jobs` array and derived UI recomputing on each render.
+  - Polling effect tied to `jobs` dependency, creating repeated re-trigger loops.
+
+- Fix approach:
+  - Migrated property input from controlled state to ref-backed uncontrolled input:
+    - `propertyNameRef` introduced to store live input value.
+    - React state (`propertyName`) now updates only on blur / Enter.
+  - Introduced `propertyInputRef` to directly manage DOM value when needed.
+  - Updated analyze flow to use `effectivePropertyName` (ref-first fallback logic).
+  - Cleared input deterministically post-submit across:
+    - ref
+    - state
+    - DOM input value
+
+- Auto-fill synchronization fix:
+  - `needs_documents` recovery path updated to sync all three layers:
+    - React state
+    - `propertyNameRef.current`
+    - input element value
+  - Prevents desync between UI and internal state.
+
+- Polling stabilization:
+  - Replaced `jobs` dependency in polling effect with stable boolean:
+    - `hasActiveProcessingJob`
+  - Eliminates unnecessary interval resets and render churn.
+
+- Result:
+  - Typing in Dashboard input no longer blocks UI thread.
+  - No browser freeze during input or upload flow.
+  - Rendering stabilized without altering business logic.
+
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
 - Test 9 pipeline failure: completed.
