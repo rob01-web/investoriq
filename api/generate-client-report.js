@@ -4334,9 +4334,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount
       );
       const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
-      const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
-      const baseCapPct = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? rawCapPct : 5.5;
-      const capSource = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? "appraisal" : "stated default";
+      const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
+      const baseCapPct = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? resolvedCapPct : 5.5;
+      const capSource = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? "document-derived" : "stated default";
 
       if (Number.isFinite(noiBase) && noiBase > 0 && Number.isFinite(baseRatePct) && baseRatePct > 0 && Number.isFinite(debtBal) && debtBal > 0) {
         const LTV = 0.75;
