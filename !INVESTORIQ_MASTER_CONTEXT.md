@@ -112,6 +112,29 @@
   - No browser freeze during input or upload flow.
   - Rendering stabilized without altering business logic.
 
+### Reports Query Schema Fix (April 2026)
+
+- Dashboard reports were failing to load and causing UI freeze.
+- Supabase error identified:
+  - `column reports.status does not exist`
+
+- Root cause:
+  - Frontend query in `Dashboard.jsx` requested a non-existent `status` column from `public.reports`.
+
+- Fix applied:
+  - Removed `status` from all `.select(...)` calls on `reports`.
+
+- Final query:
+
+```js
+.select('id, property_name, report_type, created_at, storage_path')
+```
+
+- Result:
+  - Reports load successfully.
+  - Dashboard freeze resolved.
+  - Supabase queries execute cleanly.
+
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
 - Test 9 pipeline failure: completed.
@@ -119,7 +142,7 @@
 - Dashboard auto-refresh removal: completed.
 - Analysis Scope Preview removal: completed.
 - Active Jobs filtering and property-name fallback: completed.
-- Report History `report_type` population for newly generated reports: completed.
+- Report History `report_type` population for newly generated reports (replaces legacy status concept): completed.
 - Admin issue / regen workflow wiring: completed.
 - Admin dashboard blank-screen crash from missing `loading` state: completed.
 - Cover-page REPORT TIER visibility/color fix: completed.
@@ -142,6 +165,23 @@
 - Replace homepage sample reports with final production-grade outputs.
 - Do one final website pass for any remaining user-facing copy or workflow rough edges.
 - Prepare Ken Dunn outreach only after final report QA and sample replacement are complete.
+
+## 7.1 Reports Table Schema (Locked)
+
+```text
+id
+user_id
+property_name
+storage_path
+created_at
+report_type
+```
+
+Notes:
+
+- `report_type` is the only classification field (`screening`, `underwriting`)
+- No `status` column exists in `public.reports`
+- Any future queries must NOT reference `status`
 
 ## 8. Key Files
 - `api/generate-client-report.js`

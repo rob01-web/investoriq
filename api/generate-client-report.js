@@ -4394,9 +4394,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     let dcfTableHtml = "";
     if (t12Payload && effectiveReportMode === "v1_core") {
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
-      const rawExitCapPct = coerceNumber(appraisalPayload?.cap_rate);
-      const exitCapPct = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? rawExitCapPct : 5.5;
-      const exitCapSource = (Number.isFinite(rawExitCapPct) && rawExitCapPct > 0) ? "appraisal" : "stated default";
+      const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
+      const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
+      const exitCapSource = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? "document-derived" : "stated default";
       const GROWTH = 0.03; // 3% annual NOI growth ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â stated assumption
       const DISCOUNT = 0.08; // 8% discount rate ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â stated assumption
 
@@ -4461,9 +4461,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     let scenarioTrajectoryChartHtml = "";
     if (effectiveReportMode === "v1_core" && t12Payload) {
       const noiBasis = coerceNumber(t12Payload.net_operating_income);
-      const rawCapPct = coerceNumber(appraisalPayload?.cap_rate);
-      const exitCapPct = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? rawCapPct : 5.5;
-      const exitCapSource = (Number.isFinite(rawCapPct) && rawCapPct > 0) ? "appraisal" : "5.5% stated";
+      const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
+      const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
+      const exitCapSource = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? "document-derived" : "5.5% stated";
       const exitCapDec = exitCapPct / 100;
       if (Number.isFinite(noiBasis) && noiBasis > 0) {
         const growthRates = [
