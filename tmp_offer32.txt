@@ -1,0 +1,32 @@
+Offering Summary (Test Document)
+
+124 Richmond Street Apartments
+124 Richmond Street, London, Ontario
+As of: March 1, 2026
+
+ Field                                 Detail
+
+ Property                              124 Richmond Street Apartments
+
+ Address                               124 Richmond Street, London, Ontario
+
+ Asset Type                            12-Unit Purpose-Built Multifamily (brick walk-up)
+
+ Year Built                            1978
+
+ Asking Price                          $1,250,000
+
+ Units                                 6 x 1BR, 6 x 2BR
+
+ Utilities                             Individually metered hydro; Owner pays water & gas
+
+ Disposition Context                   Long-term owner (retiring). No family succession plan.
+
+
+Recent Capital Items (stated by ownership): Roof (2018), Boiler (2020), 4 unit cosmetic updates (2023–2024).
+Windows original but functional.
+
+
+
+Fictitious test document prepared for software validation only.
+

@@ -1,0 +1,18 @@
+Municipal Property Tax Notice (Test Document)
+
+124 Richmond Street Apartments
+124 Richmond Street, London, Ontario
+As of: March 1, 2026
+
+ Item                                                             Amount
+
+ 2025 Municipal Property Taxes                                    $38,400
+
+ Installments                                                     6 installments (Jan–Dec)
+
+ Roll Number                                                      1234-567-890-00000 (test)
+
+
+
+Fictitious test document prepared for software validation only.
+

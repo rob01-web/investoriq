@@ -1,0 +1,15 @@
+Phase I Environmental Site Assessment (Test — Unsupported)
+
+124 Richmond Street Apartments
+124 Richmond Street, London, Ontario
+As of: March 1, 2026
+
+Conclusion: No Recognized Environmental Conditions (RECs) identified in desktop review (test).
+
+Note: InvestorIQ V1 does not model environmental risk; document provided to ensure system ignores
+unsupported inputs.
+
+
+
+Fictitious test document. Marked UNSUPPORTED for ingestion behavior testing.
+

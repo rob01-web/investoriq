@@ -1,0 +1,24 @@
+REFI TERMS — Richmond 124 (working notes)
+
+124 Richmond Street Apartments
+124 Richmond Street, London, Ontario
+As of: March 1, 2026
+
+Loan: 75% LTV | Rate: 5.85% FIXED | AM: 30 yrs
+IO: none
+Price ref: 1,250,000 -> Loan $937,500
+
+Vacancy: 3% (UW). Exit cap 6.25% (note: subject to review).
+
+ Item                           Notes
+
+ Lender                         Example CU — indicative only
+
+ Fees                           1% lender fee + legal
+
+ Closing                        Target 45–60 days
+
+
+
+Fictitious test doc. For ingestion stress testing only.
+

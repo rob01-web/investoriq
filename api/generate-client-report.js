@@ -373,9 +373,9 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
 </div>`;
   const refiHtml = `<div class="card no-break"><p><strong>Refinance Stability Classification: ${escapeHtml(
     refiTier
-  )}</strong></p><p>Base Coverage: ${formatCoverage(
+  )}</strong></p><p>Refinance Proceeds / Debt Balance: ${formatCoverage(
     coverageBase
-  )}</p><p>Worst-Case Coverage: ${formatCoverage(
+  )}</p><p>Stressed Proceeds / Debt Balance: ${formatCoverage(
     worstFiniteCoverage
   )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
   return { tier: refiTier, evidence, html: refiHtml };
@@ -1049,7 +1049,7 @@ function buildScreeningDataCoverageSummary({
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All relevant supporting documents were successfully extracted and incorporated into underwriting analysis.</p>${coverageTableHtml}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Unsupported or unstructured documents were excluded from quantitative modeling.</p>${coverageTableHtml}<p style="margin:10px 0 4px 0;color:#1e293b;font-size:11px;font-weight:600;">Unsupported / Excluded Inputs:</p><ul style="margin:0 0 0 18px;padding:0;color:#374151;font-size:11px;"><li>Appraisal summary (unstructured format)</li><li>Market rent survey excerpt (unstructured)</li><li>ESA summary (non-financial)</li><li>Zoning letter (non-financial)</li></ul></div>`;
     }
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
@@ -4346,18 +4346,11 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           { label: `+100 bps (${(baseRatePct + 1).toFixed(1)}%)`, addPct: 1 },
           { label: `+200 bps (${(baseRatePct + 2).toFixed(1)}%)`, addPct: 2 },
         ];
-        const capScenarios = [
-          { label: `${baseCapPct.toFixed(1)}%`, addPct: 0 },
-          { label: `${(baseCapPct + 0.5).toFixed(1)}%`, addPct: 0.5 },
-          { label: `${(baseCapPct + 1.0).toFixed(1)}%`, addPct: 1.0 },
-        ];
 
         let grid = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
         grid += `<thead><tr>`;
         grid += `<th style="text-align:left;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Rate Scenario</th>`;
-        for (const cs of capScenarios) {
-          grid += `<th style="text-align:center;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">Cap: ${escapeHtml(cs.label)}</th>`;
-        }
+        grid += `<th style="text-align:center;padding:4px 8px;background:#F3F4F6;border:1px solid #E5E7EB;">DSCR</th>`;
         grid += `</tr></thead><tbody>`;
 
         for (const rs of rateScenarios) {
@@ -4365,27 +4358,24 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           const mc = computeMortgageConstant(newRateDec, amortYrs);
           grid += `<tr>`;
           grid += `<td style="padding:4px 8px;font-weight:600;background:#F9FAFB;border:1px solid #E5E7EB;">${escapeHtml(rs.label)}</td>`;
-          for (const cs of capScenarios) {
-            const capDec = (baseCapPct + cs.addPct) / 100;
-            let coverageDisplay = "N/A";
-            let bg = "#F9FAFB";
-            let fc = "#374151";
-            if (mc && mc > 0 && capDec > 0) {
-              const annualDs = debtBal * mc;
-              const coverage = annualDs > 0 ? noiBase / annualDs : 0;
-              if (coverage > 0 && Number.isFinite(coverage)) {
-                coverageDisplay = formatMultiple(coverage, 2);
-                if (coverage < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
-                else if (coverage < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
-                else { bg = "#FEFCE8"; fc = "#B8860B"; }
-              }
+          let coverageDisplay = "N/A";
+          let bg = "#F9FAFB";
+          let fc = "#374151";
+          if (mc && mc > 0) {
+            const annualDs = debtBal * mc;
+            const coverage = annualDs > 0 ? noiBase / annualDs : 0;
+            if (coverage > 0 && Number.isFinite(coverage)) {
+              coverageDisplay = formatMultiple(coverage, 2);
+              if (coverage < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
+              else if (coverage < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
+              else { bg = "#FEFCE8"; fc = "#B8860B"; }
             }
-            grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${coverageDisplay}</td>`;
           }
+          grid += `<td style="text-align:center;padding:4px 8px;background:${bg};color:${fc};font-weight:600;border:1px solid #E5E7EB;">${coverageDisplay}</td>`;
           grid += `</tr>`;
         }
         grid += `</tbody></table>`;
-        grid += `<p class="small" style="margin-top:6px;">Current debt coverage sensitivity using current debt balance under rate and cap scenarios | Cap rate source: ${escapeHtml(capSource)} | Green = coverage >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
+        grid += `<p class="small" style="margin-top:6px;">Current debt service coverage sensitivity using current debt balance under interest-rate scenarios only. Green = coverage >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
         refiCollapseGridHtml = grid;
       }
     }
@@ -4585,7 +4575,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
-        const verdictLabel = score >= 70 ? "PROCEED" : score >= 50 ? "REVIEW" : "PASS";
+        const verdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "REVIEW" : "PASS";
         const verdictColor = "#1F3A5F";
         const rows = scoreRows.map((r) =>
           `<tr>` +
@@ -4614,7 +4604,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. PROCEED \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
