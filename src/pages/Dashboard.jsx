@@ -864,7 +864,7 @@ export default function Dashboard() {
                 onClick={() => { const t = document.getElementById('upload-section'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                 style={{ ...labelMono, color: T.okGreen, background: 'none', border: 'none', cursor: 'pointer', marginTop: 8, textDecoration: 'underline' }}
               >
-                Jump to upload ->
+                Jump to upload →
               </button>
             </NoticeBox>
           )}
@@ -998,6 +998,10 @@ export default function Dashboard() {
               <input
                 ref={propertyInputRef}
                 type="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 defaultValue={propertyName}
                 onChange={(e) => { propertyNameRef.current = e.target.value; }}
                 onKeyDown={async (e) => {
@@ -1020,7 +1024,6 @@ export default function Dashboard() {
                   outline:      'none',
                   boxSizing:    'border-box',
                 }}
-                onFocus={(e) => { e.target.style.borderColor = T.gold; }}
                 onBlur={(e)  => {
                   propertyNameRef.current = e.target.value;
                   setPropertyName(e.target.value.trim());
