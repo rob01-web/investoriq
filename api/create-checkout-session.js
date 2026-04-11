@@ -92,23 +92,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: jobRow, error: jobErr } = await supabase
-      .from("analysis_jobs")
-      .insert({
-        user_id: userId,
-        report_type: normalizedProductType,
-        status: "needs_documents",
-      })
-      .select("id")
-      .single();
-
-    if (jobErr || !jobRow?.id) {
-      console.error("ANALYSIS_JOB_INSERT_ERROR:", jobErr);
-      return res.status(500).json({ error: jobErr?.message || "Failed to create analysis job" });
-    }
-    const jobId = jobRow.id;
-
     const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
 
     const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success`;
@@ -124,7 +107,6 @@ export default async function handler(req, res) {
         // 🔒 webhook should trust THIS canonical value
         userId: userId || "",
         productType: normalizedProductType || "",
-        jobId,
       },
     });
 
@@ -134,4 +116,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to create checkout session" });
   }
 }
-

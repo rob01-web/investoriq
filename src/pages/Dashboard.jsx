@@ -1015,7 +1015,7 @@ export default function Dashboard() {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     const nextValue = propertyNameRef.current.trim();
-                    setPropertyName(nextValue);
+                    if (nextValue !== propertyName) setPropertyName(nextValue);
                   }
                 }}
                 placeholder="e.g. 4200 Commerce Drive, Austin TX"
@@ -1033,7 +1033,8 @@ export default function Dashboard() {
                 }}
                 onBlur={(e)  => {
                   propertyNameRef.current = e.target.value;
-                  setPropertyName(e.target.value.trim());
+                  const nextValue = e.target.value.trim();
+                  if (nextValue !== propertyName) setPropertyName(nextValue);
                   e.target.style.borderColor = T.hairlineMid;
                 }}
               />
