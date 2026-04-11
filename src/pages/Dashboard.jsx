@@ -558,10 +558,12 @@ export default function Dashboard() {
       return String(f.original_name || f.file?.name || '').toLowerCase().includes('tax');
     })
   ), [uploadedFiles]);
-  const preflightAppraisal = uploadedFiles.some((f) => {
-    if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
-    return String(f.original_name || f.file?.name || '').toLowerCase().includes('appraisal');
-  });
+  const preflightAppraisal = useMemo(() => (
+    uploadedFiles.some((f) => {
+      if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
+      return String(f.original_name || f.file?.name || '').toLowerCase().includes('appraisal');
+    })
+  ), [uploadedFiles]);
   const preflightHardMissing = selectedReportType === 'underwriting' && (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
   const visibleLatestFailedJob = latestFailedJob && !dismissedJobIds.has(String(latestFailedJob.id)) ? latestFailedJob : null;
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
