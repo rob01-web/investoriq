@@ -796,11 +796,13 @@ export default function Dashboard() {
       setAckLocked(false);
       setAckAcceptedAtLocal(null);
       setStagedBatchId(null);
-      await Promise.all([
-        fetchInProgressJobs(),
-        fetchReports(),
-        fetchEntitlements(),
-      ]);
+      setTimeout(() => {
+        Promise.all([
+          fetchInProgressJobs(),
+          fetchReports(),
+          fetchEntitlements(),
+        ]);
+      }, 250);
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
       await fetchEntitlements();
