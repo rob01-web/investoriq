@@ -529,22 +529,35 @@ export default function Dashboard() {
     { docType: 'other',              label: 'Other Supporting Document' },
   ];
 
-  const rentRollFiles = uploadedFiles.filter((f) => f.docType === 'rent_roll');
-  const t12Files = uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement');
+  const rentRollFiles = useMemo(
+    () => uploadedFiles.filter((f) => f.docType === 'rent_roll'),
+    [uploadedFiles]
+  );
+  const t12Files = useMemo(
+    () => uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement'),
+    [uploadedFiles]
+  );
   const hasRentRoll = rentRollFiles.length > 0;
   const hasT12 = t12Files.length > 0;
   const requiredDocsReady = hasRentRoll && hasT12;
-  const hasUnderwritingSupportDocs = uploadedFiles.some((f) => f.docType === 'supporting_documents' || f.docType === 'supporting_documents_ui' || supportingDocTypes.some((t) => t.docType === f.docType));
+  const hasUnderwritingSupportDocs = useMemo(
+    () => uploadedFiles.some((f) => f.docType === 'supporting_documents' || f.docType === 'supporting_documents_ui' || supportingDocTypes.some((t) => t.docType === f.docType)),
+    [uploadedFiles]
+  );
   const hasRequiredUploads = selectedReportType === 'underwriting' ? requiredDocsReady && hasUnderwritingSupportDocs : requiredDocsReady;
-  const preflightDebtTerms = uploadedFiles.some((f) => {
-    if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
-    const n = String(f.original_name || f.file?.name || '').toLowerCase();
-    return n.includes('term') || n.includes('debt') || n.includes('loan');
-  });
-  const preflightPropertyTax = uploadedFiles.some((f) => {
-    if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
-    return String(f.original_name || f.file?.name || '').toLowerCase().includes('tax');
-  });
+  const preflightDebtTerms = useMemo(() => (
+    uploadedFiles.some((f) => {
+      if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
+      const n = String(f.original_name || f.file?.name || '').toLowerCase();
+      return n.includes('term') || n.includes('debt') || n.includes('loan');
+    })
+  ), [uploadedFiles]);
+  const preflightPropertyTax = useMemo(() => (
+    uploadedFiles.some((f) => {
+      if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
+      return String(f.original_name || f.file?.name || '').toLowerCase().includes('tax');
+    })
+  ), [uploadedFiles]);
   const preflightAppraisal = uploadedFiles.some((f) => {
     if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
     return String(f.original_name || f.file?.name || '').toLowerCase().includes('appraisal');
