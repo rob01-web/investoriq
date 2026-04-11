@@ -287,6 +287,7 @@ function NoticeBox({ type = 'info', children }) {
 
 // MAIN COMPONENT
 export default function Dashboard() {
+  console.log('DASHBOARD RENDER TRACE', Date.now());
   const { toast } = useToast();
   const { profile, fetchProfile } = useAuth();
   const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
