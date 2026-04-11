@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -336,17 +336,25 @@ export default function Dashboard() {
   const [entitlements, setEntitlements] = useState({ screening: null, underwriting: null, error: false });
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
-  const visibleInProgressJobs = inProgressJobs.filter((job) => {
-    const dismissed = dismissedJobIds.has(String(job.id));
-    return ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status) && !dismissed;
-  });
-  const failedJobsForDisplay = inProgressJobs.filter((job) => {
-    const dismissed = dismissedJobIds.has(String(job.id));
-    return job.status === 'failed' && !dismissed;
-  });
-  const hasActiveProcessingJob = inProgressJobs.some((job) =>
-    ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
-  );
+  const visibleInProgressJobs = useMemo(() => (
+    inProgressJobs.filter((job) => {
+      const dismissed = dismissedJobIds.has(String(job.id));
+      return ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status) && !dismissed;
+    })
+  ), [inProgressJobs, dismissedJobIds]);
+
+  const failedJobsForDisplay = useMemo(() => (
+    inProgressJobs.filter((job) => {
+      const dismissed = dismissedJobIds.has(String(job.id));
+      return job.status === 'failed' && !dismissed;
+    })
+  ), [inProgressJobs, dismissedJobIds]);
+
+  const hasActiveProcessingJob = useMemo(() => (
+    inProgressJobs.some((job) =>
+      ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(job.status)
+    )
+  ), [inProgressJobs]);
 
   const fetchReports = async () => {
     if (!profile?.id) return;
