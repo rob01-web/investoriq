@@ -469,7 +469,6 @@ export default function Dashboard() {
         fetchInProgressJobs(),
         fetchLatestFailedJob(),
         fetchEntitlements(),
-        fetchRecentJobs(),
       ]);
       setAcknowledged(false);
       setAckLocked(false);
@@ -515,7 +514,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!jobId) { setRentRollCoverage(null); return; }
-    fetchRentRollCoverage(jobId);
+    return;
   }, [jobId]);
 
   useEffect(() => {
