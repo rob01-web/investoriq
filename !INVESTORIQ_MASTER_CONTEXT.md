@@ -167,6 +167,47 @@
   - Dashboard freeze resolved.
   - Supabase queries execute cleanly.
 
+### Dashboard Stability Investigation (April 10-11, 2026)
+
+- A severe UI freeze was reintroduced on the Dashboard page, triggered when interacting with the property name input field.
+
+- Behavior observed:
+  - Freeze occurs on focus OR shortly after typing/pasting
+  - In some cases immediate lock, in others after several seconds of interaction
+  - UI becomes unresponsive (cannot switch tabs or interact)
+  - Visual flicker observed during freeze (likely repaint thrash)
+
+- Confirmed NOT root causes:
+  - Not strictly `onChange` related
+  - Not resolved by uncontrolled input migration alone
+  - Not resolved by removing `onFocus` handler
+  - Not resolved by memoizing uploadedFiles filters
+  - Not resolved by preflight useMemo conversions
+
+- Changes applied during investigation:
+  - Removed `onFocus` styling handler from property input
+  - Disabled browser auto-features:
+    - `autoComplete="off"`
+    - `autoCorrect="off"`
+    - `autoCapitalize="none"`
+    - `spellCheck={false}`
+  - Moved Google Fonts injection out of render and into module-level one-time injection
+  - Removed `<style>{FONTS}</style>` from JSX
+  - Removed one `needs_documents` auto-fill sync block (possible render trigger)
+  - Cleaned JSX invalid `>` characters in UI text
+
+- Current status:
+  - Freeze still reproducible
+  - Root cause not yet fully isolated
+  - Strong suspicion remains:
+    - render-loop interaction
+    - Framer Motion repaint thrash
+    - or effect-driven re-render cascade
+
+- Important:
+  - No further Dashboard structural changes should be made without controlled isolation
+  - Avoid broad refactors this close to launch
+
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
 - Test 9 pipeline failure: completed.
@@ -187,22 +228,34 @@
 - Stripe checkout -> entitlement flow practical validation: completed.
 
 ### Immediate agenda — April 11, 2026
-- Run fresh end-to-end validation tests:
-  - at least one clean Screening
-  - at least one clean Underwriting
-  - at least one messy / mixed-document Underwriting
-  - confirm no regressions from final hardening patches
-- Run Stripe live-money acceptance validation:
-  - confirm the live Stripe account is ready to accept real payments
-  - confirm payment methods are enabled
-  - confirm payouts / bank setup are healthy
-  - run one low-dollar live Stripe payment test
-  - verify the payment appears in Stripe
-  - verify Stripe balance updates
-  - verify payout path to TD bank is functioning
-  - note that prior coupon-flow testing validated entitlement logic but did not move real funds
-- Feed April 11 fresh outputs back into Codex for one more strict institutional-quality audit.
-- Run one final pre-outreach readiness sweep to confirm no new regressions and no credibility risk before contacting Ken Dunn.
+- STEP 1 — END-TO-END TESTING
+  - Run:
+    - 1 clean Screening report
+    - 1 clean Underwriting report
+    - 1 messy Underwriting report
+  - Confirm:
+    - no missing sections
+    - no incorrect wording
+    - no regressions
+    - no encoding issues
+- STEP 2 — STRIPE LIVE PAYMENT TEST
+  - Create low-dollar live product or test price ($1 or similar)
+  - Run real payment (NOT coupon-based)
+  - Confirm:
+    - payment appears in Stripe dashboard
+    - Stripe balance updates
+    - payout path to TD bank account is functioning
+- STEP 3 — CODEX AUDIT
+  - Provide fresh outputs from April 11 tests
+  - Request STRICT institutional audit
+  - Only fix if a REAL blocker is identified
+  - No cosmetic rewrites
+- STEP 4 — FINAL READINESS CHECK
+  - Confirm:
+    - sample reports are elite quality
+    - system is stable
+    - no last-minute risks
+    - no UI blocking issues (Dashboard freeze must be resolved or isolated)
 
 ### Before Ken Dunn outreach
 - Fresh final Screening PDF generated and approved.
@@ -220,6 +273,16 @@
   - no unsupported narrative claims
 - No real launch blockers remaining.
 - Outreach email to Ken Dunn only after all items above are green.
+
+### Launch Risk Flag (Dashboard)
+
+- Dashboard input freeze is currently the only known high-severity UX risk.
+- Must be:
+  - resolved
+    OR
+  - safely isolated (non-blocking to report generation + checkout)
+- No outreach should occur until:
+  - user can reliably enter property name without UI lock
 
 ## 7.1 Reports Table Schema (Locked)
 

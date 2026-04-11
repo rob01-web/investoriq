@@ -982,7 +982,7 @@ export default function Dashboard() {
           </div>
 
           {/* STEP 2 */}
-          <motion.div
+          <div
             id="upload-section"
             style={{ ...sectionCard, opacity: step2Locked && !hasAvailableReport ? 0.55 : 1, transition:'opacity 0.2s' }}
           >
@@ -1177,7 +1177,7 @@ export default function Dashboard() {
             <input id="rentRollInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 'rent_roll')} className="hidden" style={{ display:'none' }} />
             <input id="t12Input" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 't12')} className="hidden" style={{ display:'none' }} />
             <input id="supporting-docs-input" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 'supporting_documents')} className="hidden" style={{ display:'none' }} />
-          </motion.div>
+          </div>
 
           {/* STEP 3 */}
           <div style={{ ...sectionCard, opacity: step3Locked ? 0.55 : 1, transition:'opacity 0.2s' }}>
