@@ -448,12 +448,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     const syncEverything = async () => {
-      await fetchProfile(profile.id);
-      await fetchReports();
-      await fetchInProgressJobs();
-      await fetchLatestFailedJob();
-      await fetchEntitlements();
-      await fetchRecentJobs();
+      await Promise.all([
+        fetchReports(),
+        fetchInProgressJobs(),
+        fetchLatestFailedJob(),
+        fetchEntitlements(),
+        fetchRecentJobs(),
+      ]);
       setAcknowledged(false);
       setAckLocked(false);
       setAckAcceptedAtLocal(null);
@@ -762,9 +763,11 @@ export default function Dashboard() {
       setAckLocked(false);
       setAckAcceptedAtLocal(null);
       setStagedBatchId(null);
-      fetchEntitlements();
-      fetchReports();
-      await Promise.all([fetchInProgressJobs(), fetchReports(), fetchEntitlements(), fetchProfile(profile.id)]);
+      await Promise.all([
+        fetchInProgressJobs(),
+        fetchReports(),
+        fetchEntitlements(),
+      ]);
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
       await fetchEntitlements();
@@ -977,7 +980,6 @@ export default function Dashboard() {
                     e.preventDefault();
                     const nextValue = propertyNameRef.current.trim();
                     setPropertyName(nextValue);
-                    if (!jobId && nextValue && hasAvailableReport) { fetchReports(); }
                   }
                 }}
                 placeholder="e.g. 4200 Commerce Drive, Austin TX"

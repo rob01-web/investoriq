@@ -1,13 +1,13 @@
 # InvestorIQ Master Context — April 2026
 
 ## 1. Current Product State
-- InvestorIQ is in final launch hardening.
+- InvestorIQ is in final validation and outreach-prep.
 - Screening report is materially compressed, document-driven, and positioned as a decision-grade screening memorandum.
 - Underwriting report retains full debt, refinance, valuation, and scenario depth with deterministic inputs only.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
-- Launch phase status: final QA and sample-output replacement remain before outreach.
+- Launch phase status: final validation, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
 - InvestorIQ is a document-driven real estate decision engine for investors.
@@ -36,6 +36,11 @@
 - Screening and Underwriting are separate report products, not layered versions of the same memo.
 - Screening is a concise acquisition screening memorandum built primarily from T12 and rent roll inputs.
 - Underwriting is the full capital-risk report with debt structure, refinance capacity, valuation, and scenario depth when supporting documents exist.
+- InvestorIQ does not "use only 3 documents."
+- T12 and Rent Roll are the core required structured inputs.
+- Debt terms / mortgage documents are incorporated when they are successfully parsed into structured fields.
+- Additional supporting documents may be uploaded, but only recognized and structured inputs are incorporated into quantitative underwriting.
+- Unsupported or unstructured documents are excluded from modeling rather than guessed from.
 - One-and-done entitlement rule applies unless regeneration is triggered for system/support reasons.
 - Narrative must be document-derived and supportable from parsed inputs.
 - No fabricated data, no silent fallback assumptions, and no decorative filler sections.
@@ -57,7 +62,34 @@
 - Dashboard auto-refresh polling has been removed in favor of manual refresh/reload actions.
 - Analysis Scope Preview has been removed from the user dashboard UI.
 - Failed Step 03 dashboard state now supports UI-only dismissal through local storage, with no report, job, or credit changes.
-- Underwriting capability has been reconfirmed: refinance stress testing, DSCR, and cap-rate / valuation sensitivity are already present; remaining work is phrasing and final QA.
+- Underwriting capability has been reconfirmed: refinance stress testing, DSCR, and cap-rate / valuation sensitivity are already present.
+- Underwriting cap-rate consistency is now unified across refinance, debt structure, scenario analysis, and DCF.
+- Messy Underwriting Test 32 reached production-pass status after:
+  - unifying cap-rate source to the document-derived path
+  - removing the invalid cap-rate dimension from the DSCR sensitivity grid
+  - renaming misleading refinance "Coverage" labels to proceeds-vs-debt-balance language
+  - correcting overstated coverage disclosure
+  - adding unsupported / excluded input disclosure
+  - removing recommendation-style "PROCEED" language in favor of neutral underwriting framing
+- Worker loop / double-trigger behavior has been re-verified as fixed in the live path:
+  - `api/admin-run-worker.js` uses `maxSeconds = 55`
+  - single-run publish path is confirmed through `pdf_generating` -> `publishing` -> `published`
+- Stripe purchase flow is architecturally imperfect in code review but functionally validated in real-world usage:
+  - 30+ live end-to-end checkout tests have already been completed through the real pricing page using 100% coupon flow
+  - Screening and Underwriting entitlements have both been repeatedly confirmed working in practice
+  - Stripe is not a pre-launch patch target unless a real bug is reproduced
+
+### Prompt / Hallucination Risk Clarification (April 2026)
+
+- Locked v7.1 master prompt policy exists and remains the governing prompt standard.
+- Current system strength comes from structured-input-first generation, deterministic math, and fail-closed handling.
+- Pre-launch risk is not classic hallucination inside the model logic.
+- The larger risk is accidental late-stage wording edits introducing unsupported claims.
+- Pre-launch patch style therefore remains:
+  - anchor-locked
+  - minimal diff
+  - no broad narrative rewrites
+  - deterministic only
 
 ### Recent Parsing & Underwriting Hardening (April 2026)
 
@@ -149,11 +181,36 @@
 - Underwriting support-doc detection for page-13 coverage messaging: completed.
 - Failed Step 03 dashboard-state dismissal: completed.
 - Screening and Underwriting wording polish wave: substantially completed.
+- Underwriting cap-rate consistency across refinance / debt grid / scenario / DCF: completed.
+- Messy Underwriting Test 32 production-pass hardening sweep: completed.
+- Worker loop / double-trigger verification: completed.
+- Stripe checkout -> entitlement flow practical validation: completed.
 
-### Real current punch list
-- Finalize the remaining `_refiClass` underwriting phrasing patch if still pending in the live output path.
-- Run one fresh production-grade Screening PDF and one fresh production-grade Underwriting PDF.
-- Perform final manual QA on both outputs:
+### Immediate agenda — April 11, 2026
+- Run fresh end-to-end validation tests:
+  - at least one clean Screening
+  - at least one clean Underwriting
+  - at least one messy / mixed-document Underwriting
+  - confirm no regressions from final hardening patches
+- Run Stripe live-money acceptance validation:
+  - confirm the live Stripe account is ready to accept real payments
+  - confirm payment methods are enabled
+  - confirm payouts / bank setup are healthy
+  - run one low-dollar live Stripe payment test
+  - verify the payment appears in Stripe
+  - verify Stripe balance updates
+  - verify payout path to TD bank is functioning
+  - note that prior coupon-flow testing validated entitlement logic but did not move real funds
+- Feed April 11 fresh outputs back into Codex for one more strict institutional-quality audit.
+- Run one final pre-outreach readiness sweep to confirm no new regressions and no credibility risk before contacting Ken Dunn.
+
+### Before Ken Dunn outreach
+- Fresh final Screening PDF generated and approved.
+- Fresh final Underwriting PDF generated and approved.
+- Messy / mixed-document regression pass completed.
+- Stripe live-money acceptance tested at low dollar amount.
+- Homepage / sample-report replacements finalized if still pending.
+- One final manual QA sweep completed:
   - report type labels
   - executive summary wording
   - updated wording appearing in live PDFs
@@ -161,10 +218,8 @@
   - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
-- Verify admin dashboard stability, acknowledgement timestamp behavior, and failed-state dismissal in the current UI.
-- Replace homepage sample reports with final production-grade outputs.
-- Do one final website pass for any remaining user-facing copy or workflow rough edges.
-- Prepare Ken Dunn outreach only after final report QA and sample replacement are complete.
+- No real launch blockers remaining.
+- Outreach email to Ken Dunn only after all items above are green.
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -201,6 +256,7 @@ Notes:
 - Minimal diffs only.
 - Fail on anchor mismatch rather than guessing.
 - Deterministic changes only.
+- No broad narrative rewrites in the final validation window.
 - Preserve institutional tone and document-driven logic.
 
 ## 10. Launch Readiness Snapshot
@@ -210,8 +266,16 @@ Notes:
   - contact routing is corrected
   - dashboard/admin support workflow is operational
   - Test 9 is back to green and pipeline/report creation is restored
-  - core report engine is stable enough for final launch QA
+  - core report engine is stable enough for final validation and outreach-prep
+  - underwriting cap-rate consistency is fixed across refinance, debt structure, scenario analysis, and DCF
+  - messy underwriting regression output has reached production-pass status
+  - worker publish-loop behavior is confirmed stable in a single-run path
+  - Stripe entitlement behavior is practically validated through repeated real-world checkout testing
 - Still needed before Ken Dunn outreach:
-  - fresh final Screening and Underwriting PDFs
-  - final manual QA pass
-  - homepage sample report replacement
+  - fresh final Screening PDF generated and approved
+  - fresh final Underwriting PDF generated and approved
+  - messy test regression pass completed
+  - low-dollar live Stripe acceptance test completed
+  - homepage sample report replacement finalized if still pending
+  - one final manual QA sweep completed
+  - no real launch blockers remaining
