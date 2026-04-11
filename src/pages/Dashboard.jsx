@@ -36,6 +36,14 @@ const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 `;
 
+// Inject fonts once at module load, never inside render
+if (typeof document !== 'undefined' && !document.getElementById('iq-fonts')) {
+  const styleEl = document.createElement('style');
+  styleEl.id = 'iq-fonts';
+  styleEl.textContent = FONTS;
+  document.head.appendChild(styleEl);
+}
+
 // SHARED STYLE HELPERS
 
 const sectionCard = {
@@ -478,11 +486,6 @@ export default function Dashboard() {
     if (preferredJob?.id && preferredJob.id !== jobId) {
       setJobId(preferredJob.id);
       setLockedJobIdForUploads(preferredJob.id);
-      if (preferredJob.status === 'needs_documents' && !propertyNameRef.current.trim() && preferredJob.property_name) {
-        setPropertyName(preferredJob.property_name);
-        propertyNameRef.current = preferredJob.property_name;
-        if (propertyInputRef.current) propertyInputRef.current.value = preferredJob.property_name;
-      }
     }
   }, [recentJobs, selectedReportType]);
 
@@ -803,7 +806,6 @@ export default function Dashboard() {
   // RENDER
   return (
     <>
-      <style>{FONTS}</style>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       <Helmet>
