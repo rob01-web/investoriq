@@ -2,11 +2,14 @@
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep.
+- InvestorIQ remains in pre-launch phase, April 2026, and is now days away from outreach to Ken Dunn.
 - Screening report is materially compressed, document-driven, and positioned as a decision-grade screening memorandum.
 - Underwriting report retains full debt, refinance, valuation, and scenario depth with deterministic inputs only.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
+- Reports are generating successfully; stability and precision are now the top priority.
+- Main launch blocker remains Dashboard stability / UI freeze behavior.
 - Launch phase status: final validation, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
@@ -170,12 +173,14 @@
 ### Dashboard Stability Investigation (April 10-11, 2026)
 
 - A severe UI freeze was reintroduced on the Dashboard page, triggered when interacting with the property name input field.
+- This session focused on controlled, evidence-based diagnosis rather than broad or speculative patching.
 
 - Behavior observed:
   - Freeze occurs on focus OR shortly after typing/pasting
   - In some cases immediate lock, in others after several seconds of interaction
   - UI becomes unresponsive (cannot switch tabs or interact)
   - Visual flicker observed during freeze (likely repaint thrash)
+  - After a report run, the page can become broadly unresponsive, not just inside the property input
 
 - Confirmed NOT root causes:
   - Not strictly `onChange` related
@@ -183,6 +188,20 @@
   - Not resolved by removing `onFocus` handler
   - Not resolved by memoizing uploadedFiles filters
   - Not resolved by preflight useMemo conversions
+
+- Confirmed findings from diagnosis:
+  - Dashboard was polluted by abandoned `needs_documents` jobs with `property_name = null`.
+  - Those ghost jobs were being created by `api/create-checkout-session.js`.
+  - Checkout-created jobs were not reused later by the Dashboard flow.
+  - Dashboard `recentJobs` selection was previously willing to choose null-name `needs_documents` rows.
+  - Worker events themselves did not appear to be the primary issue.
+  - The remaining freeze is not just a property-input bug; it appears to be a broader Dashboard UI / state-churn / reactivity problem.
+  - The issue likely worsened because `Dashboard.jsx` has accumulated too many overlapping responsibilities and fetch/effect paths.
+
+- Supabase / data findings:
+  - Many `analysis_jobs` rows in `needs_documents` were confirmed to have `property_name = null`.
+  - Successful published jobs were separate named rows.
+  - This confirmed that stale `needs_documents` rows were abandoned ghost jobs, not the same published rows changing state.
 
 - Changes applied during investigation:
   - Removed `onFocus` styling handler from property input
@@ -195,18 +214,31 @@
   - Removed `<style>{FONTS}</style>` from JSX
   - Removed one `needs_documents` auto-fill sync block (possible render trigger)
   - Cleaned JSX invalid `>` characters in UI text
+  - Removed abandoned checkout placeholder `analysis_jobs` creation from `api/create-checkout-session.js`
+  - Removed `jobId` from Stripe session metadata
+  - Added Dashboard containment so `recentJobs` no longer prefers `needs_documents` rows unless `property_name` is non-empty
+  - Reduced redundant `setPropertyName(...)` commits on Enter / blur when the trimmed value did not change
+  - Delayed the post-analyze refresh burst to move heavy refresh work off the critical interaction path
 
 - Current status:
-  - Freeze still reproducible
+  - Dashboard behavior improved somewhat versus earlier state
+  - User was able to log in, enter a full property address, and run a Screening report successfully
+  - Freeze still reproducible after report generation during later Dashboard interaction
   - Root cause not yet fully isolated
   - Strong suspicion remains:
-    - render-loop interaction
-    - Framer Motion repaint thrash
-    - or effect-driven re-render cascade
+    - broader Dashboard state/reactivity overload
+    - overlapping fetch / effect chains
+    - render-loop interaction or repaint thrash
 
 - Important:
   - No further Dashboard structural changes should be made without controlled isolation
   - Avoid broad refactors this close to launch
+
+- Strategic interpretation:
+  - Current concern is not that the backend cannot necessarily handle serious demand.
+  - Current concern is that the Dashboard frontend has likely accumulated too many responsibilities and overlapping reactive paths.
+  - If Ken Dunn responds positively and syndicate interest increases, Dashboard stability and simplification become urgent because the customer control surface must feel stable and institutional.
+  - Future hardening should prioritize a lighter Dashboard orchestration model and potentially a cleaner dashboard-state layer or helper endpoint rather than continuing to pile more logic into `Dashboard.jsx`.
 
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
@@ -226,6 +258,10 @@
 - Messy Underwriting Test 32 production-pass hardening sweep: completed.
 - Worker loop / double-trigger verification: completed.
 - Stripe checkout -> entitlement flow practical validation: completed.
+- Checkout ghost-job creation removal: completed.
+- Dashboard null-name `needs_documents` containment patch: completed.
+- Property-name redundant state-commit reduction: completed.
+- Post-analyze refresh deferral test: completed.
 
 ### Immediate agenda — April 11, 2026
 - STEP 1 — END-TO-END TESTING
@@ -258,6 +294,14 @@
     - no UI blocking issues (Dashboard freeze must be resolved or isolated)
 
 ### Before Ken Dunn outreach
+- Screening test result â€” April 11, 2026
+  - Successfully generated:
+    - `124 Richmond Street (Screening Test 33)`
+  - Quick review outcome:
+    - structurally strong overall
+    - no major missing-section issue observed from quick review
+    - minor cosmetic note observed: brand text showed `INVEST ORIQ` spacing / kerning issue in parsed output
+
 - Fresh final Screening PDF generated and approved.
 - Fresh final Underwriting PDF generated and approved.
 - Messy / mixed-document regression pass completed.
@@ -273,6 +317,14 @@
   - no unsupported narrative claims
 - No real launch blockers remaining.
 - Outreach email to Ken Dunn only after all items above are green.
+
+### Exact next task / resume point
+- Continue isolating and reducing Dashboard state-reactivity overload.
+- Focus on Dashboard-wide responsiveness, not just the property input field.
+- Likely next step is a controlled reduction of Dashboard live reactivity / overlapping fetch-effect chains, one surgical change at a time.
+- Use anchor-locked minimal diffs only.
+- No refactors.
+- No random patching.
 
 ### Launch Risk Flag (Dashboard)
 
@@ -321,6 +373,11 @@ Notes:
 - Deterministic changes only.
 - No broad narrative rewrites in the final validation window.
 - Preserve institutional tone and document-driven logic.
+- We are too close to launch day to allow uncontrolled code churn.
+- Minimal reversible changes only.
+- One step at a time.
+- No guessing.
+- Anchor-based reasoning only.
 
 ## 10. Launch Readiness Snapshot
 - Launch-ready now:
@@ -335,6 +392,7 @@ Notes:
   - worker publish-loop behavior is confirmed stable in a single-run path
   - Stripe entitlement behavior is practically validated through repeated real-world checkout testing
 - Still needed before Ken Dunn outreach:
+  - Dashboard freeze / responsiveness issue resolved or safely isolated
   - fresh final Screening PDF generated and approved
   - fresh final Underwriting PDF generated and approved
   - messy test regression pass completed

@@ -509,9 +509,6 @@ export default function Dashboard() {
     if (!hasActiveProcessingJob) return;
     const intervalId = window.setInterval(() => {
       fetchInProgressJobs();
-      fetchReports();
-      fetchLatestFailedJob();
-      fetchRecentJobs();
     }, 60000);
     return () => { window.clearInterval(intervalId); };
   }, [profile?.id, hasActiveProcessingJob]);
