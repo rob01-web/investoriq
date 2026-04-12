@@ -828,28 +828,34 @@ export default function Dashboard() {
           <meta name="description" content="Upload property documents and generate institutional-grade underwriting reports." />
         </Helmet>
 
-        <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif", padding: '48px' }}>
-          <div style={{ maxWidth: 720, margin: '0 auto', background: T.white, border: `1px solid ${T.hairline}`, padding: '32px' }}>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 500, color: T.ink, marginBottom: 12 }}>Dashboard Diagnostic Mode</h1>
-            <p style={{ ...bodySmall, fontSize: 14, marginBottom: 20 }}>Normal dashboard content is temporarily bypassed to isolate whether the freeze is caused by Dashboard-local rendering or broader authenticated-session behavior.</p>
-            <button
-              type="button"
-              onClick={handleDiagnosticSignOut}
-              style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 10,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                fontWeight: 500,
-                padding: '10px 20px',
-                background: T.green,
-                color: T.gold,
-                border: `1px solid ${T.green}`,
-                cursor: 'pointer',
-              }}
+        <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position:'absolute', top:0, bottom:0, left:40, width:1, background:'linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.4) 20%, rgba(201,168,76,0.4) 80%, transparent 100%)', pointerEvents:'none' }} />
+
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 48px 36px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}
             >
-              Log Out
-            </button>
+              <div>
+                <p style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(201,168,76,0.45)', marginBottom:8 }}>
+                  InvestorIQ - Dashboard
+                </p>
+                <h1 style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:'clamp(26px, 3.5vw, 36px)', fontWeight:500, letterSpacing:'-0.02em', color:'#FFFFFF', lineHeight:1.05, marginBottom:6 }}>
+                  Welcome, {profile?.full_name || 'Investor'}.
+                </h1>
+                <p style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
+                  Normal dashboard content is temporarily bypassed to isolate whether the freeze is caused by Dashboard-local rendering or broader authenticated-session behavior.
+                </p>
+              </div>
+              <GhostBtn
+                onClick={handleDiagnosticSignOut}
+                style={{ borderColor:'rgba(255,255,255,0.18)', color:'rgba(255,255,255,0.45)', alignSelf:'flex-end' }}
+              >
+                Log Out
+              </GhostBtn>
+            </motion.div>
           </div>
         </div>
       </>
