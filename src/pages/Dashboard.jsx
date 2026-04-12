@@ -321,6 +321,9 @@ export default function Dashboard() {
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
+  const completionReloadPendingRef = useRef(false);
+  const completionReloadTimeoutRef = useRef(null);
+  const previousHasActiveProcessingJobRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -522,6 +525,21 @@ export default function Dashboard() {
     }, 60000);
     return () => { window.clearInterval(intervalId); };
   }, [profile?.id, hasActiveProcessingJob]);
+
+  useEffect(() => {
+    if (hasActiveProcessingJob) {
+      previousHasActiveProcessingJobRef.current = true;
+      return;
+    }
+    if (!completionReloadPendingRef.current) return;
+    if (!previousHasActiveProcessingJobRef.current) return;
+    if (completionReloadTimeoutRef.current) return;
+    completionReloadPendingRef.current = false;
+    previousHasActiveProcessingJobRef.current = false;
+    completionReloadTimeoutRef.current = window.setTimeout(() => {
+      window.location.reload();
+    }, 7000);
+  }, [hasActiveProcessingJob]);
 
   useEffect(() => {
     if (!jobId) { setRentRollCoverage(null); return; }
@@ -795,6 +813,11 @@ export default function Dashboard() {
         return;
       }
       toast({ title: 'Report queued', description: 'Your report has started. You may safely close this page and return later.' });
+      completionReloadPendingRef.current = true;
+      if (completionReloadTimeoutRef.current) {
+        window.clearTimeout(completionReloadTimeoutRef.current);
+        completionReloadTimeoutRef.current = null;
+      }
       propertyNameRef.current = '';
       setPropertyName('');
       if (propertyInputRef.current) propertyInputRef.current.value = '';
@@ -1352,7 +1375,6 @@ export default function Dashboard() {
                 <p style={stepEyebrow}>Generated Reports</p>
                 <span style={stepTitle}>Report history</span>
               </div>
-              <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
             </div>
 
             {reportsLoading ? (
