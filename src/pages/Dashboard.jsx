@@ -321,6 +321,7 @@ export default function Dashboard() {
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
+  const COMPLETION_RELOAD_REPORTS_KEY = 'investoriq_completion_reload_reports';
   const completionReloadPendingRef = useRef(false);
   const completionReloadTimeoutRef = useRef(null);
   const previousHasActiveProcessingJobRef = useRef(false);
@@ -485,9 +486,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!profile?.id) return;
+    let isCompletionReload = false;
+    try {
+      isCompletionReload = window.sessionStorage.getItem(COMPLETION_RELOAD_REPORTS_KEY) === '1';
+      if (isCompletionReload) window.sessionStorage.removeItem(COMPLETION_RELOAD_REPORTS_KEY);
+    } catch (err) {}
     const timeoutId = window.setTimeout(() => {
       fetchReports();
-    }, 1200);
+    }, isCompletionReload ? 4500 : 1200);
     return () => { window.clearTimeout(timeoutId); };
   }, [profile?.id]);
 
@@ -537,6 +543,7 @@ export default function Dashboard() {
     completionReloadPendingRef.current = false;
     previousHasActiveProcessingJobRef.current = false;
     completionReloadTimeoutRef.current = window.setTimeout(() => {
+      try { window.sessionStorage.setItem(COMPLETION_RELOAD_REPORTS_KEY, '1'); } catch (err) {}
       window.location.reload();
     }, 7000);
   }, [hasActiveProcessingJob]);
