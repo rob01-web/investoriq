@@ -889,6 +889,96 @@ export default function Dashboard() {
                 }}
               />
             </div>
+
+            <div style={{ ...sectionCard, marginTop:8 }}>
+              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+                <div>
+                  <p style={stepEyebrow}>Generated Reports</p>
+                  <span style={stepTitle}>Report history</span>
+                </div>
+                <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
+              </div>
+
+              {reportsLoading ? (
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'20px 0' }}>
+                  <Loader2 style={{ width:16, height:16, color:T.gold, animation:'spin 1s linear infinite' }} />
+                  <span style={{ ...bodySmall, fontSize:12 }}>Loading reports...</span>
+                </div>
+              ) : reports.length === 0 ? (
+                <div style={{ padding:'24px 0', textAlign:'center' }}>
+                  <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1-3 above to generate your first report.</span>
+                </div>
+              ) : (
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:"'DM Sans', sans-serif", fontSize:12 }}>
+                    <thead>
+                      <tr style={{ borderBottom:`1.5px solid ${T.ink}` }}>
+                        {['Property','Report Type','Generated','Status','Actions'].map((h) => (
+                          <th key={h} style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:T.ink3, fontWeight:400, padding:'0 10px 10px', textAlign: h === 'Actions' ? 'right' : 'left' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((report, i) => (
+                        <tr key={report.id} style={{ borderBottom:`1px solid ${T.hairline}`, background: i % 2 === 1 ? T.warm : T.white }}>
+                          <td style={{ padding:'10px 10px', color:T.ink2, fontWeight:400, maxWidth:200 }}>
+                            <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{report.property_name || '-'}</div>
+                          </td>
+                          <td style={{ padding:'10px 10px' }}>
+                            <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '-'}</span>
+                          </td>
+                          <td style={{ padding:'10px 10px', color:T.ink4, whiteSpace:'nowrap' }}>
+                            {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
+                          </td>
+                          <td style={{ padding:'10px 10px' }}>
+                            <StatusBadge status={report.status || 'published'} />
+                          </td>
+                          <td style={{ padding:'10px 10px', textAlign:'right' }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:12, flexWrap:'wrap' }}>
+                              {report.storage_path && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(report.storage_path, 300);
+                                    if (error || !data?.signedUrl) { toast({ title:'Download failed', description: error?.message || 'Unable to generate link.', variant:'destructive' }); return; }
+                                    window.open(data.signedUrl, '_blank');
+                                  }}
+                                  style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4 }}
+                                >
+                                  <FileDown style={{ width:11, height:11 }} /> Download
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => { setIssueReport(report); setIssueModalOpen(true); }}
+                                style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4, background:'none', border:'none', cursor:'pointer' }}
+                              >
+                                Issue
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (confirm('Permanently remove this report?')) {
+                                    try {
+                                      await supabase.storage.from('generated_reports').remove([report.storage_path]);
+                                      await supabase.from('reports').delete().eq('id', report.id);
+                                      toast({ title:'Report deleted' });
+                                      fetchReports();
+                                    } catch (err) { console.error(err); }
+                                  }
+                                }}
+                                style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.errorRed, background:'none', border:'none', cursor:'pointer' }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </>
