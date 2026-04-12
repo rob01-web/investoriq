@@ -67,6 +67,7 @@ export default function CheckoutSuccess() {
 
   const [status, setStatus]           = useState('loading');
   const [productType, setProductType] = useState('');
+  const [quantity, setQuantity]       = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,7 +92,9 @@ export default function CheckoutSuccess() {
         }
 
         const localProductType = String(data?.metadata?.productType || '');
+        const localQuantity = Math.max(1, Number.parseInt(data?.metadata?.quantity, 10) || 1);
         if (isMounted) setProductType(localProductType);
+        if (isMounted) setQuantity(localQuantity);
 
         if (profile?.id) {
           for (let i = 0; i < 8; i++) {
@@ -109,7 +112,7 @@ export default function CheckoutSuccess() {
           : localProductType === 'screening'  ? 'Screening Report'
           : 'Report';
 
-        toast({ title: 'Payment received', description: `${purchaseLabel} purchased.` });
+        toast({ title: 'Payment received', description: `${localQuantity} ${purchaseLabel}${localQuantity > 1 ? 's' : ''} purchased.` });
 
         setTimeout(() => { window.location.href = '/dashboard'; }, 3500);
 
@@ -280,9 +283,21 @@ export default function CheckoutSuccess() {
                     color:      T.okGreen,
                     lineHeight: 1.6,
                   }}>
-                    <strong style={{ fontWeight: 500 }}>{purchaseLabel}</strong> purchased and added to your account. Redirecting to your dashboard…
+                    <strong style={{ fontWeight: 500 }}>{quantity} {purchaseLabel}{quantity > 1 ? 's' : ''}</strong> purchased and added to your account. Redirecting to your dashboard…
                   </p>
                 </div>
+
+                <p style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize:   13,
+                  fontWeight: 300,
+                  color:      T.ink3,
+                  lineHeight: 1.65,
+                  marginBottom: 24,
+                }}>
+                  InvestorIQ reports are typically delivered within 1 business day.
+                  Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
+                </p>
 
                 <PrimaryBtn onClick={() => { window.location.href = '/dashboard'; }}>
                   Upload Documents →

@@ -57,7 +57,8 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const { productType, planKey, successUrl, cancelUrl, userId, userEmail } = req.body || {};
+    const { productType, planKey, successUrl, cancelUrl, userId, userEmail, quantity } = req.body || {};
+    const normalizedQuantity = Math.max(1, Math.min(5, Number.parseInt(quantity, 10) || 1));
 
     const normalizedProductType = normalizeProductType({ productType, planKey });
     const { ok: configOk, missing, config: configMap } = getValidatedPriceConfig();
@@ -99,7 +100,7 @@ export default async function handler(req, res) {
 
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,
-      line_items: [{ price: config.priceId, quantity: 1 }],
+      line_items: [{ price: config.priceId, quantity: normalizedQuantity }],
       allow_promotion_codes: true,
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
@@ -107,6 +108,7 @@ export default async function handler(req, res) {
         // 🔒 webhook should trust THIS canonical value
         userId: userId || "",
         productType: normalizedProductType || "",
+        quantity: String(normalizedQuantity),
       },
     });
 

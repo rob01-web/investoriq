@@ -77,6 +77,7 @@ const tiers = [
 function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk }) {
   const isLoading = loadingKey === tier.productType;
   const [hovered, setHovered] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const buttonLabel = isLoading
     ? 'Redirecting…'
@@ -204,6 +205,44 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
         {tier.description}
       </p>
 
+      <div style={{
+        display:      'flex',
+        alignItems:   'center',
+        justifyContent:'space-between',
+        gap:          12,
+        marginBottom: 20,
+      }}>
+        <span style={{
+          fontFamily:   "'DM Mono', monospace",
+          fontSize:     10,
+          letterSpacing:'0.14em',
+          textTransform:'uppercase',
+          color:        T.ink4,
+        }}>
+          Quantity
+        </span>
+        <select
+          value={quantity}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+          disabled={isLoading || !pricingOk}
+          style={{
+            fontFamily:   "'DM Mono', monospace",
+            fontSize:     10,
+            letterSpacing:'0.08em',
+            textTransform:'uppercase',
+            color:        T.ink2,
+            background:   T.white,
+            border:       `1px solid ${T.hairlineMid}`,
+            padding:      '8px 10px',
+            outline:      'none',
+          }}
+        >
+          {[1, 2, 3, 4, 5].map((value) => (
+            <option key={value} value={value}>{value}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Features */}
       <ul style={{
         listStyle:    'none',
@@ -249,7 +288,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
       {/* CTA Button */}
       <button
         type="button"
-        onClick={() => onCheckout(tier.productType)}
+        onClick={() => onCheckout(tier.productType, quantity)}
         disabled={isLoading || !pricingOk}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -305,7 +344,7 @@ export default function PricingPage() {
     };
   }, []);
 
-  const handleCheckout = async (productType) => {
+  const handleCheckout = async (productType, quantity = 1) => {
     try {
       if (!isAuthed) {
         window.location.href = `/login?next=/pricing`;
@@ -319,6 +358,7 @@ export default function PricingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productType,
+          quantity,
           userId:    user.id,
           userEmail: user.email,
         }),
@@ -526,6 +566,18 @@ export default function PricingPage() {
                 Reports are property-specific and document-based. Once generation begins, refunds are not available.
                 If generation fails due to a system error, InvestorIQ will regenerate the same report at no cost.
                 InvestorIQ does not provide investment advice or appraisals.
+              </motion.p>
+
+              <motion.p variants={fadeUp} style={{
+                fontFamily:   "'DM Sans', sans-serif",
+                fontSize:     12,
+                fontWeight:   300,
+                color:        T.ink4,
+                lineHeight:   1.7,
+                maxWidth:     680,
+              }}>
+                InvestorIQ reports are typically delivered within 1 business day.
+                Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
               </motion.p>
             </motion.div>
 

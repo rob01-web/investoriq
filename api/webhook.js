@@ -60,6 +60,7 @@ export default async function handler(req, res) {
 
   const userId = session?.metadata?.userId;
   const productType = session?.metadata?.productType;
+  const quantity = Math.max(1, Math.min(5, Number.parseInt(session?.metadata?.quantity, 10) || 1));
   if (!userId || !productType) {
     console.warn("Missing metadata userId/productType", {
       userId,
@@ -99,17 +100,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
+  const purchaseRows = Array.from({ length: quantity }, () => ({
+    user_id: userId,
+    product_type: productType,
+    job_id: null,
+    consumed_at: null,
+    stripe_session_id: sessionId || null,
+  }));
+
   const { error: purchaseErr } = await supabaseAdmin
     .from("report_purchases")
-    .insert([
-      {
-        user_id: userId,
-        product_type: productType,
-        job_id: null,
-        consumed_at: null,
-        stripe_session_id: sessionId || null,
-      },
-    ]);
+    .insert(purchaseRows);
 
   if (purchaseErr) {
     const msg = String(purchaseErr.message || "").toLowerCase();
