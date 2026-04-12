@@ -68,15 +68,11 @@ export const AuthProvider = ({ children }) => {
 
     getSession();
 
-    // TEMP DISABLED FOR DIAGNOSTIC
-    // const {
-    //   data: { subscription },
-    // } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    //   handleSession(session);
-    // });
-
-    // Provide dummy unsubscribe to avoid errors
-    const subscription = { unsubscribe: () => {} };
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      handleSession(session);
+    });
 
     return () => subscription.unsubscribe();
   }, [handleSession]);

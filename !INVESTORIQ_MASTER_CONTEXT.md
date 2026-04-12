@@ -10,6 +10,7 @@
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
 - Reports are generating successfully; stability and precision are now the top priority.
 - Main launch blocker remains Dashboard stability / UI freeze behavior.
+- The Dashboard freeze investigation continued through the latest session and remains unresolved despite several containment patches and mixed short-term improvements.
 - Launch phase status: final validation, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
@@ -219,16 +220,34 @@
   - Added Dashboard containment so `recentJobs` no longer prefers `needs_documents` rows unless `property_name` is non-empty
   - Reduced redundant `setPropertyName(...)` commits on Enter / blur when the trimmed value did not change
   - Delayed the post-analyze refresh burst to move heavy refresh work off the critical interaction path
+  - Narrowed active polling to `fetchInProgressJobs()` only
+  - Disabled the `jobId -> fetchRentRollCoverage(jobId)` effect for diagnostic containment
+  - Removed `fetchRecentJobs()` from mount-time `syncEverything`
+  - Removed `fetchReports()` from mount-time `syncEverything`
+  - Added a separate deferred `fetchReports()` effect after mount
+  - Added temporary render tracing at the top of `Dashboard.jsx`:
+    - `console.log('DASHBOARD RENDER TRACE', Date.now());`
+  - Tried a temporary diagnostic patch disabling the Supabase auth-state listener in `SupabaseAuthContext.jsx`
 
 - Current status:
   - Dashboard behavior improved somewhat versus earlier state
   - User was able to log in, enter a full property address, and run a Screening report successfully
-  - Freeze still reproducible after report generation during later Dashboard interaction
+  - Several containment patches temporarily improved responsiveness and Dashboard sometimes appeared stable again
+  - Removing `fetchReports()` from mount-time sync materially improved responsiveness at one point
+  - Report History then required separate deferred loading / manual refresh behavior
+  - Render trace did not show obvious hundreds/thousands-per-second render spam
+  - Console behavior looked more like a few renders per interaction, not a classic local render storm
+  - Incognito testing did not isolate the problem; freeze behavior still affected the logged-in browser session broadly
+  - Logging out restored responsiveness
+  - The temporary auth-listener diagnostic patch did not solve the freeze
+  - Attempted Chrome Performance tracing became unusable because the browser froze hard enough that the trace never finished loading
+  - Freeze still returned unpredictably after later interaction
+  - In the worst late-session case, the user was effectively a sitting duck again for more than 10 minutes with the machine/browser broadly unusable
   - Root cause not yet fully isolated
   - Strong suspicion remains:
-    - broader Dashboard state/reactivity overload
-    - overlapping fetch / effect chains
-    - render-loop interaction or repaint thrash
+    - authenticated-session / shared-client / background behavior
+    - Dashboard-local reactive churn as a real amplifier, but not a complete explanation by itself
+    - repaint / resource-thrash behavior rather than a simple local render loop
 
 - Important:
   - No further Dashboard structural changes should be made without controlled isolation
@@ -236,9 +255,11 @@
 
 - Strategic interpretation:
   - Current concern is not that the backend cannot necessarily handle serious demand.
-  - Current concern is that the Dashboard frontend has likely accumulated too many responsibilities and overlapping reactive paths.
-  - If Ken Dunn responds positively and syndicate interest increases, Dashboard stability and simplification become urgent because the customer control surface must feel stable and institutional.
-  - Future hardening should prioritize a lighter Dashboard orchestration model and potentially a cleaner dashboard-state layer or helper endpoint rather than continuing to pile more logic into `Dashboard.jsx`.
+  - Dashboard-local churn was real and some contained reductions helped.
+  - But the root cause is still not fully isolated and current evidence no longer supports overcommitting to `Dashboard.jsx` local state churn as the sole explanation.
+  - Current evidence suggests the issue may be tied to authenticated-session / shared browser resource / background client behavior, not just the local property input or a simple Dashboard render loop.
+  - Dashboard-only micro-patching is now considered incomplete as a diagnosis path.
+  - If Ken Dunn responds positively and syndicate interest increases, Dashboard stability and simplification remain urgent because the customer control surface must feel stable and institutional.
 
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
@@ -262,6 +283,13 @@
 - Dashboard null-name `needs_documents` containment patch: completed.
 - Property-name redundant state-commit reduction: completed.
 - Post-analyze refresh deferral test: completed.
+- Active polling narrowed to `fetchInProgressJobs()` only: completed.
+- `jobId -> fetchRentRollCoverage(jobId)` effect diagnostic disable: completed.
+- `fetchRecentJobs()` removed from mount-time `syncEverything`: completed.
+- `fetchReports()` removed from mount-time `syncEverything`: completed.
+- Separate deferred `fetchReports()` effect after mount: completed.
+- Temporary Dashboard render trace insertion: completed.
+- Temporary auth-listener diagnostic patch: tried; did not solve freeze.
 
 ### Immediate agenda — April 11, 2026
 - STEP 1 — END-TO-END TESTING
@@ -315,13 +343,14 @@
   - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
-- No real launch blockers remaining.
+- Dashboard freeze remains the primary unresolved launch blocker.
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
-- Continue isolating and reducing Dashboard state-reactivity overload.
-- Focus on Dashboard-wide responsiveness, not just the property input field.
-- Likely next step is a controlled reduction of Dashboard live reactivity / overlapping fetch-effect chains, one surgical change at a time.
+- Resume with high-level, read-only diagnosis first.
+- Inspect authenticated-session / shared-client / Supabase / provider / background behavior, not just Dashboard local effects.
+- Avoid more blind containment patches until the next investigation step is clearer.
+- First move tomorrow should be: check whether that temporary auth-listener diagnostic patch is still in the repo and revert it if it is, so you are not diagnosing on top of a dead-end test change.
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
@@ -329,6 +358,7 @@
 ### Launch Risk Flag (Dashboard)
 
 - Dashboard input freeze is currently the only known high-severity UX risk.
+- Mixed containment results improved responsiveness at points, but the freeze still returned unpredictably and remains the primary unresolved blocker before outreach.
 - Must be:
   - resolved
     OR
@@ -399,4 +429,4 @@ Notes:
   - low-dollar live Stripe acceptance test completed
   - homepage sample report replacement finalized if still pending
   - one final manual QA sweep completed
-  - no real launch blockers remaining
+  - no other real launch blockers remaining after Dashboard stability is cleared
