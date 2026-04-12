@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     product_type: productType,
     job_id: null,
     consumed_at: null,
-    stripe_session_id: index === 0 ? (sessionId || null) : null,
+    stripe_session_id: index === 0 ? (sessionId || null) : `${sessionId}#${index + 1}`,
   }));
 
   const { data: insertedPurchases, error: purchaseErr } = await supabaseAdmin
