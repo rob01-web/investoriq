@@ -100,27 +100,25 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
-  const purchaseRows = Array.from({ length: quantity }, () => ({
+  const purchaseRows = Array.from({ length: quantity }, (_value, index) => ({
     user_id: userId,
     product_type: productType,
     job_id: null,
     consumed_at: null,
-    stripe_session_id: sessionId || null,
+    stripe_session_id: index === 0 ? (sessionId || null) : null,
   }));
 
-  const { error: purchaseErr } = await supabaseAdmin
+  const { data: insertedPurchases, error: purchaseErr } = await supabaseAdmin
     .from("report_purchases")
-    .insert(purchaseRows);
+    .insert(purchaseRows)
+    .select("id");
 
   if (purchaseErr) {
-    const msg = String(purchaseErr.message || "").toLowerCase();
-    if (!msg.includes("duplicate") && !msg.includes("unique") && !msg.includes("already exists")) {
-      console.error("Failed to record report purchase:", purchaseErr);
-      return res.status(500).json({ error: "Report purchase insert failed" });
-    }
+    console.error("Failed to record report purchase:", purchaseErr);
+    return res.status(500).json({ error: "Report purchase insert failed" });
   }
 
-  console.log("Recorded purchase for userId=" + userId + " (" + productType + ")");
+  console.log("Recorded purchase for userId=" + userId + " (" + productType + "), inserted_rows=" + (insertedPurchases?.length || 0) + ", session_id=" + (sessionId || "null"));
   return res.status(200).json({ received: true });
 }
 
