@@ -321,10 +321,6 @@ export default function Dashboard() {
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
-  const COMPLETION_RELOAD_REPORTS_KEY = 'investoriq_completion_reload_reports';
-  const completionReloadPendingRef = useRef(false);
-  const completionReloadTimeoutRef = useRef(null);
-  const previousHasActiveProcessingJobRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -486,14 +482,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    let isCompletionReload = false;
-    try {
-      isCompletionReload = window.sessionStorage.getItem(COMPLETION_RELOAD_REPORTS_KEY) === '1';
-      if (isCompletionReload) window.sessionStorage.removeItem(COMPLETION_RELOAD_REPORTS_KEY);
-    } catch (err) {}
     const timeoutId = window.setTimeout(() => {
       fetchReports();
-    }, isCompletionReload ? 4500 : 1200);
+    }, 1200);
     return () => { window.clearTimeout(timeoutId); };
   }, [profile?.id]);
 
@@ -531,22 +522,6 @@ export default function Dashboard() {
     }, 60000);
     return () => { window.clearInterval(intervalId); };
   }, [profile?.id, hasActiveProcessingJob]);
-
-  useEffect(() => {
-    if (hasActiveProcessingJob) {
-      previousHasActiveProcessingJobRef.current = true;
-      return;
-    }
-    if (!completionReloadPendingRef.current) return;
-    if (!previousHasActiveProcessingJobRef.current) return;
-    if (completionReloadTimeoutRef.current) return;
-    completionReloadPendingRef.current = false;
-    previousHasActiveProcessingJobRef.current = false;
-    completionReloadTimeoutRef.current = window.setTimeout(() => {
-      try { window.sessionStorage.setItem(COMPLETION_RELOAD_REPORTS_KEY, '1'); } catch (err) {}
-      window.location.reload();
-    }, 7000);
-  }, [hasActiveProcessingJob]);
 
   useEffect(() => {
     if (!jobId) { setRentRollCoverage(null); return; }
@@ -820,11 +795,6 @@ export default function Dashboard() {
         return;
       }
       toast({ title: 'Report queued', description: 'Your report has started. You may safely close this page and return later.' });
-      completionReloadPendingRef.current = true;
-      if (completionReloadTimeoutRef.current) {
-        window.clearTimeout(completionReloadTimeoutRef.current);
-        completionReloadTimeoutRef.current = null;
-      }
       propertyNameRef.current = '';
       setPropertyName('');
       if (propertyInputRef.current) propertyInputRef.current.value = '';
@@ -1382,6 +1352,7 @@ export default function Dashboard() {
                 <p style={stepEyebrow}>Generated Reports</p>
                 <span style={stepTitle}>Report history</span>
               </div>
+              <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
             </div>
 
             {reportsLoading ? (
