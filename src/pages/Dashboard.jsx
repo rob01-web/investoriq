@@ -973,7 +973,7 @@ export default function Dashboard() {
           {/* Checkout success */}
           {checkoutSuccess && (
             <NoticeBox type="success">
-              <strong style={{ fontWeight: 500 }}>Payment received.</strong> One report credit added. Upload documents below to begin.
+              <strong style={{ fontWeight: 500 }}>Payment received.</strong> Report credits added to your account. Upload documents below to begin.
               <br />
               <button
                 type="button"
