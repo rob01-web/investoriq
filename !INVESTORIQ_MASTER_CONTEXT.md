@@ -1,4 +1,4 @@
-# InvestorIQ Master Context — April 2026
+# InvestorIQ Master Context - April 2026
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep.
@@ -9,8 +9,11 @@
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
 - Reports are generating successfully; stability and precision are now the top priority.
-- Main launch blocker remains Dashboard stability / UI freeze behavior.
-- The Dashboard freeze investigation continued through the latest session and remains unresolved despite several containment patches and mixed short-term improvements.
+- A severe Dashboard freeze was isolated through controlled diagnostic containment and materially resolved through Report History render-path stabilization.
+- Authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause.
+- The freeze was isolated to the rendered Report History table/rows subtree.
+- Replacing the old Report History table with a lightweight stacked list/card layout materially resolved the catastrophic browser-freeze behavior.
+- Current Dashboard status: stable enough for launch validation, with light monitoring recommended for any residual sluggishness.
 - Launch phase status: final validation, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
@@ -82,6 +85,8 @@
   - 30+ live end-to-end checkout tests have already been completed through the real pricing page using 100% coupon flow
   - Screening and Underwriting entitlements have both been repeatedly confirmed working in practice
   - Stripe is not a pre-launch patch target unless a real bug is reproduced
+- Dashboard Report History now uses a lightweight stacked list/card layout instead of the prior table-based render path.
+- This Report History render-path replacement is a production stabilization fix applied after controlled freeze isolation, not a temporary diagnostic patch.
 
 ### Prompt / Hallucination Risk Clarification (April 2026)
 
@@ -147,6 +152,36 @@
   - Typing in Dashboard input no longer blocks UI thread.
   - No browser freeze during input or upload flow.
   - Rendering stabilized without altering business logic.
+
+### Dashboard Render-Path Stabilization (April 2026)
+
+- Controlled diagnostic isolation was extended beyond effects and auth/session hypotheses.
+- Confirmed binary test sequence:
+  - diagnostic shell: stable
+  - header-only diagnostic mode: stable
+  - header + property input: stable
+  - header + property input + Report History table: froze
+  - header + property input + Report History summary-only branch: stable
+- Conclusion:
+  - the old rendered Report History table/rows subtree was the primary frontend freeze trigger.
+
+- Final applied stabilization in `Dashboard.jsx`:
+  - temporary diagnostic gate was used for isolation and then turned off
+  - `DASHBOARD_DIAG_MINIMAL` returned to `false`
+  - temporary render trace was removed
+  - temporary `SupabaseAuthContext.jsx` auth-listener diagnostic patch was reverted
+  - normal Dashboard Report History non-empty branch now renders a lightweight stacked list/card layout instead of table markup
+
+- Report History capabilities preserved:
+  - refresh
+  - loading state
+  - empty state
+  - download
+  - issue
+  - delete
+
+- Classification:
+  - this was a production stabilization fix, not just a diagnostic patch.
 
 ### Reports Query Schema Fix (April 2026)
 
@@ -230,24 +265,21 @@
   - Tried a temporary diagnostic patch disabling the Supabase auth-state listener in `SupabaseAuthContext.jsx`
 
 - Current status:
-  - Dashboard behavior improved somewhat versus earlier state
-  - User was able to log in, enter a full property address, and run a Screening report successfully
-  - Several containment patches temporarily improved responsiveness and Dashboard sometimes appeared stable again
-  - Removing `fetchReports()` from mount-time sync materially improved responsiveness at one point
-  - Report History then required separate deferred loading / manual refresh behavior
-  - Render trace did not show obvious hundreds/thousands-per-second render spam
-  - Console behavior looked more like a few renders per interaction, not a classic local render storm
-  - Incognito testing did not isolate the problem; freeze behavior still affected the logged-in browser session broadly
-  - Logging out restored responsiveness
-  - The temporary auth-listener diagnostic patch did not solve the freeze
-  - Attempted Chrome Performance tracing became unusable because the browser froze hard enough that the trace never finished loading
-  - Freeze still returned unpredictably after later interaction
-  - In the worst late-session case, the user was effectively a sitting duck again for more than 10 minutes with the machine/browser broadly unusable
-  - Root cause not yet fully isolated
-  - Strong suspicion remains:
-    - authenticated-session / shared-client / background behavior
-    - Dashboard-local reactive churn as a real amplifier, but not a complete explanation by itself
-    - repaint / resource-thrash behavior rather than a simple local render loop
+  - The diagnostic shell remained stable.
+  - Header-only diagnostic mode remained stable.
+  - Header + property input remained stable.
+  - Header + property input + Report History table froze.
+  - Header + property input + Report History summary-only branch remained stable.
+  - Render trace did not show obvious runaway local render spam.
+  - Authenticated session / global auth was not confirmed as the primary cause.
+  - Property input alone was not the primary cause.
+  - Fetched report data alone was not the primary cause.
+  - Conclusion:
+    - the old rendered Report History table/rows subtree was the primary frontend freeze trigger.
+  - Final production state:
+    - the old table-based Report History non-empty branch was replaced with a lightweight stacked list/card layout.
+    - catastrophic browser-freeze behavior appears materially resolved after that change.
+    - repeated typing and refresh testing became stable enough to stop further speculative property-input tuning before launch.
 
 - Important:
   - No further Dashboard structural changes should be made without controlled isolation
@@ -255,11 +287,10 @@
 
 - Strategic interpretation:
   - Current concern is not that the backend cannot necessarily handle serious demand.
-  - Dashboard-local churn was real and some contained reductions helped.
-  - But the root cause is still not fully isolated and current evidence no longer supports overcommitting to `Dashboard.jsx` local state churn as the sole explanation.
-  - Current evidence suggests the issue may be tied to authenticated-session / shared browser resource / background client behavior, not just the local property input or a simple Dashboard render loop.
-  - Dashboard-only micro-patching is now considered incomplete as a diagnosis path.
-  - If Ken Dunn responds positively and syndicate interest increases, Dashboard stability and simplification remain urgent because the customer control surface must feel stable and institutional.
+  - Dashboard-local churn was real, but the catastrophic freeze was isolated more narrowly to the old Report History table/rows render subtree.
+  - The applied stacked-list replacement is treated as the operative stabilization fix.
+  - Dashboard should still be monitored during final validation, but the current evidence no longer supports treating the freeze as an unresolved architecture-level blocker.
+  - If Ken Dunn responds positively and syndicate interest increases, Dashboard simplicity and controlled render-path discipline should remain part of future hardening.
 
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
@@ -290,39 +321,37 @@
 - Separate deferred `fetchReports()` effect after mount: completed.
 - Temporary Dashboard render trace insertion: completed.
 - Temporary auth-listener diagnostic patch: tried; did not solve freeze.
+- Report History render-path isolation sequence: completed.
+- Old Report History table/rows subtree replaced with lightweight stacked list/card layout: completed.
+- Temporary diagnostic gate disabled and Dashboard returned to normal route rendering: completed.
 
-### Immediate agenda — April 11, 2026
-- STEP 1 — END-TO-END TESTING
-  - Run:
-    - 1 clean Screening report
-    - 1 clean Underwriting report
-    - 1 messy Underwriting report
-  - Confirm:
-    - no missing sections
-    - no incorrect wording
-    - no regressions
-    - no encoding issues
-- STEP 2 — STRIPE LIVE PAYMENT TEST
+### Immediate agenda - April 12, 2026
+- STEP 1 - END-TO-END TESTING
+  - 1 clean Screening
+  - 1 clean Underwriting
+  - 1 messy Underwriting
+  - confirm no missing sections, no regressions, no wording drift, and no encoding issues
+- STEP 2 - STRIPE LIVE PAYMENT TEST
   - Create low-dollar live product or test price ($1 or similar)
   - Run real payment (NOT coupon-based)
   - Confirm:
     - payment appears in Stripe dashboard
     - Stripe balance updates
     - payout path to TD bank account is functioning
-- STEP 3 — CODEX AUDIT
+- STEP 3 - CODEX AUDIT
   - Provide fresh outputs from April 11 tests
   - Request STRICT institutional audit
   - Only fix if a REAL blocker is identified
   - No cosmetic rewrites
-- STEP 4 — FINAL READINESS CHECK
+- STEP 4 - FINAL READINESS CHECK
   - Confirm:
     - sample reports are elite quality
     - system is stable
     - no last-minute risks
-    - no UI blocking issues (Dashboard freeze must be resolved or isolated)
+    - no UI blocking issues
 
 ### Before Ken Dunn outreach
-- Screening test result â€” April 11, 2026
+- Screening test result - April 11, 2026
   - Successfully generated:
     - `124 Richmond Street (Screening Test 33)`
   - Quick review outcome:
@@ -343,28 +372,30 @@
   - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
-- Dashboard freeze remains the primary unresolved launch blocker.
+- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization.
+- Continue light monitoring during final validation for any residual sluggishness.
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
-- Resume with high-level, read-only diagnosis first.
-- Inspect authenticated-session / shared-client / Supabase / provider / background behavior, not just Dashboard local effects.
-- Avoid more blind containment patches until the next investigation step is clearer.
-- First move tomorrow should be: check whether that temporary auth-listener diagnostic patch is still in the repo and revert it if it is, so you are not diagnosing on top of a dead-end test change.
+- STEP 1 - END-TO-END TESTING
+  - 1 clean Screening
+  - 1 clean Underwriting
+  - 1 messy Underwriting
+  - confirm no missing sections, no regressions, no wording drift, and no encoding issues
+- After that:
+  - Stripe low-dollar live payment test
+  - Codex institutional audit
+  - final readiness check
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
 
 ### Launch Risk Flag (Dashboard)
 
-- Dashboard input freeze is currently the only known high-severity UX risk.
-- Mixed containment results improved responsiveness at points, but the freeze still returned unpredictably and remains the primary unresolved blocker before outreach.
-- Must be:
-  - resolved
-    OR
-  - safely isolated (non-blocking to report generation + checkout)
-- No outreach should occur until:
-  - user can reliably enter property name without UI lock
+- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization.
+- Continue light monitoring during final validation.
+- No current evidence of the prior machine-locking behavior after the stacked-list fix.
+- The team chose not to pursue additional speculative property-input optimization before launch because repeated typing and refresh testing became stable once the Report History table subtree was replaced.
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -429,4 +460,4 @@ Notes:
   - low-dollar live Stripe acceptance test completed
   - homepage sample report replacement finalized if still pending
   - one final manual QA sweep completed
-  - no other real launch blockers remaining after Dashboard stability is cleared
+  - no other real launch blockers remaining after final validation is complete
