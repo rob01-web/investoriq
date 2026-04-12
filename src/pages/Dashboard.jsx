@@ -287,9 +287,9 @@ function NoticeBox({ type = 'info', children }) {
 
 // MAIN COMPONENT
 export default function Dashboard() {
-  console.log('DASHBOARD RENDER TRACE', Date.now());
   const { toast } = useToast();
-  const { profile, fetchProfile } = useAuth();
+  const { profile, fetchProfile, signOut } = useAuth();
+  const DASHBOARD_DIAG_MINIMAL = true;
   const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
   const loadDismissedJobs = () => {
     if (typeof window === "undefined") return new Set();
@@ -313,6 +313,9 @@ export default function Dashboard() {
       saveDismissedJobs(next);
       return next;
     });
+  };
+  const handleDiagnosticSignOut = async () => {
+    await signOut();
   };
   const [propertyName, setPropertyName] = useState('');
   const propertyNameRef = useRef('');
@@ -817,6 +820,42 @@ export default function Dashboard() {
   };
 
   // RENDER
+  if (DASHBOARD_DIAG_MINIMAL) {
+    return (
+      <>
+        <Helmet>
+          <title>InvestorIQ - Dashboard</title>
+          <meta name="description" content="Upload property documents and generate institutional-grade underwriting reports." />
+        </Helmet>
+
+        <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif", padding: '48px' }}>
+          <div style={{ maxWidth: 720, margin: '0 auto', background: T.white, border: `1px solid ${T.hairline}`, padding: '32px' }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 500, color: T.ink, marginBottom: 12 }}>Dashboard Diagnostic Mode</h1>
+            <p style={{ ...bodySmall, fontSize: 14, marginBottom: 20 }}>Normal dashboard content is temporarily bypassed to isolate whether the freeze is caused by Dashboard-local rendering or broader authenticated-session behavior.</p>
+            <button
+              type="button"
+              onClick={handleDiagnosticSignOut}
+              style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 10,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                fontWeight: 500,
+                padding: '10px 20px',
+                background: T.green,
+                color: T.gold,
+                border: `1px solid ${T.green}`,
+                cursor: 'pointer',
+              }}
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
