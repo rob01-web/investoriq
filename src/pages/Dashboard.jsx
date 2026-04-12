@@ -857,6 +857,39 @@ export default function Dashboard() {
               </GhostBtn>
             </motion.div>
           </div>
+
+          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 48px 64px' }}>
+            <div style={{ ...sectionCard, maxWidth: 760 }}>
+              <label style={{ ...labelMono, display:'block', marginBottom:8 }}>
+                Property Name or Address
+              </label>
+              <input
+                ref={propertyInputRef}
+                type="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                defaultValue={propertyName}
+                onChange={(e) => { propertyNameRef.current = e.target.value; }}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const nextValue = propertyNameRef.current.trim();
+                    if (nextValue !== propertyName) setPropertyName(nextValue);
+                  }
+                }}
+                placeholder="e.g. 4200 Commerce Drive, Austin TX"
+                style={{ width:'100%', background:T.warm, border:`1px solid ${T.hairlineMid}`, padding:'14px 16px', fontFamily:"'DM Sans', sans-serif", fontSize:14, fontWeight:300, color:T.ink, outline:'none', boxSizing:'border-box' }}
+                onBlur={(e)  => {
+                  propertyNameRef.current = e.target.value;
+                  const nextValue = e.target.value.trim();
+                  if (nextValue !== propertyName) setPropertyName(nextValue);
+                  e.target.style.borderColor = T.hairlineMid;
+                }}
+              />
+            </div>
+          </div>
         </div>
       </>
     );
