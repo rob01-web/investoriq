@@ -77,7 +77,6 @@ const tiers = [
 function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk }) {
   const isLoading = loadingKey === tier.productType;
   const [hovered, setHovered] = useState(false);
-  const [quantity, setQuantity] = useState(1);
 
   const buttonLabel = isLoading
     ? 'Redirecting…'
@@ -205,44 +204,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
         {tier.description}
       </p>
 
-      <div style={{
-        display:      'flex',
-        alignItems:   'center',
-        justifyContent:'space-between',
-        gap:          12,
-        marginBottom: 20,
-      }}>
-        <span style={{
-          fontFamily:   "'DM Mono', monospace",
-          fontSize:     10,
-          letterSpacing:'0.14em',
-          textTransform:'uppercase',
-          color:        T.ink4,
-        }}>
-          Quantity
-        </span>
-        <select
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          disabled={isLoading || !pricingOk}
-          style={{
-            fontFamily:   "'DM Mono', monospace",
-            fontSize:     10,
-            letterSpacing:'0.08em',
-            textTransform:'uppercase',
-            color:        T.ink2,
-            background:   T.white,
-            border:       `1px solid ${T.hairlineMid}`,
-            padding:      '8px 10px',
-            outline:      'none',
-          }}
-        >
-          {[1, 2, 3, 4, 5].map((value) => (
-            <option key={value} value={value}>{value}</option>
-          ))}
-        </select>
-      </div>
-
       {/* Features */}
       <ul style={{
         listStyle:    'none',
@@ -288,7 +249,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
       {/* CTA Button */}
       <button
         type="button"
-        onClick={() => onCheckout(tier.productType, quantity)}
+        onClick={() => onCheckout(tier.productType, 1)}
         disabled={isLoading || !pricingOk}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -552,7 +513,7 @@ export default function PricingPage() {
                 color:        T.goldDark,
                 textTransform:'uppercase',
               }}>
-                Portfolio and team usage available on request.
+                Portfolio pricing available on request
               </motion.p>
 
               <motion.p variants={fadeUp} style={{
