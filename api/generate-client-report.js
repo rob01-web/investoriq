@@ -4738,7 +4738,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     );
     finalHtml = finalHtml.replace(
       /DATA COVERAGE\s*&\s*UNDERWRITING GAPS\s*-\s*MISSING INPUTS AND OMITTED SECTIONS/g,
-      "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
+      effectiveReportMode === "v1_core"
+        ? "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
+        : "Data Coverage & Screening Notes - Missing Inputs and Omitted Sections"
     );
     finalHtml = finalHtml.replace(
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
@@ -4929,8 +4931,8 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         const trs = rows.map(r =>
           `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
           `<td style="padding:5px 8px;width:44%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;"><span class="analysis-chart-table-value">${formatCurrency(r.val)}</span></td>` +
-          `<td style="padding:5px 8px;font-size:10px;text-align:right;color:#6B7280;"><span class="analysis-chart-table-pct">${r.pct}%</span></td></tr>`
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;"><span class="analysis-chart-table-value" style="white-space:nowrap;">${formatCurrency(r.val)}</span></td>` +
+          `<td style="padding:5px 8px;font-size:10px;text-align:right;color:#6B7280;white-space:nowrap;"><span class="analysis-chart-table-pct" style="white-space:nowrap;">${r.pct}%</span></td></tr>`
         ).join("");
         html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
       }

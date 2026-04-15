@@ -13,8 +13,20 @@
 - Authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause.
 - The freeze was isolated to the rendered Report History table/rows subtree.
 - Replacing the old Report History table with a lightweight stacked list/card layout materially resolved the catastrophic browser-freeze behavior.
-- Current Dashboard status: stable enough for launch validation, with light monitoring recommended for any residual sluggishness.
-- Launch phase status: final validation, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
+- Worker single-run timeout issue was reproduced, diagnosed, and materially fixed with a route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json`.
+- Single worker kick now completes the processing pipeline without requiring a second manual run.
+- Dashboard auto full-page completion reload was tested, followed by a timing patch, and then fully reverted after regression risk / freeze return.
+- Current Dashboard status: stable in the reverted manual-refresh state, with light monitoring recommended for any residual sluggishness.
+- V1.0 Dashboard posture is now locked:
+  - keep top Reload button
+  - keep Report History Refresh button
+  - no auto completion reload before launch
+- Website now includes business-day turnaround expectation copy on Pricing and Checkout Success.
+- Multi-quantity Stripe checkout now works for Screening and Underwriting.
+- Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
+- Fresh multi-quantity underwriting purchase now correctly creates 5 available underwriting credits in Supabase and shows 5 underwriting credits in Dashboard.
+- Dashboard checkout-success banner copy has been updated from single-credit wording to quantity-neutral wording.
+- Launch phase status: final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
 - InvestorIQ is a document-driven real estate decision engine for investors.
@@ -28,7 +40,8 @@
 ## 3. Current Pricing
 - Screening Report: $499
 - Underwriting Report: $1,499
-- One purchase = one report.
+- Quantity purchase supported at checkout for both report types.
+- One purchased report = one report credit.
 - No subscription.
 
 ## 4. Core System Architecture
@@ -87,6 +100,16 @@
   - Stripe is not a pre-launch patch target unless a real bug is reproduced
 - Dashboard Report History now uses a lightweight stacked list/card layout instead of the prior table-based render path.
 - This Report History render-path replacement is a production stabilization fix applied after controlled freeze isolation, not a temporary diagnostic patch.
+- Worker single-run timeout issue was reproduced live and materially fixed by adding a route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json`.
+- Single worker kick now completes the full pipeline without requiring a second manual run.
+- Dashboard completion auto-reload experiments were attempted and then fully reverted after regression risk / freeze return.
+- Reverted manual-refresh Dashboard state is the locked V1.0 posture.
+- Pricing page and Checkout Success page now include the business-day turnaround disclosure:
+  - "InvestorIQ reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day."
+- Multi-quantity Stripe checkout now supports quantity selection for Screening and Underwriting.
+- `api/create-checkout-session.js` now passes quantity into Stripe line items and metadata.
+- Stripe webhook entitlement creation now writes one `report_purchases` row per purchased credit.
+- Dashboard checkout-success banner copy is now quantity-neutral.
 
 ### Prompt / Hallucination Risk Clarification (April 2026)
 
@@ -182,6 +205,56 @@
 
 - Classification:
   - this was a production stabilization fix, not just a diagnostic patch.
+
+### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
+
+- Worker timeout issue evidence:
+  - first GitHub-triggered worker kick advanced a job into `extracting`
+  - first `/api/admin-run-worker` invocation then hit `FUNCTION_INVOCATION_TIMEOUT`
+  - second run completed the pipeline
+  - root cause was runtime budget on `api/admin-run-worker`
+  - fix applied in `vercel.json`:
+    - route-specific `maxDuration` override for `api/admin-run-worker.js`
+
+- Report History auto full-page reload experiment:
+  - attempted one-shot completion reload
+  - attempted a follow-up delayed post-reload `fetchReports()` timing patch
+  - freeze / regression risk returned
+  - both patches were fully reverted
+  - reverted manual-refresh Dashboard state was confirmed stable again
+
+- Locked V1.0 Dashboard posture:
+  - 60-second top-section in-progress polling remains
+  - no automatic full page reload after completion
+  - Report History remains manual refresh for V1.0
+  - do not attempt more Dashboard synchronization experiments before launch
+
+- Optional UX containment idea discussed:
+  - add nearby guidance that completed reports may require Refresh
+  - treat as optional and non-blocking
+  - do not patch unless explicitly resumed later
+
+### Stripe Quantity Checkout and Entitlements (April 12, 2026)
+
+- Quantity selector (1-5) added to Pricing cards for both Screening and Underwriting.
+- `api/create-checkout-session.js` now passes quantity into Stripe line items and session metadata.
+- Webhook now creates one `report_purchases` row per purchased credit.
+
+- Live bug investigation path:
+  - Stripe metadata confirmed `productType=underwriting`, `quantity=5`, and valid `userId`
+  - `report_purchases` initially showed 0 matching rows for the exact session
+  - Vercel webhook logs exposed false-success behavior, then a NOT NULL constraint issue (`23502`)
+  - first webhook fix removed false-success logging and stopped the null session-id strategy
+  - final fix:
+    - first entitlement row keeps exact `stripe_session_id`
+    - rows 2..N use deterministic suffixed ids such as `sessionId#2`, `sessionId#3`, etc.
+
+- Final live validation result:
+  - 5 underwriting credits successfully created
+  - Dashboard underwriting count updated correctly
+
+- Business note:
+  - when creating a coupon for Ken Dunn, quantity / offer behavior should be considered carefully so he cannot accidentally run more reports than intended
 
 ### Reports Query Schema Fix (April 2026)
 
@@ -324,31 +397,31 @@
 - Report History render-path isolation sequence: completed.
 - Old Report History table/rows subtree replaced with lightweight stacked list/card layout: completed.
 - Temporary diagnostic gate disabled and Dashboard returned to normal route rendering: completed.
+- Worker single-run timeout reproduction and fix via `vercel.json` route-specific override: completed.
+- Auto full-page completion reload experiment: attempted, caused regression risk, and fully reverted.
+- Business-day turnaround copy added to Pricing and Checkout Success: completed.
+- Multi-quantity Stripe checkout support for Screening and Underwriting: completed.
+- Webhook quantity entitlement creation bug investigation and final fix: completed.
+- Dashboard checkout-success banner copy updated to quantity-neutral wording: completed.
 
 ### Immediate agenda - April 12, 2026
-- STEP 1 - END-TO-END TESTING
-  - 1 clean Screening
-  - 1 clean Underwriting
-  - 1 messy Underwriting
-  - confirm no missing sections, no regressions, no wording drift, and no encoding issues
-- STEP 2 - STRIPE LIVE PAYMENT TEST
-  - Create low-dollar live product or test price ($1 or similar)
-  - Run real payment (NOT coupon-based)
-  - Confirm:
-    - payment appears in Stripe dashboard
-    - Stripe balance updates
-    - payout path to TD bank account is functioning
-- STEP 3 - CODEX AUDIT
-  - Provide fresh outputs from April 11 tests
-  - Request STRICT institutional audit
-  - Only fix if a REAL blocker is identified
-  - No cosmetic rewrites
-- STEP 4 - FINAL READINESS CHECK
-  - Confirm:
-    - sample reports are elite quality
-    - system is stable
-    - no last-minute risks
-    - no UI blocking issues
+- HIGH PRIORITY NEXT
+  - Final microscope-level review of the newly generated reports:
+    - clean Screening
+    - clean Underwriting
+    - messy Underwriting
+  - This is the final report review before placing sample reports on the website.
+
+- STILL OPEN
+  - Verify / fix report-ready email notifications
+    - earlier logs indicated a missing env var on the `report_published` email path
+    - confirm whether production email notification is fully wired and actually sent
+  - Strict ASCII / typography cleanup across user-facing surfaces
+    - remove unicode arrows, ellipses, and similar characters surgically
+    - no broad sweep
+  - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
+  - Final Codex institutional audit after final reports are reviewed
+  - Final readiness check after report review and any real blockers are fixed
 
 ### Before Ken Dunn outreach
 - Screening test result - April 11, 2026
@@ -362,7 +435,7 @@
 - Fresh final Screening PDF generated and approved.
 - Fresh final Underwriting PDF generated and approved.
 - Messy / mixed-document regression pass completed.
-- Stripe live-money acceptance tested at low dollar amount.
+- Low-dollar true live Stripe payment test completed if not already verified.
 - Homepage / sample-report replacements finalized if still pending.
 - One final manual QA sweep completed:
   - report type labels
@@ -377,22 +450,37 @@
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
-- STEP 1 - END-TO-END TESTING
-  - 1 clean Screening
-  - 1 clean Underwriting
-  - 1 messy Underwriting
-  - confirm no missing sections, no regressions, no wording drift, and no encoding issues
-- After that:
-  - Stripe low-dollar live payment test
-  - Codex institutional audit
-  - final readiness check
+- FIRST THING TOMORROW MORNING
+  - Put the newly generated reports under a microscope
+  - Review in this exact order:
+    1. clean Screening
+    2. clean Underwriting
+    3. messy Underwriting
+  - Check for:
+    - missing sections
+    - wording drift
+    - wrong report-type leakage
+    - AI wording
+    - unsupported claims
+    - mojibake / encoding issues
+    - unicode typography that damages elite credibility
+    - institutional tone consistency
+  - This is the final review before placing sample reports on the website.
+
+- AFTER THAT
+  - verify / fix report-ready email notifications
+  - apply any surgical copy / typography cleanups that are truly needed
+  - run final Codex institutional audit only if needed
+  - complete final readiness check
+  - prepare website sample report placement for public display
+
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
 
 ### Launch Risk Flag (Dashboard)
 
-- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization.
+- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization and completion-reload experiment reversion.
 - Continue light monitoring during final validation.
 - No current evidence of the prior machine-locking behavior after the stacked-list fix.
 - The team chose not to pursue additional speculative property-input optimization before launch because repeated typing and refresh testing became stable once the Report History table subtree was replaced.
@@ -450,14 +538,14 @@ Notes:
   - core report engine is stable enough for final validation and outreach-prep
   - underwriting cap-rate consistency is fixed across refinance, debt structure, scenario analysis, and DCF
   - messy underwriting regression output has reached production-pass status
-  - worker publish-loop behavior is confirmed stable in a single-run path
-  - Stripe entitlement behavior is practically validated through repeated real-world checkout testing
+  - worker single-run reliability issue is fixed
+  - Dashboard catastrophic freeze is materially resolved in the reverted stable manual-refresh state
+  - multi-quantity Stripe checkout is now working
+  - Stripe entitlement creation for quantity purchases is now working
 - Still needed before Ken Dunn outreach:
-  - Dashboard freeze / responsiveness issue resolved or safely isolated
-  - fresh final Screening PDF generated and approved
-  - fresh final Underwriting PDF generated and approved
-  - messy test regression pass completed
-  - low-dollar live Stripe acceptance test completed
-  - homepage sample report replacement finalized if still pending
-  - one final manual QA sweep completed
-  - no other real launch blockers remaining after final validation is complete
+  - final microscope-level review of clean Screening, clean Underwriting, and messy Underwriting
+  - verify / fix report-ready email notifications
+  - strict ASCII / typography cleanup where truly needed
+  - low-dollar true live Stripe payment test if not yet completed
+  - final Codex institutional audit if needed after report review
+  - final readiness check and sample presentation readiness

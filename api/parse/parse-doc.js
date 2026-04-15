@@ -1618,10 +1618,12 @@ export default async function handler(req, res) {
               /(?:->\s*)?loan\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
             );
             for (const match of compactLoanMatches) addCandidate(match[1]);
-            const fallbackAmount = extractDollarNear(rawText, [
-              'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
-            ]);
-            addCandidate(fallbackAmount);
+            if (candidates.length === 0) {
+              const fallbackAmount = extractDollarNear(rawText, [
+                'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
+              ]);
+              addCandidate(fallbackAmount);
+            }
             return candidates.length > 0 ? Math.max(...candidates) : null;
           })();
 
