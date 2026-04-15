@@ -991,8 +991,28 @@ export default async function handler(req, res) {
                   }
                 }
 
-                passTransitions += 1;
-                continue;
+                const { data: refreshedRelevantFiles, error: refreshedRelevantFilesErr } = await supabaseAdmin
+                  .from('analysis_job_files')
+                  .select('doc_type, parse_status, original_filename, object_path, mime_type')
+                  .eq('job_id', job.id);
+
+                if (refreshedRelevantFilesErr) {
+                  throw new Error(`Failed to refresh file parse state: ${refreshedRelevantFilesErr.message}`);
+                }
+
+                const refreshedStructuredFiles = (refreshedRelevantFiles || []).filter((file) => {
+                  const docType = String(file.doc_type || '').toLowerCase();
+                  return docType === 'rent_roll' || docType === 't12';
+                });
+
+                const stillPending = refreshedStructuredFiles.some(
+                  (file) => String(file.parse_status || '').toLowerCase() === 'pending'
+                );
+
+                if (stillPending) {
+                  passTransitions += 1;
+                  continue;
+                }
               }
             }
 
