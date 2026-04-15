@@ -4742,6 +4742,12 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         ? "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
         : "Data Coverage & Screening Notes - Missing Inputs and Omitted Sections"
     );
+    if (effectiveReportMode !== "v1_core") {
+      finalHtml = finalHtml.replace(
+        /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,
+        '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
+      );
+    }
     finalHtml = finalHtml.replace(
       /REFINANCE DATA SUFFICIENCY FLAG\s*-\s*ELIGIBILITY FOR REFINANCE STABILITY CLASSIFICATION/g,
       "Refinance Data Sufficiency - Eligibility for Refinance Stability Classification"
