@@ -909,9 +909,11 @@ export default async function handler(req, res) {
                 continue;
               }
 
-              const anyPending = relevantFiles.some(
-                (file) => String(file.parse_status || '').toLowerCase() === 'pending'
-              );
+              const anyPending = relevantFiles.some((file) => {
+                const dt = String(file.doc_type || '').toLowerCase();
+                const isInProgress = ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase());
+                return isInProgress && (dt === 'rent_roll' || dt === 't12');
+              });
               let requiredStructuredNowParsed = false;
 
               if (anyPending) {
@@ -1006,8 +1008,8 @@ export default async function handler(req, res) {
                   return docType === 'rent_roll' || docType === 't12';
                 });
 
-                const stillPending = refreshedStructuredFiles.some(
-                  (file) => String(file.parse_status || '').toLowerCase() === 'pending'
+                const stillPending = refreshedStructuredFiles.some((file) =>
+                  ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase())
                 );
                 const refreshedHasRentRollParsed = refreshedStructuredFiles.some(
                   (file) =>

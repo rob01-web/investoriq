@@ -13,8 +13,8 @@
 - Authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause.
 - The freeze was isolated to the rendered Report History table/rows subtree.
 - Replacing the old Report History table with a lightweight stacked list/card layout materially resolved the catastrophic browser-freeze behavior.
-- Worker single-run timeout issue was reproduced, diagnosed, and materially fixed with a route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json`.
-- Single worker kick now completes the processing pipeline without requiring a second manual run.
+- Worker single-run timeout issue was reproduced, and the route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
+- Worker single-run reliability was previously thought fixed, but recent live retesting disproved that. Worker control flow remains an active launch blocker under investigation / patch validation.
 - Dashboard auto full-page completion reload was tested, followed by a timing patch, and then fully reverted after regression risk / freeze return.
 - Current Dashboard status: stable in the reverted manual-refresh state, with light monitoring recommended for any residual sluggishness.
 - V1.0 Dashboard posture is now locked:
@@ -26,7 +26,8 @@
 - Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
 - Fresh multi-quantity underwriting purchase now correctly creates 5 available underwriting credits in Supabase and shows 5 underwriting credits in Dashboard.
 - Dashboard checkout-success banner copy has been updated from single-credit wording to quantity-neutral wording.
-- Launch phase status: final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
+- Recent Supabase inspection strongly suggests `report_purchases` is the real entitlement / source-of-truth ledger, while `profiles.report_credits` and related Dashboard credit displays may be stale, secondary, legacy, or misleading.
+- Launch phase status: worker stabilization, final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
 - InvestorIQ is a document-driven real estate decision engine for investors.
@@ -125,19 +126,35 @@
 
 ### Recent Parsing & Underwriting Hardening (April 2026)
 
+- Microscope review completed:
+  - clean Screening
+  - clean Underwriting
+  - messy Underwriting
+- Microscope review findings:
+  - clean Screening math checked out against source documents
+  - clean Screening surfaced wrong-report-type leakage in the heading: `Data Coverage & Underwriting Gaps`
+  - clean Underwriting surfaced a real debt parsing bug where purchase price was being used as current debt balance instead of the parsed loan amount
+  - messy Underwriting debt parsing and core math looked materially correct
+  - underwriting PDFs surfaced a presentation issue in NOI breakdown numeric wrapping
 - Debt document routing hardened:
   - Normalized `debt_term_sheet` -> `loan_term_sheet` in `parse-doc.js` to ensure consistent extraction path and artifact generation.
 - Loan term sheet inference expanded:
   - `inferDocTypeFromText(...)` now supports compact lender-style debt summaries (e.g., "REFI TERMS", "Rate", "AM", "LTV") using signal-count + financing-pattern gating.
   - Prevents valid debt documents from falling into `supporting_documents_unclassified`.
 - Loan amount extraction hardened:
-  - Replaced single-match parsing with multi-candidate collection using `matchAll(...)`.
-  - Added plausibility filter (`>= 10,000`) to eliminate OCR noise and small-value miscaptures (e.g., `$75`).
-  - Deterministic selection now returns the largest valid candidate.
+  - `api/parse/parse-doc.js` fixed the clean underwriting loan amount parsing bug.
+  - Fallback loan amount candidate now only applies when no explicit / compact loan match exists.
 - Result:
   - Messy debt documents now correctly produce `loan_term_sheet_parsed` artifacts.
-  - Underwriting debt inputs (loan balance, rate, amortization, LTV) reliably populate from compact or non-standard lender formats.
-  - DSCR and refinance outputs no longer break due to invalid small-value parses.
+  - Clean underwriting debt balance no longer substitutes purchase price when an explicit loan amount is present.
+  - Underwriting debt inputs (loan balance, rate, amortization, LTV) now route correctly from both clean and messy lender formats.
+  - Screening heading was corrected from `Data Coverage & Underwriting Gaps` to `Data Coverage & Screening Notes`.
+  - Underwriting NOI breakdown presentation was patched with nowrap on values / percentages to stop ugly numeric wrapping.
+  - Header mobile-menu visibility was corrected by moving hamburger flex behavior into `className`, preventing desktop visibility.
+  - Public pricing page cleanup completed:
+    - removed quantity selector from the public pricing page
+    - public pricing page checkout now hard-calls quantity `1`
+    - copy changed to `Portfolio pricing available on request.`
 
 ### Dashboard Performance Hardening (April 2026)
 
@@ -215,6 +232,38 @@
   - root cause was runtime budget on `api/admin-run-worker`
   - fix applied in `vercel.json`:
     - route-specific `maxDuration` override for `api/admin-run-worker.js`
+- Worker debugging timeline after the timeout fix:
+  - original live issue:
+    - worker needed 2 kicks
+    - kick 1: `queued` -> `extracting`
+    - kick 2: `extracting` -> `published`
+  - investigation found:
+    - extracting branch dispatched parsing and then immediately deferred
+    - worker self-limited to `maxSeconds = 55`
+  - first worker patch attempted:
+    - refresh parse state after dispatch so the worker could continue in the same invocation
+  - live retest failed:
+    - valid jobs incorrectly landed in `needs_documents`
+    - purchases / credits were restored
+  - investigation confirmed stale pre-dispatch parsed booleans caused fall-through into `needs_documents`
+  - second worker patch attempted:
+    - post-refresh parsed-doc guard
+  - live retest still failed
+  - latest investigation confirmed why:
+    - the current patch only rechecked inside `if (anyPending)`
+    - `anyPending` only looked at `parse_status === 'pending'`
+    - structured docs can be `extracted` at that point
+    - refresh / recheck could therefore be skipped and valid jobs still routed to `needs_documents`
+  - latest action:
+    - a new Codex patch prompt was issued to replace the failed local worker patch block so structured `rent_roll` / `t12` in `pending` or `extracted` both trigger refresh / recheck
+    - this replacement patch is the current active item awaiting confirmation / validation
+- Latest live worker / UX symptom:
+  - after clicking Generate Report, the job appeared at the top of the Dashboard as `queued`
+  - after roughly 30-45 seconds and auto-refresh, it disappeared from that top section
+  - it never visibly showed `extracting` in the Dashboard UI before disappearing
+  - backend inspection showed jobs landing in `needs_documents`
+  - credits / purchases were restored
+  - this is a major UX / support risk because users are not clearly told where the job went or why
 
 - Report History auto full-page reload experiment:
   - attempted one-shot completion reload
@@ -381,7 +430,7 @@
 - Screening and Underwriting wording polish wave: substantially completed.
 - Underwriting cap-rate consistency across refinance / debt grid / scenario / DCF: completed.
 - Messy Underwriting Test 32 production-pass hardening sweep: completed.
-- Worker loop / double-trigger verification: completed.
+- Report microscope review of clean Screening, clean Underwriting, and messy Underwriting: completed.
 - Stripe checkout -> entitlement flow practical validation: completed.
 - Checkout ghost-job creation removal: completed.
 - Dashboard null-name `needs_documents` containment patch: completed.
@@ -397,20 +446,28 @@
 - Report History render-path isolation sequence: completed.
 - Old Report History table/rows subtree replaced with lightweight stacked list/card layout: completed.
 - Temporary diagnostic gate disabled and Dashboard returned to normal route rendering: completed.
-- Worker single-run timeout reproduction and fix via `vercel.json` route-specific override: completed.
+- Worker single-run timeout reproduction and route-specific `vercel.json` override: completed.
+- Worker extracting-stage same-invocation continuation fix: attempted, failed live retest.
+- Worker post-refresh parsed-doc guard patch: attempted, failed live retest.
+- Worker extracting-stage `pending` or `extracted` refresh / recheck replacement patch: issued and awaiting confirmation / validation.
 - Auto full-page completion reload experiment: attempted, caused regression risk, and fully reverted.
 - Business-day turnaround copy added to Pricing and Checkout Success: completed.
 - Multi-quantity Stripe checkout support for Screening and Underwriting: completed.
 - Webhook quantity entitlement creation bug investigation and final fix: completed.
 - Dashboard checkout-success banner copy updated to quantity-neutral wording: completed.
+- Public pricing page quantity selector removal and copy cleanup: completed.
 
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
-  - Final microscope-level review of the newly generated reports:
-    - clean Screening
-    - clean Underwriting
-    - messy Underwriting
-  - This is the final report review before placing sample reports on the website.
+  - Wait for Codex confirmation on the replacement worker patch.
+  - Then run one controlled Screening test first.
+  - Verify:
+    - one worker kick
+    - no false `needs_documents`
+    - no entitlement restore
+    - report reaches `published`
+    - report appears in Report History
+  - Only after that should clean Underwriting and messy Underwriting be re-run.
 
 - STILL OPEN
   - Verify / fix report-ready email notifications
@@ -419,6 +476,10 @@
   - Strict ASCII / typography cleanup across user-facing surfaces
     - remove unicode arrows, ellipses, and similar characters surgically
     - no broad sweep
+  - Post-launch / post-blocker entitlement-model cleanup investigation
+    - verify whether `report_purchases` is the true entitlement ledger
+    - determine whether `profiles.report_credits` and related Dashboard credit displays are stale, secondary, legacy, or misleading
+    - clean up empty / unclear credit tables and 0-credit display behavior after launch blockers are cleared
   - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
   - Final Codex institutional audit after final reports are reviewed
   - Final readiness check after report review and any real blockers are fixed
@@ -451,23 +512,19 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - Put the newly generated reports under a microscope
-  - Review in this exact order:
-    1. clean Screening
-    2. clean Underwriting
-    3. messy Underwriting
-  - Check for:
-    - missing sections
-    - wording drift
-    - wrong report-type leakage
-    - AI wording
-    - unsupported claims
-    - mojibake / encoding issues
-    - unicode typography that damages elite credibility
-    - institutional tone consistency
-  - This is the final review before placing sample reports on the website.
+  - Wait for Codex confirmation on the replacement worker patch.
+  - Then run one controlled Screening test first.
+  - Verify:
+    - one worker kick
+    - no false `needs_documents`
+    - no entitlement restore
+    - report reaches `published`
+    - report appears in Report History
+  - Only after that should clean Underwriting and messy Underwriting be re-run.
 
 - AFTER THAT
+  - confirm clean Screening remains correct after the worker fix
+  - re-run clean Underwriting and messy Underwriting microscope review
   - verify / fix report-ready email notifications
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
@@ -538,12 +595,12 @@ Notes:
   - core report engine is stable enough for final validation and outreach-prep
   - underwriting cap-rate consistency is fixed across refinance, debt structure, scenario analysis, and DCF
   - messy underwriting regression output has reached production-pass status
-  - worker single-run reliability issue is fixed
   - Dashboard catastrophic freeze is materially resolved in the reverted stable manual-refresh state
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
 - Still needed before Ken Dunn outreach:
-  - final microscope-level review of clean Screening, clean Underwriting, and messy Underwriting
+  - worker single-run reliability must be validated after the current replacement extracting-stage patch
+  - final microscope-level review of clean Screening, clean Underwriting, and messy Underwriting after worker stabilization
   - verify / fix report-ready email notifications
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
