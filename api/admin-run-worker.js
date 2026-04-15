@@ -909,12 +909,9 @@ export default async function handler(req, res) {
                 continue;
               }
 
-              const anyPending = relevantFiles.some((file) => {
-                const dt = String(file.doc_type || '').toLowerCase();
-                const isInProgress = ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase());
-                return isInProgress && (dt === 'rent_roll' || dt === 't12');
-              });
-              let requiredStructuredNowParsed = false;
+              const anyPending = relevantFiles.some(
+                (file) => String(file.parse_status || '').toLowerCase() === 'pending'
+              );
 
               if (anyPending) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
@@ -994,258 +991,225 @@ export default async function handler(req, res) {
                   }
                 }
 
-                const { data: refreshedRelevantFiles, error: refreshedRelevantFilesErr } = await supabaseAdmin
-                  .from('analysis_job_files')
-                  .select('doc_type, parse_status, original_filename, object_path, mime_type')
-                  .eq('job_id', job.id);
-
-                if (refreshedRelevantFilesErr) {
-                  throw new Error(`Failed to refresh file parse state: ${refreshedRelevantFilesErr.message}`);
-                }
-
-                const refreshedStructuredFiles = (refreshedRelevantFiles || []).filter((file) => {
-                  const docType = String(file.doc_type || '').toLowerCase();
-                  return docType === 'rent_roll' || docType === 't12';
-                });
-
-                const stillPending = refreshedStructuredFiles.some((file) =>
-                  ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase())
-                );
-                const refreshedHasRentRollParsed = refreshedStructuredFiles.some(
-                  (file) =>
-                    String(file.doc_type || '').toLowerCase() === 'rent_roll' &&
-                    String(file.parse_status || '').toLowerCase() === 'parsed'
-                );
-                const refreshedHasT12Parsed = refreshedStructuredFiles.some(
-                  (file) =>
-                    String(file.doc_type || '').toLowerCase() === 't12' &&
-                    String(file.parse_status || '').toLowerCase() === 'parsed'
-                );
-                requiredStructuredNowParsed = refreshedHasRentRollParsed && refreshedHasT12Parsed;
-
-                if (stillPending) {
-                  passTransitions += 1;
-                  continue;
-                }
+                passTransitions += 1;
+                continue;
               }
             }
 
-            if (!requiredStructuredNowParsed) {
-              const { error: needsDocsErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .update({ status: 'needs_documents' })
-                .eq('id', job.id)
-                .eq('status', 'extracting');
+            const { error: needsDocsErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update({ status: 'needs_documents' })
+              .eq('id', job.id)
+              .eq('status', 'extracting');
 
-              if (needsDocsErr) {
-                throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
-              }
+            if (needsDocsErr) {
+              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+            }
 
-              const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .select('purchase_id')
-                .eq('id', job.id)
-                .maybeSingle();
+            const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .select('purchase_id')
+              .eq('id', job.id)
+              .maybeSingle();
 
-              if (needsDocsJobErr) {
-                throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
-              }
+            if (needsDocsJobErr) {
+              throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
+            }
 
-              let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
-              if (!restorePurchaseId) {
-                const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
-                  .from('report_purchases')
-                  .select('id')
-                  .eq('job_id', job.id)
-                  .not('consumed_at', 'is', null)
-                  .limit(1)
-                  .maybeSingle();
-
-                if (purchaseByJobErr) {
-                  throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
-                }
-
-                restorePurchaseId = purchaseByJobRow?.id || null;
-              }
-              if (restorePurchaseId) {
-                const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
-                  .from('report_purchases')
-                  .update({ consumed_at: null })
-                  .eq('id', restorePurchaseId)
-                  .not('consumed_at', 'is', null)
-                  .select('id')
-                  .maybeSingle();
-
-                if (restorePurchaseErr) {
-                  throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
-                }
-
-                if (restoredPurchase?.id) {
-                  const { error: clearPurchaseLinkErr } = await supabaseAdmin
-                    .from('analysis_jobs')
-                    .update({ purchase_id: null })
-                    .eq('id', job.id)
-                    .eq('status', 'needs_documents');
-
-                  if (clearPurchaseLinkErr) {
-                    throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
-                  }
-
-                  const entitlementRestoredErr = await writeWorkerEventArtifact(
-                    job.id,
-                    job.user_id,
-                    'entitlement_restored',
-                    {
-                      reason: 'missing_structured_financials',
-                      purchase_id: restorePurchaseId,
-                      timestamp: nowIso,
-                    }
-                  );
-
-                  if (entitlementRestoredErr) {
-                    throw new Error(
-                      `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
-                    );
-                  }
-                }
-              }
-
-              const needsDocsTransitionErr = await writeStatusTransitionArtifact(
-                job.id,
-                'extracting',
-                'needs_documents',
-                { user_id: job.user_id }
-              );
-
-              if (needsDocsTransitionErr) {
-                throw new Error(
-                  `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
-                );
-              }
-
-              if (!blockedJobIds.includes(job.id)) {
-                blockedJobIds.push(job.id);
-              }
-
-              const { data: detectedRows, error: detectedErr } = await supabaseAdmin
-                .from('analysis_job_files')
-                .select('doc_type')
-                .eq('job_id', job.id)
-                .not('doc_type', 'is', null);
-
-              if (detectedErr) {
-                throw new Error(`Failed to detect document types: ${detectedErr.message}`);
-              }
-
-              const detected = Array.from(
-                new Set((detectedRows || []).map((row) => row.doc_type).filter(Boolean))
-              );
-
-              const { data: existingEvent } = await supabaseAdmin
-                .from('analysis_artifacts')
+            let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
+            if (!restorePurchaseId) {
+              const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
+                .from('report_purchases')
                 .select('id')
                 .eq('job_id', job.id)
-                .eq('type', 'worker_event')
-                .eq('payload->>event', 'missing_structured_financials')
+                .not('consumed_at', 'is', null)
                 .limit(1)
                 .maybeSingle();
 
-              if (!existingEvent?.id) {
-                const workerEventErr = await writeWorkerEventArtifact(
+              if (purchaseByJobErr) {
+                throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
+              }
+
+              restorePurchaseId = purchaseByJobRow?.id || null;
+            }
+            if (restorePurchaseId) {
+              const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
+                .from('report_purchases')
+                .update({ consumed_at: null })
+                .eq('id', restorePurchaseId)
+                .not('consumed_at', 'is', null)
+                .select('id')
+                .maybeSingle();
+
+              if (restorePurchaseErr) {
+                throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
+              }
+
+              if (restoredPurchase?.id) {
+                const { error: clearPurchaseLinkErr } = await supabaseAdmin
+                  .from('analysis_jobs')
+                  .update({ purchase_id: null })
+                  .eq('id', job.id)
+                  .eq('status', 'needs_documents');
+
+                if (clearPurchaseLinkErr) {
+                  throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
+                }
+
+                const entitlementRestoredErr = await writeWorkerEventArtifact(
                   job.id,
                   job.user_id,
-                  'missing_structured_financials',
+                  'entitlement_restored',
                   {
-                    code: 'NO_STRUCTURED_FINANCIALS',
-                    level: 'error',
-                    error_message:
-                      'No rent roll or T12 has been parsed yet. Job will remain in needs_documents until structured financials are available.',
-                    missing: ['rent_roll', 't12_or_operating_statement'],
-                    detected,
+                    reason: 'missing_structured_financials',
+                    purchase_id: restorePurchaseId,
                     timestamp: nowIso,
                   }
                 );
 
-                if (workerEventErr) {
-                  throw new Error(`Failed to write worker event artifact: ${workerEventErr.message}`);
-                }
-
-                const { data: existingEmail } = await supabaseAdmin
-                  .from('analysis_artifacts')
-                  .select('id')
-                  .eq('job_id', job.id)
-                  .eq('type', 'email_sent')
-                  .eq('bucket', 'system')
-                  .eq('payload->>email_type', 'missing_structured_financials')
-                  .limit(1)
-                  .maybeSingle();
-
-                if (!existingEmail?.id) {
-                  try {
-                    const { data: userRes, error: userErr } =
-                      await supabaseAdmin.auth.admin.getUserById(job.user_id);
-
-                    if (userErr) {
-                      throw userErr;
-                    }
-
-                    const userEmail = userRes?.user?.email;
-                    if (!userEmail) {
-                      throw new Error('Missing user email');
-                    }
-
-                    const { data: profileRow, error: profileErr } = await supabaseAdmin
-                      .from('profiles')
-                      .select('full_name')
-                      .eq('id', job.user_id)
-                      .maybeSingle();
-
-                    if (profileErr) {
-                      throw profileErr;
-                    }
-
-                    const fullName = String(profileRow?.full_name || '').trim();
-                    const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
-
-                    await sendEmailSES({
-                      to: userEmail,
-                      subject: 'Action required: documents needed to continue your InvestorIQ report',
-                      text:
-                        `Hello ${firstName},\n\n` +
-                        'Your InvestorIQ report cannot proceed yet.\n\n' +
-                        'We could not identify structured financial documents required for underwriting.\n\n' +
-                        'Required:\n' +
-                        '- Rent Roll\n' +
-                        '- T12 (Operating Statement)\n\n' +
-                        'Please log in to your InvestorIQ dashboard\n' +
-                        'and upload the required documents to continue processing.\n\n' +
-                        'This report will remain paused until required documents are available.',
-                    });
-
-                    await supabaseAdmin.from('analysis_artifacts').insert([
-                      {
-                        job_id: job.id,
-                        user_id: job.user_id,
-                        type: 'email_sent',
-                        bucket: 'system',
-                        object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
-                          nowIso
-                        )}.json`,
-                        payload: {
-                          email_type: 'missing_structured_financials',
-                          job_id: job.id,
-                          user_id: job.user_id,
-                          timestamp: nowIso,
-                        },
-                      },
-                    ]);
-                  } catch (err) {
-                    console.error('Failed to send missing_structured_financials email:', err?.message || err);
-                  }
+                if (entitlementRestoredErr) {
+                  throw new Error(
+                    `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
+                  );
                 }
               }
-              continue;
             }
+
+            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'extracting',
+              'needs_documents',
+              { user_id: job.user_id }
+            );
+
+            if (needsDocsTransitionErr) {
+              throw new Error(
+                `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+              );
+            }
+
+            if (!blockedJobIds.includes(job.id)) {
+              blockedJobIds.push(job.id);
+            }
+
+            const { data: detectedRows, error: detectedErr } = await supabaseAdmin
+              .from('analysis_job_files')
+              .select('doc_type')
+              .eq('job_id', job.id)
+              .not('doc_type', 'is', null);
+
+            if (detectedErr) {
+              throw new Error(`Failed to detect document types: ${detectedErr.message}`);
+            }
+
+            const detected = Array.from(
+              new Set((detectedRows || []).map((row) => row.doc_type).filter(Boolean))
+            );
+
+            const { data: existingEvent } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('id')
+              .eq('job_id', job.id)
+              .eq('type', 'worker_event')
+              .eq('payload->>event', 'missing_structured_financials')
+              .limit(1)
+              .maybeSingle();
+
+            if (!existingEvent?.id) {
+              const workerEventErr = await writeWorkerEventArtifact(
+                job.id,
+                job.user_id,
+                'missing_structured_financials',
+                {
+                  code: 'NO_STRUCTURED_FINANCIALS',
+                  level: 'error',
+                  error_message:
+                    'No rent roll or T12 has been parsed yet. Job will remain in needs_documents until structured financials are available.',
+                  missing: ['rent_roll', 't12_or_operating_statement'],
+                  detected,
+                  timestamp: nowIso,
+                }
+              );
+
+              if (workerEventErr) {
+                throw new Error(`Failed to write worker event artifact: ${workerEventErr.message}`);
+              }
+
+              const { data: existingEmail } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .select('id')
+                .eq('job_id', job.id)
+                .eq('type', 'email_sent')
+                .eq('bucket', 'system')
+                .eq('payload->>email_type', 'missing_structured_financials')
+                .limit(1)
+                .maybeSingle();
+
+              if (!existingEmail?.id) {
+                try {
+                  const { data: userRes, error: userErr } =
+                    await supabaseAdmin.auth.admin.getUserById(job.user_id);
+
+                  if (userErr) {
+                    throw userErr;
+                  }
+
+                  const userEmail = userRes?.user?.email;
+                  if (!userEmail) {
+                    throw new Error('Missing user email');
+                  }
+
+                  const { data: profileRow, error: profileErr } = await supabaseAdmin
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', job.user_id)
+                    .maybeSingle();
+
+                  if (profileErr) {
+                    throw profileErr;
+                  }
+
+                  const fullName = String(profileRow?.full_name || '').trim();
+                  const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
+
+                  await sendEmailSES({
+                    to: userEmail,
+                    subject: 'Action required: documents needed to continue your InvestorIQ report',
+                    text:
+                      `Hello ${firstName},\n\n` +
+                      'Your InvestorIQ report cannot proceed yet.\n\n' +
+                      'We could not identify structured financial documents required for underwriting.\n\n' +
+                      'Required:\n' +
+                      '- Rent Roll\n' +
+                      '- T12 (Operating Statement)\n\n' +
+                      'Please log in to your InvestorIQ dashboard\n' +
+                      'and upload the required documents to continue processing.\n\n' +
+                      'This report will remain paused until required documents are available.',
+                  });
+
+                  await supabaseAdmin.from('analysis_artifacts').insert([
+                    {
+                      job_id: job.id,
+                      user_id: job.user_id,
+                      type: 'email_sent',
+                      bucket: 'system',
+                      object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
+                        nowIso
+                      )}.json`,
+                      payload: {
+                        email_type: 'missing_structured_financials',
+                        job_id: job.id,
+                        user_id: job.user_id,
+                        timestamp: nowIso,
+                      },
+                    },
+                  ]);
+                } catch (err) {
+                  console.error('Failed to send missing_structured_financials email:', err?.message || err);
+                }
+              }
+            }
+            continue;
           }
 
           const { data: supportingStatusRows, error: supportingStatusErr } = await supabaseAdmin
