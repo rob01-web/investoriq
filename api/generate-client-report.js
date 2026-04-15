@@ -2835,7 +2835,9 @@ export default async function handler(req, res) {
     };
     const breakEvenOccPct = toPctValue(breakEvenOcc);
     const operatingCushionPct =
-      Number.isFinite(breakEvenOccPct) ? 100 - breakEvenOccPct : null;
+      Number.isFinite(execOccupancy) && Number.isFinite(breakEvenOccPct)
+        ? (execOccupancy * 100) - breakEvenOccPct
+        : null;
     const marketRentPremiumPct =
       Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
       Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
