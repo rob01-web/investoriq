@@ -149,7 +149,7 @@ export default function InvestorIQHeader() {
 
           {/* MOBILE MENU TOGGLE */}
           <button
-            className="sm:hidden"
+            className="flex flex-col sm:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle navigation"
             style={{
@@ -157,8 +157,6 @@ export default function InvestorIQHeader() {
               border:      "none",
               cursor:      "pointer",
               padding:     "4px",
-              display:     "flex",
-              flexDirection:"column",
               gap:         5,
             }}
           >
