@@ -513,7 +513,7 @@ export default function PricingPage() {
                 color:        T.goldDark,
                 textTransform:'uppercase',
               }}>
-                Portfolio pricing available on request
+                Portfolio pricing available on request.
               </motion.p>
 
               <motion.p variants={fadeUp} style={{
