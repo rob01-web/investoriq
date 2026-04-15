@@ -202,7 +202,7 @@ export default function SignUpPage() {
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
                 'Flat fee per property',
-                'Screening & underwriting reports',
+                'Screening & Underwriting reports',
                 'Document-based · No assumptions',
               ].map((item) => (
                 <div key={item} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
