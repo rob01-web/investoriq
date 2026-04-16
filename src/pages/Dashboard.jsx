@@ -321,7 +321,6 @@ export default function Dashboard() {
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
-  const prevHasActiveProcessingJobRef = useRef(null);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -554,20 +553,6 @@ useEffect(() => {
     fetchInProgressJobs();
   }, 60000);
   return () => { window.clearInterval(intervalId); };
-}, [profile?.id, hasActiveProcessingJob]);
-
-useEffect(() => {
-  if (!profile?.id) {
-    prevHasActiveProcessingJobRef.current = null;
-    return;
-  }
-
-  const prev = prevHasActiveProcessingJobRef.current;
-  if (prev === true && hasActiveProcessingJob === false) {
-    fetchReports();
-  }
-
-  prevHasActiveProcessingJobRef.current = hasActiveProcessingJob;
 }, [profile?.id, hasActiveProcessingJob]);
 
 useEffect(() => {
