@@ -14,7 +14,16 @@
 - The freeze was isolated to the rendered Report History table/rows subtree.
 - Replacing the old Report History table with a lightweight stacked list/card layout materially resolved the catastrophic browser-freeze behavior.
 - Worker single-run timeout issue was reproduced, and the route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
-- Worker single-run reliability was previously thought fixed, but recent live retesting disproved that. Worker control flow remains an active launch blocker under investigation / patch validation.
+- Today's worker-fix experiments then broke live generation and caused false extracting-stage failures / false `needs_documents`.
+- The safest rollback boundary was confirmed to be file-level rather than whole-repo.
+- Only `api/admin-run-worker.js` was reverted to the pre-worker-debugging version from before the failed worker experiments.
+- Result:
+  - report generation stability returned
+  - pipeline is back to the last known-good state
+  - current temporary operational reality is that the worker may still require 2 manual runs
+- Launch decision:
+  - do not touch worker logic again before launch unless a brand-new blocker appears
+  - stability now takes priority over single-run worker perfection
 - Dashboard auto full-page completion reload was tested, followed by a timing patch, and then fully reverted after regression risk / freeze return.
 - Current Dashboard status: stable in the reverted manual-refresh state, with light monitoring recommended for any residual sluggishness.
 - V1.0 Dashboard posture is now locked:
@@ -26,8 +35,11 @@
 - Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
 - Fresh multi-quantity underwriting purchase now correctly creates 5 available underwriting credits in Supabase and shows 5 underwriting credits in Dashboard.
 - Dashboard checkout-success banner copy has been updated from single-credit wording to quantity-neutral wording.
+- Dashboard multi-quantity purchase has now been restored without reintroducing quantity selection on the public Pricing page.
+- Public Pricing remains simplified with no public quantity selector, while authenticated Dashboard purchase flow again supports quantity selection.
+- Signup page copy typo was corrected manually from `Screening & underwriting reports` to `Screening & Underwriting reports`.
 - Recent Supabase inspection strongly suggests `report_purchases` is the real entitlement / source-of-truth ledger, while `profiles.report_credits` and related Dashboard credit displays may be stale, secondary, legacy, or misleading.
-- Launch phase status: worker stabilization, final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
+- Launch phase status: worker remains frozen in the last known-good rollback state, while final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
 ## 2. Locked Product Positioning
 - InvestorIQ is a document-driven real estate decision engine for investors.
@@ -101,8 +113,9 @@
   - Stripe is not a pre-launch patch target unless a real bug is reproduced
 - Dashboard Report History now uses a lightweight stacked list/card layout instead of the prior table-based render path.
 - This Report History render-path replacement is a production stabilization fix applied after controlled freeze isolation, not a temporary diagnostic patch.
-- Worker single-run timeout issue was reproduced live and materially fixed by adding a route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json`.
-- Single worker kick now completes the full pipeline without requiring a second manual run.
+- Worker single-run timeout issue was reproduced live, and a route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
+- Single worker kick was previously thought fixed, but later live retesting disproved that and the failed worker experiments were rolled back.
+- Current worker posture is intentionally frozen at the last known-good rollback state, even if that still means 2 manual runs in some cases.
 - Dashboard completion auto-reload experiments were attempted and then fully reverted after regression risk / freeze return.
 - Reverted manual-refresh Dashboard state is the locked V1.0 posture.
 - Pricing page and Checkout Success page now include the business-day turnaround disclosure:
@@ -111,6 +124,12 @@
 - `api/create-checkout-session.js` now passes quantity into Stripe line items and metadata.
 - Stripe webhook entitlement creation now writes one `report_purchases` row per purchased credit.
 - Dashboard checkout-success banner copy is now quantity-neutral.
+- Dashboard purchase flow now again supports quantity selection while the public Pricing page remains quantity-free.
+- Screening heading leak is now fixed in the true live generation path.
+- PDF brand spacing / kerning fix was applied through CSS letter-spacing adjustment only.
+- Break-even occupancy investigation confirmed the formula itself can remain, while shared operating cushion logic was the actual bug.
+- Shared operating cushion calculation now uses current occupancy minus break-even occupancy when current occupancy is available.
+- NOI breakdown wrapping still needs live re-verification because recent PDFs continued to show broken numeric wrapping despite prior patching.
 
 ### Prompt / Hallucination Risk Clarification (April 2026)
 
@@ -155,6 +174,44 @@
     - removed quantity selector from the public pricing page
     - public pricing page checkout now hard-calls quantity `1`
     - copy changed to `Portfolio pricing available on request.`
+
+### Tonight's Live Validation Re-Test Sequence (April 2026)
+
+- Screening Test 3
+  - generated successfully
+  - heading leakage fix confirmed live:
+    - `Data Coverage & Screening Notes` now appears correctly
+  - brand spacing / kerning fix confirmed live:
+    - `INVESTORIQ` now renders correctly
+  - Screening core math remains materially correct
+  - break-even occupancy still shows `65.3%`
+  - occupancy cushion shows `34.7 pts`
+  - because occupancy was `100.0%` in this test, this run did not independently stress-test the new cushion fix under non-100% occupancy
+
+- Clean Underwriting Test 3
+  - not green
+  - report now shows:
+    - EGI `192,960`
+    - NOI `72,170`
+    - DSCR `1.09x`
+  - this differs from the previously validated underwriting basis
+  - clean path appears to be using raw T12 NOI / raw T12 operating basis instead of the vacancy-sensitized underwriting basis
+  - this is now the main remaining report blocker
+  - NOI breakdown wrapping is still visibly broken in the live PDF
+  - heading / branding were otherwise improved
+
+- Messy Underwriting Test 3
+  - green
+  - messy path still shows the previously validated underwriting basis:
+    - EGI `187,172`
+    - NOI `66,382`
+    - DSCR `1.00x`
+    - refinance proceeds / debt balance `0.80x`
+    - stressed proceeds / debt balance `0.55x`
+  - conclusion:
+    - messy underwriting path remains healthy
+    - clean underwriting path is now the outlier
+    - this is likely a clean-vs-messy underwriting basis inconsistency, not a system-wide underwriting regression
 
 ### Dashboard Performance Hardening (April 2026)
 
@@ -254,9 +311,9 @@
     - `anyPending` only looked at `parse_status === 'pending'`
     - structured docs can be `extracted` at that point
     - refresh / recheck could therefore be skipped and valid jobs still routed to `needs_documents`
-  - latest action:
-    - a new Codex patch prompt was issued to replace the failed local worker patch block so structured `rent_roll` / `t12` in `pending` or `extracted` both trigger refresh / recheck
-    - this replacement patch is the current active item awaiting confirmation / validation
+  - latest action before rollback:
+    - a replacement local patch was prepared so structured `rent_roll` / `t12` in `pending` or `extracted` would both trigger refresh / recheck
+    - that path was not kept; the worker file was later rolled back to the last known-good version after the failed experiments
 - Latest live worker / UX symptom:
   - after clicking Generate Report, the job appeared at the top of the Dashboard as `queued`
   - after roughly 30-45 seconds and auto-refresh, it disappeared from that top section
@@ -264,6 +321,15 @@
   - backend inspection showed jobs landing in `needs_documents`
   - credits / purchases were restored
   - this is a major UX / support risk because users are not clearly told where the job went or why
+
+- Final worker outcome tonight:
+  - worker-fix experiments caused false extracting-stage failures / false `needs_documents`
+  - rollback boundary investigation confirmed the safest rollback target was file-level rather than whole-repo
+  - only `api/admin-run-worker.js` was reverted to the pre-worker-debugging version from before the failed worker experiments
+  - report-generation stability returned after that revert
+  - pipeline is back to the last known-good state
+  - current operational reality is that the worker may still require 2 manual runs
+  - worker logic is now frozen in rollback state unless a brand-new blocker appears
 
 - Report History auto full-page reload experiment:
   - attempted one-shot completion reload
@@ -449,25 +515,35 @@
 - Worker single-run timeout reproduction and route-specific `vercel.json` override: completed.
 - Worker extracting-stage same-invocation continuation fix: attempted, failed live retest.
 - Worker post-refresh parsed-doc guard patch: attempted, failed live retest.
-- Worker extracting-stage `pending` or `extracted` refresh / recheck replacement patch: issued and awaiting confirmation / validation.
+- Worker extracting-stage `pending` or `extracted` refresh / recheck replacement patch: attempted during worker debugging, then superseded by file-level rollback to the last known-good worker state.
+- Worker file-level rollback to pre-worker-debugging `api/admin-run-worker.js`: completed.
 - Auto full-page completion reload experiment: attempted, caused regression risk, and fully reverted.
 - Business-day turnaround copy added to Pricing and Checkout Success: completed.
 - Multi-quantity Stripe checkout support for Screening and Underwriting: completed.
 - Webhook quantity entitlement creation bug investigation and final fix: completed.
 - Dashboard checkout-success banner copy updated to quantity-neutral wording: completed.
 - Public pricing page quantity selector removal and copy cleanup: completed.
+- Screening live heading leak fix in the true generation path: completed.
+- PDF brand-spacing / kerning CSS adjustment: completed.
+- Shared operating cushion calculation fix (`current occupancy - break-even occupancy`): completed.
+- Dashboard-only multi-quantity purchase restoration while keeping public Pricing quantity-free: completed.
+- Signup page copy typo fix (`Screening & Underwriting reports`): completed.
 
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
-  - Wait for Codex confirmation on the replacement worker patch.
-  - Then run one controlled Screening test first.
-  - Verify:
-    - one worker kick
-    - no false `needs_documents`
-    - no entitlement restore
-    - report reaches `published`
-    - report appears in Report History
-  - Only after that should clean Underwriting and messy Underwriting be re-run.
+  - Investigate the clean-vs-messy Underwriting basis inconsistency.
+  - Determine why clean Underwriting is using raw T12 NOI / EGI.
+  - Determine why messy Underwriting still uses the vacancy-sensitized underwriting basis.
+  - Identify the exact live calculation / routing path difference.
+  - Fix only after root cause is confirmed.
+  - Re-check the NOI breakdown wrapping issue in live Underwriting.
+  - Confirm whether the continued wrapping is true live-path code vs deployment / runtime lag.
+  - Patch only if root cause is clearly identified.
+  - After those fixes, run a dedicated heavy testing block:
+    - Screening
+    - clean Underwriting
+    - messy Underwriting
+    - additional scenario / edge-case runs
 
 - STILL OPEN
   - Verify / fix report-ready email notifications
@@ -480,6 +556,15 @@
     - verify whether `report_purchases` is the true entitlement ledger
     - determine whether `profiles.report_credits` and related Dashboard credit displays are stale, secondary, legacy, or misleading
     - clean up empty / unclear credit tables and 0-credit display behavior after launch blockers are cleared
+  - Admin Dashboard worker-run visibility improvement
+    - show queued job count clearly
+    - show which jobs likely still need another worker run
+    - reduce manual guesswork while worker still requires 2 runs
+  - Final pre-launch language / typography sweep
+    - one final search for mojibake
+    - em dash / en dash cleanup
+    - remove any public-facing `AI` / `artificial intelligence` / generic AI-sounding wording
+    - preserve proprietary document-driven positioning
   - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
   - Final Codex institutional audit after final reports are reviewed
   - Final readiness check after report review and any real blockers are fixed
@@ -512,24 +597,17 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - Wait for Codex confirmation on the replacement worker patch.
-  - Then run one controlled Screening test first.
-  - Verify:
-    - one worker kick
-    - no false `needs_documents`
-    - no entitlement restore
-    - report reaches `published`
-    - report appears in Report History
-  - Only after that should clean Underwriting and messy Underwriting be re-run.
+  - investigate clean-vs-messy Underwriting basis inconsistency
 
 - AFTER THAT
-  - confirm clean Screening remains correct after the worker fix
-  - re-run clean Underwriting and messy Underwriting microscope review
+  - verify / resolve live NOI wrapping
+  - run the final heavy test block after fixes
   - verify / fix report-ready email notifications
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
   - complete final readiness check
   - prepare website sample report placement for public display
+  - worker logic remains frozen in rollback state unless a brand-new blocker appears
 
 - Use anchor-locked minimal diffs only.
 - No refactors.
@@ -599,8 +677,10 @@ Notes:
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
 - Still needed before Ken Dunn outreach:
-  - worker single-run reliability must be validated after the current replacement extracting-stage patch
-  - final microscope-level review of clean Screening, clean Underwriting, and messy Underwriting after worker stabilization
+  - clean-vs-messy Underwriting basis inconsistency must be isolated and corrected
+  - live NOI wrapping must be re-verified and fixed if the issue is still truly in the live path
+  - final heavy testing block must be completed after those fixes
+  - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - verify / fix report-ready email notifications
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
