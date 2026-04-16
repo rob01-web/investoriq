@@ -321,6 +321,7 @@ export default function Dashboard() {
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
+  const prevHasActiveProcessingJobRef = useRef(null);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -546,19 +547,33 @@ export default function Dashboard() {
     if (checkout) { url.searchParams.delete('checkout'); window.history.replaceState({}, document.title, url.toString()); }
   }, []);
 
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (!hasActiveProcessingJob) return;
-    const intervalId = window.setInterval(() => {
-      fetchInProgressJobs();
-    }, 60000);
-    return () => { window.clearInterval(intervalId); };
-  }, [profile?.id, hasActiveProcessingJob]);
+useEffect(() => {
+  if (!profile?.id) return;
+  if (!hasActiveProcessingJob) return;
+  const intervalId = window.setInterval(() => {
+    fetchInProgressJobs();
+  }, 60000);
+  return () => { window.clearInterval(intervalId); };
+}, [profile?.id, hasActiveProcessingJob]);
 
-  useEffect(() => {
-    if (!jobId) { setRentRollCoverage(null); return; }
+useEffect(() => {
+  if (!profile?.id) {
+    prevHasActiveProcessingJobRef.current = null;
     return;
-  }, [jobId]);
+  }
+
+  const prev = prevHasActiveProcessingJobRef.current;
+  if (prev === true && hasActiveProcessingJob === false) {
+    fetchReports();
+  }
+
+  prevHasActiveProcessingJobRef.current = hasActiveProcessingJob;
+}, [profile?.id, hasActiveProcessingJob]);
+
+useEffect(() => {
+  if (!jobId) { setRentRollCoverage(null); return; }
+  return;
+}, [jobId]);
 
   useEffect(() => {
     if (!profile?.id) return;
