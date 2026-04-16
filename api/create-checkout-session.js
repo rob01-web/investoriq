@@ -100,7 +100,15 @@ export default async function handler(req, res) {
 
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,
-      line_items: [{ price: config.priceId, quantity: normalizedQuantity }],
+      line_items: [{
+        price: config.priceId,
+        quantity: normalizedQuantity,
+        adjustable_quantity: {
+          enabled: true,
+          minimum: 1,
+          maximum: 5,
+        },
+      }],
       allow_promotion_codes: true,
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,

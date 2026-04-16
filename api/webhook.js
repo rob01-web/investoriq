@@ -60,7 +60,6 @@ export default async function handler(req, res) {
 
   const userId = session?.metadata?.userId;
   const productType = session?.metadata?.productType;
-  const quantity = Math.max(1, Math.min(5, Number.parseInt(session?.metadata?.quantity, 10) || 1));
   if (!userId || !productType) {
     console.warn("Missing metadata userId/productType", {
       userId,
@@ -76,6 +75,18 @@ export default async function handler(req, res) {
 
   const eventId = event.id;
   const sessionId = session?.id;
+  let quantity = 1;
+
+  if (sessionId) {
+    try {
+      const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 10 });
+      const purchasedQuantity = Number(lineItems?.data?.[0]?.quantity);
+      quantity = Math.max(1, Math.min(5, Number.isFinite(purchasedQuantity) ? purchasedQuantity : 1));
+    } catch (lineItemErr) {
+      console.error("Failed to fetch checkout line items:", lineItemErr);
+      return res.status(500).json({ error: "Webhook line item lookup failed" });
+    }
+  }
 
   // ✅ Idempotency (HARD): INSERT FIRST. If duplicate => already processed => return 200.
   const { error: insertErr } = await supabaseAdmin

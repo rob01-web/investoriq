@@ -347,7 +347,6 @@ export default function Dashboard() {
   const [issueReport, setIssueReport] = useState(null);
   const [entitlements, setEntitlements] = useState({ screening: null, underwriting: null, error: false });
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
-  const [checkoutQuantity, setCheckoutQuantity] = useState(1);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const visibleInProgressJobs = useMemo(() => (
@@ -460,7 +459,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productType: selectedReportType,
-          quantity: checkoutQuantity,
+          quantity: 1,
           userId: profile?.id,
           userEmail: user?.email,
         }),
@@ -1122,33 +1121,9 @@ export default function Dashboard() {
                     {availableReportsCount}
                   </div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <label style={{ ...labelMono, color:T.ink4 }}>
-                    Quantity
-                  </label>
-                  <select
-                    value={checkoutQuantity}
-                    onChange={(e) => setCheckoutQuantity(Number(e.target.value))}
-                    style={{
-                      fontFamily:"'DM Mono', monospace",
-                      fontSize:10,
-                      letterSpacing:'0.14em',
-                      textTransform:'uppercase',
-                      padding:'9px 12px',
-                      background:T.white,
-                      color:T.ink3,
-                      border:`1px solid ${T.hairlineMid}`,
-                      cursor:'pointer',
-                    }}
-                  >
-                    {[1, 2, 3, 4, 5].map((qty) => (
-                      <option key={qty} value={qty}>{qty}</option>
-                    ))}
-                  </select>
-                  <PrimaryBtn onClick={handleCheckout} loading={checkoutLoading}>
-                    Purchase Report
-                  </PrimaryBtn>
-                </div>
+                <PrimaryBtn onClick={handleCheckout} loading={checkoutLoading}>
+                  Purchase Report
+                </PrimaryBtn>
               </div>
             )}
           </div>
