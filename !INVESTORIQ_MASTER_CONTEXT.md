@@ -5,6 +5,28 @@
 - InvestorIQ remains in pre-launch phase, April 2026, and is now days away from outreach to Ken Dunn.
 - Screening report is materially compressed, document-driven, and positioned as a decision-grade screening memorandum.
 - Underwriting report retains full debt, refinance, valuation, and scenario depth with deterministic inputs only.
+- Live architecture is now confirmed as:
+  - a Supabase-centered document pipeline
+  - Stripe for entitlements / checkout
+  - an admin-style worker for job progression
+  - AWS Textract plus `pdf-parse` for extraction
+  - deterministic parsers for structured artifacts
+  - a tokenized HTML report renderer
+  - DocRaptor for final PDF generation
+- The current live runtime is not LLM-driven.
+- No active OpenAI client / OpenAI API call exists in the present live code path.
+- The imported master prompt file is currently used for version logging only, not live model generation.
+- Current live report generation is primarily:
+  - deterministic calculations
+  - structured artifact reads
+  - template / token replacement
+  - section gating
+  - DocRaptor rendering
+- Report validation block is now materially green:
+  - Screening green
+  - clean Underwriting green
+  - messy Underwriting green
+- Deterministic / no-hallucination / document-driven behavior is now validated in the live report path.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -63,12 +85,47 @@
 - Stripe handles checkout and report purchase entitlements.
 - DocRaptor renders final HTML into production PDFs.
 - Textract plus `pdf-parse` handle document text extraction and fallback parsing paths.
-- Report generation is deterministic first, with narrative assembly layered on top of structured artifacts and computed outputs.
+- Current live stack definitely includes:
+  - Supabase
+  - Stripe
+  - DocRaptor
+  - AWS Textract
+  - `pdf-parse`
+  - `api/admin-run-worker.js`
+  - `api/parse/extract-job-text.js`
+  - `api/parse/parse-doc.js`
+  - `api/report-template-runtime.html`
+  - `api/generate-client-report.js`
+- Report generation in the confirmed live path is deterministic first, with optional narrative slots present in the renderer but not populated by the live worker path.
+- `api/generate-client-report.js` supports optional narrative `sections`, but the production worker call does not populate them.
+- End-to-end live report flow:
+  - user purchases report entitlement via Stripe
+  - webhook inserts unconsumed `report_purchases`
+  - dashboard uploads files to `staged_uploads`
+  - dashboard calls `consume_purchase_and_create_job`
+  - dashboard calls `queue_job_for_processing`
+  - worker claims queued jobs
+  - extraction pass runs
+  - structured parsers create artifacts in `analysis_artifacts`
+  - worker advances statuses through rendering
+  - `generate-client-report.js` reads artifacts, computes metrics, assembles HTML, and sends to DocRaptor
+  - PDF is uploaded to `generated_reports`
+  - `reports` row powers Report History
 
 ## 5. Current Report Rules
 - Screening and Underwriting are separate report products, not layered versions of the same memo.
-- Screening is a concise acquisition screening memorandum built primarily from T12 and rent roll inputs.
+- Screening is a concise acquisition screening memorandum built from T12 and Rent Roll inputs.
+- Screening currently:
+  - requires T12 + Rent Roll
+  - uses `screening_v1`
+  - strips most underwriting-only sections
+  - is primarily deterministic and compressed
 - Underwriting is the full capital-risk report with debt structure, refinance capacity, valuation, and scenario depth when supporting documents exist.
+- Underwriting currently:
+  - requires T12 + Rent Roll + at least one supporting document
+  - uses `v1_core`
+  - can incorporate mortgage statement / loan term sheet / appraisal / property tax artifacts when parsed
+  - uses active debt normalization / fallback between mortgage statement and loan term sheet
 - InvestorIQ does not "use only 3 documents."
 - T12 and Rent Roll are the core required structured inputs.
 - Debt terms / mortgage documents are incorporated when they are successfully parsed into structured fields.
@@ -118,6 +175,16 @@
 - Current worker posture is intentionally frozen at the last known-good rollback state, even if that still means 2 manual runs in some cases.
 - Dashboard completion auto-reload experiments were attempted and then fully reverted after regression risk / freeze return.
 - Reverted manual-refresh Dashboard state is the locked V1.0 posture.
+- Deterministic vs narrative layer is now confirmed more precisely:
+  - pure deterministic layer includes parsing, T12 / rent roll rollups, occupancy, NOI, expense ratio, NOI margin, DSCR, refinance stress, and scenario / deal-score / risk-register math
+  - template replacement layer is `api/report-template-runtime.html` plus token replacement / section stripping in `api/generate-client-report.js`
+  - narrative slots exist in the renderer but are mostly inactive in the live worker path because `body.sections` is not populated by production worker calls
+  - true LLM-generated narrative is not active in the current live production path
+- Cost / OpenAI clarification:
+  - despite earlier assumptions, current codebase inspection indicates the live report path is not actively using OpenAI API
+  - this matters for real variable-cost assumptions and future pricing analysis
+  - current live variable cost is more likely concentrated in Stripe, Textract, DocRaptor, and infrastructure / storage
+  - OpenAI API cost should not currently be treated as a confirmed live per-report cost unless a new active path is later introduced
 - Pricing page and Checkout Success page now include the business-day turnaround disclosure:
   - "InvestorIQ reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day."
 - Multi-quantity Stripe checkout now supports quantity selection for Screening and Underwriting.
@@ -129,7 +196,7 @@
 - PDF brand spacing / kerning fix was applied through CSS letter-spacing adjustment only.
 - Break-even occupancy investigation confirmed the formula itself can remain, while shared operating cushion logic was the actual bug.
 - Shared operating cushion calculation now uses current occupancy minus break-even occupancy when current occupancy is available.
-- NOI breakdown wrapping still needs live re-verification because recent PDFs continued to show broken numeric wrapping despite prior patching.
+- NOI breakdown wrapping was rechecked in the latest live validation runs and now appears visually resolved.
 
 ### Prompt / Hallucination Risk Clarification (April 2026)
 
@@ -175,43 +242,46 @@
     - public pricing page checkout now hard-calls quantity `1`
     - copy changed to `Portfolio pricing available on request.`
 
-### Tonight's Live Validation Re-Test Sequence (April 2026)
+### Latest Live Validation Status (April 2026)
 
-- Screening Test 3
-  - generated successfully
-  - heading leakage fix confirmed live:
-    - `Data Coverage & Screening Notes` now appears correctly
-  - brand spacing / kerning fix confirmed live:
-    - `INVESTORIQ` now renders correctly
-  - Screening core math remains materially correct
-  - break-even occupancy still shows `65.3%`
-  - occupancy cushion shows `34.7 pts`
-  - because occupancy was `100.0%` in this test, this run did not independently stress-test the new cushion fix under non-100% occupancy
-
-- Clean Underwriting Test 3
-  - not green
-  - report now shows:
+- Clean Screening Test 4 = GREEN
+  - `Preliminary Screening` correct
+  - heading correctly shows `Data Coverage & Screening Notes`
+  - math remains consistent:
     - EGI `192,960`
+    - OpEx `120,790`
     - NOI `72,170`
-    - DSCR `1.09x`
-  - this differs from the previously validated underwriting basis
-  - clean path appears to be using raw T12 NOI / raw T12 operating basis instead of the vacancy-sensitized underwriting basis
-  - this is now the main remaining report blocker
-  - NOI breakdown wrapping is still visibly broken in the live PDF
-  - heading / branding were otherwise improved
+    - Expense Ratio `62.6%`
+    - NOI Margin `37.4%`
+    - Break-even Occupancy `65.3%`
 
-- Messy Underwriting Test 3
-  - green
-  - messy path still shows the previously validated underwriting basis:
+- Clean Underwriting Test 4 = GREEN
+  - clean underwriting path accepted as correct / document-driven
+  - no vacancy invention
+  - live NOI breakdown visual issue was rechecked and appears visually resolved
+
+- Messy Underwriting Test 4 = GREEN
+  - preserved validated messy basis:
     - EGI `187,172`
+    - OpEx `120,790`
     - NOI `66,382`
+    - Expense Ratio `64.5%`
+    - NOI Margin `35.5%`
     - DSCR `1.00x`
-    - refinance proceeds / debt balance `0.80x`
-    - stressed proceeds / debt balance `0.55x`
+    - Refinance Proceeds / Debt Balance `0.80x`
+    - Stressed Proceeds / Debt Balance `0.55x`
+  - page 8 NOI breakdown visually rechecked and appears clean
+
+- Vacancy investigation conclusion
+  - clean-vs-messy underwriting difference was investigated
   - conclusion:
-    - messy underwriting path remains healthy
-    - clean underwriting path is now the outlier
-    - this is likely a clean-vs-messy underwriting basis inconsistency, not a system-wide underwriting regression
+    - not a parser bug
+    - not a hallucination issue
+    - not a clean-path math bug
+  - clean T12 simply did not contain a vacancy row
+  - messy T12 did contain a vacancy row
+  - InvestorIQ correctly did not invent vacancy for the clean file
+  - this is working as intended under the document-driven / fail-closed doctrine
 
 ### Dashboard Performance Hardening (April 2026)
 
@@ -531,19 +601,12 @@
 
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
-  - Investigate the clean-vs-messy Underwriting basis inconsistency.
-  - Determine why clean Underwriting is using raw T12 NOI / EGI.
-  - Determine why messy Underwriting still uses the vacancy-sensitized underwriting basis.
-  - Identify the exact live calculation / routing path difference.
-  - Fix only after root cause is confirmed.
-  - Re-check the NOI breakdown wrapping issue in live Underwriting.
-  - Confirm whether the continued wrapping is true live-path code vs deployment / runtime lag.
-  - Patch only if root cause is clearly identified.
-  - After those fixes, run a dedicated heavy testing block:
-    - Screening
-    - clean Underwriting
-    - messy Underwriting
-    - additional scenario / edge-case runs
+  - Report-core validation block is now green:
+    - Screening green
+    - clean Underwriting green
+    - messy Underwriting green
+  - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
+  - Focus remaining pre-outreach work on outreach prep / pricing / notifications / final polish rather than report-core math failures.
 
 - STILL OPEN
   - Verify / fix report-ready email notifications
@@ -560,6 +623,10 @@
     - show queued job count clearly
     - show which jobs likely still need another worker run
     - reduce manual guesswork while worker still requires 2 runs
+  - Dashboard follow-up after launch blockers are cleared
+    - revisit Report History auto-visibility so newly published reports appear without manual Refresh
+    - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
+    - prefer a tightly scoped, low-churn solution only
   - Final pre-launch language / typography sweep
     - one final search for mojibake
     - em dash / en dash cleanup
@@ -597,12 +664,10 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - investigate clean-vs-messy Underwriting basis inconsistency
+  - verify / resolve live report-ready email notifications
 
 - AFTER THAT
-  - verify / resolve live NOI wrapping
-  - run the final heavy test block after fixes
-  - verify / fix report-ready email notifications
+  - complete final outreach-prep / pricing / notification / polish items
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
   - complete final readiness check
@@ -672,17 +737,18 @@ Notes:
   - Test 9 is back to green and pipeline/report creation is restored
   - core report engine is stable enough for final validation and outreach-prep
   - underwriting cap-rate consistency is fixed across refinance, debt structure, scenario analysis, and DCF
-  - messy underwriting regression output has reached production-pass status
+  - Screening is green
+  - clean Underwriting is green
+  - messy Underwriting is green
+  - deterministic / no-hallucination / document-driven report behavior is validated
   - Dashboard catastrophic freeze is materially resolved in the reverted stable manual-refresh state
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
 - Still needed before Ken Dunn outreach:
-  - clean-vs-messy Underwriting basis inconsistency must be isolated and corrected
-  - live NOI wrapping must be re-verified and fixed if the issue is still truly in the live path
-  - final heavy testing block must be completed after those fixes
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - verify / fix report-ready email notifications
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
   - final Codex institutional audit if needed after report review
   - final readiness check and sample presentation readiness
+  - outreach prep / pricing / notification / final polish items
