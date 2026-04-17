@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailSES } from '../lib/email-ses.js';
+import { sendEmailResend } from '../lib/email-resend.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -1972,7 +1973,7 @@ export default async function handler(req, res) {
               const fullName = String(profileRow?.full_name || '').trim();
               const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
 
-              await sendEmailSES({
+              await sendEmailResend({
                 to: userEmail,
                 subject: 'Your InvestorIQ report is ready',
                 text:

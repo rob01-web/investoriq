@@ -47,11 +47,29 @@
   - do not touch worker logic again before launch unless a brand-new blocker appears
   - stability now takes priority over single-run worker perfection
 - Dashboard auto full-page completion reload was tested, followed by a timing patch, and then fully reverted after regression risk / freeze return.
+- A narrowly scoped Dashboard auto-visibility patch was also attempted in `Dashboard.jsx`:
+  - tracked `hasActiveProcessingJob`
+  - detected transition from `true -> false`
+  - fired one isolated `fetchReports()` call
+- That tiny reports-only completion refresh initially appeared to work in live testing.
+- Freeze signs then returned shortly afterward, and the patch was fully reverted.
+- Conclusion:
+  - even the tiny reports-only completion refresh did not pass the launch-safety test
+  - manual Refresh remains the locked pre-launch posture
 - Current Dashboard status: stable in the reverted manual-refresh state, with light monitoring recommended for any residual sluggishness.
 - V1.0 Dashboard posture is now locked:
   - keep top Reload button
   - keep Report History Refresh button
   - no auto completion reload before launch
+  - no automatic Report History completion refresh before launch
+  - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
+- Dashboard UX containment selected for launch:
+  - a copy-only helper note was added to the Report History card header area instead of further sync logic
+  - helper copy now shown:
+    - `Completed reports may take a moment to appear in Report History.`
+    - `Click Refresh if needed.`
+  - the note sits centered between the left heading block and the Refresh button
+  - the note was intentionally darkened from the first too-faint version so it remains readable while still subordinate to the main heading
 - Website now includes business-day turnaround expectation copy on Pricing and Checkout Success.
 - Multi-quantity Stripe checkout now works for Screening and Underwriting.
 - Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
@@ -175,6 +193,14 @@
 - Current worker posture is intentionally frozen at the last known-good rollback state, even if that still means 2 manual runs in some cases.
 - Dashboard completion auto-reload experiments were attempted and then fully reverted after regression risk / freeze return.
 - Reverted manual-refresh Dashboard state is the locked V1.0 posture.
+- The narrow completion-hook experiment in `Dashboard.jsx` was also tried and reverted:
+  - tracked `hasActiveProcessingJob`
+  - detected `true -> false`
+  - fired one isolated `fetchReports()` call
+  - initially appeared to work
+  - freeze signs then returned
+  - experiment was fully removed
+- Launch-safe Dashboard containment now favors the centered Report History helper note over further sync logic.
 - Deterministic vs narrative layer is now confirmed more precisely:
   - pure deterministic layer includes parsing, T12 / rent roll rollups, occupancy, NOI, expense ratio, NOI margin, DSCR, refinance stress, and scenario / deal-score / risk-register math
   - template replacement layer is `api/report-template-runtime.html` plus token replacement / section stripping in `api/generate-client-report.js`
@@ -185,6 +211,11 @@
   - this matters for real variable-cost assumptions and future pricing analysis
   - current live variable cost is more likely concentrated in Stripe, Textract, DocRaptor, and infrastructure / storage
   - OpenAI API cost should not currently be treated as a confirmed live per-report cost unless a new active path is later introduced
+  - this improves expected margins and makes modest transactional email spend acceptable if needed for reliable launch notifications
+- Notifications / provider status:
+  - report-published email path remains wired in code through the worker publish flow
+  - Amazon SES production access was denied and the account remains in sandbox
+  - report-published notifications are therefore currently blocked in practice by SES / env / provider readiness rather than report-core generation logic
 - Pricing page and Checkout Success page now include the business-day turnaround disclosure:
   - "InvestorIQ reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day."
 - Multi-quantity Stripe checkout now supports quantity selection for Screening and Underwriting.
@@ -611,7 +642,11 @@
 - STILL OPEN
   - Verify / fix report-ready email notifications
     - earlier logs indicated a missing env var on the `report_published` email path
-    - confirm whether production email notification is fully wired and actually sent
+    - report-published email path is wired in code but currently blocked in practice by SES / env / provider readiness
+    - Amazon SES production access was denied and the account remains in sandbox
+    - confirm whether production email notification is fully wired and actually sent once provider readiness is resolved
+    - evaluate replacing Amazon SES with a simpler transactional email provider with a better free tier or easier onboarding for launch notifications
+    - treat this as launch-readiness / notifications work, not a report-core patch
   - Strict ASCII / typography cleanup across user-facing surfaces
     - remove unicode arrows, ellipses, and similar characters surgically
     - no broad sweep
@@ -627,6 +662,7 @@
     - revisit Report History auto-visibility so newly published reports appear without manual Refresh
     - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
     - prefer a tightly scoped, low-churn solution only
+    - investigate after launch blockers are cleared why the tiny completion `fetchReports()` hook re-triggered freeze signs
   - Final pre-launch language / typography sweep
     - one final search for mojibake
     - em dash / en dash cleanup
@@ -668,6 +704,7 @@
 
 - AFTER THAT
   - complete final outreach-prep / pricing / notification / polish items
+  - evaluate simpler transactional email provider options if SES onboarding remains a blocker
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
   - complete final readiness check
@@ -747,6 +784,8 @@ Notes:
 - Still needed before Ken Dunn outreach:
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - verify / fix report-ready email notifications
+  - accept that Dashboard remains in locked manual-refresh posture before launch
+  - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
   - final Codex institutional audit if needed after report review
