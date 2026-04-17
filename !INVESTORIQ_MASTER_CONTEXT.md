@@ -70,6 +70,17 @@
     - `Click Refresh if needed.`
   - the note sits centered between the left heading block and the Refresh button
   - the note was intentionally darkened from the first too-faint version so it remains readable while still subordinate to the main heading
+- Report-published launch notification path has now been successfully moved from AWS SES to Resend.
+- Resend domain `investoriq.tech` was verified successfully.
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` were added in Vercel.
+- `RESEND_FROM_EMAIL` is set to `InvestorIQ <reports@investoriq.tech>`.
+- One controlled live Screening report test was run after deployment:
+  - report published successfully
+  - report-ready email was received successfully
+  - subject received: `Your InvestorIQ report is ready`
+  - sender appeared as: `InvestorIQ <reports@investoriq.tech>`
+- Conclusion:
+  - Resend is now confirmed live and working for the launch-critical report-ready notification path
 - Website now includes business-day turnaround expectation copy on Pricing and Checkout Success.
 - Multi-quantity Stripe checkout now works for Screening and Underwriting.
 - Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
@@ -215,7 +226,15 @@
 - Notifications / provider status:
   - report-published email path remains wired in code through the worker publish flow
   - Amazon SES production access was denied and the account remains in sandbox
-  - report-published notifications are therefore currently blocked in practice by SES / env / provider readiness rather than report-core generation logic
+  - scope of the provider cutover was intentionally kept narrow
+  - `lib/email-ses.js` was not globally replaced
+  - new helper `lib/email-resend.js` was added
+  - the helper uses native `fetch` to call Resend
+  - only the `report_published` send call in `api/admin-run-worker.js` was changed from `sendEmailSES(...)` to `sendEmailResend(...)`
+  - other SES-backed notification paths were intentionally left untouched for now
+  - Resend is now the preferred launch notification provider for report-published emails
+  - launch-critical report-ready notifications are materially de-risked
+  - this removes SES sandbox / approval risk from the primary user-facing publish-notification flow
 - Pricing page and Checkout Success page now include the business-day turnaround disclosure:
   - "InvestorIQ reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day."
 - Multi-quantity Stripe checkout now supports quantity selection for Screening and Underwriting.
@@ -641,11 +660,10 @@
 
 - STILL OPEN
   - Verify / fix report-ready email notifications
-    - earlier logs indicated a missing env var on the `report_published` email path
-    - report-published email path is wired in code but currently blocked in practice by SES / env / provider readiness
-    - Amazon SES production access was denied and the account remains in sandbox
-    - confirm whether production email notification is fully wired and actually sent once provider readiness is resolved
-    - evaluate replacing Amazon SES with a simpler transactional email provider with a better free tier or easier onboarding for launch notifications
+    - `report_published` email path is now live on Resend and validated through a controlled live Screening test
+    - preserve Resend as the launch provider for report-published emails
+    - inspect remaining SES-backed paths
+    - remove or retire Amazon SES from the launch notification path and clean up obsolete SES-specific configuration after confirming no required path still depends on it
     - treat this as launch-readiness / notifications work, not a report-core patch
   - Strict ASCII / typography cleanup across user-facing surfaces
     - remove unicode arrows, ellipses, and similar characters surgically
@@ -700,11 +718,11 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - verify / resolve live report-ready email notifications
+  - inspect remaining SES-backed notification paths and confirm whether any required launch path still depends on SES
 
 - AFTER THAT
   - complete final outreach-prep / pricing / notification / polish items
-  - evaluate simpler transactional email provider options if SES onboarding remains a blocker
+  - remove or retire obsolete SES-specific launch notification configuration once dependency scope is confirmed
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
   - complete final readiness check
@@ -783,7 +801,8 @@ Notes:
   - Stripe entitlement creation for quantity purchases is now working
 - Still needed before Ken Dunn outreach:
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
-  - verify / fix report-ready email notifications
+  - preserve the Resend-backed `report_published` notification path as the launch notification default
+  - inspect remaining SES-backed paths and confirm whether any required launch path still depends on SES
   - accept that Dashboard remains in locked manual-refresh posture before launch
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed

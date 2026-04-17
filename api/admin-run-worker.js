@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { sendEmailSES } from '../lib/email-ses.js';
 import { sendEmailResend } from '../lib/email-resend.js';
 
 export default async function handler(req, res) {
@@ -842,69 +841,6 @@ export default async function handler(req, res) {
                     .limit(1)
                     .maybeSingle();
 
-                  if (!existingEmail?.id) {
-                    try {
-                      const { data: userRes, error: userErr } =
-                        await supabaseAdmin.auth.admin.getUserById(job.user_id);
-
-                      if (userErr) {
-                        throw userErr;
-                      }
-
-                      const userEmail = userRes?.user?.email;
-                      if (!userEmail) {
-                        throw new Error('Missing user email');
-                      }
-
-                      const { data: profileRow, error: profileErr } = await supabaseAdmin
-                        .from('profiles')
-                        .select('full_name')
-                        .eq('id', job.user_id)
-                        .maybeSingle();
-
-                      if (profileErr) {
-                        throw profileErr;
-                      }
-
-                      const fullName = String(profileRow?.full_name || '').trim();
-                      const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
-
-                      await sendEmailSES({
-                        to: userEmail,
-                        subject: 'Action required: documents needed to continue your InvestorIQ report',
-                        text:
-                          `Hello ${firstName},\n\n` +
-                          'Your InvestorIQ report cannot proceed yet.\n\n' +
-                          'We could not identify structured financial documents required for underwriting.\n\n' +
-                          'Required:\n' +
-                          '- Rent Roll\n' +
-                          '- T12 (Operating Statement)\n\n' +
-                          'Please log in to your InvestorIQ dashboard\n' +
-                          'and upload the required documents to continue processing.\n\n' +
-                          'This report will remain paused until required documents are available.',
-                      });
-
-                      await supabaseAdmin.from('analysis_artifacts').insert([
-                        {
-                          job_id: job.id,
-                          user_id: job.user_id,
-                          type: 'email_sent',
-                          bucket: 'system',
-                          object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
-                            nowIso
-                          )}.json`,
-                          payload: {
-                            email_type: 'missing_structured_financials',
-                            job_id: job.id,
-                            user_id: job.user_id,
-                            timestamp: nowIso,
-                          },
-                        },
-                      ]);
-                    } catch (err) {
-                      console.error('Failed to send missing_structured_financials email:', err?.message || err);
-                    }
-                  }
                 }
 
                 continue;
@@ -1146,69 +1082,6 @@ export default async function handler(req, res) {
                 .limit(1)
                 .maybeSingle();
 
-              if (!existingEmail?.id) {
-                try {
-                  const { data: userRes, error: userErr } =
-                    await supabaseAdmin.auth.admin.getUserById(job.user_id);
-
-                  if (userErr) {
-                    throw userErr;
-                  }
-
-                  const userEmail = userRes?.user?.email;
-                  if (!userEmail) {
-                    throw new Error('Missing user email');
-                  }
-
-                  const { data: profileRow, error: profileErr } = await supabaseAdmin
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', job.user_id)
-                    .maybeSingle();
-
-                  if (profileErr) {
-                    throw profileErr;
-                  }
-
-                  const fullName = String(profileRow?.full_name || '').trim();
-                  const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
-
-                  await sendEmailSES({
-                    to: userEmail,
-                    subject: 'Action required: documents needed to continue your InvestorIQ report',
-                    text:
-                      `Hello ${firstName},\n\n` +
-                      'Your InvestorIQ report cannot proceed yet.\n\n' +
-                      'We could not identify structured financial documents required for underwriting.\n\n' +
-                      'Required:\n' +
-                      '- Rent Roll\n' +
-                      '- T12 (Operating Statement)\n\n' +
-                      'Please log in to your InvestorIQ dashboard\n' +
-                      'and upload the required documents to continue processing.\n\n' +
-                      'This report will remain paused until required documents are available.',
-                  });
-
-                  await supabaseAdmin.from('analysis_artifacts').insert([
-                    {
-                      job_id: job.id,
-                      user_id: job.user_id,
-                      type: 'email_sent',
-                      bucket: 'system',
-                      object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
-                        nowIso
-                      )}.json`,
-                      payload: {
-                        email_type: 'missing_structured_financials',
-                        job_id: job.id,
-                        user_id: job.user_id,
-                        timestamp: nowIso,
-                      },
-                    },
-                  ]);
-                } catch (err) {
-                  console.error('Failed to send missing_structured_financials email:', err?.message || err);
-                }
-              }
             }
             continue;
           }
@@ -1567,70 +1440,6 @@ export default async function handler(req, res) {
               .limit(1)
               .maybeSingle();
 
-            if (!existingEmail?.id) {
-              try {
-                const { data: userRes, error: userErr } =
-                  await supabaseAdmin.auth.admin.getUserById(job.user_id);
-
-                if (userErr) {
-                  throw userErr;
-                }
-
-                const userEmail = userRes?.user?.email;
-                if (!userEmail) {
-                  throw new Error('Missing user email');
-                }
-
-                const { data: profileRow, error: profileErr } = await supabaseAdmin
-                  .from('profiles')
-                  .select('full_name')
-                  .eq('id', job.user_id)
-                  .maybeSingle();
-
-                if (profileErr) {
-                  throw profileErr;
-                }
-
-                const fullName = String(profileRow?.full_name || '').trim();
-                const firstName = fullName ? fullName.split(/\s+/)[0] : 'Investor';
-
-                await sendEmailSES({
-                  to: userEmail,
-                  subject: 'Action required: documents needed to continue your InvestorIQ report',
-                  text:
-                    `Hello ${firstName},\n\n` +
-                    'Your InvestorIQ report cannot proceed yet.\n\n' +
-                    'We could not identify structured financial documents required for underwriting.\n\n' +
-                    'Required:\n' +
-                    '- Rent Roll\n' +
-                    '- T12 (Operating Statement)\n\n' +
-                    'Please log in to your InvestorIQ dashboard\n' +
-                    'and upload the required documents to continue processing.\n\n' +
-                    'This report will remain paused until required documents are available.',
-                });
-
-                await supabaseAdmin.from('analysis_artifacts').insert([
-                  {
-                    job_id: job.id,
-                    user_id: job.user_id,
-                    type: 'email_sent',
-                    bucket: 'system',
-                    object_path: `analysis_jobs/${job.id}/email_sent/missing_structured_financials/${safeTimestamp(
-                      nowIso
-                    )}.json`,
-                    payload: {
-                      email_type: 'missing_structured_financials',
-                      job_id: job.id,
-                      user_id: job.user_id,
-                      timestamp: nowIso,
-                    },
-                  },
-                ]);
-              } catch (err) {
-                console.error('Failed to send missing_structured_financials email:', err?.message || err);
-              }
-            }
-
             continue;
           }
 
@@ -1979,10 +1788,9 @@ export default async function handler(req, res) {
                 text:
                   `Hello ${firstName},\n\n` +
                   'Your InvestorIQ report has been published and is now available in your dashboard.\n\n' +
-                  'Please log in to your InvestorIQ dashboard\n' +
-                  'to review and download your report.\n\n' +
-                  'If you have additional documents or wish to run another analysis,\n' +
-                  'you may start a new report from your dashboard.',
+                  'Please log in to review and download your report.\n\n' +
+                  'Thanks,\n\n' +
+                  'InvestorIQ Team',
               });
 
               await supabaseAdmin.from('analysis_artifacts').insert([
