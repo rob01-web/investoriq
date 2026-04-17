@@ -1384,10 +1384,10 @@ useEffect(() => {
                 <span style={stepTitle}>Report history</span>
               </div>
               <div style={{ flex:'1 1 280px', minWidth:220, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, padding:'0 12px' }}>
-                <span style={{ ...bodySmall, fontSize:11, color:T.ink4, lineHeight:1.35 }}>
+                <span style={{ ...bodySmall, fontSize:11, color:T.ink3, lineHeight:1.35 }}>
                   Completed reports may take a moment to appear in Report History.
                 </span>
-                <span style={{ ...bodySmall, fontSize:11, color:T.ink4, lineHeight:1.35 }}>
+                <span style={{ ...bodySmall, fontSize:11, color:T.ink3, lineHeight:1.35 }}>
                   Click Refresh if needed.
                 </span>
               </div>
