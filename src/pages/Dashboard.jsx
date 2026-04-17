@@ -1378,10 +1378,18 @@ useEffect(() => {
 
           {/* REPORTS TABLE */}
           <div style={{ ...sectionCard, marginTop:8 }}>
-            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
               <div>
                 <p style={stepEyebrow}>Generated Reports</p>
                 <span style={stepTitle}>Report history</span>
+              </div>
+              <div style={{ flex:'1 1 280px', minWidth:220, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, padding:'0 12px' }}>
+                <span style={{ ...bodySmall, fontSize:11, color:T.ink4, lineHeight:1.35 }}>
+                  Completed reports may take a moment to appear in Report History.
+                </span>
+                <span style={{ ...bodySmall, fontSize:11, color:T.ink4, lineHeight:1.35 }}>
+                  Click Refresh if needed.
+                </span>
               </div>
               <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
             </div>
