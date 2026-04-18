@@ -4606,7 +4606,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | REVIEW 50\u201369 | PASS &lt; 50.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }

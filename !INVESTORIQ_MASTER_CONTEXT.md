@@ -81,6 +81,17 @@
   - sender appeared as: `InvestorIQ <reports@investoriq.tech>`
 - Conclusion:
   - Resend is now confirmed live and working for the launch-critical report-ready notification path
+- Fresh live validation also confirmed the updated `report_published` email copy was received successfully.
+- Current live publish email wording is now:
+  - `Hello [FirstName],`
+  - ``
+  - `Your InvestorIQ report has been published and is now available in your dashboard.`
+  - ``
+  - `Please log in to review and download your report.`
+  - ``
+  - `Thanks,`
+  - ``
+  - `InvestorIQ Team`
 - Website now includes business-day turnaround expectation copy on Pricing and Checkout Success.
 - Multi-quantity Stripe checkout now works for Screening and Underwriting.
 - Stripe webhook quantity entitlement creation was diagnosed through live Stripe metadata, Supabase inspection, and Vercel logs, then fixed.
@@ -161,6 +172,10 @@
 - Additional supporting documents may be uploaded, but only recognized and structured inputs are incorporated into quantitative underwriting.
 - Unsupported or unstructured documents are excluded from modeling rather than guessed from.
 - One-and-done entitlement rule applies unless regeneration is triggered for system/support reasons.
+- One-and-done product rule is now explicitly confirmed:
+  - users do not upload additional documents after report generation begins as part of the normal product flow
+  - the old missing-doc continuation / reminder workflow is legacy behavior and is no longer part of the intended launch model
+  - no refunds once report generation is in progress unless there is a true system-side error
 - Narrative must be document-derived and supportable from parsed inputs.
 - No fabricated data, no silent fallback assumptions, and no decorative filler sections.
 
@@ -231,9 +246,17 @@
   - new helper `lib/email-resend.js` was added
   - the helper uses native `fetch` to call Resend
   - only the `report_published` send call in `api/admin-run-worker.js` was changed from `sendEmailSES(...)` to `sendEmailResend(...)`
-  - other SES-backed notification paths were intentionally left untouched for now
+  - obsolete missing-doc SES sends in `api/admin-run-worker.js` were later retired because that workflow no longer matches the live product model
+  - the top-level worker import of `sendEmailSES` was removed from `api/admin-run-worker.js`
+  - worker no longer imports `sendEmailSES`
+  - current live `report_published` email wording was updated and validated live
+  - subject remains `Your InvestorIQ report is ready`
+  - sender remains `InvestorIQ <reports@investoriq.tech>`
   - Resend is now the preferred launch notification provider for report-published emails
   - launch-critical report-ready notifications are materially de-risked
+  - obsolete SES worker exposure has been removed from the active publish path
+  - `lib/email-ses.js` may still remain in the repo for now as legacy leftover code, but it is no longer part of the active worker path
+  - broader final SES cleanup / deletion can happen later and is no longer a launch blocker
   - this removes SES sandbox / approval risk from the primary user-facing publish-notification flow
 - Pricing page and Checkout Success page now include the business-day turnaround disclosure:
   - "InvestorIQ reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day."
@@ -659,11 +682,13 @@
   - Focus remaining pre-outreach work on outreach prep / pricing / notifications / final polish rather than report-core math failures.
 
 - STILL OPEN
-  - Verify / fix report-ready email notifications
+  - Preserve Resend as the launch notification default
     - `report_published` email path is now live on Resend and validated through a controlled live Screening test
     - preserve Resend as the launch provider for report-published emails
-    - inspect remaining SES-backed paths
-    - remove or retire Amazon SES from the launch notification path and clean up obsolete SES-specific configuration after confirming no required path still depends on it
+    - obsolete worker missing-doc SES send calls were removed
+    - worker no longer imports `sendEmailSES`
+    - optional later cleanup: remove / retire leftover SES helper / config / doc references if desired
+    - not required before Ken Dunn outreach unless a new blocker appears
     - treat this as launch-readiness / notifications work, not a report-core patch
   - Strict ASCII / typography cleanup across user-facing surfaces
     - remove unicode arrows, ellipses, and similar characters surgically
@@ -718,11 +743,11 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - inspect remaining SES-backed notification paths and confirm whether any required launch path still depends on SES
+  - continue final outreach-prep / pricing / notification / polish work from the now-de-risked launch baseline
 
 - AFTER THAT
   - complete final outreach-prep / pricing / notification / polish items
-  - remove or retire obsolete SES-specific launch notification configuration once dependency scope is confirmed
+  - optionally remove / retire leftover SES helper / config / doc references later if desired
   - apply any surgical copy / typography cleanups that are truly needed
   - run final Codex institutional audit only if needed
   - complete final readiness check
@@ -799,10 +824,13 @@ Notes:
   - Dashboard catastrophic freeze is materially resolved in the reverted stable manual-refresh state
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
+  - launch-critical `report_published` email notifications are live on Resend and validated
+  - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
+  - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
-  - inspect remaining SES-backed paths and confirm whether any required launch path still depends on SES
+  - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
