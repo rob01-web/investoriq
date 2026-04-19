@@ -414,6 +414,7 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     ...(Number.isFinite(laundryIncomeTotal) && laundryIncomeTotal > 0 ? [{ label: 'Laundry Income', amount: laundryIncomeTotal }] : []),
     ...(Number.isFinite(parkingIncomeTotal) && parkingIncomeTotal > 0 ? [{ label: 'Parking Income', amount: parkingIncomeTotal }] : []),
     ...(Number.isFinite(otherIncomeTotal) && otherIncomeTotal > 0 ? [{ label: 'Other Income', amount: otherIncomeTotal }] : []),
+    ...(Number.isFinite(vacancyAdjusted) && vacancyAdjusted !== 0 ? [{ label: 'Vacancy Allowance', amount: vacancyAdjusted }] : []),
   ];
 
   // Build expense_lines array for the report renderer

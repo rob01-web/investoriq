@@ -23,9 +23,9 @@
   - section gating
   - DocRaptor rendering
 - Report validation block is now materially green:
-  - Screening green
-  - clean Underwriting green
-  - messy Underwriting green
+  - Screening Test 7 green
+  - CLEAN Underwriting Test 7 green
+  - MESSY Underwriting Test 7 green
 - Deterministic / no-hallucination / document-driven behavior is now validated in the live report path.
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
@@ -56,7 +56,7 @@
 - Conclusion:
   - even the tiny reports-only completion refresh did not pass the launch-safety test
   - manual Refresh remains the locked pre-launch posture
-- Current Dashboard status: stable in the reverted manual-refresh state, with light monitoring recommended for any residual sluggishness.
+- Current Dashboard status: materially improved in the reverted manual-refresh state, but no longer assumed fully resolved.
 - V1.0 Dashboard posture is now locked:
   - keep top Reload button
   - keep Report History Refresh button
@@ -100,6 +100,11 @@
 - Dashboard multi-quantity purchase has now been restored without reintroducing quantity selection on the public Pricing page.
 - Public Pricing remains simplified with no public quantity selector, while authenticated Dashboard purchase flow again supports quantity selection.
 - Signup page copy typo was corrected manually from `Screening & underwriting reports` to `Screening & Underwriting reports`.
+- Underwriting document-derived cap-rate display precision issue is now fixed in the live output:
+  - parser and math were already correct at `6.25`
+  - the bug was a display-only rounding issue in `api/generate-client-report.js`
+  - a narrow cap-specific display formatter was introduced
+  - displayed refinance / exit cap labels now preserve exact parsed precision for that field family without changing parsing or math
 - Recent Supabase inspection strongly suggests `report_purchases` is the real entitlement / source-of-truth ledger, while `profiles.report_credits` and related Dashboard credit displays may be stale, secondary, legacy, or misleading.
 - Launch phase status: worker remains frozen in the last known-good rollback state, while final report review, notification verification, low-dollar live Stripe acceptance confirmation, and outreach-prep remain before outreach.
 
@@ -317,33 +322,27 @@
 
 ### Latest Live Validation Status (April 2026)
 
-- Clean Screening Test 4 = GREEN
-  - `Preliminary Screening` correct
+- Screening Test 7 = GREEN
+  - Screening remains green
   - heading correctly shows `Data Coverage & Screening Notes`
-  - math remains consistent:
-    - EGI `192,960`
-    - OpEx `120,790`
-    - NOI `72,170`
-    - Expense Ratio `62.6%`
-    - NOI Margin `37.4%`
-    - Break-even Occupancy `65.3%`
+  - report remains materially document-driven and deterministic
 
-- Clean Underwriting Test 4 = GREEN
-  - clean underwriting path accepted as correct / document-driven
-  - no vacancy invention
-  - live NOI breakdown visual issue was rechecked and appears visually resolved
+- CLEAN Underwriting Test 7 = GREEN
+  - clean Underwriting remains green
+  - clean underwriting path remains materially document-driven and deterministic
+  - underwriting reports now display `6.25%` consistently where the document-derived exit / refi cap is shown
 
-- Messy Underwriting Test 4 = GREEN
-  - preserved validated messy basis:
-    - EGI `187,172`
-    - OpEx `120,790`
-    - NOI `66,382`
-    - Expense Ratio `64.5%`
-    - NOI Margin `35.5%`
-    - DSCR `1.00x`
-    - Refinance Proceeds / Debt Balance `0.80x`
-    - Stressed Proceeds / Debt Balance `0.55x`
-  - page 8 NOI breakdown visually rechecked and appears clean
+- MESSY Underwriting Test 7 = GREEN
+  - messy Underwriting remains green
+  - messy Underwriting remains strong validation evidence of deterministic messy-doc handling
+  - underwriting reports now display `6.25%` consistently where the document-derived exit / refi cap is shown
+
+- Practical review conclusion
+  - Screening Test 7 is showcase-ready
+  - CLEAN Underwriting Test 7 is showcase-ready
+  - MESSY Underwriting Test 7 is strong validation evidence of deterministic messy-doc handling
+  - report-core quality is not the immediate concern right now
+  - dashboard reliability has re-emerged as the bigger pre-outreach concern
 
 - Vacancy investigation conclusion
   - clean-vs-messy underwriting difference was investigated
@@ -618,10 +617,18 @@
 
 - Strategic interpretation:
   - Current concern is not that the backend cannot necessarily handle serious demand.
-  - Dashboard-local churn was real, but the catastrophic freeze was isolated more narrowly to the old Report History table/rows render subtree.
-  - The applied stacked-list replacement is treated as the operative stabilization fix.
-  - Dashboard should still be monitored during final validation, but the current evidence no longer supports treating the freeze as an unresolved architecture-level blocker.
-  - If Ken Dunn responds positively and syndicate interest increases, Dashboard simplicity and controlled render-path discipline should remain part of future hardening.
+- Dashboard-local churn was real, but the catastrophic freeze was isolated more narrowly to the old Report History table/rows render subtree.
+- The applied stacked-list replacement is treated as the operative stabilization fix.
+- Dashboard should still be monitored during final validation, and the freeze can no longer be treated as fully closed.
+- Latest live recurrence note:
+  - dashboard was left open / idling for roughly 10 minutes
+  - returning to the dashboard and typing in the property name box became very slow
+  - the page then froze for roughly 2-3 minutes
+  - user had to log out / recover
+  - after logging back in, old reports were manually reduced down to only 3 visible history items as a containment test
+  - it is not yet confirmed whether report-count reduction actually fixes the issue
+  - current evidence suggests catastrophic freeze was materially reduced by the Report History render-path change, but the broader idle-time / state-churn root cause is still not fully closed
+- If Ken Dunn responds positively and syndicate interest increases, Dashboard simplicity and controlled render-path discipline should remain part of future hardening.
 
 ## 7. Current Remaining Issues / Immediate Next Work
 ### Completed recent fixes
@@ -675,11 +682,17 @@
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
   - Report-core validation block is now green:
-    - Screening green
-    - clean Underwriting green
-    - messy Underwriting green
+    - Screening Test 7 green
+    - CLEAN Underwriting Test 7 green
+    - MESSY Underwriting Test 7 green
+  - Controlled Dashboard repro test
+    - log in
+    - leave Dashboard open / idle for 10-15 minutes
+    - return to property-name input
+    - test whether freezing still occurs with only 3 reports in history
+    - determine whether report-count reduction matters or whether the freeze is tied to idle-time / state churn instead
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
-  - Focus remaining pre-outreach work on outreach prep / pricing / notifications / final polish rather than report-core math failures.
+  - Focus remaining pre-outreach work on Dashboard reliability, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
 - STILL OPEN
   - Preserve Resend as the launch notification default
@@ -737,13 +750,21 @@
   - no padded or robotic phrasing
   - no mojibake or typography regressions
   - no unsupported narrative claims
-- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization.
-- Continue light monitoring during final validation for any residual sluggishness.
+- Screening Test 7 reviewed and remains showcase-ready.
+- CLEAN Underwriting Test 7 reviewed and remains showcase-ready.
+- MESSY Underwriting Test 7 reviewed and remains strong deterministic messy-doc validation evidence.
+- Dashboard freeze risk is no longer assumed resolved.
+- Report-core quality is not the immediate concern right now; Dashboard reliability has re-emerged as the bigger pre-outreach concern.
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - continue final outreach-prep / pricing / notification / polish work from the now-de-risked launch baseline
+  - run the controlled Dashboard repro test first:
+    - log in
+    - leave Dashboard open / idle for 10-15 minutes
+    - return to property-name input
+    - test whether freezing still occurs with only 3 reports in history
+    - determine whether report-count reduction matters or whether the freeze is tied to idle-time / state churn instead
 
 - AFTER THAT
   - complete final outreach-prep / pricing / notification / polish items
@@ -760,10 +781,14 @@
 
 ### Launch Risk Flag (Dashboard)
 
-- Dashboard catastrophic freeze issue appears materially resolved after Report History render-path stabilization and completion-reload experiment reversion.
-- Continue light monitoring during final validation.
-- No current evidence of the prior machine-locking behavior after the stacked-list fix.
-- The team chose not to pursue additional speculative property-input optimization before launch because repeated typing and refresh testing became stable once the Report History table subtree was replaced.
+- Dashboard catastrophic freeze issue was materially reduced after Report History render-path stabilization and completion-reload experiment reversion, but must now be treated as an active launch-risk item again.
+- Latest live behavior confirms freeze can still reappear after idle time:
+  - dashboard left open for roughly 10 minutes
+  - property-name input then became very slow
+  - page froze for roughly 2-3 minutes
+  - user had to log out / recover
+- Report-count reduction to only 3 visible history items has been tried as a containment test, but it is not yet confirmed whether that actually fixes the issue.
+- Do not assume the Dashboard freeze is solved until controlled idle-time retesting proves otherwise.
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -817,11 +842,12 @@ Notes:
   - Test 9 is back to green and pipeline/report creation is restored
   - core report engine is stable enough for final validation and outreach-prep
   - underwriting cap-rate consistency is fixed across refinance, debt structure, scenario analysis, and DCF
-  - Screening is green
-  - clean Underwriting is green
-  - messy Underwriting is green
+  - Screening Test 7 is green
+  - CLEAN Underwriting Test 7 is green
+  - MESSY Underwriting Test 7 is green
   - deterministic / no-hallucination / document-driven report behavior is validated
-  - Dashboard catastrophic freeze is materially resolved in the reverted stable manual-refresh state
+  - underwriting document-derived exit / refi cap labels now display exact parsed precision consistently, including `6.25%`
+  - Dashboard catastrophic freeze has been materially reduced in the reverted stable manual-refresh state, but is not yet fully closed
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
   - launch-critical `report_published` email notifications are live on Resend and validated
@@ -832,6 +858,7 @@ Notes:
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
+  - run a controlled idle-time Dashboard repro test before treating Dashboard reliability as green for outreach
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
