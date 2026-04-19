@@ -48,6 +48,12 @@ function formatPercent1(value) {
   const pct = n > 1.5 ? n : n * 100;
   return `${pct.toFixed(1)}%`;
 }
+function formatCapPercentExact(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = n > 1.5 ? n : n * 100;
+  return `${pct.toFixed(2)}%`;
+}
 function formatMultiple(value, decimals = 2) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -897,7 +903,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
       label: "Refinance cap rate",
       present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
       value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
-        ? formatPercent1(coerceNumber(f.refi_cap_rate_base))
+        ? formatCapPercentExact(coerceNumber(f.refi_cap_rate_base))
         : " - ",
     },
     {
@@ -4424,7 +4430,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalPv)}</td>`;
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
-        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)})</p>`;
+        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${escapeHtml(exitCapSource)})</p>`;
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
@@ -4486,7 +4492,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / exitCapDec)}</td>`;
         }
         sTbl += `</tr></tbody></table>`;
-        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${exitCapPct.toFixed(1)}% (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
+        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value: Cap Rate Sensitivity</p>`;
