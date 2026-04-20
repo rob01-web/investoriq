@@ -621,6 +621,7 @@ export default async function handler(req, res) {
             const isPending = ['pending', 'extracted'].includes(String(file.parse_status || '').toLowerCase());
             return (
               docType === 'other' ||
+              docType === 'loan_terms' ||
               docType === 'supporting' ||
               docType === 'supporting_documents' ||
               docType === 'supporting_documents_ui'
@@ -633,7 +634,9 @@ export default async function handler(req, res) {
                 // Normalize supporting/supporting_documents_ui → supporting_documents so parse-doc
                 // can apply inferDocTypeFromText() to auto-classify the file
                 const dispatchDocType =
-                  ['supporting', 'supporting_documents_ui'].includes(String(file.doc_type || '').toLowerCase())
+                  String(file.doc_type || '').toLowerCase() === 'loan_terms'
+                    ? 'loan_term_sheet'
+                    : ['supporting', 'supporting_documents_ui'].includes(String(file.doc_type || '').toLowerCase())
                     ? 'supporting_documents'
                     : file.doc_type;
                 const supportingRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
