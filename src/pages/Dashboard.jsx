@@ -333,7 +333,7 @@ export default function Dashboard() {
   const [ackSubmitting, setAckSubmitting] = useState(false);
   const [stagedBatchId, setStagedBatchId] = useState(null);
   const [reports, setReports] = useState([]);
-  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsLoading, setReportsLoading] = useState(false);
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [recentJobs, setRecentJobs] = useState([]);
@@ -556,11 +556,10 @@ export default function Dashboard() {
     setRentRollCoverage({ provided, total, percent });
   };
 
-  useEffect(() => {
+    useEffect(() => {
     const syncEverything = async () => {
       await Promise.all([
         fetchInProgressJobs(),
-        fetchRecentJobs(),
         fetchLatestFailedJob(),
         fetchEntitlements(),
       ]);
