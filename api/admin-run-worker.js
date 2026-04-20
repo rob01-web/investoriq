@@ -938,9 +938,22 @@ export default async function handler(req, res) {
               }
             }
 
+            const needsDocsUpdate = {
+              status: 'needs_documents',
+              failure_reason:
+                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts.',
+            };
+            if (supportsErrorCode) {
+              needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS';
+            }
+            if (supportsErrorMessage) {
+              needsDocsUpdate.error_message =
+                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Job remains in needs_documents until a parsable Rent Roll and T12 are available.';
+            }
+
             const { error: needsDocsErr } = await supabaseAdmin
               .from('analysis_jobs')
-              .update({ status: 'needs_documents' })
+              .update(needsDocsUpdate)
               .eq('id', job.id)
               .eq('status', 'extracting');
 
@@ -1063,10 +1076,10 @@ export default async function handler(req, res) {
                 job.user_id,
                 'missing_structured_financials',
                 {
-                  code: 'NO_STRUCTURED_FINANCIALS',
+                  code: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
                   level: 'error',
                   error_message:
-                    'No rent roll or T12 has been parsed yet. Job will remain in needs_documents until structured financials are available.',
+                    'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Job remains in needs_documents until a parsable Rent Roll and T12 are available.',
                   missing: ['rent_roll', 't12_or_operating_statement'],
                   detected,
                   timestamp: nowIso,
