@@ -557,18 +557,17 @@ export default function Dashboard() {
   };
 
     useEffect(() => {
-    const syncEverything = async () => {
-      await Promise.all([
-        fetchInProgressJobs(),
-        fetchLatestFailedJob(),
-        fetchEntitlements(),
-      ]);
-      setAcknowledged(false);
-      setAckLocked(false);
-      setAckAcceptedAtLocal(null);
-    };
-    if (profile?.id) syncEverything();
-  }, [profile?.id]);
+  const syncEverything = async () => {
+    await Promise.all([
+      fetchLatestFailedJob(),
+      fetchEntitlements(),
+    ]);
+    setAcknowledged(false);
+    setAckLocked(false);
+    setAckAcceptedAtLocal(null);
+  };
+  if (profile?.id) syncEverything();
+}, [profile?.id]);
 
     useEffect(() => {
     if (recentJobs.length === 0) return;
