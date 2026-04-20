@@ -330,6 +330,7 @@ export default async function handler(req, res) {
               object_path: file.object_path,
               pages,
               chars,
+              text,
               excerpt,
             },
           },

@@ -1904,7 +1904,7 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
 
-        const rawText = String(textArtifact?.payload?.excerpt || '');
+        const rawText = String(textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '');
         const lowerText = rawText.toLowerCase();
 
         // Helper: extract dollar value near a label in raw text
