@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -369,7 +369,7 @@ export default function Dashboard() {
     )
   ), [inProgressJobs]);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     if (!profile?.id) return;
     try {
       setReportsLoading(true);
@@ -383,7 +383,65 @@ export default function Dashboard() {
       setReports(data || []);
     } catch (err) { console.error('Error fetching reports FULL:', JSON.stringify(err, null, 2)); }
     finally { setReportsLoading(false); }
-  };
+  }, [profile?.id]);
+
+  const reportHistoryCards = useMemo(() => (
+    reports.map((report) => (
+      <div key={report.id} style={{ border:`1px solid ${T.hairline}`, background:T.white, padding:'14px 16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:10 }}>
+          <div style={{ minWidth:0, flex:'1 1 260px' }}>
+            <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, marginBottom:4 }}>
+              {report.property_name || '-'}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '-'}</span>
+              <span style={{ ...bodySmall, fontSize:12, color:T.ink4 }}>
+                {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
+              </span>
+            </div>
+          </div>
+          <StatusBadge status={report.status || 'published'} />
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          {report.storage_path && (
+            <button
+              type="button"
+              onClick={async () => {
+                const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(report.storage_path, 300);
+                if (error || !data?.signedUrl) { toast({ title:'Download failed', description: error?.message || 'Unable to generate link.', variant:'destructive' }); return; }
+                window.open(data.signedUrl, '_blank');
+              }}
+              style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4, padding:0 }}
+            >
+              <FileDown style={{ width:11, height:11 }} /> Download
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => { setIssueReport(report); setIssueModalOpen(true); }}
+            style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4, background:'none', border:'none', cursor:'pointer', padding:0 }}
+          >
+            Issue
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm('Permanently remove this report?')) {
+                try {
+                  await supabase.storage.from('generated_reports').remove([report.storage_path]);
+                  await supabase.from('reports').delete().eq('id', report.id);
+                  toast({ title:'Report deleted' });
+                  fetchReports();
+                } catch (err) { console.error(err); }
+              }
+            }}
+            style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.errorRed, background:'none', border:'none', cursor:'pointer', padding:0 }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ))
+  ), [reports, fetchReports, toast]);
 
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) { setJobEvents({}); return; }
@@ -516,9 +574,9 @@ export default function Dashboard() {
     if (!profile?.id) return;
     const timeoutId = window.setTimeout(() => {
       fetchReports();
-    }, 1200);
+    }, 3000);
     return () => { window.clearTimeout(timeoutId); };
-  }, [profile?.id]);
+  }, [profile?.id, fetchReports]);
 
   useEffect(() => {
     if (recentJobs.length === 0) return;
@@ -1405,61 +1463,7 @@ useEffect(() => {
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {reports.map((report) => (
-                  <div key={report.id} style={{ border:`1px solid ${T.hairline}`, background:T.white, padding:'14px 16px' }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:10 }}>
-                      <div style={{ minWidth:0, flex:'1 1 260px' }}>
-                        <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, marginBottom:4 }}>
-                          {report.property_name || '-'}
-                        </div>
-                        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-                          <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '-'}</span>
-                          <span style={{ ...bodySmall, fontSize:12, color:T.ink4 }}>
-                            {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
-                          </span>
-                        </div>
-                      </div>
-                      <StatusBadge status={report.status || 'published'} />
-                    </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-                      {report.storage_path && (
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(report.storage_path, 300);
-                            if (error || !data?.signedUrl) { toast({ title:'Download failed', description: error?.message || 'Unable to generate link.', variant:'destructive' }); return; }
-                            window.open(data.signedUrl, '_blank');
-                          }}
-                          style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4, padding:0 }}
-                        >
-                          <FileDown style={{ width:11, height:11 }} /> Download
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => { setIssueReport(report); setIssueModalOpen(true); }}
-                        style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4, background:'none', border:'none', cursor:'pointer', padding:0 }}
-                      >
-                        Issue
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (confirm('Permanently remove this report?')) {
-                            try {
-                              await supabase.storage.from('generated_reports').remove([report.storage_path]);
-                              await supabase.from('reports').delete().eq('id', report.id);
-                              toast({ title:'Report deleted' });
-                              fetchReports();
-                            } catch (err) { console.error(err); }
-                          }
-                        }}
-                        style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.errorRed, background:'none', border:'none', cursor:'pointer', padding:0 }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {reportHistoryCards}
               </div>
             )}
           </div>

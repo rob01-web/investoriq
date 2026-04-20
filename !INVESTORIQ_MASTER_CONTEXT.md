@@ -31,10 +31,11 @@
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
 - Reports are generating successfully; stability and precision are now the top priority.
-- A severe Dashboard freeze was isolated through controlled diagnostic containment and materially resolved through Report History render-path stabilization.
-- Authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause.
-- The freeze was isolated to the rendered Report History table/rows subtree.
-- Replacing the old Report History table with a lightweight stacked list/card layout materially resolved the catastrophic browser-freeze behavior.
+- Dashboard freeze history is now more precise:
+  - controlled diagnostic containment isolated the worst freeze behavior to Dashboard-local render pressure, especially the old Report History table/rows subtree
+  - authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause during that isolation sequence
+  - the old Report History table was replaced with a lightweight stacked list/card layout, which materially reduced the earlier catastrophic browser-freeze behavior
+  - however, the freeze has now reappeared in live use and must be treated as an active blocker again rather than a solved issue
 - Worker single-run timeout issue was reproduced, and the route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
 - Today's worker-fix experiments then broke live generation and caused false extracting-stage failures / false `needs_documents`.
 - The safest rollback boundary was confirmed to be file-level rather than whole-repo.
@@ -57,6 +58,10 @@
   - even the tiny reports-only completion refresh did not pass the launch-safety test
   - manual Refresh remains the locked pre-launch posture
 - Current Dashboard status: materially improved in the reverted manual-refresh state, but no longer assumed fully resolved.
+- Latest live Dashboard blocker:
+  - after logging back in to run the next underwriting validation test, the Dashboard froze again when typing into the property name box
+  - this re-blocked practical underwriting validation
+  - current investigation points away from the property input itself and toward whole-page render pressure / mount-refetch churn in `src/pages/Dashboard.jsx`
 - V1.0 Dashboard posture is now locked:
   - keep top Reload button
   - keep Report History Refresh button
@@ -171,15 +176,33 @@
   - uses `v1_core`
   - can incorporate mortgage statement / loan term sheet / appraisal / property tax artifacts when parsed
   - uses active debt normalization / fallback between mortgage statement and loan term sheet
-- Underwriting intake acceptance investigation is now complete:
-  - the live underwriting intake contract is materially narrower than the Dashboard / UI implies
-  - this is not only a T12 issue; it is a broader underwriting intake mismatch
-  - Dashboard allows broad file formats for T12 and Rent Roll, including PDF
-  - live underwriting currently only meaningfully accepts spreadsheet-format T12 and rent roll inputs (`xlsx` / `xls` / `csv`) through the structured parser paths
-  - debt / support-doc handling is also narrower than the UI promise in several places
-  - `loan_terms` vs `loan_term_sheet` remains a real normalization / routing mismatch
-  - generic supporting-doc acceptance is broader in the UI than in the meaningful extraction / parsing path
-  - core-doc fallback references in `extract-job-text.js` point to non-existent rent roll / T12 xlsx routes and should be treated as a real narrowness / cleanup issue
+- Underwriting intake acceptance investigation is complete, and the ranked patch wave was executed in sequence with anchor-locked, minimal-diff changes only.
+- Forest City Manor remained the real-world proof case that exposed the underwriting intake contract mismatch:
+  - readable PDF T12
+  - XLSX rent roll
+  - debt-style purchase assumptions PDF
+  - broker email
+  - renovation budget
+  - failure was treated as a product-contract mismatch, not simply bad user documents
+- Final underwriting acceptance patch wave status:
+  - Patch 1 passed: worker-side user-facing failure message precision in `api/admin-run-worker.js`
+  - Patch 2 passed: live `loan_terms` routing normalized into `loan_term_sheet`
+  - Patch 3 passed: dead core-doc fallback references removed from `api/parse/extract-job-text.js`
+  - Patch 4 passed: T12 acceptance widened in the live path, after repeated correction when earlier attempts placed fallback logic in the wrong parser branch
+  - Patch 5 passed: rent roll acceptance widened in the live path with strict fail-closed table-based parsing for non-spreadsheet rent rolls
+  - Patch 6 passed: support-doc extraction contract mismatch corrected by storing full extracted text and using full text first in support-doc parsing / classification
+- Implementation discipline for the underwriting patch wave:
+  - pre-patch planning completed first
+  - report-core remained materially green throughout
+  - worker stayed frozen in the last known-good rollback state
+  - no Dashboard sync experiments were performed during the underwriting acceptance patch wave
+  - no refactors
+  - one step at a time
+  - failed patches were cleaned up before moving on
+  - repo hygiene check was run before Patch 5 and came back clean
+- Patch-review lesson from this wave:
+  - multiple Patch 4 attempts produced false-positive summaries where the claimed fix did not match the actual saved file
+  - final review discipline was pass / fail based on the real uploaded file, not the summary
 - InvestorIQ does not "use only 3 documents."
 - T12 and Rent Roll are the core required structured inputs.
 - Debt terms / mortgage documents are incorporated when they are successfully parsed into structured fields.
@@ -222,15 +245,11 @@
 - Worker loop / double-trigger behavior has been re-verified as fixed in the live path:
   - `api/admin-run-worker.js` uses `maxSeconds = 55`
   - single-run publish path is confirmed through `pdf_generating` -> `publishing` -> `published`
-- Forest City Manor acceptance investigation established a real-world underwriting contract mismatch:
+- Forest City Manor acceptance investigation remains the key real-world underwriting proof case:
   - package included a PDF T12 / operating statement, XLSX rent roll, purchase assumptions PDF with debt-style terms, broker email, and renovation budget
   - this package should feel acceptable to a serious investor / user
   - Textract / text readability was not the main issue
   - the underwriting failure exposed downstream acceptance / gating narrowness rather than simple user-error or unreadable source documents
-- Forest City Manor underwriting failure conclusion:
-  - the uploaded T12 was a readable PDF operating statement
-  - the worker / gate currently requires structured spreadsheet T12 for underwriting
-  - the failure was therefore not a raw text-readability problem and not a user-error problem
 - User-facing failure-message interpretation from the acceptance investigation:
   - `Missing structured financials: t12` is only partially accurate and materially misleading for packages like Forest City Manor
   - it hides the narrower truth that a readable PDF T12 was uploaded, but the live underwriting gate only trusts spreadsheet-format structured T12
@@ -408,10 +427,9 @@
     - `hasActiveProcessingJob`
   - Eliminates unnecessary interval resets and render churn.
 
-- Result:
-  - Typing in Dashboard input no longer blocks UI thread.
-  - No browser freeze during input or upload flow.
-  - Rendering stabilized without altering business logic.
+- Result at that stage:
+  - typing pressure was reduced without altering business logic
+  - this was a meaningful stabilization step, but later live recurrence proved it was not the final root-cause closure
 
 ### Dashboard Render-Path Stabilization (April 2026)
 
@@ -442,6 +460,29 @@
 
 - Classification:
   - this was a production stabilization fix, not just a diagnostic patch.
+
+### Dashboard Freeze Status - Current Truth (April 2026)
+
+- Current blocker status:
+  - Dashboard freeze is back and is now again an immediate launch blocker.
+  - It reappeared when logging back in to run the next underwriting validation test.
+  - The freeze hit immediately while typing into the property name box, which paused practical underwriting validation.
+- Latest focused investigation inspected:
+  - `src/pages/Dashboard.jsx`
+  - `src/contexts/SupabaseAuthContext.jsx`
+- Main conclusion:
+  - the property input itself is likely not the root cause
+  - the stronger suspect is whole-page render pressure / mount-refetch churn in `Dashboard.jsx`
+- Ranked likely causes:
+  1. whole-page render pressure rather than property-input state churn
+  2. clustered mount/refetch churn in `Dashboard.jsx`
+  3. heavy normal non-empty Report History render path
+  4. query / refetch coupling around reports and jobs
+  5. realtime / subscription storm: low confidence
+  6. the normal live Report History render path appears to be the most relevant reintroduced heavy path
+- Safest next patch target:
+  - `src/pages/Dashboard.jsx`
+  - start with the post-login fetch / render fan-out plus the normal non-empty Report History render branch
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -553,9 +594,9 @@
 ```
 
 - Result:
-  - Reports load successfully.
-  - Dashboard freeze resolved.
-  - Supabase queries execute cleanly.
+  - reports load successfully
+  - Supabase queries execute cleanly
+  - this fixed one concrete query failure, but it did not permanently close the broader Dashboard freeze issue
 
 ### Dashboard Stability Investigation (April 10-11, 2026)
 
@@ -627,10 +668,9 @@
   - Fetched report data alone was not the primary cause.
   - Conclusion:
     - the old rendered Report History table/rows subtree was the primary frontend freeze trigger.
-  - Final production state:
-    - the old table-based Report History non-empty branch was replaced with a lightweight stacked list/card layout.
-    - catastrophic browser-freeze behavior appears materially resolved after that change.
-    - repeated typing and refresh testing became stable enough to stop further speculative property-input tuning before launch.
+  - Final production state at that stage:
+    - the old table-based Report History non-empty branch was replaced with a lightweight stacked list/card layout
+    - repeated typing and refresh testing became stable enough to stop further speculative property-input tuning at that time
 
 - Important:
   - No further Dashboard structural changes should be made without controlled isolation
@@ -706,24 +746,21 @@
     - Screening Test 7 green
     - CLEAN Underwriting Test 7 green
     - MESSY Underwriting Test 7 green
-  - Underwriting acceptance widening planning was completed before any new code changes:
-    - no underwriting acceptance-widening patch from this investigation wave has been applied yet
-    - staged, anchor-locked, one-step-at-a-time execution remains mandatory
-  - Ranked underwriting patch-order plan is now locked as:
+  - Underwriting acceptance investigation plus ranked patch wave: completed.
+  - Ranked underwriting sequence executed in full:
     1. user-facing failure message precision
     2. `loan_terms` -> `loan_term_sheet` normalization and routing
     3. dead fallback cleanup for core docs
     4. T12 acceptance / gate widening
     5. rent roll acceptance / gate widening
     6. support-doc extraction contract mismatch
-  - Planning conclusions:
-    - do not combine T12 widening and rent-roll widening in one patch
-    - do not combine support-doc extraction widening with loan-terms normalization
-    - do not combine messaging fixes with parser / gate behavior changes
-  - Current working decision:
-    - planning was done first to rank the safest patch order by user impact and blast radius
-    - the next likely implementation work will begin from the ranked underwriting patch-order plan
-    - after underwriting acceptance work is completed, perform the same style of full acceptance investigation for Screening
+  - What was supposed to happen next before the Dashboard issue came back:
+    - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
+    - only after that, perform the same style of acceptance investigation for Screening
+  - Current immediate priority has now changed:
+    - Dashboard freeze stabilization again
+    - underwriting validation run is paused until Dashboard usability is restored
+    - do not move to Screening investigation yet
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -791,16 +828,15 @@
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
-- FIRST THING TOMORROW MORNING
-  - start from the ranked underwriting patch-order plan:
-    - first: user-facing failure message precision
-    - second: `loan_terms` -> `loan_term_sheet` normalization and routing
-    - third: dead fallback cleanup for core docs
-  - keep T12 acceptance / gate widening and rent-roll acceptance / gate widening as separate later patches
-  - after underwriting acceptance work is completed, run the same style of full acceptance investigation for Screening
+- Immediate resume point
+  - stabilize the Dashboard freeze again
+  - start with `src/pages/Dashboard.jsx`, focusing on post-login fetch / render fan-out and the normal non-empty Report History render branch
+  - restore practical Dashboard usability before resuming underwriting validation
 
 - AFTER THAT
-  - continue the remaining ranked underwriting acceptance-widening work one step at a time
+  - rerun the underwriting proof validation, especially Forest City Manor
+  - confirm whether the completed underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
+  - only then move to Screening acceptance investigation
   - complete final outreach-prep / pricing / notification / polish items
   - optionally remove / retire leftover SES helper / config / doc references later if desired
   - apply any surgical copy / typography cleanups that are truly needed
@@ -815,14 +851,13 @@
 
 ### Launch Risk Flag (Dashboard)
 
-- Dashboard catastrophic freeze issue was materially reduced after Report History render-path stabilization and completion-reload experiment reversion, but must now be treated as an active launch-risk item again.
-- Latest live behavior confirms freeze can still reappear after idle time:
-  - dashboard left open for roughly 10 minutes
-  - property-name input then became very slow
-  - page froze for roughly 2-3 minutes
-  - user had to log out / recover
+- Dashboard freeze is an active launch-risk item and must not be treated as solved.
+- Historical pattern:
+  - Report History render-path stabilization materially reduced the earlier catastrophic freeze behavior
+  - later tiny completion-refresh experiments were reverted after freeze / regression signs returned
+  - recent live use then showed the freeze reappearing again, including idle-time slowdown and a fresh freeze while typing into the property name box after logging back in
 - Report-count reduction to only 3 visible history items has been tried as a containment test, but it is not yet confirmed whether that actually fixes the issue.
-- Do not assume the Dashboard freeze is solved until controlled idle-time retesting proves otherwise.
+- Do not assume the Dashboard freeze is solved until controlled retesting proves otherwise.
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -881,7 +916,8 @@ Notes:
   - MESSY Underwriting Test 7 is green
   - deterministic / no-hallucination / document-driven report behavior is validated
   - underwriting document-derived exit / refi cap labels now display exact parsed precision consistently, including `6.25%`
-  - Dashboard catastrophic freeze has been materially reduced in the reverted stable manual-refresh state, but is not yet fully closed
+  - report-core quality remains materially green
+  - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
   - launch-critical `report_published` email notifications are live on Resend and validated
@@ -892,7 +928,8 @@ Notes:
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
-  - run a controlled idle-time Dashboard repro test before treating Dashboard reliability as green for outreach
+  - Dashboard freeze stabilization is again an immediate blocker
+  - run a controlled Dashboard repro / stabilization pass before treating Dashboard reliability as green for outreach
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
