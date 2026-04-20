@@ -559,7 +559,6 @@ export default function Dashboard() {
     useEffect(() => {
   const syncEverything = async () => {
     await Promise.all([
-      fetchLatestFailedJob(),
       fetchEntitlements(),
     ]);
     setAcknowledged(false);
