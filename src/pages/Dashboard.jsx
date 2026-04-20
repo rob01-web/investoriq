@@ -978,21 +978,19 @@ useEffect(() => {
                   <p style={stepEyebrow}>Generated Reports</p>
                   <span style={stepTitle}>Report history</span>
                 </div>
-                <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
               </div>
 
-              {reportsLoading ? (
-                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'20px 0' }}>
-                  <Loader2 style={{ width:16, height:16, color:T.gold, animation:'spin 1s linear infinite' }} />
-                  <span style={{ ...bodySmall, fontSize:12 }}>Loading reports...</span>
-                </div>
-              ) : reports.length === 0 ? (
+              {reports.length === 0 ? (
                 <div style={{ padding:'24px 0', textAlign:'center' }}>
                   <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1-3 above to generate your first report.</span>
                 </div>
               ) : (
                 <div style={{ padding:'24px 0' }}>
-                  <span style={{ ...bodySmall, fontSize:13, color:T.ink3 }}>Reports loaded successfully. Table rendering is temporarily bypassed for freeze isolation. {reports.length} reports loaded.</span>
+                  {reports.map((r) => (
+                    <div key={r.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
+                      {r.property_name || 'Unnamed Property'} - {r.created_at}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

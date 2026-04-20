@@ -465,24 +465,43 @@
 
 - Current blocker status:
   - Dashboard freeze is back and is now again an immediate launch blocker.
+  - After resuming from the updated master context, Dashboard freeze stabilization remained the top priority before any further underwriting validation.
   - It reappeared when logging back in to run the next underwriting validation test.
   - The freeze hit immediately while typing into the property name box, which paused practical underwriting validation.
 - Latest focused investigation inspected:
   - `src/pages/Dashboard.jsx`
   - `src/contexts/SupabaseAuthContext.jsx`
+- Fresh controlled manual isolation pass:
+  - a fresh manual isolation pass was performed directly in `src/pages/Dashboard.jsx`
+  - the delayed post-mount auto `fetchReports()` effect was removed so Report History no longer auto-loads on Dashboard mount
+  - `reportsLoading` was moved to an idle/manual posture so Report History does not sit in a false loading state when reports are no longer auto-fetched
+  - mount-time `fetchRecentJobs()` was removed again from the startup sync path during this pass
+  - mount-time `fetchInProgressJobs()` was also removed from the startup sync path during this pass
+  - mount-time `fetchLatestFailedJob()` was also removed during this pass
+  - startup mount was therefore reduced to entitlements-only
+- Result:
+  - the Dashboard did not catastrophically freeze during this pass
+  - however, typing into the property name box was still inconsistent
+  - observed behavior was: slows down, then partially recovers / speeds back up again
 - Main conclusion:
   - the property input itself is likely not the root cause
-  - the stronger suspect is whole-page render pressure / mount-refetch churn in `Dashboard.jsx`
+  - the stronger suspect is whole-page render pressure in `Dashboard.jsx`
+- Interpretation:
+  - this weakens the theory that the remaining issue is primarily mount fetch fan-out alone
+  - this strengthens the theory that the remaining slowness may now be in the normal live Dashboard render tree itself
+  - especially the normal non-diagnostic branch in `src/pages/Dashboard.jsx`
 - Ranked likely causes:
   1. whole-page render pressure rather than property-input state churn
-  2. clustered mount/refetch churn in `Dashboard.jsx`
-  3. heavy normal non-empty Report History render path
-  4. query / refetch coupling around reports and jobs
-  5. realtime / subscription storm: low confidence
-  6. the normal live Report History render path appears to be the most relevant reintroduced heavy path
+  2. the normal live Dashboard render tree itself
+  3. especially the normal non-diagnostic branch in `src/pages/Dashboard.jsx`
+  4. heavy normal non-empty Report History render path
+  5. query / refetch coupling around reports and jobs
+  6. realtime / subscription storm: low confidence
 - Safest next patch target:
   - `src/pages/Dashboard.jsx`
-  - start with the post-login fetch / render fan-out plus the normal non-empty Report History render branch
+  - use the built-in `DASHBOARD_DIAG_MINIMAL` gate in `src/pages/Dashboard.jsx`
+  - flip it from `false` to `true`
+  - use that as the next controlled test to determine whether the normal render tree is now the remaining culprit
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -830,7 +849,9 @@
 ### Exact next task / resume point
 - Immediate resume point
   - stabilize the Dashboard freeze again
-  - start with `src/pages/Dashboard.jsx`, focusing on post-login fetch / render fan-out and the normal non-empty Report History render branch
+  - treat the fresh Dashboard.jsx isolation pass as the new baseline: startup mount reduced to entitlements-only, with reports / recentJobs / inProgressJobs / latestFailedJob removed from mount-time startup sync during the controlled pass
+  - use the built-in `DASHBOARD_DIAG_MINIMAL` gate in `src/pages/Dashboard.jsx` as the next safest isolate by flipping it from `false` to `true`
+  - use that controlled test to prove or disprove whether the remaining slowness now lives in the normal non-diagnostic render branch itself
   - restore practical Dashboard usability before resuming underwriting validation
 
 - AFTER THAT
@@ -848,6 +869,9 @@
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
+- No worker changes.
+- No move to Screening yet.
+- Forest City Manor remains the underwriting proof case after Dashboard usability is restored.
 
 ### Launch Risk Flag (Dashboard)
 
