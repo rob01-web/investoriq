@@ -1017,6 +1017,28 @@ useEffect(() => {
                 </div>
               )}
             </div>
+
+            <div style={{ ...sectionCard, marginTop:8 }}>
+              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+                <div>
+                  <p style={stepEyebrow}>Latest Failed Job</p>
+                  <span style={stepTitle}>Latest failed / needs documents</span>
+                </div>
+              </div>
+
+              <div style={{ padding:'24px 0' }}>
+                {latestFailedJob ? (
+                  <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
+                    <div>{latestFailedJob.property_name || 'Unnamed Property'} - {latestFailedJob.status}</div>
+                    <div>{latestFailedJob.failure_reason || latestFailedJob.error_message || 'No message'}</div>
+                  </div>
+                ) : (
+                  <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
+                    No latest failed job.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </>
