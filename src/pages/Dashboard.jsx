@@ -289,7 +289,7 @@ function NoticeBox({ type = 'info', children }) {
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, profile, fetchProfile, signOut } = useAuth();
-  const DASHBOARD_DIAG_MINIMAL = false;
+const DASHBOARD_DIAG_MINIMAL = true;
   const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
   const loadDismissedJobs = () => {
     if (typeof window === "undefined") return new Set();
