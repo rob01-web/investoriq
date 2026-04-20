@@ -731,7 +731,7 @@ export default async function handler(req, res) {
               };
 
               const hasStructuredRentRoll = relevantFiles.some(
-                (file) => String(file.doc_type || '').toLowerCase() === 'rent_roll' && isStructuredSpreadsheet(file)
+                (file) => String(file.doc_type || '').toLowerCase() === 'rent_roll'
               );
               const hasStructuredT12 = relevantFiles.some(
                 (file) => String(file.doc_type || '').toLowerCase() === 't12'
@@ -859,7 +859,7 @@ export default async function handler(req, res) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
                   const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  return isPending && dt === 'rent_roll' && isStructuredSpreadsheet(file);
+                  return isPending && dt === 'rent_roll';
                 });
                 const hasPendingT12 = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
@@ -871,7 +871,7 @@ export default async function handler(req, res) {
                   for (const pendingFile of relevantFiles.filter((item) => {
                     const dt = String(item.doc_type || '').toLowerCase();
                     const isPending = String(item.parse_status || '').toLowerCase() === 'pending';
-                    return dt === 'rent_roll' && isPending && isStructuredSpreadsheet(item);
+                    return dt === 'rent_roll' && isPending;
                   })) {
                     const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',

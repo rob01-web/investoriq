@@ -909,14 +909,195 @@ export default async function handler(req, res) {
           isCsvMime(file.mime_type) ||
           isCsvName(file.original_filename);
         if (!eligible) {
-          await supabaseAdmin
-            .from('analysis_job_files')
-            .update({
-              parse_status: 'failed',
-              parse_error: 'unsupported_file_type_for_structured_parsing',
-            })
-            .eq('id', file.id);
-          return res.status(200).json({ ok: true, skipped: 1 });
+          try {
+            const { data: tablesArtifact } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('bucket, object_path')
+              .eq('job_id', jobId)
+              .eq('type', 'document_tables_extracted')
+              .eq('payload->>source_file_id', String(file.id))
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (!tablesArtifact?.bucket || !tablesArtifact?.object_path) {
+              await supabaseAdmin
+                .from('analysis_job_files')
+                .update({
+                  parse_status: 'failed',
+                  parse_error: 'unsupported_file_type_for_structured_parsing',
+                })
+                .eq('id', file.id);
+              return res.status(200).json({ ok: true, skipped: 1 });
+            }
+
+            const { data: tablesFile, error: tablesDownloadErr } = await supabaseAdmin.storage
+              .from(tablesArtifact.bucket)
+              .download(tablesArtifact.object_path);
+
+            if (tablesDownloadErr || !tablesFile) {
+              throw new Error(tablesDownloadErr?.message || 'Failed to download extracted rent roll tables');
+            }
+
+            const tablesBuffer = Buffer.from(await tablesFile.arrayBuffer());
+            const tablesPayload = JSON.parse(tablesBuffer.toString('utf-8'));
+            const parsedRentRoll = parseRentRollFromRowMatrices(tablesPayload?.tables);
+            let parseWarnings = [];
+            const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
+            const columnMap = parsedRentRoll?.column_map || null;
+            const unitMix = Array.isArray(parsedRentRoll?.unit_mix) ? parsedRentRoll.unit_mix : [];
+            const totalUnits = Number.isFinite(parsedRentRoll?.total_units) ? parsedRentRoll.total_units : 0;
+            const occupancy = Number.isFinite(parsedRentRoll?.occupancy) ? parsedRentRoll.occupancy : null;
+
+            if (!columnMap?.unit) parseWarnings.push('missing_unit');
+            if (!columnMap?.in_place_rent) parseWarnings.push('missing_in_place_rent');
+            if (!parsedRentRoll) parseWarnings.push('insufficient_rent_roll_structure');
+
+            if (declaredTypeMismatch && !parseWarnings.includes('declared_doc_type_mismatch')) {
+              parseWarnings.push('declared_doc_type_mismatch');
+            }
+
+            const hasFiniteInPlaceRent = units.some((row) => Number.isFinite(row?.in_place_rent));
+            const hasUnitIdentifier = units.some((row) => String(row?.unit || '').trim() !== '');
+            const hasBedsOrStatus = units.some(
+              (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
+            );
+            const hasMarketRent = units.some((row) => Number.isFinite(row?.market_rent));
+            const hasMinimumRentRoll =
+              Number.isFinite(totalUnits) && totalUnits >= 4 && hasFiniteInPlaceRent;
+            const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
+            const rentRollConfidence = hasMinimumRentRoll && hasSecondarySignal ? 0.9 : 0.5;
+
+            if (!(Number.isFinite(totalUnits) && totalUnits >= 4) && !parseWarnings.includes('missing_total_units')) {
+              parseWarnings.push('missing_total_units');
+            }
+            if (!hasFiniteInPlaceRent && !parseWarnings.includes('missing_in_place_rent')) {
+              parseWarnings.push('missing_in_place_rent');
+            }
+            if (!hasUnitIdentifier && !parseWarnings.includes('missing_unit_identifier')) {
+              parseWarnings.push('missing_unit_identifier');
+            }
+
+            if (!(hasMinimumRentRoll && hasSecondarySignal)) {
+              await supabaseAdmin
+                .from('analysis_job_files')
+                .update({
+                  parse_status: 'failed',
+                  parse_error: 'insufficient_rent_roll_text_coverage',
+                })
+                .eq('id', file.id);
+              return res.status(200).json({ ok: true, skipped: 1 });
+            }
+
+            const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'rent_roll_parsed',
+                bucket: 'system',
+                object_path: `analysis_jobs/${jobId}/rent_roll/${file.id}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  declared_doc_type: declaredDocType,
+                  detected_doc_type: detectedDocType,
+                  classifier_score: classifierScore,
+                  classifier_signals: classifierSignals,
+                  method: 'aws_textract_tables',
+                  confidence: rentRollConfidence,
+                  total_units: totalUnits,
+                  unit_mix: unitMix,
+                  occupancy,
+                  units,
+                  column_map: columnMap,
+                  parse_warnings: parseWarnings,
+                },
+              },
+            ]);
+
+            if (artifactErr) {
+              throw new Error(artifactErr.message || 'Failed to write rent roll artifact');
+            }
+
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({ parse_status: 'parsed', parse_error: null })
+              .eq('id', file.id);
+
+            const { error: parsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'parser_completed',
+                  parser: 'rent_roll',
+                  result: 'parsed',
+                  job_id: jobId,
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+
+            if (parsedEventErr) {
+              console.error('Failed to write parser_completed event:', parsedEventErr.message);
+            }
+
+            parsedCount += 1;
+            continue;
+          } catch (err) {
+            const errorMessage = err?.message || 'Unknown error';
+
+            await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'rent_roll_parse_error',
+                bucket: 'system',
+                object_path: `analysis_jobs/${jobId}/rent_roll_error/${file.id}/${safeTimestamp(nowIso)}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  error_message: errorMessage,
+                },
+              },
+            ]);
+
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({ parse_status: 'failed', parse_error: errorMessage })
+              .eq('id', file.id);
+
+            const { error: failedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'parser_completed',
+                  parser: 'rent_roll',
+                  result: 'failed',
+                  job_id: jobId,
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+
+            if (failedEventErr) {
+              console.error('Failed to write parser_completed event:', failedEventErr.message);
+            }
+
+            failedCount += 1;
+            continue;
+          }
         }
 
         try {
