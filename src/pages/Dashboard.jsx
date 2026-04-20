@@ -571,15 +571,7 @@ export default function Dashboard() {
     if (profile?.id) syncEverything();
   }, [profile?.id]);
 
-  useEffect(() => {
-    if (!profile?.id) return;
-    const timeoutId = window.setTimeout(() => {
-      fetchReports();
-    }, 3000);
-    return () => { window.clearTimeout(timeoutId); };
-  }, [profile?.id, fetchReports]);
-
-  useEffect(() => {
+    useEffect(() => {
     if (recentJobs.length === 0) return;
     const typedJobs = recentJobs.filter((job) => job.report_type === selectedReportType);
     if (typedJobs.length === 0) { if (jobId) setJobId(null); setLockedJobIdForUploads(null); return; }
