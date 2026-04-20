@@ -483,7 +483,7 @@ export default function Dashboard() {
 
   const fetchRecentJobs = async () => {
     if (!profile?.id) return [];
-    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at').eq('user_id', profile.id)
+    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id)
       .in('status', ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
       .order('created_at', { ascending: false }).limit(25);
     if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
@@ -560,6 +560,7 @@ export default function Dashboard() {
     const syncEverything = async () => {
       await Promise.all([
         fetchInProgressJobs(),
+        fetchRecentJobs(),
         fetchLatestFailedJob(),
         fetchEntitlements(),
       ]);
@@ -674,8 +675,9 @@ useEffect(() => {
   const preflightHardMissing = selectedReportType === 'underwriting' && (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
   const visibleLatestFailedJob = latestFailedJob && !dismissedJobIds.has(String(latestFailedJob.id)) ? latestFailedJob : null;
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
+  const jobFromNeedsDocuments = recentJobs.find((job) => job.id === jobId && job.status === 'needs_documents') || null;
   const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
-  const activeJobForRuns = jobFromInProgress || jobFromFailed || inProgressJobs[0] || visibleLatestFailedJob || null;
+  const activeJobForRuns = jobFromInProgress || jobFromNeedsDocuments || jobFromFailed || inProgressJobs[0] || visibleLatestFailedJob || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = Boolean(jobId) && activeJobForRuns?.id === jobId && activeJobForRuns?.status === 'needs_documents' && Boolean(activeNeedsDocumentsEvent);
   const activeFailedReason =
@@ -896,6 +898,7 @@ useEffect(() => {
       setTimeout(() => {
         Promise.all([
           fetchInProgressJobs(),
+          fetchRecentJobs(),
           fetchReports(),
           fetchEntitlements(),
         ]);
@@ -1396,6 +1399,7 @@ useEffect(() => {
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Queued for processing.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing in progress.'
+                    : activeJobForRuns?.status === 'needs_documents' ? (activeFailedReason || needsDocumentsMessage)
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : 'Complete steps 1 and 2 to generate your report.'}
