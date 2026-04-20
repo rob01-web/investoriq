@@ -734,7 +734,7 @@ export default async function handler(req, res) {
                 (file) => String(file.doc_type || '').toLowerCase() === 'rent_roll' && isStructuredSpreadsheet(file)
               );
               const hasStructuredT12 = relevantFiles.some(
-                (file) => String(file.doc_type || '').toLowerCase() === 't12' && isStructuredSpreadsheet(file)
+                (file) => String(file.doc_type || '').toLowerCase() === 't12'
               );
 
               if (!hasStructuredRentRoll || !hasStructuredT12) {
@@ -849,9 +849,11 @@ export default async function handler(req, res) {
                 continue;
               }
 
-              const anyPending = relevantFiles.some(
-                (file) => String(file.parse_status || '').toLowerCase() === 'pending'
-              );
+              const anyPending = relevantFiles.some((file) => {
+                const dt = String(file.doc_type || '').toLowerCase();
+                const parseStatus = String(file.parse_status || '').toLowerCase();
+                return parseStatus === 'pending' || (dt === 't12' && parseStatus === 'extracted');
+              });
 
               if (anyPending) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
@@ -861,8 +863,8 @@ export default async function handler(req, res) {
                 });
                 const hasPendingT12 = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
-                  const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  return isPending && dt === 't12' && isStructuredSpreadsheet(file);
+                  const parseStatus = String(file.parse_status || '').toLowerCase();
+                  return dt === 't12' && (parseStatus === 'pending' || parseStatus === 'extracted');
                 });
 
                 if (hasPendingRentRoll) {
@@ -889,8 +891,8 @@ export default async function handler(req, res) {
                 if (hasPendingT12) {
                   for (const pendingFile of relevantFiles.filter((item) => {
                     const dt = String(item.doc_type || '').toLowerCase();
-                    const isPending = String(item.parse_status || '').toLowerCase() === 'pending';
-                    return dt === 't12' && isPending && isStructuredSpreadsheet(item);
+                    const parseStatus = String(item.parse_status || '').toLowerCase();
+                    return dt === 't12' && (parseStatus === 'pending' || parseStatus === 'extracted');
                   })) {
                     const t12Res = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',

@@ -1106,14 +1106,184 @@ export default async function handler(req, res) {
           isCsvMime(file.mime_type) ||
           isCsvName(file.original_filename);
         if (!eligible) {
-          await supabaseAdmin
-            .from('analysis_job_files')
-            .update({
-              parse_status: 'failed',
-              parse_error: 'unsupported_file_type_for_structured_parsing',
-            })
-            .eq('id', file.id);
-          return res.status(200).json({ ok: true, skipped: 1 });
+          try {
+            const { data: textArtifact } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .select('payload')
+              .eq('job_id', jobId)
+              .eq('type', 'document_text_extracted')
+              .eq('payload->>file_id', String(file.id))
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            const rawText = String(textArtifact?.payload?.excerpt || textArtifact?.payload?.text || '');
+            const extractDollarNear = (text, labels) => {
+              for (const label of labels) {
+                const idx = text.toLowerCase().indexOf(label);
+                if (idx === -1) continue;
+                const snippet = text.slice(idx, idx + 120);
+                const match = snippet.match(/\(?-?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?/);
+                if (match) {
+                  let val = parseFloat(match[1].replace(/,/g, ''));
+                  if (!Number.isFinite(val)) continue;
+                  if (/^\s*\(/.test(match[0]) || /^\s*-\s*/.test(match[0])) val = -Math.abs(val);
+                  return val;
+                }
+              }
+              return null;
+            };
+
+            const gross_potential_rent = extractDollarNear(rawText, [
+              'gross potential rent', 'gpr', 'gross potential income',
+            ]);
+            const effective_gross_income = extractDollarNear(rawText, [
+              'effective gross income', 'egi', 'effective gross',
+            ]);
+            const total_operating_expenses = extractDollarNear(rawText, [
+              'total operating expenses', 'operating expenses', 'total expenses', 'opex',
+            ]);
+            const net_operating_income = extractDollarNear(rawText, [
+              'net operating income', 'noi', 'net operating',
+            ]);
+
+            const parse_warnings = [];
+            if (!Number.isFinite(gross_potential_rent)) parse_warnings.push('missing_gross_potential_rent');
+            if (!Number.isFinite(effective_gross_income)) parse_warnings.push('missing_effective_gross_income');
+            if (!Number.isFinite(total_operating_expenses)) parse_warnings.push('missing_total_operating_expenses');
+            if (!Number.isFinite(net_operating_income)) parse_warnings.push('missing_net_operating_income');
+            if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
+
+            const requiredValues = [
+              gross_potential_rent,
+              effective_gross_income,
+              total_operating_expenses,
+              net_operating_income,
+            ];
+            const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
+
+            if (presentCount < 4) {
+              await supabaseAdmin
+                .from('analysis_job_files')
+                .update({
+                  parse_status: 'failed',
+                  parse_error: 'insufficient_t12_text_coverage',
+                })
+                .eq('id', file.id);
+              return res.status(200).json({ ok: true, skipped: 1 });
+            }
+
+            const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 't12_parsed',
+                bucket: 'system',
+                object_path: `analysis_jobs/${jobId}/t12/${file.id}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  declared_doc_type: declaredDocType,
+                  detected_doc_type: detectedDocType,
+                  classifier_score: classifierScore,
+                  classifier_signals: classifierSignals,
+                  method: 'text_excerpt',
+                  confidence: 0.9,
+                  gross_potential_rent,
+                  effective_gross_income,
+                  total_operating_expenses,
+                  net_operating_income,
+                  income_lines: [],
+                  expense_lines: [],
+                  column_map: null,
+                  parse_warnings,
+                },
+              },
+            ]);
+
+            if (artifactErr) {
+              throw new Error(artifactErr.message || 'Failed to write t12 artifact');
+            }
+
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({ parse_status: 'parsed', parse_error: null })
+              .eq('id', file.id);
+
+            const { error: parsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'parser_completed',
+                  parser: 't12',
+                  result: 'parsed',
+                  job_id: jobId,
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+
+            if (parsedEventErr) {
+              console.error('Failed to write parser_completed event:', parsedEventErr.message);
+            }
+
+            parsedCount += 1;
+            continue;
+          } catch (err) {
+            const errorMessage = err?.message || 'Unknown error';
+
+            await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 't12_parse_error',
+                bucket: 'system',
+                object_path: `analysis_jobs/${jobId}/t12_error/${file.id}/${safeTimestamp(nowIso)}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  error_message: errorMessage,
+                },
+              },
+            ]);
+
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({ parse_status: 'failed', parse_error: errorMessage })
+              .eq('id', file.id);
+
+            const { error: failedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'parser_completed',
+                  parser: 't12',
+                  result: 'failed',
+                  job_id: jobId,
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+
+            if (failedEventErr) {
+              console.error('Failed to write parser_completed event:', failedEventErr.message);
+            }
+
+            failedCount += 1;
+            continue;
+          }
         }
 
         try {
