@@ -994,6 +994,29 @@ useEffect(() => {
                 </div>
               )}
             </div>
+
+            <div style={{ ...sectionCard, marginTop:8 }}>
+              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+                <div>
+                  <p style={stepEyebrow}>Active Jobs</p>
+                  <span style={stepTitle}>In-progress jobs</span>
+                </div>
+              </div>
+
+              {inProgressJobs.length === 0 ? (
+                <div style={{ padding:'24px 0', textAlign:'center' }}>
+                  <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No in-progress jobs.</span>
+                </div>
+              ) : (
+                <div style={{ padding:'24px 0' }}>
+                  {inProgressJobs.map((j) => (
+                    <div key={j.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
+                      {j.property_name || 'Unnamed Property'} - {j.status}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </>
