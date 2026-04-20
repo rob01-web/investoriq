@@ -171,6 +171,15 @@
   - uses `v1_core`
   - can incorporate mortgage statement / loan term sheet / appraisal / property tax artifacts when parsed
   - uses active debt normalization / fallback between mortgage statement and loan term sheet
+- Underwriting intake acceptance investigation is now complete:
+  - the live underwriting intake contract is materially narrower than the Dashboard / UI implies
+  - this is not only a T12 issue; it is a broader underwriting intake mismatch
+  - Dashboard allows broad file formats for T12 and Rent Roll, including PDF
+  - live underwriting currently only meaningfully accepts spreadsheet-format T12 and rent roll inputs (`xlsx` / `xls` / `csv`) through the structured parser paths
+  - debt / support-doc handling is also narrower than the UI promise in several places
+  - `loan_terms` vs `loan_term_sheet` remains a real normalization / routing mismatch
+  - generic supporting-doc acceptance is broader in the UI than in the meaningful extraction / parsing path
+  - core-doc fallback references in `extract-job-text.js` point to non-existent rent roll / T12 xlsx routes and should be treated as a real narrowness / cleanup issue
 - InvestorIQ does not "use only 3 documents."
 - T12 and Rent Roll are the core required structured inputs.
 - Debt terms / mortgage documents are incorporated when they are successfully parsed into structured fields.
@@ -213,6 +222,18 @@
 - Worker loop / double-trigger behavior has been re-verified as fixed in the live path:
   - `api/admin-run-worker.js` uses `maxSeconds = 55`
   - single-run publish path is confirmed through `pdf_generating` -> `publishing` -> `published`
+- Forest City Manor acceptance investigation established a real-world underwriting contract mismatch:
+  - package included a PDF T12 / operating statement, XLSX rent roll, purchase assumptions PDF with debt-style terms, broker email, and renovation budget
+  - this package should feel acceptable to a serious investor / user
+  - Textract / text readability was not the main issue
+  - the underwriting failure exposed downstream acceptance / gating narrowness rather than simple user-error or unreadable source documents
+- Forest City Manor underwriting failure conclusion:
+  - the uploaded T12 was a readable PDF operating statement
+  - the worker / gate currently requires structured spreadsheet T12 for underwriting
+  - the failure was therefore not a raw text-readability problem and not a user-error problem
+- User-facing failure-message interpretation from the acceptance investigation:
+  - `Missing structured financials: t12` is only partially accurate and materially misleading for packages like Forest City Manor
+  - it hides the narrower truth that a readable PDF T12 was uploaded, but the live underwriting gate only trusts spreadsheet-format structured T12
 - Stripe purchase flow is architecturally imperfect in code review but functionally validated in real-world usage:
   - 30+ live end-to-end checkout tests have already been completed through the real pricing page using 100% coupon flow
   - Screening and Underwriting entitlements have both been repeatedly confirmed working in practice
@@ -681,18 +702,30 @@
 
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
-  - Report-core validation block is now green:
+  - Report-core validation block remains green:
     - Screening Test 7 green
     - CLEAN Underwriting Test 7 green
     - MESSY Underwriting Test 7 green
-  - Controlled Dashboard repro test
-    - log in
-    - leave Dashboard open / idle for 10-15 minutes
-    - return to property-name input
-    - test whether freezing still occurs with only 3 reports in history
-    - determine whether report-count reduction matters or whether the freeze is tied to idle-time / state churn instead
+  - Underwriting acceptance widening planning was completed before any new code changes:
+    - no underwriting acceptance-widening patch from this investigation wave has been applied yet
+    - staged, anchor-locked, one-step-at-a-time execution remains mandatory
+  - Ranked underwriting patch-order plan is now locked as:
+    1. user-facing failure message precision
+    2. `loan_terms` -> `loan_term_sheet` normalization and routing
+    3. dead fallback cleanup for core docs
+    4. T12 acceptance / gate widening
+    5. rent roll acceptance / gate widening
+    6. support-doc extraction contract mismatch
+  - Planning conclusions:
+    - do not combine T12 widening and rent-roll widening in one patch
+    - do not combine support-doc extraction widening with loan-terms normalization
+    - do not combine messaging fixes with parser / gate behavior changes
+  - Current working decision:
+    - planning was done first to rank the safest patch order by user impact and blast radius
+    - the next likely implementation work will begin from the ranked underwriting patch-order plan
+    - after underwriting acceptance work is completed, perform the same style of full acceptance investigation for Screening
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
-  - Focus remaining pre-outreach work on Dashboard reliability, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
+  - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
 - STILL OPEN
   - Preserve Resend as the launch notification default
@@ -759,14 +792,15 @@
 
 ### Exact next task / resume point
 - FIRST THING TOMORROW MORNING
-  - run the controlled Dashboard repro test first:
-    - log in
-    - leave Dashboard open / idle for 10-15 minutes
-    - return to property-name input
-    - test whether freezing still occurs with only 3 reports in history
-    - determine whether report-count reduction matters or whether the freeze is tied to idle-time / state churn instead
+  - start from the ranked underwriting patch-order plan:
+    - first: user-facing failure message precision
+    - second: `loan_terms` -> `loan_term_sheet` normalization and routing
+    - third: dead fallback cleanup for core docs
+  - keep T12 acceptance / gate widening and rent-roll acceptance / gate widening as separate later patches
+  - after underwriting acceptance work is completed, run the same style of full acceptance investigation for Screening
 
 - AFTER THAT
+  - continue the remaining ranked underwriting acceptance-widening work one step at a time
   - complete final outreach-prep / pricing / notification / polish items
   - optionally remove / retire leftover SES helper / config / doc references later if desired
   - apply any surgical copy / typography cleanups that are truly needed

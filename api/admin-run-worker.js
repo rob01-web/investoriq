@@ -773,7 +773,7 @@ export default async function handler(req, res) {
                 }
                 if (supportsErrorMessage) {
                   needsDocsUpdate.error_message =
-                    'A spreadsheet version of your Rent Roll and T12/Operating Statement is required to complete underwriting. Please upload XLSX or CSV.';
+                    'Underwriting currently requires spreadsheet-format Rent Roll and T12/Operating Statement inputs. Please upload XLSX or CSV files for those core financials.';
                 }
 
                 const { error: needsDocsErr } = await supabaseAdmin
@@ -821,7 +821,7 @@ export default async function handler(req, res) {
                       code: 'MISSING_STRUCTURED_FINANCIALS',
                       level: 'error',
                       error_message:
-                        'A spreadsheet version of your Rent Roll and T12/Operating Statement is required to complete underwriting. Please upload XLSX or CSV.',
+                        'Underwriting currently requires spreadsheet-format Rent Roll and T12/Operating Statement inputs. Please upload XLSX or CSV files for those core financials.',
                       missing: missingStructured,
                       timestamp: nowIso,
                     }
