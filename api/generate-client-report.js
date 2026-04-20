@@ -394,6 +394,13 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+function normalizeExitCapSourceLabel(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const compact = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  if (compact === "document-derived") return "document-derived";
+  return escapeHtml(raw);
+}
 function hasMeaningfulNarrative(html) {
   if (!html || typeof html !== "string") return false;
   if (html.includes(DATA_NOT_AVAILABLE)) return false;
@@ -1055,7 +1062,7 @@ function buildScreeningDataCoverageSummary({
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Unsupported or unstructured documents were excluded from quantitative modeling.</p>${coverageTableHtml}<p style="margin:10px 0 4px 0;color:#1e293b;font-size:11px;font-weight:600;">Unsupported / Excluded Inputs:</p><ul style="margin:0 0 0 18px;padding:0;color:#374151;font-size:11px;"><li>Appraisal summary (unstructured format)</li><li>Market rent survey excerpt (unstructured)</li><li>ESA summary (non-financial)</li><li>Zoning letter (non-financial)</li></ul></div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Unsupported or unstructured documents were excluded from quantitative modeling.</p>${coverageTableHtml}<div style="margin:10px 0 4px 0;color:#1e293b;font-size:11px;font-weight:600;">Unsupported / Excluded Inputs:</div><ul style="margin:0 0 0 18px;padding:0;color:#374151;font-size:11px;"><li>Appraisal summary (unstructured format)</li><li>Market rent survey excerpt (unstructured)</li><li>ESA summary (non-financial)</li><li>Zoning letter (non-financial)</li></ul></div>`;
     }
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
@@ -4430,7 +4437,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalPv)}</td>`;
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
-        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${escapeHtml(exitCapSource)})</p>`;
+        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)})</p>`;
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
@@ -4447,7 +4454,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowBg = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
           const vs = isBase ? "—" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -4492,7 +4499,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / exitCapDec)}</td>`;
         }
         sTbl += `</tr></tbody></table>`;
-        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${escapeHtml(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
+        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value: Cap Rate Sensitivity</p>`;
@@ -4505,7 +4512,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         for (const cap of capRateRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowStyle = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
-          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${escapeHtml(exitCapSource)})</span>` : ""}</td>`;
+          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td>`;
           for (const s of growthRates) {
             const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
             sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / (cap / 100))}</td>`;
@@ -4943,11 +4950,11 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
-          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:30%;">${escapeHtml(r.label)}</td>` +
-          `<td style="padding:5px 8px;width:40%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;width:30%;"><span class="analysis-chart-table-value" style="white-space:nowrap;">${formatCurrency(r.val)}</span><span class="analysis-chart-table-pct" style="white-space:nowrap;color:#6B7280;font-size:10px;font-weight:400;margin-left:10px;">${r.pct}%</span></td></tr>`
+          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:24%;">${escapeHtml(r.label)}</td>` +
+          `<td style="padding:5px 8px;width:36%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;width:40%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;">${formatCurrency(r.val)}</span><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;color:#6B7280;font-size:10px;font-weight:400;margin-left:10px;">${r.pct}%</span></td></tr>`
         ).join("");
-        html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;">${trs}</table></div>`;
+        html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;table-layout:fixed;">${trs}</table></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{NOI_WATERFALL_CHART}}", html);
     }
