@@ -1132,18 +1132,25 @@ useEffect(() => {
             </NoticeBox>
           )}
 
-          {/* Failed jobs */}
-          {failedJobsForDisplay.map((job) => (
-            <NoticeBox key={job.id} type="error">
-              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-                <div>
-                  <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
-                  {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
+          <div data-dashboard-compartment="needs-attention">
+            {/* Failed jobs */}
+            {failedJobsForDisplay.map((job) => (
+              <NoticeBox key={job.id} type="error">
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                  <div>
+                    <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
+                    {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
+                  </div>
+                  <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
                 </div>
-                <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
-              </div>
-            </NoticeBox>
-          ))}
+              </NoticeBox>
+            ))}
+
+            {/* Needs documents warning */}
+            {showNeedsDocsWarning && (
+              <NoticeBox type="warning">{needsDocumentsMessage}</NoticeBox>
+            )}
+          </div>
 
           {/* Active jobs */}
           {visibleInProgressJobs.length > 0 && (
@@ -1164,11 +1171,6 @@ useEffect(() => {
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Needs documents warning */}
-          {showNeedsDocsWarning && (
-            <NoticeBox type="warning">{needsDocumentsMessage}</NoticeBox>
           )}
 
           {/* STEP 1 */}
