@@ -1022,7 +1022,7 @@ useEffect(() => {
               <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
                 <div>
                   <p style={stepEyebrow}>Latest Failed Job</p>
-                  <span style={stepTitle}>Latest failed / needs documents</span>
+                  <span style={stepTitle}>Latest failed job</span>
                 </div>
               </div>
 
