@@ -977,6 +977,54 @@ useEffect(() => {
             <div style={{ ...sectionCard, marginTop:8 }}>
               <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
                 <div>
+                  <p style={stepEyebrow}>Step 02</p>
+                  <span style={stepTitle}>Property and documents</span>
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12, marginBottom:16 }}>
+                <div style={{ padding:'16px', border:`1px solid ${hasRentRoll ? T.okBorder : T.hairline}`, background:hasRentRoll ? T.okBg : T.white }}>
+                  <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                  <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>Rent Roll</div>
+                  <PrimaryBtn
+                    onClick={() => { document.getElementById('diagRentRollInput')?.click(); }}
+                    style={{ width:'100%', justifyContent:'center', marginBottom:10 }}
+                  >
+                    <UploadCloud style={{ width:12, height:12 }} /> Upload Rent Roll
+                  </PrimaryBtn>
+                  {rentRollFiles.length === 0
+                    ? <div style={{ ...bodySmall, fontSize:11, color:T.ink4 }}>No file uploaded.</div>
+                    : rentRollFiles.map((entry, idx) => (
+                      <FileRow key={idx} name={safeName(entry.file.name)} size={entry.file.size} onRemove={() => setUploadedFiles((prev) => prev.filter((item) => !(item.docType === 'rent_roll' && item.file?.name === entry.file.name && item.file?.size === entry.file.size)))} />
+                    ))
+                  }
+                </div>
+
+                <div style={{ padding:'16px', border:`1px solid ${hasT12 ? T.okBorder : T.hairline}`, background:hasT12 ? T.okBg : T.white }}>
+                  <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                  <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>T12 (Operating Statement)</div>
+                  <PrimaryBtn
+                    onClick={() => { document.getElementById('diagT12Input')?.click(); }}
+                    style={{ width:'100%', justifyContent:'center', marginBottom:10 }}
+                  >
+                    <UploadCloud style={{ width:12, height:12 }} /> Upload T12
+                  </PrimaryBtn>
+                  {t12Files.length === 0
+                    ? <div style={{ ...bodySmall, fontSize:11, color:T.ink4 }}>No file uploaded.</div>
+                    : t12Files.map((entry, idx) => (
+                      <FileRow key={idx} name={safeName(entry.file.name)} size={entry.file.size} onRemove={() => setUploadedFiles((prev) => prev.filter((item) => !(item.docType === 't12' && item.file?.name === entry.file.name && item.file?.size === entry.file.size)))} />
+                    ))
+                  }
+                </div>
+              </div>
+
+              <input id="diagRentRollInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 'rent_roll')} className="hidden" style={{ display:'none' }} />
+              <input id="diagT12Input" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.txt" onChange={(e) => handleUpload(e, 't12')} className="hidden" style={{ display:'none' }} />
+            </div>
+
+            <div style={{ ...sectionCard, marginTop:8 }}>
+              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+                <div>
                   <p style={stepEyebrow}>Generated Reports</p>
                   <span style={stepTitle}>Report history</span>
                 </div>
