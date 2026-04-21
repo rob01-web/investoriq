@@ -1039,6 +1039,27 @@ useEffect(() => {
                 )}
               </div>
             </div>
+
+            <div style={{ ...sectionCard, marginTop:8 }}>
+              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
+                <div>
+                  <p style={stepEyebrow}>Step 03</p>
+                  <span style={stepTitle}>Job status</span>
+                </div>
+              </div>
+
+              <div style={{ padding:'24px 0' }}>
+                {activeJobForRuns ? (
+                  <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
+                    {(activeJobForRuns.property_name || activeJobForRuns.id || 'Unnamed Property')} - {activeJobForRuns.status}
+                  </div>
+                ) : (
+                  <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
+                    No active job
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </>
