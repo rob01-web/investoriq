@@ -847,7 +847,9 @@ useEffect(() => {
         const normalizedDocType = normalizeDocType(docType);
         const safeOriginalName = safeName(file.name);
         const storagePath = `staged/${profile.id}/${batchId}/${normalizedDocType}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('staged_uploads').upload(storagePath, file, { upsert: false });
+        const { error: uploadError } = DASHBOARD_DIAG_MINIMAL
+          ? { error: null }
+          : await supabase.storage.from('staged_uploads').upload(storagePath, file, { upsert: false });
         if (uploadError) { toast({ title: 'Upload failed', description: `${file.name}: ${uploadError.message}`, variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
         stagedFiles.push({
           storage_path: storagePath,

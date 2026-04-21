@@ -39,6 +39,10 @@
   - latest controlled diagnostic pass used `DASHBOARD_DIAG_MINIMAL = true` as the live isolate; startup mount had already been reduced to entitlements-only, but property input slowdown / recovery still appeared inconsistent
   - diagnostic mode stayed smooth after raw reintroduction of property input, Report History, in-progress jobs, latest failed / `needs_documents`, and Step 03 job status
   - current suspicion is no longer raw data rendering alone; stronger suspect is interactive / conditional UI coupling in the full normal Dashboard branch, especially heavier live Step 02 / Step 03 surfaces coexisting in one page tree
+  - latest diagnostic work has materially reduced catastrophic full-freeze behavior; current symptom is narrower temporary lag around upload and acknowledgement interactions rather than a permanent freeze loop
+  - fresh-login typing materially improved after diagnostic-mode shared report-history / ready-report computations were short-circuited
+  - post-generate lag materially improved after the delayed post-generate fetch burst was reduced to `fetchInProgressJobs()` only
+  - latest controlled worker kick testing did not itself introduce lag
 - Worker single-run timeout issue was reproduced, and the route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
 - Today's worker-fix experiments then broke live generation and caused false extracting-stage failures / false `needs_documents`.
 - The safest rollback boundary was confirmed to be file-level rather than whole-repo.
@@ -464,13 +468,15 @@
 - Classification:
   - this was a production stabilization fix, not just a diagnostic patch.
 
-### Dashboard Freeze Status - Current Truth (April 2026)
+### Dashboard Freeze / Lag Status - Current Truth (April 2026)
 
 - Current blocker status:
-  - Dashboard freeze is back and is now again an immediate launch blocker.
+  - Dashboard usability remains an immediate launch blocker, but current evidence has narrowed the issue from catastrophic full-freeze behavior to intermittent temporary lag around specific interaction paths.
   - After resuming from the updated master context, Dashboard freeze stabilization remained the top priority before any further underwriting validation.
   - It reappeared when logging back in to run the next underwriting validation test.
   - The freeze hit immediately while typing into the property name box, which paused practical underwriting validation.
+  - Latest controlled diagnostic testing shows fresh-login typing is now materially improved; remaining lag is concentrated mainly after uploading Rent Roll + T12 and, secondarily, after clicking the acknowledgement checkbox.
+  - Post-Generate typing is now materially better after narrowing the delayed fetch burst, and worker kick testing did not introduce lag.
 - Latest focused investigation inspected:
   - `src/pages/Dashboard.jsx`
   - `src/contexts/SupabaseAuthContext.jsx`
@@ -504,6 +510,29 @@
   - raw data rendering alone does not appear to be the remaining culprit
   - the stronger suspicion is interactive / conditional UI coupling in the full normal Dashboard branch
   - likely pressure area is the heavier live Step 02 / Step 03 interface and how those sections coexist in one page tree
+- Controlled diagnostic re-expansion completed:
+  - Generate button restored in the diagnostic branch
+  - Rent Roll upload control restored in the diagnostic branch
+  - T12 upload control restored in the diagnostic branch
+  - acknowledgement checkbox restored in the diagnostic branch
+  - these were restored one step at a time to isolate remaining lag triggers
+- Latest controlled live behavior:
+  - fresh-login typing became fine after diagnostic-mode `reportHistoryCards` and `readyReports` short-circuits
+  - uploading Rent Roll + T12 still triggered temporary lag, then settled
+  - acknowledgement checkbox click still triggered a smaller temporary lag window, then settled
+  - Generate path itself became materially better / fine in the latest test
+  - kicking the worker twice did not introduce lag
+  - remaining suspect area is now upload-driven churn first, then checkbox-driven churn second
+- Latest Dashboard lag patches completed:
+  - post-generate delayed fetch burst was reduced from `fetchInProgressJobs()`, `fetchRecentJobs()`, `fetchReports()`, and `fetchEntitlements()` to only `fetchInProgressJobs()`
+  - diagnostic-mode `reportHistoryCards` now resolves to `[]`
+  - diagnostic-mode `readyReports` now resolves to `[]`
+  - diagnostic-mode `setScopeConfirmed(false)` effect now returns early when `DASHBOARD_DIAG_MINIMAL` is true
+- Current remaining lag-suspect ranking:
+  1. upload-related Dashboard churn
+  2. upload-derived support / preflight scans still running above the diagnostic return
+  3. diagnostic `FileRow` rendering / inline remove callbacks
+  4. acknowledgement acceptance path via `recordLegalAcceptance()` and its multi-state update pattern
 - Ranked likely causes:
   1. whole-page render pressure rather than property-input state churn
   2. the normal live Dashboard render tree itself
@@ -532,11 +561,20 @@
   - existing 60-second active-job auto-refresh remains relevant to the live operational zone
   - limited live auto-update behavior should serve the top operational zone only
   - do not reintroduce broad full-page or full-history auto-refresh behavior before launch
+- Compartment architecture work completed in `src/pages/Dashboard.jsx` under controlled diagnostic / anchor-locked minimal-diff discipline:
+  - top operational zone wrapper added
+  - bottom archive zone wrapper added
+  - needs-attention wrapper added
+  - current-job wrapper / marker added
+  - ready-to-download anchor added
+  - ready-to-download visible card added
+  - ready-to-download empty-state copy added: `Completed reports will appear here.`
+  - diagnostic heading copy corrected from `Latest failed / needs documents` to `Latest failed job`
+  - these changes were structural seams intended to reduce render coupling while preserving InvestorIQ visual language
 - Safest next work:
-  - do not continue blind diagnostic reintroduction
-  - perform an investigation-only compartment mapping for live `Dashboard.jsx`
-  - map current live sections into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
-  - rank the safest anchor-locked patch order that preserves ELITE styling while reducing render coupling
+  - test the diagnostic-mode `scopeConfirmed` short-circuit patch
+  - determine whether post-upload lag is gone, materially better, or still present
+  - if lag remains, continue upload-lag investigation / patching before checkbox-path cleanup
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -793,6 +831,12 @@
 - Shared operating cushion calculation fix (`current occupancy - break-even occupancy`): completed.
 - Dashboard-only multi-quantity purchase restoration while keeping public Pricing quantity-free: completed.
 - Signup page copy typo fix (`Screening & Underwriting reports`): completed.
+- Dashboard compartment seam wave in `src/pages/Dashboard.jsx`: completed.
+- Ready to Download card and empty state (`Completed reports will appear here.`): completed.
+- Diagnostic branch Generate button, Rent Roll upload, T12 upload, and acknowledgement checkbox controlled reintroduction: completed.
+- Post-generate delayed fetch burst reduced to `fetchInProgressJobs()` only: completed.
+- Diagnostic-mode `reportHistoryCards` / `readyReports` short-circuit: completed.
+- Diagnostic-mode `setScopeConfirmed(false)` early return: completed.
 
 ### Immediate agenda - April 12, 2026
 - HIGH PRIORITY NEXT
@@ -812,11 +856,12 @@
     - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
     - only after that, perform the same style of acceptance investigation for Screening
   - Current immediate priority has now changed:
-    - Dashboard freeze stabilization through live Dashboard compartment mapping
+    - Dashboard lag stabilization through controlled diagnostic upload-path isolation
     - underwriting validation run is paused until Dashboard usability is restored
     - do not move to Screening investigation yet
-    - next step is investigation-only mapping of the current live `Dashboard.jsx` into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
-    - rank safest anchor-locked patch order before changing the live branch
+    - compartment mapping and initial structural seam patches are completed
+    - next step is to test the diagnostic-mode `scopeConfirmed` short-circuit patch
+    - if post-upload lag remains, continue upload-lag investigation / patching before checkbox-path cleanup
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -886,12 +931,14 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - do not perform more blind diagnostic reintroduction inside `DASHBOARD_DIAG_MINIMAL`
+  - test the newly applied diagnostic-mode `scopeConfirmed` short-circuit patch
+  - determine whether post-upload lag is gone, materially better, or still present
+  - if lag remains, continue upload-lag investigation / patching before checkbox-path cleanup
+  - do not perform more broad or blind diagnostic reintroduction inside `DASHBOARD_DIAG_MINIMAL`
   - treat the fresh Dashboard.jsx isolation pass as the new baseline: startup mount reduced to entitlements-only, with reports / recentJobs / inProgressJobs / latestFailedJob removed from mount-time startup sync during the controlled pass
   - diagnostic mode remained smooth after raw property input, Report History, in-progress jobs, latest failed / `needs_documents`, and Step 03 job status were reintroduced
-  - next task is investigation-only compartment mapping for the live `Dashboard.jsx`
-  - map current live sections into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
-  - identify current live anchors, rank safest patch order, and preserve ELITE styling while reducing render coupling
+  - controlled diagnostic re-expansion has now restored Generate, Rent Roll upload, T12 upload, and acknowledgement checkbox one step at a time
+  - compartment mapping and initial structural seam patches are complete
   - restore practical Dashboard usability before resuming underwriting validation
 
 - AFTER THAT
@@ -915,7 +962,7 @@
 
 ### Launch Risk Flag (Dashboard)
 
-- Dashboard freeze is an active launch-risk item and must not be treated as solved.
+- Dashboard freeze / lag is an active launch-risk item and must not be treated as solved.
 - Historical pattern:
   - Report History render-path stabilization materially reduced the earlier catastrophic freeze behavior
   - later tiny completion-refresh experiments were reverted after freeze / regression signs returned
@@ -923,8 +970,11 @@
 - Latest diagnostic pass:
   - startup mount was reduced to entitlements-only and diagnostic raw sections stayed smooth
   - raw data rendering alone is no longer the leading suspect
-  - current focus is the full normal Dashboard's interactive / conditional UI coupling, especially heavier live Step 02 / Step 03 coexistence
-- Do not assume the Dashboard freeze is solved until controlled retesting proves otherwise.
+  - catastrophic full-freeze behavior is materially reduced
+  - current remaining issue is intermittent temporary lag tied mainly to upload and acknowledgement paths
+  - post-generate lag materially improved after reducing the delayed fetch burst
+  - worker kick did not cause lag in latest controlled testing
+- Do not assume the Dashboard freeze / lag is solved until controlled retesting proves otherwise.
 
 ## 7.1 Reports Table Schema (Locked)
 
