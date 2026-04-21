@@ -616,7 +616,10 @@ useEffect(() => {
     return undefined;
   }, [profile?.id]);
 
-  useEffect(() => { setScopeConfirmed(false); }, [`${uploadedFiles.map((file) => file.docType).sort().join('|')}::${uploadedFiles.length}`]);
+  useEffect(() => {
+    if (DASHBOARD_DIAG_MINIMAL) return;
+    setScopeConfirmed(false);
+  }, [`${uploadedFiles.map((file) => file.docType).sort().join('|')}::${uploadedFiles.length}`]);
   // All the existing computed values and handlers (unchanged)
   const supportingDocTypes = [
     { docType: 'mortgage_statement', label: 'Mortgage Statement' },
