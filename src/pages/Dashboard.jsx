@@ -1060,6 +1060,13 @@ useEffect(() => {
                     No active job
                   </div>
                 )}
+                <PrimaryBtn
+                  onClick={handleAnalyze}
+                  loading={loading}
+                  style={{ minWidth: 200, marginTop: 12 }}
+                >
+                  {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
+                </PrimaryBtn>
               </div>
             </div>
           </div>
