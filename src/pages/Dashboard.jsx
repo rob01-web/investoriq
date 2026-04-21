@@ -884,9 +884,11 @@ useEffect(() => {
         return;
       }
       toast({ title: 'Report queued', description: 'Your report has started. You may safely close this page and return later.' });
-      propertyNameRef.current = '';
-      setPropertyName('');
-      if (propertyInputRef.current) propertyInputRef.current.value = '';
+      if (!DASHBOARD_DIAG_MINIMAL) {
+        propertyNameRef.current = '';
+        setPropertyName('');
+        if (propertyInputRef.current) propertyInputRef.current.value = '';
+      }
       if (!DASHBOARD_DIAG_MINIMAL) setUploadedFiles([]);
       setAcknowledged(false);
       setAckLocked(false);
