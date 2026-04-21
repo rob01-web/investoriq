@@ -887,7 +887,7 @@ useEffect(() => {
       propertyNameRef.current = '';
       setPropertyName('');
       if (propertyInputRef.current) propertyInputRef.current.value = '';
-      setUploadedFiles([]);
+      if (!DASHBOARD_DIAG_MINIMAL) setUploadedFiles([]);
       setAcknowledged(false);
       setAckLocked(false);
       setAckAcceptedAtLocal(null);
