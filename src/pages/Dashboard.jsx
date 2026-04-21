@@ -1116,6 +1116,7 @@ useEffect(() => {
             Reports are property-specific and non-refundable once generation begins.
           </div>
 
+          <div data-dashboard-zone="top-operational">
           {/* Checkout success */}
           {checkoutSuccess && (
             <NoticeBox type="success">
@@ -1490,7 +1491,9 @@ useEffect(() => {
               </div>
             )}
           </div>
+          </div>
 
+          <div data-dashboard-zone="bottom-archive">
           {/* REPORTS TABLE */}
           <div style={{ ...sectionCard, marginTop:8 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
@@ -1523,6 +1526,7 @@ useEffect(() => {
                 {reportHistoryCards}
               </div>
             )}
+          </div>
           </div>
 
         </div>

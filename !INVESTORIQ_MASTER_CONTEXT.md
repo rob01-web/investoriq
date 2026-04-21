@@ -36,6 +36,9 @@
   - authenticated session / global auth, the property input alone, and fetched report data alone were each ruled out as the primary cause during that isolation sequence
   - the old Report History table was replaced with a lightweight stacked list/card layout, which materially reduced the earlier catastrophic browser-freeze behavior
   - however, the freeze has now reappeared in live use and must be treated as an active blocker again rather than a solved issue
+  - latest controlled diagnostic pass used `DASHBOARD_DIAG_MINIMAL = true` as the live isolate; startup mount had already been reduced to entitlements-only, but property input slowdown / recovery still appeared inconsistent
+  - diagnostic mode stayed smooth after raw reintroduction of property input, Report History, in-progress jobs, latest failed / `needs_documents`, and Step 03 job status
+  - current suspicion is no longer raw data rendering alone; stronger suspect is interactive / conditional UI coupling in the full normal Dashboard branch, especially heavier live Step 02 / Step 03 surfaces coexisting in one page tree
 - Worker single-run timeout issue was reproduced, and the route-specific `maxDuration` override for `api/admin-run-worker.js` in `vercel.json` remains in place.
 - Today's worker-fix experiments then broke live generation and caused false extracting-stage failures / false `needs_documents`.
 - The safest rollback boundary was confirmed to be file-level rather than whole-repo.
@@ -473,6 +476,7 @@
   - `src/contexts/SupabaseAuthContext.jsx`
 - Fresh controlled manual isolation pass:
   - a fresh manual isolation pass was performed directly in `src/pages/Dashboard.jsx`
+  - `DASHBOARD_DIAG_MINIMAL` was actively used as the controlled live isolate
   - the delayed post-mount auto `fetchReports()` effect was removed so Report History no longer auto-loads on Dashboard mount
   - `reportsLoading` was moved to an idle/manual posture so Report History does not sit in a false loading state when reports are no longer auto-fetched
   - mount-time `fetchRecentJobs()` was removed again from the startup sync path during this pass
@@ -490,18 +494,49 @@
   - this weakens the theory that the remaining issue is primarily mount fetch fan-out alone
   - this strengthens the theory that the remaining slowness may now be in the normal live Dashboard render tree itself
   - especially the normal non-diagnostic branch in `src/pages/Dashboard.jsx`
+- Fresh diagnostic reintroduction sequence:
+  - diagnostic shell remained smooth after reintroducing the property input
+  - minimal raw Report History remained smooth
+  - minimal raw in-progress jobs remained smooth
+  - minimal raw latest failed / `needs_documents` surface remained smooth
+  - minimal raw Step 03 job status remained smooth
+- Current interpretation:
+  - raw data rendering alone does not appear to be the remaining culprit
+  - the stronger suspicion is interactive / conditional UI coupling in the full normal Dashboard branch
+  - likely pressure area is the heavier live Step 02 / Step 03 interface and how those sections coexist in one page tree
 - Ranked likely causes:
   1. whole-page render pressure rather than property-input state churn
   2. the normal live Dashboard render tree itself
   3. especially the normal non-diagnostic branch in `src/pages/Dashboard.jsx`
-  4. heavy normal non-empty Report History render path
+  4. heavier live Step 02 / Step 03 interactive and conditional surfaces
   5. query / refetch coupling around reports and jobs
-  6. realtime / subscription storm: low confidence
-- Safest next patch target:
-  - `src/pages/Dashboard.jsx`
-  - use the built-in `DASHBOARD_DIAG_MINIMAL` gate in `src/pages/Dashboard.jsx`
-  - flip it from `false` to `true`
-  - use that as the next controlled test to determine whether the normal render tree is now the remaining culprit
+  6. heavy normal non-empty Report History render path: lower confidence after raw history remained smooth
+  7. realtime / subscription storm: low confidence
+- Strategic Dashboard direction now locked for planning:
+  - preferred direction is a compartment-based live layout rather than one large shared interactive surface
+  - preserve existing InvestorIQ visual language: fonts, colors, branding, and premium / institutional styling
+  - keep the existing Report History helper note:
+    - `Completed reports may take a moment to appear in Report History.`
+    - `Click Refresh if needed.`
+- Preferred live Dashboard compartment model:
+  - top operational zone: Start New Report, Current Job, Needs Attention, Ready to Download
+  - bottom reference zone: Archive / Report History
+  - top zone should isolate active operational boxes and hottest interactions from status/history clutter
+  - bottom archive should be calmer and lighter than the current all-purpose history concept
+- Recent published report handling decision:
+  - newly published reports should first appear in a top-level recent / ready-to-download area
+  - older reports should live in the lower archive/history area
+  - avoid timer-based 72-hour client-side movement before launch
+  - prefer state/priority-based compartments rather than time-based transitions
+- Auto-refresh / live-zone posture:
+  - existing 60-second active-job auto-refresh remains relevant to the live operational zone
+  - limited live auto-update behavior should serve the top operational zone only
+  - do not reintroduce broad full-page or full-history auto-refresh behavior before launch
+- Safest next work:
+  - do not continue blind diagnostic reintroduction
+  - perform an investigation-only compartment mapping for live `Dashboard.jsx`
+  - map current live sections into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
+  - rank the safest anchor-locked patch order that preserves ELITE styling while reducing render coupling
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -777,9 +812,11 @@
     - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
     - only after that, perform the same style of acceptance investigation for Screening
   - Current immediate priority has now changed:
-    - Dashboard freeze stabilization again
+    - Dashboard freeze stabilization through live Dashboard compartment mapping
     - underwriting validation run is paused until Dashboard usability is restored
     - do not move to Screening investigation yet
+    - next step is investigation-only mapping of the current live `Dashboard.jsx` into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
+    - rank safest anchor-locked patch order before changing the live branch
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -807,6 +844,7 @@
     - revisit Report History auto-visibility so newly published reports appear without manual Refresh
     - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
     - prefer a tightly scoped, low-churn solution only
+    - current pre-launch preference is state/priority-based ready-to-download placement in the top operational zone, not timer-based movement into history
     - investigate after launch blockers are cleared why the tiny completion `fetchReports()` hook re-triggered freeze signs
   - Final pre-launch language / typography sweep
     - one final search for mojibake
@@ -848,10 +886,12 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - stabilize the Dashboard freeze again
+  - do not perform more blind diagnostic reintroduction inside `DASHBOARD_DIAG_MINIMAL`
   - treat the fresh Dashboard.jsx isolation pass as the new baseline: startup mount reduced to entitlements-only, with reports / recentJobs / inProgressJobs / latestFailedJob removed from mount-time startup sync during the controlled pass
-  - use the built-in `DASHBOARD_DIAG_MINIMAL` gate in `src/pages/Dashboard.jsx` as the next safest isolate by flipping it from `false` to `true`
-  - use that controlled test to prove or disprove whether the remaining slowness now lives in the normal non-diagnostic render branch itself
+  - diagnostic mode remained smooth after raw property input, Report History, in-progress jobs, latest failed / `needs_documents`, and Step 03 job status were reintroduced
+  - next task is investigation-only compartment mapping for the live `Dashboard.jsx`
+  - map current live sections into Start New Report, Current Job, Needs Attention, Ready to Download, and Archive / Report History
+  - identify current live anchors, rank safest patch order, and preserve ELITE styling while reducing render coupling
   - restore practical Dashboard usability before resuming underwriting validation
 
 - AFTER THAT
@@ -880,7 +920,10 @@
   - Report History render-path stabilization materially reduced the earlier catastrophic freeze behavior
   - later tiny completion-refresh experiments were reverted after freeze / regression signs returned
   - recent live use then showed the freeze reappearing again, including idle-time slowdown and a fresh freeze while typing into the property name box after logging back in
-- Report-count reduction to only 3 visible history items has been tried as a containment test, but it is not yet confirmed whether that actually fixes the issue.
+- Latest diagnostic pass:
+  - startup mount was reduced to entitlements-only and diagnostic raw sections stayed smooth
+  - raw data rendering alone is no longer the leading suspect
+  - current focus is the full normal Dashboard's interactive / conditional UI coupling, especially heavier live Step 02 / Step 03 coexistence
 - Do not assume the Dashboard freeze is solved until controlled retesting proves otherwise.
 
 ## 7.1 Reports Table Schema (Locked)
