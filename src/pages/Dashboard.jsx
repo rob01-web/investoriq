@@ -1152,26 +1152,28 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Active jobs */}
-          {visibleInProgressJobs.length > 0 && (
-            <div style={{ ...sectionCard, marginBottom: 16 }}>
-              <p style={stepEyebrow}>Active Jobs</p>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {visibleInProgressJobs.map((job) => (
-                  <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
-                    <div>
-                      <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
-                      <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
+          <div data-dashboard-compartment="current-job">
+            {/* Active jobs */}
+            {visibleInProgressJobs.length > 0 && (
+              <div style={{ ...sectionCard, marginBottom: 16 }}>
+                <p style={stepEyebrow}>Active Jobs</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {visibleInProgressJobs.map((job) => (
+                    <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
+                      <div>
+                        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
+                        <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                        <StatusBadge status={job.status} />
+                        <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
+                      </div>
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                      <StatusBadge status={job.status} />
-                      <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* STEP 1 */}
           <div style={sectionCard}>
@@ -1486,12 +1488,14 @@ useEffect(() => {
               {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
 
-            {activeJobForRuns && (
-              <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:10 }}>
-                <span style={{ ...bodySmall, fontSize:12 }}>{activeJobForRuns.property_name || 'Current job'}</span>
-                <StatusBadge status={activeJobForRuns.status} />
-              </div>
-            )}
+            <div data-dashboard-current-job-fragment="step-03">
+              {activeJobForRuns && (
+                <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ ...bodySmall, fontSize:12 }}>{activeJobForRuns.property_name || 'Current job'}</span>
+                  <StatusBadge status={activeJobForRuns.status} />
+                </div>
+              )}
+            </div>
           </div>
           </div>
 
