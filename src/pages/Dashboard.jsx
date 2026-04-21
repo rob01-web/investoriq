@@ -1108,6 +1108,37 @@ useEffect(() => {
                     No active job
                   </div>
                 )}
+                <div style={{ padding:'14px 16px', background:acknowledged ? T.okBg : T.warm, border:`1px solid ${acknowledged ? T.okBorder : T.hairlineMid}`, marginTop:12, marginBottom:12 }}>
+                  <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={acknowledged}
+                      disabled={ackSubmitting}
+                      onChange={async (e) => {
+                        const next = e.target.checked;
+                        if (ackSubmitting) return;
+                        if (!next) { setAcknowledged(false); setAckLocked(false); setAckAcceptedAtLocal(null); return; }
+                        setAckSubmitting(true);
+                        const accepted = await recordLegalAcceptance();
+                        if (!accepted?.ok) {
+                          toast({ title: 'Unable to record acknowledgement', description: 'Please try again.', variant: 'destructive' });
+                          setAcknowledged(false); setAckLocked(false); setAckSubmitting(false); return;
+                        }
+                        const acceptedAtValue = accepted?.acceptedAt ? new Date(accepted.acceptedAt) : new Date();
+                        setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(acceptedAtValue); setAckSubmitting(false);
+                      }}
+                      style={{ marginTop:2, flexShrink:0 }}
+                    />
+                    <div>
+                      <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
+                        I acknowledge that InvestorIQ provides document-based analysis only, makes no assumptions, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
+                      </div>
+                      <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
+                        Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
+                      </div>
+                    </div>
+                  </label>
+                </div>
                 <PrimaryBtn
                   onClick={handleAnalyze}
                   loading={loading}
