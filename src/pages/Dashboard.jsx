@@ -386,6 +386,7 @@ const DASHBOARD_DIAG_MINIMAL = true;
   }, [profile?.id]);
 
   const reportHistoryCards = useMemo(() => (
+    DASHBOARD_DIAG_MINIMAL ? [] :
     reports.map((report) => (
       <div key={report.id} style={{ border:`1px solid ${T.hairline}`, background:T.white, padding:'14px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:10 }}>
@@ -443,7 +444,7 @@ const DASHBOARD_DIAG_MINIMAL = true;
     ))
   ), [reports, fetchReports, toast]);
 
-  const readyReports = reports.filter((r) => r.storage_path);
+  const readyReports = DASHBOARD_DIAG_MINIMAL ? [] : reports.filter((r) => r.storage_path);
 
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) { setJobEvents({}); return; }
