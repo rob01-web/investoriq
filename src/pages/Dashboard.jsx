@@ -443,6 +443,8 @@ const DASHBOARD_DIAG_MINIMAL = true;
     ))
   ), [reports, fetchReports, toast]);
 
+  const readyReports = reports.filter((r) => r.storage_path);
+
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) { setJobEvents({}); return; }
     const eventTypes = ['missing_structured_financials','missing_required_documents','textract_failed','rent_roll_fallback_failed','t12_fallback_failed'];
@@ -1498,7 +1500,38 @@ useEffect(() => {
             </div>
           </div>
 
-          <div data-dashboard-compartment="ready-to-download" />
+          <div data-dashboard-compartment="ready-to-download">
+            {readyReports.length > 0 && (
+              <div style={{ ...sectionCard, marginTop:8 }}>
+                <p style={stepEyebrow}>Ready to Download</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {readyReports.slice(0, 3).map((report) => (
+                    <div key={report.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', padding:'6px 0' }}>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>
+                          {report.property_name || '-'}
+                        </div>
+                        <div style={{ ...bodySmall, fontSize:12, color:T.ink4 }}>
+                          {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(report.storage_path, 300);
+                          if (error || !data?.signedUrl) { toast({ title:'Download failed', description: error?.message || 'Unable to generate link.', variant:'destructive' }); return; }
+                          window.open(data.signedUrl, '_blank');
+                        }}
+                        style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4, padding:0 }}
+                      >
+                        <FileDown style={{ width:11, height:11 }} /> Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           </div>
 
           <div data-dashboard-zone="bottom-archive">
