@@ -1497,6 +1497,8 @@ useEffect(() => {
               )}
             </div>
           </div>
+
+          <div data-dashboard-compartment="ready-to-download" />
           </div>
 
           <div data-dashboard-zone="bottom-archive">
