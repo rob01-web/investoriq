@@ -1632,9 +1632,9 @@ useEffect(() => {
           </div>
           </div>
 
-          <div data-dashboard-zone="bottom-archive" data-dashboard-section="report-history-archive">
+          <div data-dashboard-zone="bottom-archive" data-dashboard-section="report-history-archive" data-dashboard-layout-slot="bottom">
           {/* REPORTS TABLE */}
-          <div style={{ ...sectionCard, marginTop:8 }}>
+          <div data-dashboard-reference-surface="report-history" style={{ ...sectionCard, marginTop:8 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
               <div>
                 <p style={stepEyebrow}>Generated Reports</p>
