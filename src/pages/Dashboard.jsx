@@ -1547,8 +1547,8 @@ useEffect(() => {
 
           </div>
 
-          <div data-dashboard-section="current-job">
-          <div data-dashboard-compartment="current-job">
+          <div data-dashboard-section="current-job" data-dashboard-layout-slot="top-middle">
+          <div data-dashboard-compartment="current-job" data-dashboard-live-surface="current-job">
             {/* Active jobs */}
             {visibleInProgressJobs.length > 0 && (
               <div style={{ ...sectionCard, marginBottom: 16 }}>
