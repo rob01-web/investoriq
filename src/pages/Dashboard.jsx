@@ -887,12 +887,7 @@ useEffect(() => {
       setAckAcceptedAtLocal(null);
       setStagedBatchId(null);
       setTimeout(() => {
-        Promise.all([
-          fetchInProgressJobs(),
-          fetchRecentJobs(),
-          fetchReports(),
-          fetchEntitlements(),
-        ]);
+        fetchInProgressJobs();
       }, 250);
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
