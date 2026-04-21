@@ -1206,6 +1206,7 @@ useEffect(() => {
           </div>
 
           <div data-dashboard-zone="top-operational">
+          <div data-dashboard-section="start-new-report">
           {/* Checkout success */}
           {checkoutSuccess && (
             <NoticeBox type="success">
@@ -1220,49 +1221,6 @@ useEffect(() => {
               </button>
             </NoticeBox>
           )}
-
-          <div data-dashboard-compartment="needs-attention">
-            {/* Failed jobs */}
-            {failedJobsForDisplay.map((job) => (
-              <NoticeBox key={job.id} type="error">
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-                  <div>
-                    <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
-                    {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
-                  </div>
-                  <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
-                </div>
-              </NoticeBox>
-            ))}
-
-            {/* Needs documents warning */}
-            {showNeedsDocsWarning && (
-              <NoticeBox type="warning">{needsDocumentsMessage}</NoticeBox>
-            )}
-          </div>
-
-          <div data-dashboard-compartment="current-job">
-            {/* Active jobs */}
-            {visibleInProgressJobs.length > 0 && (
-              <div style={{ ...sectionCard, marginBottom: 16 }}>
-                <p style={stepEyebrow}>Active Jobs</p>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {visibleInProgressJobs.map((job) => (
-                    <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
-                      <div>
-                        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
-                        <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <StatusBadge status={job.status} />
-                        <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* STEP 1 */}
           <div style={sectionCard}>
@@ -1587,6 +1545,54 @@ useEffect(() => {
             </div>
           </div>
 
+          </div>
+
+          <div data-dashboard-section="current-job">
+          <div data-dashboard-compartment="current-job">
+            {/* Active jobs */}
+            {visibleInProgressJobs.length > 0 && (
+              <div style={{ ...sectionCard, marginBottom: 16 }}>
+                <p style={stepEyebrow}>Active Jobs</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {visibleInProgressJobs.map((job) => (
+                    <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
+                      <div>
+                        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
+                        <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                        <StatusBadge status={job.status} />
+                        <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
+
+          <div data-dashboard-section="needs-and-ready">
+          <div data-dashboard-compartment="needs-attention">
+            {/* Failed jobs */}
+            {failedJobsForDisplay.map((job) => (
+              <NoticeBox key={job.id} type="error">
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                  <div>
+                    <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
+                    {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
+                  </div>
+                  <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
+                </div>
+              </NoticeBox>
+            ))}
+
+            {/* Needs documents warning */}
+            {showNeedsDocsWarning && (
+              <NoticeBox type="warning">{needsDocumentsMessage}</NoticeBox>
+            )}
+          </div>
+
           <div data-dashboard-compartment="ready-to-download">
             <div style={{ ...sectionCard, marginTop:8 }}>
               <p style={stepEyebrow}>Ready to Download</p>
@@ -1624,8 +1630,9 @@ useEffect(() => {
             </div>
           </div>
           </div>
+          </div>
 
-          <div data-dashboard-zone="bottom-archive">
+          <div data-dashboard-zone="bottom-archive" data-dashboard-section="report-history-archive">
           {/* REPORTS TABLE */}
           <div style={{ ...sectionCard, marginTop:8 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
