@@ -1572,8 +1572,8 @@ useEffect(() => {
           </div>
           </div>
 
-          <div data-dashboard-section="needs-and-ready">
-          <div data-dashboard-compartment="needs-attention">
+          <div data-dashboard-section="needs-and-ready" data-dashboard-layout-slot="bottom-middle">
+          <div data-dashboard-compartment="needs-attention" data-dashboard-action-surface="needs-attention">
             {/* Failed jobs */}
             {failedJobsForDisplay.map((job) => (
               <NoticeBox key={job.id} type="error">
@@ -1593,7 +1593,7 @@ useEffect(() => {
             )}
           </div>
 
-          <div data-dashboard-compartment="ready-to-download">
+          <div data-dashboard-compartment="ready-to-download" data-dashboard-action-surface="ready-to-download">
             <div style={{ ...sectionCard, marginTop:8 }}>
               <p style={stepEyebrow}>Ready to Download</p>
               {readyReports.length === 0 ? (
