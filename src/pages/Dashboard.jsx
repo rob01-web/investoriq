@@ -381,7 +381,11 @@ const DASHBOARD_DIAG_MINIMAL = false;
         .order('created_at', { ascending: false })
         .limit(25);
       if (error) throw error;
-      setReports(data || []);
+      const rows = data || [];
+      setReports((prev) => {
+        const serialize = (items) => items.map((report) => `${report.id}|${report.property_name || ''}|${report.report_type || ''}|${report.created_at || ''}|${report.storage_path || ''}`).join('||');
+        return serialize(prev) === serialize(rows) ? prev : rows;
+      });
     } catch (err) { console.error('Error fetching reports FULL:', JSON.stringify(err, null, 2)); }
     finally { setReportsLoading(false); }
   }, [profile?.id]);
@@ -618,6 +622,7 @@ useEffect(() => {
   if (hadActiveProcessingJob && !hasActiveProcessingJob) {
     fetchRecentJobs();
     fetchLatestFailedJob();
+    fetchReports();
   }
 }, [profile?.id, hasActiveProcessingJob]);
 
