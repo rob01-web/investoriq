@@ -901,6 +901,7 @@ useEffect(() => {
       setTimeout(() => {
         fetchInProgressJobs();
         fetchEntitlements();
+        fetchRecentJobs();
       }, 250);
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
