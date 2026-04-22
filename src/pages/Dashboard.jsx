@@ -562,6 +562,8 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const syncEverything = async () => {
     await Promise.all([
       fetchEntitlements(),
+      fetchInProgressJobs(),
+      fetchLatestFailedJob(),
     ]);
     setAcknowledged(false);
     setAckLocked(false);
@@ -895,6 +897,7 @@ useEffect(() => {
       setStagedBatchId(null);
       setTimeout(() => {
         fetchInProgressJobs();
+        fetchEntitlements();
       }, 250);
     } catch (error) {
       console.error('Queue Error FULL:', error, error?.stack);
