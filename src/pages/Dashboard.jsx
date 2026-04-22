@@ -321,6 +321,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const propertyNameRef = useRef('');
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
+  const hadActiveProcessingJobRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -608,6 +609,16 @@ useEffect(() => {
     fetchInProgressJobs();
   }, 60000);
   return () => { window.clearInterval(intervalId); };
+}, [profile?.id, hasActiveProcessingJob]);
+
+useEffect(() => {
+  const hadActiveProcessingJob = hadActiveProcessingJobRef.current;
+  hadActiveProcessingJobRef.current = hasActiveProcessingJob;
+  if (!profile?.id) return;
+  if (hadActiveProcessingJob && !hasActiveProcessingJob) {
+    fetchRecentJobs();
+    fetchLatestFailedJob();
+  }
 }, [profile?.id, hasActiveProcessingJob]);
 
 useEffect(() => {
