@@ -572,6 +572,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
       fetchEntitlements(),
       fetchInProgressJobs(),
       fetchLatestFailedJob(),
+      fetchRecentJobs(),
     ]);
     setAcknowledged(false);
     setAckLocked(false);

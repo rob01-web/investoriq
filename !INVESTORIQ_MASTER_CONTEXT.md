@@ -533,6 +533,9 @@
   - diagnostic-mode `reportHistoryCards` and `readyReports` were temporarily short-circuited to `[]` during isolation, then those stale suppressions were removed after normal branch reactivation
   - Ready to Download and Report History / Archive now use real `reports` data again
   - diagnostic-mode `setScopeConfirmed(false)` effect now returns early when `DASHBOARD_DIAG_MINIMAL` is true
+  - `fetchInProgressJobs()` now has an equality guard so unchanged active-job rows do not commit a new `inProgressJobs` array
+  - `fetchReports()` now has an equality guard so unchanged report rows do not commit a new `reports` array
+  - active -> inactive job transition now triggers a one-shot visibility refresh for `fetchRecentJobs()`, `fetchLatestFailedJob()`, and `fetchReports()`
 - Latest Generate-path diagnostic patches completed:
   - diagnostic-mode staged upload skip tested inside `handleAnalyze` while preserving loop structure and `stagedFiles` shape
   - diagnostic-mode guard added so post-Generate `setUploadedFiles([])` is skipped only when `DASHBOARD_DIAG_MINIMAL` is true
@@ -590,9 +593,104 @@
   - diagnostic heading copy corrected from `Latest failed / needs documents` to `Latest failed job`
   - these changes were structural seams intended to reduce render coupling while preserving InvestorIQ visual language
 - Safest next work:
-  - controlled live retesting / confidence validation of the real 4-section Dashboard branch
-  - verify completed-report visibility in Ready to Download and Report History / Archive after worker completion
+  - investigate Dashboard status-truth alignment between `inProgressJobs`, `recentJobs`, `latestFailedJob`, and `reports`
+  - determine why the same job can appear as `needs_documents` in Step 03 while also appearing as `queued` in Active Jobs
+  - determine which status/source becomes orphaned after worker runs and why jobs can still disappear after full page refresh
   - only after Dashboard confidence is good, resume underwriting proof validation, especially Forest City Manor
+
+### Dashboard Stability Findings (April 2026)
+
+- Root cause category identified:
+  - frontend state churn / polling re-render pressure
+  - the freeze reproduced while the page was idle, which points away from backend execution as the direct UI-freeze trigger
+- Key breakthrough:
+  - idle freeze / flicker behavior was materially reduced after `fetchInProgressJobs()` stopped committing unchanged active-job arrays
+  - this identified repeated frontend state commits as a primary Dashboard stability issue
+- Confirmed behavior:
+  - the page could freeze or lag even without active typing, upload, or Generate interaction
+  - after the `inProgressJobs` equality guard, a long idle session of roughly 5 hours remained stable
+
+### Dashboard Stability Patches Applied
+
+- `fetchInProgressJobs()` equality guard:
+  - added a deterministic comparison over active-job fields used by Dashboard rendering
+  - unchanged active-job fetch results now return the previous `inProgressJobs` array instead of committing a new array
+  - result: significant reduction in idle flicker / lag
+- `fetchReports()` equality guard:
+  - added a deterministic comparison over fields selected for report rendering: `id`, `property_name`, `report_type`, `created_at`, and `storage_path`
+  - unchanged report fetch results now return the previous `reports` array instead of committing a new array
+
+### Dashboard Visibility Restoration Work
+
+- Mount-time restore currently includes:
+  - `fetchEntitlements()`
+  - `fetchInProgressJobs()`
+  - `fetchLatestFailedJob()`
+- Mount-time restore still intentionally excludes:
+  - `fetchRecentJobs()`
+  - `fetchReports()`
+- Post-generate restore currently includes:
+  - `fetchInProgressJobs()`
+  - `fetchEntitlements()`
+  - `fetchRecentJobs()`
+- Active -> inactive transition restore:
+  - when `hasActiveProcessingJob` changes from `true` to `false`, Dashboard now runs:
+    - `fetchRecentJobs()`
+    - `fetchLatestFailedJob()`
+    - `fetchReports()`
+  - this is intended to restore non-active job visibility and completed-report visibility without broad mount-time report refresh
+
+### Dashboard Data Source Model
+
+- `inProgressJobs`:
+  - active pipeline only
+  - currently covers `queued`, `extracting`, `underwriting`, `scoring`, `rendering`, `pdf_generating`, and `publishing`
+- `recentJobs`:
+  - broader lifecycle states
+  - includes `needs_documents`, active statuses, `published`, and `failed`
+- `latestFailedJob`:
+  - failed only
+  - does not cover `needs_documents`
+- `reports`:
+  - published report artifacts only
+  - powers Ready to Download and Report History / Archive
+- Important:
+  - these Dashboard sources are not fully synchronized
+  - visibility depends on correct timing and selection logic across the separate sources
+
+### Dashboard Current Known Issues
+
+- Status contradiction:
+  - the same job can show as `needs_documents` in Step 03 while also showing as `queued` in Active Jobs
+  - root cause class is cross-source state mismatch between `inProgressJobs` and `recentJobs`
+- Post-worker disappearance:
+  - jobs can still disappear after worker runs
+  - this can still happen even after a full page refresh
+  - current evidence points to source/selection mismatch rather than a worker-code issue
+
+### Dashboard Restoration Status
+
+- Fully restored:
+  - 4-section Dashboard structure
+  - real normal Dashboard branch with `DASHBOARD_DIAG_MINIMAL = false`
+  - major idle stability after the `inProgressJobs` equality guard
+- Partially restored:
+  - job lifecycle visibility
+  - post-generate refresh behavior
+  - completed-report visibility after active processing ends
+- Still reduced / cautious:
+  - mount-time `fetchRecentJobs()`
+  - mount-time `fetchReports()`
+  - broad report auto-refresh
+  - Report History remains manual-first
+
+### Dashboard Next Investigation Target
+
+- Investigate status-truth alignment before additional restoration patches.
+- Determine:
+  - why `needs_documents` and `queued` can coexist visually for the same job
+  - which Dashboard source becomes orphaned after worker runs
+  - whether the next safe fix belongs in selection logic, source reconciliation, or a narrower fetch timing adjustment
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -879,13 +977,14 @@
     - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
     - only after that, perform the same style of acceptance investigation for Screening
   - Current immediate priority has now changed:
-    - Dashboard confidence validation through controlled live retesting of the real 4-section branch
+    - Dashboard status-truth alignment investigation in the real 4-section branch
     - underwriting validation run is paused until Dashboard usability is restored
     - do not move to Screening investigation yet
     - compartment mapping and structural seam patches are completed
     - `DASHBOARD_DIAG_MINIMAL` has been flipped back to `false`
     - stale completed-report suppressions were removed from `readyReports` and `reportHistoryCards`
-    - next step is controlled live retesting / confidence validation before returning to underwriting proof validation
+    - idle stability is materially improved after the `inProgressJobs` equality guard
+    - next step is to resolve cross-source status mismatch / disappearance before returning to underwriting proof validation
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -955,9 +1054,9 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - controlled live retesting / confidence validation of the real 4-section Dashboard branch
-  - confirm typing, upload, acknowledgement, Generate, refresh, reload, Ready to Download, and Report History / Archive behavior remain stable in the normal branch
-  - verify that completed reports remain visible after worker completion now that stale `readyReports` and `reportHistoryCards` suppressions have been removed
+  - investigate Dashboard status-truth alignment in the real 4-section branch
+  - determine why a job can show as `needs_documents` in Step 03 while also showing as `queued` in Active Jobs
+  - determine which Dashboard source becomes orphaned after worker runs and why jobs can still disappear after full page refresh
   - do not return to broad diagnostic micro-isolation unless live testing reproduces a specific narrow blocker
   - compartment mapping and structural seam patches are complete
   - restore practical Dashboard confidence before resuming underwriting validation
@@ -996,6 +1095,8 @@
   - the real 4-section Dashboard branch has been reactivated with `DASHBOARD_DIAG_MINIMAL = false`
   - stale completed-report suppressions were removed so Ready to Download and Report History / Archive use real `reports` data again
   - initial live retesting after reactivation was materially smoother, including Generate
+  - idle freeze / flicker was materially reduced after the `fetchInProgressJobs()` equality guard
+  - current critical issue is status-source mismatch: `needs_documents` can coexist visually with `queued`, and jobs can still disappear after worker runs / full refresh
   - worker kick did not cause lag in latest controlled testing
 - Do not assume the Dashboard freeze / lag is solved until controlled retesting proves otherwise.
 
@@ -1068,8 +1169,8 @@ Notes:
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
-  - Dashboard is materially improved after real 4-section branch reactivation, but still requires controlled confidence validation before outreach
-  - verify Ready to Download and Report History / Archive completed-report visibility during live retesting
+  - Dashboard idle stability is materially improved after real 4-section branch reactivation and the `inProgressJobs` equality guard
+  - resolve Dashboard status-truth mismatch / post-worker disappearance before treating Dashboard reliability as green for outreach
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
