@@ -479,7 +479,10 @@ const DASHBOARD_DIAG_MINIMAL = false;
       .order('created_at', { ascending: false }).limit(10);
     if (error) { console.error('Failed to fetch in-progress jobs:', error); return; }
     const rows = data || [];
-    setInProgressJobs(rows);
+    setInProgressJobs((prev) => {
+      const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}`).join('||');
+      return serialize(prev) === serialize(rows) ? prev : rows;
+    });
     await fetchJobEvents(rows.map((job) => job.id));
   };
 
