@@ -534,6 +534,7 @@ export function parseT12FromExtractedTables(tables) {
   const monthTokens = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
   const periodTokens = ['ytd', 'trailing 12', 't-12'];
   const metricTokens = ['noi', 'net operating income', 'total operating expenses', 'effective gross income'];
+  const annualSummaryTokens = ['annual total', 'annual', 'category', '% of egi', 'notes'];
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const headerHasToken = (rows, token, { prefix = false, word = false } = {}) =>
     (rows || []).some((row) =>
@@ -559,15 +560,30 @@ export function parseT12FromExtractedTables(tables) {
       const hasPeriod =
         monthTokens.some((token) => headerHasToken(headerRows, token, { prefix: true })) ||
         periodTokens.some((token) => headerHasToken(headerRows, token));
-      const hasMetric = metricTokens.some((token) =>
+      const metricMatches = metricTokens.filter((token) =>
         headerHasToken(headerRows, token, { word: token === 'noi' })
       );
-      if (!hasPeriod || !hasMetric) return null;
+      const annualSummaryMatches = annualSummaryTokens.filter((token) => headerHasToken(headerRows, token));
+      const rowMetricMatches = labelRules.filter((rule) =>
+        rows.some((row) =>
+          Array.isArray(row) &&
+          row.some((cell) => {
+            const text = normalizeText(cell);
+            return text && rule.labels.some((label) => text.includes(label));
+          })
+        )
+      );
+      const hasMetric = metricMatches.length > 0;
+      const hasAnnualSummaryStructure = annualSummaryMatches.length >= 2;
+      const hasAnnualSummaryMetrics = rowMetricMatches.length >= 4;
+      if ((!hasPeriod || !hasMetric) && !(hasAnnualSummaryStructure && hasAnnualSummaryMetrics)) return null;
 
       const score =
         monthTokens.filter((token) => headerHasToken(headerRows, token, { prefix: true })).length +
         periodTokens.filter((token) => headerHasToken(headerRows, token)).length +
-        metricTokens.filter((token) => headerHasToken(headerRows, token, { word: token === 'noi' })).length;
+        metricMatches.length +
+        annualSummaryMatches.length +
+        rowMetricMatches.length;
       return { rows, score };
     })
     .filter(Boolean);
@@ -1344,6 +1360,111 @@ export default async function handler(req, res) {
             const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
 
             if (presentCount < 4) {
+              try {
+                const { data: tablesArtifact } = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('bucket, object_path')
+                  .eq('job_id', jobId)
+                  .eq('type', 'document_tables_extracted')
+                  .eq('payload->>source_file_id', String(file.id))
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (tablesArtifact?.bucket && tablesArtifact?.object_path) {
+                  const { data: tablesFile, error: tablesDownloadErr } = await supabaseAdmin.storage
+                    .from(tablesArtifact.bucket)
+                    .download(tablesArtifact.object_path);
+
+                  if (!tablesDownloadErr && tablesFile) {
+                    const tablesBuffer = Buffer.from(await tablesFile.arrayBuffer());
+                    const tablesPayload = JSON.parse(tablesBuffer.toString('utf-8'));
+                    const parsedT12FromTables = parseT12FromExtractedTables(tablesPayload?.tables);
+                    const fallbackRequiredValues = [
+                      parsedT12FromTables?.gross_potential_rent,
+                      parsedT12FromTables?.effective_gross_income,
+                      parsedT12FromTables?.total_operating_expenses,
+                      parsedT12FromTables?.net_operating_income,
+                    ];
+                    const fallbackPresentCount = fallbackRequiredValues.filter((value) => Number.isFinite(value)).length;
+
+                    if (fallbackPresentCount === 4) {
+                      const fallbackParseWarnings = [];
+                      if (!Number.isFinite(parsedT12FromTables?.gross_potential_rent)) fallbackParseWarnings.push('missing_gross_potential_rent');
+                      if (!Number.isFinite(parsedT12FromTables?.effective_gross_income)) fallbackParseWarnings.push('missing_effective_gross_income');
+                      if (!Number.isFinite(parsedT12FromTables?.total_operating_expenses)) fallbackParseWarnings.push('missing_total_operating_expenses');
+                      if (!Number.isFinite(parsedT12FromTables?.net_operating_income)) fallbackParseWarnings.push('missing_net_operating_income');
+                      if (declaredTypeMismatch) fallbackParseWarnings.push('declared_doc_type_mismatch');
+
+                      const { error: fallbackArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                        {
+                          job_id: jobId,
+                          user_id: file.user_id || null,
+                          type: 't12_parsed',
+                          bucket: 'system',
+                          object_path: `analysis_jobs/${jobId}/t12/${file.id}.json`,
+                          payload: {
+                            file_id: file.id,
+                            original_filename: file.original_filename,
+                            declared_doc_type: declaredDocType,
+                            detected_doc_type: detectedDocType,
+                            classifier_score: classifierScore,
+                            classifier_signals: classifierSignals,
+                            method: 'aws_textract_tables',
+                            confidence: 0.9,
+                            gross_potential_rent: parsedT12FromTables.gross_potential_rent,
+                            effective_gross_income: parsedT12FromTables.effective_gross_income,
+                            total_operating_expenses: parsedT12FromTables.total_operating_expenses,
+                            net_operating_income: parsedT12FromTables.net_operating_income,
+                            income_lines: Array.isArray(parsedT12FromTables?.income_lines) ? parsedT12FromTables.income_lines : [],
+                            expense_lines: Array.isArray(parsedT12FromTables?.expense_lines) ? parsedT12FromTables.expense_lines : [],
+                            column_map: parsedT12FromTables?.column_map || null,
+                            parse_warnings: fallbackParseWarnings,
+                          },
+                        },
+                      ]);
+
+                      if (fallbackArtifactErr) {
+                        throw new Error(fallbackArtifactErr.message || 'Failed to write t12 artifact');
+                      }
+
+                      await supabaseAdmin
+                        .from('analysis_job_files')
+                        .update({ parse_status: 'parsed', parse_error: null })
+                        .eq('id', file.id);
+
+                      const { error: fallbackParsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                        {
+                          job_id: jobId,
+                          user_id: file.user_id || null,
+                          type: 'worker_event',
+                          bucket: 'internal',
+                          object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                            nowIso
+                          )}.json`,
+                          payload: {
+                            event: 'parser_completed',
+                            parser: 't12',
+                            result: 'parsed',
+                            job_id: jobId,
+                            timestamp: nowIso,
+                          },
+                        },
+                      ]);
+
+                      if (fallbackParsedEventErr) {
+                        console.error('Failed to write parser_completed event:', fallbackParsedEventErr.message);
+                      }
+
+                      parsedCount += 1;
+                      continue;
+                    }
+                  }
+                }
+              } catch (_fallbackErr) {
+                // Fall through to the existing fail-closed text coverage error.
+              }
+
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({
