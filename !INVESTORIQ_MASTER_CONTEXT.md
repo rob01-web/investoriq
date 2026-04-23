@@ -626,8 +626,8 @@
   - `fetchEntitlements()`
   - `fetchInProgressJobs()`
   - `fetchLatestFailedJob()`
-- Mount-time restore still intentionally excludes:
   - `fetchRecentJobs()`
+- Mount-time restore still intentionally excludes:
   - `fetchReports()`
 - Post-generate restore currently includes:
   - `fetchInProgressJobs()`
@@ -665,7 +665,6 @@
   - root cause class is cross-source state mismatch between `inProgressJobs` and `recentJobs`
 - Post-worker disappearance:
   - jobs can still disappear after worker runs
-  - this can still happen even after a full page refresh
   - current evidence points to source/selection mismatch rather than a worker-code issue
 
 ### Dashboard Restoration Status
@@ -691,6 +690,44 @@
   - why `needs_documents` and `queued` can coexist visually for the same job
   - which Dashboard source becomes orphaned after worker runs
   - whether the next safe fix belongs in selection logic, source reconciliation, or a narrower fetch timing adjustment
+
+### Latest Dashboard + Worker Reality Update (April 2026)
+
+- Dashboard status-truth investigation was completed in the real 4-section branch.
+- Exact Dashboard source model was confirmed:
+  - `inProgressJobs` = active pipeline only
+  - `recentJobs` = broader lifecycle including `needs_documents`
+  - `latestFailedJob` = failed only
+  - `reports` = published artifacts only
+- Exact orphaned lifecycle state was confirmed as `needs_documents`.
+- Exact reload visibility gap was confirmed: mount-time Dashboard initialization did not fetch `recentJobs`, so `needs_documents` could disappear after refresh even when still present in the database.
+- A narrow mount-time visibility restore was applied in `src/pages/Dashboard.jsx` by adding `fetchRecentJobs()` back into the mount `syncEverything()` path.
+- Result:
+  - `needs_documents` no longer disappeared on refresh
+  - lifecycle visibility was restored
+- However, the Dashboard freeze later reappeared again in live use after that change.
+- Current interpretation:
+  - lifecycle visibility gap and freeze root cause are separate problems
+  - the freeze is still the top launch blocker
+- Product-contract clarification is now locked more explicitly:
+  - `needs_documents` is NOT a valid customer-facing V1 endpoint
+  - users cannot upload additional documents after generation begins
+  - one purchase = one generation
+  - second run occurs only from admin when InvestorIQ failed on its side
+- Fresh worker-path investigation confirmed:
+  - there were exactly two live `needs_documents` assignments in `api/admin-run-worker.js`
+  - the extracting-stage branch represented a system-side parsing / artifact failure, not a valid customer continuation state
+  - the rendering-stage branch also represents an internal inconsistency / system-side failure bucket, not a true user-actionable missing-doc state
+- Extracting-stage worker correction was applied:
+  - extracting-stage `needs_documents` was converted to `failed`
+  - extracting -> `needs_documents` transition artifact was converted to extracting -> `failed`
+  - misleading continuation wording implying upload-more-later was removed from that branch
+- Remaining worker follow-up:
+  - rendering-stage `needs_documents` still exists and remains the next worker-status cleanup target once Dashboard freeze work is under control
+- Dashboard wording polish decision:
+  - bottom archive surface wording should now be:
+    - section title: `Generated Reports`
+    - subheading: `Archive`
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -977,14 +1014,19 @@
     - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
     - only after that, perform the same style of acceptance investigation for Screening
   - Current immediate priority has now changed:
-    - Dashboard status-truth alignment investigation in the real 4-section branch
+    - Dashboard freeze / lag root-cause isolation and fix
+    - remove rendering-stage `needs_documents`
+    - validate failed-job entitlement behavior after worker-status cleanup
+    - resume final underwriting proof validation, especially Forest City Manor
+    - only then resume Screening acceptance investigation
     - underwriting validation run is paused until Dashboard usability is restored
     - do not move to Screening investigation yet
     - compartment mapping and structural seam patches are completed
     - `DASHBOARD_DIAG_MINIMAL` has been flipped back to `false`
     - stale completed-report suppressions were removed from `readyReports` and `reportHistoryCards`
-    - idle stability is materially improved after the `inProgressJobs` equality guard
-    - next step is to resolve cross-source status mismatch / disappearance before returning to underwriting proof validation
+    - `needs_documents` reload visibility gap is fixed
+    - extracting-stage `needs_documents` has been converted to `failed`
+    - idle stability is materially improved after the `inProgressJobs` equality guard, but the freeze is still unresolved
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -1054,17 +1096,16 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - investigate Dashboard status-truth alignment in the real 4-section branch
-  - determine why a job can show as `needs_documents` in Step 03 while also showing as `queued` in Active Jobs
-  - determine which Dashboard source becomes orphaned after worker runs and why jobs can still disappear after full page refresh
-  - do not return to broad diagnostic micro-isolation unless live testing reproduces a specific narrow blocker
-  - compartment mapping and structural seam patches are complete
-  - restore practical Dashboard confidence before resuming underwriting validation
+  - isolate the real current Dashboard freeze cause in `src/pages/Dashboard.jsx`
+  - treat freeze root cause as separate from the already-fixed `needs_documents` reload visibility gap
+  - do not re-open broad worker redesign
+  - do not resume underwriting proof validation until Dashboard freeze confidence is restored
 
 - AFTER THAT
-  - rerun the underwriting proof validation, especially Forest City Manor
-  - confirm whether the completed underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
-  - only then move to Screening acceptance investigation
+  - remove rendering-stage `needs_documents`
+  - verify failure / entitlement behavior
+  - rerun Forest City Manor
+  - then continue final validation and outreach prep
   - complete final outreach-prep / pricing / notification / polish items
   - optionally remove / retire leftover SES helper / config / doc references later if desired
   - apply any surgical copy / typography cleanups that are truly needed
@@ -1169,8 +1210,11 @@ Notes:
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
-  - Dashboard idle stability is materially improved after real 4-section branch reactivation and the `inProgressJobs` equality guard
-  - resolve Dashboard status-truth mismatch / post-worker disappearance before treating Dashboard reliability as green for outreach
+  - `needs_documents` refresh disappearance gap was fixed by restoring mount-time `fetchRecentJobs()`
+  - Dashboard freeze is still unresolved and remains the bigger blocker
+  - customer-facing `needs_documents` is not an acceptable V1 endpoint
+  - extracting-stage `needs_documents` has been converted to `failed`
+  - rendering-stage `needs_documents` still remains for later cleanup
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed

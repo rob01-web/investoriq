@@ -498,7 +498,10 @@ const DASHBOARD_DIAG_MINIMAL = false;
       .order('created_at', { ascending: false }).limit(25);
     if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
     const rows = data || [];
-    setRecentJobs(rows);
+    setRecentJobs((prev) => {
+      const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.report_type || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}|${job.error_message || ''}|${job.error_code || ''}`).join('||');
+      return serialize(prev) === serialize(rows) ? prev : rows;
+    });
     return rows;
   };
 
