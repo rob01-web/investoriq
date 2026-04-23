@@ -589,12 +589,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     const typedJobs = recentJobs.filter((job) => job.report_type === selectedReportType);
     if (typedJobs.length === 0) { if (jobId) setJobId(null); setLockedJobIdForUploads(null); return; }
 
-    const preferredNeedsDocsJob = typedJobs.find((job) => {
-      const hasName = String(job?.property_name || '').trim().length > 0;
-      return job.status === 'needs_documents' && hasName;
-    });
-
-    const preferredJob = preferredNeedsDocsJob || typedJobs[0];
+  const preferredJob = typedJobs[0];
 
     if (preferredJob?.id && preferredJob.id !== jobId) {
       setJobId(preferredJob.id);
