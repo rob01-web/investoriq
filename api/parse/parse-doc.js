@@ -34,8 +34,14 @@ const parseMoneyLike = (value) => {
   const text = String(value).trim();
   if (!text || text === '-') return null;
   const isParenNegative = /^\(.*\)$/.test(text);
-  const cleaned = text.replace(/[,$()\s]/g, '').replace(/[^0-9.\-]/g, '');
-  if (!cleaned) return null;
+  // Extract first valid currency-like number only (ignore trailing % or extra numbers)
+  const match = text.match(/\(?-?\$?\s*[\d,]+(?:\.\d{1,2})?\)?/);
+
+  if (!match) return null;
+
+  let cleaned = match[0]
+    .replace(/[,$()\s]/g, '');
+
   let parsed = Number(cleaned);
   if (!Number.isFinite(parsed)) return null;
   if (isParenNegative && parsed > 0) parsed = -parsed;
