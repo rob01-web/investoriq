@@ -143,7 +143,8 @@ export default async function handler(req, res) {
           await supabaseAdmin
             .from('analysis_job_files')
             .update({ parse_status: 'extracted', parse_error: null })
-            .eq('id', file.id);
+            .eq('id', file.id)
+            .or('parse_status.is.null,parse_status.eq.pending,parse_status.eq.uploaded');
 
           extractedCount += 1;
           results.push({
@@ -343,7 +344,8 @@ export default async function handler(req, res) {
         await supabaseAdmin
           .from('analysis_job_files')
           .update({ parse_status: 'extracted', parse_error: null })
-          .eq('id', file.id);
+          .eq('id', file.id)
+          .or('parse_status.is.null,parse_status.eq.pending,parse_status.eq.uploaded');
 
         extractedCount += 1;
         results.push({
