@@ -687,11 +687,11 @@ useEffect(() => {
   const preflightHardMissing = selectedReportType === 'underwriting' && (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
   const visibleLatestFailedJob = latestFailedJob && !dismissedJobIds.has(String(latestFailedJob.id)) ? latestFailedJob : null;
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
-  const jobFromNeedsDocuments = recentJobs.find((job) => job.id === jobId && job.status === 'needs_documents') || null;
+  const jobFromNeedsDocuments = null;
   const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
   const activeJobForRuns = jobFromInProgress || jobFromFailed || jobFromNeedsDocuments || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
-  const showNeedsDocsWarning = Boolean(jobId) && activeJobForRuns?.id === jobId && activeJobForRuns?.status === 'needs_documents' && Boolean(activeNeedsDocumentsEvent);
+  const showNeedsDocsWarning = false;
   const activeFailedReason =
     activeJobForRuns?.failure_reason ||
     activeJobForRuns?.error_message ||
@@ -1525,7 +1525,7 @@ useEffect(() => {
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Queued for processing.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing in progress.'
-                    : activeJobForRuns?.status === 'needs_documents' ? (activeFailedReason || needsDocumentsMessage)
+                    : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : 'Complete steps 1 and 2 to generate your report.'}
