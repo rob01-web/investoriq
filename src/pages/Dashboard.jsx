@@ -584,18 +584,16 @@ const DASHBOARD_DIAG_MINIMAL = false;
   if (profile?.id) syncEverything();
 }, [profile?.id]);
 
-    useEffect(() => {
-    if (recentJobs.length === 0) return;
-    const typedJobs = recentJobs.filter((job) => job.report_type === selectedReportType);
-    if (typedJobs.length === 0) { if (jobId) setJobId(null); setLockedJobIdForUploads(null); return; }
+useEffect(() => {
+  if (recentJobs.length === 0) return;
 
-  const preferredJob = typedJobs[0];
+  const preferredJob = recentJobs[0];
 
-    if (preferredJob?.id && preferredJob.id !== jobId) {
-      setJobId(preferredJob.id);
-      setLockedJobIdForUploads(preferredJob.id);
-    }
-  }, [recentJobs, selectedReportType]);
+  if (preferredJob?.id && preferredJob.id !== jobId) {
+    setJobId(preferredJob.id);
+    setLockedJobIdForUploads(preferredJob.id);
+  }
+}, [recentJobs, jobId]);
 
   useEffect(() => {
     const url = new URL(window.location.href);

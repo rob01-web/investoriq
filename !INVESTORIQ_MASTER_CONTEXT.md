@@ -187,13 +187,31 @@
   - can incorporate mortgage statement / loan term sheet / appraisal / property tax artifacts when parsed
   - uses active debt normalization / fallback between mortgage statement and loan term sheet
 - Underwriting intake acceptance investigation is complete, and the ranked patch wave was executed in sequence with anchor-locked, minimal-diff changes only.
-- Forest City Manor remained the real-world proof case that exposed the underwriting intake contract mismatch:
+- Forest City Manor was the real-world proof case that exposed the underwriting intake contract mismatch and is now materially green after the parser / status-sync fixes:
   - readable PDF T12
   - XLSX rent roll
   - debt-style purchase assumptions PDF
   - broker email
   - renovation budget
   - failure was treated as a product-contract mismatch, not simply bad user documents
+  - current locked truth now confirms:
+    - Forest City Manor Underwriting Test 1 = `published`
+    - Forest City Manor Screening Test 1 = `published`
+    - latest `analysis_job_files` rows confirm:
+      - T12 = `parsed`
+      - Rent Roll = `parsed`
+      - `loan_term_sheet` = `parsed` for the underwriting package
+      - supporting unclassified docs remain `parsed_with_warnings` where appropriate
+    - worker lifecycle advanced fully through:
+      - `extracting`
+      - `underwriting`
+      - `scoring`
+      - `rendering`
+      - `pdf_generating`
+      - `publishing`
+      - `published`
+    - generated PDFs exist for both reports
+    - reports explicitly confirm T12 and Rent Roll coverage in output
 - Final underwriting acceptance patch wave status:
   - Patch 1 passed: worker-side user-facing failure message precision in `api/admin-run-worker.js`
   - Patch 2 passed: live `loan_terms` routing normalized into `loan_term_sheet`
@@ -671,6 +689,15 @@
   - current product truth is now clearer:
     - Step 01 selection should control new intake only
     - Step 03 must behave as a true current-job surface, not a selected-report-type surface
+  - stale failure pinning was then traced further to the report-type selector itself:
+    - `recentJobs` filtered by `selectedReportType`
+    - selector explicitly preferred older `needs_documents` rows
+  - patch applied in `src/pages/Dashboard.jsx`:
+    - removed the old `preferredNeedsDocsJob` preference
+    - current selection now uses:
+      - `const preferredJob = typedJobs[0];`
+  - result:
+    - Step 03 no longer hard-pins itself to an older `needs_documents` row for that report type
 - V1-invalid `needs_documents` presentation:
   - customer-facing `needs_documents` remains invalid for V1
   - Step 03 still has remaining user-facing `needs_documents` display paths that should be converted to failed / system-side messaging instead
@@ -749,19 +776,36 @@
   - bottom archive surface wording should now be:
     - section title: `Generated Reports`
     - subheading: `Archive`
-- Forest City Manor remains the key targeted underwriting proof-case rather than evidence of universal parser failure:
+- Ready to Download section decision and current status:
+  - `Ready to Download` was investigated as a pure render surface over:
+    - `const readyReports = reports.filter((r) => r.storage_path);`
+  - investigation confirmed it has no fetch/effect/state coupling
+  - safe patch shape chosen:
+    - remove JSX only
+    - do not remove `readyReports`
+    - do not combine with wording changes
+  - patch was then applied:
+    - standalone `Ready to Download` render block removed from `src/pages/Dashboard.jsx`
+- Forest City Manor was confirmed as a targeted underwriting blind spot rather than evidence of universal parser failure:
   - Screening Test 9 passed using a different property / document set
   - messy Underwriting Test 9 passed using a different property / document set
-  - current issue is therefore framed as a targeted Forest City Manor blind spot, not a system-wide messy-doc failure
-- Underwriting failure root cause is now clearer:
+  - the issue was therefore framed correctly as a targeted Forest City Manor blind spot, not a system-wide messy-doc failure
+- Exact Forest City Manor failure chain that was found and fixed:
   - `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` is triggered only when the worker does not see both core parsed artifacts:
     - parsed `rent_roll`
     - parsed `t12`
   - supporting docs are not part of the blocking gate for that failure code
-  - Forest City Manor strongly points to the T12 path as the likely blind spot:
-    - Forest City Manor uses a PDF T12 / operating statement, XLSX rent roll, broker email PDF, purchase assumptions PDF, and renovation budget ODT
-    - 124 Richmond successful packages used spreadsheet T12 plus spreadsheet rent roll
-    - Forest City Manor T12 appears to be an annual-summary operating-statement format rather than a spreadsheet-style T12
+  - initial Forest City Manor failure was not a universal parser failure
+  - Forest City Manor used a PDF T12 / operating statement, XLSX rent roll, broker email PDF, purchase assumptions PDF, and renovation budget ODT
+  - T12 parser hardening was applied for PDF / annual-summary operating statements
+  - later investigation proved parser success artifacts were already being generated
+  - the real blocking bug was `api/parse/extract-job-text.js` overwriting `analysis_job_files.parse_status` back to `extracted` after parse success
+  - that overwrite affected non-spreadsheet files and could hit T12 / `loan_term_sheet` style documents
+  - fix applied:
+    - the two `parse_status: 'extracted'` updates in `api/parse/extract-job-text.js` are now guarded so they only apply for `NULL`, `pending`, or `uploaded`
+    - this prevents overwriting `parsed` / `failed`
+  - result:
+    - Forest City Manor now publishes correctly
 - Latest parser hardening steps:
   - Patch A: non-spreadsheet T12 parsing in `api/parse/parse-doc.js` now falls back from direct text extraction to already-extracted Textract tables via `parseT12FromExtractedTables(...)` before failing
   - this remains fail-closed: if fallback also fails, parser still fails
@@ -771,9 +815,8 @@
   - annual-summary support now recognizes header structure such as `annual total`, `annual`, `category`, `% of egi`, and `notes`
   - existing month/YTD path remains intact
   - downstream requirement that all four core T12 values must still be found before success remains unchanged
-- Current parser risk posture:
-  - Forest City Manor should now be re-tested after the two T12 parser hardening patches
-  - if Forest City Manor still fails after these T12 fixes, the next likely area to investigate is rent roll structuring, not support-doc routing
+  - Earlier T12 parsed-status check hardening also happened in `api/parse/parse-doc.js` so the direct text success path no longer silently masks a failed parsed-status update
+  - this hardening mattered, but the `extract-job-text.js` overwrite bug was the real final blocker
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -1031,7 +1074,7 @@
 - Dashboard-only multi-quantity purchase restoration while keeping public Pricing quantity-free: completed.
 - Signup page copy typo fix (`Screening & Underwriting reports`): completed.
 - Dashboard compartment seam wave in `src/pages/Dashboard.jsx`: completed.
-- Ready to Download card and empty state (`Completed reports will appear here.`): completed.
+- Ready to Download card and empty state (`Completed reports will appear here.`): completed during the compartment wave, then the standalone render block was removed later as a pure render-surface cleanup.
 - Diagnostic branch Generate button, Rent Roll upload, T12 upload, and acknowledgement checkbox controlled reintroduction: completed.
 - Post-generate delayed fetch burst reduced to `fetchInProgressJobs()` only: completed.
 - Diagnostic-mode `reportHistoryCards` / `readyReports` short-circuit: completed during isolation, then removed after normal branch reactivation.
@@ -1059,17 +1102,18 @@
   - What was supposed to happen next before the Dashboard issue came back:
     - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
     - only after that, perform the same style of acceptance investigation for Screening
-  - Current immediate priority has now changed:
+- Current immediate priority has now changed:
     - Dashboard freeze / lag root-cause isolation and fix
     - Step 03 current-job truth alignment
     - removal of customer-facing `needs_documents` presentation
-    - Forest City Manor re-test after T12 parser hardening
-    - if still failing, investigate rent roll parsing next
-    - bottom section wording change to `Archive`
+    - fetch reconciliation investigation
+    - lower completed-reports wording decision:
+      - keep `Generated Reports` / `Report history`
+      - or later change to `Generated Reports` / `Archive`
     - Admin Dashboard worker-run visibility improvement
     - remove rendering-stage `needs_documents`
     - validate failed-job entitlement behavior after worker-status cleanup
-    - resume final underwriting proof validation, especially Forest City Manor
+    - Forest City Manor proof-case is now materially green and no longer the immediate parser blocker
     - only then resume Screening acceptance investigation
     - underwriting validation run is paused until Dashboard usability is restored
     - do not move to Screening investigation yet
@@ -1098,6 +1142,9 @@
     - verify whether `report_purchases` is the true entitlement ledger
     - determine whether `profiles.report_credits` and related Dashboard credit displays are stale, secondary, legacy, or misleading
     - clean up empty / unclear credit tables and 0-credit display behavior after launch blockers are cleared
+  - Post-blocker parser / extraction follow-up
+    - broader repo-wide investigation for unchecked parsed-status success updates is useful follow-up work after launch blockers
+    - do not treat this as an immediate blocker unless a fresh real failure reproduces
   - Admin Dashboard worker-run visibility improvement
     - show queued job count clearly
     - show which jobs likely still need another worker run
@@ -1158,8 +1205,10 @@
   - remove remaining user-facing `needs_documents` display paths in Step 03
   - remove rendering-stage `needs_documents`
   - verify failure / entitlement behavior
-  - rerun Forest City Manor after the new T12 parser hardening patches
-  - if Forest City Manor still fails, investigate rent roll parsing next
+  - run the separate fetch-reconciliation investigation:
+    - determine what should be put back
+    - determine what should remain cautious
+    - do not do a blanket restoration
   - then continue final validation and outreach prep
   - complete final outreach-prep / pricing / notification / polish items
   - optionally remove / retire leftover SES helper / config / doc references later if desired
@@ -1174,7 +1223,7 @@
 - No random patching.
 - No worker changes.
 - No move to Screening yet.
-- Forest City Manor remains the underwriting proof case after Dashboard usability is restored.
+- Forest City Manor proof-case is now materially green; current immediate Dashboard work should no longer treat it as an unresolved parser blocker.
 
 ### Launch Risk Flag (Dashboard)
 
@@ -1239,7 +1288,28 @@ Notes:
 - No guessing.
 - Anchor-based reasoning only.
 
-## 10. Launch Readiness Snapshot
+## 10. Codex-First Workflow (Locked)
+
+  - All investigation and code extraction should be performed by Codex first.
+  - ChatGPT acts as:
+  - verifier
+  - reasoning layer
+  - patch planner
+
+  - Standard flow:
+  1. ChatGPT provides micro-prompt
+  2. Codex returns exact file-truth code
+  3. ChatGPT analyzes and determines next step
+  4. Only then propose anchor-locked patch (if needed)
+
+  - Never skip Codex investigation for:
+  - Dashboard logic
+  - Worker logic
+  - Parser logic
+
+  - No direct guessing or speculative patches without Codex-backed file truth.
+
+## 11. Launch Readiness Snapshot
 - Launch-ready now:
   - pricing and positioning are fully aligned with institutional positioning and proprietary-system messaging
   - screening vs underwriting separation is materially cleaner
@@ -1271,12 +1341,18 @@ Notes:
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
   - extracting-stage `needs_documents` has been converted to `failed`
   - Step 03 still needs current-job truth alignment and removal of remaining user-facing `needs_documents` display paths
-  - Forest City Manor remains the targeted underwriting proof-case, not proof of universal parser failure
-  - new T12 parser hardening has been applied for PDF / annual-summary operating-statement fallback handling; Forest City Manor now needs re-test
-  - if Forest City Manor still fails, rent roll parsing is the next likely investigation area
+  - Forest City Manor is now materially green:
+    - Screening Test 1 = `published`
+    - Underwriting Test 1 = `published`
+    - latest core file rows are `parsed`
+    - generated PDFs exist and confirm T12 / Rent Roll coverage
   - rendering-stage `needs_documents` still remains for later cleanup
+  - fetch reconciliation investigation still remains open and should not be handled through blanket restoration
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
-  - bottom Dashboard archive wording still needs the final `Archive` wording pass
+  - bottom completed-reports wording choice still remains open:
+    - keep `Generated Reports` / `Report history`
+    - or later change to `Generated Reports` / `Archive`
+  - Ready to Download standalone JSX block was removed after it was confirmed to be a pure render surface with no fetch/effect/state coupling
   - Admin Dashboard still needs clearer worker-run visibility while worker may require multiple manual kicks
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
