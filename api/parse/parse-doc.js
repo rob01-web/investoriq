@@ -1428,10 +1428,14 @@ export default async function handler(req, res) {
                         throw new Error(fallbackArtifactErr.message || 'Failed to write t12 artifact');
                       }
 
-                      await supabaseAdmin
+                      const { error: fallbackParsedStatusErr } = await supabaseAdmin
                         .from('analysis_job_files')
                         .update({ parse_status: 'parsed', parse_error: null })
                         .eq('id', file.id);
+
+                      if (fallbackParsedStatusErr) {
+                        throw new Error(`Failed to mark t12 file parsed: ${fallbackParsedStatusErr.message}`);
+                      }
 
                       const { error: fallbackParsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
                         {
@@ -1507,10 +1511,14 @@ export default async function handler(req, res) {
               throw new Error(artifactErr.message || 'Failed to write t12 artifact');
             }
 
-            await supabaseAdmin
+            const { error: parsedStatusErr } = await supabaseAdmin
               .from('analysis_job_files')
               .update({ parse_status: 'parsed', parse_error: null })
               .eq('id', file.id);
+
+            if (parsedStatusErr) {
+              throw new Error(`Failed to mark t12 file parsed: ${parsedStatusErr.message}`);
+            }
 
             const { error: parsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
               {
@@ -1892,10 +1900,14 @@ export default async function handler(req, res) {
             throw new Error(artifactErr.message || 'Failed to write t12 artifact');
           }
 
-          await supabaseAdmin
+          const { error: parsedStatusErr } = await supabaseAdmin
             .from('analysis_job_files')
             .update({ parse_status: 'parsed', parse_error: null })
             .eq('id', file.id);
+
+          if (parsedStatusErr) {
+            throw new Error(`Failed to mark t12 file parsed: ${parsedStatusErr.message}`);
+          }
 
           const { error: parsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
             {
