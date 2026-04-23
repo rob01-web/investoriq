@@ -616,6 +616,10 @@
   - added a deterministic comparison over active-job fields used by Dashboard rendering
   - unchanged active-job fetch results now return the previous `inProgressJobs` array instead of committing a new array
   - result: significant reduction in idle flicker / lag
+- `fetchRecentJobs()` equality guard:
+  - added a deterministic comparison over `recentJobs` fields used by Dashboard selection / lifecycle rendering
+  - unchanged recent-job fetch results now return the previous `recentJobs` array instead of committing a new array
+  - intended to reduce unnecessary re-renders from unchanged `recentJobs` payloads
 - `fetchReports()` equality guard:
   - added a deterministic comparison over fields selected for report rendering: `id`, `property_name`, `report_type`, `created_at`, and `storage_path`
   - unchanged report fetch results now return the previous `reports` array instead of committing a new array
@@ -661,11 +665,18 @@
 ### Dashboard Current Known Issues
 
 - Status contradiction:
-  - the same job can show as `needs_documents` in Step 03 while also showing as `queued` in Active Jobs
-  - root cause class is cross-source state mismatch between `inProgressJobs` and `recentJobs`
-- Post-worker disappearance:
-  - jobs can still disappear after worker runs
-  - current evidence points to source/selection mismatch rather than a worker-code issue
+  - Step 03 contradiction bug was traced to mixed-source `activeJobForRuns` fallback logic
+  - unrelated fallback rows (`inProgressJobs[0]`, `visibleLatestFailedJob`) were removed from `activeJobForRuns`
+  - however, live testing showed Step 03 is still too tightly coupled to `selectedReportType` / selected `jobId`
+  - current product truth is now clearer:
+    - Step 01 selection should control new intake only
+    - Step 03 must behave as a true current-job surface, not a selected-report-type surface
+- V1-invalid `needs_documents` presentation:
+  - customer-facing `needs_documents` remains invalid for V1
+  - Step 03 still has remaining user-facing `needs_documents` display paths that should be converted to failed / system-side messaging instead
+- Dashboard freeze / lag:
+  - freeze remains an active launch blocker
+  - the new `fetchRecentJobs()` equality guard was added as a targeted churn-reduction patch, but freeze is still not yet declared solved
 
 ### Dashboard Restoration Status
 
@@ -678,17 +689,16 @@
   - post-generate refresh behavior
   - completed-report visibility after active processing ends
 - Still reduced / cautious:
-  - mount-time `fetchRecentJobs()`
   - mount-time `fetchReports()`
   - broad report auto-refresh
   - Report History remains manual-first
 
 ### Dashboard Next Investigation Target
 
-- Investigate status-truth alignment before additional restoration patches.
+- Investigate Dashboard freeze / lag closure first, then finish status-truth alignment.
 - Determine:
-  - why `needs_documents` and `queued` can coexist visually for the same job
-  - which Dashboard source becomes orphaned after worker runs
+  - how to make Step 03 show the real active job regardless of selected report type
+  - how to remove remaining user-facing `needs_documents` display paths in Step 03
   - whether the next safe fix belongs in selection logic, source reconciliation, or a narrower fetch timing adjustment
 
 ### Latest Dashboard + Worker Reality Update (April 2026)
@@ -709,11 +719,22 @@
 - Current interpretation:
   - lifecycle visibility gap and freeze root cause are separate problems
   - the freeze is still the top launch blocker
+- A targeted churn-reduction patch was then applied:
+  - `fetchRecentJobs()` now uses a serialize-and-compare equality guard, matching the existing pattern already used for `fetchInProgressJobs()` and `fetchReports()`
+  - this was intended to reduce unnecessary re-renders from unchanged `recentJobs` payloads
+  - freeze is still not yet declared solved
 - Product-contract clarification is now locked more explicitly:
   - `needs_documents` is NOT a valid customer-facing V1 endpoint
   - users cannot upload additional documents after generation begins
   - one purchase = one generation
   - second run occurs only from admin when InvestorIQ failed on its side
+- Dashboard status/source reconciliation also progressed:
+  - Step 03 contradiction bug was traced to mixed-source `activeJobForRuns` fallback logic
+  - unrelated fallback rows (`inProgressJobs[0]`, `visibleLatestFailedJob`) were removed from `activeJobForRuns`
+  - live testing then showed Step 03 is still too tightly coupled to `selectedReportType` / selected `jobId`
+  - current product truth is now clearer:
+    - Step 01 selection should control new intake only
+    - Step 03 must behave as a true current-job surface, not a selected-report-type surface
 - Fresh worker-path investigation confirmed:
   - there were exactly two live `needs_documents` assignments in `api/admin-run-worker.js`
   - the extracting-stage branch represented a system-side parsing / artifact failure, not a valid customer continuation state
@@ -728,6 +749,31 @@
   - bottom archive surface wording should now be:
     - section title: `Generated Reports`
     - subheading: `Archive`
+- Forest City Manor remains the key targeted underwriting proof-case rather than evidence of universal parser failure:
+  - Screening Test 9 passed using a different property / document set
+  - messy Underwriting Test 9 passed using a different property / document set
+  - current issue is therefore framed as a targeted Forest City Manor blind spot, not a system-wide messy-doc failure
+- Underwriting failure root cause is now clearer:
+  - `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` is triggered only when the worker does not see both core parsed artifacts:
+    - parsed `rent_roll`
+    - parsed `t12`
+  - supporting docs are not part of the blocking gate for that failure code
+  - Forest City Manor strongly points to the T12 path as the likely blind spot:
+    - Forest City Manor uses a PDF T12 / operating statement, XLSX rent roll, broker email PDF, purchase assumptions PDF, and renovation budget ODT
+    - 124 Richmond successful packages used spreadsheet T12 plus spreadsheet rent roll
+    - Forest City Manor T12 appears to be an annual-summary operating-statement format rather than a spreadsheet-style T12
+- Latest parser hardening steps:
+  - Patch A: non-spreadsheet T12 parsing in `api/parse/parse-doc.js` now falls back from direct text extraction to already-extracted Textract tables via `parseT12FromExtractedTables(...)` before failing
+  - this remains fail-closed: if fallback also fails, parser still fails
+  - no worker gate changes
+  - no fabricated data
+  - Patch B: `parseT12FromExtractedTables(...)` was widened so Textract-table T12 detection now supports both month / YTD / trailing-12 tables and annual-summary operating statements
+  - annual-summary support now recognizes header structure such as `annual total`, `annual`, `category`, `% of egi`, and `notes`
+  - existing month/YTD path remains intact
+  - downstream requirement that all four core T12 values must still be found before success remains unchanged
+- Current parser risk posture:
+  - Forest City Manor should now be re-tested after the two T12 parser hardening patches
+  - if Forest City Manor still fails after these T12 fixes, the next likely area to investigate is rent roll structuring, not support-doc routing
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -1015,6 +1061,12 @@
     - only after that, perform the same style of acceptance investigation for Screening
   - Current immediate priority has now changed:
     - Dashboard freeze / lag root-cause isolation and fix
+    - Step 03 current-job truth alignment
+    - removal of customer-facing `needs_documents` presentation
+    - Forest City Manor re-test after T12 parser hardening
+    - if still failing, investigate rent roll parsing next
+    - bottom section wording change to `Archive`
+    - Admin Dashboard worker-run visibility improvement
     - remove rendering-stage `needs_documents`
     - validate failed-job entitlement behavior after worker-status cleanup
     - resume final underwriting proof validation, especially Forest City Manor
@@ -1026,7 +1078,7 @@
     - stale completed-report suppressions were removed from `readyReports` and `reportHistoryCards`
     - `needs_documents` reload visibility gap is fixed
     - extracting-stage `needs_documents` has been converted to `failed`
-    - idle stability is materially improved after the `inProgressJobs` equality guard, but the freeze is still unresolved
+    - idle stability is materially improved after the `inProgressJobs` equality guard, and `fetchRecentJobs()` now also has a matching equality guard, but the freeze is still unresolved
   - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
   - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
 
@@ -1102,9 +1154,12 @@
   - do not resume underwriting proof validation until Dashboard freeze confidence is restored
 
 - AFTER THAT
+  - make Step 03 show the real active job regardless of selected report type
+  - remove remaining user-facing `needs_documents` display paths in Step 03
   - remove rendering-stage `needs_documents`
   - verify failure / entitlement behavior
-  - rerun Forest City Manor
+  - rerun Forest City Manor after the new T12 parser hardening patches
+  - if Forest City Manor still fails, investigate rent roll parsing next
   - then continue final validation and outreach prep
   - complete final outreach-prep / pricing / notification / polish items
   - optionally remove / retire leftover SES helper / config / doc references later if desired
@@ -1211,11 +1266,18 @@ Notes:
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
   - `needs_documents` refresh disappearance gap was fixed by restoring mount-time `fetchRecentJobs()`
+  - `fetchRecentJobs()` now also has a serialize-and-compare equality guard to reduce unchanged-payload churn, but Dashboard freeze is still not declared solved
   - Dashboard freeze is still unresolved and remains the bigger blocker
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
   - extracting-stage `needs_documents` has been converted to `failed`
+  - Step 03 still needs current-job truth alignment and removal of remaining user-facing `needs_documents` display paths
+  - Forest City Manor remains the targeted underwriting proof-case, not proof of universal parser failure
+  - new T12 parser hardening has been applied for PDF / annual-summary operating-statement fallback handling; Forest City Manor now needs re-test
+  - if Forest City Manor still fails, rent roll parsing is the next likely investigation area
   - rendering-stage `needs_documents` still remains for later cleanup
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
+  - bottom Dashboard archive wording still needs the final `Archive` wording pass
+  - Admin Dashboard still needs clearer worker-run visibility while worker may require multiple manual kicks
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
   - final Codex institutional audit if needed after report review

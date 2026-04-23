@@ -905,6 +905,13 @@ export default async function handler(req, res) {
                     });
                     if (!t12Res.ok) {
                       console.error('parse-doc failed (t12):', t12Res.status);
+                      await supabaseAdmin
+                        .from('analysis_job_files')
+                        .update({
+                          parse_status: 'failed',
+                          parse_error: 't12_parse_request_failed',
+                        })
+                        .eq('id', pendingFile.id);
                     }
                   }
                 }
