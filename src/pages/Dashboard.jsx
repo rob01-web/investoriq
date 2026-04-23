@@ -696,7 +696,7 @@ useEffect(() => {
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
   const jobFromNeedsDocuments = recentJobs.find((job) => job.id === jobId && job.status === 'needs_documents') || null;
   const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
-  const activeJobForRuns = jobFromInProgress || jobFromNeedsDocuments || jobFromFailed || inProgressJobs[0] || visibleLatestFailedJob || null;
+  const activeJobForRuns = jobFromInProgress || jobFromFailed || jobFromNeedsDocuments || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = Boolean(jobId) && activeJobForRuns?.id === jobId && activeJobForRuns?.status === 'needs_documents' && Boolean(activeNeedsDocumentsEvent);
   const activeFailedReason =
