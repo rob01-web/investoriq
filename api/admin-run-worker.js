@@ -939,7 +939,7 @@ export default async function handler(req, res) {
             }
 
             const needsDocsUpdate = {
-              status: 'needs_documents',
+              status: 'failed',
               failure_reason:
                 'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts.',
             };
@@ -948,7 +948,7 @@ export default async function handler(req, res) {
             }
             if (supportsErrorMessage) {
               needsDocsUpdate.error_message =
-                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Job remains in needs_documents until a parsable Rent Roll and T12 are available.';
+                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts.';
             }
 
             const { error: needsDocsErr } = await supabaseAdmin
@@ -1033,7 +1033,7 @@ export default async function handler(req, res) {
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
               job.id,
               'extracting',
-              'needs_documents',
+              'failed',
               { user_id: job.user_id }
             );
 
