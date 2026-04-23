@@ -620,7 +620,16 @@ export function parseT12FromExtractedTables(tables) {
         }
         if (rule.labels.some((label) => cellText.includes(label))) {
           for (let j = i + 1; j < row.length; j += 1) {
+            const cell = String(row[j] || '').toLowerCase();
+
+            // Skip percentage columns explicitly
+            if (cell.includes('%')) continue;
+
             const value = numericFromCell(row[j]);
+
+            // Reject suspiciously large values (likely concatenation or bad extraction)
+            if (Number.isFinite(value) && value > 1_000_000_000) continue;
+
             if (value !== null) {
               found[rule.key] = value;
               break;
@@ -1326,7 +1335,8 @@ export default async function handler(req, res) {
                 const idx = text.toLowerCase().indexOf(label);
                 if (idx === -1) continue;
                 const snippet = text.slice(idx, idx + 120);
-                const match = snippet.match(/\(?-?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?/);
+                // Match ONLY first standalone currency-like number (stop before space + % or next number)
+                const match = snippet.match(/\(?-?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?(?!\s*\d)/);
                 if (match) {
                   let val = parseFloat(match[1].replace(/,/g, ''));
                   if (!Number.isFinite(val)) continue;

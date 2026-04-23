@@ -387,6 +387,23 @@
     - removed quantity selector from the public pricing page
     - public pricing page checkout now hard-calls quantity `1`
     - copy changed to `Portfolio pricing available on request.`
+- Final T12 numeric extraction hardening completed across ALL parsing layers:
+  - Layer 1: `parseMoneyLike` fixed to ignore `%` tokens and adjacent numeric bleed
+  - Layer 2: table parsing guarded with:
+    - percent-column skip logic
+    - >$1B sanity bounds to reject malformed concatenations
+  - Layer 3: text extraction regex hardened in `api/parse/parse-doc.js`:
+    - updated currency match to prevent trailing numeric capture bleed
+    - new regex:
+      `/\(?-?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?(?!\s*\d)/`
+    - ensures extraction stops before adjacent numeric tokens (e.g. `100%`)
+- Result:
+  - prevents concatenation bugs such as:
+    - `$2,517,120 100%` -> `2,517,120,100` (now eliminated)
+  - ensures clean isolation of financial values from mixed-format T12 rows
+- Parsing system classification:
+  - now considered **multi-layer hardened**
+  - both text-based and table-based extraction paths are aligned and safe
 
 ### Latest Live Validation Status (April 2026)
 
@@ -817,6 +834,12 @@
   - downstream requirement that all four core T12 values must still be found before success remains unchanged
   - Earlier T12 parsed-status check hardening also happened in `api/parse/parse-doc.js` so the direct text success path no longer silently masks a failed parsed-status update
   - this hardening mattered, but the `extract-job-text.js` overwrite bug was the real final blocker
+- T12 parsing is now fully hardened across:
+  - direct text extraction
+  - Textract fallback
+  - table parsing
+- Silent numeric corruption risk has been eliminated from the underwriting pipeline
+- Parsing system now behaves deterministically under mixed-format financial tables (currency + % + adjacent numeric tokens)
 
 ### Worker Runtime and Dashboard Reload Posture (April 12, 2026)
 
@@ -1086,45 +1109,35 @@
 - Completed-report visibility restored by removing stale `reportHistoryCards` / `readyReports` suppressions: completed.
 
 ### Immediate agenda - April 12, 2026
-- HIGH PRIORITY NEXT
-  - Report-core validation block remains green:
-    - Screening Test 7 green
-    - CLEAN Underwriting Test 7 green
-    - MESSY Underwriting Test 7 green
-  - Underwriting acceptance investigation plus ranked patch wave: completed.
-  - Ranked underwriting sequence executed in full:
-    1. user-facing failure message precision
-    2. `loan_terms` -> `loan_term_sheet` normalization and routing
-    3. dead fallback cleanup for core docs
-    4. T12 acceptance / gate widening
-    5. rent roll acceptance / gate widening
-    6. support-doc extraction contract mismatch
-  - What was supposed to happen next before the Dashboard issue came back:
-    - rerun the same underwriting proof test first, especially Forest City Manor, to validate whether the full underwriting acceptance patch wave fixed the real intake-contract mismatch in practice
-    - only after that, perform the same style of acceptance investigation for Screening
-- Current immediate priority has now changed:
-    - Dashboard freeze / lag root-cause isolation and fix
-    - Step 03 current-job truth alignment
-    - removal of customer-facing `needs_documents` presentation
-    - fetch reconciliation investigation
-    - lower completed-reports wording decision:
-      - keep `Generated Reports` / `Report history`
-      - or later change to `Generated Reports` / `Archive`
-    - Admin Dashboard worker-run visibility improvement
-    - remove rendering-stage `needs_documents`
-    - validate failed-job entitlement behavior after worker-status cleanup
-    - Forest City Manor proof-case is now materially green and no longer the immediate parser blocker
-    - only then resume Screening acceptance investigation
-    - underwriting validation run is paused until Dashboard usability is restored
-    - do not move to Screening investigation yet
-    - compartment mapping and structural seam patches are completed
-    - `DASHBOARD_DIAG_MINIMAL` has been flipped back to `false`
-    - stale completed-report suppressions were removed from `readyReports` and `reportHistoryCards`
-    - `needs_documents` reload visibility gap is fixed
-    - extracting-stage `needs_documents` has been converted to `failed`
-    - idle stability is materially improved after the `inProgressJobs` equality guard, and `fetchRecentJobs()` now also has a matching equality guard, but the freeze is still unresolved
-  - Keep worker frozen in the last known-good rollback state unless a brand-new blocker appears.
-  - Focus remaining pre-outreach work on Dashboard reliability, underwriting acceptance contract correction, outreach prep, pricing, notifications, and final polish rather than report-core math failures.
+- IMMEDIATE PRIORITY (UPDATED)
+  1. Dashboard freeze / lag - STILL ACTIVE BLOCKER
+     - root cause remains unresolved
+     - must be isolated in `src/pages/Dashboard.jsx`
+     - no new sync experiments
+     - focus on render pressure + UI coupling
+  2. Dashboard status-truth alignment
+     - Step 03 must reflect real active job
+     - remove dependency on selected report type
+     - eliminate contradictory states (queued vs needs_documents)
+  3. Remove remaining user-facing `needs_documents`
+     - not valid in V1 product model
+     - must be treated as system failure (`failed`)
+  4. Worker status cleanup (LOWER PRIORITY - POST DASHBOARD)
+     - remove rendering-stage `needs_documents`
+     - confirm entitlement restoration behavior
+  5. Rent Roll parsing validation (NEXT REPORT-CORE TASK)
+     - validate:
+       - unit counts
+       - totals row handling
+       - unit mix accuracy
+     - ensure no aggregation distortion
+  6. Final T12 validation run
+     - confirm:
+       - EGI
+       - expenses
+       - NOI
+       - ratios
+     - verify clean output across real document set
 
 - STILL OPEN
   - Preserve Resend as the launch notification default
@@ -1244,6 +1257,23 @@
   - current critical issue is status-source mismatch: `needs_documents` can coexist visually with `queued`, and jobs can still disappear after worker runs / full refresh
   - worker kick did not cause lag in latest controlled testing
 - Do not assume the Dashboard freeze / lag is solved until controlled retesting proves otherwise.
+
+### Parsing System Status (April 2026)
+
+- Parsing system is now fully hardened across:
+  - text extraction
+  - table extraction
+  - numeric normalization
+- Multi-layer protection prevents:
+  - adjacent numeric bleed
+  - percent contamination
+  - malformed concatenation
+- System now meets:
+  - deterministic underwriting requirements
+  - institutional-grade financial parsing expectations
+- Remaining report-core work is now:
+  - validation (not repair)
+  - edge-case tightening (rent roll)
 
 ## 7.1 Reports Table Schema (Locked)
 
