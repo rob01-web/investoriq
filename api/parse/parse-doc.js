@@ -318,8 +318,11 @@ const parseT12FromRowMatrices = (rowMatrices) => {
       let value = null;
       for (let i = 0; i < row.length; i += 1) {
         if (i === labelIdx) continue;
+        const cell = String(row[i] || '').toLowerCase();
+        if (cell.includes('%')) continue;
         const candidate = parseMoneyLike(row[i]);
         if (Number.isFinite(candidate)) {
+          if (candidate > 1_000_000_000) continue;
           value = candidate;
           break;
         }
@@ -1709,8 +1712,11 @@ export default async function handler(req, res) {
               for (let r = 1; r < rows.length; r += 1) {
                 const row = rows[r];
                 if (!Array.isArray(row)) continue;
+                const cell = String(row[idx] || '').toLowerCase();
+                if (cell.includes('%')) continue;
                 const value = numericFromCell(row[idx]);
                 if (!Number.isFinite(value)) continue;
+                if (value > 1_000_000_000) continue;
                 total += value;
                 count += 1;
               }
