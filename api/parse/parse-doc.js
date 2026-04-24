@@ -1430,7 +1430,7 @@ export default async function handler(req, res) {
                 if (idx === -1) continue;
                 const snippet = text.slice(idx, idx + 120);
                 // Match ONLY first standalone currency-like number (stop before space + % or next number)
-                const match = snippet.match(/\(?-?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?(?!\s*\d)/);
+                const match = snippet.match(/\(?-?\$?\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)\)?(?!\d)(?!\s*%)/);
                 if (match) {
                   let val = parseFloat(match[1].replace(/,/g, ''));
                   if (!Number.isFinite(val)) continue;
