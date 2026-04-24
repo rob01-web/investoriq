@@ -22,18 +22,19 @@
   - template / token replacement
   - section gating
   - DocRaptor rendering
-- Forest City Manor live publication status is green, but report-core output is not launch-safe:
-  - Screening and Underwriting tests continue to publish successfully
-  - Forest City Manor Tests 5, 6, and 7 hard-failed on the same T12 financial corruption
-  - generated reports still show:
-    - Effective Gross Income: $2,517,120,100
-    - Total Operating Expenses: $79,368,532
-    - Net Operating Income: $1,723,435
-  - source T12 values are:
+- Forest City Manor Screening Test 14 is GREEN:
+  - critical report-core launch blocker is materially resolved
+  - cover now correctly shows 144 Units
+  - asset class now correctly shows Multifamily - 144 Units
+  - T12 values now publish correctly:
     - Effective Gross Income: $2,517,120
     - Total Operating Expenses: $793,685
     - Net Operating Income: $1,723,435
-  - this is a hard launch blocker
+  - root display/count fix was in `api/generate-client-report.js`
+  - `computedRentRoll` total-unit selection now prefers finite `rentRollPayload.total_units`
+  - fallback to `rentRollUnits.length` only when parsed total is unavailable
+  - this was display/count selection only: no parser changes, no T12 math changes, no extrapolation changes
+  - prior active 144-unit / T12 corruption launch blocker is materially closed pending broader underwriting validation
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -1118,19 +1119,10 @@
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Full launch-blocker audit of `api/parse/parse-doc.js` (active task now)
-     - stop one-off branch patching
-     - identify every report-impact launch blocker in the file
-  2. Controlled bundled parser patch set
-     - patch all confirmed `parse-doc.js` launch blockers together
-     - then rerun Forest City Manor tests
-  3. Keep non-parser launch-risk items frozen until parser blocker is resolved
-     - no Dashboard changes
-     - no worker one-run behavior changes
-     - no report wording polish
-     - no valuation math changes
-     - no marketing/outreach work
-     - no additional user-facing retests before audit + bundled patch set
+  1. Audit and investigate debt / purchase assumptions ingestion path
+  2. Resume underwriting proof validation with Forest City Manor underwriting retest
+  3. Run pre-outreach repo-wide Codex red-team audit
+  4. Complete final launch readiness sweep
 
 - STILL OPEN
   - Preserve Resend as the launch notification default
@@ -1151,7 +1143,7 @@
   - Post-blocker parser / extraction follow-up
     - broader repo-wide investigation for unchecked parsed-status success updates is useful follow-up work after launch blockers
     - do not treat this as an immediate blocker unless a fresh real failure reproduces
-  - Debt / purchase assumptions path remains a separate blocker (secondary to T12 corruption)
+  - Debt / purchase assumptions artifact path remains a separate blocker
     - Forest City Manor Underwriting still states debt terms were not included / DSCR not assessed
     - purchase assumptions include: CMHC Select, 3.8% rate, 40-year amortization, 85% LTV
     - `generate-client-report.js` does not currently load a `purchase_assumptions` artifact path
@@ -1159,7 +1151,7 @@
     - show queued job count clearly
     - show which jobs likely still need another worker run
     - reduce manual guesswork while worker still requires 2 runs
-  - Dashboard follow-up after launch blockers are cleared
+  - Dashboard freeze / status-truth follow-up after report blockers
     - revisit Report History auto-visibility so newly published reports appear without manual Refresh
     - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
     - prefer a tightly scoped, low-churn solution only
@@ -1171,7 +1163,7 @@
     - remove any public-facing `AI` / `artificial intelligence` / generic AI-sounding wording
     - preserve proprietary document-driven positioning
   - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
-  - Final Codex institutional audit after final reports are reviewed
+  - Final repo hygiene / hidden surprise Codex red-team audit before Ken Dunn
   - Final readiness check after report review and any real blockers are fixed
 
 ### Before Ken Dunn outreach
@@ -1200,7 +1192,7 @@
 - CLEAN Underwriting Test 7 reviewed and remains showcase-ready.
 - MESSY Underwriting Test 7 reviewed and remains strong deterministic messy-doc validation evidence.
 - Dashboard freeze risk is no longer assumed resolved.
-- Report-core quality is now the immediate concern due active T12 corruption blocker.
+- Report-core risk is lower after Forest City Manor Screening Test 14, pending broader underwriting validation.
 - Before messaging Ken Dunn, run a Final Codex Red-Team Audit across major production files:
   - hidden surprises
   - duplicate/orphaned logic
@@ -1211,16 +1203,13 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - run the full launch-blocker audit of `api/parse/parse-doc.js`
-  - confirm all active report-impact corruption paths
-  - prepare one controlled bundled patch set for confirmed blockers only
+  - audit and investigate debt / purchase assumptions ingestion path
+  - confirm why Forest City Manor Underwriting debt terms / DSCR are not reflected
+  - identify the smallest document-driven artifact path correction if proven
 
 - AFTER THAT
-  - apply bundled `parse-doc.js` launch-blocker patch set
-  - rerun Forest City Manor tests
-  - verify T12 values match source with no silent corruption
-  - then resume remaining launch tasks in priority order
-  - run final Codex institutional audit before outreach
+  - resume Forest City Manor underwriting proof validation
+  - run final repo-wide Codex red-team audit before outreach
   - complete final readiness check
   - prepare website sample report placement only after blockers are closed
   - worker logic remains frozen in rollback state unless a brand-new blocker appears
@@ -1229,9 +1218,8 @@
 - No refactors.
 - No random patching.
 - No worker changes.
-- No Dashboard changes until parser blockers are resolved.
-- No move to Screening yet.
-- Forest City Manor remains an unresolved parser blocker until T12 corruption is closed.
+- No Dashboard changes until report blockers are resolved.
+- No report wording or valuation polish until debt / underwriting proof validation is complete.
 
 ### Launch Risk Flag (Dashboard)
 
@@ -1267,8 +1255,8 @@
   - CSV `sumColumn` now skips percent cells and rejects values over `1_000_000_000`
   - CSV row-fallback `sumRow` now skips percent cells and rejects values over `1_000_000_000`
   - these patches are present in file truth
-  - Forest City Manor Test 7 still failed with the same corrupted EGI and expense values
-  - conclusion: no more one-off branch patches for this blocker until the full `parse-doc.js` launch-blocker audit is complete
+  - later bundled audit strategy closed the Forest City Manor Screening report-core blocker by Test 14
+  - lesson reinforced: Repo-Wide Audit Mode is preferred over drip patches when repeated failures show a systemic bug class
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -1429,6 +1417,10 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - deterministic / no-hallucination / document-driven report behavior is validated
   - underwriting document-derived exit / refi cap labels now display exact parsed precision consistently, including `6.25%`
   - rent roll hardening is materially improved and currently pass-with-caution
+  - Forest City Manor Screening Test 14 is green:
+    - cover and asset class now show 144 Units
+    - T12 values publish correctly at EGI $2,517,120, OpEx $793,685, NOI $1,723,435
+    - unit-count display fix was in `api/generate-client-report.js` total-unit selection only
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1436,16 +1428,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - resolve the active T12 corruption launch blocker in generated reports:
-    - generated output still showing:
-      - Effective Gross Income: $2,517,120,100
-      - Total Operating Expenses: $79,368,532
-      - Net Operating Income: $1,723,435
-    - source T12 values are:
-      - Effective Gross Income: $2,517,120
-      - Total Operating Expenses: $793,685
-      - Net Operating Income: $1,723,435
-    - hard-failed across Forest City Manor Tests 5, 6, and 7
+  - investigate debt / purchase assumptions artifact path and rerun Forest City Manor underwriting proof validation
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
@@ -1456,7 +1439,6 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
   - extracting-stage `needs_documents` has been converted to `failed`
   - Step 03 still needs current-job truth alignment and removal of remaining user-facing `needs_documents` display paths
-  - Forest City Manor currently publishes but is not launch-safe due unresolved T12 corruption
   - rendering-stage `needs_documents` still remains for later cleanup
   - fetch reconciliation investigation still remains open and should not be handled through blanket restoration
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears

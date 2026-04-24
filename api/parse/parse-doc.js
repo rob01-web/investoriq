@@ -2304,8 +2304,12 @@ export default async function handler(req, res) {
           })();
 
           const compact_interest_rate = (() => {
-            const m = rawText.match(/\b(?:interest\s*rate|note\s*rate|coupon\s*rate|rate)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
-            return m ? Number(m[1]) : null;
+            const beforeLabel = rawText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:interest\s*rate|note\s*rate|coupon\s*rate)\b/i);
+            if (beforeLabel) return Number(beforeLabel[1]);
+            const afterLabel = rawText.match(/\b(?:interest\s*rate|note\s*rate|coupon\s*rate)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
+            if (afterLabel) return Number(afterLabel[1]);
+            const financingContext = rawText.match(/\bfinancing\b[\s\S]{0,160}?(\d+(?:\.\d+)?)\s*%[\s\S]{0,80}?\b(?:interest\s*rate|note\s*rate|coupon\s*rate)\b/i);
+            return financingContext ? Number(financingContext[1]) : null;
           })();
 
           const compact_ltv = (() => {
@@ -2318,6 +2322,8 @@ export default async function handler(req, res) {
           const compact_amort_years = (() => {
             const compactAmMatch = rawText.match(/\bAM\s*[:\-]?\s*(\d+)\s*(?:years?|yrs?|yr)\b/i);
             if (compactAmMatch) return parseInt(compactAmMatch[1], 10);
+            const beforeAmortMatch = rawText.match(/\b(\d+)\s*-?\s*(?:years?|yrs?|yr)\s+amort(?:ization)?\b/i);
+            if (beforeAmortMatch) return parseInt(beforeAmortMatch[1], 10);
             const idx = lowerText.search(/amortiz/);
             if (idx !== -1) {
               const snippet = rawText.slice(idx, idx + 80);
@@ -2335,7 +2341,7 @@ export default async function handler(req, res) {
           const interest_rate =
             compact_interest_rate ??
             extractPercentNear(rawText, [
-              'interest rate', 'rate:', 'rate', 'note rate', 'coupon rate',
+              'interest rate', 'note rate', 'coupon rate',
             ]);
 
           let ltv =
