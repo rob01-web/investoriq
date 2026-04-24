@@ -199,8 +199,29 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
 
       const firstLabel = normalizeClassifierText(row[0]);
       if (firstLabel && (firstLabel.includes('total') || firstLabel.includes('summary'))) {
-        break;
+        continue;
       }
+
+      const unitCellLabel = unitIdx !== -1 ? normalizeClassifierText(row[unitIdx]) : '';
+      const rowSummaryLabel = normalizeClassifierText(
+        `${String(row[0] || '')} ${unitIdx !== -1 ? String(row[unitIdx] || '') : ''}`
+      );
+      const isSummaryLikeRow =
+        /\btotal\b/.test(rowSummaryLabel) ||
+        /\bsubtotal\b/.test(rowSummaryLabel) ||
+        /\bgrand\s*total\b/.test(rowSummaryLabel) ||
+        /\baverage\b/.test(rowSummaryLabel) ||
+        /\bavg\b/.test(rowSummaryLabel) ||
+        /\boccupied\b/.test(firstLabel) ||
+        /\bvacant\b/.test(firstLabel) ||
+        /\bmodel\b/.test(firstLabel) ||
+        /\bdown\b/.test(firstLabel) ||
+        /\btotal\b/.test(unitCellLabel) ||
+        /\bsubtotal\b/.test(unitCellLabel) ||
+        /\bgrand\s*total\b/.test(unitCellLabel) ||
+        /\baverage\b/.test(unitCellLabel) ||
+        /\bavg\b/.test(unitCellLabel);
+      if (isSummaryLikeRow) continue;
 
       const unit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
       const inPlaceRent = rentIdx !== -1 ? parseMoneyLike(row[rentIdx]) : null;
@@ -1176,6 +1197,17 @@ export default async function handler(req, res) {
             Number.isFinite(totalUnits) && totalUnits >= 4 && hasFiniteInPlaceRent;
           const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
           const rentRollConfidence = hasMinimumRentRoll && hasSecondarySignal ? 0.95 : 0.5;
+
+          if (!(hasMinimumRentRoll && hasSecondarySignal)) {
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({
+                parse_status: 'failed',
+                parse_error: 'insufficient_rent_roll_spreadsheet_coverage',
+              })
+              .eq('id', file.id);
+            return res.status(200).json({ ok: true, skipped: 1 });
+          }
 
           if (!(Number.isFinite(totalUnits) && totalUnits >= 4) && !parseWarnings.includes('missing_total_units')) {
             parseWarnings.push('missing_total_units');
