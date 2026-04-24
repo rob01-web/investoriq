@@ -22,11 +22,18 @@
   - template / token replacement
   - section gating
   - DocRaptor rendering
-- Report validation block is now materially green:
-  - Screening Test 7 green
-  - CLEAN Underwriting Test 7 green
-  - MESSY Underwriting Test 7 green
-- Deterministic / no-hallucination / document-driven behavior is now validated in the live report path.
+- Forest City Manor live publication status is green, but report-core output is not launch-safe:
+  - Screening and Underwriting tests continue to publish successfully
+  - Forest City Manor Tests 5, 6, and 7 hard-failed on the same T12 financial corruption
+  - generated reports still show:
+    - Effective Gross Income: $2,517,120,100
+    - Total Operating Expenses: $79,368,532
+    - Net Operating Income: $1,723,435
+  - source T12 values are:
+    - Effective Gross Income: $2,517,120
+    - Total Operating Expenses: $793,685
+    - Net Operating Income: $1,723,435
+  - this is a hard launch blocker
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -67,7 +74,8 @@
 - Conclusion:
   - even the tiny reports-only completion refresh did not pass the launch-safety test
   - manual Refresh remains the locked pre-launch posture
-- Current Dashboard status: materially improved after the real 4-section Dashboard branch was reactivated, but not yet declared permanently solved.
+- Current Dashboard status: recent testing was smoother, but freeze is not declared solved and remains a launch-risk confidence item.
+- Dashboard is frozen for now: do not touch Dashboard until active `api/parse/parse-doc.js` launch blockers are resolved.
 - Latest live Dashboard blocker status:
   - the earlier catastrophic freeze has been materially reduced
   - controlled retesting now needs to validate stability in the real branch before underwriting proof validation resumes
@@ -1110,34 +1118,19 @@
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Dashboard freeze / lag - STILL ACTIVE BLOCKER
-     - root cause remains unresolved
-     - must be isolated in `src/pages/Dashboard.jsx`
-     - no new sync experiments
-     - focus on render pressure + UI coupling
-  2. Dashboard status-truth alignment
-     - Step 03 must reflect real active job
-     - remove dependency on selected report type
-     - eliminate contradictory states (queued vs needs_documents)
-  3. Remove remaining user-facing `needs_documents`
-     - not valid in V1 product model
-     - must be treated as system failure (`failed`)
-  4. Worker status cleanup (LOWER PRIORITY - POST DASHBOARD)
-     - remove rendering-stage `needs_documents`
-     - confirm entitlement restoration behavior
-  5. Rent Roll parsing validation (NEXT REPORT-CORE TASK)
-     - validate:
-       - unit counts
-       - totals row handling
-       - unit mix accuracy
-     - ensure no aggregation distortion
-  6. Final T12 validation run
-     - confirm:
-       - EGI
-       - expenses
-       - NOI
-       - ratios
-     - verify clean output across real document set
+  1. Full launch-blocker audit of `api/parse/parse-doc.js` (active task now)
+     - stop one-off branch patching
+     - identify every report-impact launch blocker in the file
+  2. Controlled bundled parser patch set
+     - patch all confirmed `parse-doc.js` launch blockers together
+     - then rerun Forest City Manor tests
+  3. Keep non-parser launch-risk items frozen until parser blocker is resolved
+     - no Dashboard changes
+     - no worker one-run behavior changes
+     - no report wording polish
+     - no valuation math changes
+     - no marketing/outreach work
+     - no additional user-facing retests before audit + bundled patch set
 
 - STILL OPEN
   - Preserve Resend as the launch notification default
@@ -1158,6 +1151,10 @@
   - Post-blocker parser / extraction follow-up
     - broader repo-wide investigation for unchecked parsed-status success updates is useful follow-up work after launch blockers
     - do not treat this as an immediate blocker unless a fresh real failure reproduces
+  - Debt / purchase assumptions path remains a separate blocker (secondary to T12 corruption)
+    - Forest City Manor Underwriting still states debt terms were not included / DSCR not assessed
+    - purchase assumptions include: CMHC Select, 3.8% rate, 40-year amortization, 85% LTV
+    - `generate-client-report.js` does not currently load a `purchase_assumptions` artifact path
   - Admin Dashboard worker-run visibility improvement
     - show queued job count clearly
     - show which jobs likely still need another worker run
@@ -1203,40 +1200,38 @@
 - CLEAN Underwriting Test 7 reviewed and remains showcase-ready.
 - MESSY Underwriting Test 7 reviewed and remains strong deterministic messy-doc validation evidence.
 - Dashboard freeze risk is no longer assumed resolved.
-- Report-core quality is not the immediate concern right now; Dashboard reliability has re-emerged as the bigger pre-outreach concern.
+- Report-core quality is now the immediate concern due active T12 corruption blocker.
+- Before messaging Ken Dunn, run a Final Codex Red-Team Audit across major production files:
+  - hidden surprises
+  - duplicate/orphaned logic
+  - stale diagnostics
+  - launch blockers
+  - filebase hygiene
 - Outreach email to Ken Dunn only after all items above are green.
 
 ### Exact next task / resume point
 - Immediate resume point
-  - isolate the real current Dashboard freeze cause in `src/pages/Dashboard.jsx`
-  - treat freeze root cause as separate from the already-fixed `needs_documents` reload visibility gap
-  - do not re-open broad worker redesign
-  - do not resume underwriting proof validation until Dashboard freeze confidence is restored
+  - run the full launch-blocker audit of `api/parse/parse-doc.js`
+  - confirm all active report-impact corruption paths
+  - prepare one controlled bundled patch set for confirmed blockers only
 
 - AFTER THAT
-  - make Step 03 show the real active job regardless of selected report type
-  - remove remaining user-facing `needs_documents` display paths in Step 03
-  - remove rendering-stage `needs_documents`
-  - verify failure / entitlement behavior
-  - run the separate fetch-reconciliation investigation:
-    - determine what should be put back
-    - determine what should remain cautious
-    - do not do a blanket restoration
-  - then continue final validation and outreach prep
-  - complete final outreach-prep / pricing / notification / polish items
-  - optionally remove / retire leftover SES helper / config / doc references later if desired
-  - apply any surgical copy / typography cleanups that are truly needed
-  - run final Codex institutional audit only if needed
+  - apply bundled `parse-doc.js` launch-blocker patch set
+  - rerun Forest City Manor tests
+  - verify T12 values match source with no silent corruption
+  - then resume remaining launch tasks in priority order
+  - run final Codex institutional audit before outreach
   - complete final readiness check
-  - prepare website sample report placement for public display
+  - prepare website sample report placement only after blockers are closed
   - worker logic remains frozen in rollback state unless a brand-new blocker appears
 
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
 - No worker changes.
+- No Dashboard changes until parser blockers are resolved.
 - No move to Screening yet.
-- Forest City Manor proof-case is now materially green; current immediate Dashboard work should no longer treat it as an unresolved parser blocker.
+- Forest City Manor remains an unresolved parser blocker until T12 corruption is closed.
 
 ### Launch Risk Flag (Dashboard)
 
@@ -1260,20 +1255,20 @@
 
 ### Parsing System Status (April 2026)
 
-- Parsing system is now fully hardened across:
-  - text extraction
-  - table extraction
-  - numeric normalization
-- Multi-layer protection prevents:
-  - adjacent numeric bleed
-  - percent contamination
-  - malformed concatenation
-- System now meets:
-  - deterministic underwriting requirements
-  - institutional-grade financial parsing expectations
-- Remaining report-core work is now:
-  - validation (not repair)
-  - edge-case tightening (rent roll)
+- Rent roll hardening completed today and passed validation:
+  - spreadsheet weak-coverage rent roll now fails closed before writing `rent_roll_parsed`
+  - summary/totals contamination rows are skipped before unit/rent acceptance
+  - summary keywords include: total, subtotal, grand total, average, avg
+  - occupied/vacant/model/down checks are limited to first-label/non-unit context to avoid false skips of legitimate unit identifiers
+  - status: PASS with caution
+  - remaining caution: summary semantics only in non-`row[0]`/non-unit columns could theoretically pass without further evidence
+- T12 hardening attempted today in `api/parse/parse-doc.js`:
+  - spreadsheet T12 matrix candidate path now skips percent cells and rejects values over `1_000_000_000`
+  - CSV `sumColumn` now skips percent cells and rejects values over `1_000_000_000`
+  - CSV row-fallback `sumRow` now skips percent cells and rejects values over `1_000_000_000`
+  - these patches are present in file truth
+  - Forest City Manor Test 7 still failed with the same corrupted EGI and expense values
+  - conclusion: no more one-off branch patches for this blocker until the full `parse-doc.js` launch-blocker audit is complete
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -1317,6 +1312,7 @@ Notes:
 - One step at a time.
 - No guessing.
 - Anchor-based reasoning only.
+- Token discipline applies: prefer compressed patch receipts over verbose Codex summaries.
 
 ## 10. Codex-First Workflow (Locked)
 
@@ -1338,6 +1334,85 @@ Notes:
   - Parser logic
 
   - No direct guessing or speculative patches without Codex-backed file truth.
+  
+  ## 10.1 Codex Token Discipline / Compressed Patch Receipts (Locked)
+  Status: Governing default protocol unless explicitly overridden.
+
+  ## Purpose
+  - GPT-5.5 Codex usage must conserve tokens aggressively.
+  - Default operating mode is compressed patch receipts, not verbose patch explanations.
+
+  ## Default Codex Return Format (Required Unless Explicitly Overridden)
+
+  Codex should return SHORT FORM RECEIPT ONLY:
+
+  A. Files changed
+  - file path(s) only
+
+  B. Patch summary (max 5 bullets)
+  - grouped changes only
+  - what changed, not full diff restatement
+  - no repeated old/new snippets
+  - no code blocks unless anchor mismatch occurred
+
+C. Safety note
+- one sentence only
+
+D. Validation (if applicable)
+- `node --check` pass/fail only
+
+E. Retest checklist
+- max 5 bullets
+- concise verification only
+
+### Prohibited by Default
+Do NOT return:
+- long explanations
+- rationale essays
+- repeated old/new snippets
+- duplicate anchor restatements
+- giant diff summaries
+- unnecessary blast-radius prose
+- token-heavy narrative explanations
+- do not echo entire old/new snippets unless specifically requested
+
+### Rule
+- Default to compressed patch receipts unless FULL DIFF MODE is explicitly requested.
+- Assume ChatGPT maintains master context and acts as:
+  - verifier
+  - reasoning layer
+  - patch planner
+
+### Standard Codex footer instruction
+Use this in patch prompts by default:
+
+Return SHORT FORM RECEIPT ONLY.
+Do not restate code unless anchor mismatch occurred.
+Optimize for token conservation.
+
+### Reason
+- Preserve GPT-5.5 usage budget
+- Reduce Codex token burn
+- Keep more budget available for audits and actual code investigation
+- Prioritize file truth over verbose reporting
+
+### Trigger Phrase
+If prompt includes:
+"Compressed Receipt Mode"
+
+Codex should automatically use Section 10.1 format.
+
+## 10.2 Repo-Wide Audit Mode (Locked)
+Status: Governing escalation protocol when repeated failures indicate systemic risk.
+
+Principles
+- audit entire file before patching when repeated failures occur
+- prefer bundled patch sets over drip patches when bug class is systemic
+- repo hygiene / duplicate logic scan before launch outreach
+- red-team audit before messaging Ken Dunn
+
+Trigger condition:
+Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
 ## 11. Launch Readiness Snapshot
 - Launch-ready now:
@@ -1353,7 +1428,7 @@ Notes:
   - MESSY Underwriting Test 7 is green
   - deterministic / no-hallucination / document-driven report behavior is validated
   - underwriting document-derived exit / refi cap labels now display exact parsed precision consistently, including `6.25%`
-  - report-core quality remains materially green
+  - rent roll hardening is materially improved and currently pass-with-caution
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1361,6 +1436,16 @@ Notes:
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
+  - resolve the active T12 corruption launch blocker in generated reports:
+    - generated output still showing:
+      - Effective Gross Income: $2,517,120,100
+      - Total Operating Expenses: $79,368,532
+      - Net Operating Income: $1,723,435
+    - source T12 values are:
+      - Effective Gross Income: $2,517,120
+      - Total Operating Expenses: $793,685
+      - Net Operating Income: $1,723,435
+    - hard-failed across Forest City Manor Tests 5, 6, and 7
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
@@ -1371,11 +1456,7 @@ Notes:
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
   - extracting-stage `needs_documents` has been converted to `failed`
   - Step 03 still needs current-job truth alignment and removal of remaining user-facing `needs_documents` display paths
-  - Forest City Manor is now materially green:
-    - Screening Test 1 = `published`
-    - Underwriting Test 1 = `published`
-    - latest core file rows are `parsed`
-    - generated PDFs exist and confirm T12 / Rent Roll coverage
+  - Forest City Manor currently publishes but is not launch-safe due unresolved T12 corruption
   - rendering-stage `needs_documents` still remains for later cleanup
   - fetch reconciliation investigation still remains open and should not be handled through blanket restoration
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
@@ -1386,6 +1467,12 @@ Notes:
   - Admin Dashboard still needs clearer worker-run visibility while worker may require multiple manual kicks
   - strict ASCII / typography cleanup where truly needed
   - low-dollar true live Stripe payment test if not yet completed
-  - final Codex institutional audit if needed after report review
+  - Final Codex Red-Team Audit is required before outreach:
+    - repo-wide audit across major production files
+    - hidden surprises
+    - duplicate/orphaned logic
+    - stale diagnostics
+    - launch blockers
+    - filebase hygiene
   - final readiness check and sample presentation readiness
   - outreach prep / pricing / notification / final polish items

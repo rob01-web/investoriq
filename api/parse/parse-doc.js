@@ -117,6 +117,56 @@ const numericFromCell = (value) => {
   return parseMoneyLike(value);
 };
 
+const isPlausibleT12Field = (key, value) => {
+  if (!Number.isFinite(value)) return false;
+  if (key === 'effective_gross_income' && value <= 0) return false;
+  if (key === 'total_operating_expenses' && value < 0) return false;
+  return true;
+};
+
+const validateCoreT12Payload = (payload, parseBranch) => {
+  const effectiveGrossIncome = Number(payload?.effective_gross_income);
+  const totalOperatingExpenses = Number(payload?.total_operating_expenses);
+  const netOperatingIncome = Number(payload?.net_operating_income);
+  const failures = [];
+
+  if (!isPlausibleT12Field('effective_gross_income', effectiveGrossIncome)) failures.push('invalid_effective_gross_income');
+  if (!isPlausibleT12Field('total_operating_expenses', totalOperatingExpenses)) failures.push('invalid_total_operating_expenses');
+  if (!isPlausibleT12Field('net_operating_income', netOperatingIncome)) failures.push('invalid_net_operating_income');
+
+  if (failures.length === 0) {
+    const expectedNoi = effectiveGrossIncome - totalOperatingExpenses;
+    const tolerance = Math.max(5000, Math.abs(effectiveGrossIncome) * 0.03);
+    if (Math.abs(expectedNoi - netOperatingIncome) > tolerance) {
+      failures.push('core_t12_equation_mismatch');
+    }
+  }
+
+  return {
+    ok: failures.length === 0,
+    failures,
+    parse_branch: parseBranch,
+    accepted_core_values: {
+      effective_gross_income: Number.isFinite(effectiveGrossIncome) ? effectiveGrossIncome : null,
+      total_operating_expenses: Number.isFinite(totalOperatingExpenses) ? totalOperatingExpenses : null,
+      net_operating_income: Number.isFinite(netOperatingIncome) ? netOperatingIncome : null,
+    },
+  };
+};
+
+const deleteExistingT12Artifacts = async (supabaseAdmin, jobId, fileId) => {
+  const { error } = await supabaseAdmin
+    .from('analysis_artifacts')
+    .delete()
+    .eq('job_id', jobId)
+    .eq('type', 't12_parsed')
+    .or(`payload->>file_id.eq.${String(fileId)},object_path.eq.analysis_jobs/${jobId}/t12/${fileId}.json`);
+
+  if (error) {
+    throw new Error(`Failed to clear previous t12 artifact: ${error.message}`);
+  }
+};
+
 const toSheetRows = (sheet) => {
   const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) || [];
   return rawRows.map((row) =>
@@ -426,6 +476,10 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     net_operating_income = effective_gross_income - total_operating_expenses;
   }
 
+  if (!isPlausibleT12Field('effective_gross_income', effective_gross_income)) effective_gross_income = null;
+  if (!isPlausibleT12Field('total_operating_expenses', total_operating_expenses)) total_operating_expenses = null;
+  if (!isPlausibleT12Field('net_operating_income', net_operating_income)) net_operating_income = null;
+
   if (!hasMinimumT12Coverage) {
     gross_potential_rent = null;
     effective_gross_income = null;
@@ -663,6 +717,10 @@ export function parseT12FromExtractedTables(tables) {
       }
     }
   }
+
+  if (!isPlausibleT12Field('effective_gross_income', found.effective_gross_income)) found.effective_gross_income = null;
+  if (!isPlausibleT12Field('total_operating_expenses', found.total_operating_expenses)) found.total_operating_expenses = null;
+  if (!isPlausibleT12Field('net_operating_income', found.net_operating_income)) found.net_operating_income = null;
 
   return {
     file_id: null,
@@ -1447,6 +1505,21 @@ export default async function handler(req, res) {
                       if (!Number.isFinite(parsedT12FromTables?.net_operating_income)) fallbackParseWarnings.push('missing_net_operating_income');
                       if (declaredTypeMismatch) fallbackParseWarnings.push('declared_doc_type_mismatch');
 
+                      const fallbackCoreValidation = validateCoreT12Payload(parsedT12FromTables, 'aws_textract_tables');
+                      if (!fallbackCoreValidation.ok) {
+                        await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
+                        await supabaseAdmin
+                          .from('analysis_job_files')
+                          .update({
+                            parse_status: 'failed',
+                            parse_error: `invalid_core_t12_values:${fallbackCoreValidation.failures.join(',')}`,
+                          })
+                          .eq('id', file.id);
+                        return res.status(200).json({ ok: true, skipped: 1 });
+                      }
+
+                      await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
+
                       const { error: fallbackArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
                         {
                           job_id: jobId,
@@ -1462,7 +1535,9 @@ export default async function handler(req, res) {
                             classifier_score: classifierScore,
                             classifier_signals: classifierSignals,
                             method: 'aws_textract_tables',
+                            parse_branch: fallbackCoreValidation.parse_branch,
                             confidence: 0.9,
+                            core_t12_validation: fallbackCoreValidation,
                             gross_potential_rent: parsedT12FromTables.gross_potential_rent,
                             effective_gross_income: parsedT12FromTables.effective_gross_income,
                             total_operating_expenses: parsedT12FromTables.total_operating_expenses,
@@ -1530,6 +1605,27 @@ export default async function handler(req, res) {
               return res.status(200).json({ ok: true, skipped: 1 });
             }
 
+            const coreT12Validation = validateCoreT12Payload(
+              {
+                effective_gross_income,
+                total_operating_expenses,
+                net_operating_income,
+              },
+              'text_excerpt'
+            );
+            if (!coreT12Validation.ok) {
+              await supabaseAdmin
+                .from('analysis_job_files')
+                .update({
+                  parse_status: 'failed',
+                  parse_error: `invalid_core_t12_values:${coreT12Validation.failures.join(',')}`,
+                })
+                .eq('id', file.id);
+              return res.status(200).json({ ok: true, skipped: 1 });
+            }
+
+            await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
+
             const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
               {
                 job_id: jobId,
@@ -1545,7 +1641,9 @@ export default async function handler(req, res) {
                   classifier_score: classifierScore,
                   classifier_signals: classifierSignals,
                   method: 'text_excerpt',
+                  parse_branch: coreT12Validation.parse_branch,
                   confidence: 0.9,
+                  core_t12_validation: coreT12Validation,
                   gross_potential_rent,
                   effective_gross_income,
                   total_operating_expenses,
@@ -1705,7 +1803,7 @@ export default async function handler(req, res) {
             const opexAliasIdx = normalizedHeaders.findIndex((header) => header === 'totalopex');
             const noiAliasIdx = normalizedHeaders.findIndex((header) => header === 'noi');
 
-            const sumColumn = (idx) => {
+            const sumColumn = (idx, key = null) => {
               if (idx === -1) return null;
               let total = 0;
               let count = 0;
@@ -1716,21 +1814,22 @@ export default async function handler(req, res) {
                 if (cell.includes('%')) continue;
                 const value = numericFromCell(row[idx]);
                 if (!Number.isFinite(value)) continue;
-                if (value > 1_000_000_000) continue;
+                if (key && !isPlausibleT12Field(key, value)) continue;
                 total += value;
                 count += 1;
               }
+              if (key && !isPlausibleT12Field(key, total)) return null;
               return count > 0 ? total : null;
             };
 
             let gross_potential_rent = sumColumn(gprIdx);
-            let effective_gross_income = sumColumn(egiIdx);
-            let total_operating_expenses = sumColumn(opexIdx);
-            let net_operating_income = sumColumn(noiIdx);
+            let effective_gross_income = sumColumn(egiIdx, 'effective_gross_income');
+            let total_operating_expenses = sumColumn(opexIdx, 'total_operating_expenses');
+            let net_operating_income = sumColumn(noiIdx, 'net_operating_income');
             if (gross_potential_rent === null) gross_potential_rent = sumColumn(gprAliasIdx);
-            if (effective_gross_income === null) effective_gross_income = sumColumn(egiAliasIdx);
-            if (total_operating_expenses === null) total_operating_expenses = sumColumn(opexAliasIdx);
-            if (net_operating_income === null) net_operating_income = sumColumn(noiAliasIdx);
+            if (effective_gross_income === null) effective_gross_income = sumColumn(egiAliasIdx, 'effective_gross_income');
+            if (total_operating_expenses === null) total_operating_expenses = sumColumn(opexAliasIdx, 'total_operating_expenses');
+            if (net_operating_income === null) net_operating_income = sumColumn(noiAliasIdx, 'net_operating_income');
 
             if (!Number.isFinite(gross_potential_rent) && Number.isFinite(parsedT12.gross_potential_rent)) {
               gross_potential_rent = parsedT12.gross_potential_rent;
@@ -1784,22 +1883,25 @@ export default async function handler(req, res) {
                 acc[rule.key] = rule.labels;
                 return acc;
               }, {});
-              const sumRow = (row) => {
-                let total = 0;
-                let count = 0;
+              const sumRow = (row, key = null) => {
+                const values = [];
                 for (let i = 1; i < row.length; i += 1) {
                   const cell = String(row[i] || '').toLowerCase();
                   if (cell.includes('%')) continue;
                   const value = numericFromCell(row[i]);
                   if (!Number.isFinite(value)) continue;
-                  if (value > 1_000_000_000) continue;
-                  total += value;
-                  count += 1;
+                  if (key && !isPlausibleT12Field(key, value)) continue;
+                  values.push(value);
                 }
-                return count > 0 ? total : null;
+                if (values.length === 1) return values[0];
+                if (values.length === 12) {
+                  const total = values.reduce((sum, value) => sum + value, 0);
+                  return key && !isPlausibleT12Field(key, total) ? null : total;
+                }
+                return null;
               };
 
-              const applyRowMatch = (key, row) => sumRow(row);
+              const applyRowMatch = (key, row) => sumRow(row, key);
 
               for (const row of rows.slice(1)) {
                 if (!Array.isArray(row)) continue;
@@ -1941,6 +2043,29 @@ export default async function handler(req, res) {
               parse_warnings,
             };
           }
+
+          const coreT12Validation = validateCoreT12Payload(
+            payload,
+            payload?.method || 'spreadsheet'
+          );
+          if (!coreT12Validation.ok) {
+            await supabaseAdmin
+              .from('analysis_job_files')
+              .update({
+                parse_status: 'failed',
+                parse_error: `invalid_core_t12_values:${coreT12Validation.failures.join(',')}`,
+              })
+              .eq('id', file.id);
+            return res.status(200).json({ ok: true, skipped: 1 });
+          }
+
+          payload = {
+            ...payload,
+            parse_branch: coreT12Validation.parse_branch,
+            core_t12_validation: coreT12Validation,
+          };
+
+          await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
 
           const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
             {
