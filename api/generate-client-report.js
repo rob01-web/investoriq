@@ -123,6 +123,15 @@ function hasUsableDebtPayload(payload) {
   const hasMonthlyPayment = Number.isFinite(monthlyPayment) && monthlyPayment > 0;
   return hasBalance && (hasMonthlyPayment || (hasRate && hasAmort));
 }
+function hasDebtTermsPayload(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  return (
+    isFinitePositive(payload.interest_rate) ||
+    isFinitePositive(payload.amort_years) ||
+    isFinitePositive(payload.ltv) ||
+    isFinitePositive(payload.refi_cap_rate)
+  );
+}
 function hasMinimumScreeningCoverage(t12Payload) {
   const gpr =
     t12Payload?.gross_potential_rent ??
@@ -2320,6 +2329,7 @@ export default async function handler(req, res) {
     let rentRollPayload = null;
     let t12Payload = null;
     let mortgagePayload = null;
+    let loanTermSheetTermsPayload = null;
     let appraisalPayload = null;
     let propertyTaxPayload = null;
     if (jobId) {
@@ -2388,6 +2398,7 @@ export default async function handler(req, res) {
           .maybeSingle();
         const rawLoanTermSheetPayload = loanTermSheetArtifact?.payload || null;
         const loanTermSheetPayload = hasUsableDebtPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
+        loanTermSheetTermsPayload = hasDebtTermsPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
         // Fallback: use loan term sheet when mortgage statement was absent or unusable
         if (!mortgagePayload && loanTermSheetPayload) {
           mortgagePayload = loanTermSheetPayload;
@@ -2927,18 +2938,22 @@ export default async function handler(req, res) {
       refi_interest_rate:
         rawFinancials?.refi_interest_rate ??
         mortgagePayload?.interest_rate ??
+        loanTermSheetTermsPayload?.interest_rate ??
         null,
       refi_amort_years:
         rawFinancials?.refi_amort_years ??
         mortgagePayload?.amort_years ??
+        loanTermSheetTermsPayload?.amort_years ??
         null,
       refi_cap_rate_base:
         rawFinancials?.refi_cap_rate_base ??
         mortgagePayload?.refi_cap_rate ??
+        loanTermSheetTermsPayload?.refi_cap_rate ??
         appraisalPayload?.cap_rate ??
         null,
       refi_ltv_max:
         mortgagePayload?.ltv ??
+        loanTermSheetTermsPayload?.ltv ??
         rawFinancials?.refi_ltv_max ??
         0.75,
       refi_dscr_min:
@@ -3423,7 +3438,11 @@ export default async function handler(req, res) {
           : null;
         if (_refiClass) riskBullets.push(_refiClass);
       } else {
-        riskBullets.push("Debt terms were not included in the uploaded documents; DSCR and refinance risk are not assessed in this report.");
+        riskBullets.push(
+          loanTermSheetTermsPayload
+            ? "Debt terms were partially identified, but no debt sizing balance was provided; DSCR and current-debt service are not assessed."
+            : "Debt terms were not included in the uploaded documents; DSCR and refinance risk are not assessed in this report."
+        );
       }
     }
     const upsideHtml = upsideBullets
@@ -4895,7 +4914,15 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
           }
         } else {
-          addRisk("DSCR", "No debt doc uploaded", "Debt terms were not included in the uploaded documents", "NOT ASSESSED", "#9CA3AF");
+          addRisk(
+            "DSCR",
+            loanTermSheetTermsPayload ? "Debt sizing balance not provided" : "No debt doc uploaded",
+            loanTermSheetTermsPayload
+              ? "Debt terms were partially identified; DSCR and current-debt service are not assessed"
+              : "Debt terms were not included in the uploaded documents",
+            "NOT ASSESSED",
+            "#9CA3AF"
+          );
         }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
