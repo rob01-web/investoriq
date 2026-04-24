@@ -1788,8 +1788,11 @@ export default async function handler(req, res) {
                 let total = 0;
                 let count = 0;
                 for (let i = 1; i < row.length; i += 1) {
+                  const cell = String(row[i] || '').toLowerCase();
+                  if (cell.includes('%')) continue;
                   const value = numericFromCell(row[i]);
                   if (!Number.isFinite(value)) continue;
+                  if (value > 1_000_000_000) continue;
                   total += value;
                   count += 1;
                 }
