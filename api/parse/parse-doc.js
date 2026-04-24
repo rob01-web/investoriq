@@ -134,13 +134,14 @@ const validateCoreT12Payload = (payload, parseBranch) => {
   if (!isPlausibleT12Field('total_operating_expenses', totalOperatingExpenses)) failures.push('invalid_total_operating_expenses');
   if (!isPlausibleT12Field('net_operating_income', netOperatingIncome)) failures.push('invalid_net_operating_income');
 
-  if (failures.length === 0) {
-    const expectedNoi = effectiveGrossIncome - totalOperatingExpenses;
-    const tolerance = Math.max(5000, Math.abs(effectiveGrossIncome) * 0.03);
-    if (Math.abs(expectedNoi - netOperatingIncome) > tolerance) {
-      failures.push('core_t12_equation_mismatch');
-    }
+if (failures.length === 0) {
+  const expectedNoi = effectiveGrossIncome - totalOperatingExpenses;
+  const normalizedNoi = Math.abs(netOperatingIncome);
+  const tolerance = Math.max(5000, Math.abs(effectiveGrossIncome) * 0.03);
+  if (Math.abs(expectedNoi - normalizedNoi) > tolerance) {
+    failures.push('core_t12_equation_mismatch');
   }
+}
 
   return {
     ok: failures.length === 0,
