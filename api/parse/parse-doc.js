@@ -238,6 +238,7 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
     let occupiedCount = 0;
     let statusCount = 0;
     let blankRowStreak = 0;
+    let explicitTotalUnits = null;
 
     for (let i = headerIdx + 1; i < rows.length; i += 1) {
       const row = rows[i] || [];
@@ -250,6 +251,13 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
 
       const firstLabel = normalizeClassifierText(row[0]);
       if (firstLabel && (firstLabel.includes('total') || firstLabel.includes('summary'))) {
+        for (const cell of row) {
+          const match = String(cell || '').match(/\b(\d{1,5})\s*units?\b/i);
+          if (match) {
+            const parsed = Number(match[1]);
+            if (Number.isFinite(parsed) && parsed > 0) explicitTotalUnits = parsed;
+          }
+        }
         continue;
       }
 
@@ -336,7 +344,7 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
     });
 
     return {
-      total_units: units.length,
+      total_units: explicitTotalUnits || units.length,
       unit_mix: unitMix,
       occupancy: statusCount > 0 ? occupiedCount / statusCount : null,
       units,
