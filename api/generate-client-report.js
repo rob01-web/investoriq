@@ -2445,6 +2445,11 @@ export default async function handler(req, res) {
     if (rentRollUnits && rentRollUnits.length > 0) {
       const parsedTotalUnits = coerceNumber(rentRollPayload?.total_units);
       const totalUnits = Number.isFinite(parsedTotalUnits) && parsedTotalUnits > 0 ? parsedTotalUnits : rentRollUnits.length;
+      const isPartialRentRollSample =
+        Number.isFinite(parsedTotalUnits) &&
+        parsedTotalUnits > 0 &&
+        rentRollUnits.length > 0 &&
+        parsedTotalUnits !== rentRollUnits.length;
       let occupiedUnits = 0;
       let vacantUnits = 0;
       const inPlaceRents = [];
@@ -2547,15 +2552,16 @@ export default async function handler(req, res) {
         });
       computedRentRoll = {
         total_units: totalUnits,
-        occupied_units: occupiedUnits,
-        vacant_units: vacantUnits,
-        occupancy,
+        occupied_units: isPartialRentRollSample ? null : occupiedUnits,
+        vacant_units: isPartialRentRollSample ? null : vacantUnits,
+        occupancy: isPartialRentRollSample ? null : occupancy,
         avg_in_place_rent: avgInPlaceRent ?? DATA_NOT_AVAILABLE,
         avg_market_rent: avgMarketRent ?? DATA_NOT_AVAILABLE,
-        total_in_place_monthly: totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
-        total_market_monthly: totalMarketMonthly ?? DATA_NOT_AVAILABLE,
-        total_in_place_annual: totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
-        total_market_annual: totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        total_in_place_monthly: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
+        total_market_monthly: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
+        total_in_place_annual: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
+        total_market_annual: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        is_partial_sample: isPartialRentRollSample,
         unit_mix: unitMix,
       };
     }
@@ -2754,6 +2760,7 @@ export default async function handler(req, res) {
       coerceNumber(t12Payload?.physical_occupancy) ??
       coerceNumber(t12Payload?.economic_occupancy) ??
       coerceNumber(t12Payload?.occupancy);
+    const rentRollIsPartialSample = computedRentRoll?.is_partial_sample === true;
     const rrTotalUnits =
       coerceNumber(computedRentRoll?.total_units) ??
       coerceNumber(rentRollPayload?.totals?.total_units);
@@ -2761,7 +2768,7 @@ export default async function handler(req, res) {
       coerceNumber(computedRentRoll?.occupied_units) ??
       coerceNumber(rentRollPayload?.totals?.occupied_units);
     const execOccFromRR =
-      Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
+      !rentRollIsPartialSample && Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
         ? rrOccupiedUnits / rrTotalUnits
         : null;
     const rrUnitRows = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : [];
@@ -2790,10 +2797,10 @@ export default async function handler(req, res) {
     let execOccupancy =
       Number.isFinite(execOccFromT12)
         ? execOccFromT12
-        : Number.isFinite(execOccFromRR)
+      : Number.isFinite(execOccFromRR)
         ? execOccFromRR
-        : rrOccFromRows;
-    if (!Number.isFinite(execOccupancy)) {
+        : rentRollIsPartialSample ? null : rrOccFromRows;
+    if (!Number.isFinite(execOccupancy) && !rentRollIsPartialSample) {
       const rrUnits = rentRollPayload?.units;
       if (Array.isArray(rrUnits) && rrUnits.length > 0) {
         const totalUnits = rrUnits.length;
@@ -2816,7 +2823,7 @@ export default async function handler(req, res) {
         computedRentRoll?.annual_in_place_rent_total ??
         computedRentRoll?.annual_current_rent ??
         computedRentRoll?.in_place_rent_annual ??
-        rrAnnualInPlaceFromRows ??
+        (rentRollIsPartialSample ? null : rrAnnualInPlaceFromRows) ??
         computedRentRoll?.total_in_place_annual ??
         rentRollPayload?.total_in_place_annual
     );
@@ -3489,12 +3496,13 @@ export default async function handler(req, res) {
     }
     let execAnnualInPlaceTokenValue = null;
     if (
+      !rentRollIsPartialSample &&
       Number.isFinite(weightedAvgInPlaceRent) &&
       Number.isFinite(execTotalUnits) &&
       execTotalUnits > 0
     ) {
       execAnnualInPlaceTokenValue = weightedAvgInPlaceRent * execTotalUnits * 12;
-    } else if (rrRows.length > 0) {
+    } else if (!rentRollIsPartialSample && rrRows.length > 0) {
       const annualFromRows = rrRows.reduce((acc, row) => {
         const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
         const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
