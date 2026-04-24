@@ -2432,7 +2432,8 @@ export default async function handler(req, res) {
     let computedRentRoll = null;
     const rentRollUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : null;
     if (rentRollUnits && rentRollUnits.length > 0) {
-      const totalUnits = rentRollUnits.length;
+      const parsedTotalUnits = coerceNumber(rentRollPayload?.total_units);
+      const totalUnits = Number.isFinite(parsedTotalUnits) && parsedTotalUnits > 0 ? parsedTotalUnits : rentRollUnits.length;
       let occupiedUnits = 0;
       let vacantUnits = 0;
       const inPlaceRents = [];
