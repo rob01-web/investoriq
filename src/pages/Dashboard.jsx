@@ -1523,8 +1523,8 @@ useEffect(() => {
                 <span style={{ ...stepSub, display:'block' }}>
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
-                    : activeJobForRuns?.status === 'queued' ? 'Queued for processing.'
-                    : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing in progress.'
+                    : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
+                    : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
@@ -1556,14 +1556,6 @@ useEffect(() => {
               {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
 
-            <div data-dashboard-current-job-fragment="step-03">
-              {activeJobForRuns && (
-                <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ ...bodySmall, fontSize:12 }}>{activeJobForRuns.property_name || 'Current job'}</span>
-                  <StatusBadge status={activeJobForRuns.status} />
-                </div>
-              )}
-            </div>
           </div>
 
           </div>

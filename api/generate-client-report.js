@@ -54,6 +54,12 @@ function formatCapPercentExact(value) {
   const pct = n > 1.5 ? n : n * 100;
   return `${pct.toFixed(2)}%`;
 }
+function formatInterestRatePercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = n > 1.5 ? n : n * 100;
+  return `${pct.toFixed(2)}%`;
+}
 function formatMultiple(value, decimals = 2) {
   if (isNil(value) || isNaN(Number(value))) return "";
   const num = Number(value);
@@ -364,7 +370,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
     })
     .join("");
   const fmtMoney = (x) => (Number.isFinite(x) ? formatValue(x) : DATA_NOT_AVAILABLE);
-  const fmtRate = (x) => (Number.isFinite(x) ? formatPercent1(x) : DATA_NOT_AVAILABLE);
+  const fmtRate = (x) => (Number.isFinite(x) ? formatInterestRatePercent(x) : DATA_NOT_AVAILABLE);
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent(x, 2) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:6px;">
@@ -537,6 +543,8 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
       const avgSqftNum = toNum(row.avg_sqft);
       const currentRentNum = toNum(row.current_rent);
       const marketRentNum = toNum(row.market_rent);
+      const currentRentDisplayNum = Number.isFinite(currentRentNum) ? Math.round(currentRentNum) : NaN;
+      const marketRentDisplayNum = Number.isFinite(marketRentNum) ? Math.round(marketRentNum) : NaN;
       const count = Number.isFinite(countNum) ? String(Math.round(countNum)) : "";
       const avgSqft = Number.isFinite(avgSqftNum)
         ? String(Math.round(avgSqftNum))
@@ -548,8 +556,8 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
         ? formatValue(marketRentNum)
         : "";
       const plannedLift =
-        Number.isFinite(currentRentNum) && Number.isFinite(marketRentNum)
-          ? formatValue(marketRentNum - currentRentNum)
+        Number.isFinite(currentRentDisplayNum) && Number.isFinite(marketRentDisplayNum)
+          ? formatValue(marketRentDisplayNum - currentRentDisplayNum)
           : "";
       return `<tr>
             <td>${unitType}</td>
@@ -905,7 +913,7 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
       label: "Interest rate",
       present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
       value: Number.isFinite(coerceNumber(f.refi_interest_rate))
-        ? formatPercent1(coerceNumber(f.refi_interest_rate))
+        ? formatInterestRatePercent(coerceNumber(f.refi_interest_rate))
         : " - ",
     },
     {
@@ -1771,7 +1779,9 @@ function buildScreeningRentRollDistributionHtml({
       if (!Number.isFinite(units) || units <= 0) return "";
       const inPlace = coerceNumber(row?.current_rent);
       const market = coerceNumber(row?.market_rent);
-      const gap = Number.isFinite(inPlace) && Number.isFinite(market) ? market - inPlace : null;
+      const inPlaceDisplay = Number.isFinite(inPlace) ? Math.round(inPlace) : null;
+      const marketDisplay = Number.isFinite(market) ? Math.round(market) : null;
+      const gap = Number.isFinite(inPlaceDisplay) && Number.isFinite(marketDisplay) ? marketDisplay - inPlaceDisplay : null;
       const gapPct =
         Number.isFinite(inPlace) &&
         Number.isFinite(market) &&
@@ -4385,9 +4395,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         const LTV = 0.75;
         const MIN_DSCR_QUAL = 1.25;
         const rateScenarios = [
-          { label: `Base (${baseRatePct.toFixed(1)}%)`, addPct: 0 },
-          { label: `+100 bps (${(baseRatePct + 1).toFixed(1)}%)`, addPct: 1 },
-          { label: `+200 bps (${(baseRatePct + 2).toFixed(1)}%)`, addPct: 2 },
+          { label: `Base (${formatInterestRatePercent(baseRatePct)})`, addPct: 0 },
+          { label: `+100 bps (${formatInterestRatePercent(baseRatePct + 1)})`, addPct: 1 },
+          { label: `+200 bps (${formatInterestRatePercent(baseRatePct + 2)})`, addPct: 2 },
         ];
 
         let grid = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
