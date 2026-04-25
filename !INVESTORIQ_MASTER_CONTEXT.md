@@ -56,16 +56,32 @@
     - no debt/refi contamination
     - report tier and section labeling correct
     - remaining polish: final ASCII/typography cleanup and tighter "no assumptions" wording
+  - Screening Test 11 = GREEN
+    - all core math reconciled: EGI $192,960, OpEx $120,790, NOI $72,170, Expense Ratio 62.6%, NOI Margin 37.4%, Annual In-Place Rent $186,780, Annual Market Rent $219,240, Rent Gap 17.4%, Units / Occupied 12 / 12, Occupancy 100.0%
+    - no debt/refi contamination appeared in the screening report
+    - NOI wrap defect is visually fixed in the Screening Test 11 PDF
+    - Screening Test 11 remains math-green and logic-green
+    - the only new issue elevated after secondary review is the visible rent-lift rounding reconciliation defect
+    - remaining issues are presentation / wording polish, not report-core blockers
   - Clean Underwriting Test 10 = GREEN with one real launch defect
     - debt/refi math checked out
     - rent roll/T12 alignment checked out
     - launch defect: NOI breakdown numeric wrap still broken
     - institutional polish flags: `Illustrative Capital Structure` wording, score calibration review, projection framing / risk tone alignment
+  - Clean Underwriting Test 11 status revised after dual red-team audit:
+    - strong engine / not yet IC-ready
+    - two critical math defects elevated: break-even occupancy formula and DSCR threshold consistency
   - Messy Underwriting Test 10 = GREEN with two major catches
     - partial debt terms fail-closed behavior confirmed strong
     - no debt balance invention
     - new issues surfaced: composite score inflation problem, mojibake in `document-derived` text, and systemic NOI wrap bug
-  - model-risk insight: missing debt sizing must not improve deal score; an 84 composite score with DSCR not assessed is a scoring optics concern Ken Dunn would likely question
+  - Messy Underwriting Test 11 did not expose a new catastrophic model-risk class
+    - DSCR score inflation fix held under messy conditions: DSCR Not Assessed = 0/10, Composite Score = 70/100, and missing debt sizing no longer improves score
+    - confirmed the same shared defects already found in clean underwriting: break-even occupancy defect, NOI wrap / rendering defect, rent-lift header collision, and rent-lift display reconciliation issue
+    - messy debt gating behaved correctly: partial debt terms were identified, no debt balance was invented, DSCR / current debt service remained not assessed, and refinance debt sections were omitted / fail-closed where debt sizing was unavailable
+  - NOI Breakdown numeric wrapping was patched in `api/generate-client-report.js` by widening the value column and strengthening no-wrap controls; presentation-only fix, pending PDF visual retest
+  - composite score inflation was patched in `api/generate-client-report.js`; missing debt sizing / DSCR NOT ASSESSED now adds `DSCR (Not Assessed) = 0/10` and expands the denominator so missing debt data cannot improve the composite score
+  - resolved model-risk insight: missing debt sizing must not improve deal score; this scoring optics concern was likely to be questioned by institutional reviewers
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -1150,29 +1166,68 @@
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Fix NOI breakdown wrapping bug
-  2. Fix composite score logic when DSCR is NOT ASSESSED
-  3. Run mojibake sweep
-  4. Run final ASCII / typography sweep
-  5. Tighten Step 03 failed / integrity messaging UX
-  6. Clean up rendering-stage `needs_documents`
-  7. Run final repo-wide Codex red-team audit
+  1. Run 124 Richmond Screening retest
+  2. Run 124 Richmond Clean Underwriting retest
+  3. Run 124 Richmond Messy Underwriting retest
+  4. Verify NOI wrap fix and composite score fix in PDFs
+  5. Complete Ken Dunn / investment committee QA tear-apart review
 
 - STILL OPEN
   - True launch-fix candidates:
-    1. NOI breakdown wrapping bug
-    2. Composite score logic when DSCR = NOT ASSESSED
-    3. Mojibake sweep
-    4. Final ASCII / typography sweep
-    5. Step 03 failed / integrity messaging UX
-    6. Rendering-stage `needs_documents` cleanup
-    7. Final repo-wide Codex red-team audit
+    1. Break-even occupancy formula defect - critical
+        - Current report shows 65.3%.
+        - Correct from OpEx / EGI is 62.6%.
+        - Recalculate all dependent vacancy buffer references and downstream uses.
+    2. DSCR threshold consistency defect - critical
+        - Proceeds math implies 1.25x floor.
+        - Narrative / scorecard uses 1.20x.
+        - Select one threshold and align math + disclosures everywhere.
+    3. NOI wrap defect - patched but regression still open until underwriting PDF retest confirms
+    4. Composite score logic issue - patched, awaiting retest confirmation
+    5. Mojibake sweep
+    6. Final ASCII / typography sweep
+    7. Step 03 failed / integrity messaging UX
+    8. Rendering-stage `needs_documents` cleanup
+    9. Final repo-wide Codex red-team audit
   - Secondary polish:
-    8. Assumption wording tighten
-    9. `Illustrative Capital Structure` rename
-    10. Projection framing alignment
-    11. Score calibration review
-    12. Screening / clean underwriting / messy underwriting polish items
+    10. Remove `Illustrative Capital Structure` wording
+    11. Assumption wording tighten
+    12. Projection framing alignment
+    13. Score calibration review
+    14. Screening / clean underwriting / messy underwriting polish items
+    15. Screening rent-lift table header collision
+        - Page 4 header visually jams as `TARGET RENT (POST-RENO)MONTHLY LIFT`.
+        - Pure presentation defect; fix before Ken Dunn sample / outreach.
+    16. Absolute "no assumptions" wording correction
+        - Current wording is too absolute because the methodology page also references `InvestorIQ Estimates` and standardized frameworks.
+        - Replace concept with supportable wording such as `No unsupported assumptions introduced` or `Outputs are document-derived and framework-constrained`.
+    17. Screening-specific typography / ASCII sweep
+        - Include middle-dot separators, copyright glyph review, footer symbols, and any non-ASCII artifacts.
+        - Keep this tied to final typography / mojibake cleanup.
+    18. Rent-lift derived display consistency rule
+        - Displayed derived differences must reconcile to displayed rounded components.
+        - Example from Screening Test 11: if Avg In-Place Rent displays as `$1,173` and Target Rent displays as `$1,395`, displayed Monthly Lift should reconcile to `$222`, not `$223`.
+        - Prevent rounded-input / unrounded-delta mismatches in visible tables.
+        - Annual rent $60 discrepancy and implied value lift cascade are tracked here, not as separate defects.
+    19. Debt term sheet coverage disclosure gap
+        - Add Debt Term Sheet to coverage matrix.
+    20. CapEx schedule acknowledgment gap
+        - Include as excluded input or integrate intentionally.
+    21. Interest-rate label consistency
+        - Reconcile 5.8% vs 5.85%.
+    22. Jurisdiction-sensitive rent-growth realism note - future enhancement only
+        - Keep generic and globally applicable.
+        - Avoid Canada / Ontario / province-specific wording.
+        - Concept: when local rent regulation, tenancy law, lease restrictions, or turnover constraints may affect the timing of capturing rent-to-market upside, InvestorIQ may eventually include a jurisdiction-aware qualifier.
+        - Not a launch blocker.
+        - Do not add this as a near-term patch unless explicitly approved later.
+    23. Vacancy-adjusted concentration percentage disclosure
+        - In messy underwriting, Top Income Drivers can sum above 100% because vacancy allowance reduces the EGI denominator.
+        - Decide whether to use a gross-income denominator for concentration metrics or add a clear footnote / explanation when vacancy-adjusted EGI is used.
+        - Prevent investor-facing confusion where line-item concentration percentages appear to exceed 100% in aggregate.
+    24. Mojibake survivor in DCF wording
+        - Messy Underwriting Test 11 still shows mojibake in `document-derived` wording (`document￾derived`).
+        - Include this exact survivor in final typography / ASCII sweep.
   - Step 03 failed / integrity messaging UX remains open
     - replace vague FAILED / needs-docs style copy for parser integrity failures
     - target concept: `Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated. 1 report credit has been returned to your balance. Please review source documents and retry.`
@@ -1234,11 +1289,16 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - fix NOI breakdown numeric wrapping
-  - then address composite score logic when DSCR is NOT ASSESSED
-  - then run mojibake / ASCII / typography sweeps
+  - stop discovery testing for now
+  - begin batching fixes by defect class instead of retesting after every tiny fix
+  - preferred workflow:
+    1. Patch a meaningful batch of related defects
+    2. Run targeted validation
+    3. Patch next batch
+    4. Run final three-report regression suite
 
 - AFTER THAT
+  - run mojibake / ASCII / typography sweeps
   - tighten Step 03 integrity failure messaging
   - clean up rendering-stage `needs_documents`
   - run final repo-wide Codex red-team audit before outreach
@@ -1466,9 +1526,11 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - partial rent-roll sample no longer produces 2.1% occupancy, 3 occupied units against 144, annual rent contradiction, or false rent roll vs T12 GPR variance
   - 124 Richmond Screening / Clean Underwriting / Messy Underwriting Test 10 Doberman reviews are GREEN overall:
     - Screening Test 10: math verified, no debt/refi contamination, report tier / section labeling correct
+    - Screening Test 11: financially sound and logic-green; all core math reconciled, no debt/refi contamination, NOI wrap visually fixed
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
-    - remaining true blockers: NOI wrap defect, messy score inflation logic, lingering mojibake, rendering-stage `needs_documents`, final red-team audit
+    - NOI wrap defect and messy score inflation logic are patched and awaiting PDF retest confirmation
+    - current true blockers: confirm NOI wrap fix in PDFs, confirm messy score fix in PDFs, lingering mojibake / ASCII sweep, rendering-stage `needs_documents`, final red-team audit
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1476,8 +1538,8 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - fix NOI wrap defect
-  - fix messy score inflation logic when DSCR is not assessed
+  - confirm NOI wrap fix in PDFs
+  - confirm messy score fix in PDFs
   - complete mojibake / ASCII / typography sweeps
   - tighten Step 03 integrity failure messaging and clean up rendering-stage `needs_documents`
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation

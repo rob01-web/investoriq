@@ -836,7 +836,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
   const dscrTargets = [
     { label: "1.10x (CMHC / Insured)", value: 1.10 },
-    { label: "1.20x (Conventional)", value: 1.20 },
+    { label: "1.25x (Conventional)", value: 1.25 },
     { label: "1.35x (Conservative)", value: 1.35 },
   ];
   const rateScenarios = [5.50, 6.50, 7.50];
@@ -857,7 +857,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     .join("");
   const unitsNote =
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.20x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.2))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.20x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1476,8 +1476,8 @@ function buildScreeningNoiStabilityHtml({
       )}</td></tr>`
     );
   }
-  if (Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0) {
-    const breakEvenOcc = opex / gpr;
+  if (Number.isFinite(opex) && Number.isFinite(egi) && egi > 0) {
+    const breakEvenOcc = opex / egi;
     if (Number.isFinite(breakEvenOcc)) {
       rows.push(
         `<tr><td>Break-even Occupancy</td><td>${formatPercent1(
@@ -1613,10 +1613,10 @@ function buildScreeningNoiStabilityHtml({
     : "";
   let vacancyBufferCard = "";
   if (
-    Number.isFinite(opex) && Number.isFinite(gpr) && gpr > 0 &&
+    Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 &&
     Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(occupancy)
   ) {
-    const beOcc = opex / gpr;
+    const beOcc = opex / egi;
     const cushion = occupancy - beOcc;
     if (Number.isFinite(cushion) && cushion > 0) {
       const cushionUnits = Math.floor(cushion * rrTotalUnits);
@@ -2846,9 +2846,9 @@ export default async function handler(req, res) {
         : null;
     const breakEvenOccupancy =
       Number.isFinite(execOpex) &&
-      Number.isFinite(execGpr) &&
-      execGpr > 0
-        ? execOpex / execGpr
+      Number.isFinite(execEgi) &&
+      execEgi > 0
+        ? execOpex / execEgi
         : null;
     const toRatioMetric = (value) => {
       const n = Number(value);
@@ -3093,7 +3093,7 @@ export default async function handler(req, res) {
         const _dscr = _an / (_mp * 12);
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = formatMultiple(_dscr, 2);
-          primaryPressurePoint = _dscr < 1.20
+          primaryPressurePoint = _dscr < 1.25
             ? `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`
             : _dscr < 1.35
             ? `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`
@@ -3433,7 +3433,7 @@ export default async function handler(req, res) {
             const _ds = formatMultiple(_dscr, 2);
             if (_dscr >= 1.35) {
               upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum. Debt service is well-covered by T12 NOI.`);
-            } else if (_dscr >= 1.20) {
+            } else if (_dscr >= 1.25) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
               riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
@@ -4410,7 +4410,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             if (coverage > 0 && Number.isFinite(coverage)) {
               coverageDisplay = formatMultiple(coverage, 2);
               if (coverage < 1.00) { bg = "#F8FAFC"; fc = "#64748B"; }
-              else if (coverage < 1.20) { bg = "#F8FAFC"; fc = "#64748B"; }
+              else if (coverage < 1.25) { bg = "#F8FAFC"; fc = "#64748B"; }
               else { bg = "#FEFCE8"; fc = "#B8860B"; }
             }
           }
@@ -4418,7 +4418,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           grid += `</tr>`;
         }
         grid += `</tbody></table>`;
-        grid += `<p class="small" style="margin-top:6px;">Current debt service coverage sensitivity using current debt balance under interest-rate scenarios only. Green = coverage >= 1.20 | Amber = 1.00-1.19 | Red = below 1.00</p>`;
+        grid += `<p class="small" style="margin-top:6px;">Current debt service coverage sensitivity using current debt balance under interest-rate scenarios only. Green = coverage >= 1.25 | Amber = 1.00-1.24 | Red = below 1.00</p>`;
         refiCollapseGridHtml = grid;
       }
     }
@@ -4611,9 +4611,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           const mp = loanAmt * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
           const dscr = annualNOI / (mp * 12);
           if (Number.isFinite(dscr) && dscr > 0) {
-            const pts = dscr > 1.35 ? 10 : dscr >= 1.20 ? 7 : 3;
+            const pts = dscr > 1.35 ? 10 : dscr >= 1.25 ? 7 : 3;
             totalPoints += pts; maxPoints += 10;
-            scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.20 ? "1.20\u20131.35x" : "Below 1.20x" });
+            scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x" });
             hasDscrScore = true;
           }
         }
@@ -4926,9 +4926,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             const mp = la * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
             const dscr = an / (mp * 12);
             if (Number.isFinite(dscr) && dscr > 0) {
-              const flag = dscr < 1.20 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
-              const color = dscr < 1.20 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x · ADEQUATE 1.20-1.35x · STRESSED < 1.20x", flag, color);
+              const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
+              const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
+              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x · ADEQUATE 1.25-1.35x · STRESSED < 1.25x", flag, color);
             }
           } else {
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
