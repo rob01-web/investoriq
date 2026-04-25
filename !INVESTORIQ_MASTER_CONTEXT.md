@@ -35,6 +35,37 @@
   - fallback to `rentRollUnits.length` only when parsed total is unavailable
   - this was display/count selection only: no parser changes, no T12 math changes, no extrapolation changes
   - prior active 144-unit / T12 corruption launch blocker is materially closed pending broader underwriting validation
+- Forest City Manor Underwriting validation sequence materially improved debt and rent-roll integrity:
+  - PurchaseAssumptions PDF correctly classified as `loan_term_sheet_parsed`
+  - `api/parse/parse-doc.js` now extracts debt interest rate from explicit financing / interest-rate context, so 3.8% is no longer contaminated by 4.99% cap rate
+  - `api/parse/parse-doc.js` now extracts `40-year amortization`
+  - LTV remains 85 and refi / exit cap remains 4.99 from cap-rate labels
+  - `node --check api/parse/parse-doc.js`: PASS
+  - `api/generate-client-report.js` now supports partial loan-term assumptions through a separate weaker terms payload while leaving `hasUsableDebtPayload()` unchanged for DSCR / current-debt eligibility
+  - rate, amortization, LTV, and refi / exit cap can feed refinance assumptions when document-derived
+  - debt balance is not invented; DSCR / current debt remains not assessed without loan amount or outstanding balance
+  - confirmed wording: `Debt terms were partially identified, but no debt sizing balance was provided; DSCR and current-debt service are not assessed.`
+  - Forest City Manor Underwriting Test 17 is a meaningful underwriting integrity pass
+  - explicit 144-unit asset count is preserved while partial/sample-derived full-property metrics are suppressed
+  - 2.1% occupancy, 3 occupied units against 144, annual in-place rent contradiction, and false rent roll vs T12 GPR variance are gone
+  - executive snapshot now shows Units: 144, Occupancy: DATA NOT AVAILABLE, Annual In-Place Rent: DATA NOT AVAILABLE
+  - remaining caution: Rent Roll Distribution still shows sample-derived weighted averages / rent bands from the 4 parsed rows; not a current launch blocker if not used as full-property totals
+- 124 Richmond Street Doberman validation sequence completed:
+  - Screening Test 10 = GREEN
+    - math verified
+    - no debt/refi contamination
+    - report tier and section labeling correct
+    - remaining polish: final ASCII/typography cleanup and tighter "no assumptions" wording
+  - Clean Underwriting Test 10 = GREEN with one real launch defect
+    - debt/refi math checked out
+    - rent roll/T12 alignment checked out
+    - launch defect: NOI breakdown numeric wrap still broken
+    - institutional polish flags: `Illustrative Capital Structure` wording, score calibration review, projection framing / risk tone alignment
+  - Messy Underwriting Test 10 = GREEN with two major catches
+    - partial debt terms fail-closed behavior confirmed strong
+    - no debt balance invention
+    - new issues surfaced: composite score inflation problem, mojibake in `document-derived` text, and systemic NOI wrap bug
+  - model-risk insight: missing debt sizing must not improve deal score; an 84 composite score with DSCR not assessed is a scoring optics concern Ken Dunn would likely question
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -351,7 +382,7 @@
 - PDF brand spacing / kerning fix was applied through CSS letter-spacing adjustment only.
 - Break-even occupancy investigation confirmed the formula itself can remain, while shared operating cushion logic was the actual bug.
 - Shared operating cushion calculation now uses current occupancy minus break-even occupancy when current occupancy is available.
-- NOI breakdown wrapping was rechecked in the latest live validation runs and now appears visually resolved.
+- Latest Doberman validation found NOI breakdown numeric wrapping is still a live launch-fix candidate.
 
 ### Prompt / Hallucination Risk Clarification (April 2026)
 
@@ -1119,44 +1150,43 @@
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Audit and investigate debt / purchase assumptions ingestion path
-  2. Resume underwriting proof validation with Forest City Manor underwriting retest
-  3. Run pre-outreach repo-wide Codex red-team audit
-  4. Complete final launch readiness sweep
+  1. Fix NOI breakdown wrapping bug
+  2. Fix composite score logic when DSCR is NOT ASSESSED
+  3. Run mojibake sweep
+  4. Run final ASCII / typography sweep
+  5. Tighten Step 03 failed / integrity messaging UX
+  6. Clean up rendering-stage `needs_documents`
+  7. Run final repo-wide Codex red-team audit
 
 - STILL OPEN
-  - Preserve Resend as the launch notification default
-    - `report_published` email path is now live on Resend and validated through a controlled live Screening test
-    - preserve Resend as the launch provider for report-published emails
-    - obsolete worker missing-doc SES send calls were removed
-    - worker no longer imports `sendEmailSES`
-    - optional later cleanup: remove / retire leftover SES helper / config / doc references if desired
-    - not required before Ken Dunn outreach unless a new blocker appears
-    - treat this as launch-readiness / notifications work, not a report-core patch
-  - Strict ASCII / typography cleanup across user-facing surfaces
-    - remove unicode arrows, ellipses, and similar characters surgically
-    - no broad sweep
-  - Post-launch / post-blocker entitlement-model cleanup investigation
-    - verify whether `report_purchases` is the true entitlement ledger
-    - determine whether `profiles.report_credits` and related Dashboard credit displays are stale, secondary, legacy, or misleading
-    - clean up empty / unclear credit tables and 0-credit display behavior after launch blockers are cleared
-  - Post-blocker parser / extraction follow-up
-    - broader repo-wide investigation for unchecked parsed-status success updates is useful follow-up work after launch blockers
-    - do not treat this as an immediate blocker unless a fresh real failure reproduces
-  - Debt / purchase assumptions artifact path remains a separate blocker
-    - Forest City Manor Underwriting still states debt terms were not included / DSCR not assessed
-    - purchase assumptions include: CMHC Select, 3.8% rate, 40-year amortization, 85% LTV
-    - `generate-client-report.js` does not currently load a `purchase_assumptions` artifact path
-  - Admin Dashboard worker-run visibility improvement
-    - show queued job count clearly
-    - show which jobs likely still need another worker run
-    - reduce manual guesswork while worker still requires 2 runs
+  - True launch-fix candidates:
+    1. NOI breakdown wrapping bug
+    2. Composite score logic when DSCR = NOT ASSESSED
+    3. Mojibake sweep
+    4. Final ASCII / typography sweep
+    5. Step 03 failed / integrity messaging UX
+    6. Rendering-stage `needs_documents` cleanup
+    7. Final repo-wide Codex red-team audit
+  - Secondary polish:
+    8. Assumption wording tighten
+    9. `Illustrative Capital Structure` rename
+    10. Projection framing alignment
+    11. Score calibration review
+    12. Screening / clean underwriting / messy underwriting polish items
+  - Step 03 failed / integrity messaging UX remains open
+    - replace vague FAILED / needs-docs style copy for parser integrity failures
+    - target concept: `Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated. 1 report credit has been returned to your balance. Please review source documents and retry.`
+    - only show credit-return line when entitlement restoration actually occurred
+    - map integrity failure states such as `invalid_core_t12_values:*`
+    - do not show misleading needs-documents messaging
   - Dashboard freeze / status-truth follow-up after report blockers
     - revisit Report History auto-visibility so newly published reports appear without manual Refresh
     - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
     - prefer a tightly scoped, low-churn solution only
     - current pre-launch preference is state/priority-based ready-to-download placement in the top operational zone, not timer-based movement into history
     - investigate after launch blockers are cleared why the tiny completion `fetchReports()` hook re-triggered freeze signs
+  - Optional later rent-roll partial/sample hardening
+    - suppress or relabel Rent Roll Distribution sample-derived weighted averages / rent bands when `is_partial_sample === true`
   - Final pre-launch language / typography sweep
     - one final search for mojibake
     - em dash / en dash cleanup
@@ -1165,6 +1195,7 @@
   - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
   - Final repo hygiene / hidden surprise Codex red-team audit before Ken Dunn
   - Final readiness check after report review and any real blockers are fixed
+  - Optional later cleanup: SES helpers, entitlement table/source-of-truth cleanup, Dashboard auto-visibility, rent-roll sample relabel / suppression review
 
 ### Before Ken Dunn outreach
 - Screening test result - April 11, 2026
@@ -1192,7 +1223,7 @@
 - CLEAN Underwriting Test 7 reviewed and remains showcase-ready.
 - MESSY Underwriting Test 7 reviewed and remains strong deterministic messy-doc validation evidence.
 - Dashboard freeze risk is no longer assumed resolved.
-- Report-core risk is lower after Forest City Manor Screening Test 14, pending broader underwriting validation.
+- Report-core risk is lower after Forest City Manor Screening Test 14 and Forest City Manor Underwriting Test 17, pending the next 3-report validation pass.
 - Before messaging Ken Dunn, run a Final Codex Red-Team Audit across major production files:
   - hidden surprises
   - duplicate/orphaned logic
@@ -1203,12 +1234,13 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - audit and investigate debt / purchase assumptions ingestion path
-  - confirm why Forest City Manor Underwriting debt terms / DSCR are not reflected
-  - identify the smallest document-driven artifact path correction if proven
+  - fix NOI breakdown numeric wrapping
+  - then address composite score logic when DSCR is NOT ASSESSED
+  - then run mojibake / ASCII / typography sweeps
 
 - AFTER THAT
-  - resume Forest City Manor underwriting proof validation
+  - tighten Step 03 integrity failure messaging
+  - clean up rendering-stage `needs_documents`
   - run final repo-wide Codex red-team audit before outreach
   - complete final readiness check
   - prepare website sample report placement only after blockers are closed
@@ -1257,6 +1289,11 @@
   - these patches are present in file truth
   - later bundled audit strategy closed the Forest City Manor Screening report-core blocker by Test 14
   - lesson reinforced: Repo-Wide Audit Mode is preferred over drip patches when repeated failures show a systemic bug class
+- Forest City Manor Underwriting Test 16 / Test 17 validation:
+  - partial loan-term debt assumptions can feed refinance assumptions without creating a debt balance
+  - `hasUsableDebtPayload()` remains unchanged for DSCR / current-debt eligibility
+  - partial rent-roll samples now preserve explicit total units while suppressing misleading full-property occupancy and annual rent metrics
+  - Test 17 confirmed the debt partial-term wording remained intact and partial rent-roll contamination was materially contained
 
 ## 7.1 Reports Table Schema (Locked)
 
@@ -1421,6 +1458,17 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - cover and asset class now show 144 Units
     - T12 values publish correctly at EGI $2,517,120, OpEx $793,685, NOI $1,723,435
     - unit-count display fix was in `api/generate-client-report.js` total-unit selection only
+  - Forest City Manor Underwriting Test 17 is a meaningful integrity pass:
+    - PurchaseAssumptions PDF is parsed as `loan_term_sheet_parsed`
+    - 3.8% interest rate, 40-year amortization, 85% LTV, and 4.99% refi / exit cap are separated correctly
+    - partial loan-term assumptions inform refinance assumptions without inventing debt balance
+    - DSCR / current debt remains not assessed when loan amount or outstanding balance is absent
+    - partial rent-roll sample no longer produces 2.1% occupancy, 3 occupied units against 144, annual rent contradiction, or false rent roll vs T12 GPR variance
+  - 124 Richmond Screening / Clean Underwriting / Messy Underwriting Test 10 Doberman reviews are GREEN overall:
+    - Screening Test 10: math verified, no debt/refi contamination, report tier / section labeling correct
+    - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
+    - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
+    - remaining true blockers: NOI wrap defect, messy score inflation logic, lingering mojibake, rendering-stage `needs_documents`, final red-team audit
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1428,17 +1476,20 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - investigate debt / purchase assumptions artifact path and rerun Forest City Manor underwriting proof validation
+  - fix NOI wrap defect
+  - fix messy score inflation logic when DSCR is not assessed
+  - complete mojibake / ASCII / typography sweeps
+  - tighten Step 03 integrity failure messaging and clean up rendering-stage `needs_documents`
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
   - accept that Dashboard remains in locked manual-refresh posture before launch
   - `needs_documents` refresh disappearance gap was fixed by restoring mount-time `fetchRecentJobs()`
   - `fetchRecentJobs()` now also has a serialize-and-compare equality guard to reduce unchanged-payload churn, but Dashboard freeze is still not declared solved
-  - Dashboard freeze is still unresolved and remains the bigger blocker
+  - Dashboard freeze remains a monitor / cautious launch-risk item, not solved
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
   - extracting-stage `needs_documents` has been converted to `failed`
-  - Step 03 still needs current-job truth alignment and removal of remaining user-facing `needs_documents` display paths
+  - Step 03 still needs integrity-aware failure messaging and removal of remaining misleading `needs_documents` display paths
   - rendering-stage `needs_documents` still remains for later cleanup
   - fetch reconciliation investigation still remains open and should not be handled through blanket restoration
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears

@@ -4599,6 +4599,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         totalPoints += pts; maxPoints += 10;
         scoreRows.push({ label: "Rent-to-Market Gap", value: formatPercent1(marketRentPremiumRatio), pts, max: 10, band: pct > 15 ? ">15% upside" : pct >= 5 ? "5\u201315% upside" : "<5% upside" });
       }
+      let hasDscrScore = false;
       if (mortgagePayload) {
         const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
         const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
@@ -4613,8 +4614,19 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             const pts = dscr > 1.35 ? 10 : dscr >= 1.20 ? 7 : 3;
             totalPoints += pts; maxPoints += 10;
             scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.20 ? "1.20\u20131.35x" : "Below 1.20x" });
+            hasDscrScore = true;
           }
         }
+      }
+      if (!hasDscrScore) {
+        totalPoints += 0; maxPoints += 10;
+        scoreRows.push({
+          label: "DSCR (Not Assessed)",
+          value: DATA_NOT_AVAILABLE,
+          pts: 0,
+          max: 10,
+          band: loanTermSheetTermsPayload ? "Debt sizing balance not provided" : "Debt terms not provided",
+        });
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
@@ -4986,9 +4998,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
-          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:24%;">${escapeHtml(r.label)}</td>` +
-          `<td style="padding:5px 8px;width:36%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;width:40%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;">${formatCurrency(r.val)}</span><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;color:#6B7280;font-size:10px;font-weight:400;margin-left:10px;">${r.pct}%</span></td></tr>`
+          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:28%;">${escapeHtml(r.label)}</td>` +
+          `<td style="padding:5px 8px;width:28%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;width:44%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;">${formatCurrency(r.val)}</span><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;color:#6B7280;font-size:10px;font-weight:400;margin-left:10px;">${r.pct}%</span></td></tr>`
         ).join("");
         html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;table-layout:fixed;">${trs}</table></div>`;
       }
