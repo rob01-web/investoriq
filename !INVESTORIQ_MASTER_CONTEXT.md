@@ -79,6 +79,11 @@
     - DSCR score inflation fix held under messy conditions: DSCR Not Assessed = 0/10, Composite Score = 70/100, and missing debt sizing no longer improves score
     - confirmed the same shared defects already found in clean underwriting: break-even occupancy defect, NOI wrap / rendering defect, rent-lift header collision, and rent-lift display reconciliation issue
     - messy debt gating behaved correctly: partial debt terms were identified, no debt balance was invented, DSCR / current debt service remained not assessed, and refinance debt sections were omitted / fail-closed where debt sizing was unavailable
+  - Batch 1 Critical Math Integrity - VERIFIED PASS (Closed)
+    - Clean Underwriting Test 12 passed: break-even occupancy corrected to 62.6%, occupancy cushion 37.4 pts reconciled, and DSCR lender minimum threshold aligned to 1.25x
+    - Messy Underwriting Test 12 passed: break-even occupancy corrected to 64.5%, occupancy cushion 35.5 pts reconciled, and DSCR Not Assessed fail-closed behavior preserved
+    - shared engine-level hardening confirmed: OpEx / EGI break-even basis fixed across underwriting paths and DSCR threshold inconsistency eliminated
+    - Batch 1 was the highest model-risk batch and is now formally closed
   - NOI Breakdown numeric wrapping was patched in `api/generate-client-report.js` by widening the value column and strengthening no-wrap controls; presentation-only fix, pending PDF visual retest
   - composite score inflation was patched in `api/generate-client-report.js`; missing debt sizing / DSCR NOT ASSESSED now adds `DSCR (Not Assessed) = 0/10` and expands the denominator so missing debt data cannot improve the composite score
   - resolved model-risk insight: missing debt sizing must not improve deal score; this scoring optics concern was likely to be questioned by institutional reviewers
@@ -1163,32 +1168,35 @@
 - Diagnostic-mode post-Generate property reset cluster guard: completed.
 - Real 4-section Dashboard branch reactivated by flipping `DASHBOARD_DIAG_MINIMAL` back to `false`: completed.
 - Completed-report visibility restored by removing stale `reportHistoryCards` / `readyReports` suppressions: completed.
+- Batch 1 Critical Math Integrity: completed / verified pass.
+- Break-even occupancy basis corrected from OpEx / GPR to OpEx / EGI and validated in Clean + Messy Underwriting Test 12.
+- DSCR minimum threshold standardized to 1.25x and validated.
+- Composite score inflation fix validated under messy underwriting conditions.
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Run 124 Richmond Screening retest
-  2. Run 124 Richmond Clean Underwriting retest
-  3. Run 124 Richmond Messy Underwriting retest
-  4. Verify NOI wrap fix and composite score fix in PDFs
+  1. Execute Batch 2 rendering / presentation integrity fixes
+  2. Run targeted Batch 2 validation
+  3. Execute Batch 3 disclosure / coverage / ASCII / mojibake sweep
+  4. Run final three-report regression suite
   5. Complete Ken Dunn / investment committee QA tear-apart review
 
 - STILL OPEN
   - True launch-fix candidates:
-    1. Break-even occupancy formula defect - critical
-        - Current report shows 65.3%.
-        - Correct from OpEx / EGI is 62.6%.
-        - Recalculate all dependent vacancy buffer references and downstream uses.
-    2. DSCR threshold consistency defect - critical
-        - Proceeds math implies 1.25x floor.
-        - Narrative / scorecard uses 1.20x.
-        - Select one threshold and align math + disclosures everywhere.
     3. NOI wrap defect - patched but regression still open until underwriting PDF retest confirms
-    4. Composite score logic issue - patched, awaiting retest confirmation
     5. Mojibake sweep
     6. Final ASCII / typography sweep
     7. Step 03 failed / integrity messaging UX
     8. Rendering-stage `needs_documents` cleanup
     9. Final repo-wide Codex red-team audit
+  - Batch 2 - current active batch:
+    - NOI wrap defect
+    - Screening rent-lift table header collision
+    - Rent-lift display reconciliation / derived display consistency
+    - Interest-rate label consistency
+    - Item 25 Step 03 processing simplification
+  - Batch 3 - next batch:
+    - Disclosure / coverage / ASCII / mojibake sweep items
   - Secondary polish:
     10. Remove `Illustrative Capital Structure` wording
     11. Assumption wording tighten
@@ -1228,6 +1236,13 @@
     24. Mojibake survivor in DCF wording
         - Messy Underwriting Test 11 still shows mojibake in `document-derived` wording (`document￾derived`).
         - Include this exact survivor in final typography / ASCII sweep.
+    25. Simplify Step 03 processing state - Batch 2 micro-polish / low-risk UX cleanup
+        - Remove duplicate property / job row from Step 03 processing panel while jobs are running.
+        - Keep Step 03 as workflow-state container only: Step 03 Generate Report; status copy: `Processing underway. Monitor status in Active Jobs below.`
+        - Remove duplicated property name + Extracting badge from Step 03.
+        - Keep Active Jobs as sole live processing monitor / status source.
+        - Goals: reduce dashboard visual noise, eliminate duplicate status surfaces, reinforce single-source-of-truth for job monitoring, reduce reactive UI churn risk, and improve institutional dashboard polish.
+        - User prefers batching this with Batch 2 rendering / presentation fixes, not as an immediate standalone patch.
   - Step 03 failed / integrity messaging UX remains open
     - replace vague FAILED / needs-docs style copy for parser integrity failures
     - target concept: `Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated. 1 report credit has been returned to your balance. Please review source documents and retry.`
@@ -1529,8 +1544,8 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Screening Test 11: financially sound and logic-green; all core math reconciled, no debt/refi contamination, NOI wrap visually fixed
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
-    - NOI wrap defect and messy score inflation logic are patched and awaiting PDF retest confirmation
-    - current true blockers: confirm NOI wrap fix in PDFs, confirm messy score fix in PDFs, lingering mojibake / ASCII sweep, rendering-stage `needs_documents`, final red-team audit
+    - Batch 1 Critical Math Integrity is closed after Clean + Messy Underwriting Test 12
+    - current true blockers: confirm NOI wrap fix in underwriting PDFs, lingering mojibake / ASCII sweep, rendering-stage `needs_documents`, final red-team audit
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1539,7 +1554,6 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
   - confirm NOI wrap fix in PDFs
-  - confirm messy score fix in PDFs
   - complete mojibake / ASCII / typography sweeps
   - tighten Step 03 integrity failure messaging and clean up rendering-stage `needs_documents`
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
