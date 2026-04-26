@@ -5008,10 +5008,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
-          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:34%;">${escapeHtml(r.label)}</td>` +
-          `<td style="padding:5px 8px;width:24%;"><div style="background:#E5E7EB;height:12px;border-radius:3px;overflow:hidden;"><div style="background:${r.color};height:100%;width:${r.pct}%;border-radius:3px;"></div></div></td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:28%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${formatCurrency(r.val)}</span></td>` +
-          `<td style="padding:5px 8px;font-size:10px;font-weight:400;text-align:right;color:#6B7280;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:14%;"><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${r.pct}%</span></td></tr>`
+          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:42%;">${escapeHtml(r.label)}</td>` +
+          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:42%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${formatCurrency(r.val)}</span></td>` +
+          `<td style="padding:5px 8px;font-size:10px;font-weight:400;text-align:right;color:#6B7280;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:16%;"><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${r.pct}%</span></td></tr>`
         ).join("");
         html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;table-layout:fixed;">${trs}</table></div>`;
       }

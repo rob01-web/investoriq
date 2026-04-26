@@ -84,6 +84,13 @@
     - Messy Underwriting Test 12 passed: break-even occupancy corrected to 64.5%, occupancy cushion 35.5 pts reconciled, and DSCR Not Assessed fail-closed behavior preserved
     - shared engine-level hardening confirmed: OpEx / EGI break-even basis fixed across underwriting paths and DSCR threshold inconsistency eliminated
     - Batch 1 was the highest model-risk batch and is now formally closed
+  - Batch 2 retest - 124 Richmond Clean + Messy Underwriting Test 13:
+    - 2B header collision fix verified
+    - 2C rent-lift / displayed rent reconciliation fix verified
+    - 2D interest-rate precision consistency fix verified
+    - 2E Step 03 duplicate live processing row UX cleanup patch applied, pending live smoke test
+    - 2A NOI wrap defect improved but still open; likely final surgical patch should remove or shrink the NOI breakdown bar column rather than continue fighting column widths
+    - no new hidden model-risk regressions surfaced; remaining issues are presentation / polish class, not core underwriting math defects
   - NOI Breakdown numeric wrapping was patched in `api/generate-client-report.js` by widening the value column and strengthening no-wrap controls; presentation-only fix, pending PDF visual retest
   - composite score inflation was patched in `api/generate-client-report.js`; missing debt sizing / DSCR NOT ASSESSED now adds `DSCR (Not Assessed) = 0/10` and expands the denominator so missing debt data cannot improve the composite score
   - resolved model-risk insight: missing debt sizing must not improve deal score; this scoring optics concern was likely to be questioned by institutional reviewers
@@ -1175,28 +1182,26 @@
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Execute Batch 2 rendering / presentation integrity fixes
-  2. Run targeted Batch 2 validation
+  1. Close NOI wrap defect
+  2. Run Step 03 smoke test
   3. Execute Batch 3 disclosure / coverage / ASCII / mojibake sweep
   4. Run final three-report regression suite
-  5. Complete Ken Dunn / investment committee QA tear-apart review
+  5. Run final repo-wide Codex red-team audit before Ken Dunn outreach
 
 - STILL OPEN
   - True launch-fix candidates:
-    3. NOI wrap defect - patched but regression still open until underwriting PDF retest confirms
+    3. NOI wrap defect - Batch 2 survivor / top remaining presentation defect
     5. Mojibake sweep
     6. Final ASCII / typography sweep
     7. Step 03 failed / integrity messaging UX
     8. Rendering-stage `needs_documents` cleanup
     9. Final repo-wide Codex red-team audit
   - Batch 2 - current active batch:
-    - NOI wrap defect
-    - Screening rent-lift table header collision
-    - Rent-lift display reconciliation / derived display consistency
-    - Interest-rate label consistency
-    - Item 25 Step 03 processing simplification
+    - NOI wrap defect remains open after improvement; next patch should likely remove or shrink the NOI breakdown bar column
+    - Step 03 duplicate live processing row cleanup is patched and pending live smoke validation
+    - Header collision, rent-lift display reconciliation, and interest-rate precision consistency are verified fixed in Test 13
   - Batch 3 - next batch:
-    - Disclosure / coverage / ASCII / mojibake sweep items
+    - Disclosure / coverage / ASCII / mojibake sweep items, including `document￾derived`
   - Secondary polish:
     10. Remove `Illustrative Capital Structure` wording
     11. Assumption wording tighten
@@ -1304,8 +1309,9 @@
 
 ### Exact next task / resume point
 - Immediate resume point
+  - resume with NOI-wrap round 2 patch planning first thing next session
   - stop discovery testing for now
-  - begin batching fixes by defect class instead of retesting after every tiny fix
+  - continue batching fixes by defect class instead of retesting after every tiny fix
   - preferred workflow:
     1. Patch a meaningful batch of related defects
     2. Run targeted validation
