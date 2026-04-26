@@ -969,6 +969,7 @@ function buildScreeningDataCoverageSummary({
   financials,
   effectiveReportMode,
   supportingUnderwritingDocsUsed = false,
+  hasUploadedFiles = false,
 }) {
   const t12Checks = [
     {
@@ -1081,7 +1082,7 @@ function buildScreeningDataCoverageSummary({
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.</p>${coverageTableHtml}</div>`;
     }
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Missing structured debt sizing prevents DSCR and current-debt assessment.</p>${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -2609,8 +2610,8 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_TITLE}}", displayPropertyTitle);
     finalHtml = replaceAll(finalHtml, "{{CITY}}", "");
     finalHtml = replaceAll(finalHtml, "{{PROVINCE}}", "");
-    // Strip the preceding &middot; separator together with the token when submarket is empty
-    finalHtml = finalHtml.replace(/\s*&middot;\s*\{\{PROPERTY_SUBMARKET\}\}/g, "");
+    // Strip the preceding separator together with the token when submarket is empty
+    finalHtml = finalHtml.replace(/\s*\|\s*\{\{PROPERTY_SUBMARKET\}\}/g, "");
     // Strip "{{PROPERTY_SUBMARKET}} Location Review" subtitle when submarket is empty
     finalHtml = finalHtml.replace(/\{\{PROPERTY_SUBMARKET\}\}\s+Location Review/g, "Location Overview");
     finalHtml = replaceAll(finalHtml, "{{PROPERTY_SUBMARKET}}", "");
@@ -3620,7 +3621,7 @@ export default async function handler(req, res) {
       const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
       if (unitCount) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;font-weight:600;">Multifamily &mdash; ${unitCount} Units</td></tr>`);
       const docLabels = Array.isArray(documentSources) && documentSources.length > 0
-        ? documentSources.map(r => escapeHtml(r.original_filename || "")).filter(Boolean).join(" &nbsp;&middot;&nbsp; ")
+        ? documentSources.map(r => escapeHtml(r.original_filename || "")).filter(Boolean).join(" &nbsp;|&nbsp; ")
         : null;
       if (docLabels) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;">${docLabels}</td></tr>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
@@ -3694,7 +3695,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries reported rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
       let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
       if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
-        thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Value creation is dependent on reducing the current 62.6% expense ratio and capturing the observed 17.4% rent-to-market gap.`;
+        thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Operating improvement sensitivity is tied to expense-ratio reduction and the observed rent-to-market gap.`;
       } else if (screeningClass === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
       } else if (screeningClass === "Stable") {
@@ -3835,9 +3836,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr>` +
           `<tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr>` +
           `</tbody></table></div>` +
-          `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Lift at Stabilization</p>` +
+          `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
-          `<p class="small" style="margin-top:6px;">Implied value lift reflects annual rent upside capitalized at the stated cap rate, assuming full occupancy at market rents.</p></div>` +
+          `<p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the stated cap rate and remains conditional on market-rent capture and occupancy.</p></div>` +
           `</div></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", upsideHtml);
@@ -4641,7 +4642,8 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
-        const verdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "REVIEW" : "Outside Parameters";
+        const normalVerdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "Review" : "Outside Parameters";
+        const verdictLabel = !hasDscrScore && score >= 70 ? "Review" : normalVerdictLabel;
         const verdictColor = "#1F3A5F";
         const rows = scoreRows.map((r) =>
           `<tr>` +
@@ -4670,7 +4672,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR not assessed caps the verdict at Review.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
@@ -4834,6 +4836,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       financials,
       effectiveReportMode,
       supportingUnderwritingDocsUsed,
+      hasUploadedFiles: Array.isArray(documentSources) && documentSources.length > 0 && Boolean(documentSourcesHtml),
     });
     finalHtml = replaceAll(
       finalHtml,

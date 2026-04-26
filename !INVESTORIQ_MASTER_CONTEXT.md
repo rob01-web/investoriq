@@ -89,11 +89,27 @@
     - 2C rent-lift / displayed rent reconciliation fix verified
     - 2D interest-rate precision consistency fix verified
     - 2E Step 03 duplicate live processing row UX cleanup patch applied, pending live smoke test
-    - 2A NOI wrap defect improved but still open; likely final surgical patch should remove or shrink the NOI breakdown bar column rather than continue fighting column widths
+    - 2A NOI wrap defect resolved by converting NOI Breakdown to a 3-column layout and removing the visual bar column
+    - Batch 2 is materially closed pending Step 03 smoke verification only
     - no new hidden model-risk regressions surfaced; remaining issues are presentation / polish class, not core underwriting math defects
-  - NOI Breakdown numeric wrapping was patched in `api/generate-client-report.js` by widening the value column and strengthening no-wrap controls; presentation-only fix, pending PDF visual retest
   - composite score inflation was patched in `api/generate-client-report.js`; missing debt sizing / DSCR NOT ASSESSED now adds `DSCR (Not Assessed) = 0/10` and expands the denominator so missing debt data cannot improve the composite score
   - resolved model-risk insight: missing debt sizing must not improve deal score; this scoring optics concern was likely to be questioned by institutional reviewers
+  - Batch 3 cleanup is materially completed:
+    - `document-derived` mojibake survivor removed
+    - ASCII-safe typography sweep completed
+    - `Illustrative Capital Structure` renamed to `Debt Structure Summary`
+    - `Scenario Assumptions` renamed to `Scenario Inputs`
+    - speculative / DCF wording tightened to scenario-conditioned language
+    - low-score `PASS` defect corrected to `Outside Parameters`
+    - `Refinance Failure Under Stress` renamed to `Refinance Shortfall Under Stress`
+    - `Final Recommendations` renamed to `Final Observations`
+    - Uploaded Files disclosure fix completed
+    - hardcoded unsupported / excluded document-name list removed
+    - public-facing "no assumptions" language softened to document-backed / framework-constrained wording
+    - public `AI` language audit returned clean
+    - public em dash / en dash audit returned clean
+    - Pricing typography survivors cleaned: `Redirecting...` and `|` separators
+    - public `refinance failure risk` wording changed to `refinance shortfall risk`
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -1179,98 +1195,28 @@
 - Break-even occupancy basis corrected from OpEx / GPR to OpEx / EGI and validated in Clean + Messy Underwriting Test 12.
 - DSCR minimum threshold standardized to 1.25x and validated.
 - Composite score inflation fix validated under messy underwriting conditions.
+- Batch 2 Rendering / Presentation Integrity: materially closed.
+- NOI Breakdown wrap defect resolved with the 3-column NOI Breakdown patch in `api/generate-client-report.js`.
+- Step 03 duplicate live processing row cleanup patched; live smoke verification remains pending.
+- Batch 3 public-language, disclosure, ASCII, mojibake, and score-label cleanup: materially completed.
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Close NOI wrap defect
-  2. Run Step 03 smoke test
-  3. Execute Batch 3 disclosure / coverage / ASCII / mojibake sweep
-  4. Run final three-report regression suite
+  1. Run Step 03 smoke test
+  2. Run final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting
+  3. Red-team outputs like Ken Dunn would
+  4. Patch only real regressions found
   5. Run final repo-wide Codex red-team audit before Ken Dunn outreach
 
 - STILL OPEN
-  - True launch-fix candidates:
-    3. NOI wrap defect - Batch 2 survivor / top remaining presentation defect
-    5. Mojibake sweep
-    6. Final ASCII / typography sweep
-    7. Step 03 failed / integrity messaging UX
-    8. Rendering-stage `needs_documents` cleanup
-    9. Final repo-wide Codex red-team audit
-  - Batch 2 - current active batch:
-    - NOI wrap defect remains open after improvement; next patch should likely remove or shrink the NOI breakdown bar column
-    - Step 03 duplicate live processing row cleanup is patched and pending live smoke validation
-    - Header collision, rent-lift display reconciliation, and interest-rate precision consistency are verified fixed in Test 13
-  - Batch 3 - next batch:
-    - Disclosure / coverage / ASCII / mojibake sweep items, including `document￾derived`
-  - Secondary polish:
-    10. Remove `Illustrative Capital Structure` wording
-    11. Assumption wording tighten
-    12. Projection framing alignment
-    13. Score calibration review
-    14. Screening / clean underwriting / messy underwriting polish items
-    15. Screening rent-lift table header collision
-        - Page 4 header visually jams as `TARGET RENT (POST-RENO)MONTHLY LIFT`.
-        - Pure presentation defect; fix before Ken Dunn sample / outreach.
-    16. Absolute "no assumptions" wording correction
-        - Current wording is too absolute because the methodology page also references `InvestorIQ Estimates` and standardized frameworks.
-        - Replace concept with supportable wording such as `No unsupported assumptions introduced` or `Outputs are document-derived and framework-constrained`.
-    17. Screening-specific typography / ASCII sweep
-        - Include middle-dot separators, copyright glyph review, footer symbols, and any non-ASCII artifacts.
-        - Keep this tied to final typography / mojibake cleanup.
-    18. Rent-lift derived display consistency rule
-        - Displayed derived differences must reconcile to displayed rounded components.
-        - Example from Screening Test 11: if Avg In-Place Rent displays as `$1,173` and Target Rent displays as `$1,395`, displayed Monthly Lift should reconcile to `$222`, not `$223`.
-        - Prevent rounded-input / unrounded-delta mismatches in visible tables.
-        - Annual rent $60 discrepancy and implied value lift cascade are tracked here, not as separate defects.
-    19. Debt term sheet coverage disclosure gap
-        - Add Debt Term Sheet to coverage matrix.
-    20. CapEx schedule acknowledgment gap
-        - Include as excluded input or integrate intentionally.
-    21. Interest-rate label consistency
-        - Reconcile 5.8% vs 5.85%.
-    22. Jurisdiction-sensitive rent-growth realism note - future enhancement only
-        - Keep generic and globally applicable.
-        - Avoid Canada / Ontario / province-specific wording.
-        - Concept: when local rent regulation, tenancy law, lease restrictions, or turnover constraints may affect the timing of capturing rent-to-market upside, InvestorIQ may eventually include a jurisdiction-aware qualifier.
-        - Not a launch blocker.
-        - Do not add this as a near-term patch unless explicitly approved later.
-    23. Vacancy-adjusted concentration percentage disclosure
-        - In messy underwriting, Top Income Drivers can sum above 100% because vacancy allowance reduces the EGI denominator.
-        - Decide whether to use a gross-income denominator for concentration metrics or add a clear footnote / explanation when vacancy-adjusted EGI is used.
-        - Prevent investor-facing confusion where line-item concentration percentages appear to exceed 100% in aggregate.
-    24. Mojibake survivor in DCF wording
-        - Messy Underwriting Test 11 still shows mojibake in `document-derived` wording (`document￾derived`).
-        - Include this exact survivor in final typography / ASCII sweep.
-    25. Simplify Step 03 processing state - Batch 2 micro-polish / low-risk UX cleanup
-        - Remove duplicate property / job row from Step 03 processing panel while jobs are running.
-        - Keep Step 03 as workflow-state container only: Step 03 Generate Report; status copy: `Processing underway. Monitor status in Active Jobs below.`
-        - Remove duplicated property name + Extracting badge from Step 03.
-        - Keep Active Jobs as sole live processing monitor / status source.
-        - Goals: reduce dashboard visual noise, eliminate duplicate status surfaces, reinforce single-source-of-truth for job monitoring, reduce reactive UI churn risk, and improve institutional dashboard polish.
-        - User prefers batching this with Batch 2 rendering / presentation fixes, not as an immediate standalone patch.
-  - Step 03 failed / integrity messaging UX remains open
-    - replace vague FAILED / needs-docs style copy for parser integrity failures
-    - target concept: `Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated. 1 report credit has been returned to your balance. Please review source documents and retry.`
-    - only show credit-return line when entitlement restoration actually occurred
-    - map integrity failure states such as `invalid_core_t12_values:*`
-    - do not show misleading needs-documents messaging
-  - Dashboard freeze / status-truth follow-up after report blockers
-    - revisit Report History auto-visibility so newly published reports appear without manual Refresh
-    - avoid full-page reloads or broad auto-sync patterns that previously reintroduced freeze / regression risk
-    - prefer a tightly scoped, low-churn solution only
-    - current pre-launch preference is state/priority-based ready-to-download placement in the top operational zone, not timer-based movement into history
-    - investigate after launch blockers are cleared why the tiny completion `fetchReports()` hook re-triggered freeze signs
-  - Optional later rent-roll partial/sample hardening
-    - suppress or relabel Rent Roll Distribution sample-derived weighted averages / rent bands when `is_partial_sample === true`
-  - Final pre-launch language / typography sweep
-    - one final search for mojibake
-    - em dash / en dash cleanup
-    - remove any public-facing `AI` / `artificial intelligence` / generic AI-sounding wording
-    - preserve proprietary document-driven positioning
-  - Low-dollar true live Stripe payment test (non-coupon) if not yet completed
-  - Final repo hygiene / hidden surprise Codex red-team audit before Ken Dunn
-  - Final readiness check after report review and any real blockers are fixed
-  - Optional later cleanup: SES helpers, entitlement table/source-of-truth cleanup, Dashboard auto-visibility, rent-roll sample relabel / suppression review
+  - Step 03 smoke test after duplicate live processing row cleanup.
+  - Final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting.
+  - Rendering-stage `needs_documents` cleanup.
+  - Final repo-wide Codex red-team audit before Ken Dunn.
+  - Low-dollar true live Stripe payment test if not yet completed.
+  - Dashboard freeze remains a monitored launch-risk item, not solved.
+  - Optional later cleanup: SES helpers, entitlement table/source-of-truth cleanup, Dashboard auto-visibility, rent-roll sample relabel / suppression review, jurisdiction-sensitive rent-growth qualifier, and vacancy-adjusted concentration disclosure.
+  - Final readiness check after report review and any real blockers are fixed.
 
 ### Before Ken Dunn outreach
 - Screening test result - April 11, 2026
@@ -1309,18 +1255,12 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - resume with NOI-wrap round 2 patch planning first thing next session
-  - stop discovery testing for now
-  - continue batching fixes by defect class instead of retesting after every tiny fix
-  - preferred workflow:
-    1. Patch a meaningful batch of related defects
-    2. Run targeted validation
-    3. Patch next batch
-    4. Run final three-report regression suite
+  - resume with Step 03 smoke test
+  - run final three-report regression assault
+  - red-team outputs like Ken Dunn would
+  - patch only real regressions found
 
 - AFTER THAT
-  - run mojibake / ASCII / typography sweeps
-  - tighten Step 03 integrity failure messaging
   - clean up rendering-stage `needs_documents`
   - run final repo-wide Codex red-team audit before outreach
   - complete final readiness check
@@ -1551,7 +1491,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
     - Batch 1 Critical Math Integrity is closed after Clean + Messy Underwriting Test 12
-    - current true blockers: confirm NOI wrap fix in underwriting PDFs, lingering mojibake / ASCII sweep, rendering-stage `needs_documents`, final red-team audit
+    - current true survivors: Step 03 smoke test, final three-report regression suite, rendering-stage `needs_documents`, final red-team audit, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1559,9 +1499,10 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - confirm NOI wrap fix in PDFs
-  - complete mojibake / ASCII / typography sweeps
-  - tighten Step 03 integrity failure messaging and clean up rendering-stage `needs_documents`
+  - run Step 03 smoke test
+  - run final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting
+  - clean up rendering-stage `needs_documents`
+  - patch only real regressions found in final validation
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
   - accept that broader SES helper / config cleanup is optional later work, not a current launch blocker
