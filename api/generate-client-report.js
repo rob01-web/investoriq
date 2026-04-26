@@ -436,14 +436,14 @@ function sanitizeTypography(html) {
     .replace(/[\u2018\u2019]/g, "'")      // smart apostrophes
     .replace(/[\u201C\u201D]/g, '"')      // smart quotes
     .replace(/&(?:ndash|mdash);/g, "-")
-    .replace(/ÃƒÂ¢/g, "")
-    .replace(/ÃƒÂ£/g, "")
-    .replace(/ÃƒÂ¢Ã¢/g, "")
-    .replace(/·/g, " · ")
-    .replace(/Â·/g, " · ")
-    .replace(/[â€“]/g, "-")
-    .replace(/[â€”]/g, "-")
-    .replace(/Â/g, "");
+    .replace(/\u00b7/g, " | ")
+    .replace(/\u2212/g, "-")
+    .replace(/\u00c2\u00b7/g, " | ")
+    .replace(/\u00c3\u201a\u00c2\u00b7/g, " | ")
+    .replace(/\u00e2\u20ac\u201d/g, "-")
+    .replace(/\u00e2\u20ac\u201c/g, "-")
+    .replace(/\u00e2\u02c6\u2019/g, "-")
+    .replace(/\u00c3\u201a/g, "");
 }
 
 function dedupeDataNotAvailableBySection(html) {
@@ -1167,7 +1167,7 @@ function buildScreeningIncomeForensicsHtml({
     Number.isFinite(annualMarket) &&
     annualMarket > annualInPlace &&
     annualInPlace > 0
-      ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document-derived from uploaded rent roll. Market rents as stated in document.</p></div>`
+      ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document derived from uploaded rent roll. Market rents as stated in document.</p></div>`
       : "";
   if (incomeLines.length < 2 || expenseLines.length < 2) {
     // Lump-sum T12: no line items ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â return summary-level fallback card
@@ -2654,12 +2654,12 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(
       finalHtml,
       "{{ESTIMATES_DISCLOSURE}}",
-      "InvestorIQ estimates are derived from uploaded documents and standardized underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred."
+      "InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred."
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{METHODOLOGY_NOTES}}",
-      "Metrics and tables reflect document-backed inputs and deterministic calculations. No manual adjustments or external assumptions are introduced when source data is incomplete."
+      "Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing source data is not gap-filled."
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -2670,8 +2670,8 @@ export default async function handler(req, res) {
       finalHtml,
       "{{ASSUMPTIONS_DISCLOSURE}}",
       allowAssumptions
-        ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents. InvestorIQ does not invent missing data or fabricate market inputs."
-        : "This memorandum contains no assumptions. Outputs are derived strictly from uploaded documents. Missing inputs are not inferred."
+        ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. InvestorIQ does not invent missing data or fabricate market inputs."
+        : "Outputs are document-backed and framework-constrained. Missing inputs are not inferred."
     );
     if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
@@ -4491,8 +4491,8 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           }, 0);
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowBg = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
-          const vs = isBase ? "—" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "—" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
+          const vs = isBase ? "-" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -4885,7 +4885,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           `</tr></thead>` +
           `<tbody>${iChartRows}</tbody>` +
           `</table>` +
-          `<p class="small" style="margin-top:6px;color:#9CA3AF;">All data derived exclusively from uploaded documents. No estimates or inferences.</p>` +
+          `<p class="small" style="margin-top:6px;color:#9CA3AF;">Signals are document-backed and framework-constrained. Missing inputs are not inferred.</p>` +
           `</div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", dealScoreInlineChartHtml);
@@ -4903,27 +4903,27 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         if (Number.isFinite(expenseRatioR)) {
           const flag = expenseRatioR > 0.65 ? "ELEVATED" : expenseRatioR > 0.55 ? "WATCH" : "CLEAR";
           const color = expenseRatioR > 0.65 ? "#dc2626" : expenseRatioR > 0.55 ? "#d97706" : "#16a34a";
-          addRisk("Expense Ratio", formatPercent1(expenseRatioR), "CLEAR < 55% · WATCH 55-65% · ELEVATED > 65%", flag, color);
+          addRisk("Expense Ratio", formatPercent1(expenseRatioR), "CLEAR < 55% | WATCH 55-65% | ELEVATED > 65%", flag, color);
         }
         if (Number.isFinite(noiMarginR)) {
           const flag = noiMarginR < 0.35 ? "LOW" : noiMarginR < 0.45 ? "WATCH" : "STRONG";
           const color = noiMarginR < 0.35 ? "#dc2626" : noiMarginR < 0.45 ? "#d97706" : "#16a34a";
-          addRisk("NOI Margin", formatPercent1(noiMarginR), "STRONG > 45% · WATCH 35-45% · LOW < 35%", flag, color);
+          addRisk("NOI Margin", formatPercent1(noiMarginR), "STRONG > 45% | WATCH 35-45% | LOW < 35%", flag, color);
         }
         if (Number.isFinite(execOccupancy)) {
           const flag = execOccupancy < 0.85 ? "LOW" : execOccupancy < 0.95 ? "WATCH" : "CLEAR";
           const color = execOccupancy < 0.85 ? "#dc2626" : execOccupancy < 0.95 ? "#d97706" : "#16a34a";
-          addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% · WATCH 85-95% · LOW < 85%", flag, color);
+          addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% | WATCH 85-95% | LOW < 85%", flag, color);
         }
         if (Number.isFinite(breakEvenOccR)) {
           const flag = breakEvenOccR > 0.80 ? "ELEVATED" : breakEvenOccR > 0.70 ? "WATCH" : "CLEAR";
           const color = breakEvenOccR > 0.80 ? "#dc2626" : breakEvenOccR > 0.70 ? "#d97706" : "#16a34a";
-          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% · WATCH 70-80% · ELEVATED > 80%", flag, color);
+          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% | WATCH 70-80% | ELEVATED > 80%", flag, color);
         }
         if (Number.isFinite(marketRentPremiumRatio)) {
           const flag = marketRentPremiumRatio > 0.15 ? "UPSIDE" : marketRentPremiumRatio > 0.05 ? "MODERATE" : "MINIMAL";
           const color = marketRentPremiumRatio > 0.15 ? "#16a34a" : marketRentPremiumRatio > 0.05 ? "#1e40af" : "#6B7280";
-          addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside · 5-15% = moderate · < 5% = minimal", flag, color);
+          addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside | 5-15% = moderate | < 5% = minimal", flag, color);
         }
         if (mortgagePayload) {
           const la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
@@ -4938,7 +4938,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             if (Number.isFinite(dscr) && dscr > 0) {
               const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
               const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x · ADEQUATE 1.25-1.35x · STRESSED < 1.25x", flag, color);
+              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
             }
           } else {
             addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
@@ -4963,7 +4963,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
             `<th style="text-align:left;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Threshold</th>` +
             `<th style="text-align:center;padding:5px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;font-size:10px;text-transform:uppercase;">Flag</th>` +
             `</tr></thead><tbody>${riskRows.join("")}</tbody></table>` +
-            `<p class="small" style="margin-top:6px;">All signals derived deterministically from uploaded documents. No inferences or estimates.</p></div>`
+            `<p class="small" style="margin-top:6px;">Signals are derived deterministically from document-backed inputs and framework-constrained calculations. Missing inputs are not inferred.</p></div>`
           : "";
         finalHtml = replaceAll(finalHtml, "{{RISK_REGISTER_TABLE}}", riskRegisterHtml);
       }
@@ -5004,7 +5004,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       if (effectiveReportMode !== "screening_v1" && Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
         const rows = [
           { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e293b" },
-          { label: "Operating Expenses (−)", val: opex, pct: Math.round((opex / egi) * 100), color: "#94A3B8" },
+          { label: "Operating Expenses (-)", val: opex, pct: Math.round((opex / egi) * 100), color: "#94A3B8" },
           { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
         ];
         const trs = rows.map(r =>
@@ -5068,7 +5068,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
               `<td style="padding:4px 8px;font-size:10px;font-weight:600;width:18%;">${escapeHtml(label)}</td>` +
               `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#1e293b;height:100%;width:${ipW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(inPlace)}</span></td>` +
               `<td style="padding:4px 6px;width:30%;"><div style="background:#E5E7EB;height:9px;border-radius:2px;overflow:hidden;"><div style="background:#94A3B8;height:100%;width:${mktW}%;border-radius:2px;"></div></div><span style="font-size:9px;color:#374151;">&nbsp;${formatCurrency(market)}</span></td>` +
-              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#B8860B" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "—"}</td></tr>`;
+              `<td style="padding:4px 8px;font-size:10px;font-weight:700;text-align:right;color:${gapPct ? "#B8860B" : "#374151"};">${gapPct ? `+${gapPct}% gap` : "-"}</td></tr>`;
           }).join("");
           html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:4px;">In-Place vs. Market Rent by Unit Type</p>` +
             `<table style="width:100%;border-collapse:collapse;"><thead><tr>` +
