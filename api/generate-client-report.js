@@ -1079,7 +1079,7 @@ function buildScreeningDataCoverageSummary({
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Unsupported or unstructured documents were excluded from quantitative modeling.</p>${coverageTableHtml}<div style="margin:10px 0 4px 0;color:#1e293b;font-size:11px;font-weight:600;">Unsupported / Excluded Inputs:</div><ul style="margin:0 0 0 18px;padding:0;color:#374151;font-size:11px;"><li>Appraisal summary (unstructured format)</li><li>Market rent survey excerpt (unstructured)</li><li>ESA summary (non-financial)</li><li>Zoning letter (non-financial)</li></ul></div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.</p>${coverageTableHtml}</div>`;
     }
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All minimum-required T12 and rent roll fields were extracted from uploaded documents. Supplemental underwriting sections may still depend on additional supporting documents when applicable.</p>${coverageTableHtml}</div><p class="small" style="margin-top:8px;">Additional documents such as a mortgage statement, term sheet, appraisal, or property tax bill may be required to generate supplemental underwriting sections.</p>`;
   }
@@ -4173,7 +4173,8 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesHtml);
     const hasDocSources =
       Array.isArray(documentSources) &&
-      documentSources.some((s) => s?.status || s?.parse_status || s?.doc_type);
+      documentSources.length > 0 &&
+      Boolean(documentSourcesHtml);
     if (!hasDocSources || effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
