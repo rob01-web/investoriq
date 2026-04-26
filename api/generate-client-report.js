@@ -336,9 +336,9 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   }
   let refiTier = "Stable";
   if (coverageBase < 1.0) {
-    refiTier = "Refinance Failure Under Stress";
+    refiTier = "Refinance Shortfall Under Stress";
   } else if (worstFiniteCoverage < 0.90) {
-    refiTier = "Refinance Failure Under Stress";
+    refiTier = "Refinance Shortfall Under Stress";
   } else if (worstFiniteCoverage < 1.0) {
     refiTier = "Fragile";
   } else if (worstFiniteCoverage < 1.1) {
@@ -865,7 +865,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     .join("");
   const unitsNote =
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Assumes 25-year amortization.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1953,7 +1953,7 @@ function buildReturnSummaryTable(rows = []) {
     <th>Scenario</th>
     <th>Levered IRR</th>
     <th>Equity Multiple</th>
-    <th>Illustrative Sale Price</th>
+    <th>Scenario Sale Price</th>
   </tr>
 `;
   for (const row of rows) {
@@ -3001,7 +3001,7 @@ export default async function handler(req, res) {
         "Stable",
         "Sensitized",
         "Fragile",
-        "Refinance Failure Under Stress",
+        "Refinance Shortfall Under Stress",
       ]);
       if (validRefiTiers.has(refiTier)) {
         execRefiLine = `<p>Refinance Stability Classification: ${escapeHtml(refiTier)}.</p>`;
@@ -3116,7 +3116,7 @@ export default async function handler(req, res) {
     if (!screeningHasSufficientData) {
       screeningClass = "Insufficient Data";
       screeningExplanation =
-        "Insufficient operating data to assess acquisition viability.";
+        "Insufficient operating data to classify the operating profile.";
     } else if (
       (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
       (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
@@ -3442,7 +3442,7 @@ export default async function handler(req, res) {
           if (Number.isFinite(_dscr) && _dscr > 0) {
             const _ds = formatMultiple(_dscr, 2);
             if (_dscr >= 1.35) {
-              upsideBullets.push(`DSCR of ${_ds} exceeds 1.35x institutional minimum. Debt service is well-covered by T12 NOI.`);
+              upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
             } else if (_dscr >= 1.25) {
               riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
             } else {
@@ -3680,7 +3680,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         const marker = isCurrent ? " \u25B6" : "";
         return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
       }).join("");
-      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized investment thresholds. &#9654; = current classification.</p></div>`;
+      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
       // Investment thesis ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â fully deterministic
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
@@ -4125,7 +4125,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         "Stable",
         "Sensitized",
         "Fragile",
-        "Refinance Failure Under Stress",
+        "Refinance Shortfall Under Stress",
       ]);
       const refiHtml = String(refiResult?.html || "").trim();
       canRenderRefi =
@@ -4538,7 +4538,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / exitCapDec)}</td>`;
         }
         sTbl += `</tr></tbody></table>`;
-        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)}). Projections are deterministic from uploaded documents only.</p>`;
+        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)}). Scenario outputs are deterministic from document-backed inputs.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value: Cap Rate Sensitivity</p>`;
@@ -4641,7 +4641,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
-        const verdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "REVIEW" : "PASS";
+        const verdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "REVIEW" : "Outside Parameters";
         const verdictColor = "#1F3A5F";
         const rows = scoreRows.map((r) =>
           `<tr>` +
