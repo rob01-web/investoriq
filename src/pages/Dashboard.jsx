@@ -762,7 +762,7 @@ useEffect(() => {
   const hasAvailableReport = availableReportsCount >= 1;
   const step2Locked = !propertyName.trim();
   const step3Locked = !propertyName.trim() || !hasAvailableReport || !hasRequiredUploads || !acknowledged;
-  const policyText = 'InvestorIQ produces document-based underwriting only, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. Analysis outputs are generated strictly from the documents provided. No assumptions or gap-filling are performed.';
+  const policyText = 'InvestorIQ produces document-backed and framework-constrained underwriting, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. No invented data or gap-filling is performed.';
   const computePolicyTextHash = async () => {
     const encoder = new TextEncoder();
     const bytes = encoder.encode(policyText);
@@ -1153,7 +1153,7 @@ useEffect(() => {
                     />
                     <div>
                       <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                        I acknowledge that InvestorIQ provides document-based analysis only, makes no assumptions, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
+                        I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
                       </div>
                       <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
                         Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
@@ -1391,7 +1391,7 @@ useEffect(() => {
                 />
                 <div>
                   <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                    I acknowledge that InvestorIQ provides document-based analysis only, makes no assumptions, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
+                    I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
                   </div>
                   <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
                     Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}

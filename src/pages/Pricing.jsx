@@ -44,12 +44,12 @@ const tiers = [
     price:       '$499',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
-    valueLine:   'Rapid risk screening from real documents. No assumptions.',
+    valueLine:   'Rapid risk screening from document-backed inputs with missing inputs disclosed.',
     description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
     features: [
-      'Built strictly from T12 and rent roll documents',
+      'Built from T12 and rent roll documents with framework-constrained outputs',
       'Clear, document-driven acquisition summary',
-      'No assumptions, no invented data',
+      'No invented data; missing inputs disclosed',
       'One generation per purchase',
     ],
     cta: 'Start Screening',
@@ -64,7 +64,7 @@ const tiers = [
     description: 'Institutional-grade underwriting memorandum built for investment committee review.',
     features: [
       'Built from T12, rent roll, and supporting due diligence documents',
-      'Identifies refinance failure risk under real-world rate and cap scenarios',
+      'Identifies refinance shortfall risk under real-world rate and cap scenarios',
       'Structured for investment committee review',
       'One generation per purchase',
     ],
@@ -79,7 +79,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
   const [hovered, setHovered] = useState(false);
 
   const buttonLabel = isLoading
-    ? 'Redirecting…'
+    ? 'Redirecting...'
     : !pricingOk
     ? 'Pricing unavailable'
     : !isAuthenticated
@@ -187,7 +187,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           marginTop:    4,
           display:      'block',
         }}>
-          Flat fee · One property
+          Flat fee | One property
         </span>
       </div>
 
@@ -638,7 +638,7 @@ export default function PricingPage() {
                       { label: 'Rent roll analysis',                    screening: true,  underwriting: true  },
                       { label: 'Supporting due diligence documents',    screening: false, underwriting: true  },
                       { label: 'Institutional format PDF output',       screening: true,  underwriting: true  },
-                      { label: 'No assumptions. Missing inputs disclosed.',  screening: true,  underwriting: true  },
+                      { label: 'Document-backed outputs. Missing inputs disclosed.',  screening: true,  underwriting: true  },
                       { label: 'Investment committee depth',            screening: false, underwriting: true  },
                       { label: 'Full underwriting memorandum',          screening: false, underwriting: true  },
                       { label: 'One generation per purchase',           screening: true,  underwriting: true  },
