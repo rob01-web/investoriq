@@ -728,7 +728,7 @@ useEffect(() => {
     if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
-  const defaultNeedsDocumentsMessage = 'Action required: Required documents were not recognized. Please upload a T12 (Operating Statement) and a Rent Roll.';
+  const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
   const needsDocumentsMessage = (() => {
     if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
     if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
@@ -750,12 +750,12 @@ useEffect(() => {
     });
     const detectedLabels = detectedRaw.map((value) => formatDocLabel(value)).filter(Boolean);
     const hasDetectedDuplicates = detectedCanonical.length > 1 && detectedCanonical.some((value, idx) => value && detectedCanonical.indexOf(value) !== idx);
-    if (hasDetectedDuplicates && detectedLabels.length > 0) return `Action required: Uploaded documents were detected as ${joinLabels(detectedLabels)}. Please upload one T12 (Operating Statement) and one Rent Roll.`;
+    if (hasDetectedDuplicates && detectedLabels.length > 0) return `Generation halted due to document integrity validation. Uploaded documents were detected as ${joinLabels(detectedLabels)}, and required financial values could not be validated.`;
     const missingT12 = missingCanonical.has('t12');
     const missingRentRoll = missingCanonical.has('rent_roll');
-    if (missingT12 && missingRentRoll) return 'Action required: Uploaded documents were not recognized as a T12 (Operating Statement) and Rent Roll. Please re-upload both documents.';
-    if (missingT12) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Action required: T12 (Operating Statement) was not recognized.${s} Please upload a valid T12 (Operating Statement).`; }
-    if (missingRentRoll) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Action required: Rent Roll was not recognized.${s} Please upload a valid Rent Roll.`; }
+    if (missingT12 && missingRentRoll) return 'Generation halted due to document integrity validation. Uploaded documents were not recognized as structured T12 and rent roll inputs.';
+    if (missingT12) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Generation halted due to document integrity validation. T12 operating values could not be validated.${s}`; }
+    if (missingRentRoll) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Generation halted due to document integrity validation. Rent roll values could not be validated.${s}`; }
     return defaultNeedsDocumentsMessage;
   })();
   const availableReportsCount = entitlements.error ? 0 : Number(entitlements[selectedReportType] ?? 0);

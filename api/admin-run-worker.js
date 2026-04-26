@@ -776,7 +776,7 @@ export default async function handler(req, res) {
                 }
                 if (supportsErrorMessage) {
                   needsDocsUpdate.error_message =
-                    'Underwriting currently requires spreadsheet-format Rent Roll and T12/Operating Statement inputs. Please upload XLSX or CSV files for those core financials.';
+                    'Generation halted due to document integrity validation. Required structured Rent Roll and T12/Operating Statement inputs could not be validated.';
                 }
 
                 const { error: needsDocsErr } = await supabaseAdmin
@@ -786,7 +786,7 @@ export default async function handler(req, res) {
                   .eq('status', 'extracting');
 
                 if (needsDocsErr) {
-                  throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+                  throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
                 }
 
                 const needsDocsTransitionErr = await writeStatusTransitionArtifact(
@@ -824,7 +824,7 @@ export default async function handler(req, res) {
                       code: 'MISSING_STRUCTURED_FINANCIALS',
                       level: 'error',
                       error_message:
-                        'Underwriting currently requires spreadsheet-format Rent Roll and T12/Operating Statement inputs. Please upload XLSX or CSV files for those core financials.',
+                        'Generation halted due to document integrity validation. Required structured Rent Roll and T12/Operating Statement inputs could not be validated.',
                       missing: missingStructured,
                       timestamp: nowIso,
                     }
@@ -965,7 +965,7 @@ export default async function handler(req, res) {
               .eq('status', 'extracting');
 
             if (needsDocsErr) {
-              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+              throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
             }
 
             const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
@@ -1012,7 +1012,7 @@ export default async function handler(req, res) {
                   .from('analysis_jobs')
                   .update({ purchase_id: null })
                   .eq('id', job.id)
-                  .eq('status', 'needs_documents');
+                  .eq('status', 'failed');
 
                 if (clearPurchaseLinkErr) {
                   throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
@@ -1046,7 +1046,7 @@ export default async function handler(req, res) {
 
             if (needsDocsTransitionErr) {
               throw new Error(
-                `Failed to write extracting->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+                    `Failed to write extracting->failed status transition artifact: ${needsDocsTransitionErr.message}`
               );
             }
 
@@ -1086,7 +1086,7 @@ export default async function handler(req, res) {
                   code: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
                   level: 'error',
                   error_message:
-                    'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Job remains in needs_documents until a parsable Rent Roll and T12 are available.',
+                    'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Generation halted before report publication due to document integrity validation.',
                   missing: ['rent_roll', 't12_or_operating_statement'],
                   detected,
                   timestamp: nowIso,
@@ -1328,12 +1328,12 @@ export default async function handler(req, res) {
 
             const { error: needsDocsErr } = await supabaseAdmin
               .from('analysis_jobs')
-              .update({ status: 'needs_documents' })
+              .update({ status: 'failed' })
               .eq('id', job.id)
               .eq('status', 'rendering');
 
             if (needsDocsErr) {
-              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+              throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
             }
 
             const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
@@ -1380,7 +1380,7 @@ export default async function handler(req, res) {
                   .from('analysis_jobs')
                   .update({ purchase_id: null })
                   .eq('id', job.id)
-                  .eq('status', 'needs_documents');
+                  .eq('status', 'failed');
 
                 if (clearPurchaseLinkErr) {
                   throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
@@ -1391,7 +1391,7 @@ export default async function handler(req, res) {
                   job.user_id,
                   'entitlement_restored',
                   {
-                    reason: 'needs_documents',
+                    reason: 'rendering_integrity_validation_failed',
                     purchase_id: restorePurchaseId,
                     timestamp: nowIso,
                   }
@@ -1408,13 +1408,13 @@ export default async function handler(req, res) {
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
               job.id,
               'rendering',
-              'needs_documents',
+              'failed',
               { user_id: job.user_id }
             );
 
             if (needsDocsTransitionErr) {
               throw new Error(
-                `Failed to write rendering->needs_documents status transition artifact: ${needsDocsTransitionErr.message}`
+                `Failed to write rendering->failed status transition artifact: ${needsDocsTransitionErr.message}`
               );
             }
 
