@@ -413,7 +413,7 @@ function normalizeExitCapSourceLabel(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return "";
   const compact = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  if (compact === "document-derived") return "document-derived";
+  if (compact === "document-derived") return "document derived";
   return escapeHtml(raw);
 }
 function hasMeaningfulNarrative(html) {
