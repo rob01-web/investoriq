@@ -4008,9 +4008,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       if ((screeningNoiHtml || "").trim().length === 0) {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
       }
-      if ((screeningRentRollHtml || "").trim().length === 0) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
-      }
+    }
+    if ((screeningRentRollHtml || "").trim().length === 0) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
     }
     const screeningRefiSufficiencyHtml =
       effectiveReportMode === "screening_v1"
@@ -4049,14 +4049,32 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         .maybeSingle();
       renovationPayload = renovationArtifact?.payload || null;
     }
+    const hasMeaningfulRenovationText = (value) =>
+      typeof value === "string" &&
+      value.trim().length > 0 &&
+      value.trim() !== DATA_NOT_AVAILABLE;
+    const hasMeaningfulRenovationRows = (rows) =>
+      Array.isArray(rows) &&
+      rows.some((row) => {
+        if (row && typeof row === "object") {
+          return Object.values(row).some((value) => String(value ?? "").trim().length > 0);
+        }
+        return String(row ?? "").trim().length > 0;
+      });
     const hasExplicitRenovationInput = Boolean(
-      (renovationPayload && typeof renovationPayload === "object") ||
+      (renovationPayload && typeof renovationPayload === "object" && (
+        hasMeaningfulRenovationRows(renovationPayload.budget_rows) ||
+        hasMeaningfulRenovationRows(renovationPayload.execution_rows) ||
+        hasMeaningfulRenovationText(renovationPayload.budget_note) ||
+        hasMeaningfulRenovationText(renovationPayload.execution_note) ||
+        hasMeaningfulRenovationText(renovationPayload.interpretation)
+      )) ||
         (financials && typeof financials === "object" && (
-          Array.isArray(financials.renovation_budget_rows) ||
-          Array.isArray(financials.renovation_execution_rows) ||
-          typeof financials.renovation_budget_note === "string" ||
-          typeof financials.renovation_execution_note === "string" ||
-          typeof financials.renovation_interpretation === "string"
+          hasMeaningfulRenovationRows(financials.renovation_budget_rows) ||
+          hasMeaningfulRenovationRows(financials.renovation_execution_rows) ||
+          hasMeaningfulRenovationText(financials.renovation_budget_note) ||
+          hasMeaningfulRenovationText(financials.renovation_execution_note) ||
+          hasMeaningfulRenovationText(financials.renovation_interpretation)
         ))
     );
     const hasRenovationFilenameSignal = Array.isArray(documentSources) && documentSources.some((row) => {
@@ -4077,7 +4095,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     });
     const renovationAcknowledgmentHtml =
       !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<div class="card no-break"><p class="subsection-title">Uploaded Renovation / CapEx Document</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">A renovation, CapEx, capital plan, or budget-related document was included in the uploaded source package. The document was not converted into structured renovation budget inputs for this report. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.</p></div>`
+        ? `<strong>Uploaded Renovation / CapEx Document:</strong> A renovation, CapEx, capital plan, or budget-related document was included in the uploaded source package. The document was not converted into structured renovation budget inputs for this report. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.`
         : "";
     const renovationBudgetRows = hasExplicitRenovationInput
       ? buildRenovationBudgetRows(
