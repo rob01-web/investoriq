@@ -1007,6 +1007,7 @@ function buildScreeningDataCoverageSummary({
   const totalUnitsPresent = Number.isFinite(
     coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)
   );
+  const isPartialRentRollSample = computedRentRoll?.is_partial_sample === true;
   const occFromT12 =
     coerceNumber(t12Payload?.physical_occupancy) ??
     coerceNumber(t12Payload?.economic_occupancy) ??
@@ -1022,8 +1023,8 @@ function buildScreeningDataCoverageSummary({
       ? rrOccupiedUnits / rrTotalUnits
       : null;
   const rrOccPresent = Number.isFinite(
-    coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy)
-  ) || Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload));
+    coerceNumber(computedRentRoll?.occupancy ?? (isPartialRentRollSample ? null : rentRollPayload?.occupancy))
+  ) || (!isPartialRentRollSample && Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload)));
   const inPlacePresent = Array.isArray(rentRollRows)
     ? rentRollRows.some((row) =>
         Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
@@ -1575,11 +1576,12 @@ function buildScreeningNoiStabilityHtml({
   const rrTotalUnits = coerceNumber(
     computedRentRoll?.total_units ?? rentRollPayload?.total_units
   );
+  const isPartialRentRollSample = computedRentRoll?.is_partial_sample === true;
   const rrOccupiedUnits = coerceNumber(
-    computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units
+    computedRentRoll?.occupied_units ?? (isPartialRentRollSample ? null : rentRollPayload?.occupied_units)
   );
   let occupancy = coerceNumber(
-    computedRentRoll?.occupancy ?? rentRollPayload?.occupancy
+    computedRentRoll?.occupancy ?? (isPartialRentRollSample ? null : rentRollPayload?.occupancy)
   );
   if (
     !Number.isFinite(occupancy) &&
@@ -1589,7 +1591,7 @@ function buildScreeningNoiStabilityHtml({
   ) {
     occupancy = rrOccupiedUnits / rrTotalUnits;
   }
-  if (!Number.isFinite(occupancy)) {
+  if (!Number.isFinite(occupancy) && !isPartialRentRollSample) {
     occupancy = deriveOccFromRentRollUnits(rentRollPayload);
   }
   const sensitivityRows = [];
@@ -1622,6 +1624,7 @@ function buildScreeningNoiStabilityHtml({
     : "";
   let vacancyBufferCard = "";
   if (
+    !isPartialRentRollSample &&
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 &&
     Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(occupancy)
   ) {
@@ -1654,6 +1657,7 @@ function buildScreeningRentRollDistributionHtml({
       ? rentRollPayload
       : null;
   if (!source) return "";
+  if (source.is_partial_sample === true) return "";
   const totalUnits = coerceNumber(source.total_units);
   const occupiedUnits = coerceNumber(source.occupied_units);
   let occupancy = coerceNumber(source.occupancy);
@@ -3920,7 +3924,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     const screeningIncomeForensicsHtml = effectiveReportMode === "screening_v1"
       ? (() => {
           const operatingSummaryLines = [];
-          const screeningOccupancy = coerceNumber(computedRentRoll?.occupancy ?? rentRollPayload?.occupancy);
+          const screeningOccupancy = coerceNumber(computedRentRoll?.occupancy ?? (computedRentRoll?.is_partial_sample === true ? null : rentRollPayload?.occupancy));
           const screeningAnnualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual);
           const screeningExpenseRatio = Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue) && t12EgiValue > 0
             ? t12TotalExpensesValue / t12EgiValue

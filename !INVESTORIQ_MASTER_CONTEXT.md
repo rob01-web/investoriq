@@ -88,9 +88,9 @@
     - 2B header collision fix verified
     - 2C rent-lift / displayed rent reconciliation fix verified
     - 2D interest-rate precision consistency fix verified
-    - 2E Step 03 duplicate live processing row UX cleanup patch applied, pending live smoke test
+    - 2E Step 03 duplicate live processing row UX cleanup patch applied and smoke-tested
     - 2A NOI wrap defect resolved by converting NOI Breakdown to a 3-column layout and removing the visual bar column
-    - Batch 2 is materially closed pending Step 03 smoke verification only
+    - Batch 2 is closed
     - no new hidden model-risk regressions surfaced; remaining issues are presentation / polish class, not core underwriting math defects
   - composite score inflation was patched in `api/generate-client-report.js`; missing debt sizing / DSCR NOT ASSESSED now adds `DSCR (Not Assessed) = 0/10` and expands the denominator so missing debt data cannot improve the composite score
   - resolved model-risk insight: missing debt sizing must not improve deal score; this scoring optics concern was likely to be questioned by institutional reviewers
@@ -110,6 +110,44 @@
     - public em dash / en dash audit returned clean
     - Pricing typography survivors cleaned: `Redirecting...` and `|` separators
     - public `refinance failure risk` wording changed to `refinance shortfall risk`
+  - Batch 4 report-polish cleanup is completed:
+    - DSCR Not Assessed now caps the score verdict at Review
+    - supporting-doc coverage fallback wording tightened
+    - footer, header, and document separators changed from middle dot to `|`
+    - value-add language neutralized to sensitivity-based wording
+    - `node --check api/generate-client-report.js`: PASS
+  - Batch 5 Step 03 / worker cleanup is completed:
+    - rendering-stage missing parsed artifacts now route to `failed`, not `needs_documents`
+    - rendering transition changed to `rendering -> failed`
+    - entitlement restore behavior preserved
+    - hidden Dashboard upload-more-docs language neutralized to integrity-validation wording
+    - `npm run build`: PASS
+    - internal response metadata `blockedNeedsDocumentsCount` may remain but is not customer-facing
+  - Step 03 smoke test materially passed:
+    - Start new report: PASS
+    - Step 03 shows only `Processing underway...` copy: PASS
+    - no duplicate property / status row in Step 03: PASS
+    - Active Jobs shows live statuses: PASS
+    - Generate disabled during processing: PASS
+    - no upload-more-documents wording on failures: PASS
+    - published-state copy not directly confirmed; verify opportunistically during next regression
+  - 124 Richmond final validation:
+    - Screening Test 15: strong pass / sendable screening memo
+    - Clean Underwriting Test 15: strong pass
+    - Messy Underwriting Test 15: strong pass
+    - NOI wrap is closed after visual screenshot verification; parsed text line breaks were false positives
+    - unsupported docs were ignored correctly
+    - DSCR Not Assessed / partial debt behavior held
+    - remaining items are polish philosophy only: Sensitized / borderline severity, any survivor value-creation wording, softer value sensitivity framing, and score-calibration optics where DSCR / refi shortfall creates concern
+  - Forest City Test 18 review:
+    - Forest City Screening Test 18 and Underwriting Test 18 reviewed
+    - T12 reconciles to source: EGI $2,517,120, OpEx $793,685, NOI $1,723,435, Expense Ratio 31.5%
+    - footer middle dot is fixed in generated PDFs; footer now uses `|`
+    - DSCR Not Assessed score cap works: Underwriting shows Review, not Within Underwriting Parameters
+    - no fake DSCR was invented from partial financing terms
+    - 4.99% cap rate carried from purchase assumptions
+    - real issue: partial rent-roll sample leakage remains in Operating Profile / NOI Stability, which still use 75.0% and vacancy buffer from partial/sample rows even though Executive Snapshot suppresses occupancy as DATA NOT AVAILABLE
+    - real issue: CapEx / renovation budget acknowledgment gap remains; uploaded CapEx should be structured into the renovation section or disclosed as uploaded but excluded / unstructured
 - Website positioning, pricing copy, contact routing, and core report wording have been materially tightened for launch.
 - Website copy and positioning have been hardened to remove legacy automation references and reinforce proprietary, document-driven positioning.
 - Test 9 returned to green after the live `public.reports` persistence issue was corrected.
@@ -1197,24 +1235,27 @@
 - Composite score inflation fix validated under messy underwriting conditions.
 - Batch 2 Rendering / Presentation Integrity: materially closed.
 - NOI Breakdown wrap defect resolved with the 3-column NOI Breakdown patch in `api/generate-client-report.js`.
-- Step 03 duplicate live processing row cleanup patched; live smoke verification remains pending.
+- Step 03 duplicate live processing row cleanup patched and smoke-tested.
 - Batch 3 public-language, disclosure, ASCII, mojibake, and score-label cleanup: materially completed.
+- Batch 4 score / disclosure / footer / value-add polish: completed.
+- Batch 5 Step 03 / rendering-stage `needs_documents` cleanup: completed.
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Run Step 03 smoke test
-  2. Run final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting
-  3. Red-team outputs like Ken Dunn would
-  4. Patch only real regressions found
-  5. Run final repo-wide Codex red-team audit before Ken Dunn outreach
+  1. Batch 6A partial rent-roll sample leakage audit / fix
+  2. Batch 6B CapEx schedule acknowledgment audit / fix
+  3. Run final repo-wide Codex red-team audit
+  4. Run final regression pass
+  5. Low-dollar Stripe test / Ken Dunn prep
 
 - STILL OPEN
-  - Step 03 smoke test after duplicate live processing row cleanup.
-  - Final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting.
-  - Rendering-stage `needs_documents` cleanup.
+  - Partial rent-roll sample leakage fix.
+  - CapEx schedule acknowledgment / disclosure fix.
   - Final repo-wide Codex red-team audit before Ken Dunn.
+  - Final three-report regression suite after the fixes above.
   - Low-dollar true live Stripe payment test if not yet completed.
   - Dashboard freeze remains a monitored launch-risk item, not solved.
+  - Opportunistically confirm Step 03 published-state copy during next regression.
   - Optional later cleanup: SES helpers, entitlement table/source-of-truth cleanup, Dashboard auto-visibility, rent-roll sample relabel / suppression review, jurisdiction-sensitive rent-growth qualifier, and vacancy-adjusted concentration disclosure.
   - Final readiness check after report review and any real blockers are fixed.
 
@@ -1255,14 +1296,13 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - resume with Step 03 smoke test
-  - run final three-report regression assault
-  - red-team outputs like Ken Dunn would
-  - patch only real regressions found
+  - Batch 6A partial rent-roll sample leakage audit / fix
+  - Batch 6B CapEx schedule acknowledgment audit / fix
+  - run final repo-wide Codex red-team audit
+  - run final regression pass
+  - low-dollar Stripe test / Ken Dunn prep
 
 - AFTER THAT
-  - clean up rendering-stage `needs_documents`
-  - run final repo-wide Codex red-team audit before outreach
   - complete final readiness check
   - prepare website sample report placement only after blockers are closed
   - worker logic remains frozen in rollback state unless a brand-new blocker appears
@@ -1270,7 +1310,10 @@
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
-- No worker changes.
+- Codex investigation before worker / Dashboard / parser patches.
+- Worker success flow remains protected.
+- Dashboard remains manual-refresh / cautious posture.
+- Patch only real regressions found.
 - No Dashboard changes until report blockers are resolved.
 - No report wording or valuation polish until debt / underwriting proof validation is complete.
 
@@ -1491,7 +1534,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
     - Batch 1 Critical Math Integrity is closed after Clean + Messy Underwriting Test 12
-    - current true survivors: Step 03 smoke test, final three-report regression suite, rendering-stage `needs_documents`, final red-team audit, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
+    - current true survivors: partial rent-roll sample leakage, CapEx schedule acknowledgment, final red-team audit, final regression suite, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1499,9 +1542,10 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - run Step 03 smoke test
-  - run final three-report regression suite: clean screening, clean underwriting, and messy / 124 Richmond underwriting
-  - clean up rendering-stage `needs_documents`
+  - fix partial rent-roll sample leakage
+  - fix CapEx schedule acknowledgment / disclosure gap
+  - run final repo-wide Codex red-team audit
+  - run final three-report regression suite after those fixes
   - patch only real regressions found in final validation
   - worker remains in the last known-good rollback state, with stability prioritized over further pre-launch worker experimentation
   - preserve the Resend-backed `report_published` notification path as the launch notification default
@@ -1511,9 +1555,8 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - `fetchRecentJobs()` now also has a serialize-and-compare equality guard to reduce unchanged-payload churn, but Dashboard freeze is still not declared solved
   - Dashboard freeze remains a monitor / cautious launch-risk item, not solved
   - customer-facing `needs_documents` is not an acceptable V1 endpoint
-  - extracting-stage `needs_documents` has been converted to `failed`
-  - Step 03 still needs integrity-aware failure messaging and removal of remaining misleading `needs_documents` display paths
-  - rendering-stage `needs_documents` still remains for later cleanup
+  - extracting-stage and rendering-stage `needs_documents` paths have been converted to `failed`
+  - hidden Step 03 upload-more-docs language has been neutralized to integrity-validation wording
   - fetch reconciliation investigation still remains open and should not be handled through blanket restoration
   - no more Dashboard sync experiments before outreach unless a brand-new blocker appears
   - bottom completed-reports wording choice still remains open:
