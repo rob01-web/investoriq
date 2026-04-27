@@ -4059,6 +4059,26 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           typeof financials.renovation_interpretation === "string"
         ))
     );
+    const hasRenovationFilenameSignal = Array.isArray(documentSources) && documentSources.some((row) => {
+      const name = String(row?.original_filename || "").toLowerCase();
+      return [
+        "capex",
+        "cap ex",
+        "capital expenditure",
+        "capital expenditures",
+        "capital plan",
+        "renovation",
+        "renovations",
+        "reno",
+        "budget",
+        "improvement",
+        "improvements",
+      ].some((term) => name.includes(term));
+    });
+    const renovationAcknowledgmentHtml =
+      !hasExplicitRenovationInput && hasRenovationFilenameSignal
+        ? `<div class="card no-break"><p class="subsection-title">Uploaded Renovation / CapEx Document</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">A renovation, CapEx, capital plan, or budget-related document was included in the uploaded source package. The document was not converted into structured renovation budget inputs for this report. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.</p></div>`
+        : "";
     const renovationBudgetRows = hasExplicitRenovationInput
       ? buildRenovationBudgetRows(
           financials?.renovation_budget_rows || renovationPayload?.budget_rows || [],
@@ -4114,7 +4134,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     finalHtml = replaceAll(
       finalHtml,
       "{{RENOVATION_INTERPRETATION}}",
-      escapeHtml(renovationInterpretation)
+      renovationAcknowledgmentHtml || escapeHtml(renovationInterpretation)
     );
     let canRenderRefi = false;
     if (effectiveReportMode !== "v1_core") {
@@ -4163,6 +4183,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     const showRenovationSection = Boolean(
       (renovationBudgetRows || "").trim() ||
         (renovationExecutionRows || "").trim() ||
+        renovationAcknowledgmentHtml ||
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
         (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
     );

@@ -362,7 +362,13 @@
 - One-and-done product rule is now explicitly confirmed:
   - users do not upload additional documents after report generation begins as part of the normal product flow
   - the old missing-doc continuation / reminder workflow is legacy behavior and is no longer part of the intended launch model
-  - no refunds once report generation is in progress unless there is a true system-side error
+  - if InvestorIQ cannot verify enough required source data to produce a defensible report, no report publishes and the report credit is automatically restored
+  - if a defensible report is successfully generated and published from the submitted package, the credit is consumed
+  - if a user later realizes they forgot optional documents after publication, that is not a system failure and requires a new report request
+  - to retry after failed generation, the user must start a new report request and upload the complete document package again, including all required and supporting documents
+  - V1 does not support supplementing a failed job with only selected replacement documents
+- Preferred failed-generation copy:
+  - `Generation halted due to document verification limits. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report. No report was published, and 1 report credit has been returned to your account. To try again, please start a new report request and upload the complete document package again, including all required and supporting documents. Do not upload only the documents you believe were unclear or unreadable, because each report is generated from a single complete upload package.`
 - Narrative must be document-derived and supportable from parsed inputs.
 - No fabricated data, no silent fallback assumptions, and no decorative filler sections.
 
@@ -1239,20 +1245,30 @@
 - Batch 3 public-language, disclosure, ASCII, mojibake, and score-label cleanup: materially completed.
 - Batch 4 score / disclosure / footer / value-add polish: completed.
 - Batch 5 Step 03 / rendering-stage `needs_documents` cleanup: completed.
+- Batch 6A partial rent-roll sample leakage suppression: code-complete, pending Forest City retest.
+- Batch 6A preserves explicit total units while preventing partial/sample rows from supporting full-property occupancy, occupied/vacant counts, vacancy buffer, row-derived occupancy, annual in-place / market rent totals, Rent Roll Distribution, or Data Coverage occupancy presence.
+- Batch 6A validation: `node --check api/generate-client-report.js`: PASS.
+- Batch 6A required retest: Forest City Screening / Underwriting should confirm 144 units remain preserved and occupancy / vacancy / distribution fail closed.
+- Batch 6B CapEx / renovation acknowledgment:
+  - audit found no live CapEx / renovation / budget classifier in the parser
+  - generator queries `renovation_parsed`, but parser does not currently create it
+  - CapEx / renovation docs can become supporting unclassified docs
+  - launch decision: do not build a CapEx parser before launch
+  - minimum launch behavior is disclosure-only when uploaded filenames suggest CapEx / renovation / budget / capital plan and no structured renovation input exists
+  - no costs, rent lift, ROI, payback, or scope should be invented
+  - disclosure patch is code-complete and pending regression confirmation
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Batch 6A partial rent-roll sample leakage audit / fix
-  2. Batch 6B CapEx schedule acknowledgment audit / fix
-  3. Run final repo-wide Codex red-team audit
-  4. Run final regression pass
-  5. Low-dollar Stripe test / Ken Dunn prep
+  1. Final Forest City / 124 Richmond regression suite
+  2. Run final repo-wide Codex red-team audit
+  3. Low-dollar Stripe test if outstanding
+  4. Ken Dunn sample package review
 
 - STILL OPEN
-  - Partial rent-roll sample leakage fix.
-  - CapEx schedule acknowledgment / disclosure fix.
+  - Forest City / 124 Richmond regression confirmation for Batch 6A and Batch 6B.
   - Final repo-wide Codex red-team audit before Ken Dunn.
-  - Final three-report regression suite after the fixes above.
+  - Final three-report regression suite.
   - Low-dollar true live Stripe payment test if not yet completed.
   - Dashboard freeze remains a monitored launch-risk item, not solved.
   - Opportunistically confirm Step 03 published-state copy during next regression.
@@ -1296,11 +1312,10 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - Batch 6A partial rent-roll sample leakage audit / fix
-  - Batch 6B CapEx schedule acknowledgment audit / fix
+  - final Forest City / 124 Richmond regression suite
   - run final repo-wide Codex red-team audit
-  - run final regression pass
-  - low-dollar Stripe test / Ken Dunn prep
+  - low-dollar Stripe test if outstanding
+  - Ken Dunn sample package review
 
 - AFTER THAT
   - complete final readiness check
@@ -1503,7 +1518,39 @@ Principles
 Trigger condition:
 Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
+## 10.3 Post-Launch QA Roadmap
+- AI QA Safeguard Layer:
+  - post-launch roadmap item, not a pre-Ken Dunn launch pivot
+  - purpose: AI-assisted document QA to flag parser misses, unsupported report claims, uploaded-but-unused docs, source/report inconsistencies, and messy mom-and-pop / napkin-user document issues
+  - AI may flag issues and recommend review actions
+  - AI must not silently inject financial values into NOI, rent, occupancy, DSCR, debt, valuation, cap rate, refinance, or deal score
+  - deterministic parser / calculation layer remains source of truth
+  - admin approval or deterministic validation is required before any AI-identified financial value affects a report
+- Manual Admin QA Gate:
+  - V1.1 / immediate post-launch hardening option, not current pre-launch pivot
+  - concept: reports remain private until admin approval; admin can inspect uploaded docs, run generation privately, QA PDF against source documents, then approve / publish
+  - no customer-visible report or report-ready email until approval
+  - current decision: do not pivot launch to this before Ken Dunn unless final validation reveals a fatal issue
+
 ## 11. Launch Readiness Snapshot
+- Scenario coverage audit recommendation: Launch this week = CONDITIONAL.
+- Launch conditions:
+  - complete and validate CapEx / renovation uploaded-but-unstructured acknowledgment
+  - run final regression suite
+  - run final repo-wide Codex red-team audit
+  - complete low-dollar live Stripe payment test if still outstanding
+  - stop only if a new report-core math or document-integrity regression appears
+- Current covered scenarios:
+  - clean Screening
+  - clean Underwriting
+  - messy T12 extraction with fail-closed validation
+  - full rent roll
+  - partial rent roll sample with explicit total units
+  - missing / partial debt terms
+  - DSCR not assessed
+  - rendering-stage failure remap to failed
+  - Stripe quantity entitlement path
+  - Dashboard visibility with caution
 - Launch-ready now:
   - pricing and positioning are fully aligned with institutional positioning and proprietary-system messaging
   - screening vs underwriting separation is materially cleaner
@@ -1534,7 +1581,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
     - Batch 1 Critical Math Integrity is closed after Clean + Messy Underwriting Test 12
-    - current true survivors: partial rent-roll sample leakage, CapEx schedule acknowledgment, final red-team audit, final regression suite, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
+    - current true survivors: final Batch 6 regression confirmation, final red-team audit, final regression suite, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1542,8 +1589,8 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - fix partial rent-roll sample leakage
-  - fix CapEx schedule acknowledgment / disclosure gap
+  - confirm Batch 6A partial rent-roll sample fail-closed behavior in Forest City retest
+  - confirm Batch 6B CapEx / renovation uploaded-but-unstructured acknowledgment in Forest City retest
   - run final repo-wide Codex red-team audit
   - run final three-report regression suite after those fixes
   - patch only real regressions found in final validation
