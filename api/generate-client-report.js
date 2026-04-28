@@ -2452,18 +2452,18 @@ export default async function handler(req, res) {
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
-        .select("original_filename, created_at")
+        .select("original_filename, uploaded_at")
         .eq("job_id", jobId)
-        .order("created_at", { ascending: true });
+        .order("uploaded_at", { ascending: true });
       if (!sourceErr && sourceRows && sourceRows.length > 0) {
         documentSources = sourceRows;
         const items = sourceRows
           .map((row) => {
             const name = escapeHtml(row.original_filename || "Unnamed file");
-            const createdAt = row.created_at
-              ? new Date(row.created_at).toLocaleString()
+            const uploadedAt = row.uploaded_at
+              ? new Date(row.uploaded_at).toLocaleString()
               : "Unknown date";
-            return `<li>${name}  -  ${escapeHtml(createdAt)}</li>`;
+            return `<li>${name}  -  ${escapeHtml(uploadedAt)}</li>`;
           })
           .join("");
         documentSourcesHtml = `<ul>${items}</ul>`;
@@ -4140,26 +4140,38 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           hasMeaningfulRenovationText(financials.renovation_interpretation)
         ))
     );
-    const hasRenovationFilenameSignal = Array.isArray(documentSources) && documentSources.some((row) => {
-      const name = String(row?.original_filename || "").toLowerCase();
-      return [
-        "capex",
-        "cap ex",
-        "capital expenditure",
-        "capital expenditures",
-        "capital plan",
-        "renovation",
-        "renovations",
-        "reno",
-        "budget",
-        "improvement",
-        "improvements",
-      ].some((term) => name.includes(term));
-    });
+    const renovationFilenameTerms = [
+      "capex",
+      "cap ex",
+      "capital expenditure",
+      "capital expenditures",
+      "capital plan",
+      "capital budget",
+      "renovation",
+      "renovations",
+      "renovation budget",
+      "reno",
+      "budget",
+      "construction budget",
+      "scope of work",
+      "improvement",
+      "improvements",
+    ];
+    const renovationSourceFilenames = Array.isArray(documentSources) ? documentSources
+      .map((row) => String(row?.original_filename || "").trim())
+      .filter((name) => {
+        const lower = name.toLowerCase();
+        return lower && renovationFilenameTerms.some((term) => lower.includes(term));
+      }) : [];
+    const hasRenovationFilenameSignal = renovationSourceFilenames.length > 0;
+    const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
     const renovationAcknowledgmentHtml =
       !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<strong>Uploaded Renovation / CapEx Document:</strong> A renovation, CapEx, capital plan, or budget-related document was included in the uploaded source package. The document was not converted into structured renovation budget inputs for this report. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.`
+        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Structured CapEx modeling was not produced because the file was not converted into verified structured renovation inputs. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.`
         : "";
+    if (renovationAcknowledgmentHtml && documentSourcesHtml) {
+      documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
+    }
     const renovationBudgetRows = hasExplicitRenovationInput
       ? buildRenovationBudgetRows(
           financials?.renovation_budget_rows || renovationPayload?.budget_rows || [],
@@ -4215,7 +4227,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     finalHtml = replaceAll(
       finalHtml,
       "{{RENOVATION_INTERPRETATION}}",
-      renovationAcknowledgmentHtml || escapeHtml(renovationInterpretation)
+      escapeHtml(renovationInterpretation)
     );
     let canRenderRefi = false;
     if (effectiveReportMode !== "v1_core") {
@@ -4264,7 +4276,6 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     const showRenovationSection = Boolean(
       (renovationBudgetRows || "").trim() ||
         (renovationExecutionRows || "").trim() ||
-        renovationAcknowledgmentHtml ||
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
         (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
     );

@@ -1,0 +1,352 @@
+INVESTORIQ
+
+INSTITUTIONAL
+
+REAL
+
+ESTATE ANALYSIS
+
+124 Richmond Street Final
+Regression Screening
+Sensitized
+12 Units | NOI $72,170 | Expense Ratio 62.6% | NOI Margin 37.4%
+
+ASSET CLASS
+
+Multifamily - 12 Units
+
+DOCUMENTS
+
+!Rent_Roll_124_Richmond_St_London_ON.xlsx |
+!T12_124_Richmond_St_London_ON.xlsx
+
+REPORT TIER
+
+Preliminary Screening
+
+CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.
+
+APRIL 28, 2026
+
+INVESTORIQ
+
+124 Richmond Street Final Regression Screening
+
+April 28, 2026
+
+Executive Summary
+Deal overview, operating profile, and primary risk drivers
+
+12-Unit Multifamily
+SCREENING SIGNAL
+
+Sensitized
+Primary Pressure Point: Expense Ratio (62.6%)
+Operating profile classified as SENSITIZED: elevated operating expense burden (62.6%) breaches the sensitized threshold;
+compressed NOI margin (37.4%) breaches the sensitized threshold.
+KEY METRICS SNAPSHOT
+UNITS
+
+12
+OCCUPANCY
+
+100.0%
+ANNUAL IN-PLACE RENT
+
+$186,780
+EFFECTIVE GROSS INCOME
+
+$192,960
+OPERATING EXPENSES
+
+$120,790
+NET OPERATING INCOME
+
+$72,170
+EXPENSE RATIO
+
+62.6% (Sensitized)
+NOI MARGIN
+
+37.4% (Sensitized)
+BREAK-EVEN OCCUPANCY
+
+62.6% (Stable)
+KEY UPSIDE DRIVERS
+
+• In-place rents trail market by ~17.4% (observed rent gap).
+• Occupancy is 100.0%, reflecting fully stabilized in-place tenancy.
+• Operating cushion of 37.4% above break-even occupancy based on in-place performance.
+PRIMARY CONSTRAINTS
+
+• Expense ratio is 62.6%, pressuring NOI margin.
+• NOI margin is 37.4%, leaving limited buffer for shocks.
+RANKED DRIVERS (WORST → BEST)
+
+1. Expense Ratio: 62.6% (trigger: >= 55.0% sensitized threshold breached)
+2. NOI Margin: 37.4% (trigger: <= 45.0% sensitized threshold breached)
+3. Break-even Occupancy: 62.6% (trigger: < 75.0% within stable range)
+CLASSIFICATION FRAMEWORK
+
+TIER
+
+EXPENSE RATIO
+
+NOI MARGIN
+
+BREAK-EVEN OCC.
+
+Stable
+
+< 55%
+
+> 45%
+
+< 75%
+
+Sensitized ▶
+
+55-65%
+
+35-45%
+
+75-85%
+
+Fragile
+
+> 65%
+
+< 35%
+
+> 85%
+
+Standardized underwriting thresholds. ▶ = current classification.
+OPERATING SUMMARY
+
+The property is 100.0% occupied and carries reported rent-to-market upside of 14.8%. NOI margin compression to 37.4%,
+primarily attributable to a 62.6% expense ratio, supports a Sensitized classification. Operating improvement sensitivity is tied
+to expense-ratio reduction and the observed rent-to-market gap.
+
+All statements derive from reported metrics and standardized classification thresholds. No forward-looking projections.
+
+Unit-Level Value Add Analysis
+Rent lift, renovation potential, and implied value sensitivity
+
+UNIT MIX AND RENT LIFT
+
+UNIT TYPE
+
+COUNT
+
+AVG SQ FT
+
+AVG IN-PLACE RENT
+
+TARGET RENT (POST-RENO)
+
+MONTHLY LIFT
+
+1 Bed
+
+6
+
+613
+
+$1,173
+
+$1,395
+
+$222
+
+2 Bed
+
+6
+
+823
+
+$1,422
+
+$1,650
+
+$228
+
+RENT POSITIONING SUMMARY
+
+Rent roll data indicates in-place rents are below market across the current unit mix.
+
+Operating Statement (Trailing Twelve Months)
+Operating summary based on uploaded financials
+
+NET OPERATING INCOME SUMMARY
+
+METRIC
+
+VALUE
+
+Effective Gross Income (TTM)
+
+$192,960
+
+Total Operating Expenses (TTM)
+
+$120,790
+
+Net Operating Income (TTM)
+
+$72,170
+
+Operating Expense Ratio
+
+62.6%
+
+EGI per Unit (TTM)
+
+$16,080
+
+OpEx per Unit (TTM)
+
+$10,066
+
+NOI per Unit (TTM)
+
+$6,014
+
+Operating Profile
+Occupancy, rent level, and operating summary
+
+OPERATING PROFILE SUMMARY
+
+Occupancy of 100.0% and annual in-place rent of $186,780. Total operating expenses of $120,790 and an expense ratio of
+62.6%. NOI of $72,170, reflecting an NOI margin of 37.4%. Rent roll data supports below-market in-place rents across the
+current unit mix.
+
+Rent Roll Distribution
+Occupancy, rent dispersion, and unit mix profile
+
+METRIC
+
+VALUE
+
+Total Units
+
+12
+
+Occupied Units
+
+12
+
+Occupancy
+
+100.0%
+
+Weighted Avg In-Place Rent
+
+$1,297
+
+Weighted Avg Market Rent
+
+$1,523
+
+Market Rent Premium (Avg)
+
+17.4%
+
+Annual In-Place Rent (Total)
+
+$186,780
+
+Annual Market Rent (Total)
+
+$219,240
+
+RENT BANDS (IN-PLACE)
+
+UNIT TYPE
+
+UNITS
+
+AVG IN-PLACE
+
+AVG MARKET
+
+GAP ($)
+
+GAP (%)
+
+1 Bed
+
+6
+
+$1,173
+
+$1,395
+
+$222
+
+19.0%
+
+2 Bed
+
+6
+
+$1,422
+
+$1,650
+
+$228
+
+16.1%
+
+Data Coverage & Screening Notes
+Missing inputs and omitted sections
+
+CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified.
+All required screening inputs were fully extracted from uploaded documents.
+DATASET
+
+FIELDS PRESENT
+
+COVERAGE
+
+MISSING
+
+T12 Operating Statement
+
+4/4
+
+100.0%
+
+None
+
+Rent Roll
+
+4/4
+
+100.0%
+
+None
+
+Methodology & Data Transparency
+Assumptions, methodology notes, and data limitations
+
+InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and defined
+modeling frameworks, with transparency and auditability as core design principles.
+Outputs are document-backed and framework-constrained. Missing inputs are not inferred.
+
+12.1 InvestorIQ Estimates
+InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized
+underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+12.2 Methodology Notes
+Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing
+source data is not gap-filled.
+
+12.3 Data Limitations & Missing Inputs
+This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed
+and excluded from analysis.
+
+I N V E S T O R I Q C A P ITAL INTELLIGENCE MEMORANDUM | CONFIDENTIAL
+
+© InvestorIQ Technologies Inc.
+
+

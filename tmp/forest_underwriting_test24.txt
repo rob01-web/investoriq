@@ -1,0 +1,914 @@
+INVESTORIQ
+
+INSTITUTIONAL
+
+REAL
+
+ESTATE ANALYSIS
+
+Forest City Manor Underwriting
+Test 24
+Stable
+ASSET CLASS
+
+Multifamily - 144 Units
+
+DOCUMENTS
+
+ForestCityManor_RentRoll.xlsx |
+ForestCityManor_T12_2024-2025.pdf |
+ForestCityManor_BrokerEmail.pdf |
+ForestCityManor_PurchaseAssumptions.pdf |
+ForestCityManor_RenovationBudget.docx
+
+REPORT TIER
+
+Full Underwriting
+
+CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.
+
+APRIL 28, 2026
+
+INVESTORIQ
+
+Forest City Manor Underwriting Test 24
+
+Executive Summary
+Deal overview, operating profile, and primary risk drivers
+
+144-Unit Multifamily
+CAPITAL RISK PROFILE
+
+Stable
+Primary Pressure Point: Expense Ratio (31.5%)
+KEY METRICS SNAPSHOT
+UNITS
+
+144
+OCCUPANCY
+
+96.0%
+ANNUAL IN-PLACE RENT
+
+$2,622,000
+EFFECTIVE GROSS INCOME
+
+$2,517,120
+OPERATING EXPENSES
+
+$793,685
+NET OPERATING INCOME
+
+$1,723,435
+EXPENSE RATIO
+
+31.5% (Stable)
+NOI MARGIN
+
+68.5% (Stable)
+BREAK-EVEN OCCUPANCY
+
+31.5% (Stable)
+KEY UPSIDE DRIVERS
+
+• In-place rents trail market by ~16.7% (observed rent gap).
+• Occupancy is 96.0%, reflecting fully stabilized in-place tenancy.
+• Operating cushion of 64.5% above break-even occupancy based on in-place performance.
+
+April 28, 2026
+
+PRIMARY CONSTRAINTS
+
+• Debt terms were partially identified, but no debt sizing balance was provided; DSCR and current-debt service are not
+assessed.
+CAPITAL RISK PROFILE: STABLE
+
+Expense Ratio
+
+31.5%
+
+NOI Margin
+
+68.5%
+
+Break-Even Occupancy
+
+31.5%
+
+Operating profile classification based on standardized underwriting thresholds from uploaded documents only.
+Uploaded Files
+
+This section lists the files uploaded and associated with this report.
+• ForestCityManor_RentRoll.xlsx - 2026-04-27, 7:12:27 p.m.
+• ForestCityManor_T12_2024-2025.pdf - 2026-04-27, 7:12:27 p.m.
+• ForestCityManor_BrokerEmail.pdf - 2026-04-27, 7:12:27 p.m.
+• ForestCityManor_PurchaseAssumptions.pdf - 2026-04-27, 7:12:27 p.m.
+• ForestCityManor_RenovationBudget.docx - 2026-04-27, 7:12:27 p.m.
+Uploaded Renovation / CapEx Document: Uploaded renovation/CapEx source file acknowledged:
+ForestCityManor_RenovationBudget.docx. Structured CapEx modeling was not produced because the file was not converted
+into verified structured renovation inputs. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been
+modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as
+structured document-derived inputs.
+
+Unit-Level Value Add Analysis
+Rent lift, renovation potential, and implied value sensitivity
+
+UNIT MIX AND RENT LIFT
+
+UNIT TYPE
+
+COUNT
+
+AVG SQ FT
+
+AVG IN-PLACE RENT
+
+TARGET RENT (POST-RENO)
+
+MONTHLY LIFT
+
+1BR
+
+2
+
+650
+
+$1,450
+
+$1,650
+
+$200
+
+2BR
+
+1
+
+850
+
+$1,725
+
+$2,100
+
+$375
+
+Studio
+
+1
+
+450
+
+$0
+
+$1,400
+
+$1,400
+
+CAP RATE VALUE INDICATION
+
+CAP RATE
+
+IMPLIED VALUE
+
+PER UNIT
+
+5.0%
+
+$34,468,700
+
+$239,366
+
+6.0%
+
+$28,723,917
+
+$199,472
+
+7.0%
+
+$24,620,500
+
+$170,976
+
+Derived from reported NOI of $1,723,435. Cap rates are standardized framework benchmarks, not document-sourced.
+
+RENT UPSIDE PATHWAY: MARK-TO-MARKET ANALYSIS
+
+Annual In-Place Rent
+
+$2,622,000
+
+Annual Market Rent
+
+$3,148,800
+
+Annual Gross Rent Upside
+
+$526,800
+
+IMPLIED VALUE SENSITIVITY AT STABILIZATION.
+
+5.0% cap rate
+
+$10,536,000
+
+6.0% cap rate
+
+$8,780,000
+
+7.0% cap rate
+
+$7,525,714
+
+Implied value sensitivity reflects annual rent gap capitalized at the stated cap rate and remains conditional on market-rent
+capture and occupancy.
+
+Operating Statement (Trailing Twelve Months)
+Operating summary based on uploaded financials
+
+INCOME RECONSTRUCTION (TTM)
+
+INCOME LINE ITEM
+
+TTM AMOUNT
+
+No line-item detail available. Effective Gross Income (TTM): $2,517,120.
+OPERATING EXPENSES (TTM)
+
+EXPENSE LINE ITEM
+
+TTM AMOUNT
+
+No line-item detail available. Total Operating Expenses (TTM): $793,685.
+
+NET OPERATING INCOME SUMMARY
+
+METRIC
+
+VALUE
+
+Effective Gross Income (TTM)
+
+$2,517,120
+
+Total Operating Expenses (TTM)
+
+$793,685
+
+Net Operating Income (TTM)
+
+$1,723,435
+
+Operating Expense Ratio
+
+31.5%
+
+EGI per Unit (TTM)
+
+$17,480
+
+OpEx per Unit (TTM)
+
+$5,512
+
+NOI per Unit (TTM)
+
+$11,968
+
+NOI BREAKDOWN
+
+Effective Gross Income
+
+$2,517,120
+
+100%
+
+Operating Expenses (-)
+
+$793,685
+
+32%
+
+Net Operating Income
+
+$1,723,435
+
+68%
+
+Operating Profile
+Occupancy, rent level, and operating summary
+
+INCOME & EXPENSE SUMMARY (LUMP-SUM T12)
+
+LINE ITEM
+
+AMOUNT (TTM)
+
+Effective Gross Income (TTM)
+
+$2,517,120
+
+Total Operating Expenses (TTM)
+
+$793,685
+
+Net Operating Income (TTM)
+
+$1,723,435
+
+No line-item detail available for this T12 format. All values are reported totals.
+REVENUE UPSIDE QUANTIFICATION
+
+METRIC
+
+VALUE
+
+Annual In-Place Rent
+
+$2,622,000
+
+Annual Market Rent (100% Occupancy)
+
+$3,148,800
+
+Gross Rent Upside
+
+$526,800 (20.1%)
+
+All values document derived from uploaded rent roll. Market rents as stated in document.
+
+Expense Structure Analysis
+Expense ratio, drivers, and intensity flags
+
+METRIC
+
+VALUE
+
+Operating Expense Ratio
+
+31.5%
+
+Operating Expense per Unit
+
+$5,512
+
+NOI per Unit
+
+$11,968
+
+EXPENSE FLAGS (DETERMINISTIC)
+EXPENSE DRIVERS
+
+No line-item expense detail available. Total Operating Expenses: $793,685.
+EXPENSE RATIO SENSITIVITY
+
+EXPENSE RATIO
+
+IMPLIED OPEX
+
+IMPLIED NOI
+
+50%
+
+$1,258,560
+
+$1,258,560
+
+55%
+
+$1,384,416
+
+$1,132,704
+
+60%
+
+$1,510,272
+
+$1,006,848
+
+65%
+
+$1,636,128
+
+$880,992
+
+70%
+
+$1,761,984
+
+$755,136
+
+Anchored to reported EGI of $2,517,120. Standardized threshold scenarios.
+
+NOI Stability Review
+Margin, volatility, and income resilience
+
+INDICATOR
+
+VALUE
+
+NOI Margin
+
+68.5%
+
+Expense Sensitivity
+
+68.5%
+
+Break-even Occupancy
+
+31.5%
+
+Rent Roll vs T12 GPR Variance
+
+0.0%
+
+STABILITY DRIVERS (WORST 3)
+
+1. NOI Margin 68.5%
+2. Expense Ratio 31.5%
+3. Rent Roll vs T12 GPR 0.0%
+
+NOI SENSITIVITY (DETERMINISTIC)
+
+SCENARIO
+
+IMPLIED NOI
+
+NOI MARGIN (IMPLIED)
+
+Expenses +5% (cost shock)
+
+$1,683,751
+
+66.9%
+
+Income -5% (revenue shock)
+
+$1,597,579
+
+66.8%
+
+Combined Shock (-5% income, +5%
+expenses)
+
+$1,557,895
+
+65.1%
+
+BREAK-EVEN OCCUPANCY BUFFER
+
+Break-even: 31.5%
+
+Buffer: 64.5 percentage points - Strong cushion
+
+Current occupancy: 96.0%
+
+Data Coverage & Underwriting Gaps
+Missing inputs and omitted sections
+
+CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified.
+Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain
+excluded from modeled outputs. Missing structured debt sizing prevents DSCR and current-debt assessment.
+DATASET
+
+FIELDS PRESENT
+
+COVERAGE
+
+T12 Operating Statement
+
+4/4
+
+100.0%
+
+None
+
+Rent Roll
+
+4/4
+
+100.0%
+
+None
+
+Uploaded files are listed separately; only structured inputs are used quantitatively.
+
+MISSING
+
+Scenario Analysis & Five-Year Outlook
+Cash flow projections and return sensitivities
+
+SCENARIO INPUTS
+
+YEAR
+
+CONSERVATIVE (2%
+GROWTH)
+
+BASE (3% GROWTH)
+
+OPTIMISTIC (4% GROWTH)
+
+Year 1
+
+$1,757,904
+
+$1,775,138
+
+$1,792,372
+
+Year 2
+
+$1,793,062
+
+$1,828,392
+
+$1,864,067
+
+Year 3
+
+$1,828,923
+
+$1,883,244
+
+$1,938,630
+
+Year 4
+
+$1,865,501
+
+$1,939,741
+
+$2,016,175
+
+Year 5
+
+$1,902,811
+
+$1,997,934
+
+$2,096,822
+
+$38,132,495
+
+$40,038,748
+
+$42,020,485
+
+Year 5 Exit Value
+
+Basis: T12 NOI = $1,723,435 | Exit cap: 4.99% (document derived). Scenario outputs are deterministic from document-backed
+inputs.
+YEAR 5 EXIT VALUE: CAP RATE SENSITIVITY
+
+EXIT CAP RATE
+
+CONSERVATIVE
+
+BASE
+
+OPTIMISTIC
+
+4.5%
+
+$42,284,700
+
+$44,398,523
+
+$46,596,049
+
+4.99% (document derived)
+
+$38,132,495
+
+$40,038,748
+
+$42,020,485
+
+5.5%
+
+$34,596,573
+
+$36,326,064
+
+$38,124,040
+
+6.0%
+
+$31,713,525
+
+$33,298,892
+
+$34,947,037
+
+6.5%
+
+$29,274,023
+
+$30,737,439
+
+$32,258,803
+
+DATA NOT AVAILABLE (not present in uploaded documents). Metrics that depend on missing source inputs are shown as
+unavailable.
+
+Deal Scorecard & Radar
+InvestorIQ deal score components
+
+FACTOR-LEVEL SCORES
+
+Review
+Composite Score: 83 / 100
+
+FACTOR
+
+VALUE
+
+THRESHOLD
+
+SCORE
+
+Expense Ratio
+
+31.5%
+
+Below 55%
+
+10/10
+
+NOI Margin
+
+68.5%
+
+Above 45%
+
+10/10
+
+Occupancy Rate
+
+96.0%
+
+Above 95%
+
+10/10
+
+Break-Even Occupancy
+
+31.5%
+
+Below 70%
+
+10/10
+
+Rent-to-Market Gap
+
+16.7%
+
+>15% upside
+
+10/10
+
+DSCR (Not Assessed)
+
+DATA NOT AVAILABLE
+
+Debt sizing balance not
+provided
+
+0/10
+
+Composite Score (normalized)
+
+83/100
+
+Scored from reported metrics only. Within Underwriting Parameters ≥ 70 | Review 50-69 | Outside Parameters < 50. DSCR not
+assessed caps the verdict at Review.
+
+RISK REGISTER: DETERMINISTIC SIGNAL SUMMARY
+
+RISK FACTOR
+
+CURRENT READING
+
+THRESHOLD
+
+FLAG
+
+Expense Ratio
+
+31.5%
+
+CLEAR < 55% | WATCH
+55-65% | ELEVATED > 65%
+
+CLEAR
+
+NOI Margin
+
+68.5%
+
+STRONG > 45% | WATCH
+35-45% | LOW < 35%
+
+STRONG
+
+Occupancy Rate
+
+96.0%
+
+CLEAR > 95% | WATCH
+85-95% | LOW < 85%
+
+CLEAR
+
+Break-Even Occupancy
+
+31.5%
+
+CLEAR < 70% | WATCH
+70-80% | ELEVATED > 80%
+
+CLEAR
+
+Rent-to-Market Gap
+
+16.7% below market
+
+> 15% = meaningful upside |
+5-15% = moderate | < 5% =
+minimal
+
+UPSIDE
+
+DSCR
+
+Debt sizing balance not
+provided
+
+Debt terms were partially
+identified; DSCR and
+current-debt service are not
+assessed
+
+NOT ASSESSED
+
+Signals are derived deterministically from document-backed inputs and framework-constrained calculations. Missing inputs
+are not inferred.
+
+Discounted Cash Flow (DCF)
+Cap rate expansion, exit sensitivity, and downside valuation pressure
+
+YEAR
+
+NOI
+
+EXIT VALUE
+
+TOTAL CASH
+FLOW
+
+PV FACTOR
+
+PRESENT VALUE
+
+Year 1
+
+$1,775,138
+
+-
+
+$1,775,138
+
+0.9259
+
+$1,643,646
+
+Year 2
+
+$1,828,392
+
+-
+
+$1,828,392
+
+0.8573
+
+$1,567,552
+
+Year 3
+
+$1,883,244
+
+-
+
+$1,883,244
+
+0.7938
+
+$1,494,980
+
+Year 4
+
+$1,939,741
+
+-
+
+$1,939,741
+
+0.7350
+
+$1,425,768
+
+Year 5
+
+$1,997,934
+
+$40,038,748
+
+$42,036,681
+
+0.6806
+
+$28,609,459
+
+Estimated Intrinsic Value (Sum of PVs)
+
+$34,741,404
+
+Basis: T12 NOI = $1,723,435 | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: 4.99% (document
+derived)
+INTRINSIC VALUE: EXIT CAP RATE SENSITIVITY
+
+EXIT CAP RATE
+
+YEAR 5 EXIT VALUE
+
+IMPLIED INTRINSIC VALUE
+
+VS. BASE
+
+4.5%
+
+$44,398,523
+
+$37,708,594
+
+8.5%
+
+4.99% (document derived)
+
+$40,038,748
+
+$34,741,404
+
+-
+
+5.5%
+
+$36,326,064
+
+$32,214,614
+
+-7.3%
+
+6.0%
+
+$33,298,892
+
+$30,154,372
+
+-13.2%
+
+6.5%
+
+$30,737,439
+
+$28,411,090
+
+-18.2%
+
+Methodology & Data Transparency
+Assumptions, methodology notes, and data limitations
+
+InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and defined
+modeling frameworks, with transparency and auditability as core design principles.
+Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting
+frameworks. InvestorIQ does not invent missing data or fabricate market inputs.
+
+12.1 InvestorIQ Estimates
+InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized
+underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+12.2 Methodology Notes
+Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing
+source data is not gap-filled.
+
+12.3 Data Limitations & Missing Inputs
+This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed
+and excluded from analysis.
+
+I N V E S T O R I Q C A P ITAL INTELLIGENCE MEMORANDUM | CONFIDENTIAL
+
+© InvestorIQ Technologies Inc.
+
+

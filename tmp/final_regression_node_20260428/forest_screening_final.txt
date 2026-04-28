@@ -1,0 +1,285 @@
+INVESTORIQ
+
+INSTITUTIONAL
+
+REAL
+
+ESTATE ANALYSIS
+
+Forest City Manor Final Regression
+Screening
+Stable
+144 Units | NOI $1,723,435 | Expense Ratio 31.5% | NOI Margin 68.5%
+
+ASSET CLASS
+
+Multifamily - 144 Units
+
+DOCUMENTS
+
+ForestCityManor_RentRoll.xlsx |
+ForestCityManor_T12_2024-2025.pdf |
+ForestCityManor_BrokerEmail.pdf |
+ForestCityManor_PurchaseAssumptions.pdf |
+ForestCityManor_RenovationBudget.docx
+
+REPORT TIER
+
+Preliminary Screening
+
+CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.
+
+APRIL 28, 2026
+
+INVESTORIQ
+
+Forest City Manor Final Regression Screening
+
+April 28, 2026
+
+Executive Summary
+Deal overview, operating profile, and primary risk drivers
+
+144-Unit Multifamily
+SCREENING SIGNAL
+
+Stable
+Primary Pressure Point: Expense Ratio (31.5%)
+Classified STABLE: expense ratio of 31.5%, NOI margin of 68.5%, break-even occupancy of 31.5% are within institutional
+operating thresholds.
+KEY METRICS SNAPSHOT
+UNITS
+
+144
+OCCUPANCY
+
+96.0%
+ANNUAL IN-PLACE RENT
+
+$2,622,000
+EFFECTIVE GROSS INCOME
+
+$2,517,120
+OPERATING EXPENSES
+
+$793,685
+NET OPERATING INCOME
+
+$1,723,435
+EXPENSE RATIO
+
+31.5% (Stable)
+NOI MARGIN
+
+68.5% (Stable)
+BREAK-EVEN OCCUPANCY
+
+31.5% (Stable)
+KEY UPSIDE DRIVERS
+
+• In-place rents trail market by ~16.7% (observed rent gap).
+• Occupancy is 96.0%, reflecting fully stabilized in-place tenancy.
+• Operating cushion of 64.5% above break-even occupancy based on in-place performance.
+RANKED DRIVERS (WORST → BEST)
+
+1. Expense Ratio: 31.5% (trigger: < 55.0% within stable range)
+2. NOI Margin: 68.5% (trigger: >= 45.0% within stable range)
+3. Break-even Occupancy: 31.5% (trigger: < 75.0% within stable range)
+CLASSIFICATION FRAMEWORK
+
+TIER
+
+EXPENSE RATIO
+
+NOI MARGIN
+
+BREAK-EVEN OCC.
+
+Stable ▶
+
+< 55%
+
+> 45%
+
+< 75%
+
+Sensitized
+
+55-65%
+
+35-45%
+
+75-85%
+
+Fragile
+
+> 65%
+
+< 35%
+
+> 85%
+
+Standardized underwriting thresholds. ▶ = current classification.
+OPERATING SUMMARY
+
+The property is 96.0% occupied and carries reported rent-to-market upside of 16.7%. Operating results remain stable based
+on uploaded operating data.
+
+All statements derive from reported metrics and standardized classification thresholds. No forward-looking projections.
+
+Unit-Level Value Add Analysis
+Rent lift, renovation potential, and implied value sensitivity
+
+UNIT MIX AND RENT LIFT
+
+UNIT TYPE
+
+COUNT
+
+AVG SQ FT
+
+AVG IN-PLACE RENT
+
+TARGET RENT (POST-RENO)
+
+MONTHLY LIFT
+
+1BR
+
+2
+
+650
+
+$1,450
+
+$1,650
+
+$200
+
+2BR
+
+1
+
+850
+
+$1,725
+
+$2,100
+
+$375
+
+Studio
+
+1
+
+450
+
+$0
+
+$1,400
+
+$1,400
+
+RENT POSITIONING SUMMARY
+
+Rent roll data indicates in-place rents are below market across the current unit mix.
+
+Operating Statement (Trailing Twelve Months)
+Operating summary based on uploaded financials
+
+NET OPERATING INCOME SUMMARY
+
+METRIC
+
+VALUE
+
+Effective Gross Income (TTM)
+
+$2,517,120
+
+Total Operating Expenses (TTM)
+
+$793,685
+
+Net Operating Income (TTM)
+
+$1,723,435
+
+Operating Expense Ratio
+
+31.5%
+
+EGI per Unit (TTM)
+
+$17,480
+
+OpEx per Unit (TTM)
+
+$5,512
+
+NOI per Unit (TTM)
+
+$11,968
+
+Operating Profile
+Occupancy, rent level, and operating summary
+
+OPERATING PROFILE SUMMARY
+
+Occupancy of 96.0% and annual in-place rent of $2,622,000. Total operating expenses of $793,685 and an expense ratio of
+31.5%. NOI of $1,723,435, reflecting an NOI margin of 68.5%. Rent roll data supports below-market in-place rents across the
+current unit mix.
+
+Data Coverage & Screening Notes
+Missing inputs and omitted sections
+
+CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified.
+All required screening inputs were fully extracted from uploaded documents.
+DATASET
+
+FIELDS PRESENT
+
+COVERAGE
+
+MISSING
+
+T12 Operating Statement
+
+4/4
+
+100.0%
+
+None
+
+Rent Roll
+
+4/4
+
+100.0%
+
+None
+
+Methodology & Data Transparency
+Assumptions, methodology notes, and data limitations
+
+InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and defined
+modeling frameworks, with transparency and auditability as core design principles.
+Outputs are document-backed and framework-constrained. Missing inputs are not inferred.
+
+12.1 InvestorIQ Estimates
+InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized
+underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+12.2 Methodology Notes
+Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing
+source data is not gap-filled.
+
+12.3 Data Limitations & Missing Inputs
+This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed
+and excluded from analysis.
+
+I N V E S T O R I Q C A P ITAL INTELLIGENCE MEMORANDUM | CONFIDENTIAL
+
+© InvestorIQ Technologies Inc.
+
+
