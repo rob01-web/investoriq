@@ -239,6 +239,96 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
     let statusCount = 0;
     let blankRowStreak = 0;
     let explicitTotalUnits = null;
+    const summaryTotals = {};
+    const assignFiniteSummaryTotal = (key, value) => {
+      if (Number.isFinite(value)) summaryTotals[key] = value;
+    };
+    const parseSummaryPercent = (row) => {
+      const text = row.map((cell) => String(cell || '')).join(' ');
+      const afterValue = text.match(/\b(\d{1,3}(?:\.\d+)?)\s*%\s*(?:occ|occupancy)\b/i);
+      const beforeValue = text.match(/\b(?:occ|occupancy)\b[^\d]{0,12}(\d{1,3}(?:\.\d+)?)\s*%/i);
+      const match = afterValue || beforeValue;
+      if (!match) return null;
+      const parsed = Number(match[1]);
+      return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed / 100 : null;
+    };
+    const parseSummaryCount = (row, label) => {
+      const text = row.map((cell) => String(cell || '')).join(' ');
+      const afterValue = text.match(new RegExp(`\\b(\\d{1,5})\\s+${label}\\b`, 'i'));
+      const beforeValue = text.match(new RegExp(`\\b${label}\\b[^\\d]{0,12}(\\d{1,5})\\b`, 'i'));
+      const match = afterValue || beforeValue;
+      if (!match) return null;
+      const parsed = Number(match[1]);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    };
+    const parseSummaryMoneyAt = (row, index) => {
+      if (index === -1) return null;
+      const raw = String(row[index] || '');
+      if (!raw.trim() || raw.includes('%')) return null;
+      const parsed = parseMoneyLike(raw);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    };
+    const applySummaryTotalsFromRow = (row) => {
+      summaryTotals.summary_row_detected = true;
+      for (const cell of row) {
+        const match = String(cell || '').match(/\b(\d{1,5})\s*units?\b/i);
+        if (match) {
+          const parsed = Number(match[1]);
+          if (Number.isFinite(parsed) && parsed > 0) {
+            explicitTotalUnits = parsed;
+            summaryTotals.total_units = parsed;
+          }
+        }
+      }
+      assignFiniteSummaryTotal('occupancy', parseSummaryPercent(row));
+      assignFiniteSummaryTotal('occupied_units', parseSummaryCount(row, 'occupied'));
+      assignFiniteSummaryTotal('vacant_units', parseSummaryCount(row, 'vacant'));
+
+      const currentRentTotal = parseSummaryMoneyAt(row, rentIdx);
+      if (Number.isFinite(currentRentTotal)) {
+        const rentHeaderLabel = normalizeClassifierText(header[rentIdx]);
+        if (rentHeaderLabel.includes('annual') || rentHeaderLabel.includes('year')) {
+          summaryTotals.in_place_rent_annual = currentRentTotal;
+          summaryTotals.in_place_rent_monthly = currentRentTotal / 12;
+          summaryTotals.current_rent_monthly = currentRentTotal / 12;
+        } else {
+          summaryTotals.current_rent_monthly = currentRentTotal;
+          summaryTotals.in_place_rent_monthly = currentRentTotal;
+          summaryTotals.in_place_rent_annual = currentRentTotal * 12;
+        }
+      }
+
+      const marketRentTotal = parseSummaryMoneyAt(row, marketRentIdx);
+      if (Number.isFinite(marketRentTotal)) {
+        const marketHeaderLabel = normalizeClassifierText(header[marketRentIdx]);
+        if (marketHeaderLabel.includes('annual') || marketHeaderLabel.includes('year')) {
+          summaryTotals.market_rent_annual = marketRentTotal;
+          summaryTotals.market_rent_monthly = marketRentTotal / 12;
+        } else {
+          summaryTotals.market_rent_monthly = marketRentTotal;
+          summaryTotals.market_rent_annual = marketRentTotal * 12;
+        }
+      }
+
+      const totalUnitsForAverage = Number.isFinite(summaryTotals.total_units)
+        ? summaryTotals.total_units
+        : explicitTotalUnits;
+      if (Number.isFinite(totalUnitsForAverage) && totalUnitsForAverage > 0) {
+        if (Number.isFinite(summaryTotals.in_place_rent_monthly)) {
+          summaryTotals.avg_in_place_rent = summaryTotals.in_place_rent_monthly / totalUnitsForAverage;
+        }
+        if (Number.isFinite(summaryTotals.market_rent_monthly)) {
+          summaryTotals.avg_market_rent = summaryTotals.market_rent_monthly / totalUnitsForAverage;
+        }
+      }
+      if (
+        Number.isFinite(summaryTotals.occupancy) ||
+        Number.isFinite(summaryTotals.occupied_units) ||
+        Number.isFinite(summaryTotals.vacant_units)
+      ) {
+        summaryTotals.status_summary_present = true;
+      }
+    };
 
     for (let i = headerIdx + 1; i < rows.length; i += 1) {
       const row = rows[i] || [];
@@ -251,13 +341,7 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
 
       const firstLabel = normalizeClassifierText(row[0]);
       if (firstLabel && (firstLabel.includes('total') || firstLabel.includes('summary'))) {
-        for (const cell of row) {
-          const match = String(cell || '').match(/\b(\d{1,5})\s*units?\b/i);
-          if (match) {
-            const parsed = Number(match[1]);
-            if (Number.isFinite(parsed) && parsed > 0) explicitTotalUnits = parsed;
-          }
-        }
+        applySummaryTotalsFromRow(row);
         continue;
       }
 
@@ -280,7 +364,10 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
         /\bgrand\s*total\b/.test(unitCellLabel) ||
         /\baverage\b/.test(unitCellLabel) ||
         /\bavg\b/.test(unitCellLabel);
-      if (isSummaryLikeRow) continue;
+      if (isSummaryLikeRow) {
+        applySummaryTotalsFromRow(row);
+        continue;
+      }
 
       const unit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
       const inPlaceRent = rentIdx !== -1 ? parseMoneyLike(row[rentIdx]) : null;
@@ -345,6 +432,7 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
 
     return {
       total_units: explicitTotalUnits || units.length,
+      totals: Object.keys(summaryTotals).length > 0 ? summaryTotals : null,
       unit_mix: unitMix,
       occupancy: statusCount > 0 ? occupiedCount / statusCount : null,
       units,
@@ -1067,6 +1155,7 @@ export default async function handler(req, res) {
             let parseWarnings = [];
             const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
             const columnMap = parsedRentRoll?.column_map || null;
+            const totals = parsedRentRoll?.totals || null;
             const unitMix = Array.isArray(parsedRentRoll?.unit_mix) ? parsedRentRoll.unit_mix : [];
             const totalUnits = Number.isFinite(parsedRentRoll?.total_units) ? parsedRentRoll.total_units : 0;
             const occupancy = Number.isFinite(parsedRentRoll?.occupancy) ? parsedRentRoll.occupancy : null;
@@ -1128,6 +1217,7 @@ export default async function handler(req, res) {
                   method: 'aws_textract_tables',
                   confidence: rentRollConfidence,
                   total_units: totalUnits,
+                  totals,
                   unit_mix: unitMix,
                   occupancy,
                   units,
@@ -1245,6 +1335,7 @@ export default async function handler(req, res) {
           let parseWarnings = [];
           const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
           const columnMap = parsedRentRoll?.column_map || null;
+          const totals = parsedRentRoll?.totals || null;
           const unitMix = Array.isArray(parsedRentRoll?.unit_mix) ? parsedRentRoll.unit_mix : [];
           const totalUnits = Number.isFinite(parsedRentRoll?.total_units) ? parsedRentRoll.total_units : 0;
           const occupancy = Number.isFinite(parsedRentRoll?.occupancy) ? parsedRentRoll.occupancy : null;
@@ -1306,6 +1397,7 @@ export default async function handler(req, res) {
                 method: isCsv ? 'csv' : 'xlsx',
                 confidence: rentRollConfidence,
                 total_units: totalUnits,
+                totals,
                 unit_mix: unitMix,
                 occupancy,
                 units,

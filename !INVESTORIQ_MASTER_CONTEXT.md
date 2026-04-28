@@ -1245,10 +1245,20 @@
 - Batch 3 public-language, disclosure, ASCII, mojibake, and score-label cleanup: materially completed.
 - Batch 4 score / disclosure / footer / value-add polish: completed.
 - Batch 5 Step 03 / rendering-stage `needs_documents` cleanup: completed.
-- Batch 6A partial rent-roll sample leakage suppression: code-complete, pending Forest City retest.
+- Batch 6A partial rent-roll sample leakage suppression: validated by Forest City Screening / Underwriting Test 19/20 for true partial-row suppression.
 - Batch 6A preserves explicit total units while preventing partial/sample rows from supporting full-property occupancy, occupied/vacant counts, vacancy buffer, row-derived occupancy, annual in-place / market rent totals, Rent Roll Distribution, or Data Coverage occupancy presence.
+- Batch 6A confirmed outcomes: 144 units preserved; Occupancy and Annual In-Place Rent suppress as DATA NOT AVAILABLE when only partial detail rows are available; sample-derived vacancy buffer removed; Data Coverage correctly marks rent roll occupancy / unit status missing without trusted summary totals; empty Rent Roll Distribution heading removed in underwriting mode.
+- Doctrine locked: partial detail rows must not be used as full-property metrics, but explicit totals / summary-row values may be used if clearly parsed from totals / summary rows.
 - Batch 6A validation: `node --check api/generate-client-report.js`: PASS.
-- Batch 6A required retest: Forest City Screening / Underwriting should confirm 144 units remain preserved and occupancy / vacancy / distribution fail closed.
+- Forest City second-pass red-team finding:
+  - Forest City rent roll may include an explicit totals / summary row with values such as 96% Occ., current monthly rent near $218,500, annual in-place rent near $2,622,000, market monthly rent near $262,400, current rent / unit near $1,517, market rent / unit near $1,822, and implied rent-to-market gap near 16.7%
+  - current reports showed these as DATA NOT AVAILABLE / 0.0% because the parser did not extract explicit summary totals
+- Batch 6A.2 explicit totals-row trust path:
+  - Patch 1 parser-side complete in `api/parse/parse-doc.js`
+  - `parseRentRollFromRowMatrices(...)` now adds `summaryTotals` extraction for explicit totals-row `total_units`, occupancy %, occupied/vacant counts, aligned current / in-place and market rent totals, annual totals, and average rents derived only from explicit summary totals
+  - existing top-level `total_units` is preserved and `totals` is added to both `rent_roll_parsed` artifact insert paths
+  - validation: `node --check api/parse/parse-doc.js`: PASS
+  - Patch 2 generator-side is pending: inspect/retest `rent_roll_parsed.payload.totals`, then allow trusted explicit totals during partial-sample mode while continuing to suppress all detail-row-derived full-property metrics
 - Batch 6B CapEx / renovation acknowledgment:
   - audit found no live CapEx / renovation / budget classifier in the parser
   - generator queries `renovation_parsed`, but parser does not currently create it
@@ -1256,17 +1266,32 @@
   - launch decision: do not build a CapEx parser before launch
   - minimum launch behavior is disclosure-only when uploaded filenames suggest CapEx / renovation / budget / capital plan and no structured renovation input exists
   - no costs, rent lift, ROI, payback, or scope should be invented
-  - disclosure patch is code-complete and pending regression confirmation
+  - disclosure patch is code-complete in `api/generate-client-report.js`; filename detection includes CapEx / cap ex / capital expenditure(s) / capital plan / renovation(s) / reno / budget / improvement(s)
+  - `hasExplicitRenovationInput` now requires meaningful rows / text, not empty arrays / strings
+  - uploaded-but-unstructured acknowledgment is paragraph-safe and remains disclosure-only
+  - targeted validation is still needed if the upload package includes a filename that should trigger disclosure
+- DCF cap-rate consistency follow-up:
+  - Forest City red-team identified a narrow DCF consistency issue where one path uses 4.99% document-derived exit cap while sensitivity / base labeling may show 5.0%, creating slightly different base values
+  - needs micro-audit / patch to unify base-case cap-rate label / calculation before Ken Dunn
+- Purchase-assumption DSCR note:
+  - current engine correctly refuses to use purchase assumption terms as current-debt DSCR when no debt balance is provided
+  - future enhancement: optional Acquisition DSCR / Pro Forma Debt Coverage metric from purchase assumptions, separate from current debt assessment
 
 ### Immediate agenda - April 12, 2026
 - IMMEDIATE PRIORITY (UPDATED)
-  1. Final Forest City / 124 Richmond regression suite
-  2. Run final repo-wide Codex red-team audit
-  3. Low-dollar Stripe test if outstanding
-  4. Ken Dunn sample package review
+  1. Inspect Forest City `rent_roll_parsed.payload.totals` after the parser patch
+  2. If totals are present, patch `api/generate-client-report.js` to consume trusted explicit totals during partial-sample mode
+  3. Retest Forest City Screening + Underwriting
+  4. Patch DCF 4.99% vs 5.0% consistency
+  5. Validate CapEx acknowledgment with a triggering filename if applicable
+  6. Run final Forest City / 124 Richmond regression suite
+  7. Run final repo-wide Codex red-team audit
+  8. Low-dollar Stripe test if outstanding, then Ken Dunn sample package review
 
 - STILL OPEN
-  - Forest City / 124 Richmond regression confirmation for Batch 6A and Batch 6B.
+  - Forest City explicit rent-roll totals generator consumption.
+  - Forest City / 124 Richmond regression confirmation for Batch 6A.2 and Batch 6B.
+  - DCF 4.99% vs 5.0% base-case cap-rate consistency.
   - Final repo-wide Codex red-team audit before Ken Dunn.
   - Final three-report regression suite.
   - Low-dollar true live Stripe payment test if not yet completed.
@@ -1535,7 +1560,9 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
 ## 11. Launch Readiness Snapshot
 - Scenario coverage audit recommendation: Launch this week = CONDITIONAL.
 - Launch conditions:
-  - complete and validate CapEx / renovation uploaded-but-unstructured acknowledgment
+  - complete Forest City explicit rent-roll totals trust path: inspect `rent_roll_parsed.payload.totals`, consume trusted totals in generator if present, and retest
+  - validate CapEx / renovation uploaded-but-unstructured acknowledgment when a triggering filename exists
+  - patch narrow DCF 4.99% vs 5.0% base-case cap-rate consistency
   - run final regression suite
   - run final repo-wide Codex red-team audit
   - complete low-dollar live Stripe payment test if still outstanding
@@ -1581,7 +1608,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Clean Underwriting Test 10: debt/refi math and rent roll/T12 alignment checked out
     - Messy Underwriting Test 10: partial debt terms fail-closed behavior confirmed, no debt balance invention
     - Batch 1 Critical Math Integrity is closed after Clean + Messy Underwriting Test 12
-    - current true survivors: final Batch 6 regression confirmation, final red-team audit, final regression suite, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
+    - current true survivors: Forest City explicit rent-roll totals generator consumption, CapEx acknowledgment validation, DCF 4.99% vs 5.0% consistency, final red-team audit, final regression suite, low-dollar Stripe test if still open, and monitored Dashboard freeze risk
   - the underwriting acceptance patch wave is complete
   - multi-quantity Stripe checkout is now working
   - Stripe entitlement creation for quantity purchases is now working
@@ -1589,8 +1616,11 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - obsolete SES worker exposure for the legacy missing-doc workflow has been removed
   - report-ready email wording now matches the actual one-and-done product model
 - Still needed before Ken Dunn outreach:
-  - confirm Batch 6A partial rent-roll sample fail-closed behavior in Forest City retest
-  - confirm Batch 6B CapEx / renovation uploaded-but-unstructured acknowledgment in Forest City retest
+  - inspect Forest City `rent_roll_parsed.payload.totals` after Batch 6A.2 parser patch
+  - if explicit totals are present, patch generator to trust those totals during partial-sample mode while continuing to suppress detail-row-derived full-property metrics
+  - confirm Batch 6A.2 explicit totals behavior in Forest City Screening / Underwriting retest
+  - confirm Batch 6B CapEx / renovation uploaded-but-unstructured acknowledgment when filename signal exists
+  - patch DCF 4.99% vs 5.0% base-case cap-rate consistency
   - run final repo-wide Codex red-team audit
   - run final three-report regression suite after those fixes
   - patch only real regressions found in final validation
