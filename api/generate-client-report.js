@@ -4600,10 +4600,13 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
+        const capRatesDcfRows = capRatesDcf.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
+        ? capRatesDcf
+        : [...capRatesDcf, exitCapPct].sort((a, b) => a - b);
         tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value: Exit Cap Rate Sensitivity</p>`;
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
-        for (const cap of capRatesDcf) {
+        for (const cap of capRatesDcfRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowCap = isBase ? exitCapPct : cap;
           const exitV = noi5dcf / (rowCap / 100);
@@ -4662,6 +4665,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)}). Scenario outputs are deterministic from document-backed inputs.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
+        const capRateSensitivityRows = capRateRows.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
+        ? capRateRows
+        : [...capRateRows, exitCapPct].sort((a, b) => a - b);
         sTbl += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Year 5 Exit Value: Cap Rate Sensitivity</p>`;
         sTbl += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         sTbl += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th>`;
@@ -4669,7 +4675,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
           sTbl += `<th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">${s.label}</th>`;
         }
         sTbl += `</tr></thead><tbody>`;
-        for (const cap of capRateRows) {
+        for (const cap of capRateSensitivityRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowCap = isBase ? exitCapPct : cap;
           const rowStyle = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
