@@ -3685,15 +3685,13 @@ export default async function handler(req, res) {
       const snapRows = [];
       const _coverRrUnits = Number(computedRentRoll?.total_units);
       const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
-      if (unitCount) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;font-weight:600;">Multifamily &mdash; ${unitCount} Units</td></tr>`);
-      const docLabels = Array.isArray(documentSources) && documentSources.length > 0
-        ? documentSources.map(r => escapeHtml(r.original_filename || "")).filter(Boolean).join(" &nbsp;|&nbsp; ")
-        : null;
-      if (docLabels) snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</td><td style="padding:3px 10px;color:#F9FAFB;font-size:11px;">${docLabels}</td></tr>`);
+      if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="color:#F9FAFB;font-size:11px;font-weight:600;">Multifamily - ${unitCount} Units</span></div>`);
+      const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
+      if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="color:#F9FAFB;font-size:11px;">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
-snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</td><td style="padding:3px 10px;color:#9CA3AF;font-size:11px;font-weight:600;">${modeLabel}</td></tr>`);
+snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><span style="color:#9CA3AF;font-size:11px;font-weight:600;">${modeLabel}</span></div>`);
       const snapHtml = snapRows.length > 0
-        ? `<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;"><table style="width:100%;border-collapse:collapse;">${snapRows.join("")}</table></div>`
+        ? `<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;">${snapRows.join("")}</div>`
         : "";
       finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
     }
@@ -5130,22 +5128,7 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
     // ===== HTML/CSS Charts (shared across Screening + Underwriting) =====
     // Chart 1: NOI Waterfall
     {
-      let html = "";
-      const egi = t12EgiValue, opex = t12TotalExpensesValue, noi = t12NoiValue;
-      if (effectiveReportMode !== "screening_v1" && Number.isFinite(egi) && egi > 0 && Number.isFinite(opex) && Number.isFinite(noi)) {
-        const rows = [
-          { label: "Effective Gross Income", val: egi, pct: 100, color: "#1e293b" },
-          { label: "Operating Expenses (-)", val: opex, pct: Math.round((opex / egi) * 100), color: "#94A3B8" },
-          { label: "Net Operating Income", val: noi, pct: Math.max(1, Math.round((noi / egi) * 100)), color: "#B8860B" },
-        ];
-        const trs = rows.map(r =>
-          `<tr><td class="analysis-chart-table-label" style="padding:5px 8px;font-size:11px;width:42%;">${escapeHtml(r.label)}</td>` +
-          `<td style="padding:5px 8px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:42%;"><span class="analysis-chart-table-value" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${formatCurrency(r.val)}</span></td>` +
-          `<td style="padding:5px 8px;font-size:10px;font-weight:400;text-align:right;color:#6B7280;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;width:16%;"><span class="analysis-chart-table-pct" style="display:inline-block;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;hyphens:none;">${r.pct}%</span></td></tr>`
-        ).join("");
-        html = `<div class="no-break analysis-chart-table" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">NOI Breakdown</p><table class="analysis-chart-table-grid" style="width:100%;border-collapse:collapse;table-layout:fixed;">${trs}</table></div>`;
-      }
-      finalHtml = replaceAll(finalHtml, "{{NOI_WATERFALL_CHART}}", html);
+      finalHtml = replaceAll(finalHtml, "{{NOI_WATERFALL_CHART}}", "");
     }
     // Chart 2: Expense Breakdown bar chart
     {

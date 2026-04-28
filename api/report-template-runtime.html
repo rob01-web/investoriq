@@ -605,6 +605,16 @@
       padding: 0;
     }
 
+    .exec-bullet-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .exec-bullet-block .exec-major-heading {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
     .exec-bullet-block li {
       margin: 3px 0;
       line-height: 1.35;
@@ -1537,7 +1547,7 @@ ul, ol {
   </div>
 
   <!-- COST PER UNIT -->
-  <div class="no-break" style="margin-top:18px;">
+  <div style="margin-top:18px; page-break-before: avoid; break-before: avoid;">
     <p class="subsection-title">Cost Per Unit and Execution Phasing</p>
 
     <table>
