@@ -1008,6 +1008,8 @@ function buildScreeningDataCoverageSummary({
     coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)
   );
   const isPartialRentRollSample = computedRentRoll?.is_partial_sample === true;
+  const hasTrustedRentRollSummaryTotals =
+    rentRollPayload?.totals?.summary_row_detected === true;
   const occFromT12 =
     coerceNumber(t12Payload?.physical_occupancy) ??
     coerceNumber(t12Payload?.economic_occupancy) ??
@@ -1025,16 +1027,25 @@ function buildScreeningDataCoverageSummary({
   const rrOccPresent = Number.isFinite(
     coerceNumber(computedRentRoll?.occupancy ?? (isPartialRentRollSample ? null : rentRollPayload?.occupancy))
   ) || (!isPartialRentRollSample && Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload)));
-  const inPlacePresent = Array.isArray(rentRollRows)
-    ? rentRollRows.some((row) =>
+  const inPlacePresent =
+    Number.isFinite(coerceNumber(computedRentRoll?.total_in_place_annual)) ||
+    Number.isFinite(coerceNumber(rentRollPayload?.totals?.in_place_rent_annual)) ||
+    Number.isFinite(coerceNumber(rentRollPayload?.totals?.in_place_rent_monthly)) ||
+    Number.isFinite(coerceNumber(rentRollPayload?.totals?.current_rent_monthly)) ||
+    (Array.isArray(rentRollRows)
+      ? rentRollRows.some((row) =>
         Number.isFinite(coerceNumber(row?.in_place_rent ?? row?.current_rent))
       )
-    : false;
-  const marketPresent = Array.isArray(rentRollRows)
-    ? rentRollRows.some((row) =>
+      : false);
+  const marketPresent =
+    Number.isFinite(coerceNumber(computedRentRoll?.total_market_annual)) ||
+    Number.isFinite(coerceNumber(rentRollPayload?.totals?.market_rent_annual)) ||
+    Number.isFinite(coerceNumber(rentRollPayload?.totals?.market_rent_monthly)) ||
+    (Array.isArray(rentRollRows)
+      ? rentRollRows.some((row) =>
         Number.isFinite(coerceNumber(row?.market_rent))
       )
-    : false;
+      : false);
   const rentRollChecks = [
     { label: "total_units", present: totalUnitsPresent },
     { label: "in_place_rent", present: inPlacePresent },
@@ -1226,7 +1237,10 @@ function buildScreeningIncomeForensicsHtml({
   const avgMarket = coerceNumber(
     computedRentRoll?.avg_market_rent ?? rentRollPayload?.avg_market_rent
   );
-  if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
+  const explicitRentGap = coerceNumber(computedRentRoll?.rent_to_market_gap);
+  if (Number.isFinite(explicitRentGap)) {
+    marketPremiumPct = explicitRentGap * 100;
+  } else if (Number.isFinite(avgInPlace) && Number.isFinite(avgMarket) && avgInPlace > 0) {
     marketPremiumPct = ((avgMarket - avgInPlace) / avgInPlace) * 100;
   }
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
@@ -2465,6 +2479,45 @@ export default async function handler(req, res) {
         parsedTotalUnits > 0 &&
         rentRollUnits.length > 0 &&
         parsedTotalUnits !== rentRollUnits.length;
+      const rentRollSummaryTotals =
+        rentRollPayload?.totals && typeof rentRollPayload.totals === "object"
+          ? rentRollPayload.totals
+          : null;
+      const hasTrustedRentRollSummaryTotals =
+        rentRollSummaryTotals?.summary_row_detected === true;
+      const summaryOccupancy = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.occupancy)
+        : null;
+      const summaryInPlaceMonthly = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(
+            rentRollSummaryTotals.in_place_rent_monthly ??
+              rentRollSummaryTotals.current_rent_monthly
+          )
+        : null;
+      const summaryMarketMonthly = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.market_rent_monthly)
+        : null;
+      const summaryInPlaceAnnual = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.in_place_rent_annual) ??
+          (Number.isFinite(summaryInPlaceMonthly) ? summaryInPlaceMonthly * 12 : null)
+        : null;
+      const summaryMarketAnnual = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.market_rent_annual) ??
+          (Number.isFinite(summaryMarketMonthly) ? summaryMarketMonthly * 12 : null)
+        : null;
+      const summaryAvgInPlaceRent = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.avg_in_place_rent)
+        : null;
+      const summaryAvgMarketRent = hasTrustedRentRollSummaryTotals
+        ? coerceNumber(rentRollSummaryTotals.avg_market_rent)
+        : null;
+      const summaryRentToMarketGap =
+        Number.isFinite(summaryInPlaceAnnual) &&
+        Number.isFinite(summaryMarketAnnual) &&
+        summaryMarketAnnual > 0 &&
+        summaryMarketAnnual > summaryInPlaceAnnual
+          ? (summaryMarketAnnual - summaryInPlaceAnnual) / summaryMarketAnnual
+          : null;
       let occupiedUnits = 0;
       let vacantUnits = 0;
       const inPlaceRents = [];
@@ -2569,13 +2622,14 @@ export default async function handler(req, res) {
         total_units: totalUnits,
         occupied_units: isPartialRentRollSample ? null : occupiedUnits,
         vacant_units: isPartialRentRollSample ? null : vacantUnits,
-        occupancy: isPartialRentRollSample ? null : occupancy,
-        avg_in_place_rent: avgInPlaceRent ?? DATA_NOT_AVAILABLE,
-        avg_market_rent: avgMarketRent ?? DATA_NOT_AVAILABLE,
-        total_in_place_monthly: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
-        total_market_monthly: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
-        total_in_place_annual: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
-        total_market_annual: isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        occupancy: Number.isFinite(summaryOccupancy) ? summaryOccupancy : isPartialRentRollSample ? null : occupancy,
+        avg_in_place_rent: Number.isFinite(summaryAvgInPlaceRent) ? summaryAvgInPlaceRent : avgInPlaceRent ?? DATA_NOT_AVAILABLE,
+        avg_market_rent: Number.isFinite(summaryAvgMarketRent) ? summaryAvgMarketRent : avgMarketRent ?? DATA_NOT_AVAILABLE,
+        total_in_place_monthly: Number.isFinite(summaryInPlaceMonthly) ? summaryInPlaceMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
+        total_market_monthly: Number.isFinite(summaryMarketMonthly) ? summaryMarketMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
+        total_in_place_annual: Number.isFinite(summaryInPlaceAnnual) ? summaryInPlaceAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
+        total_market_annual: Number.isFinite(summaryMarketAnnual) ? summaryMarketAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        rent_to_market_gap: Number.isFinite(summaryRentToMarketGap) ? summaryRentToMarketGap : null,
         is_partial_sample: isPartialRentRollSample,
         unit_mix: unitMix,
       };
@@ -2782,6 +2836,7 @@ export default async function handler(req, res) {
     const rrOccupiedUnits =
       coerceNumber(computedRentRoll?.occupied_units) ??
       coerceNumber(rentRollPayload?.totals?.occupied_units);
+    const rrExplicitOccupancy = coerceNumber(computedRentRoll?.occupancy);
     const execOccFromRR =
       !rentRollIsPartialSample && Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
         ? rrOccupiedUnits / rrTotalUnits
@@ -2812,6 +2867,8 @@ export default async function handler(req, res) {
     let execOccupancy =
       Number.isFinite(execOccFromT12)
         ? execOccFromT12
+      : Number.isFinite(rrExplicitOccupancy)
+        ? rrExplicitOccupancy
       : Number.isFinite(execOccFromRR)
         ? execOccFromRR
         : rentRollIsPartialSample ? null : rrOccFromRows;
@@ -2886,7 +2943,9 @@ export default async function handler(req, res) {
         ? (execOccupancy * 100) - breakEvenOccPct
         : null;
     const marketRentPremiumPct =
-      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.rent_to_market_gap))
+        ? coerceNumber(computedRentRoll?.rent_to_market_gap) * 100
+        : Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
       Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
       coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
         ? ((coerceNumber(computedRentRoll?.avg_market_rent) -
@@ -3509,15 +3568,18 @@ export default async function handler(req, res) {
       });
       if (sumCountInPlace > 0) weightedAvgInPlaceRent = sumRentInPlace / sumCountInPlace;
     }
-    let execAnnualInPlaceTokenValue = null;
+    let execAnnualInPlaceTokenValue = Number.isFinite(coerceNumber(computedRentRoll?.total_in_place_annual))
+      ? coerceNumber(computedRentRoll.total_in_place_annual)
+      : null;
     if (
+      !Number.isFinite(execAnnualInPlaceTokenValue) &&
       !rentRollIsPartialSample &&
       Number.isFinite(weightedAvgInPlaceRent) &&
       Number.isFinite(execTotalUnits) &&
       execTotalUnits > 0
     ) {
       execAnnualInPlaceTokenValue = weightedAvgInPlaceRent * execTotalUnits * 12;
-    } else if (!rentRollIsPartialSample && rrRows.length > 0) {
+    } else if (!Number.isFinite(execAnnualInPlaceTokenValue) && !rentRollIsPartialSample && rrRows.length > 0) {
       const annualFromRows = rrRows.reduce((acc, row) => {
         const status = String(row?.lease_status || row?.status || "").trim().toLowerCase();
         const currentRent = Number(row?.current_rent ?? row?.in_place_rent ?? row?.rent);
@@ -3690,8 +3752,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
       const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
-      const rrUpsidePct = (Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrInPlace > 0)
-        ? (rrMarket - rrInPlace) / rrInPlace : null;
+      const rrUpsidePct = coerceNumber(computedRentRoll?.rent_to_market_gap) ??
+        ((Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrMarket > 0)
+          ? (rrMarket - rrInPlace) / rrMarket : null);
       const erPctStr  = Number.isFinite(expenseRatioR) ? `${(expenseRatioR * 100).toFixed(1)}%` : null;
       const nmPctStr  = Number.isFinite(noiMarginR)    ? `${(noiMarginR * 100).toFixed(1)}%`    : null;
       const parts = [];
@@ -4304,7 +4367,9 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
       "net_operating_income",
     ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
     const marketRentPremiumAvg =
-      Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
+      Number.isFinite(coerceNumber(computedRentRoll?.rent_to_market_gap))
+        ? coerceNumber(computedRentRoll?.rent_to_market_gap)
+        : Number.isFinite(coerceNumber(computedRentRoll?.avg_market_rent)) &&
       Number.isFinite(coerceNumber(computedRentRoll?.avg_in_place_rent)) &&
       coerceNumber(computedRentRoll?.avg_in_place_rent) > 0
         ? (coerceNumber(computedRentRoll?.avg_market_rent) -

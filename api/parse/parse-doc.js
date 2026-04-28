@@ -223,7 +223,13 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
 
     const header = rows[headerIdx] || [];
     const unitIdx = findHeaderIndex(header, ['unit', 'unit number', 'unit #', 'apt', 'suite', 'apartment']);
-    const rentIdx = findHeaderIndex(header, ['current rent', 'in place rent', 'monthly rent', 'rent']);
+    let rentIdx = findHeaderIndex(header, ['current rent', 'in place rent', 'monthly rent']);
+    if (rentIdx === -1) {
+      rentIdx = header.findIndex((cell) => {
+        const label = normalizeClassifierText(cell);
+        return label.includes('rent') && !label.includes('market') && !label.includes('asking');
+      });
+    }
     const marketRentIdx = findHeaderIndex(header, ['market rent', 'asking rent', 'market']);
     const statusIdx = findHeaderIndex(header, ['status', 'occupied', 'vacant', 'occupancy']);
     const unitTypeIdx = findHeaderIndex(header, ['type', 'unit type', 'layout', 'floor plan', '1br', '2br', '3br']);
