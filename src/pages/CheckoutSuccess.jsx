@@ -3,7 +3,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Loader2 } from 'lucide-react';
 
-// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+//  DESIGN TOKENS 
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -136,7 +136,7 @@ export default function CheckoutSuccess() {
     <>
       <style>{FONTS}</style>
 
-      {/* Full-page centered layout — Forest Green top band, white canvas */}
+      {/* Full-page centered layout  Forest Green top band, white canvas */}
       <div style={{
         minHeight:   '100vh',
         background:  T.warm,
@@ -145,7 +145,7 @@ export default function CheckoutSuccess() {
         flexDirection:'column',
       }}>
 
-        {/* Top band — brand identity */}
+        {/* Top band  brand identity */}
         <div style={{
           background:   T.green,
           height:       52,
@@ -175,7 +175,7 @@ export default function CheckoutSuccess() {
           </span>
         </div>
 
-        {/* Content — vertically centered */}
+        {/* Content  vertically centered */}
         <div style={{
           flex:           1,
           display:        'flex',
@@ -185,7 +185,7 @@ export default function CheckoutSuccess() {
         }}>
           <div style={{ width: '100%', maxWidth: 520 }}>
 
-            {/* ── LOADING ─────────────────────────────────────────────── */}
+            {/*  LOADING  */}
             {status === 'loading' && (
               <div style={{
                 background: T.white,
@@ -237,7 +237,7 @@ export default function CheckoutSuccess() {
               </div>
             )}
 
-            {/* ── SUCCESS ──────────────────────────────────────────────── */}
+            {/*  SUCCESS  */}
             {status === 'ok' && (
               <div style={{
                 background: T.white,
@@ -283,7 +283,7 @@ export default function CheckoutSuccess() {
                     color:      T.okGreen,
                     lineHeight: 1.6,
                   }}>
-                    <strong style={{ fontWeight: 500 }}>{quantity} {purchaseLabel}{quantity > 1 ? 's' : ''}</strong> purchased and added to your account. Redirecting to your dashboard…
+                    <strong style={{ fontWeight: 500 }}>{quantity} {purchaseLabel}{quantity > 1 ? 's' : ''}</strong> purchased and added to your account. Redirecting to your dashboard...
                   </p>
                 </div>
 
@@ -300,7 +300,7 @@ export default function CheckoutSuccess() {
                 </p>
 
                 <PrimaryBtn onClick={() => { window.location.href = '/dashboard'; }}>
-                  Upload Documents →
+                  Upload Documents ->
                 </PrimaryBtn>
 
                 <p style={{
@@ -315,7 +315,7 @@ export default function CheckoutSuccess() {
               </div>
             )}
 
-            {/* ── ERROR ────────────────────────────────────────────────── */}
+            {/*  ERROR  */}
             {status === 'error' && (
               <div style={{
                 background: T.white,
@@ -358,7 +358,7 @@ export default function CheckoutSuccess() {
                 </p>
 
                 <PrimaryBtn onClick={() => { window.location.href = '/dashboard'; }}>
-                  Return to Dashboard →
+                  Return to Dashboard 
                 </PrimaryBtn>
               </div>
             )}

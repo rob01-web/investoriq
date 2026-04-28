@@ -16,7 +16,7 @@ import About          from '@/pages/About';
 import PricingPage    from '@/pages/Pricing';
 import { supabase }   from '@/lib/customSupabaseClient';
 
-// ─── DESIGN TOKENS ────────────────────────────────────────────
+//  DESIGN TOKENS 
 const T = {
   green:    '#0F2318',
   gold:     '#C9A84C',
@@ -33,7 +33,7 @@ const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 `;
 
-// ─── DASHBOARD SWITCH (admin vs user) ────────────────────────
+//  DASHBOARD SWITCH (admin vs user) 
 function DashboardSwitch() {
   const [ready, setReady]   = React.useState(false);
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -55,7 +55,7 @@ function DashboardSwitch() {
   return isAdmin ? <AdminDashboard /> : <Dashboard />;
 }
 
-// ─── LEGAL SHELL ─────────────────────────────────────────────
+//  LEGAL SHELL 
 function LegalShell({ title, effectiveLabel, children }) {
   return (
     <MainLayout>
@@ -78,7 +78,7 @@ function LegalShell({ title, effectiveLabel, children }) {
               letterSpacing: '0.22em', textTransform: 'uppercase',
               color: 'rgba(201,168,76,0.45)', marginBottom: 10,
             }}>
-              InvestorIQ — Legal
+              InvestorIQ - Legal
             </p>
             <h1 style={{
               fontFamily: "'Cormorant Garamond', Georgia, serif",
@@ -167,19 +167,17 @@ function LegalShell({ title, effectiveLabel, children }) {
   );
 }
 
-// ─── LEGAL PAGES ─────────────────────────────────────────────
+//  LEGAL PAGES 
 function TermsPage() {
   return (
     <LegalShell title="Terms of Use" effectiveLabel="Version: v2026-01-14">
       <h2>1. Overview</h2>
       <p>InvestorIQ is a document-based real estate underwriting platform. Outputs are produced from the documents you upload. InvestorIQ is not a brokerage, appraiser, lender, or advisor.</p>
       <h2>2. Not advice and no reliance</h2>
-      <p>InvestorIQ does not provide financial advice, investment advice, appraisal advice, legal advice, tax advice, or accounting advice. Outputs are informational only. You are responsible for verifying all inputs and results and for obtaining independent professional advice as needed.</p>
       <h2>3. Acceptance of terms and policy versioning</h2>
       <p>By accessing or using the InvestorIQ platform, including by uploading documents or generating reports, you acknowledge and agree to be bound by the then-current version of InvestorIQ's Terms of Use, Privacy Policy, and Analysis Disclosures.</p>
       <p>Acceptance is provided through an explicit acknowledgment mechanism within the platform and applies to the specific policy versions in effect at the time of acknowledgment. Once accepted, such acceptance remains valid for all subsequent use of the platform unless and until the applicable policies are modified or replaced.</p>
-      <p>InvestorIQ may update these policies from time to time. When a policy is materially updated, users will be required to review and explicitly acknowledge the updated version before continuing to use the affected features of the platform. InvestorIQ maintains audit records of policy acknowledgments, including the applicable policy version and acceptance timestamp, for compliance, security, and legal purposes.</p>
-      <h2>4. Document-only and no assumptions</h2>
+      <h2>4. Document-based and framework-constrained</h2>
       <p>InvestorIQ does not assume, infer, normalize, or fill gaps. If inputs are missing, conflicting, or degraded, the limitation may be disclosed and may reduce report completeness.</p>
       <h2>5. Accounts and eligibility</h2>
       <p>You are responsible for maintaining the confidentiality of your account credentials and for all activity under your account.</p>
@@ -251,11 +249,10 @@ function DisclosuresPage() {
   return (
     <LegalShell title="Analysis Disclosures" effectiveLabel="Version: v2026-01-14">
       <h2>1. Document-based outputs only</h2>
-      <p>InvestorIQ produces underwriting outputs strictly from the documents you upload. Outputs are not created from external data sources unless explicitly identified as such within the report.</p>
-      <h2>2. No assumptions and no gap-filling</h2>
+      <p>InvestorIQ produces underwriting outputs from uploaded source documents and framework-constrained underwriting logic. Outputs are not created from external data sources unless explicitly identified as such within the report.</p>
+      <h2>2. No unsupported values and no gap-filling</h2>
       <p>InvestorIQ does not assume, infer, normalize, or fill missing values. If information is missing, conflicting, or degraded, the output may be incomplete and the limitation may be disclosed.</p>
       <h2>3. Not advice</h2>
-      <p>InvestorIQ does not provide financial advice, investment advice, appraisal advice, legal advice, tax advice, or accounting advice. Outputs are informational and must not be relied upon as a substitute for professional judgment.</p>
       <h2>4. User responsibility</h2>
       <p>You are responsible for the accuracy, completeness, and legality of the documents you upload and for validating outputs before making decisions. Investment decisions involve risk and outcomes depend on factors beyond the platform.</p>
       <h2>5. Auditability and acceptance</h2>
@@ -266,7 +263,7 @@ function DisclosuresPage() {
   );
 }
 
-// ─── 404 PAGE ─────────────────────────────────────────────────
+//  404 PAGE 
 function NotFound() {
   return (
     <MainLayout>
@@ -295,7 +292,7 @@ function NotFound() {
             letterSpacing: '0.22em', textTransform: 'uppercase',
             color: T.goldDark, marginBottom: 14,
           }}>
-            404 — Page Not Found
+            404  Page Not Found
           </p>
           <h1 style={{
             fontFamily: "'Cormorant Garamond', Georgia, serif",
@@ -332,7 +329,7 @@ function NotFound() {
   );
 }
 
-// ─── ROUTER ───────────────────────────────────────────────────
+//  ROUTER 
 export default function App() {
   return (
     <Routes>

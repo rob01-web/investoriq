@@ -26,6 +26,11 @@ async function getRawBody(req) {
   });
 }
 
+function isDuplicateInsertError(error) {
+  const msg = String(error?.message || "").toLowerCase();
+  return msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists");
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -45,11 +50,11 @@ export default async function handler(req, res) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("❌ Stripe signature verification failed:", err?.message || err);
+    console.error("Stripe signature verification failed:", err?.message || err);
     return res.status(400).send(`Webhook Error: ${err?.message || "Invalid signature"}`);
   }
 
-  console.log("💳 Stripe event received:", event.type);
+  console.log("Stripe event received:", event.type);
 
   // Only process what we actually support.
   if (event.type !== "checkout.session.completed") {
@@ -88,7 +93,28 @@ export default async function handler(req, res) {
     }
   }
 
-  // ✅ Idempotency (HARD): INSERT FIRST. If duplicate => already processed => return 200.
+  const expectedSessionIds = Array.from({ length: quantity }, (_value, index) =>
+    index === 0 ? (sessionId || null) : `${sessionId}#${index + 1}`
+  );
+
+  const loadExistingPurchases = async () => {
+    if (!sessionId) return { rows: [], error: null };
+
+    const filters = expectedSessionIds
+      .filter(Boolean)
+      .map((value) => `stripe_session_id.eq.${value}`)
+      .join(",");
+
+    if (!filters) return { rows: [], error: null };
+
+    const { data, error } = await supabaseAdmin
+      .from("report_purchases")
+      .select("id, stripe_session_id")
+      .or(filters);
+
+    return { rows: data || [], error };
+  };
+
   const { error: insertErr } = await supabaseAdmin
     .from("stripe_events")
     .insert([
@@ -98,26 +124,52 @@ export default async function handler(req, res) {
     ]);
 
   if (insertErr) {
-    const msg = String(insertErr.message || "").toLowerCase();
-
-    // Treat duplicate/unique constraint violations as "already processed"
-    if (msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists")) {
-      console.log("ℹ️ Event already processed:", eventId);
-      return res.status(200).json({ received: true });
+    if (isDuplicateInsertError(insertErr)) {
+      const { rows: existingRows, error: existingErr } = await loadExistingPurchases();
+      if (existingErr) {
+        console.error("Failed to verify existing report purchases for duplicate event:", existingErr);
+        return res.status(500).json({ error: "Webhook purchase verification failed" });
+      }
+      if (existingRows.length >= quantity) {
+        console.log("Stripe event already processed:", eventId);
+        return res.status(200).json({ received: true });
+      }
+      console.warn("Duplicate Stripe event found without complete entitlement rows; continuing purchase creation:", {
+        eventId,
+        sessionId,
+        expected: quantity,
+        existing: existingRows.length,
+      });
+    } else {
+      console.error("Failed to record stripe event (idempotency insert):", insertErr);
+      return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
     }
-
-    console.error("❌ Failed to record stripe event (idempotency insert):", insertErr);
-    // 500 => Stripe retries => good
-    return res.status(500).json({ error: "Webhook processing failed (idempotency)" });
   }
 
-  const purchaseRows = Array.from({ length: quantity }, (_value, index) => ({
-    user_id: userId,
-    product_type: productType,
-    job_id: null,
-    consumed_at: null,
-    stripe_session_id: index === 0 ? (sessionId || null) : `${sessionId}#${index + 1}`,
-  }));
+  const { rows: existingPurchases, error: existingPurchasesErr } = await loadExistingPurchases();
+  if (existingPurchasesErr) {
+    console.error("Failed to load existing report purchases:", existingPurchasesErr);
+    return res.status(500).json({ error: "Report purchase verification failed" });
+  }
+
+  const existingSessionIds = new Set(
+    existingPurchases.map((row) => row.stripe_session_id).filter(Boolean)
+  );
+
+  const purchaseRows = expectedSessionIds
+    .filter((purchaseSessionId) => !purchaseSessionId || !existingSessionIds.has(purchaseSessionId))
+    .map((purchaseSessionId) => ({
+      user_id: userId,
+      product_type: productType,
+      job_id: null,
+      consumed_at: null,
+      stripe_session_id: purchaseSessionId,
+    }));
+
+  if (purchaseRows.length === 0) {
+    console.log("Entitlement rows already present for event:", eventId);
+    return res.status(200).json({ received: true });
+  }
 
   const { data: insertedPurchases, error: purchaseErr } = await supabaseAdmin
     .from("report_purchases")
@@ -129,8 +181,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Report purchase insert failed" });
   }
 
-  console.log("Recorded purchase for userId=" + userId + " (" + productType + "), inserted_rows=" + (insertedPurchases?.length || 0) + ", session_id=" + (sessionId || "null"));
+  console.log(
+    "Recorded purchase for userId=" +
+      userId +
+      " (" +
+      productType +
+      "), inserted_rows=" +
+      (insertedPurchases?.length || 0) +
+      ", session_id=" +
+      (sessionId || "null")
+  );
   return res.status(200).json({ received: true });
 }
-
-

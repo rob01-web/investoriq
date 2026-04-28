@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { getValidatedPriceConfig } from '@/lib/pricingConfig';
 import { supabase } from '@/lib/customSupabaseClient';
 
-// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+//  DESIGN TOKENS 
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -37,7 +37,7 @@ const stagger = {
   show:   { transition: { staggerChildren: 0.1 } },
 };
 
-// ─── TIER DATA ───────────────────────────────────────────────────────────────
+//  TIER DATA 
 const tiers = [
   {
     title:       'Screening Report',
@@ -73,7 +73,7 @@ const tiers = [
   },
 ];
 
-// ─── PRICING TILE ────────────────────────────────────────────────────────────
+//  PRICING TILE 
 function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk }) {
   const isLoading = loadingKey === tier.productType;
   const [hovered, setHovered] = useState(false);
@@ -277,7 +277,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
   );
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+//  MAIN COMPONENT 
 export default function PricingPage() {
   const { user } = useAuth();
   const [loadingKey, setLoadingKey]   = useState(null);
@@ -355,7 +355,7 @@ export default function PricingPage() {
 
       <main style={{ background: T.white, minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── HEADER BAND ─────────────────────────────────────────────── */}
+        {/*  HEADER BAND  */}
         <section style={{
           background:   T.green,
           position:     'relative',
@@ -415,7 +415,7 @@ export default function PricingPage() {
               lineHeight:   1.65,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              Built from your T12, rent roll, and deal documents - not assumptions.
+              Built from your T12, rent roll, and supporting deal documents, with assumptions constrained by uploaded source materials.
             </motion.p>
 
             {isAuthed && (
@@ -434,7 +434,7 @@ export default function PricingPage() {
                   onMouseEnter={(e) => { e.currentTarget.style.color = T.gold; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(201,168,76,0.5)'; }}
                 >
-                  ← Back to Dashboard
+                  {"<- Back to Dashboard"}
                 </Link>
               </motion.p>
             )}
@@ -442,7 +442,7 @@ export default function PricingPage() {
           </motion.div>
         </section>
 
-        {/* ── PRICING TILES ───────────────────────────────────────────── */}
+        {/*  PRICING TILES  */}
         <section style={{
           background:   T.warm,
           borderBottom: `1px solid ${T.hairline}`,
@@ -545,7 +545,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ── COMPARISON TABLE ─────────────────────────────────────────── */}
+        {/*  COMPARISON TABLE  */}
         <section style={{
           background:   T.white,
           borderBottom: `1px solid ${T.hairline}`,
@@ -661,7 +661,7 @@ export default function PricingPage() {
                             color:     val ? T.gold : T.hairlineMid,
                             fontSize:  14,
                           }}>
-                            {val ? '✓' : '-'}
+                            {val ? '' : '-'}
                           </td>
                         ))}
                       </tr>
@@ -674,7 +674,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ── CLOSING CTA ─────────────────────────────────────────────── */}
+        {/*  CLOSING CTA  */}
         <section style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
           <div style={{
             position:   'absolute',
