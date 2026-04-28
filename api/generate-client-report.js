@@ -4593,16 +4593,17 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
         tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
         for (const cap of capRatesDcf) {
-          const exitV = noi5dcf / (cap / 100);
+          const isBase = Math.abs(cap - exitCapPct) < 0.01;
+          const rowCap = isBase ? exitCapPct : cap;
+          const exitV = noi5dcf / (rowCap / 100);
           const pvSum = [1,2,3,4,5].reduce((sum, yr) => {
             const noiYr = noiYear0 * Math.pow(1 + GROWTH, yr);
             const ev = yr === 5 ? exitV : 0;
             return sum + (noiYr + ev) / Math.pow(1 + DISCOUNT, yr);
           }, 0);
-          const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowBg = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
           const vs = isBase ? "-" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -4659,11 +4660,12 @@ snapRows.push(`<tr><td style="padding:3px 10px;color:#9CA3AF;font-size:10px;lett
         sTbl += `</tr></thead><tbody>`;
         for (const cap of capRateRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
+          const rowCap = isBase ? exitCapPct : cap;
           const rowStyle = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
-          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}%${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td>`;
+          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td>`;
           for (const s of growthRates) {
             const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
-            sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / (cap / 100))}</td>`;
+            sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / (rowCap / 100))}</td>`;
           }
           sTbl += `</tr>`;
         }
