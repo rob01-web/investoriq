@@ -3845,12 +3845,18 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       "{{FINAL_RECOMMENDATION}}",
       getNarrativeHtml("finalRecommendation")
     );
-    const unitMix = computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
-    const unitMixRows = buildUnitMixRows(
-      unitMix,
-      computedRentRoll?.total_units ?? rentRollPayload?.total_units,
-      formatCurrency
-    );
+    const suppressUnitLevelRentLift =
+      computedRentRoll?.is_partial_sample === true;
+    const unitMix = suppressUnitLevelRentLift
+      ? null
+      : computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
+    const unitMixRows = suppressUnitLevelRentLift
+      ? ""
+      : buildUnitMixRows(
+          unitMix,
+          computedRentRoll?.total_units ?? rentRollPayload?.total_units,
+          formatCurrency
+        );
     let descriptorLine = "";
     const rrUnits = Number(computedRentRoll?.total_units);
     if (Number.isFinite(rrUnits) && rrUnits > 0) {
@@ -3868,7 +3874,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     finalHtml = replaceAll(
       finalHtml,
       "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}",
-      effectiveReportMode === "screening_v1"
+      suppressUnitLevelRentLift
+        ? ""
+        : effectiveReportMode === "screening_v1"
         ? (() => {
             const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
             const annualMarket = coerceNumber(computedRentRoll?.total_market_annual ?? computedRentRoll?.total_annual_market);
@@ -3884,7 +3892,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       let upsideHtml = "";
       const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
       const annualMarket  = coerceNumber(computedRentRoll?.total_market_annual   ?? computedRentRoll?.total_annual_market);
-      if (effectiveReportMode !== "screening_v1" && Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
+      if (!suppressUnitLevelRentLift && effectiveReportMode !== "screening_v1" && Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
         const annualGap = annualMarket - annualInPlace;
         const capRates = [5.0, 6.0, 7.0];
         const capRows = capRates.map(cap => {
@@ -4353,8 +4361,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
     }
     const hasRentRollUnitMix =
-      (Array.isArray(rentRollUnits) && rentRollUnits.length > 0) ||
-      (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0);
+      !suppressUnitLevelRentLift &&
+      (
+        (Array.isArray(rentRollUnits) && rentRollUnits.length > 0) ||
+        (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0)
+      );
     const hasRentRollRents =
       (Array.isArray(rentRollUnits) &&
         rentRollUnits.some(
@@ -4386,13 +4397,17 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           coerceNumber(computedRentRoll?.avg_in_place_rent)
         : null;
     const hasTargetRentInputs =
-      (Array.isArray(rentRollUnits) &&
-        rentRollUnits.some((unit) => Number.isFinite(coerceNumber(unit?.market_rent)))) ||
-      (Array.isArray(computedRentRoll?.unit_mix) &&
-        computedRentRoll.unit_mix.some((row) => Number.isFinite(coerceNumber(row?.market_rent)))) ||
-      (Array.isArray(rentRollPayload?.unit_mix) &&
-        rentRollPayload.unit_mix.some((row) => Number.isFinite(Number(row?.market_rent))));
+      !suppressUnitLevelRentLift &&
+      (
+        (Array.isArray(rentRollUnits) &&
+          rentRollUnits.some((unit) => Number.isFinite(coerceNumber(unit?.market_rent)))) ||
+        (Array.isArray(computedRentRoll?.unit_mix) &&
+          computedRentRoll.unit_mix.some((row) => Number.isFinite(coerceNumber(row?.market_rent)))) ||
+        (Array.isArray(rentRollPayload?.unit_mix) &&
+          rentRollPayload.unit_mix.some((row) => Number.isFinite(Number(row?.market_rent))))
+      );
     const hasPositiveLiftSignal =
+      !suppressUnitLevelRentLift && (
       (Number.isFinite(marketRentPremiumAvg) && marketRentPremiumAvg > 0) ||
       (Array.isArray(computedRentRoll?.unit_mix) &&
         computedRentRoll.unit_mix.some(
@@ -4407,7 +4422,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
             Number.isFinite(Number(row?.current_rent)) &&
             Number.isFinite(Number(row?.market_rent)) &&
             Number(row?.market_rent) > Number(row?.current_rent)
-        ));
+        )));
     const showSection2 = hasRentRollData && hasTargetRentInputs && hasPositiveLiftSignal;
     if (!showSection2) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
@@ -5162,7 +5177,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const avgMarketRent = coerceNumber(computedRentRoll?.avg_market_rent);
       const inplace = avgInplaceRent;
       const market = avgMarketRent;
-      const unitMixData = Array.isArray(computedRentRoll?.unit_mix) ? computedRentRoll.unit_mix : [];
+      const unitMixData =
+        suppressUnitLevelRentLift
+          ? []
+          : Array.isArray(computedRentRoll?.unit_mix)
+          ? computedRentRoll.unit_mix
+          : [];
       if (!inplace || !market) {
         finalHtml = replaceAll(finalHtml, "{{RENT_DISTRIBUTION_CHART}}", "");
       } else if (unitMixData.length > 0) {
