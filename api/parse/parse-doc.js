@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
+import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 
@@ -1838,6 +1839,80 @@ export default async function handler(req, res) {
             if (!Number.isFinite(net_operating_income)) parse_warnings.push('missing_net_operating_income');
             if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
 
+            const tryAiT12Recovery = async () => {
+              const aiCandidate = await recoverT12WithAI({
+                text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
+                filename: file.original_filename,
+                jobId,
+              });
+              if (!aiCandidate) return false;
+
+              const aiCoreValidation = validateCoreT12Payload(aiCandidate, 'ai_t12_recovery_validated');
+              if (!aiCoreValidation.ok) return false;
+
+              await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
+
+              const { error: aiArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 't12_parsed',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${jobId}/t12/${file.id}.json`,
+                  payload: {
+                    file_id: file.id,
+                    original_filename: file.original_filename,
+                    declared_doc_type: declaredDocType,
+                    detected_doc_type: detectedDocType,
+                    classifier_score: classifierScore,
+                    classifier_signals: classifierSignals,
+                    ...aiCandidate,
+                    parse_branch: aiCoreValidation.parse_branch,
+                    core_t12_validation: aiCoreValidation,
+                  },
+                },
+              ]);
+
+              if (aiArtifactErr) {
+                throw new Error(aiArtifactErr.message || 'Failed to write t12 artifact');
+              }
+
+              const { error: aiParsedStatusErr } = await supabaseAdmin
+                .from('analysis_job_files')
+                .update({ parse_status: 'parsed', parse_error: null })
+                .eq('id', file.id);
+
+              if (aiParsedStatusErr) {
+                throw new Error(`Failed to mark t12 file parsed: ${aiParsedStatusErr.message}`);
+              }
+
+              const { error: aiParsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 'worker_event',
+                  bucket: 'internal',
+                  object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                    nowIso
+                  )}.json`,
+                  payload: {
+                    event: 'parser_completed',
+                    parser: 't12',
+                    result: 'parsed',
+                    job_id: jobId,
+                    timestamp: nowIso,
+                  },
+                },
+              ]);
+
+              if (aiParsedEventErr) {
+                console.error('Failed to write parser_completed event:', aiParsedEventErr.message);
+              }
+
+              parsedCount += 1;
+              return true;
+            };
+
             const requiredValues = [
               gross_potential_rent,
               effective_gross_income,
@@ -1885,6 +1960,9 @@ export default async function handler(req, res) {
 
                       const fallbackCoreValidation = validateCoreT12Payload(parsedT12FromTables, 'aws_textract_tables');
                       if (!fallbackCoreValidation.ok) {
+                        if (await tryAiT12Recovery()) {
+                          continue;
+                        }
                         await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
                         await supabaseAdmin
                           .from('analysis_job_files')
@@ -1973,6 +2051,10 @@ export default async function handler(req, res) {
                 // Fall through to the existing fail-closed text coverage error.
               }
 
+              if (await tryAiT12Recovery()) {
+                continue;
+              }
+
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({
@@ -1992,6 +2074,9 @@ export default async function handler(req, res) {
               'text_excerpt'
             );
             if (!coreT12Validation.ok) {
+              if (await tryAiT12Recovery()) {
+                continue;
+              }
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({

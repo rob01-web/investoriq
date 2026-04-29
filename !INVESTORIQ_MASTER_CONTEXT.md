@@ -18,6 +18,7 @@
   - safe direction is narrow AI extraction recovery only
   - AI may help InvestorIQ read documents; AI may not become the source of financial truth
   - deterministic validation remains the gate before any AI-recovered values enter `analysis_artifacts`
+  - P10 validated this doctrine in a production-like live flow: AI recovered a parser-unfriendly rent roll, but deterministic validation controlled acceptance and report math
 - Batch 6A.2 explicit rent-roll summary totals is CLOSED:
   - parser now writes `rent_roll_parsed.payload.totals` from explicit totals / summary rows
   - generator trusts verified explicit summary totals during partial-sample mode
@@ -73,6 +74,10 @@
 - Deployment / secret hygiene completed today:
   - initial AI helper location under `/api` triggered Vercel Hobby function-count failure
   - helper was moved out of `/api` into `lib/`, deploy returned green/current
+  - initial live P10 failure after the `.txt` extraction patch was caused by missing `OPENAI_API_KEY` in Vercel Production while `ENABLE_AI_RENT_ROLL_RECOVERY=true` was already set
+  - after adding `OPENAI_API_KEY` in Vercel Production and redeploying, P10 passed
+  - first successful OpenAI usage was confirmed in the OpenAI dashboard at very low cost / token volume
+  - narrow AI extraction fallback appears low-cost at current scale; material cost risk is still more likely in Textract, DocRaptor, Stripe fees, infrastructure, and support / admin time than in this AI layer
   - `RESEND_API_KEY` was rotated and marked Sensitive in Vercel after the Vercel security notice
   - old Resend key was revoked after the new production key was installed
   - do not rotate Stripe / Supabase / OpenAI / AWS / DocRaptor blindly mid-launch; one secret at a time only
@@ -95,19 +100,20 @@
     - Rent Roll Distribution suppressed
   - `SYNTH-QA-P08 Glued Number T12` remains OPEN
     - current known issue is still fixture-side until latest retest is investigated
-  - `SYNTH-QA-P10 AI Rent Roll Recovery`
-    - purpose is to prove AI can recover a clearly readable but parser-unfriendly narrative rent roll without changing deterministic report math
-    - T12 fixture was corrected from `.txt` to `t12_clean_source.csv`
-    - current rent-roll fixture is `rent_roll_parser_unfriendly_source.txt`
-    - expected values:
-      - Units `8`
-      - Occupancy `87.5%`
-      - Annual In-Place Rent `$111,180`
-      - Annual Market Rent `$122,160`
-      - EGI `$111,180`
-      - OpEx `$41,250`
-      - NOI `$69,930`
-    - current confirmed blocker was not AI rejection but missing `.txt` extraction coverage upstream of AI recovery
+  - `SYNTH-QA-P10 RETEST` = PASS
+    - uploaded files:
+      - `t12_clean_source.csv`
+      - `rent_roll_parser_unfriendly_source.txt`
+    - published successfully with stable classification
+    - Units `8`, Occupancy `87.5%`, Annual In-Place Rent `$111,180`, Annual Market Rent `$122,160`
+    - EGI `$111,180`, OpEx `$41,250`, NOI `$69,930`
+    - Expense Ratio `37.1%`, NOI Margin `62.9%`
+    - `CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified`
+    - T12 Operating Statement coverage `4/4`, `100.0%`
+    - Rent Roll coverage `4/4`, `100.0%`
+    - proved the live chain:
+      - `.txt extraction -> document_text_extracted -> AI rent-roll recovery -> deterministic validation -> rent_roll_parsed -> published Screening report`
+    - confirms AI is correctly limited to extraction recovery and did not become the source of underwriting truth
   - `SYNTH-QA-P01 Clean Screening RETEST` after AI helper install and Resend rotation = PASS
     - Units `6`, Occupancy `100.0%`, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
     - confirms AI helper install did not break deterministic Screening
@@ -143,7 +149,9 @@
   - PDF = text + tables extracted
   - PNG / JPG / JPEG = tables extracted only, no `document_text_extracted`
   - CSV / XLSX = no extraction artifact, but direct structured parsers consume them
-  - TXT was accepted by Dashboard but skipped by extraction; local patch is now in place in `api/parse/extract-job-text.js` to write `document_text_extracted` for `text/plain` / `.txt`
+  - TXT is now validated for the P10 AI rent-roll recovery path:
+    - `api/parse/extract-job-text.js` writes `document_text_extracted` for `text/plain` / `.txt`
+    - non-spreadsheet rent-roll parsing can now reach AI recovery with real extracted text
   - DOC / DOCX and PPT / PPTX are accepted by Dashboard but still have no extraction path
   - XLS is accepted by Dashboard but parser eligibility remains weak / inconsistent
 - Current live stack definitely includes:
@@ -249,6 +257,10 @@
   - if a user later realizes they forgot optional documents after publication, that is not a system failure and requires a new report request
   - to retry after failed generation, the user must start a new report request and upload the complete document package again, including all required and supporting documents
   - V1 does not support supplementing a failed job with only selected replacement documents
+- Refund / regeneration policy is now locked more explicitly:
+  - InvestorIQ does not offer refunds once generation begins
+  - if InvestorIQ fails due to a system-side issue, the remedy is credit restoration or report regeneration, not a cash refund
+  - if a user uploads the wrong or incomplete package and InvestorIQ generates a defensible report from it, that requires a new report request
 - Preferred failed-generation copy:
   - `Generation halted due to document verification limits. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report. No report was published, and 1 report credit has been returned to your account. To try again, please start a new report request and upload the complete document package again, including all required and supporting documents. Do not upload only the documents you believe were unclear or unreadable, because each report is generated from a single complete upload package.`
 - Narrative must be document-derived and supportable from parsed inputs.
@@ -546,14 +558,13 @@
 
 ### Immediate agenda - April 29, 2026
 - IMMEDIATE PRIORITY
-  1. Validate and deploy the narrow `.txt` extraction patch in `api/parse/extract-job-text.js`
-  2. Rerun `SYNTH-QA-P10 AI RENT ROLL RECOVERY TXT EXTRACTION RETEST`
-  3. If P10 passes, decide whether to proceed to AI T12 Recovery v0.1 design only
-  4. Then return to `SYNTH-QA-P08 Glued Number T12`
-  5. Run low-dollar true live Stripe payment test if still outstanding
+  1. Return to `SYNTH-QA-P08 Glued Number T12`
+  2. Optional if energy allows: run `SYNTH-QA-P05 Missing Rent Roll`
+  3. Run low-dollar true live Stripe payment test if still outstanding
+  4. Review the Ken Dunn sample package
+  5. Complete final readiness check / sample package selection
 
 - STILL OPEN
-  - Validate / deploy the `.txt` extraction patch and rerun P10.
   - Investigate latest `SYNTH-QA-P08 Glued Number T12` retest failure.
   - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   - Low-dollar true live Stripe payment test if not yet completed.
@@ -564,6 +575,11 @@
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
+  - After rent-roll recovery is considered proven, AI T12 Recovery v0.1 is the next intended extraction-only module:
+    - `lib/ai-t12-recovery.js`
+    - `ENABLE_AI_T12_RECOVERY=true`
+    - stricter validation than rent-roll recovery
+    - do not implement until after current readiness priorities
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, post-launch AI QA Safeguard Layer, and broader table / schema hygiene.
 
 ### Before Ken Dunn outreach
@@ -578,24 +594,14 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - receive / validate the `.txt` extraction patch receipt for `api/parse/extract-job-text.js`
-  - deploy
-  - rerun `SYNTH-QA-P10 AI RENT ROLL RECOVERY TXT EXTRACTION RETEST`
-  - upload only:
-    - `t12_clean_source.csv`
-    - `rent_roll_parser_unfriendly_source.txt`
-  - expected:
-    - Units `8`
-    - Occupancy `87.5%`
-    - Annual In-Place Rent `$111,180`
-    - Annual Market Rent `$122,160`
-    - EGI `$111,180`
-    - OpEx `$41,250`
-    - NOI `$69,930`
-    - Rent Roll verified
-  - if P10 passes:
-    - consider AI T12 Recovery v0.1 design only
-  - then return to `SYNTH-QA-P08 Glued Number T12`
+  - return to `SYNTH-QA-P08 Glued Number T12`
+  - investigate the latest retest job:
+    - job row
+    - file rows
+    - `parse_status`
+    - `parse_error`
+    - artifact rows
+    - determine whether failure is still fixture-side or a real parser issue
   - optional: run `SYNTH-QA-P05 Missing Rent Roll`
   - low-dollar Stripe test if outstanding
   - Ken Dunn sample package review
