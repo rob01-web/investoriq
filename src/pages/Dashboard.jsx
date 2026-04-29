@@ -792,6 +792,25 @@ useEffect(() => {
     failedJobGuidance?.jobId && failedJobGuidance.jobId === activeJobForRuns?.id
       ? failedJobGuidance.message
       : '';
+  const failedMessageLeadStyle = {
+    ...bodySmall,
+    fontSize: 13,
+    color: T.ink2,
+    fontWeight: 500,
+    lineHeight: 1.55,
+  };
+  const failedMessageSupportStyle = {
+    ...bodySmall,
+    fontSize: 12,
+    color: T.ink3,
+    lineHeight: 1.6,
+  };
+  const failedMessageStatusStyle = {
+    ...labelMono,
+    fontSize: 10,
+    color: T.errorRed,
+    letterSpacing: '0.08em',
+  };
   const needsDocumentsMessage = (() => {
     if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
     if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
@@ -1163,10 +1182,22 @@ useEffect(() => {
 
               <div style={{ padding:'24px 0' }}>
                 {latestFailedJob ? (
-                  <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
-                    <div>{latestFailedJob.property_name || 'Unnamed Property'} - {latestFailedJob.status}</div>
-                    <div>{latestFailedJob.failure_reason || latestFailedJob.error_message || 'No message'}</div>
-                    {visibleFailedJobGuidance && <div style={{ marginTop:8 }}>{visibleFailedJobGuidance}</div>}
+                  <div style={{ padding:'6px 0' }}>
+                    <div style={{ ...failedMessageLeadStyle, marginBottom: 4 }}>
+                      {latestFailedJob.property_name || 'Unnamed Property'}
+                    </div>
+                    <div style={failedMessageStatusStyle}>
+                      {String(latestFailedJob.status || 'failed').toUpperCase()}
+                      {latestFailedJob.error_code ? ` - ${latestFailedJob.error_code}` : ''}
+                    </div>
+                    <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
+                      {latestFailedJob.failure_reason || latestFailedJob.error_message || 'No message'}
+                    </div>
+                    {visibleFailedJobGuidance && (
+                      <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                        {visibleFailedJobGuidance}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
@@ -1661,10 +1692,21 @@ useEffect(() => {
               <NoticeBox key={job.id} type="error">
                 <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                   <div>
-                    <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
-                    {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
+                    <div style={failedMessageLeadStyle}>
+                      <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
+                    </div>
+                    <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
+                      FAILED{job.error_code ? ` - ${job.error_code}` : ''}
+                    </div>
+                    {job.failure_reason && (
+                      <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
+                        {job.failure_reason}
+                      </div>
+                    )}
                     {failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
-                      <div style={{ marginTop:8 }}>{failedJobGuidance.message}</div>
+                      <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                        {failedJobGuidance.message}
+                      </div>
                     )}
                   </div>
                   <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
