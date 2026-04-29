@@ -948,14 +948,14 @@ export default async function handler(req, res) {
             const needsDocsUpdate = {
               status: 'failed',
               failure_reason:
-                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts.',
+                'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.',
             };
             if (supportsErrorCode) {
               needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS';
             }
             if (supportsErrorMessage) {
               needsDocsUpdate.error_message =
-                'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts.';
+                'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.';
             }
 
             const { error: needsDocsErr } = await supabaseAdmin
@@ -1086,7 +1086,7 @@ export default async function handler(req, res) {
                   code: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
                   level: 'error',
                   error_message:
-                    'Core underwriting documents were uploaded, but parsing did not produce all required structured financial artifacts. Generation halted before report publication due to document integrity validation.',
+                    'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts. Generation halted before report publication due to document integrity validation.',
                   missing: ['rent_roll', 't12_or_operating_statement'],
                   detected,
                   timestamp: nowIso,

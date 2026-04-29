@@ -1,0 +1,1 @@
+Broker note: Rent roll was not provided in this package. This fixture is intended to confirm fail-closed gating for required rent-roll support.

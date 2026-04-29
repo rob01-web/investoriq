@@ -1,0 +1,7 @@
+Northgate Apartments Loan Summary
+Outstanding Balance: $3,420,000
+Interest Rate: 5.35%
+Amortization: 30 years
+Maturity: 2032-06-01
+LTV: 72%
+Refinance Exit Cap Rate: 5.75%

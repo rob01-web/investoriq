@@ -1,0 +1,6 @@
+Senior Loan Summary
+Outstanding Balance: $6,200,000
+Interest Rate: 5.60%
+Amortization: 30 years
+Maturity: 2031-08-01
+Exit Cap Rate: 6.10%

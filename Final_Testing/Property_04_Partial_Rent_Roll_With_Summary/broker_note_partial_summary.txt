@@ -1,0 +1,1 @@
+Broker note: Attached rent roll excerpt includes sample detail rows plus portfolio totals row. Use totals only if explicitly parsed from the summary line.

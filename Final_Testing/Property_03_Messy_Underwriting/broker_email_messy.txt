@@ -1,0 +1,4 @@
+From: broker@example.test
+Subject: Sunset Court quick notes
+
+Rough thought is rents can move after turns. Debt terms attached are incomplete. Do not rely on this note for current debt sizing.

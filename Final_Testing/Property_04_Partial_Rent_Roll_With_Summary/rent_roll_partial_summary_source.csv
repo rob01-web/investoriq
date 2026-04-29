@@ -1,0 +1,6 @@
+Unit,Type,Sq Ft,Status,Market Rent,Current Rent,Lease End
+101,1BR,750,Occupied,1822,1517,2026-12-31
+102,1BR,750,Occupied,1822,1517,2027-02-28
+103,2BR,900,Vacant,1960,0,
+104,2BR,900,Occupied,1960,1665,2027-01-31
+Totals,144 Units,108k,96% Occ.,262400,218500,

@@ -1,0 +1,7 @@
+Unit,Floorplan,Status,Market Rent,Current Rent,Notes
+A-101,1BR/OCC,Occupied,1425,1380,renovated sink
+A-102,1BR,Occupied,1425,1375,
+A-201,2BR,Vacant,1680,0,make ready
+B-101,2BR,Occupied,1680,1510,legacy lease
+B-102,2BR,Occupied,1680,1495,
+C-301,3BR,Model,1895,0,model unit

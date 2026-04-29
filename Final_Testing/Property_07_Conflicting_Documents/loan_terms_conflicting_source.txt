@@ -1,0 +1,5 @@
+Structured lender terms
+Outstanding Balance: $4,050,000
+Interest Rate: 5.10%
+Amortization: 30 years
+Exit Cap Rate: 5.80%
