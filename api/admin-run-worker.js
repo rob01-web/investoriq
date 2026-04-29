@@ -294,6 +294,60 @@ export default async function handler(req, res) {
       throw error;
     };
 
+    const coerceFiniteNumber = (value) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    };
+
+    const deriveTrustedAnnualInPlaceRent = (rentRollPayload) => {
+      const payload = rentRollPayload && typeof rentRollPayload === 'object' ? rentRollPayload : {};
+      const totals = payload?.totals && typeof payload.totals === 'object' ? payload.totals : {};
+
+      const annualDirect =
+        coerceFiniteNumber(totals.in_place_rent_annual) ??
+        coerceFiniteNumber(totals.current_rent_annual);
+      if (Number.isFinite(annualDirect) && annualDirect > 0) {
+        return { annual: annualDirect, source: 'trusted_summary_annual' };
+      }
+
+      const monthlyDirect =
+        coerceFiniteNumber(totals.in_place_rent_monthly) ??
+        coerceFiniteNumber(totals.current_rent_monthly);
+      if (Number.isFinite(monthlyDirect) && monthlyDirect > 0) {
+        return { annual: monthlyDirect * 12, source: 'trusted_summary_monthly' };
+      }
+
+      const units = Array.isArray(payload.units) ? payload.units : [];
+      const totalUnits =
+        coerceFiniteNumber(payload.total_units) ??
+        coerceFiniteNumber(totals.total_units);
+      const isPartialSample =
+        payload.is_partial_sample === true ||
+        (Number.isFinite(totalUnits) && units.length > 0 && units.length < totalUnits) ||
+        (totals.summary_row_detected === true && Number.isFinite(totalUnits) && units.length < totalUnits);
+
+      if (isPartialSample || units.length === 0) {
+        return { annual: null, source: null };
+      }
+
+      let annualFromUnits = 0;
+      let countedUnits = 0;
+      for (const unit of units) {
+        const inPlaceRent = coerceFiniteNumber(unit?.in_place_rent);
+        if (!Number.isFinite(inPlaceRent)) {
+          continue;
+        }
+        annualFromUnits += inPlaceRent * 12;
+        countedUnits += 1;
+      }
+
+      if (countedUnits === units.length && annualFromUnits > 0) {
+        return { annual: annualFromUnits, source: 'full_unit_rows' };
+      }
+
+      return { annual: null, source: null };
+    };
+
     let supportsCompletedAt = false;
     let supportsFailedAt = false;
     let supportsErrorCode = false;
@@ -1466,6 +1520,187 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             continue;
+          }
+
+          const { data: latestT12Artifact, error: latestT12Err } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('payload')
+            .eq('job_id', job.id)
+            .eq('type', 't12_parsed')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestT12Err) {
+            throw new Error(`Failed to fetch latest t12 artifact: ${latestT12Err.message}`);
+          }
+
+          const { data: latestRentRollArtifact, error: latestRentRollErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('payload')
+            .eq('job_id', job.id)
+            .eq('type', 'rent_roll_parsed')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestRentRollErr) {
+            throw new Error(`Failed to fetch latest rent roll artifact: ${latestRentRollErr.message}`);
+          }
+
+          const t12Payload = latestT12Artifact?.payload || {};
+          const rentRollPayload = latestRentRollArtifact?.payload || {};
+          const effectiveGrossIncome = coerceFiniteNumber(t12Payload?.effective_gross_income);
+          const trustedAnnualInPlace = deriveTrustedAnnualInPlaceRent(rentRollPayload);
+
+          if (
+            Number.isFinite(effectiveGrossIncome) &&
+            effectiveGrossIncome > 0 &&
+            Number.isFinite(trustedAnnualInPlace.annual) &&
+            trustedAnnualInPlace.annual > 0
+          ) {
+            const ratio =
+              Math.max(effectiveGrossIncome, trustedAnnualInPlace.annual) /
+              Math.min(effectiveGrossIncome, trustedAnnualInPlace.annual);
+
+            if (ratio > 5) {
+              const mismatchMessage =
+                'InvestorIQ extracted financial values from the uploaded documents, but the operating statement and rent roll are materially inconsistent. No report was published and the report credit has been returned.';
+              const mismatchUpdate = {
+                status: 'failed',
+                failure_reason: mismatchMessage,
+              };
+              if (supportsFailedAt) {
+                mismatchUpdate.failed_at = nowIso;
+              }
+              if (supportsErrorCode) {
+                mismatchUpdate.error_code = 'DOCUMENT_FINANCIAL_SCALE_MISMATCH';
+              }
+              if (supportsErrorMessage) {
+                mismatchUpdate.error_message = mismatchMessage;
+              }
+
+              const { error: mismatchUpdateErr } = await supabaseAdmin
+                .from('analysis_jobs')
+                .update(mismatchUpdate)
+                .eq('id', job.id)
+                .eq('status', 'rendering');
+
+              if (mismatchUpdateErr) {
+                throw new Error(`Failed to mark job failed for financial scale mismatch: ${mismatchUpdateErr.message}`);
+              }
+
+              const { data: mismatchJobRow, error: mismatchJobErr } = await supabaseAdmin
+                .from('analysis_jobs')
+                .select('purchase_id')
+                .eq('id', job.id)
+                .maybeSingle();
+
+              if (mismatchJobErr) {
+                throw new Error(`Failed to fetch purchase_id for entitlement restore: ${mismatchJobErr.message}`);
+              }
+
+              let restoreMismatchPurchaseId = mismatchJobRow?.purchase_id || null;
+              if (!restoreMismatchPurchaseId) {
+                const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
+                  .from('report_purchases')
+                  .select('id')
+                  .eq('job_id', job.id)
+                  .not('consumed_at', 'is', null)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (purchaseByJobErr) {
+                  throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
+                }
+
+                restoreMismatchPurchaseId = purchaseByJobRow?.id || null;
+              }
+
+              if (restoreMismatchPurchaseId) {
+                const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
+                  .from('report_purchases')
+                  .update({ consumed_at: null })
+                  .eq('id', restoreMismatchPurchaseId)
+                  .not('consumed_at', 'is', null)
+                  .select('id')
+                  .maybeSingle();
+
+                if (restorePurchaseErr) {
+                  throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
+                }
+
+                if (restoredPurchase?.id) {
+                  const { error: clearPurchaseLinkErr } = await supabaseAdmin
+                    .from('analysis_jobs')
+                    .update({ purchase_id: null })
+                    .eq('id', job.id)
+                    .eq('status', 'failed');
+
+                  if (clearPurchaseLinkErr) {
+                    throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
+                  }
+
+                  const entitlementRestoredErr = await writeWorkerEventArtifact(
+                    job.id,
+                    job.user_id,
+                    'entitlement_restored',
+                    {
+                      reason: 'document_financial_scale_mismatch',
+                      purchase_id: restoreMismatchPurchaseId,
+                      timestamp: nowIso,
+                    }
+                  );
+
+                  if (entitlementRestoredErr) {
+                    throw new Error(
+                      `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
+                    );
+                  }
+                }
+              }
+
+              const mismatchTransitionErr = await writeStatusTransitionArtifact(
+                job.id,
+                'rendering',
+                'failed',
+                { user_id: job.user_id, reason: 'document_financial_scale_mismatch' }
+              );
+
+              if (mismatchTransitionErr) {
+                throw new Error(
+                  `Failed to write rendering->failed status transition artifact: ${mismatchTransitionErr.message}`
+                );
+              }
+
+              if (!blockedJobIds.includes(job.id)) {
+                blockedJobIds.push(job.id);
+              }
+
+              const financialScaleEventErr = await writeWorkerEventArtifact(
+                job.id,
+                job.user_id,
+                'document_financial_scale_mismatch',
+                {
+                  code: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH',
+                  level: 'error',
+                  error_message: mismatchMessage,
+                  ratio,
+                  t12_effective_gross_income: effectiveGrossIncome,
+                  rent_roll_annual_in_place_rent: trustedAnnualInPlace.annual,
+                  rent_roll_annual_source: trustedAnnualInPlace.source,
+                  timestamp: nowIso,
+                }
+              );
+
+              if (financialScaleEventErr) {
+                throw new Error(
+                  `Failed to write document_financial_scale_mismatch event: ${financialScaleEventErr.message}`
+                );
+              }
+
+              continue;
+            }
           }
 
           let reportId = null;
