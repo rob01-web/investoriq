@@ -794,9 +794,10 @@ useEffect(() => {
       : '';
   const failedMessageLeadStyle = {
     ...bodySmall,
+    fontFamily: "'DM Sans', sans-serif",
     fontSize: 13,
-    color: T.ink,
-    fontWeight: 600,
+    color: T.ink2,
+    fontWeight: 500,
     lineHeight: 1.6,
     fontStyle: 'normal',
   };
@@ -815,17 +816,17 @@ useEffect(() => {
     fontWeight: 500,
   };
   const step03FailureLeadStyle = {
-    ...stepSub,
+    fontFamily: "'DM Sans', sans-serif",
     display: 'block',
-    color: '#1f2933',
-    fontWeight: 600,
+    color: T.ink2,
+    fontWeight: 500,
     fontSize: 14,
-    lineHeight: 1.65,
+    lineHeight: 1.6,
     fontStyle: 'normal',
     opacity: 1,
   };
   const step03FailureSupportStyle = {
-    ...stepSub,
+    fontFamily: "'DM Sans', sans-serif",
     display: 'block',
     marginTop: 8,
     color: T.ink3,
