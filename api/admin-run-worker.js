@@ -906,14 +906,17 @@ export default async function handler(req, res) {
               const anyPending = relevantFiles.some((file) => {
                 const dt = String(file.doc_type || '').toLowerCase();
                 const parseStatus = String(file.parse_status || '').toLowerCase();
-                return parseStatus === 'pending' || (dt === 't12' && parseStatus === 'extracted');
+                return (
+                  parseStatus === 'pending' ||
+                  ((dt === 't12' || dt === 'rent_roll') && parseStatus === 'extracted')
+                );
               });
 
               if (anyPending) {
                 const hasPendingRentRoll = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
-                  const isPending = String(file.parse_status || '').toLowerCase() === 'pending';
-                  return isPending && dt === 'rent_roll';
+                  const parseStatus = String(file.parse_status || '').toLowerCase();
+                  return dt === 'rent_roll' && (parseStatus === 'pending' || parseStatus === 'extracted');
                 });
                 const hasPendingT12 = relevantFiles.some((file) => {
                   const dt = String(file.doc_type || '').toLowerCase();
@@ -924,8 +927,8 @@ export default async function handler(req, res) {
                 if (hasPendingRentRoll) {
                   for (const pendingFile of relevantFiles.filter((item) => {
                     const dt = String(item.doc_type || '').toLowerCase();
-                    const isPending = String(item.parse_status || '').toLowerCase() === 'pending';
-                    return dt === 'rent_roll' && isPending;
+                    const parseStatus = String(item.parse_status || '').toLowerCase();
+                    return dt === 'rent_roll' && (parseStatus === 'pending' || parseStatus === 'extracted');
                   })) {
                     const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',
