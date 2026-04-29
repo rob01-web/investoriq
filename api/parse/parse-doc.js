@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
-import { recoverRentRollWithAI } from './ai-rent-roll-recovery.js';
+import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 
