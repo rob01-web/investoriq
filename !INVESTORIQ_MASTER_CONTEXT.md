@@ -60,9 +60,21 @@
     - `src/pages/Pricing.jsx`
     - `src/App.jsx`
 - `Final_Testing/` local-only synthetic QA fixture library now exists:
-  - 10 fictional packages: P01 clean Screening, P02 clean Underwriting, P03 messy Underwriting, P04 partial rent roll with summary, P05 missing rent roll, P06 unsupported CapEx only, P07 conflicting documents, P08 glued-number T12, P09 overcomplete Underwriting, P10 AI rent-roll recovery
+  - 11 fictional packages: P01 clean Screening, P02 clean Underwriting, P03 messy Underwriting, P04 partial rent roll with summary, P05 missing rent roll, P06 unsupported CapEx only, P07 conflicting documents, P08 glued-number T12, P09 overcomplete Underwriting, P10 AI rent-roll recovery, and the dedicated `SYNTH-QA-AI-UNDERWRITING-CONTROL` pack
   - fixtures are deterministic `.csv`, `.txt`, `.md` plus `MANUAL_EXPORT.md` notes only
   - no existing safe local/batch runner reads these folders directly; honest end-to-end testing remains manual Dashboard upload unless a future staging harness is built
+- Dedicated AI Underwriting validation pack now exists at:
+  - `Final_Testing/SYNTH-QA-AI-UNDERWRITING-CONTROL/`
+  - intended subtests:
+    - `01_positive_ai_rent_roll_underwriting`
+    - `02_positive_ai_t12_underwriting`
+    - `03_positive_dual_ai_recovery_underwriting`
+  - goal is clean Underwriting validation of AI-assisted extraction recovery without reusing confusing mixed legacy packages
+  - doctrine remains locked:
+    - AI extraction only
+    - deterministic validation remains the gate
+    - no AI-written underwriting
+    - no financial value accepted unless validation passes
 - AI Rent Roll Recovery v0.1 is now implemented as a feature-flagged extraction fallback:
   - helper lives in `lib/ai-rent-roll-recovery.js`
   - `api/parse/parse-doc.js` uses it behind `ENABLE_AI_RENT_ROLL_RECOVERY=true`
@@ -142,6 +154,51 @@
     - proved the live chain:
       - `.txt extraction -> document_text_extracted -> AI rent-roll recovery -> deterministic validation -> rent_roll_parsed -> published Screening report`
     - confirms AI is correctly limited to extraction recovery and did not become the source of underwriting truth
+  - `02_positive_ai_t12_underwriting` = PASS / published / AI T12 Recovery proven live in Underwriting
+    - job `8cf09b74-0a5b-4fb4-be65-c01e578f4fb7`
+    - report `7df1f2bc-fd38-45c3-93a3-f9d55f93e5d7`
+    - uploaded files:
+      - `rent_roll_clean_control.csv` -> `rent_roll` -> `parsed`
+      - `t12_ai_recovery_source.txt` -> `t12` -> `parsed`
+      - `loan_terms_simple_source.txt` -> `loan_term_sheet` -> `parsed`
+    - T12 artifact:
+      - `method: ai_t12_recovery_validated`
+      - `ai_assisted: true`
+      - `validated: true`
+    - validated report values:
+      - EGI `$475,200`
+      - OpEx `$181,500`
+      - NOI `$293,700`
+      - Units `24`
+      - Occupancy `95.8%`
+      - Loan amount `$4,200,000`
+      - Interest rate `5.10%`
+      - Amortization `30 years`
+      - DSCR `1.07x`
+    - conclusion:
+      - AI T12 Recovery is now proven live in Underwriting
+    - minor fixture mismatch noted, not a launch blocker:
+      - published annual in-place rent showed `$476,100` while T12 EGI was `$475,200`
+      - investigation conclusion: fixture variance only; rent roll sums to `$39,675/month` while T12 states `$39,600/month`
+      - treat as later fixture cleanup or explicit documented variance, not parser / generator / AI bug
+  - `01_positive_ai_rent_roll_underwriting` = OPEN / not yet proven in Underwriting
+    - initial failure and `TEST 2` both failed on rent-roll verification
+    - worker dispatch bug was found and patched in `api/admin-run-worker.js` so extracted `.txt` rent-roll files now dispatch into `parse-doc`
+    - `node --check api/admin-run-worker.js` passed
+    - post-worker-patch `TEST 2` still failed:
+      - job `0ba307b6-bed4-4189-ae65-47594cf3f0dd`
+      - `rent_roll_ai_recovery_source.txt` -> `rent_roll` -> `failed` -> `unsupported_file_type_for_structured_parsing`
+      - `t12_clean_control.csv` parsed
+      - `loan_terms_simple_source.txt` parsed
+      - entitlement restored
+    - current conclusion:
+      - worker dispatch is no longer the likely blocker
+      - blocker moved downstream into AI rent-roll candidate acceptance / helper-validation opacity
+    - fixture was then rewritten to follow the proven P10 manager-style narrative pattern more closely
+    - `TEST 3` still visually failed in Dashboard, but exact Supabase/file-truth remains the next investigation item
+  - `03_positive_dual_ai_recovery_underwriting` = BLOCKED pending `01`
+    - original failure matched the same `.txt` rent-roll failure shape as `01`
+    - do not treat dual recovery as proven until single-path AI rent-roll Underwriting passes
   - `SYNTH-QA-P01 Clean Screening RETEST` after AI helper install and Resend rotation = PASS
     - Units `6`, Occupancy `100.0%`, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
     - confirms AI helper install did not break deterministic Screening
@@ -190,11 +247,12 @@
   - rent roll:
     - `.txt extraction -> document_text_extracted -> AI rent-roll recovery -> deterministic validation -> rent_roll_parsed`
     - Screening proven live by `SYNTH-QA-P10 RETEST`
-    - Underwriting should work architecturally because both report types consume the same `rent_roll_parsed` artifacts, but a separate Underwriting control is still recommended
+    - Underwriting `.txt` rent-roll dispatch bug in `api/admin-run-worker.js` was found and patched
+    - AI Rent Roll Recovery is still only proven live in Screening; Underwriting proof remains open because `01_positive_ai_rent_roll_underwriting` still fails downstream after dispatch
   - T12:
     - `document_text_extracted -> AI T12 recovery -> deterministic validation -> t12_parsed`
     - Screening is proven far enough through P08 to recover/process values and trigger the worker fail-closed scale-mismatch gate
-    - Underwriting should work architecturally because both report types consume the same `t12_parsed` artifacts, but a separate Underwriting control is still recommended
+    - Underwriting is now proven live through `02_positive_ai_t12_underwriting`
 - Current live stack definitely includes:
   - Supabase
   - Stripe
@@ -234,6 +292,10 @@
   - does not use partial sample rows, average rent alone, market rent, or extrapolated values
   - if the ratio exceeds `5x`, the worker fails closed with `DOCUMENT_FINANCIAL_SCALE_MISMATCH`
   - failure uses existing entitlement restoration / no-publication pattern
+- AI Underwriting validation truth after the April 29 control pack:
+  - AI T12 Recovery = proven live in Underwriting
+  - AI Rent Roll Recovery = proven live in Screening, not yet proven in Underwriting
+  - dual AI recovery in Underwriting = not yet proven
 
 ## 5. Current Report Rules
 - Screening and Underwriting are separate report products, not layered versions of the same memo.
@@ -339,6 +401,17 @@
 - Failed Step 03 dashboard state now supports UI-only dismissal through local storage, with no report, job, or credit changes.
 - Underwriting capability has been reconfirmed: refinance stress testing, DSCR, and cap-rate / valuation sensitivity are already present.
 - Underwriting cap-rate consistency is now unified across refinance, debt structure, scenario analysis, and DCF.
+- Latest narrow worker change validated:
+  - `api/admin-run-worker.js` now treats extracted `rent_roll` files as dispatchable into `parse-doc`
+  - change was limited to:
+    - `anyPending`
+    - `hasPendingRentRoll`
+    - rent-roll parse dispatch filter
+  - parser logic, AI helper validation, publication flow, and Dashboard behavior remained unchanged
+- Current AI Underwriting scoreboard:
+  - AI T12 Underwriting = PASS / published
+  - AI Rent Roll Underwriting = still failing / not yet proven
+  - dual AI Underwriting recovery = blocked until single-path rent-roll recovery passes
 - Messy Underwriting Test 32 reached production-pass status after:
   - unifying cap-rate source to the document-derived path
   - removing the invalid cap-rate dimension from the DSCR sensitivity grid
@@ -612,14 +685,16 @@
 
 ### Immediate agenda - April 29, 2026
 - IMMEDIATE PRIORITY
-  1. Run one AI recovery Underwriting control test if energy allows.
+  1. Investigate the latest failed `01_positive_ai_rent_roll_underwriting TEST 3`.
   2. Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   3. Run low-dollar true live Stripe payment test if still outstanding.
   4. Review the Ken Dunn sample package.
   5. Complete final readiness check / sample package selection.
 
 - STILL OPEN
-  - Run one AI recovery Underwriting control using AI-recovered T12 / rent roll plus a simple supporting document.
+  - AI Rent Roll Recovery in Underwriting remains open.
+  - AI T12 Recovery in Underwriting is proven.
+  - dual AI recovery in Underwriting remains unproven and should stay blocked until `01_positive_ai_rent_roll_underwriting` passes.
   - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   - Low-dollar true live Stripe payment test if not yet completed.
   - Ken Dunn sample package review.
@@ -643,11 +718,18 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - run one AI recovery Underwriting control test if energy allows
-  - optional: run `SYNTH-QA-P05 Missing Rent Roll`
-  - low-dollar Stripe test if outstanding
-  - Ken Dunn sample package review
-  - complete final readiness check / sample package selection
+  - start with the latest failed `01_positive_ai_rent_roll_underwriting TEST 3`
+  - determine:
+    - newest TEST 3 job id
+    - exact file statuses
+    - whether `document_text_extracted` exists
+    - whether `parse-doc` was reached
+    - whether `recoverRentRollWithAI(...)` ran
+    - whether any AI error / rejection is visible
+    - whether the uploaded file actually matches the edited P10-style fixture
+  - do not patch production code until file-truth confirms the next blocker
+  - do not rerun `03_positive_dual_ai_recovery_underwriting` until `01` passes
+  - after that: optional `SYNTH-QA-P05`, low-dollar Stripe test, Ken Dunn sample package review, final readiness check / sample package selection
 
 - AFTER THAT
   - prepare website sample report placement only after blockers are closed
@@ -856,10 +938,11 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Scenario and DCF basis / sensitivity base rows use `6.25% (document derived)`
   - final regression suite and final layout-polish pass are complete
   - AI Rent Roll Recovery is proven live for Screening through `SYNTH-QA-P10 RETEST`
-  - AI T12 Recovery is proven live enough to recover/process values and trigger fail-closed document-integrity protection through P08
+  - AI T12 Recovery is proven live in Underwriting through `02_positive_ai_t12_underwriting`
   - rendering-stage / pre-generation cross-document scale mismatch protection is now in place and validated
 - Still needed before Ken Dunn outreach:
-  - run one AI recovery Underwriting control if additional launch confidence is desired
+  - close the open AI Rent Roll Recovery Underwriting control (`01_positive_ai_rent_roll_underwriting`)
+  - do not claim dual AI Underwriting recovery is proven until `03` passes after `01`
   - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
   - complete low-dollar live Stripe payment test if still outstanding
   - complete Ken Dunn sample package review
