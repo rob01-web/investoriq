@@ -814,6 +814,27 @@ useEffect(() => {
     letterSpacing: '0.08em',
     fontWeight: 500,
   };
+  const step03FailureLeadStyle = {
+    ...stepSub,
+    display: 'block',
+    color: '#1f2933',
+    fontWeight: 600,
+    fontSize: 14,
+    lineHeight: 1.65,
+    fontStyle: 'normal',
+    opacity: 1,
+  };
+  const step03FailureSupportStyle = {
+    ...stepSub,
+    display: 'block',
+    marginTop: 8,
+    color: T.ink3,
+    fontWeight: 400,
+    fontSize: 13,
+    lineHeight: 1.6,
+    fontStyle: 'normal',
+    opacity: 1,
+  };
   const needsDocumentsMessage = (() => {
     if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
     if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
@@ -1618,7 +1639,13 @@ useEffect(() => {
               <div>
                 <p style={stepEyebrow}>Step 03</p>
                 <span style={stepTitle}>Generate report</span>
-                <span style={{ ...stepSub, display:'block' }}>
+                <span
+                  style={
+                    activeJobForRuns?.status === 'failed'
+                      ? step03FailureLeadStyle
+                      : { ...stepSub, display:'block' }
+                  }
+                >
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
@@ -1629,7 +1656,7 @@ useEffect(() => {
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
                 {activeJobForRuns?.status === 'failed' && activeFailedGuidance && (
-                  <span style={{ ...stepSub, display:'block', marginTop:8, color:T.ink3 }}>
+                  <span style={step03FailureSupportStyle}>
                     {activeFailedGuidance}
                   </span>
                 )}
