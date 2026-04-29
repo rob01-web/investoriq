@@ -337,6 +337,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [reportsLoading, setReportsLoading] = useState(false);
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
+  const [failedJobGuidance, setFailedJobGuidance] = useState(null);
   const [recentJobs, setRecentJobs] = useState([]);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
@@ -729,6 +730,68 @@ useEffect(() => {
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
   const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
+  const getFailedFileGuidance = (files) => {
+    const rows = Array.isArray(files) ? files : [];
+    const normalized = rows.map((row) => ({
+      original_filename: String(row?.original_filename || '').trim(),
+      doc_type: normalizeDocType(row?.doc_type),
+      parse_status: String(row?.parse_status || '').toLowerCase(),
+      parse_error: String(row?.parse_error || '').toLowerCase(),
+    }));
+    const failedCoreFile = ['t12', 'rent_roll']
+      .map((docType) => normalized.find((row) => row.doc_type === docType && row.parse_status === 'failed'))
+      .find(Boolean);
+
+    if (failedCoreFile?.doc_type === 't12') {
+      return `The uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid operating statement for this report. Please start a new report request with a clearer annual operating statement showing Gross Rental Income, Effective Gross Income, Total Operating Expenses, and Net Operating Income.`;
+    }
+    if (failedCoreFile?.doc_type === 'rent_roll') {
+      return `The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information.`;
+    }
+
+    const hasT12 = normalized.some((row) => row.doc_type === 't12');
+    const hasRentRoll = normalized.some((row) => row.doc_type === 'rent_roll');
+    if (!hasT12 || !hasRentRoll) {
+      return 'InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.';
+    }
+
+    return 'InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.';
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const targetJob = visibleLatestFailedJob;
+    if (!profile?.id || !targetJob?.id || targetJob.status !== 'failed' || targetJob.error_code !== 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS') {
+      setFailedJobGuidance(null);
+      return () => { cancelled = true; };
+    }
+
+    const fetchFailedJobGuidance = async () => {
+      const { data, error } = await supabase
+        .from('analysis_job_files')
+        .select('original_filename, doc_type, parse_status, parse_error')
+        .eq('job_id', targetJob.id);
+      if (cancelled) return;
+      if (error || !data) {
+        setFailedJobGuidance(null);
+        return;
+      }
+      const guidance = getFailedFileGuidance(data);
+      setFailedJobGuidance(guidance ? { jobId: targetJob.id, message: guidance } : null);
+    };
+
+    fetchFailedJobGuidance();
+    return () => { cancelled = true; };
+  }, [profile?.id, visibleLatestFailedJob?.id, visibleLatestFailedJob?.status, visibleLatestFailedJob?.error_code]);
+
+  const visibleFailedJobGuidance =
+    failedJobGuidance?.jobId && failedJobGuidance.jobId === visibleLatestFailedJob?.id
+      ? failedJobGuidance.message
+      : '';
+  const activeFailedGuidance =
+    failedJobGuidance?.jobId && failedJobGuidance.jobId === activeJobForRuns?.id
+      ? failedJobGuidance.message
+      : '';
   const needsDocumentsMessage = (() => {
     if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
     if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
@@ -1103,6 +1166,7 @@ useEffect(() => {
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
                     <div>{latestFailedJob.property_name || 'Unnamed Property'} - {latestFailedJob.status}</div>
                     <div>{latestFailedJob.failure_reason || latestFailedJob.error_message || 'No message'}</div>
+                    {visibleFailedJobGuidance && <div style={{ marginTop:8 }}>{visibleFailedJobGuidance}</div>}
                   </div>
                 ) : (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
@@ -1530,6 +1594,11 @@ useEffect(() => {
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
+                {activeJobForRuns?.status === 'failed' && activeFailedGuidance && (
+                  <span style={{ ...stepSub, display:'block', marginTop:8, color:T.ink3 }}>
+                    {activeFailedGuidance}
+                  </span>
+                )}
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 {activeJobForRuns?.status === 'failed' && activeJobForRuns?.id && (
@@ -1594,6 +1663,9 @@ useEffect(() => {
                   <div>
                     <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
                     {job.failure_reason && <div style={{ marginTop:4 }}>{job.failure_reason}</div>}
+                    {failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
+                      <div style={{ marginTop:8 }}>{failedJobGuidance.message}</div>
+                    )}
                   </div>
                   <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
                 </div>
