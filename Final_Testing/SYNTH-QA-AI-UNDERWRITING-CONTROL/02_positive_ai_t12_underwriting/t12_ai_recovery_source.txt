@@ -1,0 +1,16 @@
+NORTHGATE MANOR
+TRAILING 12 MONTH OPS
+
+GROSS RENTAL INCOME ............ $475,200 100.0%
+PAYROLL ........................ $44,500 9.4%
+R & M .......................... $33,000 6.9%
+REAL ESTATE TAX ................ $56,000 11.8%
+INSURANCE ...................... $18,500 3.9%
+UTILITIES ...................... $15,500 3.3%
+PROPERTY MGMT .................. $9,500 2.0%
+ADMIN / MISC ................... $4,500 0.9%
+TOT OPER EXP ................... $181,500 38.2%
+NET OPERATING INCOME ........... $293,700 61.8%
+EFF GROSS INC .................. $475,200 100%
+
+Spacing and labels are intentionally inconsistent, but the operating statement remains human-readable.

@@ -1,0 +1,50 @@
+Lakeside Commons manager unit roster
+As of date: 2026-04-01
+
+This is intentionally provided as narrative source text rather than a standard exported table.
+
+Property summary:
+- Total units: 32
+- Occupied units: 30
+- Vacant units: 2
+- Occupancy: 93.75%
+- Current monthly in-place rent from occupied units: 54000
+- Annual in-place rent total: 648000
+- Market monthly rent across all 32 units: 59200
+- Annual market rent total: 710400
+
+Unit roster notes:
+- A1 occupied, 1BR, current 1500, market 1650.
+- A2 occupied, 1BR, current 1525, market 1675.
+- A3 occupied, 1BR, current 1550, market 1700.
+- A4 occupied, 1BR, current 1575, market 1725.
+- A5 occupied, 1BR, current 1600, market 1750.
+- A6 occupied, 1BR, current 1625, market 1775.
+- A7 occupied, 1BR, current 1650, market 1800.
+- A8 occupied, 1BR, current 1675, market 1825.
+- B1 occupied, 2BR, current 1700, market 1850.
+- B2 occupied, 2BR, current 1725, market 1875.
+- B3 occupied, 2BR, current 1750, market 1900.
+- B4 occupied, 2BR, current 1775, market 1925.
+- B5 occupied, 2BR, current 1800, market 1950.
+- B6 occupied, 2BR, current 1825, market 1975.
+- B7 occupied, 2BR, current 1850, market 2000.
+- B8 occupied, 2BR, current 1875, market 2025.
+- C1 occupied, 2BR, current 1900, market 2050.
+- C2 occupied, 2BR, current 1925, market 2075.
+- C3 occupied, 2BR, current 1950, market 2100.
+- C4 occupied, 2BR, current 1975, market 2125.
+- C5 occupied, 2BR, current 2000, market 2150.
+- C6 occupied, 2BR, current 2025, market 2175.
+- C7 occupied, 2BR, current 2050, market 2200.
+- C8 occupied, 2BR, current 2075, market 2225.
+- D1 occupied, 3BR, current 2100, market 2250.
+- D2 occupied, 3BR, current 2125, market 2275.
+- D3 occupied, 3BR, current 2150, market 2300.
+- D4 occupied, 3BR, current 2175, market 2325.
+- D5 occupied, 3BR, current 2200, market 2350.
+- D6 occupied, 3BR, current 2225, market 2375.
+- D7 vacant, 3BR, current 0, market 2400.
+- D8 vacant, 3BR, current 0, market 2425.
+
+The summary totals above should reconcile to the unit notes.

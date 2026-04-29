@@ -1,0 +1,6 @@
+Northgate Manor loan summary
+Loan amount: $4,200,000
+Interest rate: 5.10%
+Amortization: 30 years
+LTV: 70%
+Term note: conventional multifamily debt summary for underwriting support only.

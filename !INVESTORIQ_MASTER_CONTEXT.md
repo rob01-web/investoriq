@@ -19,6 +19,7 @@
   - AI may help InvestorIQ read documents; AI may not become the source of financial truth
   - deterministic validation remains the gate before any AI-recovered values enter `analysis_artifacts`
   - P10 validated this doctrine in a production-like live flow: AI recovered a parser-unfriendly rent roll, but deterministic validation controlled acceptance and report math
+  - P08 validated the same doctrine on T12-side document integrity: readable T12 values can be recovered or processed, but materially inconsistent T12 vs rent-roll scale must fail closed before publication
 - Batch 6A.2 explicit rent-roll summary totals is CLOSED:
   - parser now writes `rent_roll_parsed.payload.totals` from explicit totals / summary rows
   - generator trusts verified explicit summary totals during partial-sample mode
@@ -71,6 +72,23 @@
     - `method: ai_rent_roll_recovery_validated`
     - `ai_assisted: true`
     - `validated: true`
+- AI T12 Recovery v0.1 is now implemented as a stricter feature-flagged extraction fallback:
+  - helper lives in `lib/ai-t12-recovery.js`
+  - `api/parse/parse-doc.js` uses it behind `ENABLE_AI_T12_RECOVERY=true`
+  - helper uses `OPENAI_API_KEY` plus OpenAI Responses API through native `fetch`
+  - scope is parser-unfriendly T12 / operating statement recovery only
+  - it is not report generation, not narrative, and not underwriting conclusions
+  - accepted AI recovery artifacts carry:
+    - `method: ai_t12_recovery_validated`
+    - `ai_assisted: true`
+    - `validated: true`
+  - deterministic T12 validation still gates acceptance:
+    - finite EGI / OpEx / NOI
+    - `EGI > 0`
+    - `OpEx >= 0`
+    - NOI finite
+    - `EGI - OpEx ~= NOI`
+  - T12 recovery is intentionally stricter than rent-roll recovery because it directly controls NOI
 - Deployment / secret hygiene completed today:
   - initial AI helper location under `/api` triggered Vercel Hobby function-count failure
   - helper was moved out of `/api` into `lib/`, deploy returned green/current
@@ -98,8 +116,18 @@
     - trusted summary totals remain intact
     - Unit-Level Value Add / Unit Mix Rent Lift suppressed
     - Rent Roll Distribution suppressed
-  - `SYNTH-QA-P08 Glued Number T12` remains OPEN
-    - current known issue is still fixture-side until latest retest is investigated
+  - `SYNTH-QA-P08 Glued Number T12 / Scale Mismatch` = PASS as fail-closed integrity test
+    - T12 text explicitly contained EGI `$2,517,120`, OpEx `$1,246,880`, NOI `$1,270,240`
+    - paired rent roll supported only 4 units and annual in-place rent `$73,260`
+    - root issue discovered: coverage had been treated like consistency
+    - correct fix was fail-closed document-consistency validation, not changing the numbers
+    - final behavior after redeploy:
+      - T12 values can be recovered / processed
+      - worker cross-document gate catches the T12-vs-rent-roll scale mismatch
+      - job fails closed with `DOCUMENT_FINANCIAL_SCALE_MISMATCH`
+      - no new PDF is published
+      - credit is restored
+      - Dashboard shows a readable fail-closed message
   - `SYNTH-QA-P10 RETEST` = PASS
     - uploaded files:
       - `t12_clean_source.csv`
@@ -120,6 +148,10 @@
     - confirms Resend rotation did not destabilize deployment
 - Website positioning, pricing copy, contact routing, and report wording are materially aligned with proprietary, document-driven positioning.
 - Dashboard freeze / lag remains a monitored launch-risk item, not a solved issue.
+- Dashboard Step 03 failed-state readability polish is closed:
+  - `src/pages/Dashboard.jsx`
+  - failure messaging now renders as readable, brand-consistent dashboard body/status text
+  - no backend / parser / worker / generator logic changed
 - Worker remains frozen at the last known-good rollback; do not touch worker success flow unless a brand-new blocker appears.
 - Manual Refresh remains the locked pre-launch Dashboard posture.
 - Resend is live and validated for launch-critical report-ready email delivery.
@@ -154,6 +186,15 @@
     - non-spreadsheet rent-roll parsing can now reach AI recovery with real extracted text
   - DOC / DOCX and PPT / PPTX are accepted by Dashboard but still have no extraction path
   - XLS is accepted by Dashboard but parser eligibility remains weak / inconsistent
+- AI-assisted structured recovery now exists only as validation-gated parser fallback:
+  - rent roll:
+    - `.txt extraction -> document_text_extracted -> AI rent-roll recovery -> deterministic validation -> rent_roll_parsed`
+    - Screening proven live by `SYNTH-QA-P10 RETEST`
+    - Underwriting should work architecturally because both report types consume the same `rent_roll_parsed` artifacts, but a separate Underwriting control is still recommended
+  - T12:
+    - `document_text_extracted -> AI T12 recovery -> deterministic validation -> t12_parsed`
+    - Screening is proven far enough through P08 to recover/process values and trigger the worker fail-closed scale-mismatch gate
+    - Underwriting should work architecturally because both report types consume the same `t12_parsed` artifacts, but a separate Underwriting control is still recommended
 - Current live stack definitely includes:
   - Supabase
   - Stripe
@@ -183,6 +224,16 @@
   - `generate-client-report.js` reads artifacts, computes metrics, assembles HTML, and sends to DocRaptor
   - PDF is uploaded to `generated_reports`
   - `reports` row powers Report History
+- Cross-document integrity gate now exists in the worker before report generation:
+  - `api/admin-run-worker.js`
+  - compares `t12_parsed.payload.effective_gross_income` against trusted rent-roll annual in-place rent
+  - trusted annual rent derivation uses:
+    1. explicit summary annual totals
+    2. explicit summary monthly totals x 12
+    3. full non-partial unit rows only
+  - does not use partial sample rows, average rent alone, market rent, or extrapolated values
+  - if the ratio exceeds `5x`, the worker fails closed with `DOCUMENT_FINANCIAL_SCALE_MISMATCH`
+  - failure uses existing entitlement restoration / no-publication pattern
 
 ## 5. Current Report Rules
 - Screening and Underwriting are separate report products, not layered versions of the same memo.
@@ -268,6 +319,9 @@
 
 ## 6. Current Engine State
 - Worker loop, extraction reuse, and parallel execution have been validated previously.
+- Coverage-vs-consistency lesson is now explicit:
+  - coverage confirmation is not sufficient document integrity
+  - cross-document financial scale mismatch must fail closed before report generation
 - Screening vs underwriting separation has been materially improved.
 - Wrong report-type leakage in the executive summary was fixed and hardened.
 - Screening compression removed valuation and refinance depth that belonged only in underwriting.
@@ -558,14 +612,14 @@
 
 ### Immediate agenda - April 29, 2026
 - IMMEDIATE PRIORITY
-  1. Return to `SYNTH-QA-P08 Glued Number T12`
-  2. Optional if energy allows: run `SYNTH-QA-P05 Missing Rent Roll`
-  3. Run low-dollar true live Stripe payment test if still outstanding
-  4. Review the Ken Dunn sample package
-  5. Complete final readiness check / sample package selection
+  1. Run one AI recovery Underwriting control test if energy allows.
+  2. Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
+  3. Run low-dollar true live Stripe payment test if still outstanding.
+  4. Review the Ken Dunn sample package.
+  5. Complete final readiness check / sample package selection.
 
 - STILL OPEN
-  - Investigate latest `SYNTH-QA-P08 Glued Number T12` retest failure.
+  - Run one AI recovery Underwriting control using AI-recovered T12 / rent roll plus a simple supporting document.
   - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   - Low-dollar true live Stripe payment test if not yet completed.
   - Ken Dunn sample package review.
@@ -575,11 +629,6 @@
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
-  - After rent-roll recovery is considered proven, AI T12 Recovery v0.1 is the next intended extraction-only module:
-    - `lib/ai-t12-recovery.js`
-    - `ENABLE_AI_T12_RECOVERY=true`
-    - stricter validation than rent-roll recovery
-    - do not implement until after current readiness priorities
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, post-launch AI QA Safeguard Layer, and broader table / schema hygiene.
 
 ### Before Ken Dunn outreach
@@ -594,14 +643,7 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - return to `SYNTH-QA-P08 Glued Number T12`
-  - investigate the latest retest job:
-    - job row
-    - file rows
-    - `parse_status`
-    - `parse_error`
-    - artifact rows
-    - determine whether failure is still fixture-side or a real parser issue
+  - run one AI recovery Underwriting control test if energy allows
   - optional: run `SYNTH-QA-P05 Missing Rent Roll`
   - low-dollar Stripe test if outstanding
   - Ken Dunn sample package review
@@ -813,8 +855,11 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - `CapEx_Schedule_124_Richmond_Test.pdf` is acknowledged without unsupported CapEx modeling
     - Scenario and DCF basis / sensitivity base rows use `6.25% (document derived)`
   - final regression suite and final layout-polish pass are complete
+  - AI Rent Roll Recovery is proven live for Screening through `SYNTH-QA-P10 RETEST`
+  - AI T12 Recovery is proven live enough to recover/process values and trigger fail-closed document-integrity protection through P08
+  - rendering-stage / pre-generation cross-document scale mismatch protection is now in place and validated
 - Still needed before Ken Dunn outreach:
-  - investigate the latest `SYNTH-QA-P08 Glued Number T12` retest before treating glued-number handling as launch-safe
+  - run one AI recovery Underwriting control if additional launch confidence is desired
   - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
   - complete low-dollar live Stripe payment test if still outstanding
   - complete Ken Dunn sample package review

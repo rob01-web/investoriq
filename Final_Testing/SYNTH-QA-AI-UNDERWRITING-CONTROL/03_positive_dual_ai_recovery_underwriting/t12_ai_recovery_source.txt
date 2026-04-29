@@ -1,0 +1,16 @@
+LAKESIDE COMMONS
+TTM OPERATING STATEMENT
+
+GROSS RENTAL INCOME ............ $648,000 100.0%
+PAYROLL ........................ $58,000 9.0%
+REPAIRS & MAINT ................ $41,000 6.3%
+REAL ESTATE TAXES .............. $72,000 11.1%
+INSURANCE ...................... $22,000 3.4%
+UTILITIES ...................... $28,000 4.3%
+PROPERTY MGMT .................. $16,000 2.5%
+ADMIN / MISC ................... $9,000 1.4%
+TOT OPER EXP ................... $246,000 38.0%
+NET OPERATING INCOME ........... $402,000 62.0%
+EFF GROSS INC .................. $648,000 100%
+
+Formatting is intentionally OCR-like and parser-unfriendly, but the values are explicit and internally consistent.
