@@ -93,11 +93,13 @@ export default async function handler(req, res) {
 
     for (const file of jobFiles || []) {
       const mimeType = String(file.mime_type || '').toLowerCase();
+      const lowerName = String(file.original_filename || '').toLowerCase();
       const isPdf = mimeType === 'application/pdf';
+      const isPlainText = mimeType === 'text/plain' || lowerName.endsWith('.txt');
       const canTextract =
         mimeType === 'application/pdf' || mimeType === 'image/png' || mimeType === 'image/jpeg';
 
-      if (!canTextract) {
+      if (!canTextract && !isPlainText) {
         skippedCount += 1;
         results.push({
           file_id: file.id,
@@ -167,6 +169,52 @@ export default async function handler(req, res) {
 
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        if (isPlainText) {
+          const text = buffer.toString('utf-8').trim();
+          const excerpt = text.slice(0, 1200).trim();
+          const chars = text.length;
+
+          const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 'document_text_extracted',
+              bucket: 'internal',
+              object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
+              payload: {
+                file_id: file.id,
+                original_filename: file.original_filename,
+                bucket: file.bucket,
+                object_path: file.object_path,
+                bytes: buffer.length,
+                chars,
+                text,
+                excerpt,
+                method: 'plain_text',
+              },
+            },
+          ]);
+
+          if (artifactErr) {
+            throw new Error(artifactErr.message || 'Failed to write artifact');
+          }
+
+          await supabaseAdmin
+            .from('analysis_job_files')
+            .update({ parse_status: 'extracted', parse_error: null })
+            .eq('id', file.id)
+            .or('parse_status.is.null,parse_status.eq.pending,parse_status.eq.uploaded');
+
+          extractedCount += 1;
+          results.push({
+            file_id: file.id,
+            original_filename: file.original_filename,
+            status: 'extracted',
+            chars,
+          });
+          continue;
+        }
 
         let textractLineText = '';
         try {

@@ -12,6 +12,12 @@
   - tokenized HTML renderer
   - DocRaptor PDF generation
 - No live LLM generation path exists in the report runtime.
+- Strategic direction is now explicit:
+  - repeated synthetic tests exposed real parser / file-format edge-case risk
+  - do not pivot InvestorIQ toward AI-written underwriting or AI-generated report narrative
+  - safe direction is narrow AI extraction recovery only
+  - AI may help InvestorIQ read documents; AI may not become the source of financial truth
+  - deterministic validation remains the gate before any AI-recovered values enter `analysis_artifacts`
 - Batch 6A.2 explicit rent-roll summary totals is CLOSED:
   - parser now writes `rent_roll_parsed.payload.totals` from explicit totals / summary rows
   - generator trusts verified explicit summary totals during partial-sample mode
@@ -52,9 +58,24 @@
     - `src/pages/Pricing.jsx`
     - `src/App.jsx`
 - `Final_Testing/` local-only synthetic QA fixture library now exists:
-  - 9 fictional packages: P01 clean Screening, P02 clean Underwriting, P03 messy Underwriting, P04 partial rent roll with summary, P05 missing rent roll, P06 unsupported CapEx only, P07 conflicting documents, P08 glued-number T12, P09 overcomplete Underwriting
+  - 10 fictional packages: P01 clean Screening, P02 clean Underwriting, P03 messy Underwriting, P04 partial rent roll with summary, P05 missing rent roll, P06 unsupported CapEx only, P07 conflicting documents, P08 glued-number T12, P09 overcomplete Underwriting, P10 AI rent-roll recovery
   - fixtures are deterministic `.csv`, `.txt`, `.md` plus `MANUAL_EXPORT.md` notes only
   - no existing safe local/batch runner reads these folders directly; honest end-to-end testing remains manual Dashboard upload unless a future staging harness is built
+- AI Rent Roll Recovery v0.1 is now implemented as a feature-flagged extraction fallback:
+  - helper lives in `lib/ai-rent-roll-recovery.js`
+  - `api/parse/parse-doc.js` uses it behind `ENABLE_AI_RENT_ROLL_RECOVERY=true`
+  - helper uses `OPENAI_API_KEY` plus OpenAI Responses API through native `fetch`
+  - AI output is candidate extraction only and is accepted only after deterministic validation
+  - accepted AI recovery artifacts carry:
+    - `method: ai_rent_roll_recovery_validated`
+    - `ai_assisted: true`
+    - `validated: true`
+- Deployment / secret hygiene completed today:
+  - initial AI helper location under `/api` triggered Vercel Hobby function-count failure
+  - helper was moved out of `/api` into `lib/`, deploy returned green/current
+  - `RESEND_API_KEY` was rotated and marked Sensitive in Vercel after the Vercel security notice
+  - old Resend key was revoked after the new production key was installed
+  - do not rotate Stripe / Supabase / OpenAI / AWS / DocRaptor blindly mid-launch; one secret at a time only
 - Naming convention is now locked:
   - use `SYNTH-QA-P## ...` for synthetic tests
   - reserve Richmond / Forest / Final Regression names for real proof assets only
@@ -74,6 +95,23 @@
     - Rent Roll Distribution suppressed
   - `SYNTH-QA-P08 Glued Number T12` remains OPEN
     - current known issue is still fixture-side until latest retest is investigated
+  - `SYNTH-QA-P10 AI Rent Roll Recovery`
+    - purpose is to prove AI can recover a clearly readable but parser-unfriendly narrative rent roll without changing deterministic report math
+    - T12 fixture was corrected from `.txt` to `t12_clean_source.csv`
+    - current rent-roll fixture is `rent_roll_parser_unfriendly_source.txt`
+    - expected values:
+      - Units `8`
+      - Occupancy `87.5%`
+      - Annual In-Place Rent `$111,180`
+      - Annual Market Rent `$122,160`
+      - EGI `$111,180`
+      - OpEx `$41,250`
+      - NOI `$69,930`
+    - current confirmed blocker was not AI rejection but missing `.txt` extraction coverage upstream of AI recovery
+  - `SYNTH-QA-P01 Clean Screening RETEST` after AI helper install and Resend rotation = PASS
+    - Units `6`, Occupancy `100.0%`, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
+    - confirms AI helper install did not break deterministic Screening
+    - confirms Resend rotation did not destabilize deployment
 - Website positioning, pricing copy, contact routing, and report wording are materially aligned with proprietary, document-driven positioning.
 - Dashboard freeze / lag remains a monitored launch-risk item, not a solved issue.
 - Worker remains frozen at the last known-good rollback; do not touch worker success flow unless a brand-new blocker appears.
@@ -101,6 +139,13 @@
 - Stripe handles checkout and report purchase entitlements.
 - DocRaptor renders final HTML into production PDFs.
 - Textract plus `pdf-parse` handle document text extraction and fallback parsing paths.
+- Current extraction contract reality:
+  - PDF = text + tables extracted
+  - PNG / JPG / JPEG = tables extracted only, no `document_text_extracted`
+  - CSV / XLSX = no extraction artifact, but direct structured parsers consume them
+  - TXT was accepted by Dashboard but skipped by extraction; local patch is now in place in `api/parse/extract-job-text.js` to write `document_text_extracted` for `text/plain` / `.txt`
+  - DOC / DOCX and PPT / PPTX are accepted by Dashboard but still have no extraction path
+  - XLS is accepted by Dashboard but parser eligibility remains weak / inconsistent
 - Current live stack definitely includes:
   - Supabase
   - Stripe
@@ -114,6 +159,9 @@
   - `api/generate-client-report.js`
 - Report generation in the confirmed live path is deterministic first, with optional narrative slots present in the renderer but not populated by the live worker path.
 - `api/generate-client-report.js` supports optional narrative `sections`, but the production worker call does not populate them.
+- File-type support reality should be tightened or expanded after Ken Dunn:
+  - preferred direction is real extraction support or narrower upload acceptance for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction
+  - do not keep inviting uploads the backend cannot actually read
 - End-to-end live report flow:
   - user purchases report entitlement via Stripe
   - webhook inserts unconsumed `report_purchases`
@@ -498,13 +546,14 @@
 
 ### Immediate agenda - April 29, 2026
 - IMMEDIATE PRIORITY
-  1. Investigate the latest `SYNTH-QA-P08 Glued Number T12` retest failure before deciding whether it is still fixture-side or a real parser issue
-  2. Optional if energy allows: run `SYNTH-QA-P05 Missing Rent Roll` to confirm fail-closed behavior, friendly guidance, and entitlement restoration
-  3. Run low-dollar true live Stripe payment test if still outstanding
-  4. Review the Ken Dunn sample package
-  5. Complete final readiness check / sample package selection
+  1. Validate and deploy the narrow `.txt` extraction patch in `api/parse/extract-job-text.js`
+  2. Rerun `SYNTH-QA-P10 AI RENT ROLL RECOVERY TXT EXTRACTION RETEST`
+  3. If P10 passes, decide whether to proceed to AI T12 Recovery v0.1 design only
+  4. Then return to `SYNTH-QA-P08 Glued Number T12`
+  5. Run low-dollar true live Stripe payment test if still outstanding
 
 - STILL OPEN
+  - Validate / deploy the `.txt` extraction patch and rerun P10.
   - Investigate latest `SYNTH-QA-P08 Glued Number T12` retest failure.
   - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   - Low-dollar true live Stripe payment test if not yet completed.
@@ -513,6 +562,8 @@
   - Dashboard freeze / lag remains a monitored launch-risk item, not solved.
   - Worker remains frozen at the last known-good rollback unless a brand-new blocker appears.
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
+  - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
+  - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, post-launch AI QA Safeguard Layer, and broader table / schema hygiene.
 
 ### Before Ken Dunn outreach
@@ -527,13 +578,24 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - investigate the latest `SYNTH-QA-P08 Glued Number T12` retest job:
-    - job row
-    - file rows
-    - `parse_status`
-    - `parse_error`
-    - artifact rows
-    - determine whether failure is still fixture-side or a real glued-number parser issue
+  - receive / validate the `.txt` extraction patch receipt for `api/parse/extract-job-text.js`
+  - deploy
+  - rerun `SYNTH-QA-P10 AI RENT ROLL RECOVERY TXT EXTRACTION RETEST`
+  - upload only:
+    - `t12_clean_source.csv`
+    - `rent_roll_parser_unfriendly_source.txt`
+  - expected:
+    - Units `8`
+    - Occupancy `87.5%`
+    - Annual In-Place Rent `$111,180`
+    - Annual Market Rent `$122,160`
+    - EGI `$111,180`
+    - OpEx `$41,250`
+    - NOI `$69,930`
+    - Rent Roll verified
+  - if P10 passes:
+    - consider AI T12 Recovery v0.1 design only
+  - then return to `SYNTH-QA-P08 Glued Number T12`
   - optional: run `SYNTH-QA-P05 Missing Rent Roll`
   - low-dollar Stripe test if outstanding
   - Ken Dunn sample package review
