@@ -795,21 +795,24 @@ useEffect(() => {
   const failedMessageLeadStyle = {
     ...bodySmall,
     fontSize: 13,
-    color: T.ink2,
-    fontWeight: 500,
-    lineHeight: 1.55,
+    color: T.ink,
+    fontWeight: 600,
+    lineHeight: 1.6,
+    fontStyle: 'normal',
   };
   const failedMessageSupportStyle = {
     ...bodySmall,
     fontSize: 12,
     color: T.ink3,
     lineHeight: 1.6,
+    fontStyle: 'normal',
   };
   const failedMessageStatusStyle = {
     ...labelMono,
     fontSize: 10,
     color: T.errorRed,
     letterSpacing: '0.08em',
+    fontWeight: 500,
   };
   const needsDocumentsMessage = (() => {
     if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
