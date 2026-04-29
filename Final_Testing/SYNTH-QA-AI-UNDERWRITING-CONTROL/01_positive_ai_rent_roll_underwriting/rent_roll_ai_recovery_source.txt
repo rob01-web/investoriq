@@ -1,36 +1,40 @@
-Cedar Park Residences rent notes
+Cedar Park Residences rent position notes
 As of date: 2026-04-01
 
-This upload is intentionally written as a narrative unit roster rather than a standard exported table.
+This is a narrative unit roster rather than a standard exported table.
 
-Property totals called out by management:
-- Total units in the building: 18
-- Occupied units: 17
-- Vacant units: 1
-- Occupancy: 94.4%
-- In-place monthly rent total from occupied units: 28900
+The building has 18 units total.
+Current occupied count is 17 units, with 1 unit presently vacant.
+Overall occupancy is 94.4%.
+
+Unit observations:
+- Unit A1 is a 1BR and occupied. Current monthly rent is 1325. Market monthly rent is 1500.
+- Unit A2 is a 1BR and occupied. Current monthly rent is 1350. Market monthly rent is 1500.
+- Unit A3 is a 1BR and occupied. Current monthly rent is 1375. Market monthly rent is 1500.
+- Unit A4 is a 1BR and occupied. Current monthly rent is 1400. Market monthly rent is 1500.
+- Unit A5 is a 1BR and occupied. Current monthly rent is 1425. Market monthly rent is 1500.
+- Unit A6 is a 1BR and vacant. Current monthly rent is 0. Market monthly rent is 1500.
+- Unit B1 is a 2BR and occupied. Current monthly rent is 1600. Market monthly rent is 1800.
+- Unit B2 is a 2BR and occupied. Current monthly rent is 1625. Market monthly rent is 1800.
+- Unit B3 is a 2BR and occupied. Current monthly rent is 1650. Market monthly rent is 1800.
+- Unit B4 is a 2BR and occupied. Current monthly rent is 1675. Market monthly rent is 1800.
+- Unit B5 is a 2BR and occupied. Current monthly rent is 1700. Market monthly rent is 1800.
+- Unit B6 is a 2BR and occupied. Current monthly rent is 1725. Market monthly rent is 1800.
+- Unit B7 is a 2BR and occupied. Current monthly rent is 1750. Market monthly rent is 1800.
+- Unit B8 is a 2BR and occupied. Current monthly rent is 1775. Market monthly rent is 1800.
+- Unit B9 is a 2BR and occupied. Current monthly rent is 1800. Market monthly rent is 1800.
+- Unit B10 is a 2BR and occupied. Current monthly rent is 1825. Market monthly rent is 1800.
+- Unit C1 is a 3BR and occupied. Current monthly rent is 2550. Market monthly rent is 2625.
+- Unit C2 is a 3BR and occupied. Current monthly rent is 2600. Market monthly rent is 2625.
+
+Summary totals called out by the manager:
+- In-place monthly rent total from occupied units only: 28900
 - In-place annual rent total: 346800
 - Market monthly rent total across all 18 units: 32250
 - Market annual rent total across all 18 units: 387000
+- Occupied units: 17
+- Vacant units: 1
+- Total units: 18
+- Occupancy: 94.4%
 
-Unit observations:
-- A1 is a 1BR and occupied. Current monthly rent 1450. Market monthly rent 1600.
-- A2 is a 1BR and occupied. Current monthly rent 1500. Market monthly rent 1650.
-- A3 is a 1BR and occupied. Current monthly rent 1525. Market monthly rent 1675.
-- A4 is a 1BR and occupied. Current monthly rent 1550. Market monthly rent 1700.
-- A5 is a 1BR and occupied. Current monthly rent 1575. Market monthly rent 1750.
-- A6 is a 1BR and occupied. Current monthly rent 1600. Market monthly rent 1800.
-- B1 is a 2BR and occupied. Current monthly rent 1650. Market monthly rent 1800.
-- B2 is a 2BR and occupied. Current monthly rent 1675. Market monthly rent 1825.
-- B3 is a 2BR and occupied. Current monthly rent 1700. Market monthly rent 1850.
-- B4 is a 2BR and occupied. Current monthly rent 1725. Market monthly rent 1875.
-- B5 is a 2BR and occupied. Current monthly rent 1750. Market monthly rent 1900.
-- B6 is a 2BR and occupied. Current monthly rent 1775. Market monthly rent 1925.
-- C1 is a 2BR and occupied. Current monthly rent 1800. Market monthly rent 1950.
-- C2 is a 2BR and occupied. Current monthly rent 1825. Market monthly rent 1975.
-- C3 is a 2BR and occupied. Current monthly rent 1850. Market monthly rent 2000.
-- D1 is a 3BR and occupied. Current monthly rent 2000. Market monthly rent 2250.
-- D2 is a 3BR and occupied. Current monthly rent 2025. Market monthly rent 2275.
-- D3 is a 3BR and currently vacant. Current rent 0. Market monthly rent 2300.
-
-These property totals should reconcile to the unit notes above.
+These totals should reconcile to the unit notes above.
