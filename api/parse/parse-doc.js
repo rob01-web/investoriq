@@ -1138,6 +1138,95 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             if (!tablesArtifact?.bucket || !tablesArtifact?.object_path) {
+              let aiRecoveredRentRoll = null;
+              try {
+                const { data: textArtifact } = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('payload')
+                  .eq('job_id', jobId)
+                  .eq('type', 'document_text_extracted')
+                  .eq('payload->>file_id', String(file.id))
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                aiRecoveredRentRoll = await recoverRentRollWithAI({
+                  text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
+                  tables: [],
+                  filename: file.original_filename,
+                  jobId,
+                });
+              } catch (_aiRecoveryErr) {
+                aiRecoveredRentRoll = null;
+              }
+
+              if (aiRecoveredRentRoll) {
+                const { error: aiArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: jobId,
+                    user_id: file.user_id || null,
+                    type: 'rent_roll_parsed',
+                    bucket: 'system',
+                    object_path: `analysis_jobs/${jobId}/rent_roll/${file.id}.json`,
+                    payload: {
+                      file_id: file.id,
+                      original_filename: file.original_filename,
+                      declared_doc_type: declaredDocType,
+                      detected_doc_type: detectedDocType,
+                      classifier_score: classifierScore,
+                      classifier_signals: classifierSignals,
+                      method: aiRecoveredRentRoll.method,
+                      ai_assisted: aiRecoveredRentRoll.ai_assisted === true,
+                      validated: aiRecoveredRentRoll.validated === true,
+                      confidence: aiRecoveredRentRoll.confidence,
+                      total_units: aiRecoveredRentRoll.total_units,
+                      totals: aiRecoveredRentRoll.totals || null,
+                      unit_mix: Array.isArray(aiRecoveredRentRoll.unit_mix) ? aiRecoveredRentRoll.unit_mix : [],
+                      occupancy: Number.isFinite(aiRecoveredRentRoll.occupancy) ? aiRecoveredRentRoll.occupancy : null,
+                      units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
+                      column_map: aiRecoveredRentRoll.column_map || null,
+                      parse_warnings: Array.isArray(aiRecoveredRentRoll.parse_warnings)
+                        ? aiRecoveredRentRoll.parse_warnings
+                        : [],
+                    },
+                  },
+                ]);
+
+                if (aiArtifactErr) {
+                  throw new Error(aiArtifactErr.message || 'Failed to write rent roll artifact');
+                }
+
+                await supabaseAdmin
+                  .from('analysis_job_files')
+                  .update({ parse_status: 'parsed', parse_error: null })
+                  .eq('id', file.id);
+
+                const { error: aiParsedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: jobId,
+                    user_id: file.user_id || null,
+                    type: 'worker_event',
+                    bucket: 'internal',
+                    object_path: `analysis_jobs/${jobId}/worker_event/parser_completed/${file.id}/${safeTimestamp(
+                      nowIso
+                    )}.json`,
+                    payload: {
+                      event: 'parser_completed',
+                      parser: 'rent_roll',
+                      result: 'parsed',
+                      job_id: jobId,
+                      timestamp: nowIso,
+                    },
+                  },
+                ]);
+
+                if (aiParsedEventErr) {
+                  console.error('Failed to write parser_completed event:', aiParsedEventErr.message);
+                }
+
+                parsedCount += 1;
+                continue;
+              }
+
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({
