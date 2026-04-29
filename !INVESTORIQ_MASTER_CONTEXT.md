@@ -44,6 +44,36 @@
 - Latest clean proof points:
   - `124 Richmond Street Underwriting Test 22` passed layout and financial regression
   - `Forest City Manor Underwriting Test 27` passed layout and financial regression
+- Final repo-wide Codex red-team audit is complete:
+  - no new report-core, parser, worker, or Dashboard blocker beyond the known monitored Dashboard risk
+  - true blocker found and closed in `api/webhook.js`: duplicate Stripe event IDs are no longer treated as complete until expected `report_purchases` rows are confirmed
+  - public-copy / mojibake launch-risk cleanup completed in:
+    - `src/pages/CheckoutSuccess.jsx`
+    - `src/pages/Pricing.jsx`
+    - `src/App.jsx`
+- `Final_Testing/` local-only synthetic QA fixture library now exists:
+  - 9 fictional packages: P01 clean Screening, P02 clean Underwriting, P03 messy Underwriting, P04 partial rent roll with summary, P05 missing rent roll, P06 unsupported CapEx only, P07 conflicting documents, P08 glued-number T12, P09 overcomplete Underwriting
+  - fixtures are deterministic `.csv`, `.txt`, `.md` plus `MANUAL_EXPORT.md` notes only
+  - no existing safe local/batch runner reads these folders directly; honest end-to-end testing remains manual Dashboard upload unless a future staging harness is built
+- Naming convention is now locked:
+  - use `SYNTH-QA-P## ...` for synthetic tests
+  - reserve Richmond / Forest / Final Regression names for real proof assets only
+- Dashboard failed-job guidance is now improved:
+  - for visible failed jobs with `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS`, Dashboard performs a narrow read-only `analysis_job_files` lookup
+  - friendly file-specific guidance is shown for T12, rent roll, or unknown core-document verification failures
+  - raw parser codes are not exposed to users
+- Current synthetic QA proof points:
+  - `SYNTH-QA-P01 Clean Screening RETEST 1` = PASS
+    - 6 units, `100.0%` occupancy, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
+    - T12 and Rent Roll both fully verified
+    - no underwriting-only leakage observed
+  - `SYNTH-QA-P04 Partial Summary Rent Roll RETEST 2` = PASS
+    - 144 units, `96.0%` occupancy, Annual In-Place Rent `$2,622,000`, EGI `$2,622,000`, OpEx `$898,000`, NOI `$1,724,000`, Rent-to-Market Gap `16.7%`
+    - trusted summary totals remain intact
+    - Unit-Level Value Add / Unit Mix Rent Lift suppressed
+    - Rent Roll Distribution suppressed
+  - `SYNTH-QA-P08 Glued Number T12` remains OPEN
+    - current known issue is still fixture-side until latest retest is investigated
 - Website positioning, pricing copy, contact routing, and report wording are materially aligned with proprietary, document-driven positioning.
 - Dashboard freeze / lag remains a monitored launch-risk item, not a solved issue.
 - Worker remains frozen at the last known-good rollback; do not touch worker success flow unless a brand-new blocker appears.
@@ -268,6 +298,10 @@
 - Multi-quantity Stripe checkout now supports quantity selection for Screening and Underwriting.
 - `api/create-checkout-session.js` now passes quantity into Stripe line items and metadata.
 - Stripe webhook entitlement creation now writes one `report_purchases` row per purchased credit.
+- Rare Stripe partial-failure path is now closed:
+  - duplicate webhook event IDs no longer short-circuit as complete until expected entitlement rows are confirmed
+  - if `stripe_events` exists but some `report_purchases` rows are missing, webhook inserts only the missing rows
+  - quantity behavior and deterministic suffixed `stripe_session_id` pattern were preserved
 - Dashboard checkout-success banner copy is now quantity-neutral.
 - Dashboard purchase flow now again supports quantity selection while the public Pricing page remains quantity-free.
 - Screening heading leak is now fixed in the true live generation path.
@@ -462,20 +496,23 @@
   - current engine correctly refuses to use purchase assumption terms as current-debt DSCR when no debt balance is provided
   - future enhancement: optional Acquisition DSCR / Pro Forma Debt Coverage metric from purchase assumptions, separate from current debt assessment
 
-### Immediate agenda - April 28, 2026
+### Immediate agenda - April 29, 2026
 - IMMEDIATE PRIORITY
-  1. Run final repo-wide Codex red-team audit before Ken Dunn
-  2. Run low-dollar true live Stripe payment test if still outstanding
-  3. Review the final Ken Dunn sample package
-  4. Complete final readiness check / sample package selection
+  1. Investigate the latest `SYNTH-QA-P08 Glued Number T12` retest failure before deciding whether it is still fixture-side or a real parser issue
+  2. Optional if energy allows: run `SYNTH-QA-P05 Missing Rent Roll` to confirm fail-closed behavior, friendly guidance, and entitlement restoration
+  3. Run low-dollar true live Stripe payment test if still outstanding
+  4. Review the Ken Dunn sample package
+  5. Complete final readiness check / sample package selection
 
 - STILL OPEN
-  - Final repo-wide Codex red-team audit before Ken Dunn.
+  - Investigate latest `SYNTH-QA-P08 Glued Number T12` retest failure.
+  - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
   - Low-dollar true live Stripe payment test if not yet completed.
   - Ken Dunn sample package review.
   - Final readiness check / sample package selection.
   - Dashboard freeze / lag remains a monitored launch-risk item, not solved.
   - Worker remains frozen at the last known-good rollback unless a brand-new blocker appears.
+  - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, post-launch AI QA Safeguard Layer, and broader table / schema hygiene.
 
 ### Before Ken Dunn outreach
@@ -490,7 +527,14 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - run final repo-wide Codex red-team audit
+  - investigate the latest `SYNTH-QA-P08 Glued Number T12` retest job:
+    - job row
+    - file rows
+    - `parse_status`
+    - `parse_error`
+    - artifact rows
+    - determine whether failure is still fixture-side or a real glued-number parser issue
+  - optional: run `SYNTH-QA-P05 Missing Rent Roll`
   - low-dollar Stripe test if outstanding
   - Ken Dunn sample package review
   - complete final readiness check / sample package selection
@@ -667,7 +711,6 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
 ## 11. Launch Readiness Snapshot
 - Scenario coverage audit recommendation: Launch this week = CONDITIONAL.
 - Launch conditions:
-  - final repo-wide Codex red-team audit
   - low-dollar live Stripe payment test if still outstanding
   - final Ken Dunn sample package review
   - final readiness check / sample package selection
@@ -703,8 +746,9 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - Scenario and DCF basis / sensitivity base rows use `6.25% (document derived)`
   - final regression suite and final layout-polish pass are complete
 - Still needed before Ken Dunn outreach:
-  - run final repo-wide Codex red-team audit
+  - investigate the latest `SYNTH-QA-P08 Glued Number T12` retest before treating glued-number handling as launch-safe
+  - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
   - complete low-dollar live Stripe payment test if still outstanding
   - complete Ken Dunn sample package review
   - complete final readiness check / sample package selection
-  - patch only real regressions found in the red-team / final readiness pass
+  - patch only real regressions found in the synthetic validation / final readiness pass
