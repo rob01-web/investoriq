@@ -1,0 +1,18 @@
+ANNUAL OPERATING STATEMENT
+Period: Trailing Twelve Months
+Property: SYNTH-QA-P10 AI Rent Roll Recovery Test
+
+Annual Summary
+Category | Annual Total | Notes
+Gross Rental Income | $111,180 | rent roll supported annual in-place rent
+Vacancy Loss | $0 | 87.5% physical occupancy but T12 reflects collected rent
+Effective Gross Income | $111,180 | verified operating income
+Property Taxes | $12,000 | operating expense
+Insurance | $6,500 | operating expense
+Repairs and Maintenance | $8,750 | operating expense
+Utilities | $5,500 | operating expense
+Property Management | $4,500 | operating expense
+Administrative | $2,000 | operating expense
+Garbage and Miscellaneous | $2,000 | operating expense
+Total Operating Expenses | $41,250 | verified operating expenses
+Net Operating Income | $69,930 | EGI less operating expenses

@@ -1,0 +1,13 @@
+Category,Annual Total,Notes
+Gross Rental Income,111180,rent roll supported annual in-place rent
+Vacancy Loss,0,physical vacancy disclosed in rent roll
+Effective Gross Income,111180,verified operating income
+Property Taxes,12000,operating expense
+Insurance,6500,operating expense
+Repairs and Maintenance,8750,operating expense
+Utilities,5500,operating expense
+Property Management,4500,operating expense
+Administrative,2000,operating expense
+Garbage and Miscellaneous,2000,operating expense
+Total Operating Expenses,41250,verified operating expenses
+Net Operating Income,69930,EGI less operating expenses

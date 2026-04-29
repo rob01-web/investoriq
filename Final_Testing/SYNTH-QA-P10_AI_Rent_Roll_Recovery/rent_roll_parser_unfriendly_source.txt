@@ -1,0 +1,29 @@
+Maple Court Annex rent position notes
+As of date: 2026-04-01
+
+This is a narrative unit roster rather than a standard exported table.
+The building has 8 units in total.
+Current occupied count is 7 units, with 1 unit presently vacant.
+Overall occupancy is 87.5%.
+
+Unit observations:
+- A1 is a 1BR and is occupied. Current monthly rent is 1125. Market monthly rent is 1250.
+- A2 is a 1BR and is occupied. Current monthly rent is 1150. Market monthly rent is 1250.
+- A3 is a 1BR and is currently vacant. Current rent is 0. Market monthly rent is 1250.
+- B1 is a 2BR and is occupied. Current monthly rent is 1375. Market monthly rent is 1485.
+- B2 is a 2BR and is occupied. Current monthly rent is 1395. Market monthly rent is 1485.
+- B3 is a 2BR and is occupied. Current monthly rent is 1405. Market monthly rent is 1485.
+- C1 is a 2BR and is occupied. Current monthly rent is 1400. Market monthly rent is 1485.
+- C2 is a 2BR and is occupied. Current monthly rent is 1415. Market monthly rent is 1490.
+
+Summary totals called out by the manager:
+- In-place monthly rent total from occupied units only: 9265
+- In-place annual rent total: 111180
+- Market monthly rent total across all 8 units: 10180
+- Market annual rent total across all 8 units: 122160
+- Occupied units: 7
+- Vacant units: 1
+- Total units: 8
+- Occupancy: 87.5%
+
+These totals should reconcile to the unit notes above.
