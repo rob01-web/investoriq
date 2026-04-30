@@ -9,12 +9,14 @@ All properties are fictional. These fixtures are for pre-launch QA only.
 1. `01_positive_ai_rent_roll_underwriting`
 2. `02_positive_ai_t12_underwriting`
 3. `03_positive_dual_ai_recovery_underwriting`
+4. `04_long_ai_rent_roll_stress_underwriting`
 
 ## Recommended Property Names
 
 - `SYNTH-QA-AI-UW-01 Rent Roll Recovery`
 - `SYNTH-QA-AI-UW-02 T12 Recovery`
 - `SYNTH-QA-AI-UW-03 Dual Recovery`
+- `SYNTH-QA-AI-UW-04 Long Rent Roll Stress`
 
 ## Test Intent
 
@@ -26,6 +28,11 @@ All properties are fictional. These fixtures are for pre-launch QA only.
   - rent roll remains deterministic CSV control
 - `03_positive_dual_ai_recovery_underwriting`
   - stresses both AI recovery paths in one Underwriting run
+  - primary dual recovery control
+- `04_long_ai_rent_roll_stress_underwriting`
+  - stresses AI Rent Roll Recovery with a long narrative rent roll
+  - stress / scale test only
+  - do not conflate this pass/fail result with the dual-AI control result
 
 ## Expected Anchor Values
 
@@ -67,6 +74,19 @@ All properties are fictional. These fixtures are for pre-launch QA only.
 - EGI: `648,000`
 - OpEx: `246,000`
 - NOI: `402,000`
+
+### Test 04 - Riverside Heights
+- Units: `64`
+- Occupied: `61`
+- Vacant: `3`
+- Occupancy: `95.3%`
+- Monthly In-Place Rent: `113,400`
+- Annual In-Place Rent: `1,360,800`
+- Monthly Market Rent: `124,800`
+- Annual Market Rent: `1,497,600`
+- EGI: `1,360,800`
+- OpEx: `503,500`
+- NOI: `857,300`
 
 ## Safety Expectation
 
