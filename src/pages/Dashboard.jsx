@@ -730,6 +730,7 @@ useEffect(() => {
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
   const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
+  const failedPrePublicationLead = 'Generation halted due to document verification limits. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report. No report was published, and 1 report credit has been returned to your account. To try again, please start a new report request and upload the complete document package again, including all required and supporting documents.';
   const getFailedFileGuidance = (files) => {
     const rows = Array.isArray(files) ? files : [];
     const normalized = rows.map((row) => ({
@@ -743,25 +744,26 @@ useEffect(() => {
       .find(Boolean);
 
     if (failedCoreFile?.doc_type === 't12') {
-      return `The uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid operating statement for this report. Please start a new report request with a clearer annual operating statement showing Gross Rental Income, Effective Gross Income, Total Operating Expenses, and Net Operating Income.`;
+      return `${failedPrePublicationLead} The uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid operating statement for this report. Please start a new report request with a clearer annual operating statement showing Gross Rental Income, Effective Gross Income, Total Operating Expenses, and Net Operating Income.`;
     }
     if (failedCoreFile?.doc_type === 'rent_roll') {
-      return `The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information.`;
+      return `${failedPrePublicationLead} The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information.`;
     }
 
     const hasT12 = normalized.some((row) => row.doc_type === 't12');
     const hasRentRoll = normalized.some((row) => row.doc_type === 'rent_roll');
     if (!hasT12 || !hasRentRoll) {
-      return 'InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.';
+      return `${failedPrePublicationLead} InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.`;
     }
 
-    return 'InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.';
+    return `${failedPrePublicationLead} InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.`;
   };
 
   useEffect(() => {
     let cancelled = false;
     const targetJob = visibleLatestFailedJob;
-    if (!profile?.id || !targetJob?.id || targetJob.status !== 'failed' || targetJob.error_code !== 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS') {
+    const supportsFileGuidance = ['MISSING_STRUCTURED_FINANCIAL_ARTIFACTS', 'MISSING_STRUCTURED_FINANCIALS'].includes(targetJob?.error_code);
+    if (!profile?.id || !targetJob?.id || targetJob.status !== 'failed' || !supportsFileGuidance) {
       setFailedJobGuidance(null);
       return () => { cancelled = true; };
     }
