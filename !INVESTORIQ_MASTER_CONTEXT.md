@@ -266,6 +266,27 @@
     - 04 rent roll listed all 64 unit lines
     - safety result: fail-closed worked, no report published, credit restored, no invalid rent-roll artifact accepted
     - V1 conclusion: large full-unit narrative `.txt` rent rolls are not scale-proven for AI recovery; compact `.txt` recovery is validated; CSV/XLSX remains preferred for large detailed rent rolls
+  - `SYNTH-QA-MOTHERLOAD-UNDERWRITING-01` / `Harbourstone Apartments - Underwriting` = PUBLISHED but NOT website-sample ready and NOT Ken Dunn ready
+    - treat as successful QA / stress discovery, not a public showcase asset
+    - proved core AI T12 / AI rent-roll recovery and base math can publish:
+      - T12 artifact: `method: ai_t12_recovery_validated`, `ai_assisted: true`, `validated: true`
+      - rent roll artifact: `method: ai_rent_roll_recovery_validated`, `ai_assisted: true`, `validated: true`
+      - core anchors landed: Units `48`, Occupancy `95.8%`, Annual In-Place Rent `$1,036,800`, EGI `$1,036,800`, OpEx `$425,000`, NOI `$611,800`
+    - exposed support-doc / document-boundary gaps:
+      - P0: DocRaptor test watermark still appears; no public PDF can ship with test bands
+      - P0: loan balance miss; expected `$8,750,000`, but `loan_term_sheet_parsed.loan_amount = null`; interest `5.25%`, amortization `30`, and LTV `70` parsed; report said debt sizing balance was not provided and DSCR/current-debt service were not assessed
+      - P0: property tax false positive; `property_tax_parsed.annual_tax = 2025`, expected `$124,000`; value did not appear to surface in report, but this is a parser/data-integrity issue
+      - P1: purchase/cap-rate support; purchase assumptions produced usable cap-rate support around `5.75%`, but a later null appraisal artifact effectively masked it and report used default/stated `5.50%`
+      - P1: cover title hyphenated `Harbourstone Apartments - Underwriting` awkwardly as `Un-/derwriting`; immediate sample workaround is clean property name only, such as `Harbourstone Apartments`
+      - P1: AI T12 helper recovered core totals only; expense line items from the source did not populate, leaving lump-sum T12 detail too thin for a flagship sample
+      - P2: market rent survey was misclassified as `rent_roll` and failed noisily
+      - P2: 13-page output was thin because debt/refi sections, DSCR, T12 line-item detail, and support sections did not land
+    - product lesson:
+      - these are different edge cases at the document-ingestion / support-doc boundary, not one recurring bug
+      - core underwriting math is materially strong once structured artifacts are clean
+      - remaining launch risk is source-document classification / extraction / QA, especially support docs
+      - stress packages and public showcase packages must be separated: stress packages expose failures and fail-closed behavior; showcase packages demonstrate the strongest supported path
+      - do not try to make one synthetic package both the harshest stress test and the public website sample
   - `SYNTH-QA-P01 Clean Screening RETEST` after AI helper install and Resend rotation = PASS
     - Units `6`, Occupancy `100.0%`, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
     - confirms AI helper install did not break deterministic Screening
@@ -489,6 +510,14 @@
   - AI T12 Recovery is proven in Underwriting
   - dual AI recovery is proven in Underwriting
   - large rent roll preferred V1 path remains CSV/XLSX
+- Current AI recovery scope clarification:
+  - AI is not a universal document-understanding agent
+  - current AI is narrow extraction fallback only:
+    - AI Rent Roll Recovery
+    - AI T12 Recovery
+  - AI does not currently QA loan terms, property taxes, appraisal/cap-rate artifact selection, market survey classification, or final report output
+  - AI did not catch the Motherload missed loan balance, tax year mistaken for tax amount, null appraisal masking usable cap rate, or market survey misclassification
+  - broader AI QA requires a separate safeguard layer that can flag issues without writing accepted financial values
 - Messy Underwriting Test 32 reached production-pass status after:
   - unifying cap-rate source to the document-derived path
   - removing the invalid cap-rate dimension from the DSCR sensitivity grid
@@ -762,11 +791,16 @@
 
 ### Immediate agenda - April 30, 2026
 - IMMEDIATE PRIORITY
-  1. Review the Ken Dunn sample package.
-  2. Run low-dollar true live Stripe payment test if still outstanding.
-  3. Complete final readiness check / sample package selection.
-  4. Visually retest the long-name cover-page wrap fix when regenerating a long-name report.
-  5. Keep Dashboard freeze / lag under monitored launch risk; patch only if a brand-new blocker appears.
+  1. Investigate what it would take to add an AI/admin QA safeguard or concierge approval layer before more public sample generation.
+  2. Create or select a separate clean Showcase package, not the Motherload stress package:
+     - strongest supported document formats
+     - clean deterministic T12 with line items
+     - clean deterministic rent roll with full unit detail
+     - parser-friendly loan terms
+     - no confusing unsupported appraisal / market survey docs unless intentionally testing restraint
+  3. Resolve DocRaptor production mode before any public website sample.
+  4. Run low-dollar true live Stripe payment test if still outstanding.
+  5. Complete final readiness check / sample package selection.
 
 - STILL OPEN
   - AI recovery Underwriting control is complete enough for launch confidence:
@@ -783,7 +817,8 @@
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
-  - Future AI work: chunking / large-text rent-roll recovery, clearer large-rent-roll CSV/XLSX guidance, post-launch AI QA Safeguard Layer.
+  - AI/admin QA safeguard layer is now an active design investigation, not merely a post-launch idea.
+  - Future AI work also includes chunking / large-text rent-roll recovery and clearer large-rent-roll CSV/XLSX guidance.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, and broader table / schema hygiene.
 
 ### Before Ken Dunn outreach
@@ -798,7 +833,9 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - proceed to Ken Dunn sample package review, low-dollar Stripe test if outstanding, and final readiness check / sample package selection
+  - before more public sample generation, investigate AI/admin QA safeguard or concierge approval layer options
+  - also consider a clean Showcase package separate from Motherload stress testing
+  - do not flip DocRaptor production or publish public samples until the sample package path is clean
   - do not overstate AI support:
     - claim compact `.txt` AI recovery is validated
     - claim large `.txt` rent rolls fail closed safely
@@ -960,15 +997,48 @@ Principles
 Trigger condition:
 Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
-## 10.3 Post-Launch QA Roadmap
-- AI QA Safeguard Layer:
-  - post-launch only
-  - flags parser misses, unsupported claims, uploaded-but-unused docs, and source/report inconsistencies
-  - must not inject financial values into NOI, rent, occupancy, DSCR, debt, valuation, cap rate, refinance, or deal score
+## 10.3 AI/Admin QA Safeguard Layer (Active Design Investigation)
+- Status changed after Motherload QA:
+  - this is now an active design investigation before public sample generation / high-value outreach, not merely a post-launch idea
+  - user concern is high-value users, especially `$100M+` portfolio prospects, hitting failed reports or weak sample reports
+  - question has shifted from "Can the report engine publish?" to "How do we prevent bad, missing, or weak artifacts from reaching the customer?"
+- Strategic direction:
+  - optional pre-publication AI/admin QA safeguard layer
+  - optional manual approval gate for initial high-value / concierge workflows
   - deterministic parser / calculation layer remains the source of truth
+  - AI QA may flag issues but must not inject financial values
+- AI QA may inspect:
+  - uploaded file list
+  - extracted text metadata
+  - parsed artifacts
+  - generated report HTML / PDF text
+  - missing / failed artifacts
+  - contradictions across artifacts
+- AI QA may flag:
+  - loan file appears to contain a balance but artifact has `loan_amount = null`
+  - property tax amount looks like a year / invalid amount
+  - appraisal or cap-rate support conflicts, or a null artifact masks a valid artifact
+  - market survey misclassified as rent roll
+  - uploaded-but-unused docs that may matter
+  - T12 has expense lines but report shows lump-sum only
+  - report says DSCR not assessed despite debt-looking support file
+  - CapEx / support docs acknowledged but not modeled, where that restraint should be explicitly reviewed
+  - long narrative rent roll likely to fail and should use CSV/XLSX
+- AI QA must NOT:
+  - write accepted financial values directly
+  - override deterministic parsers
+  - change NOI, rent, occupancy, debt, DSCR, cap rate, valuation, refinance, or deal score
+  - publish unsupported assumptions
+- Possible outputs:
+  - internal QA warnings
+  - admin review status
+  - block publication pending review
+  - customer-safe failed / needs-review message
+  - support checklist for manual repair / retry
+- This needs Codex investigation / design before implementation.
 - Manual Admin QA Gate:
-  - V1.1 / immediate post-launch hardening option, not a pre-Ken Dunn pivot
-  - reports remain private until admin approval if this mode is adopted
+  - now a candidate pre-Ken Dunn / high-value concierge hardening option
+  - reports may remain private until admin approval if this mode is adopted
 - Later cleanup themes:
   - SES helper cleanup
   - entitlement / schema cleanup
@@ -1017,8 +1087,12 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - dual AI recovery is proven live in Underwriting through `03_positive_dual_ai_recovery_underwriting CONTROL RETEST`
   - long full-unit narrative `.txt` rent roll recovery failed closed safely through `04_long_ai_rent_roll_stress_underwriting`; treat as known V1 scale limitation, not a launch blocker
   - failed pre-publication Dashboard copy now states no report was published and 1 report credit was returned before file-specific guidance
+  - Motherload Underwriting published but is not website-sample ready; it exposed support-doc classification / extraction / QA gaps that should be handled before high-value public samples
   - rendering-stage / pre-generation cross-document scale mismatch protection is now in place and validated
 - Still needed before Ken Dunn outreach:
+  - investigate AI/admin QA safeguard or concierge approval layer before more public sample generation
+  - create or select a clean Showcase package separate from Motherload stress testing
+  - resolve DocRaptor production mode before any public sample PDF
   - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
   - complete low-dollar live Stripe payment test if still outstanding
   - complete Ken Dunn sample package review
