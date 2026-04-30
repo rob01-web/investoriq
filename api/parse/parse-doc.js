@@ -2832,6 +2832,7 @@ export default async function handler(req, res) {
             if (candidates.length === 0) {
               const fallbackAmount = extractDollarNear(rawText, [
                 'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
+                'outstanding loan balance', 'outstanding balance', 'current loan balance', 'current mortgage balance',
               ]);
               addCandidate(fallbackAmount);
             }
