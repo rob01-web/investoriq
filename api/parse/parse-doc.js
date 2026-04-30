@@ -2972,16 +2972,46 @@ export default async function handler(req, res) {
             parse_warnings,
           };
         } else if (effectiveDocType === 'property_tax') {
-          const annual_tax = extractDollarNear(rawText, [
-            'property tax', 'annual tax', 'total tax', 'taxes owing',
-            'tax amount', 'tax due', 'realty tax', 'municipal tax',
-          ]);
+          const extractAnnualTax = (text) => {
+            const labels = [
+              'annual property tax', 'total property tax', 'total taxes', 'tax amount due',
+              'amount due', 'municipal taxes', 'property tax', 'annual tax', 'total tax',
+              'taxes owing', 'tax amount', 'tax due', 'realty tax', 'municipal tax',
+            ];
+            let rejectedCandidate = false;
+            for (const label of labels) {
+              const idx = text.toLowerCase().indexOf(label);
+              if (idx === -1) continue;
+              const snippet = text.slice(idx, idx + 160);
+              const matches = snippet.matchAll(/\$?\s*([\d,]+(?:\.\d{1,2})?)/g);
+              for (const match of matches) {
+                const val = parseFloat(String(match[1] || '').replace(/,/g, ''));
+                if (!Number.isFinite(val)) continue;
+                const matchStart = match.index || 0;
+                const context = snippet
+                  .slice(Math.max(0, matchStart - 40), matchStart + match[0].length + 40)
+                  .toLowerCase();
+                const isYearLike = val >= 1900 && val <= 2100;
+                const hasYearContext = /\b(?:tax year|roll year|billing year|assessment year|year)\b/.test(context);
+                if (isYearLike || (hasYearContext && val <= 5000) || val <= 5000) {
+                  rejectedCandidate = true;
+                  continue;
+                }
+                return { value: val, rejectedCandidate };
+              }
+            }
+            return { value: null, rejectedCandidate };
+          };
+          const annualTaxResult = extractAnnualTax(rawText);
+          const annual_tax = annualTaxResult.value;
           const assessed_value = extractDollarNear(rawText, [
             'assessed value', 'assessment value', 'property assessment',
             'phased-in assessment', 'current value assessment',
           ]);
 
-          if (!annual_tax) parse_warnings.push('missing_annual_tax');
+          if (!annual_tax) {
+            parse_warnings.push(annualTaxResult.rejectedCandidate ? 'implausible_annual_tax' : 'missing_annual_tax');
+          }
 
           payload = {
             file_id: fileRow.id,
