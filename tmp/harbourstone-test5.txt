@@ -1,0 +1,552 @@
+INVESTORIQ                                      INSTITUTIONAL   REAL   ESTATE ANALYSIS
+
+
+
+
+      Harbourstone Test 5
+
+      Stable
+      ASSET CLASS      Multifamily - 48 Units
+      DOCUMENTS        11 uploaded files
+      REPORT TIER      Full Underwriting
+
+
+
+
+CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.                              APRIL 30, 2026
+INVESTORIQ                                             Harbourstone Test 5                              April 30, 2026
+
+
+
+
+Executive Summary
+Deal overview, operating profile, and primary risk drivers
+
+
+
+
+48-Unit Multifamily
+
+CAPITAL RISK PROFILE
+
+
+
+Stable
+Primary Pressure Point: DSCR of 1.06x constrains refinance capacity below standard lender coverage thresholds
+
+KEY METRICS SNAPSHOT
+
+
+UNITS
+
+
+48
+OCCUPANCY
+
+
+95.8%
+ANNUAL IN-PLACE RENT
+
+
+$1,036,800
+EFFECTIVE GROSS INCOME
+
+
+$1,036,800
+OPERATING EXPENSES
+
+
+$425,000
+NET OPERATING INCOME
+
+
+$611,800
+EXPENSE RATIO
+
+
+41.0% (Stable)
+NOI MARGIN
+
+
+59.0% (Stable)
+BREAK-EVEN OCCUPANCY
+
+
+41.0% (Stable)
+DSCR (COMPUTED)
+
+
+1.06x
+KEY UPSIDE DRIVERS
+
+• Occupancy is 95.8%, reflecting fully stabilized in-place tenancy.
+• Operating cushion of 54.8% above break-even occupancy based on in-place performance.
+
+PRIMARY CONSTRAINTS
+
+• Base case DSCR of 1.06x falls below standard lender coverage thresholds, constraining refinance capacity and limiting
+  debt proceeds under both current and stressed conditions.
+• Operating profile classified Stable. Under stressed conditions, refinance proceeds are constrained by declining coverage
+  and reduced capital flexibility.
+
+
+CAPITAL RISK PROFILE: STABLE
+
+
+  Expense Ratio                                                    41.0%
+
+  NOI Margin                                                       59.0%
+
+  Break-Even Occupancy                                             41.0%
+
+Operating profile classification based on standardized underwriting thresholds from uploaded documents only.
+
+Uploaded Files
+
+
+
+
+This section lists the files uploaded and associated with this report.
+
+       •   rent_roll_ai_recovery_source.txt - 4/30/2026, 11:05:26 PM
+       •   t12_ai_recovery_source.txt - 4/30/2026, 11:05:26 PM
+       •   broker_email_source.txt - 4/30/2026, 11:05:26 PM
+       •   capex_budget_unstructured_source.txt - 4/30/2026, 11:05:26 PM
+       •   Harbourstone Apartments - Underwriting.pdf - 4/30/2026, 11:05:26 PM
+       •   loan_terms_simple_source.txt - 4/30/2026, 11:05:26 PM
+       •   market_rent_survey_unstructured_source.txt - 4/30/2026, 11:05:26 PM
+       •   property_tax_bill_source.txt - 4/30/2026, 11:05:26 PM
+       •   purchase_assumptions_source.txt - 4/30/2026, 11:05:26 PM
+       •   unsupported_appraisal_summary_source.txt - 4/30/2026, 11:05:26 PM
+       •   unsupported_phase_i_esa_source.txt - 4/30/2026, 11:05:26 PM
+
+Uploaded Renovation / CapEx Document: Uploaded renovation/CapEx source file acknowledged:
+capex_budget_unstructured_source.txt. Structured CapEx modeling was not produced because the file was not converted
+into verified structured renovation inputs. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been
+modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as
+structured document-derived inputs.
+Refinance Stress Test & Constraint Analysis
+DSCR, LTV, and binding-constraint analysis under documented operating and capital constraints
+
+
+
+
+Refinance Stability Classification: Refinance Shortfall Under Stress.
+
+Refinance Proceeds / Debt Balance: 0.84x.
+
+Stressed Proceeds / Debt Balance: 0.58x.
+
+ NOI SHOCK                   CAP EXPANSION              RATE SHOCK (BPS)    MAX PROCEEDS             COVERAGE
+                             (BPS)
+
+ -15.0%                      0 bps                      200 bps             $5,082,069               0.58x
+
+ -15.0%                      50 bps                     200 bps             $5,082,069               0.58x
+
+ -15.0%                      100 bps                    200 bps             $5,082,069               0.58x
+
+ -10.0%                      0 bps                      200 bps             $5,381,014               0.61x
+
+
+
+Full Refinance Sufficiency (Deterministic).
+
+ METRIC                                      BASE CASE                              WORST CASE
+
+ NOI                                         $611,800                               $520,030
+
+ Cap Rate                                    5.75%                                  5.75%
+
+ Implied Value (NOI / Cap)                   $10,640,000                            $9,044,000
+
+ LTV-Limited Proceeds                        $7,448,000                             $6,330,800
+
+ DSCR-Limited Proceeds                       $7,386,163                             $5,082,069
+
+ Binding Constraint                          DSCR-limited                           DSCR-limited (Rate/DSCR binding)
+
+ Max Proceeds (min of above)                 $7,386,163                             $5,082,069
+
+ Coverage (Max Proceeds / Debt               0.84x                                  0.58x
+ Balance)
+
+ Worst-Case Drivers (NOI shock | Cap         -                                      -15.0% | 0 bps | 200 bps
+ expansion | Rate shock)
+Debt Structure & Financing
+DSCR sensitivity, lender thresholds, and refinance constraint analysis
+
+
+
+
+DEBT STRUCTURE SUMMARY
+
+ COMPONENT                                                         TERMS
+
+ Outstanding Balance                                               $8,750,000
+
+ Interest Rate                                                     5.25%
+
+ DSCR (T12 NOI)                                                    1.06x
+
+ Amortization                                                      30 years
+DSCR SENSITIVITY & COVERAGE THRESHOLD ANALYSIS
+
+
+
+
+Note: DSCR is based on current debt service and NOI, and should be interpreted relative to standard lender thresholds and
+available coverage cushion. It is not impacted by cap rate assumptions.
+REFINANCE STRESS TEST & BINDING CONSTRAINT ANALYSIS
+
+CURRENT DEBT COVERAGE & CONSTRAINT SENSITIVITY
+
+
+ RATE SCENARIO                                                                            DSCR
+
+ Base (5.25%)                                                                             1.06x
+
+ +100 bps (6.25%)                                                                         0.95x
+
+ +200 bps (7.25%)                                                                         0.85x
+
+Current debt service coverage sensitivity using current debt balance under interest-rate scenarios only. Green = coverage >=
+1.25 | Amber = 1.00-1.24 | Red = below 1.00
+Operating Statement (Trailing Twelve Months)
+Operating summary based on uploaded financials
+
+
+
+
+INCOME RECONSTRUCTION (TTM)
+
+ INCOME LINE ITEM                                                  TTM AMOUNT
+
+ No line-item detail available. Effective Gross Income (TTM): $1,036,800.
+OPERATING EXPENSES (TTM)
+
+ EXPENSE LINE ITEM                                                 TTM AMOUNT
+
+ No line-item detail available. Total Operating Expenses (TTM): $425,000.
+
+
+
+NET OPERATING INCOME SUMMARY
+
+ METRIC                                                            VALUE
+
+ Effective Gross Income (TTM)                                      $1,036,800
+
+ Total Operating Expenses (TTM)                                    $425,000
+
+ Net Operating Income (TTM)                                        $611,800
+
+ Operating Expense Ratio                                           41.0%
+
+ EGI per Unit (TTM)                                                $21,600
+
+ OpEx per Unit (TTM)                                               $8,854
+
+ NOI per Unit (TTM)                                                $12,746
+Operating Profile
+Occupancy, rent level, and operating summary
+
+
+
+
+INCOME & EXPENSE SUMMARY (LUMP-SUM T12)
+
+ LINE ITEM                                                          AMOUNT (TTM)
+
+ Effective Gross Income (TTM)                                       $1,036,800
+
+ Total Operating Expenses (TTM)                                     $425,000
+
+ Net Operating Income (TTM)                                         $611,800
+
+No line-item detail available for this T12 format. All values are reported totals.
+
+
+REVENUE UPSIDE QUANTIFICATION
+
+ METRIC                                                             VALUE
+
+ Annual In-Place Rent                                               $1,036,800
+
+ Annual Market Rent (100% Occupancy)                                $1,137,600
+
+ Gross Rent Upside                                                  $100,800 (9.7%)
+
+All values document derived from uploaded rent roll. Market rents as stated in document.
+Expense Structure Analysis
+Expense ratio, drivers, and intensity flags
+
+
+
+
+ METRIC                                                        VALUE
+
+ Operating Expense Ratio                                       41.0%
+
+ Operating Expense per Unit                                    $8,854
+
+ NOI per Unit                                                  $12,746
+
+
+EXPENSE FLAGS (DETERMINISTIC)
+
+EXPENSE DRIVERS
+
+No line-item expense detail available. Total Operating Expenses: $425,000.
+
+
+EXPENSE RATIO SENSITIVITY
+
+ EXPENSE RATIO                                IMPLIED OPEX                   IMPLIED NOI
+
+ 50%                                          $518,400                       $518,400
+
+ 55%                                          $570,240                       $466,560
+
+ 60%                                          $622,080                       $414,720
+
+ 65%                                          $673,920                       $362,880
+
+ 70%                                          $725,760                       $311,040
+
+Anchored to reported EGI of $1,036,800. Standardized threshold scenarios.
+NOI Stability Review
+Margin, volatility, and income resilience
+
+
+
+
+ INDICATOR                                                VALUE
+
+ NOI Margin                                               59.0%
+
+ Expense Sensitivity                                      59.0%
+
+ Break-even Occupancy                                     41.0%
+
+ Rent Roll vs T12 GPR Variance                            0.0%
+
+
+STABILITY DRIVERS (WORST 3)
+
+       1. NOI Margin 59.0%
+       2. Expense Ratio 41.0%
+       3. Rent Roll vs T12 GPR 0.0%
+
+
+
+NOI SENSITIVITY (DETERMINISTIC)
+
+ SCENARIO                                   IMPLIED NOI           NOI MARGIN (IMPLIED)
+
+ Expenses +5% (cost shock)                  $590,550              57.0%
+
+ Income -5% (revenue shock)                 $559,960              56.9%
+
+ Combined Shock (-5% income, +5%            $538,710              54.7%
+ expenses)
+
+
+BREAK-EVEN OCCUPANCY BUFFER
+
+
+
+
+Break-even: 41.0%                                                             Current occupancy: 95.8%
+
+Buffer: 54.8 percentage points - Strong cushion
+Data Coverage & Underwriting Gaps
+Missing inputs and omitted sections
+
+
+
+
+   CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified.
+   Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into
+   underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used
+   quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.
+
+     DATASET                          FIELDS PRESENT                 COVERAGE              MISSING
+
+     T12 Operating Statement                4/4                        100.0%              None
+
+     Rent Roll                              4/4                        100.0%              None
+Scenario Analysis & Five-Year Outlook
+Cash flow projections and return sensitivities
+
+
+
+
+SCENARIO INPUTS
+
+
+ YEAR                                      CONSERVATIVE (2%           BASE (3% GROWTH)        OPTIMISTIC (4% GROWTH)
+                                                  GROWTH)
+
+ Year 1                                              $624,036                    $630,154                      $636,272
+
+ Year 2                                               $636,517                  $649,059                        $661,723
+
+ Year 3                                               $649,247                  $668,530                       $688,192
+
+ Year 4                                               $662,232                  $688,586                        $715,719
+
+ Year 5                                               $675,477                  $709,244                       $744,348
+
+ Year 5 Exit Value                                  $11,747,420               $12,334,676                    $12,945,187
+
+Basis: T12 NOI = $611,800 | Exit cap: 5.75% (document derived). Scenario outputs are deterministic from document-backed
+inputs.
+
+YEAR 5 EXIT VALUE: CAP RATE SENSITIVITY
+
+
+ EXIT CAP RATE                                   CONSERVATIVE                       BASE                     OPTIMISTIC
+
+ 4.5%                                               $15,010,592               $15,760,975                    $16,541,072
+
+ 5.0%                                              $13,509,533                 $14,184,878                  $14,886,965
+
+ 5.5%                                               $12,281,393               $12,895,343                   $13,533,604
+
+ 5.75% (document derived)                           $11,747,420               $12,334,676                    $12,945,187
+
+ 6.0%                                               $11,257,944                $11,820,731                  $12,405,804
+
+ 6.5%                                               $10,391,948                $10,911,444                     $11,451,511
+Deal Scorecard & Radar
+InvestorIQ deal score components
+
+
+
+
+FACTOR-LEVEL SCORES
+
+
+
+
+                   Within Underwriting Parameters
+                                              Composite Score: 83 / 100
+
+
+ FACTOR                                             VALUE     THRESHOLD                               SCORE
+
+ Expense Ratio                                       41.0%    Below 55%                                10/10
+
+ NOI Margin                                          59.0%    Above 45%                                10/10
+
+ Occupancy Rate                                      95.8%    Above 95%                                10/10
+
+ Break-Even Occupancy                                41.0%    Below 70%                                10/10
+
+ Rent-to-Market Gap                                   8.9%    5-15% upside                             7/10
+
+ DSCR (Computed)                                      1.06x   Below 1.25x                              3/10
+
+ Composite Score (normalized)                                                                         83/100
+
+Scored from reported metrics only. Within Underwriting Parameters ≥ 70 | Review 50-69 | Outside Parameters < 50. DSCR not
+assessed caps the verdict at Review.
+RISK REGISTER: DETERMINISTIC SIGNAL SUMMARY
+
+
+ RISK FACTOR                    CURRENT READING               THRESHOLD                                FLAG
+
+ Expense Ratio                  41.0%                         CLEAR < 55% | WATCH                     CLEAR
+                                                              55-65% | ELEVATED > 65%
+
+ NOI Margin                     59.0%                         STRONG > 45% | WATCH                    STRONG
+                                                              35-45% | LOW < 35%
+
+ Occupancy Rate                 95.8%                         CLEAR > 95% | WATCH                     CLEAR
+                                                              85-95% | LOW < 85%
+
+ Break-Even Occupancy           41.0%                         CLEAR < 70% | WATCH                     CLEAR
+                                                              70-80% | ELEVATED > 80%
+
+ Rent-to-Market Gap             8.9% below market             > 15% = meaningful upside |           MODERATE
+                                                              5-15% = moderate | < 5% =
+                                                              minimal
+
+ DSCR (Current Debt)            1.06x                         STRONG > 1.35x | ADEQUATE              STRESSED
+                                                              1.25-1.35x | STRESSED < 1.25x
+
+Signals are derived deterministically from document-backed inputs and framework-constrained calculations. Missing inputs
+are not inferred.
+Discounted Cash Flow (DCF)
+Cap rate expansion, exit sensitivity, and downside valuation pressure
+
+
+
+
+              YEAR                    NOI          EXIT VALUE           TOTAL CASH           PV FACTOR       PRESENT VALUE
+                                                                              FLOW
+
+              Year 1             $630,154                     -            $630,154              0.9259             $583,476
+
+             Year 2             $649,059                      -            $649,059              0.8573             $556,463
+
+             Year 3             $668,530                      -            $668,530              0.7938             $530,701
+
+             Year 4             $688,586                      -            $688,586              0.7350              $506,131
+
+             Year 5             $709,244           $12,334,676          $13,043,920              0.6806            $8,877,473
+
+                                                                  Estimated Intrinsic Value (Sum of PVs)         $11,054,244
+
+Basis: T12 NOI = $611,800 | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: 5.75% (document
+derived)
+
+INTRINSIC VALUE: EXIT CAP RATE SENSITIVITY
+
+
+ EXIT CAP RATE                               YEAR 5 EXIT VALUE       IMPLIED INTRINSIC VALUE                        VS. BASE
+
+ 4.5%                                              $15,760,975                     $13,386,126                             21.1%
+
+ 5.0%                                               $14,184,878                    $12,313,460                            11.4%
+
+ 5.5%                                              $12,895,343                     $11,435,825                             3.5%
+
+ 5.75% (document derived)                          $12,334,676                    $11,054,244                                 -
+
+ 6.0%                                               $11,820,731                   $10,704,462                             -3.2%
+
+ 6.5%                                               $10,911,444                    $10,085,617                            -8.8%
+Methodology & Data Transparency
+Assumptions, methodology notes, and data limitations
+
+
+
+
+InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and defined
+modeling frameworks, with transparency and auditability as core design principles.
+
+Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting
+frameworks. InvestorIQ does not invent missing data or fabricate market inputs.
+
+
+12.1 InvestorIQ Estimates
+InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized
+underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred.
+
+
+12.2 Methodology Notes
+Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing
+source data is not gap-filled.
+
+
+12.3 Data Limitations & Missing Inputs
+This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed
+and excluded from analysis.
+
+
+
+
+I N V E S T O R I Q C A P ITAL INTELLIGENCE MEMORANDUM | CONFIDENTIAL                              © InvestorIQ Technologies Inc.
+
