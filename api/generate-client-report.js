@@ -2376,6 +2376,7 @@ export default async function handler(req, res) {
     let mortgagePayload = null;
     let loanTermSheetTermsPayload = null;
     let appraisalPayload = null;
+    let appraisalCapRateBase = null;
     let propertyTaxPayload = null;
     if (jobId) {
       const { data: rentRollArtifact } = await supabase
@@ -2411,15 +2412,19 @@ export default async function handler(req, res) {
         // fallback, causing silent debt recognition failure.
         const rawMortgagePayload = mortgageArtifact?.payload || null;
         mortgagePayload = hasUsableDebtPayload(rawMortgagePayload) ? rawMortgagePayload : null;
-        const { data: appraisalArtifact } = await supabase
+        const { data: appraisalArtifacts } = await supabase
           .from("analysis_artifacts")
           .select("payload")
           .eq("job_id", jobId)
           .eq("type", "appraisal_parsed")
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        appraisalPayload = appraisalArtifact?.payload || null;
+          .limit(10);
+        const appraisalRows = Array.isArray(appraisalArtifacts) ? appraisalArtifacts : [];
+        appraisalPayload = appraisalRows[0]?.payload || null;
+        const usableAppraisalCapRateArtifact = appraisalRows.find((artifact) =>
+          isFinitePositive(coerceNumber(artifact?.payload?.cap_rate))
+        );
+        appraisalCapRateBase = usableAppraisalCapRateArtifact?.payload?.cap_rate ?? null;
         const { data: propertyTaxArtifact } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -3046,7 +3051,7 @@ export default async function handler(req, res) {
         rawFinancials?.refi_cap_rate_base ??
         mortgagePayload?.refi_cap_rate ??
         loanTermSheetTermsPayload?.refi_cap_rate ??
-        appraisalPayload?.cap_rate ??
+        appraisalCapRateBase ??
         null,
       refi_ltv_max:
         mortgagePayload?.ltv ??
@@ -4275,10 +4280,19 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else if (hasDebtButIncompleteRefiInputs) {
+        const hasCompleteCurrentDebtTerms =
+          isFinitePositive(refiFinancials?.refi_debt_balance) &&
+          isFinitePositive(refiFinancials?.refi_interest_rate) &&
+          isFinitePositive(refiFinancials?.refi_amort_years);
+        const missingRefiCapRate = !isFinitePositive(refiFinancials?.refi_cap_rate_base);
+        const refiNotProducedCopy =
+          hasCompleteCurrentDebtTerms && missingRefiCapRate
+            ? "Debt terms were identified, but deterministic refinance proceeds classification was not produced because refinance cap-rate or valuation support was incomplete."
+            : "Debt was identified from uploaded documents, but deterministic refinance classification was not produced because one or more required refinance inputs were incomplete.";
         finalHtml = replaceAll(
           finalHtml,
           "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Produced</strong></p><p>Debt was identified from uploaded documents, but deterministic refinance classification was not produced because one or more required debt terms were incomplete.</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Produced</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
         );
       } else {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
@@ -5504,8 +5518,10 @@ try {
     });
   }
 
+  const dscrAssessedFromDebtRows = /<td>DSCR \(T12 NOI\)<\/td><td>[0-9.]+x<\/td>/i.test(htmlString);
   if (
     debtTermsPresent &&
+    !dscrAssessedFromDebtRows &&
     htmlString.includes("DSCR") &&
     /DSCR[^<]{0,80}(?:Not Assessed|DATA NOT AVAILABLE)|Debt sizing balance not provided/i.test(htmlString)
   ) {
