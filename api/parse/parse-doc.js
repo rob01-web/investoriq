@@ -1902,6 +1902,7 @@ export default async function handler(req, res) {
 
             const gross_potential_rent = extractDollarNear(rawText, [
               'gross potential rent', 'gpr', 'gross potential income',
+              'gross rental income', 'gross rental revenue', 'rental income',
             ]);
             const effective_gross_income = extractDollarNear(rawText, [
               'effective gross income', 'egi', 'effective gross',
