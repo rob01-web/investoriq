@@ -138,6 +138,22 @@ function hasDebtTermsPayload(payload) {
     isFinitePositive(payload.refi_cap_rate)
   );
 }
+function getReportQaStatus(flags) {
+  const items = Array.isArray(flags) ? flags : [];
+  if (items.some((flag) => flag?.severity === "critical")) {
+    return { qa_status: "block", severity: "critical" };
+  }
+  if (items.some((flag) => flag?.severity === "high")) {
+    return { qa_status: "admin_review", severity: "high" };
+  }
+  if (items.some((flag) => flag?.severity === "medium")) {
+    return { qa_status: "warn", severity: "medium" };
+  }
+  if (items.some((flag) => flag?.severity === "low")) {
+    return { qa_status: "warn", severity: "low" };
+  }
+  return { qa_status: "pass", severity: "none" };
+}
 function hasMinimumScreeningCoverage(t12Payload) {
   const gpr =
     t12Payload?.gross_potential_rent ??
@@ -5351,6 +5367,9 @@ const hasFinalRecommendation =
   htmlString.includes("11.0") && htmlString.includes("Final Recommendations");
 const hasSectionTwelve =
   htmlString.includes("12.0") && htmlString.includes("Methodology & Data Transparency");
+const docraptorMode =
+  process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
+const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
 const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
 try {
   const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
@@ -5378,6 +5397,200 @@ try {
   }
 } catch (err) {
   console.error("Failed to log report_html_integrity:", err);
+}
+try {
+  const qaFlags = [];
+  let qaFileRows = Array.isArray(documentSources) ? documentSources : [];
+  if (jobId) {
+    const { data: qaFiles, error: qaFilesErr } = await supabase
+      .from("analysis_job_files")
+      .select("original_filename, doc_type, parse_status, parse_error")
+      .eq("job_id", jobId);
+    if (!qaFilesErr && Array.isArray(qaFiles)) {
+      qaFileRows = qaFiles;
+    }
+  }
+  const normalizedSourceFiles = qaFileRows.map((row) => ({
+    original_filename: String(row?.original_filename || ""),
+    doc_type: String(row?.doc_type || ""),
+    parse_status: String(row?.parse_status || ""),
+    parse_error: String(row?.parse_error || ""),
+  }));
+  const fileNameText = normalizedSourceFiles
+    .map((row) => row.original_filename.toLowerCase())
+    .join(" | ");
+  const debtLookingFile = normalizedSourceFiles.find((row) =>
+    /\b(loan|debt|mortgage|financ|term|note)\b/i.test(row.original_filename)
+  );
+  const parsedDebtBalance = coerceNumber(
+    mortgagePayload?.outstanding_balance ??
+      mortgagePayload?.loan_amount ??
+      loanTermSheetTermsPayload?.outstanding_balance ??
+      loanTermSheetTermsPayload?.loan_amount
+  );
+  const debtTermsPresent =
+    Boolean(debtLookingFile) ||
+    hasDebtTermsPayload(mortgagePayload) ||
+    hasDebtTermsPayload(loanTermSheetTermsPayload);
+
+  if (debtLookingFile && !isFinitePositive(parsedDebtBalance)) {
+    qaFlags.push({
+      code: "DEBT_FILE_WITH_MISSING_BALANCE",
+      severity: "high",
+      message: "A debt-looking source file exists, but no usable loan amount or outstanding balance was available to the report.",
+      evidence: {
+        filename: debtLookingFile.original_filename,
+        parsed_loan_amount: mortgagePayload?.loan_amount ?? null,
+        parsed_outstanding_balance: mortgagePayload?.outstanding_balance ?? null,
+        parsed_loan_term_sheet_loan_amount: loanTermSheetTermsPayload?.loan_amount ?? null,
+        parsed_loan_term_sheet_outstanding_balance:
+          loanTermSheetTermsPayload?.outstanding_balance ?? null,
+      },
+      admin_check: "Review the loan/debt source file and parsed loan_term_sheet or mortgage_statement artifact before using this report as a public sample.",
+    });
+  }
+
+  const annualTax = coerceNumber(propertyTaxPayload?.annual_tax);
+  if (
+    Number.isFinite(annualTax) &&
+    ((annualTax >= 1900 && annualTax <= 2100) || annualTax < 1000)
+  ) {
+    qaFlags.push({
+      code: "PROPERTY_TAX_AMOUNT_IMPLAUSIBLE",
+      severity: "medium",
+      message: "The parsed annual property tax value appears year-like or implausibly low.",
+      evidence: {
+        parsed_annual_tax: annualTax,
+        original_filename: propertyTaxPayload?.original_filename || null,
+      },
+      admin_check: "Confirm the property tax parser did not capture a tax year instead of the annual tax amount.",
+    });
+  }
+
+  if (
+    debtTermsPresent &&
+    htmlString.includes("DSCR") &&
+    /DSCR[^<]{0,80}(?:Not Assessed|DATA NOT AVAILABLE)|Debt sizing balance not provided/i.test(htmlString)
+  ) {
+    qaFlags.push({
+      code: "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
+      severity: "medium",
+      message: "The report indicates DSCR was not assessed even though debt-looking support or debt terms were present.",
+      evidence: {
+        debt_filename: debtLookingFile?.original_filename || null,
+        has_debt_terms_payload: hasDebtTermsPayload(loanTermSheetTermsPayload) || hasDebtTermsPayload(mortgagePayload),
+      },
+      admin_check: "Review whether the debt source file should have produced a usable balance, rate, and amortization before publication.",
+    });
+  }
+
+  const incomeLineCount = Array.isArray(t12Payload?.income_lines) ? t12Payload.income_lines.length : 0;
+  const expenseLineCount = Array.isArray(t12Payload?.expense_lines) ? t12Payload.expense_lines.length : 0;
+  if (t12Payload && incomeLineCount === 0 && expenseLineCount === 0) {
+    qaFlags.push({
+      code: "T12_TOTALS_ONLY",
+      severity: "low",
+      message: "The parsed T12 artifact contains core totals but no income or expense line-item detail.",
+      evidence: {
+        method: t12Payload?.method || null,
+        income_line_count: incomeLineCount,
+        expense_line_count: expenseLineCount,
+      },
+      admin_check: "For a showcase report, consider using a source format that produces line-item T12 detail.",
+    });
+  }
+
+  const surveyLikeFailed = normalizedSourceFiles.find((row) =>
+    /(market|survey|rent_survey|comp|comparable|market_rent)/i.test(row.original_filename) &&
+    row.doc_type === "rent_roll" &&
+    row.parse_status === "failed"
+  );
+  if (surveyLikeFailed) {
+    qaFlags.push({
+      code: "MARKET_SURVEY_CLASSIFICATION_REVIEW",
+      severity: "low",
+      message: "A market-survey-like support file is present and may require classification review if it was treated as rent roll input.",
+      evidence: {
+        filename: surveyLikeFailed.original_filename,
+        doc_type: surveyLikeFailed.doc_type,
+        parse_status: surveyLikeFailed.parse_status,
+        parse_error: surveyLikeFailed.parse_error || null,
+      },
+      admin_check: "Confirm market survey files are not being counted as failed core rent-roll files.",
+    });
+  }
+
+  let usableAppraisalCapRates = [];
+  if (jobId) {
+    const { data: appraisalArtifacts, error: appraisalArtifactsErr } = await supabase
+      .from("analysis_artifacts")
+      .select("payload")
+      .eq("job_id", jobId)
+      .eq("type", "appraisal_parsed");
+    if (!appraisalArtifactsErr && Array.isArray(appraisalArtifacts)) {
+      usableAppraisalCapRates = appraisalArtifacts
+        .map((artifact) => coerceNumber(artifact?.payload?.cap_rate))
+        .filter((value) => isFinitePositive(value));
+    }
+  }
+  if (
+    effectiveReportMode === "v1_core" &&
+    !isFinitePositive(refiFinancials?.refi_cap_rate_base) &&
+    (usableAppraisalCapRates.length > 0 ||
+      /cap(?:italization)? rate|going-in cap|purchase assumption/i.test(fileNameText))
+  ) {
+    qaFlags.push({
+      code: "CAP_RATE_SUPPORT_NOT_USED",
+      severity: "medium",
+      message: "Cap-rate or purchase-assumption support appears present by filename/context, but no usable cap-rate basis reached the report financials.",
+      evidence: {
+        refi_cap_rate_base: refiFinancials?.refi_cap_rate_base ?? null,
+        appraisal_cap_rate: appraisalPayload?.cap_rate ?? null,
+        usable_appraisal_cap_rates: usableAppraisalCapRates,
+      },
+      admin_check: "Review appraisal and purchase-support artifacts for valid cap-rate support masked by later null artifacts or classification issues.",
+    });
+  }
+
+  if (docraptorMode !== "production" || !allowProductionPdf) {
+    qaFlags.push({
+      code: "DOCRAPTOR_NOT_PRODUCTION_MODE",
+      severity: "medium",
+      message: "DocRaptor is not configured for production PDF output.",
+      evidence: {
+        docraptor_mode: docraptorMode,
+        allow_production_pdf: allowProductionPdf,
+      },
+      admin_check: "Do not use this PDF as a public sample until production PDF mode is enabled and verified.",
+    });
+  }
+
+  const qaSummary = getReportQaStatus(qaFlags);
+  const qaTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: qaErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "report_qa_flags",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/report_qa_flags/${qaTimestamp}.json`,
+      payload: {
+        event: "report_qa_flags",
+        qa_status: qaSummary.qa_status,
+        severity: qaSummary.severity,
+        flags: qaFlags,
+        report_type: reportType,
+        report_tier: reportTier,
+        html_length: htmlLength,
+        timestamp: new Date().toISOString(),
+      },
+    },
+  ]);
+  if (qaErr) {
+    console.error("Failed to write report_qa_flags artifact:", qaErr);
+  }
+} catch (err) {
+  console.error("Failed to build report_qa_flags artifact:", err);
 }
 if (!hasClosingHtml) {
   const truncatedTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -5460,9 +5673,6 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 let docHtml = dedupeDataNotAvailableBySection(htmlString);
-const docraptorMode =
-  process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
-const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
     "Production PDF generation is disabled. Contact support to enable production output.";
