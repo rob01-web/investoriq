@@ -5420,8 +5420,32 @@ try {
     .map((row) => row.original_filename.toLowerCase())
     .join(" | ");
   const debtLookingFile = normalizedSourceFiles.find((row) =>
-    /\b(loan|debt|mortgage|financ|term|note)\b/i.test(row.original_filename)
+    row.doc_type === "loan_term_sheet" ||
+    row.doc_type === "mortgage_statement" ||
+    /(loan|debt|mortgage|financ|term|note)/i.test(row.original_filename)
   );
+  let parsedDebtArtifacts = [];
+  if (jobId) {
+    const { data: debtArtifacts, error: debtArtifactsErr } = await supabase
+      .from("analysis_artifacts")
+      .select("type,payload")
+      .eq("job_id", jobId)
+      .in("type", ["loan_term_sheet_parsed", "mortgage_statement_parsed"]);
+    if (!debtArtifactsErr && Array.isArray(debtArtifacts)) {
+      parsedDebtArtifacts = debtArtifacts;
+    }
+  }
+  const debtArtifactWithMissingBalance = parsedDebtArtifacts.find((artifact) => {
+    const payload = artifact?.payload || {};
+    const hasDebtTerms =
+      hasDebtTermsPayload(payload) ||
+      isFinitePositive(payload.monthly_payment) ||
+      (Array.isArray(payload.parse_warnings) &&
+        payload.parse_warnings.includes("missing_loan_amount"));
+    const loanAmount = coerceNumber(payload.loan_amount);
+    const outstandingBalance = coerceNumber(payload.outstanding_balance);
+    return hasDebtTerms && !isFinitePositive(loanAmount) && !isFinitePositive(outstandingBalance);
+  });
   const parsedDebtBalance = coerceNumber(
     mortgagePayload?.outstanding_balance ??
       mortgagePayload?.loan_amount ??
@@ -5433,20 +5457,33 @@ try {
     hasDebtTermsPayload(mortgagePayload) ||
     hasDebtTermsPayload(loanTermSheetTermsPayload);
 
-  if (debtLookingFile && !isFinitePositive(parsedDebtBalance)) {
+  if (
+    effectiveReportMode === "v1_core" &&
+    !isFinitePositive(parsedDebtBalance) &&
+    (debtArtifactWithMissingBalance || (debtLookingFile && debtTermsPresent))
+  ) {
+    const debtPayload =
+      debtArtifactWithMissingBalance?.payload ||
+      loanTermSheetTermsPayload ||
+      mortgagePayload ||
+      {};
     qaFlags.push({
       code: "DEBT_FILE_WITH_MISSING_BALANCE",
       severity: "high",
-      message: "A debt-looking source file exists, but no usable loan amount or outstanding balance was available to the report.",
+      message: "Debt terms were identified, but no debt balance or loan amount was parsed.",
       evidence: {
-        filename: debtLookingFile.original_filename,
-        parsed_loan_amount: mortgagePayload?.loan_amount ?? null,
-        parsed_outstanding_balance: mortgagePayload?.outstanding_balance ?? null,
-        parsed_loan_term_sheet_loan_amount: loanTermSheetTermsPayload?.loan_amount ?? null,
-        parsed_loan_term_sheet_outstanding_balance:
-          loanTermSheetTermsPayload?.outstanding_balance ?? null,
+        artifact_type: debtArtifactWithMissingBalance?.type || null,
+        doc_type: debtLookingFile?.doc_type || null,
+        parse_status: debtLookingFile?.parse_status || null,
+        interest_rate: debtPayload?.interest_rate ?? null,
+        amort_years: debtPayload?.amort_years ?? null,
+        ltv: debtPayload?.ltv ?? null,
+        refi_cap_rate: debtPayload?.refi_cap_rate ?? null,
+        parse_warning: Array.isArray(debtPayload?.parse_warnings)
+          ? debtPayload.parse_warnings.find((warning) => warning === "missing_loan_amount") || null
+          : null,
       },
-      admin_check: "Review the loan/debt source file and parsed loan_term_sheet or mortgage_statement artifact before using this report as a public sample.",
+      admin_check: "Review the source debt document and loan-term parser. If the document contains an outstanding balance, update parser support before treating DSCR/refinance outputs as complete.",
     });
   }
 
