@@ -1,0 +1,36 @@
+Harbourstone Apartments rent position notes
+As of date: 2026-04-01
+
+This is a narrative unit roster rather than a standard exported table.
+
+Building summary:
+- Total units: 48
+- Occupied units: 46
+- Vacant units: 2
+- Occupancy: 95.83%
+
+Representative unit observations only:
+- Unit 101 is a 1BR and occupied. Current monthly rent is 1650. Market monthly rent is 1800.
+- Unit 102 is a 1BR and occupied. Current monthly rent is 1700. Market monthly rent is 1800.
+- Unit 103 is a 1BR and occupied. Current monthly rent is 1725. Market monthly rent is 1800.
+- Unit 108 is a 1BR and vacant. Current monthly rent is 0. Market monthly rent is 1800.
+- Unit 201 is a 2BR and occupied. Current monthly rent is 1850. Market monthly rent is 2000.
+- Unit 202 is a 2BR and occupied. Current monthly rent is 1875. Market monthly rent is 2000.
+- Unit 203 is a 2BR and occupied. Current monthly rent is 1900. Market monthly rent is 2000.
+- Unit 204 is a 2BR and occupied. Current monthly rent is 1925. Market monthly rent is 2000.
+- Unit 301 is a 3BR and occupied. Current monthly rent is 2150. Market monthly rent is 2250.
+- Unit 302 is a 3BR and occupied. Current monthly rent is 2175. Market monthly rent is 2250.
+- Unit 303 is a 3BR and occupied. Current monthly rent is 2200. Market monthly rent is 2250.
+- Unit 304 is a 3BR and vacant. Current monthly rent is 0. Market monthly rent is 2250.
+
+Summary totals called out by the manager:
+- In-place monthly rent total from occupied units only: 86400
+- In-place annual rent total: 1036800
+- Market monthly rent total across all 48 units: 94800
+- Market annual rent total across all 48 units: 1137600
+- Occupied units: 46
+- Vacant units: 2
+- Total units: 48
+- Occupancy: 95.83%
+
+These summary totals are the controlling property totals for this rent roll.

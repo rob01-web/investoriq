@@ -1,0 +1,5 @@
+Harbourstone Apartments appraisal summary excerpt
+
+The appraisal commentary describes the property as a stabilized mid-rise multifamily asset in Ottawa with generally steady occupancy and rental demand. The excerpt references comparable apartment sales in narrative form and notes that valuation depends on income durability, market conditions, and buyer underwriting.
+
+This excerpt is intentionally not a complete appraisal report and does not provide a clean final appraised value field for modeling. It should not override deterministic valuation or document-derived cap-rate support unless the system explicitly structures appraisal data.

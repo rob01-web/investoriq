@@ -1,0 +1,10 @@
+Harbourstone Apartments supporting loan summary
+
+This is a supporting debt summary only.
+
+Outstanding loan balance: $8,750,000
+Interest rate: 5.25%
+Amortization: 30 years
+Loan-to-value: 70%
+
+Debt values should support underwriting debt analysis only and should not override T12 or rent roll operating truth.

@@ -1,0 +1,6 @@
+Harbourstone Apartments property tax note
+
+Municipal tax year: 2025
+Property taxes billed: $124,000
+
+This tax support aligns with the real estate tax line in the T12. Treat as supporting evidence only if the property tax parser does not create a structured tax artifact.

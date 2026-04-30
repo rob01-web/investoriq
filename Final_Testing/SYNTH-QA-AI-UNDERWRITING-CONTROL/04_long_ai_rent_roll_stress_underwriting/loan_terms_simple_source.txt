@@ -1,6 +1,0 @@
-Riverside Heights loan summary
-Loan amount: $12,000,000
-Interest rate: 4.95%
-Amortization: 35 years
-LTV: 72%
-Term note: fixed-rate agency execution assumed for underwriting support only.

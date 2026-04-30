@@ -747,7 +747,7 @@ useEffect(() => {
       return `${failedPrePublicationLead} The uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid operating statement for this report. Please start a new report request with a clearer annual operating statement showing Gross Rental Income, Effective Gross Income, Total Operating Expenses, and Net Operating Income.`;
     }
     if (failedCoreFile?.doc_type === 'rent_roll') {
-      return `${failedPrePublicationLead} The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information.`;
+      return `${failedPrePublicationLead} The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information. For larger properties, upload the rent roll as CSV or XLSX when available.`;
     }
 
     const hasT12 = normalized.some((row) => row.doc_type === 't12');
