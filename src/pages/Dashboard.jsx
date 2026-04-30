@@ -1290,6 +1290,9 @@ useEffect(() => {
                 >
                   {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
                 </PrimaryBtn>
+                <div style={{ ...bodySmall, fontSize:12, color:T.ink3, marginTop:8, maxWidth:620 }}>
+                  Reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
+                </div>
               </div>
             </div>
           </div>
@@ -1688,6 +1691,9 @@ useEffect(() => {
             >
               {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
+            <div style={{ ...bodySmall, fontSize:12, color:T.ink3, marginTop:8, maxWidth:620 }}>
+              Reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
+            </div>
 
           </div>
 
