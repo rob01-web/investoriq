@@ -4800,6 +4800,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         scoreRows.push({ label: "Rent-to-Market Gap", value: formatPercent1(marketRentPremiumRatio), pts, max: 10, band: pct > 15 ? ">15% upside" : pct >= 5 ? "5\u201315% upside" : "<5% upside" });
       }
       let hasDscrScore = false;
+      let computedDscrForVerdict = null;
       if (mortgagePayload) {
         const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
         const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
@@ -4811,6 +4812,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           const mp = loanAmt * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
           const dscr = annualNOI / (mp * 12);
           if (Number.isFinite(dscr) && dscr > 0) {
+            computedDscrForVerdict = dscr;
             const pts = dscr > 1.35 ? 10 : dscr >= 1.25 ? 7 : 3;
             totalPoints += pts; maxPoints += 10;
             scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x" });
@@ -4831,7 +4833,16 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
         const normalVerdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "Review" : "Outside Parameters";
-        const verdictLabel = !hasDscrScore && score >= 70 ? "Review" : normalVerdictLabel;
+        const hasDebtCoverageConstraint =
+          hasDscrScore &&
+          Number.isFinite(computedDscrForVerdict) &&
+          computedDscrForVerdict < 1.25;
+        const verdictLabel =
+          hasDebtCoverageConstraint && score >= 70
+            ? "Review - Debt Coverage Constraint"
+            : !hasDscrScore && score >= 70
+            ? "Review"
+            : normalVerdictLabel;
         const verdictColor = "#1F3A5F";
         const rows = scoreRows.map((r) =>
           `<tr>` +
@@ -4860,7 +4871,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR not assessed caps the verdict at Review.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR below 1.25x or not assessed caps the verdict at Review.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
