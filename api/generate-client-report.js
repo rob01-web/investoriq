@@ -441,8 +441,23 @@ function hasMeaningfulNarrative(html) {
 function sanitizeDisplayText(s) {
   if (!s) return s;
   return String(s)
-    .replace(/\s*\((clean|messy|test|qa)[^)]*\)\s*$/i, "")
+    .replace(/\bUnderwritting\b/gi, "Underwriting")
     .replace(/\s+([,.])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+function sanitizePropertyNameDisplayText(s) {
+  if (!s) return s;
+  return sanitizeDisplayText(s)
+    .replace(/\bFinal\s+Regression\b/gi, " ")
+    .replace(/\s*\((?:clean|messy|test|qa|final\s+regression)[^)]*\)\s*/gi, " ")
+    .replace(/['"]\s*(?:clean|messy|qa|test)\s*['"]/gi, " ")
+    .replace(/\b(?:clean|messy)\s+(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
+    .replace(/\b(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
+    .replace(/\b(?:clean|messy|qa|test)\b/gi, " ")
+    .replace(/\s*[-|:]\s*$/g, "")
+    .replace(/^\s*[-|:]\s*/g, "")
+    .replace(/\s{2,}/g, " ")
     .trim();
 }
 function sanitizeTypography(html) {
@@ -2677,7 +2692,7 @@ export default async function handler(req, res) {
     const propertyAddress = property_address || "";
     const propertyTitle = property_title || "";
     const displayPropertyName =
-      sanitizeDisplayText(propertyName)?.trim() || "Property";
+      sanitizePropertyNameDisplayText(propertyName)?.trim() || "Property";
     const displayPropertyAddress = (sanitizeDisplayText(propertyAddress) || "").replace(/\s+,/g, ",");
     const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
     const propertyNameDisplay = displayPropertyName
