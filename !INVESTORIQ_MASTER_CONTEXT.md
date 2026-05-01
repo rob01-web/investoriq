@@ -20,6 +20,17 @@
   - deterministic validation remains the gate before any AI-recovered values enter `analysis_artifacts`
   - P10 validated this doctrine in a production-like live flow: AI recovered a parser-unfriendly rent roll, but deterministic validation controlled acceptance and report math
   - P08 validated the same doctrine on T12-side document integrity: readable T12 values can be recovered or processed, but materially inconsistent T12 vs rent-roll scale must fail closed before publication
+- April 30 strategic checkpoint:
+  - today was the AI QA / failed-report prevention crossroads
+  - decision: do not build concierge hold, Stripe promo-code tagging, report visibility suppression, RLS changes, or admin approval workflow yet
+  - chosen path: QA safeguard first, then hard validation; full concierge hold deferred
+  - old question: "Can InvestorIQ publish a report?"
+  - new question: "Can InvestorIQ recognize whether a published report is actually investor-ready?"
+  - this direction is validated as launch-hardening, not scope creep
+- Public-positioning rule is locked:
+  - any AI, AI-assisted QA, AI fallback, or AI red-team language is founder/internal only
+  - public/customer/website copy must say document-driven, document-backed, deterministic validation, internal quality safeguards, source-verification controls, or proprietary document-driven underwriting infrastructure
+  - do not publish copy saying AI QA, AI-assisted, or AI extraction
 - Batch 6A.2 explicit rent-roll summary totals is CLOSED:
   - parser now writes `rent_roll_parsed.payload.totals` from explicit totals / summary rows
   - generator trusts verified explicit summary totals during partial-sample mode
@@ -287,6 +298,25 @@
       - remaining launch risk is source-document classification / extraction / QA, especially support docs
       - stress packages and public showcase packages must be separated: stress packages expose failures and fail-closed behavior; showcase packages demonstrate the strongest supported path
       - do not try to make one synthetic package both the harshest stress test and the public website sample
+  - Harbourstone Motherload / Test 5 validation arc, April 30:
+    - Motherload / Harbourstone remains a stress-test package, not a public sample
+    - earlier Harbourstone exposed DocRaptor test watermark, missed `$8,750,000` loan balance, property tax year `2025` parsed as annual tax, usable `5.75%` cap-rate support masked by later null appraisal artifact, cover `Un-derwriting` hyphenation, totals-only T12 recovery, market survey classification noise, and thin 13-page output
+    - QA artifact correctly flagged `PROPERTY_TAX_AMOUNT_IMPLAUSIBLE`, `DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT`, `T12_TOTALS_ONLY`, `MARKET_SURVEY_CLASSIFICATION_REVIEW`, `CAP_RATE_SUPPORT_NOT_USED`, and `DOCRAPTOR_NOT_PRODUCTION_MODE`
+    - Phase 1.1 added direct debt flag `DEBT_FILE_WITH_MISSING_BALANCE` for debt artifacts with meaningful terms but missing balance / loan amount
+    - `Harbourstone Test 5` is current stress-test proof:
+      - job `f5855655-150d-4f47-b7dc-71c18ea5ec89`
+      - report `1cbf7fc6-99f7-4e8d-af53-9f727b3c8cf6`
+      - status `published`, page count `15`
+      - cover no longer hyphenates Underwriting
+      - `loan_term_sheet_parsed.loan_amount = 8750000`
+      - DSCR rendered `1.06x`
+      - T12 parsed with GPR / EGI `$1,036,800`, OpEx `$425,000`, NOI `$611,800`
+      - property tax parsed `$124,000`, not `2025`
+      - refinance classification rendered `Refinance Shortfall Under Stress`
+      - cap-rate basis `Exit cap: 5.75% (document derived)`
+      - `DEBT_FILE_WITH_MISSING_BALANCE` and `DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT` absent
+      - QA status `warn`, severity `medium`; remaining flags: `T12_TOTALS_ONLY`, `MARKET_SURVEY_CLASSIFICATION_REVIEW`, `DOCRAPTOR_NOT_PRODUCTION_MODE`
+    - conclusion: Harbourstone is clean enough as stress-test proof only; not a public sample / Ken Dunn candidate
   - `SYNTH-QA-P01 Clean Screening RETEST` after AI helper install and Resend rotation = PASS
     - Units `6`, Occupancy `100.0%`, Annual In-Place Rent `$111,180`, EGI `$186,780`, OpEx `$69,907`, NOI `$116,873`
     - confirms AI helper install did not break deterministic Screening
@@ -518,6 +548,32 @@
   - AI does not currently QA loan terms, property taxes, appraisal/cap-rate artifact selection, market survey classification, or final report output
   - AI did not catch the Motherload missed loan balance, tax year mistaken for tax amount, null appraisal masking usable cap rate, or market survey misclassification
   - broader AI QA requires a separate safeguard layer that can flag issues without writing accepted financial values
+- April 30 QA-driven hardening completed:
+  - `api/parse/parse-doc.js` loan-term parser recognizes `outstanding loan balance`, `outstanding balance`, `current loan balance`, and `current mortgage balance`
+    - validated: `Outstanding loan balance: $8,750,000` -> `loan_amount = 8750000`
+  - `api/parse/parse-doc.js` T12 text parser accepts `Gross Rental Income`, `gross rental revenue`, and `rental income` as GPR synonyms while preserving `validateCoreT12Payload`
+    - validated: `Gross Rental Income: $1,036,800` -> `gross_potential_rent = 1036800`
+  - `api/generate-client-report.js` refinance cap-rate selection now chooses the latest usable positive appraisal cap rate instead of allowing later null `appraisal_parsed` artifacts to mask support; explicit `refi_cap_rate` still wins
+  - `api/generate-client-report.js` tightened `DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT` so rendered DSCR suppresses the flag, and improved Not Produced copy when debt terms are complete but refinance cap-rate / value support is incomplete
+  - `api/report-template-runtime.html` cover title CSS now uses `hyphens: none`, `overflow-wrap: break-word`, `word-break: normal`, preventing `Un-derwriting`
+  - `api/parse/parse-doc.js` property tax parser rejects year-like annual-tax values `1900-2100`, requires annual tax candidates `> 5000`, and emits `implausible_annual_tax` or `missing_annual_tax`
+    - validated: `Tax Year: 2025` does not produce annual tax; `Annual Property Tax: $124,000` -> `124000`
+  - `api/report-template-runtime.html` static Methodology headings are unnumbered: `InvestorIQ Estimates`, `Methodology Notes`, `Data Limitations & Missing Inputs`
+  - `api/generate-client-report.js` whole-property rent-to-market gap basis standardized to in-place rent denominator
+    - validation wording: `($219,240 - $186,780) / $186,780 = 17.4%`
+- April 30 validation notes:
+  - 124 Richmond Screening Test:
+    - engine / math passed, 9 pages, T12 and Rent Roll fully verified
+    - issues: rent-gap basis inconsistency `17.4%` vs `14.8%`, `Target Rent (Post-Reno)` too strong without structured renovation input, Unit-Level Value Add / renovation wording may overstate Screening scope, public sample name must remove `Test`, and Methodology numbering fix requires regeneration
+  - 124 Richmond CLEAN Underwriting:
+    - engine / math passed, 17 pages, debt / DSCR / refi stress / T12 line items / expense drivers / rent roll / scenario / DCF rendered
+    - DSCR `1.09x`; `Refinance Shortfall Under Stress`; cap-rate basis `6.25% (document derived)`
+    - issues: sample name included `CLEAN`, `Underwritting`, `Test`; regenerate with clean property name; Methodology numbering fix requires regeneration; Target Rent / value-add labels need polish; review verdict optics where weak DSCR/refi shortfall conflicts with `Within Underwriting Parameters`
+  - 124 Richmond MESSY Underwriting:
+    - good stress test, not public/Ken sample
+    - T12 line items rendered despite messy input; vacancy allowance lowered EGI/NOI as expected; core T12 and rent roll verified
+    - DSCR not assessed because debt sizing balance was not parsed; scorecard correctly capped verdict at `Review`
+    - issues: name included `MESSY`, `Underwritting`, `Test`; Methodology numbering fix requires regeneration; investigate messy debt parsing / QA artifact; collapse dangling `DATA NOT AVAILABLE`; same Target Rent / value-add wording concern
 - Messy Underwriting Test 32 reached production-pass status after:
   - unifying cap-rate source to the document-derived path
   - removing the invalid cap-rate dimension from the DSCR sensitivity grid
@@ -789,18 +845,24 @@
   - current engine correctly refuses to use purchase assumption terms as current-debt DSCR when no debt balance is provided
   - future enhancement: optional Acquisition DSCR / Pro Forma Debt Coverage metric from purchase assumptions, separate from current debt assessment
 
-### Immediate agenda - April 30, 2026
-- IMMEDIATE PRIORITY
-  1. Investigate what it would take to add an AI/admin QA safeguard or concierge approval layer before more public sample generation.
-  2. Create or select a separate clean Showcase package, not the Motherload stress package:
-     - strongest supported document formats
-     - clean deterministic T12 with line items
-     - clean deterministic rent roll with full unit detail
-     - parser-friendly loan terms
-     - no confusing unsupported appraisal / market survey docs unless intentionally testing restraint
-  3. Resolve DocRaptor production mode before any public website sample.
-  4. Run low-dollar true live Stripe payment test if still outstanding.
-  5. Complete final readiness check / sample package selection.
+### Immediate agenda - May 1, 2026
+- P0 cleanup / validation:
+  1. Standardize rent-gap percentage basis everywhere.
+  2. Regenerate reports after Methodology numbering patch.
+  3. Use clean public sample property names only: no `Test`, no `CLEAN`, no `MESSY`, no typo `Underwritting`.
+  4. Investigate messy underwriting debt parsing / QA flags.
+  5. Remove or collapse dangling `DATA NOT AVAILABLE` blocks where sections should collapse.
+- P1 copy / optics polish:
+  1. Replace `Target Rent (Post-Reno)` with `Market Rent` or `Documented Market Rent` unless structured renovation inputs exist.
+  2. Replace `Monthly Lift` with `Monthly Rent Gap` where no structured renovation support exists.
+  3. Consider safer labels:
+     - Screening: `Unit Mix & Rent Positioning` or `Rent Positioning Analysis`
+     - Underwriting: `Unit-Level Rent Positioning & Value Sensitivity`
+  4. Revisit verdict optics where weak DSCR / refinance shortfall still produces `Within Underwriting Parameters`.
+- P2 QA / sample selection:
+  1. Confirm QA artifacts for Screening, Clean Underwriting, and Messy Underwriting.
+  2. Decide which report becomes public / Ken sample candidate.
+  3. Consider small deterministic final-render QA artifact only after P0/P1 cleanup.
 
 - STILL OPEN
   - AI recovery Underwriting control is complete enough for launch confidence:
@@ -817,7 +879,7 @@
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
-  - AI/admin QA safeguard layer is now an active design investigation, not merely a post-launch idea.
+  - QA safeguard Phase 1 is implemented for artifact/document-integrity risks; rendered-report editorial / sample-readiness QA remains future Phase 1.2.
   - Future AI work also includes chunking / large-text rent-roll recovery and clearer large-rent-roll CSV/XLSX guidance.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, and broader table / schema hygiene.
 
@@ -833,13 +895,18 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - before more public sample generation, investigate AI/admin QA safeguard or concierge approval layer options
-  - also consider a clean Showcase package separate from Motherload stress testing
-  - do not flip DocRaptor production or publish public samples until the sample package path is clean
-  - do not overstate AI support:
-    - claim compact `.txt` AI recovery is validated
-    - claim large `.txt` rent rolls fail closed safely
-    - do not claim all long / large narrative rent rolls or 200-unit `.txt` rent rolls are supported
+  - start with P0 cleanup:
+    - standardize rent-gap percentage basis
+    - regenerate reports after Methodology numbering patch
+    - use clean public sample names only
+    - investigate messy underwriting debt parsing / QA flags
+    - remove/collapse dangling `DATA NOT AVAILABLE`
+  - then P1 label polish:
+    - replace unsupported `Target Rent (Post-Reno)` / `Monthly Lift` wording
+    - consider safer rent-positioning labels
+    - review verdict optics where weak DSCR/refi shortfall conflicts with `Within Underwriting Parameters`
+  - do not flip DocRaptor production or publish public samples until sample package path is clean
+  - do not overstate AI support publicly; AI/fallback/QA language remains internal only
 
 - AFTER THAT
   - prepare website sample report placement only after blockers are closed
@@ -997,13 +1064,52 @@ Principles
 Trigger condition:
 Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
-## 10.3 AI/Admin QA Safeguard Layer (Active Design Investigation)
+## 10.3 AI/Admin QA Safeguard Layer (Phase 1 Implemented)
 - Status changed after Motherload QA:
-  - this is now an active design investigation before public sample generation / high-value outreach, not merely a post-launch idea
-  - user concern is high-value users, especially `$100M+` portfolio prospects, hitting failed reports or weak sample reports
-  - question has shifted from "Can the report engine publish?" to "How do we prevent bad, missing, or weak artifacts from reaching the customer?"
-- Strategic direction:
-  - optional pre-publication AI/admin QA safeguard layer
+  - Phase 1 internal deterministic QA safeguard is implemented as launch hardening
+  - concierge hold, Stripe promo-code tagging, report visibility suppression, RLS changes, and admin approval workflow were deliberately deferred
+  - user concern remains high-value users, especially `$100M+` portfolio prospects, hitting failed reports or weak sample reports
+  - question has shifted from "Can the report engine publish?" to "Can InvestorIQ recognize whether a published report is actually investor-ready?"
+- Public-positioning constraint:
+  - this layer is founder/internal only
+  - public language should use internal quality safeguards, source-verification controls, deterministic validation, document-driven / document-backed, and proprietary document-driven underwriting infrastructure
+  - do not expose AI QA / AI-assisted QA / AI fallback language in customer or website copy
+- Locked doctrine:
+  - InvestorIQ is document-driven
+  - deterministic parsers and calculations remain the source of truth
+  - AI may help read / extract documents, but may not become the source of financial truth
+  - AI must not write or override NOI, rent, occupancy, debt, DSCR, cap rate, valuation, refinance, or deal score
+  - no BUY / SELL language
+  - no fabricated values
+  - fail closed when documents are missing, unsupported, or materially inconsistent
+- Implemented Phase 1:
+  - `api/generate-client-report.js` builds deterministic, internal, non-blocking QA flags
+  - writes `analysis_artifacts.type = report_qa_flags`
+  - bucket `internal`
+  - payload includes `qa_status`, `severity`, `flags`, report type/tier, and HTML length
+  - if QA artifact insert fails, report generation should not fail
+  - no report visibility changes, email suppression, RLS changes, Stripe/promo changes, worker state machine changes, parser-output changes from QA itself, or customer-facing copy
+- Initial QA flags cover / validate:
+  - missing debt balance where debt context exists
+  - DSCR not assessed despite debt context
+  - property tax amount implausible / year-like
+  - T12 totals-only / no meaningful line detail
+  - market survey / support-doc classification review
+  - cap-rate / appraisal support not used or masked
+  - DocRaptor non-production mode as internal QA flag
+- Phase 1 lesson:
+  - it worked for artifact / document-integrity risks
+  - it is not yet final rendered-PDF editorial or sample-readiness QA
+  - it did not catch `Underwritting`, `CLEAN` / `MESSY` / `Test` sample naming, rent-gap basis inconsistency, stale static Methodology headings in already-generated PDFs, overstrong `Target Rent (Post-Reno)` wording, dangling `DATA NOT AVAILABLE`, or verdict/copy optics
+- Possible Phase 1.2 rendered-report QA flags:
+  - `Underwritting`
+  - `CLEAN`, `MESSY`, or `Test` in public sample property name
+  - old `12.1 / 12.2 / 12.3` methodology headings
+  - rendered `DATA NOT AVAILABLE`
+  - `Target Rent (Post-Reno)` when no structured renovation artifact exists
+  - mixed rent-gap basis if both `17.4%` and `14.8%` appear
+- Do not overbuild tonight; tomorrow priority is cleanup and validation.
+- Future / deferred direction:
   - optional manual approval gate for initial high-value / concierge workflows
   - deterministic parser / calculation layer remains the source of truth
   - AI QA may flag issues but must not inject financial values
@@ -1088,9 +1194,17 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - long full-unit narrative `.txt` rent roll recovery failed closed safely through `04_long_ai_rent_roll_stress_underwriting`; treat as known V1 scale limitation, not a launch blocker
   - failed pre-publication Dashboard copy now states no report was published and 1 report credit was returned before file-specific guidance
   - Motherload Underwriting published but is not website-sample ready; it exposed support-doc classification / extraction / QA gaps that should be handled before high-value public samples
+  - Harbourstone Test 5 is now clean enough as stress-test proof only:
+    - published 15-page report
+    - DSCR rendered `1.06x`
+    - property tax parsed `$124,000`, not `2025`
+    - refinance classification rendered `Refinance Shortfall Under Stress`
+    - cap-rate basis `5.75% (document derived)`
+    - remaining QA flags are `T12_TOTALS_ONLY`, `MARKET_SURVEY_CLASSIFICATION_REVIEW`, and `DOCRAPTOR_NOT_PRODUCTION_MODE`
+    - not public sample / Ken Dunn candidate
   - rendering-stage / pre-generation cross-document scale mismatch protection is now in place and validated
 - Still needed before Ken Dunn outreach:
-  - investigate AI/admin QA safeguard or concierge approval layer before more public sample generation
+  - QA safeguard Phase 1 is implemented; do not build concierge hold/admin approval until after current cleanup unless a new blocker appears
   - create or select a clean Showcase package separate from Motherload stress testing
   - resolve DocRaptor production mode before any public sample PDF
   - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
@@ -1100,3 +1214,9 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - visually retest long cover-title wrapping when a long-name report is regenerated
   - patch only real regressions found in the synthetic validation / final readiness pass
   - do not claim AI handles all long / large narrative `.txt` rent rolls; CSV/XLSX remains preferred for large rent rolls in V1
+- Ken Dunn read:
+  - Clean underwriting is closest to Ken-ready after regeneration and copy polish
+  - Messy underwriting is stress-test proof only
+  - Screening is close but needs rent-gap consistency and label polish
+  - Harbourstone is stress-test proof only
+  - do not show any report to Ken with DocRaptor test watermark, `Test`, `CLEAN`, `MESSY`, typo `Underwritting`, stale Methodology numbering, inconsistent rent-gap percentages, unsupported post-reno wording, or dangling `DATA NOT AVAILABLE`

@@ -468,6 +468,9 @@ function dedupeDataNotAvailableBySection(html) {
   const shortDna = "DATA NOT AVAILABLE";
   return html.replace(sectionPattern, (full, token, body) => {
     if (typeof body !== "string" || !body.includes(DATA_NOT_AVAILABLE)) return full;
+    if (token === "SECTION_8_DEAL_SCORE") {
+      return `<!-- BEGIN ${token} -->${body.split(DATA_NOT_AVAILABLE).join(shortDna)}<!-- END ${token} -->`;
+    }
     const note =
       `<p class="small data-gap-note">${DATA_NOT_AVAILABLE}. ` +
       "Metrics that depend on missing source inputs are shown as unavailable.</p>";
@@ -2535,9 +2538,9 @@ export default async function handler(req, res) {
       const summaryRentToMarketGap =
         Number.isFinite(summaryInPlaceAnnual) &&
         Number.isFinite(summaryMarketAnnual) &&
-        summaryMarketAnnual > 0 &&
+        summaryInPlaceAnnual > 0 &&
         summaryMarketAnnual > summaryInPlaceAnnual
-          ? (summaryMarketAnnual - summaryInPlaceAnnual) / summaryMarketAnnual
+          ? (summaryMarketAnnual - summaryInPlaceAnnual) / summaryInPlaceAnnual
           : null;
       let occupiedUnits = 0;
       let vacantUnits = 0;

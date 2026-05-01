@@ -2845,6 +2845,8 @@ export default async function handler(req, res) {
             if (beforeLabel) return Number(beforeLabel[1]);
             const afterLabel = rawText.match(/\b(?:interest\s*rate|note\s*rate|coupon\s*rate)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
             if (afterLabel) return Number(afterLabel[1]);
+            const genericDebtRate = rawText.match(/\b(?:fixed\s+rate|loan\s+rate|rate)\s*[:\-]\s*(\d+(?:\.\d+)?)\s*%\s*(?:fixed|floating|variable)?(?=\s|$|[.;,)])/i);
+            if (genericDebtRate) return Number(genericDebtRate[1]);
             const financingContext = rawText.match(/\bfinancing\b[\s\S]{0,160}?(\d+(?:\.\d+)?)\s*%[\s\S]{0,80}?\b(?:interest\s*rate|note\s*rate|coupon\s*rate)\b/i);
             return financingContext ? Number(financingContext[1]) : null;
           })();
