@@ -1904,8 +1904,8 @@ function buildUnitMixTable(rows = []) {
     <th>Count</th>
     <th>Average Sq Ft</th>
     <th>Current Avg Rent</th>
-    <th>Target Market Rent</th>
-    <th>Planned Lift</th>
+    <th>Documented Market Rent</th>
+    <th>Monthly Rent Gap</th>
   </tr>
 `;
   for (const row of rows) {
