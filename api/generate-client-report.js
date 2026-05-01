@@ -3790,8 +3790,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
       const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
       const rrUpsidePct = coerceNumber(computedRentRoll?.rent_to_market_gap) ??
-        ((Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrMarket > 0)
-          ? (rrMarket - rrInPlace) / rrMarket : null);
+        ((Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrInPlace > 0)
+          ? (rrMarket - rrInPlace) / rrInPlace : null);
       const erPctStr  = Number.isFinite(expenseRatioR) ? `${(expenseRatioR * 100).toFixed(1)}%` : null;
       const nmPctStr  = Number.isFinite(noiMarginR)    ? `${(noiMarginR * 100).toFixed(1)}%`    : null;
       const parts = [];
