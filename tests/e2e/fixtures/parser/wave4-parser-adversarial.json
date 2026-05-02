@@ -1,0 +1,117 @@
+{
+  "name": "wave4-parser-adversarial",
+  "scenarios": [
+    {
+      "profile": "loan-rate-collision",
+      "doc_type": "loan_term_sheet",
+      "text": "Loan Amount: $937,500\nRate: 5.85% FIXED\nExit cap 6.25%\nLTV 75%\nVacancy 3%\nTax Year 2025\nAmortization: 30 years",
+      "expected": {
+        "accepted": true,
+        "interest_rate": 5.85,
+        "refi_cap_rate": 6.25,
+        "ltv": 75,
+        "amort_years": 30,
+        "loan_amount": 937500,
+        "absent_fields": ["vacancy_as_interest_rate", "tax_year_as_interest_rate", "exit_cap_as_interest_rate"]
+      }
+    },
+    {
+      "profile": "generic-rate-outside-loan-context",
+      "doc_type": "supporting_documents_unclassified",
+      "text": "Operating note. Rate: 5.85% FIXED. This is not a loan term sheet and contains no loan amount, lender, amortization, or debt sizing context.",
+      "expected": {
+        "accepted": false,
+        "absent_fields": ["interest_rate", "loan_amount", "ltv", "refi_cap_rate"]
+      }
+    },
+    {
+      "profile": "tax-year-collision",
+      "doc_type": "property_tax",
+      "text": "Tax Year 2025\n2025 tax bill\n2025 assessment\nRoll number 12345\nNo annual property tax amount shown.",
+      "expected": {
+        "accepted": true,
+        "annual_tax": null,
+        "absent_fields": ["interest_rate", "cap_rate", "ltv", "loan_amount", "net_operating_income", "rent"]
+      }
+    },
+    {
+      "profile": "cap-rate-collision",
+      "doc_type": "loan_term_sheet",
+      "text": "Loan Amount: $937,500\nInterest Rate 5.85%\nCap Rate 5.00%\nExit Cap 6.25%\nLTV 75%\nAmortization 30 years",
+      "expected": {
+        "accepted": true,
+        "interest_rate": 5.85,
+        "refi_cap_rate": 6.25,
+        "ltv": 75,
+        "absent_fields": ["cap_rate_as_interest_rate", "exit_cap_as_interest_rate"]
+      }
+    },
+    {
+      "profile": "glued-number-t12",
+      "doc_type": "t12",
+      "tables": [
+        {
+          "rows": [
+            ["Category", "Annual Total", "% of EGI", "Notes"],
+            ["Effective Gross Income", "$192,960$120,790$72,170", "100%", ""],
+            ["Total Operating Expenses", "$120,790", "62.6%", ""],
+            ["Net Operating Income", "$72,170", "37.4%", ""]
+          ]
+        }
+      ],
+      "expected": {
+        "accepted": false,
+        "fail_closed": true,
+        "absurd_value_max": 1000000000,
+        "core_equation_required": true
+      }
+    },
+    {
+      "profile": "malformed-rent-roll-glued-rents",
+      "doc_type": "rent_roll",
+      "text": "Unit 101 1BR occupied $1250$1450 96%\nUnit 102 1BR $1275$1475 96%\nNo status summary. No property total row.",
+      "expected": {
+        "accepted": false,
+        "is_partial_sample": true,
+        "annual_in_place_rent": null,
+        "annual_market_rent": null,
+        "absent_fields": ["full_property_occupancy", "full_property_rent_totals"]
+      }
+    },
+    {
+      "profile": "partial-rent-roll-with-summary",
+      "doc_type": "rent_roll",
+      "text": "Summary: Total Units 144. Occupancy 96%. Monthly In-Place Rent Total $180,000. Monthly Market Rent Total $205,000.\nUnit 101 $1250 $1450\nUnit 102 $1275 $1475\nUnit 103 $1300 $1500\nUnit 104 $1325 $1525",
+      "expected": {
+        "accepted": true,
+        "is_partial_sample": true,
+        "summary_row_detected": true,
+        "total_units": 144,
+        "monthly_in_place_total": 180000,
+        "monthly_market_total": 205000,
+        "detail_rows_used_as_full_distribution": false
+      }
+    },
+    {
+      "profile": "partial-rent-roll-without-summary",
+      "doc_type": "rent_roll",
+      "text": "Unit 101 $1250 $1450\nUnit 102 $1275 $1475\nUnit 103 $1300 $1500\nUnit 104 $1325 $1525",
+      "expected": {
+        "accepted": false,
+        "is_partial_sample": true,
+        "summary_row_detected": false,
+        "annual_in_place_rent": null,
+        "annual_market_rent": null
+      }
+    },
+    {
+      "profile": "unsupported-capex-prose",
+      "doc_type": "supporting_documents_unclassified",
+      "text": "Owner believes renovations will cost $500,000 and create $400 monthly lift with a 24 month payback. No contractor scope, unit-by-unit budget, timeline, or structured renovation schedule is provided.",
+      "expected": {
+        "accepted": false,
+        "absent_fields": ["renovation_roi", "payback_months", "rent_lift", "capex_amount", "renovation_scope"]
+      }
+    }
+  ]
+}

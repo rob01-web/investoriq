@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { assertReportFile } from "./assert-report-output.js";
+import { simulateWorkerLifecycle, workerStateScenarios } from "./worker-state-scenarios.js";
+import { evaluateParserScenario } from "./parser-adversarial.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +11,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 const resultsDir = path.join(__dirname, "results");
 const latestResultsPath = path.join(resultsDir, "latest-e2e-results.json");
 const wave2FixturePath = path.join(__dirname, "fixtures", "jobs", "wave2-job-lifecycle.json");
+const wave4FixturePath = path.join(__dirname, "fixtures", "parser", "wave4-parser-adversarial.json");
 
 function read(relPath) {
   return fs.readFileSync(path.join(repoRoot, relPath), "utf8");
@@ -386,6 +389,146 @@ function runWave2LifecycleTests(profile) {
   return rows;
 }
 
+function transitionKeys(state) {
+  return new Set(state.transitions.map((transition) => `${transition.from_status}>${transition.to_status}`));
+}
+
+function runWave3WorkerStateTests(profile) {
+  const rows = [];
+  const profiles = new Set(["generic", "wave3-worker-state", "all"]);
+  const scenarios = workerStateScenarios.filter((scenario) =>
+    profiles.has(profile) || scenario.profile === profile
+  );
+  if (scenarios.length === 0) return rows;
+
+  for (const scenario of scenarios) {
+    const state = simulateWorkerLifecycle(scenario.seed);
+    const jobId = scenario.seed.analysis_jobs[0].id;
+    const job = state.job(jobId);
+    const expected = scenario.expected || {};
+    const types = new Set(state.artifactsFor(jobId).map((artifact) => artifact.type));
+    const transitions = transitionKeys(state);
+    const reportCreated = state.reports.some((report) => report.job_id === jobId);
+    const entitlementRestored = types.has("entitlement_restored");
+
+    rows.push(result(`${scenario.profile}: terminal status`, "worker-state", expected.status, job?.status || "missing", job?.status === expected.status));
+    rows.push(result(`${scenario.profile}: report row`, "worker-state", String(expected.reportCreated), String(reportCreated), reportCreated === expected.reportCreated));
+    rows.push(result(`${scenario.profile}: entitlement restored`, "worker-state", String(expected.entitlementRestored), String(entitlementRestored), entitlementRestored === expected.entitlementRestored));
+    rows.push(result(`${scenario.profile}: error code`, "worker-state", String(expected.errorCode), String(job?.error_code ?? null), Object.is(job?.error_code ?? null, expected.errorCode)));
+
+    if (expected.failureReasonIncludes) {
+      rows.push(
+        result(
+          `${scenario.profile}: failure reason`,
+          "worker-state",
+          expected.failureReasonIncludes,
+          job?.failure_reason || "",
+          String(job?.failure_reason || "").includes(expected.failureReasonIncludes)
+        )
+      );
+    }
+
+    for (const type of expected.artifactsPresent || []) {
+      rows.push(result(`${scenario.profile}: artifact present ${type}`, "worker-state", "present", types.has(type) ? "present" : "missing", types.has(type)));
+    }
+
+    for (const type of expected.artifactsAbsent || []) {
+      rows.push(result(`${scenario.profile}: artifact absent ${type}`, "worker-state", "absent", types.has(type) ? "present" : "absent", !types.has(type)));
+    }
+
+    for (const transition of expected.transitionsInclude || []) {
+      rows.push(result(`${scenario.profile}: transition ${transition}`, "worker-state", "present", transitions.has(transition) ? "present" : "missing", transitions.has(transition)));
+    }
+
+    for (const diagnostic of expected.fileDiagnostics || []) {
+      const file = state
+        .filesFor(jobId)
+        .find((candidate) => candidate.doc_type === diagnostic.doc_type && candidate.parse_status === diagnostic.parse_status);
+      const parseErrorOk =
+        diagnostic.parse_error === undefined ||
+        String(file?.parse_error || "").includes(diagnostic.parse_error);
+      rows.push(
+        result(
+          `${scenario.profile}: file diagnostic ${diagnostic.doc_type}`,
+          "worker-state",
+          `${diagnostic.parse_status}${diagnostic.parse_error ? ` / ${diagnostic.parse_error}` : ""}`,
+          file ? `${file.parse_status}${file.parse_error ? ` / ${file.parse_error}` : ""}` : "missing",
+          Boolean(file) && parseErrorOk
+        )
+      );
+    }
+
+    if (expected.debtDscrAssessed === false) {
+      const debt = state.artifact(jobId, "loan_term_sheet_parsed")?.payload || {};
+      const canComputeDscr = Boolean(debt.loan_amount && ((debt.interest_rate && debt.amort_years) || debt.monthly_payment));
+      rows.push(result(`${scenario.profile}: DSCR not assessed`, "worker-state", "false", String(canComputeDscr), canComputeDscr === false));
+    }
+  }
+
+  return rows;
+}
+
+function absentFieldPass(actual, field) {
+  if (field === "vacancy_as_interest_rate") return actual.interest_rate !== 3;
+  if (field === "tax_year_as_interest_rate") return actual.interest_rate !== 2025;
+  if (field === "exit_cap_as_interest_rate") return actual.interest_rate !== actual.refi_cap_rate;
+  if (field === "cap_rate_as_interest_rate") return actual.interest_rate !== 5;
+  if (field === "full_property_occupancy") return actual.occupancy == null;
+  if (field === "full_property_rent_totals") return actual.annual_in_place_rent == null && actual.annual_market_rent == null;
+  return actual[field] == null;
+}
+
+function runWave4ParserAdversarialTests(profile) {
+  const rows = [];
+  if (!fs.existsSync(wave4FixturePath)) {
+    rows.push(skip("Wave4 parser adversarial fixtures", "parser-adversarial", "Fixture file not found."));
+    return rows;
+  }
+  const profiles = new Set(["wave4-parser-adversarial", "all"]);
+  if (!profiles.has(profile)) return rows;
+
+  const fixture = readJson(wave4FixturePath);
+  const parserSource = read("api/parse/parse-doc.js");
+  addStaticAssertion(
+    rows,
+    "Wave4 parser source anchors present",
+    "parser-adversarial",
+    parserSource.includes("effectiveDocType === 'loan_term_sheet'") &&
+      parserSource.includes("genericDebtRate") &&
+      parserSource.includes("compact_refi_cap_rate") &&
+      parserSource.includes("validateCoreT12Payload") &&
+      parserSource.includes("implausible_annual_tax"),
+    "Adversarial contracts are anchored to current parser hardening points."
+  );
+
+  for (const scenario of fixture.scenarios || []) {
+    const expected = scenario.expected || {};
+    const actual = evaluateParserScenario(scenario);
+    rows.push(result(`${scenario.profile}: accepted state`, "parser-adversarial", String(expected.accepted), String(actual.accepted), actual.accepted === expected.accepted));
+
+    for (const field of ["interest_rate", "refi_cap_rate", "ltv", "amort_years", "loan_amount", "annual_tax", "is_partial_sample", "summary_row_detected", "total_units", "monthly_in_place_total", "monthly_market_total", "detail_rows_used_as_full_distribution"]) {
+      if (!(field in expected)) continue;
+      rows.push(result(`${scenario.profile}: ${field}`, "parser-adversarial", JSON.stringify(expected[field]), JSON.stringify(actual[field]), Object.is(actual[field], expected[field])));
+    }
+
+    for (const field of expected.absent_fields || []) {
+      rows.push(result(`${scenario.profile}: reject ${field}`, "parser-adversarial", "absent/rejected", absentFieldPass(actual, field) ? "absent/rejected" : "present", absentFieldPass(actual, field)));
+    }
+
+    if (expected.fail_closed === true) {
+      rows.push(result(`${scenario.profile}: fail closed`, "parser-adversarial", "true", String(actual.accepted === false), actual.accepted === false));
+    }
+    if (expected.absurd_value_max) {
+      rows.push(result(`${scenario.profile}: no absurd values`, "parser-adversarial", `< ${expected.absurd_value_max}`, actual.noAbsurdValues === false ? "absurd" : "ok", actual.noAbsurdValues !== false));
+    }
+    if (expected.core_equation_required) {
+      rows.push(result(`${scenario.profile}: core T12 equation restraint`, "parser-adversarial", "valid or rejected", actual.coreEquationOk ? "valid" : "rejected", actual.coreEquationOk === true || actual.accepted === false));
+    }
+  }
+
+  return rows;
+}
+
 async function runReportOutputChecks(reportPaths, profile) {
   if (reportPaths.length === 0) {
     return [
@@ -456,6 +599,8 @@ async function main() {
   rows.push(...runStaticSourceChecks());
   rows.push(...runWave1BreakTests());
   rows.push(...runWave2LifecycleTests(args.profile));
+  rows.push(...runWave3WorkerStateTests(args.profile));
+  rows.push(...runWave4ParserAdversarialTests(args.profile));
   addFixtureInventory(rows);
   rows.push(...await runReportOutputChecks(args.reportPaths, args.profile));
   addOutcomeSkips(rows);

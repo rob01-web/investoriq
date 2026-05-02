@@ -2852,10 +2852,23 @@ export default async function handler(req, res) {
           })();
 
           const compact_ltv = (() => {
-            const beforeLabel = rawText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:loan\s*to\s*value|loan-to-value|ltv)\b/i);
-            if (beforeLabel) return Number(beforeLabel[1]);
-            const afterLabel = rawText.match(/\b(?:loan\s*to\s*value|loan-to-value|ltv)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*%/i);
-            return afterLabel ? Number(afterLabel[1]) : null;
+            const parseCandidate = (value) => {
+              const parsed = Number(value);
+              return Number.isFinite(parsed) && parsed > 0 && parsed <= 100 ? parsed : null;
+            };
+            const lines = rawText.split(/\r?\n/).filter((line) =>
+              /\b(?:loan\s*to\s*value|loan-to-value|ltv)\b/i.test(line)
+            );
+            for (const line of lines) {
+              const afterLabel = line.match(/\b(?:loan\s*to\s*value|loan-to-value|ltv)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*(?:%|percent)(?=\s|$|[.;,)])/i);
+              const afterValue = parseCandidate(afterLabel?.[1]);
+              if (afterValue !== null) return afterValue;
+
+              const beforeLabel = line.match(/\b(\d+(?:\.\d+)?)\s*(?:%|percent)\s*(?:loan\s*to\s*value|loan-to-value|ltv)\b/i);
+              const beforeValue = parseCandidate(beforeLabel?.[1]);
+              if (beforeValue !== null) return beforeValue;
+            }
+            return null;
           })();
 
           const compact_amort_years = (() => {

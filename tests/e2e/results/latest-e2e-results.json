@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-02T14:36:46.242Z",
+  "generatedAt": "2026-05-02T16:08:44.551Z",
   "mode": "static",
-  "profile": "wave2",
+  "profile": "generic",
   "reportPaths": [],
   "totals": {
-    "pass": 98,
+    "pass": 156,
     "fail": 0,
     "skip": 8
   },
@@ -786,12 +786,476 @@
       "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
     },
     {
+      "testName": "happy-screening: terminal status",
+      "mode": "worker-state",
+      "expected": "published",
+      "actual": "published",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: report row",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: entitlement restored",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: error code",
+      "mode": "worker-state",
+      "expected": "null",
+      "actual": "null",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: artifact present report_generation",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: transition queued>extracting",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: transition rendering>publishing",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-screening: transition publishing>published",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: terminal status",
+      "mode": "worker-state",
+      "expected": "published",
+      "actual": "published",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: report row",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: entitlement restored",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: error code",
+      "mode": "worker-state",
+      "expected": "null",
+      "actual": "null",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: artifact present report_generation",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: transition queued>extracting",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: transition rendering>publishing",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "happy-underwriting: transition publishing>published",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: terminal status",
+      "mode": "worker-state",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: report row",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: entitlement restored",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: error code",
+      "mode": "worker-state",
+      "expected": "MISSING_REQUIRED_DOCUMENTS",
+      "actual": "MISSING_REQUIRED_DOCUMENTS",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: failure reason",
+      "mode": "worker-state",
+      "expected": "structured financial artifacts",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts. Missing: rent_roll.",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: artifact present missing_required_documents",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: artifact present entitlement_restored",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: artifact absent rent_roll_parsed",
+      "mode": "worker-state",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-rent-roll: file diagnostic t12",
+      "mode": "worker-state",
+      "expected": "parsed",
+      "actual": "parsed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: terminal status",
+      "mode": "worker-state",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: report row",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: entitlement restored",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: error code",
+      "mode": "worker-state",
+      "expected": "MISSING_REQUIRED_DOCUMENTS",
+      "actual": "MISSING_REQUIRED_DOCUMENTS",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: failure reason",
+      "mode": "worker-state",
+      "expected": "structured financial artifacts",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts. Missing: t12.",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: artifact present missing_required_documents",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: artifact present entitlement_restored",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: artifact absent t12_parsed",
+      "mode": "worker-state",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-t12: file diagnostic rent_roll",
+      "mode": "worker-state",
+      "expected": "parsed",
+      "actual": "parsed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: terminal status",
+      "mode": "worker-state",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: report row",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: entitlement restored",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: error code",
+      "mode": "worker-state",
+      "expected": "MISSING_REQUIRED_DOCUMENTS",
+      "actual": "MISSING_REQUIRED_DOCUMENTS",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: failure reason",
+      "mode": "worker-state",
+      "expected": "structured financial artifacts",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts. Missing: rent_roll, t12.",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: artifact present missing_required_documents",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: artifact present entitlement_restored",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: file diagnostic t12",
+      "mode": "worker-state",
+      "expected": "failed / no structured T12 rows detected",
+      "actual": "failed / no structured T12 rows detected",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "missing-structured-artifacts: file diagnostic rent_roll",
+      "mode": "worker-state",
+      "expected": "failed / no rent roll unit rows detected",
+      "actual": "failed / no rent roll unit rows detected",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: terminal status",
+      "mode": "worker-state",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: report row",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: entitlement restored",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: error code",
+      "mode": "worker-state",
+      "expected": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+      "actual": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: failure reason",
+      "mode": "worker-state",
+      "expected": "materially inconsistent",
+      "actual": "InvestorIQ extracted financial values from the uploaded documents, but the operating statement and rent roll are materially inconsistent.",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: artifact present document_financial_scale_mismatch",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "scale-mismatch: artifact present entitlement_restored",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: terminal status",
+      "mode": "worker-state",
+      "expected": "published",
+      "actual": "published",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: report row",
+      "mode": "worker-state",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: entitlement restored",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: error code",
+      "mode": "worker-state",
+      "expected": "null",
+      "actual": "null",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: artifact present loan_term_sheet_parsed",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: artifact present report_qa_flags",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: artifact present report_generation",
+      "mode": "worker-state",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "incomplete-debt: DSCR not assessed",
+      "mode": "worker-state",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
       "testName": "Fixture package inventory",
       "mode": "fixtures",
       "expected": "fixtures discovered",
       "actual": "4 discovered",
       "result": "PASS",
-      "notes": "Final_Testing (14 entries); tests/e2e/fixtures (2 entries); !Fictitious Property Documents to Upload (5 entries); 124 Richmond Street, London, ON (5 entries)"
+      "notes": "Final_Testing (14 entries); tests/e2e/fixtures (4 entries); !Fictitious Property Documents to Upload (5 entries); 124 Richmond Street, London, ON (5 entries)"
     },
     {
       "testName": "Published report text assertions",
