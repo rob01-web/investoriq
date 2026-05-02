@@ -1,7 +1,15 @@
-# InvestorIQ Master Context - April 2026
+# InvestorIQ Master Context - May 2026
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+- Latest status through May 2, 2026:
+  - 124 Richmond Screening, Clean Underwriting, and Messy Underwriting were regenerated and validated against the current report checks
+  - Screening passed current report checks
+  - Clean Underwriting passed current report checks
+  - Messy Underwriting passed current report checks
+  - rent-gap basis is standardized to in-place denominator: `($219,240 - $186,780) / $186,780 = 17.4%`
+  - `Market Rent Premium (Avg)` is now `Market Rent Gap (Avg)`
+  - unsupported renovation / CapEx documents remain acknowledged but are not modeled quantitatively
 - Screening is the compressed, decision-grade memorandum; Underwriting retains deterministic debt, refinance, valuation, and scenario depth.
 - Live generation remains deterministic and document-driven:
   - Supabase document pipeline
@@ -561,6 +569,96 @@
   - `api/report-template-runtime.html` static Methodology headings are unnumbered: `InvestorIQ Estimates`, `Methodology Notes`, `Data Limitations & Missing Inputs`
   - `api/generate-client-report.js` whole-property rent-to-market gap basis standardized to in-place rent denominator
     - validation wording: `($219,240 - $186,780) / $186,780 = 17.4%`
+- May 2 report polish / validation completed:
+  - `Target Rent (Post-Reno)` and `Monthly Lift` wording replaced with neutral rent-positioning language:
+    - `Documented Market Rent`
+    - `Monthly Rent Gap`
+    - `Unit-Level Rent Positioning & Value Sensitivity`
+    - `Market-rent gap and implied value sensitivity`
+  - Screening-style cover layout is now standard for Screening and Underwriting
+  - Underwriting shows the cover metric strip when core metrics exist
+  - extra divider above `ASSET CLASS / DOCUMENTS / REPORT TIER` was removed
+  - cover metadata rows remain `ASSET CLASS`, `DOCUMENTS`, and `REPORT TIER`
+  - final public samples should still use clean property names
+  - `dedupeDataNotAvailableBySection()` no longer injects a section-level `data-gap-note` for `SECTION_8_DEAL_SCORE`
+  - legitimate DSCR unavailable table-cell disclosure remains
+  - misplaced Deal Scorecard `DATA NOT AVAILABLE` note no longer lands visually on the prior Scenario page
+  - heading / metric-card punctuation cleaned:
+    - `Full Refinance Sufficiency (Deterministic)`
+    - `IMPLIED VALUE SENSITIVITY AT STABILIZATION`
+    - `TOP INCOME LINE CONCENTRATION`
+  - top income line concentration value renders as a standalone metric, e.g. `95.8%` or `98.8%`
+- May 2 Deal Scorecard / DSCR verdict cap completed:
+  - Underwriting Deal Scorecard caps displayed verdict when computed DSCR is below `1.25x`
+  - if composite score is `>= 70` but computed DSCR is below `1.25x`, displayed verdict becomes `Review - Debt Coverage Constraint`
+  - existing DSCR-not-assessed cap remains
+  - Composite Score and DSCR factor row remain visible
+  - Deal Scorecard note now clarifies that composite score is calculated from reported metrics only, base score thresholds are shown before mandatory DSCR verdict caps, and DSCR below `1.25x` or not assessed applies a mandatory Review verdict cap
+  - Clean Underwriting validated: DSCR `1.09x`, Composite Score `75/100`, verdict `Review - Debt Coverage Constraint`
+  - Messy Underwriting validated: DSCR `1.00x`, Composite Score `75/100`, verdict `Review - Debt Coverage Constraint`
+- May 2 property-name sanitizer posture:
+  - light `sanitizeDisplayText()` applies typo / spacing cleanup to property address and title, and remains the base cleanup step
+  - aggressive `sanitizePropertyNameDisplayText()` affects PDF/report property name display only
+  - raw DB `reports.property_name` is not sanitized
+  - uploaded filenames / document sources are not destructively sanitized
+  - production posture: preserve user-entered property names as source-of-truth display names; allow long names to wrap naturally; do not globally remove words like `Test`, `Final`, `Screening`, `Underwriting`, `Clean`, `Messy`, or `QA` from production names
+  - final public samples should use clean names rather than relying on aggressive sanitizer expansion
+  - later cleanup: remove aggressive sample/test cleanup from normal generation or gate it behind explicit admin/demo mode
+- May 2 pricing page polish completed:
+  - `/pricing` Report Comparison table now shows clear `Included` / `Not included` cells
+  - first visible fix used boxed badges, then final polish replaced them with plain styled table text using page typography
+  - file touched: `src/pages/Pricing.jsx`
+  - no Stripe, checkout, entitlement, API, Dashboard, or report logic changed
+  - `npm run build` passed; existing unrelated `AdminDashboard.jsx` warnings remain
+- May 2 E2E / break-test harness added:
+  - Node-based harness files:
+    - `tests/e2e/run-e2e.js`
+    - `tests/e2e/assert-report-output.js`
+    - `tests/e2e/README.md`
+    - `tests/e2e/results/latest-e2e-results.json`
+  - package scripts:
+    - `test:e2e`
+    - `test:e2e:report`
+  - harness supports static/default checks, report-path PDF/HTML/TXT assertions, `--profile underwriting-dscr-constrained`, and Wave 2/3/4 profiles
+  - report assertions cover:
+    - no `14.8%` rent-gap regression
+    - `Market Rent Gap (Avg)` present
+    - no `Market Rent Premium (Avg)`
+    - no `Target Rent (Post-Reno)`
+    - no `Monthly Lift`
+    - no BUY/SELL language
+    - no public AI terminology
+    - no dangling `DATA NOT AVAILABLE` block
+    - DSCR-constrained Underwriting shows `Review - Debt Coverage Constraint`
+    - Composite Score and DSCR row remain visible
+    - Deal Scorecard note includes base thresholds and mandatory Review verdict cap wording
+  - latest report-output validation:
+    - Screening PDF run: `37 PASS / 0 FAIL / 7 SKIP`
+    - Clean + Messy Underwriting PDF run: `57 PASS / 0 FAIL / 7 SKIP`
+    - regenerated underwriting combined JSON was superseded by later Wave profiles
+- May 2 hardcore break-testing status:
+  - Wave 1 report/static/output checks passed
+  - Wave 2 mock lifecycle fail-closed fixtures added in `tests/e2e/fixtures/jobs/wave2-job-lifecycle.json`
+    - scenarios: missing-rent-roll, missing-t12, unsupported-capex-only, scale-mismatch, partial-rent-roll-sample, incomplete-debt
+    - result: `98 PASS / 0 FAIL / 8 SKIP`
+  - Wave 3 fake Supabase / worker-state simulator added:
+    - `tests/e2e/fake-supabase.js`
+    - `tests/e2e/worker-state-scenarios.js`
+    - result: `83 PASS / 0 FAIL / 8 SKIP`
+    - no live Supabase, DocRaptor, Stripe, Resend, storage, emails, credits, or reports touched
+    - remaining gap: simulator mirrors worker terminal behavior but does not execute `api/admin-run-worker.js` directly
+  - Wave 4 parser-level adversarial fixtures added:
+    - `tests/e2e/fixtures/parser/wave4-parser-adversarial.json`
+    - `tests/e2e/parser-adversarial.js`
+    - scenarios: loan rate / cap rate / LTV collision, generic rate outside loan context, tax-year collision, glued-number T12, malformed glued rent roll, partial rent roll with / without summary, unsupported CapEx prose
+    - real parser bug found: LTV parser captured `Exit cap 6.25%` as LTV when `LTV 75%` followed
+    - `api/parse/parse-doc.js` patch applied: same-line / LTV-label scoped parsing, preserves valid LTV formats, finite range guard `> 0 && <= 100`, prevents cap/refi/vacancy/tax percentages from becoming LTV
+    - Wave 4 after patch: `78 PASS / 0 FAIL / 8 SKIP`
+  - Wave 5 launch-readiness red-team sweep completed:
+    - repo-wide public-output sweep checked public AI terminology, BUY/SELL language, stale labels, mojibake, sanitizer risk, pricing / checkout / Dashboard launch blockers, and E2E harness health
+    - no confirmed live public-output blocker found
+    - legacy/unused risk remains in `api/html/sample-report.html` and `src/lib/pdfSections.js`; archive or clean before any public demo exposure
+    - latest default `npm run test:e2e`: `156 PASS / 0 FAIL / 8 SKIP`
 - April 30 validation notes:
   - 124 Richmond Screening Test:
     - engine / math passed, 9 pages, T12 and Rent Roll fully verified
@@ -845,24 +943,22 @@
   - current engine correctly refuses to use purchase assumption terms as current-debt DSCR when no debt balance is provided
   - future enhancement: optional Acquisition DSCR / Pro Forma Debt Coverage metric from purchase assumptions, separate from current debt assessment
 
-### Immediate agenda - May 1, 2026
-- P0 cleanup / validation:
-  1. Standardize rent-gap percentage basis everywhere.
-  2. Regenerate reports after Methodology numbering patch.
-  3. Use clean public sample property names only: no `Test`, no `CLEAN`, no `MESSY`, no typo `Underwritting`.
-  4. Investigate messy underwriting debt parsing / QA flags.
-  5. Remove or collapse dangling `DATA NOT AVAILABLE` blocks where sections should collapse.
-- P1 copy / optics polish:
-  1. Replace `Target Rent (Post-Reno)` with `Market Rent` or `Documented Market Rent` unless structured renovation inputs exist.
-  2. Replace `Monthly Lift` with `Monthly Rent Gap` where no structured renovation support exists.
-  3. Consider safer labels:
-     - Screening: `Unit Mix & Rent Positioning` or `Rent Positioning Analysis`
-     - Underwriting: `Unit-Level Rent Positioning & Value Sensitivity`
-  4. Revisit verdict optics where weak DSCR / refinance shortfall still produces `Within Underwriting Parameters`.
-- P2 QA / sample selection:
-  1. Confirm QA artifacts for Screening, Clean Underwriting, and Messy Underwriting.
-  2. Decide which report becomes public / Ken sample candidate.
-  3. Consider small deterministic final-render QA artifact only after P0/P1 cleanup.
+### Immediate agenda - May 1, 2026 - superseded by May 2 validation
+- CLOSED / superseded:
+  - rent-gap basis standardized to in-place denominator
+  - reports regenerated and validated after Methodology numbering patch
+  - messy underwriting debt parsing investigated; narrow loan-rate parser gap patched
+  - dangling Deal Scorecard `DATA NOT AVAILABLE` note fixed
+  - `Target Rent (Post-Reno)` / `Monthly Lift` wording replaced with neutral rent-positioning labels
+  - verdict optics fixed with DSCR below-threshold Review cap
+  - pricing comparison table visibility / premium styling fixed
+  - E2E harness and Waves 1-5 validation added
+- STILL OPEN from that agenda:
+  - use clean public sample property names only: no `Test`, no `CLEAN`, no `MESSY`, no typo `Underwritting`
+  - decide final public / Ken sample candidate
+  - DocRaptor production mode before any public sample PDF
+  - consider small deterministic final-render QA artifact only after sample selection
+  - remove or admin/demo-gate aggressive property-name sample sanitizer in normal generation
 
 - STILL OPEN
   - AI recovery Underwriting control is complete enough for launch confidence:
@@ -895,16 +991,10 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - start with P0 cleanup:
-    - standardize rent-gap percentage basis
-    - regenerate reports after Methodology numbering patch
-    - use clean public sample names only
-    - investigate messy underwriting debt parsing / QA flags
-    - remove/collapse dangling `DATA NOT AVAILABLE`
-  - then P1 label polish:
-    - replace unsupported `Target Rent (Post-Reno)` / `Monthly Lift` wording
-    - consider safer rent-positioning labels
-    - review verdict optics where weak DSCR/refi shortfall conflicts with `Within Underwriting Parameters`
+  - select final clean public sample package
+  - regenerate final public samples with clean property names only
+  - run E2E report-path assertions on final PDFs
+  - decide whether aggressive property-name sample sanitizer should be removed or admin/demo-gated before production
   - do not flip DocRaptor production or publish public samples until sample package path is clean
   - do not overstate AI support publicly; AI/fallback/QA language remains internal only
 
@@ -948,6 +1038,16 @@ Notes:
 - `api/legal-acceptance.js`
 - `api/admin-run-worker.js`
 - `src/pages/Pricing.jsx`
+- `lib/ai-rent-roll-recovery.js`
+- `lib/ai-t12-recovery.js`
+- `api/parse/extract-job-text.js`
+- `tests/e2e/run-e2e.js`
+- `tests/e2e/assert-report-output.js`
+- `tests/e2e/fake-supabase.js`
+- `tests/e2e/worker-state-scenarios.js`
+- `tests/e2e/parser-adversarial.js`
+- `tests/e2e/fixtures/jobs/wave2-job-lifecycle.json`
+- `tests/e2e/fixtures/parser/wave4-parser-adversarial.json`
 
 ## 9. Working Style / Patch Rules
 - Anchor-locked patches only when possible.
@@ -1157,6 +1257,17 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - final Ken Dunn sample package review
   - final readiness check / sample package selection
   - stop only if a new report-core math or document-integrity regression appears
+- May 2 launch-readiness update:
+  - harness layers are materially stronger after report assertions, mock lifecycle fixtures, worker-state simulation, parser-adversarial fixtures, and repo-wide public-output sweep
+  - no product bugs remain from Waves 1-4 after the LTV parser patch
+  - Wave 5 found no confirmed live public-output blocker
+  - current harness is still non-live for:
+    - real worker execution
+    - real Supabase writes
+    - real DocRaptor generation
+    - real credit restoration
+    - real Dashboard upload flow
+  - live flow has still been manually validated through prior report generation; harness is the non-live safety net
 - Current covered scenarios:
   - clean Screening
   - clean Underwriting
@@ -1207,13 +1318,14 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - QA safeguard Phase 1 is implemented; do not build concierge hold/admin approval until after current cleanup unless a new blocker appears
   - create or select a clean Showcase package separate from Motherload stress testing
   - resolve DocRaptor production mode before any public sample PDF
-  - optional: run `SYNTH-QA-P05 Missing Rent Roll` if additional fail-closed validation is desired
+  - run final E2E report-path assertions against selected public sample PDFs
   - complete low-dollar live Stripe payment test if still outstanding
   - complete Ken Dunn sample package review
   - complete final readiness check / sample package selection
   - visually retest long cover-title wrapping when a long-name report is regenerated
   - patch only real regressions found in the synthetic validation / final readiness pass
   - do not claim AI handles all long / large narrative `.txt` rent rolls; CSV/XLSX remains preferred for large rent rolls in V1
+  - broader accepted-file-type hardening remains post-launch unless support needs to be tightened pre-launch
 - Ken Dunn read:
   - Clean underwriting is closest to Ken-ready after regeneration and copy polish
   - Messy underwriting is stress-test proof only
