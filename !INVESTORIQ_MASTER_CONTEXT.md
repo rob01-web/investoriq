@@ -133,6 +133,27 @@
   - `RESEND_API_KEY` was rotated and marked Sensitive in Vercel after the Vercel security notice
   - old Resend key was revoked after the new production key was installed
   - do not rotate Stripe / Supabase / OpenAI / AWS / DocRaptor blindly mid-launch; one secret at a time only
+- End-of-night May 2 / early May 3 OpenAI secret update:
+  - OpenAI API key was exposed during local model-list checking
+  - safe rotation completed:
+    - new OpenAI API key created
+    - Vercel Production `OPENAI_API_KEY` updated
+    - production redeployed
+    - old exposed key ending `...4v0A` revoked / deleted
+    - local PowerShell `OPENAI_API_KEY` cleared with `Remove-Item Env:OPENAI_API_KEY -ErrorAction SilentlyContinue`
+  - never paste API keys into chat, Codex, logs, or screenshots
+- End-of-night May 2 / early May 3 AI model posture:
+  - local `/v1/models` check confirmed access to `gpt-4o`, `gpt-4.1`, `gpt-5`, and newer listed GPT-5.x models including `gpt-5.5`
+  - production env model settings:
+    - `OPENAI_T12_RECOVERY_MODEL=gpt-4o`
+    - `OPENAI_RENT_ROLL_RECOVERY_MODEL=gpt-4o-mini`
+  - rationale:
+    - T12 controls EGI, OpEx, NOI, DSCR, refinance, valuation, and score optics, so T12 recovery uses a stronger model than mini
+    - compact rent roll recovery can remain on `gpt-4o-mini` unless failures appear
+    - model output remains candidate extraction only
+    - deterministic validation and cross-document gates remain source of truth
+    - public / customer copy must still not mention AI
+  - future optional test: evaluate newer models such as `gpt-5.5` for T12 recovery only after controlled structured-output and latency validation
 - Naming convention is now locked:
   - use `SYNTH-QA-P## ...` for synthetic tests
   - reserve Richmond / Forest / Final Regression names for real proof assets only
@@ -654,6 +675,25 @@
     - real parser bug found: LTV parser captured `Exit cap 6.25%` as LTV when `LTV 75%` followed
     - `api/parse/parse-doc.js` patch applied: same-line / LTV-label scoped parsing, preserves valid LTV formats, finite range guard `> 0 && <= 100`, prevents cap/refi/vacancy/tax percentages from becoming LTV
     - Wave 4 after patch: `78 PASS / 0 FAIL / 8 SKIP`
+  - End-of-night May 2 / early May 3 Wave 4 expansion:
+    - Claude review / follow-up investigation confirmed active columnar T12 parser risk:
+      - row-label T12 table parsing selected first numeric cells
+      - table detection could reject monthly-column row-label T12 layouts unless metric labels appeared in headers
+      - no fixture previously proved Jan-Dec plus TTM / Annual Total selection
+    - added adversarial fixture `columnar-monthly-t12-total-selection`
+      - Jan-Dec plus `TTM Total`
+      - expected GRI / EGI `192,960`, OpEx `120,790`, NOI `72,170`
+    - fixture initially failed as expected, confirming active product bug
+    - `api/parse/parse-doc.js` patch applied:
+      - total-column detection for `TTM`, `T12`, `Trailing 12`, `Trailing Twelve`, `Annual`, `Annual Total`, and `Total`
+      - prefers rightmost valid total-like numeric cell before first-numeric / monthly fallback
+      - applied to row matrices, extracted tables, and CSV row-label fallback
+      - added `Gross Rental Income` synonyms to shared T12 label rules
+      - preserved percent-skip, `>$1B` rejection, coverage requirements, and core T12 validation
+    - validation:
+      - `node --check api/parse/parse-doc.js`: PASS
+      - `node tests/e2e/run-e2e.js --profile wave4-parser-adversarial`: PASS including `columnar-monthly-t12-total-selection`
+      - `npm run test:e2e`: `156 PASS / 0 FAIL / 8 SKIP`
   - Wave 5 launch-readiness red-team sweep completed:
     - repo-wide public-output sweep checked public AI terminology, BUY/SELL language, stale labels, mojibake, sanitizer risk, pricing / checkout / Dashboard launch blockers, and E2E harness health
     - no confirmed live public-output blocker found
@@ -992,6 +1032,7 @@
 ### Exact next task / resume point
 - Immediate resume point
   - select final clean public sample package
+  - if a T12-columnar sample is available, regenerate / validate it against the new total-column parser path
   - regenerate final public samples with clean property names only
   - run E2E report-path assertions on final PDFs
   - decide whether aggressive property-name sample sanitizer should be removed or admin/demo-gated before production
@@ -1030,6 +1071,7 @@ Notes:
 ## 8. Key Files
 - `api/generate-client-report.js`
 - `api/report-template-runtime.html`
+- `api/parse/parse-doc.js`
 - `src/lib/pdfSections.js`
 - `src/pages/Dashboard.jsx`
 - `src/pages/AdminDashboard.jsx`
@@ -1259,8 +1301,10 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - stop only if a new report-core math or document-integrity regression appears
 - May 2 launch-readiness update:
   - harness layers are materially stronger after report assertions, mock lifecycle fixtures, worker-state simulation, parser-adversarial fixtures, and repo-wide public-output sweep
-  - no product bugs remain from Waves 1-4 after the LTV parser patch
+  - no product bugs remain from Waves 1-4 after the LTV parser patch and columnar T12 total-selection patch
   - Wave 5 found no confirmed live public-output blocker
+  - Wave 4 parser adversarial now includes and passes Jan-Dec plus TTM / Annual Total T12 selection
+  - no remaining E2E failures after T12 total-selection patch: `156 PASS / 0 FAIL / 8 SKIP`
   - current harness is still non-live for:
     - real worker execution
     - real Supabase writes
@@ -1317,6 +1361,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
 - Still needed before Ken Dunn outreach:
   - QA safeguard Phase 1 is implemented; do not build concierge hold/admin approval until after current cleanup unless a new blocker appears
   - create or select a clean Showcase package separate from Motherload stress testing
+  - if available, regenerate / validate one T12-columnar sample after the parser total-selection patch
   - resolve DocRaptor production mode before any public sample PDF
   - run final E2E report-path assertions against selected public sample PDFs
   - complete low-dollar live Stripe payment test if still outstanding

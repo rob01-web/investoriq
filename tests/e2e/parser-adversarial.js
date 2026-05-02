@@ -127,9 +127,15 @@ function validateT12Result(payload, expected) {
     payload.net_operating_income,
   ].filter(Number.isFinite);
   const noAbsurdValues = values.every((value) => value < expected.absurd_value_max);
-  if (values.length < 3) return { accepted: false, noAbsurdValues, coreEquationOk: false };
+  const fields = {
+    gross_potential_rent: payload.gross_potential_rent,
+    effective_gross_income: payload.effective_gross_income,
+    total_operating_expenses: payload.total_operating_expenses,
+    net_operating_income: payload.net_operating_income,
+  };
+  if (values.length < 3) return { accepted: false, noAbsurdValues, coreEquationOk: false, ...fields };
   const coreEquationOk = Math.abs(payload.effective_gross_income - payload.total_operating_expenses - payload.net_operating_income) <= 2;
-  return { accepted: coreEquationOk && noAbsurdValues, noAbsurdValues, coreEquationOk };
+  return { accepted: coreEquationOk && noAbsurdValues, noAbsurdValues, coreEquationOk, ...fields };
 }
 
 export function evaluateParserScenario(scenario) {

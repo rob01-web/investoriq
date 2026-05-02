@@ -506,7 +506,7 @@ function runWave4ParserAdversarialTests(profile) {
     const actual = evaluateParserScenario(scenario);
     rows.push(result(`${scenario.profile}: accepted state`, "parser-adversarial", String(expected.accepted), String(actual.accepted), actual.accepted === expected.accepted));
 
-    for (const field of ["interest_rate", "refi_cap_rate", "ltv", "amort_years", "loan_amount", "annual_tax", "is_partial_sample", "summary_row_detected", "total_units", "monthly_in_place_total", "monthly_market_total", "detail_rows_used_as_full_distribution"]) {
+    for (const field of ["interest_rate", "refi_cap_rate", "ltv", "amort_years", "loan_amount", "annual_tax", "gross_potential_rent", "effective_gross_income", "total_operating_expenses", "net_operating_income", "is_partial_sample", "summary_row_detected", "total_units", "monthly_in_place_total", "monthly_market_total", "detail_rows_used_as_full_distribution"]) {
       if (!(field in expected)) continue;
       rows.push(result(`${scenario.profile}: ${field}`, "parser-adversarial", JSON.stringify(expected[field]), JSON.stringify(actual[field]), Object.is(actual[field], expected[field])));
     }

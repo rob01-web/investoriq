@@ -67,6 +67,30 @@
       }
     },
     {
+      "profile": "columnar-monthly-t12-total-selection",
+      "doc_type": "t12",
+      "tables": [
+        {
+          "rows": [
+            ["Category", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "TTM Total"],
+            ["Gross Rental Income", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$192,960"],
+            ["Effective Gross Income", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$16,080", "$192,960"],
+            ["Total Operating Expenses", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,066", "$10,064", "$120,790"],
+            ["Net Operating Income", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,014", "$6,016", "$72,170"]
+          ]
+        }
+      ],
+      "expected": {
+        "accepted": true,
+        "gross_potential_rent": 192960,
+        "effective_gross_income": 192960,
+        "total_operating_expenses": 120790,
+        "net_operating_income": 72170,
+        "absurd_value_max": 1000000000,
+        "core_equation_required": true
+      }
+    },
+    {
       "profile": "malformed-rent-roll-glued-rents",
       "doc_type": "rent_roll",
       "text": "Unit 101 1BR occupied $1250$1450 96%\nUnit 102 1BR $1275$1475 96%\nNo status summary. No property total row.",

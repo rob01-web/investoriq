@@ -159,8 +159,41 @@ const extractNumericRight = (row, startIndex) => {
   return null;
 };
 
+const T12_TOTAL_HEADER_RE = /\b(?:ttm|t12|t-12|trailing\s*12|trailing\s*twelve|annual(?:\s*total)?|total)\b/i;
+const T12_MONTH_HEADER_RE = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
+
+const getT12TotalColumnIndexes = (headerRows) => {
+  const rows = Array.isArray(headerRows) ? headerRows : [];
+  const indexes = new Set();
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    for (let i = 0; i < row.length; i += 1) {
+      const text = String(row[i] || '').trim();
+      if (!text) continue;
+      if (T12_TOTAL_HEADER_RE.test(text) && !T12_MONTH_HEADER_RE.test(text)) {
+        indexes.add(i);
+      }
+    }
+  }
+  return Array.from(indexes).sort((a, b) => a - b);
+};
+
+const parseT12TotalColumnValue = (row, totalColumnIndexes, key = null) => {
+  if (!Array.isArray(row) || !Array.isArray(totalColumnIndexes) || totalColumnIndexes.length === 0) return null;
+  for (const idx of [...totalColumnIndexes].sort((a, b) => b - a)) {
+    const cell = String(row[idx] || '').toLowerCase();
+    if (cell.includes('%')) continue;
+    const value = numericFromCell(row[idx]);
+    if (!Number.isFinite(value)) continue;
+    if (value > 1_000_000_000) continue;
+    if (key && !isPlausibleT12Field(key, value)) continue;
+    return value;
+  }
+  return null;
+};
+
 const labelRules = [
-  { key: 'gross_potential_rent', labels: ['gross potential rent', 'gpr'] },
+  { key: 'gross_potential_rent', labels: ['gross potential rent', 'gpr', 'gross rental income', 'gross rental revenue', 'rental income'] },
   { key: 'effective_gross_income', labels: ['effective gross income', 'egi'] },
   { key: 'total_operating_expenses', labels: ['total operating expenses', 'operating expenses', 'total expenses'] },
   { key: 'net_operating_income', labels: ['net operating income', 'noi'] },
@@ -515,14 +548,16 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   const entries = [];
   for (const matrix of matrices) {
     const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
+    const totalColumnIndexes = getT12TotalColumnIndexes(rows.slice(0, 2));
     for (const row of rows) {
       if (!Array.isArray(row) || row.length === 0) continue;
       const labelIdx = row.findIndex((cell) => /[A-Za-z]/.test(String(cell || '')));
       if (labelIdx === -1) continue;
       const label = normalizeClassifierText(row[labelIdx]);
       if (!label) continue;
-      let value = null;
+      let value = parseT12TotalColumnValue(row, totalColumnIndexes);
       for (let i = 0; i < row.length; i += 1) {
+        if (Number.isFinite(value)) break;
         if (i === labelIdx) continue;
         const cell = String(row[i] || '').toLowerCase();
         if (cell.includes('%')) continue;
@@ -816,7 +851,12 @@ export function parseT12FromExtractedTables(tables) {
       const hasMetric = metricMatches.length > 0;
       const hasAnnualSummaryStructure = annualSummaryMatches.length >= 2;
       const hasAnnualSummaryMetrics = rowMetricMatches.length >= 4;
-      if ((!hasPeriod || !hasMetric) && !(hasAnnualSummaryStructure && hasAnnualSummaryMetrics)) return null;
+      const hasPeriodRowMetricStructure = hasPeriod && hasAnnualSummaryMetrics;
+      if (
+        (!hasPeriod || !hasMetric) &&
+        !hasPeriodRowMetricStructure &&
+        !(hasAnnualSummaryStructure && hasAnnualSummaryMetrics)
+      ) return null;
 
       const score =
         monthTokens.filter((token) => headerHasToken(headerRows, token, { prefix: true })).length +
@@ -836,6 +876,7 @@ export function parseT12FromExtractedTables(tables) {
     !best || current.score > best.score ? current : best
   );
   const rows = Array.isArray(bestCandidate?.rows) ? bestCandidate.rows : [];
+  const totalColumnIndexes = getT12TotalColumnIndexes(rows.slice(0, 2));
   const found = {
     gross_potential_rent: null,
     effective_gross_income: null,
@@ -853,6 +894,11 @@ export function parseT12FromExtractedTables(tables) {
           continue;
         }
         if (rule.labels.some((label) => cellText.includes(label))) {
+          const totalColumnValue = parseT12TotalColumnValue(row, totalColumnIndexes, rule.key);
+          if (totalColumnValue !== null) {
+            found[rule.key] = totalColumnValue;
+            continue;
+          }
           for (let j = i + 1; j < row.length; j += 1) {
             const cell = String(row[j] || '').toLowerCase();
 
@@ -2428,7 +2474,10 @@ export default async function handler(req, res) {
                 acc[rule.key] = rule.labels;
                 return acc;
               }, {});
+              const totalColumnIndexes = getT12TotalColumnIndexes([headerRow]);
               const sumRow = (row, key = null) => {
+                const explicitTotal = parseT12TotalColumnValue(row, totalColumnIndexes, key);
+                if (explicitTotal !== null) return explicitTotal;
                 const values = [];
                 for (let i = 1; i < row.length; i += 1) {
                   const cell = String(row[i] || '').toLowerCase();
