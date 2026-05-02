@@ -390,7 +390,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent(x, 2) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:6px;">
-  <p><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
+  <p class="subsection-title"><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
   <table>
     <thead>
       <tr><th>Metric</th><th>Base Case</th><th>Worst Case</th></tr>
@@ -1260,9 +1260,9 @@ function buildScreeningIncomeForensicsHtml({
       ? incomeLines[0].amount / egi
       : null;
   const concentrationLineHtml = Number.isFinite(topIncomeLineConcentration)
-    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Concentration</p><p>${escapeHtml(
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Concentration</p><div style="font-size:11px;line-height:1.6;color:#374151;">${escapeHtml(
         formatPercent1(topIncomeLineConcentration)
-      )}</p></div>`
+      )}</div></div>`
     : "";
   let marketPremiumPct = null;
   const avgInPlace = coerceNumber(
@@ -1806,7 +1806,7 @@ function buildScreeningRentRollDistributionHtml({
   ) {
     const premiumPct = ((weightedMarket - weightedInPlace) / weightedInPlace) * 100;
     metricsRows.push(
-      `<tr><td>Market Rent Premium (Avg)</td><td>${premiumPct.toLocaleString("en-CA", {
+      `<tr><td>Market Rent Gap (Avg)</td><td>${premiumPct.toLocaleString("en-CA", {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       })}%</td></tr>`
@@ -3703,7 +3703,7 @@ export default async function handler(req, res) {
       : "SCREENING SIGNAL";
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_LABEL}}", execVerdictLabel);
     // Cover metric strip (screening only ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â strip when values unavailable)
-    if (effectiveReportMode === "screening_v1") {
+    {
       const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
       const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
       const coverNM = Number.isFinite(noiMarginR) ? formatPercent1(noiMarginR) : "";
@@ -3716,8 +3716,6 @@ export default async function handler(req, res) {
       } else {
         finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
       }
-    } else {
-      finalHtml = stripMarkedSection(finalHtml, "COVER_METRIC_STRIP");
     }
     // Cover asset snapshot — fills the bottom of the cover page
     {
@@ -3730,7 +3728,7 @@ export default async function handler(req, res) {
       const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
 snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><span style="color:#9CA3AF;font-size:11px;font-weight:600;">${modeLabel}</span></div>`);
       const snapHtml = snapRows.length > 0
-        ? `<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;">${snapRows.join("")}</div>`
+        ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
       finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
     }
@@ -3948,7 +3946,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr>` +
           `<tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr>` +
           `</tbody></table></div>` +
-          `<div><p style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p>` +
+          `<div><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
           `<p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the stated cap rate and remains conditional on market-rent capture and occupancy.</p></div>` +
           `</div></div>`;

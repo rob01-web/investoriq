@@ -179,7 +179,7 @@
   height: 1.5px;
   background: var(--gold);
   opacity: 0.65;
-  margin: 0 0 0.42in 0;
+  margin: 0 0 0.18in 0;
 }
 
 .cover-verdict-value {
@@ -189,7 +189,7 @@
   color: var(--gold);
   text-transform: none;
   letter-spacing: -0.01em;
-  margin: 0 0 0.26in 0;
+  margin: 0 0 0.22in 0;
   line-height: 1.05;
 }
 
@@ -199,9 +199,8 @@
 .cover-verdict-value.verdict-insufficient { color: rgba(255,255,255,0.55); }
 
 .cover-metric-strip {
-  margin: 0 0 0.44in 0;
-  padding: 0.2in 0;
-  border-top: 1px solid rgba(201,168,76,0.15);
+  margin: 0 0 0.22in 0;
+  padding: 0 0 0.18in 0;
   border-bottom: 1px solid rgba(201,168,76,0.15);
 }
 
@@ -959,9 +958,9 @@ ul, ol {
           <div class="cover-prop-name">{{PROPERTY_NAME}}</div>
           <div class="cover-prop-sub">{{PROPERTY_SUBMARKET}}</div>
 
-          <hr class="cover-divider">
-
           <div class="cover-verdict-value {{VERDICT_CSS_CLASS}}">{{OPERATING_PROFILE_CLASSIFICATION}}</div>
+
+          <hr class="cover-divider">
 
 <!-- BEGIN COVER_METRIC_STRIP -->
           <div class="cover-metric-strip">
