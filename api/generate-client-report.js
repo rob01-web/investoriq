@@ -4869,7 +4869,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
           `</tr></tfoot>` +
           `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Scored from reported metrics only. Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR below 1.25x or not assessed caps the verdict at Review.</p>` +
+          `<p class="small" style="margin-top:8px;color:#3F5E84;">Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.</p>` +
           `</div>`;
         dealScoreRows = scoreRows;
       }
