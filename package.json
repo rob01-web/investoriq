@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "generate-charts": "node scripts/generateCharts.js",
+    "test:e2e": "node tests/e2e/run-e2e.js",
+    "test:e2e:report": "node tests/e2e/run-e2e.js --profile underwriting-dscr-constrained",
     "build": "vite build",
     "preview": "vite preview --host --port 4173"
   },

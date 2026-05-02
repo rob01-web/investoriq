@@ -1,0 +1,190 @@
+{
+  "name": "wave2-job-lifecycle",
+  "mode": "mock-lifecycle",
+  "scenarios": [
+    {
+      "profile": "missing-rent-roll",
+      "description": "Required T12 exists, rent roll is absent.",
+      "job": {
+        "id": "mock-missing-rent-roll",
+        "status": "failed",
+        "error_code": "MISSING_REQUIRED_DOCUMENTS",
+        "failure_reason": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts: rent roll."
+      },
+      "analysis_job_files": [
+        { "doc_type": "t12", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "t12_parsed", "payload": { "effective_gross_income": 186780, "operating_expenses": 114610, "net_operating_income": 72170 } },
+        { "type": "missing_required_documents", "payload": { "missing": ["rent_roll"] } }
+      ],
+      "reports": [],
+      "public_output_text": "",
+      "expected": {
+        "job_status": "failed",
+        "error_code_regex": "MISSING_REQUIRED_DOCUMENTS|missing|required|structured financial artifacts",
+        "failure_reason_regex": "rent roll|structured financial artifacts|missing",
+        "report_created": false,
+        "present_artifact_types": ["t12_parsed", "missing_required_documents"],
+        "absent_artifact_types": ["rent_roll_parsed"],
+        "absent_public_patterns": ["Occupancy", "Unit Mix", "Market Rent Gap", "rent_to_market_gap"]
+      }
+    },
+    {
+      "profile": "missing-t12",
+      "description": "Required rent roll exists, T12 is absent.",
+      "job": {
+        "id": "mock-missing-t12",
+        "status": "failed",
+        "error_code": "MISSING_REQUIRED_DOCUMENTS",
+        "failure_reason": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts: T12 operating statement."
+      },
+      "analysis_job_files": [
+        { "doc_type": "rent_roll", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "rent_roll_parsed", "payload": { "units": 12, "annual_in_place_rent": 186780 } },
+        { "type": "missing_required_documents", "payload": { "missing": ["t12"] } }
+      ],
+      "reports": [],
+      "public_output_text": "",
+      "expected": {
+        "job_status": "failed",
+        "error_code_regex": "MISSING_REQUIRED_DOCUMENTS|missing|required|structured financial artifacts",
+        "failure_reason_regex": "t12|operating statement|structured financial artifacts|missing",
+        "report_created": false,
+        "present_artifact_types": ["rent_roll_parsed", "missing_required_documents"],
+        "absent_artifact_types": ["t12_parsed"],
+        "absent_public_patterns": ["Effective Gross Income", "Operating Expenses", "Net Operating Income", "Expense Ratio", "NOI Margin", "Break-even Occupancy"]
+      }
+    },
+    {
+      "profile": "unsupported-capex-only",
+      "description": "Only unstructured supplemental CapEx support exists.",
+      "job": {
+        "id": "mock-unsupported-capex-only",
+        "status": "failed",
+        "error_code": "MISSING_REQUIRED_DOCUMENTS",
+        "failure_reason": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts."
+      },
+      "analysis_job_files": [
+        { "doc_type": "supporting_document", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "supporting_document_parsed", "payload": { "excluded_from_model": true, "reason": "unstructured supplemental document" } },
+        { "type": "missing_required_documents", "payload": { "missing": ["t12", "rent_roll"] } }
+      ],
+      "reports": [],
+      "public_output_text": "",
+      "expected": {
+        "job_status": "failed",
+        "failure_reason_regex": "required|structured financial artifacts|missing",
+        "report_created": false,
+        "present_artifact_types": ["supporting_document_parsed", "missing_required_documents"],
+        "absent_artifact_types": ["t12_parsed", "rent_roll_parsed", "renovation_parsed"],
+        "absent_public_patterns": ["CapEx Amount", "Renovation ROI", "Payback", "Rent Lift", "Renovation Scope"]
+      }
+    },
+    {
+      "profile": "scale-mismatch",
+      "description": "T12 income and rent roll annual in-place rent are materially inconsistent.",
+      "job": {
+        "id": "mock-scale-mismatch",
+        "status": "failed",
+        "error_code": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+        "failure_reason": "InvestorIQ extracted financial values from the uploaded documents, but the operating statement and rent roll are materially inconsistent."
+      },
+      "analysis_job_files": [
+        { "doc_type": "t12", "parse_status": "parsed" },
+        { "doc_type": "rent_roll", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "t12_parsed", "payload": { "effective_gross_income": 1036800 } },
+        { "type": "rent_roll_parsed", "payload": { "annual_in_place_rent": 120000 } },
+        { "type": "document_financial_scale_mismatch", "payload": { "ratio": 8.64, "t12_effective_gross_income": 1036800, "rent_roll_annual_in_place_rent": 120000 } }
+      ],
+      "reports": [],
+      "public_output_text": "",
+      "expected": {
+        "job_status": "failed",
+        "error_code_regex": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+        "failure_reason_regex": "materially inconsistent|scale mismatch|financial values",
+        "report_created": false,
+        "present_artifact_types": ["t12_parsed", "rent_roll_parsed", "document_financial_scale_mismatch"],
+        "absent_public_patterns": ["silently reconciled", "adjusted to match", "normalized income"]
+      }
+    },
+    {
+      "profile": "partial-rent-roll-sample",
+      "description": "A partial rent roll sample exists with trusted total unit count only.",
+      "job": {
+        "id": "mock-partial-rent-roll-sample",
+        "status": "published",
+        "error_code": null,
+        "failure_reason": null
+      },
+      "analysis_job_files": [
+        { "doc_type": "t12", "parse_status": "parsed" },
+        { "doc_type": "rent_roll", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "t12_parsed", "payload": { "effective_gross_income": 186780, "operating_expenses": 114610, "net_operating_income": 72170 } },
+        { "type": "rent_roll_parsed", "payload": { "is_partial_sample": true, "total_units": 12, "unit_rows": 3, "annual_in_place_rent": null, "annual_market_rent": null } }
+      ],
+      "reports": [
+        { "id": "mock-report-partial-rent-roll", "status": "published" }
+      ],
+      "public_output_text": "Total Units 12. Rent roll sample detail was incomplete; full-property rent distribution metrics were omitted.",
+      "expected": {
+        "job_status": "published",
+        "report_created": true,
+        "present_artifact_types": ["t12_parsed", "rent_roll_parsed"],
+        "present_public_patterns": ["Total Units 12"],
+        "absent_public_patterns": ["Market Rent Gap \\(Avg\\)", "Rent Roll Distribution", "Annual In-Place Rent \\$[0-9]", "Annual Market Rent \\$[0-9]"],
+        "artifact_payload": {
+          "type": "rent_roll_parsed",
+          "is_partial_sample": true,
+          "total_units": 12
+        }
+      }
+    },
+    {
+      "profile": "incomplete-debt",
+      "description": "T12 and rent roll are complete, but uploaded debt context is incomplete.",
+      "job": {
+        "id": "mock-incomplete-debt",
+        "status": "published",
+        "error_code": null,
+        "failure_reason": null
+      },
+      "analysis_job_files": [
+        { "doc_type": "t12", "parse_status": "parsed" },
+        { "doc_type": "rent_roll", "parse_status": "parsed" },
+        { "doc_type": "loan_term_sheet", "parse_status": "parsed" }
+      ],
+      "analysis_artifacts": [
+        { "type": "t12_parsed", "payload": { "effective_gross_income": 186780, "operating_expenses": 114610, "net_operating_income": 72170 } },
+        { "type": "rent_roll_parsed", "payload": { "units": 12, "annual_in_place_rent": 186780, "annual_market_rent": 219240 } },
+        { "type": "loan_term_sheet_parsed", "payload": { "loan_amount": null, "interest_rate": 5.85, "amort_years": 30, "monthly_payment": null, "parse_warnings": ["missing_loan_amount"] } },
+        { "type": "report_qa_flags", "payload": { "flags": [{ "code": "DEBT_FILE_WITH_MISSING_BALANCE" }] } }
+      ],
+      "reports": [
+        { "id": "mock-report-incomplete-debt", "status": "published" }
+      ],
+      "public_output_text": "Deal Scorecard. DSCR (Not Assessed). DATA NOT AVAILABLE. Review - Debt Coverage Constraint. Debt sizing balance not provided. Composite Score 68 / 100.",
+      "expected": {
+        "job_status": "published",
+        "report_created": true,
+        "present_artifact_types": ["t12_parsed", "rent_roll_parsed", "loan_term_sheet_parsed", "report_qa_flags"],
+        "present_public_patterns": ["DSCR \\(Not Assessed\\)", "Review - Debt Coverage Constraint", "Debt sizing balance not provided", "Composite Score"],
+        "absent_public_patterns": ["DSCR \\(Computed\\)", "\\b1\\.[0-9]{2}x\\b"],
+        "artifact_payload": {
+          "type": "loan_term_sheet_parsed",
+          "loan_amount": null,
+          "interest_rate": 5.85,
+          "amort_years": 30
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,861 @@
+{
+  "generatedAt": "2026-05-02T14:36:46.242Z",
+  "mode": "static",
+  "profile": "wave2",
+  "reportPaths": [],
+  "totals": {
+    "pass": 98,
+    "fail": 0,
+    "skip": 8
+  },
+  "rows": [
+    {
+      "testName": "Generator syntax target present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Template cover title token present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Market Rent Gap label present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Market Rent Premium label absent",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "No post-reno rent-positioning labels",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Refi sufficiency heading protected",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Value sensitivity heading protected",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Top income concentration value not sentence paragraph",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "DSCR constrained verdict anchor present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Deal Score cap note clear",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Loan generic fixed-rate parser support present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Property tax year-like rejection present",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "No public AI term in template",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "No BUY/SELL in template",
+      "mode": "static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": ""
+    },
+    {
+      "testName": "Wave1 missing rent roll fails closed",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Worker gate records missing required document and restores entitlement on hard failure."
+    },
+    {
+      "testName": "Wave1 missing T12 fails closed",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Worker gate records missing required document and restores entitlement on hard failure."
+    },
+    {
+      "testName": "Wave1 structured artifacts required",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Required docs without structured artifacts are not treated as publishable."
+    },
+    {
+      "testName": "Wave1 scale mismatch fails closed",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "T12/rent-roll scale mismatch has a hard failure path and event artifact."
+    },
+    {
+      "testName": "Wave1 partial rent roll suppresses full metrics",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Partial samples suppress full-property rent distribution/value sensitivity output."
+    },
+    {
+      "testName": "Wave1 unsupported CapEx not modeled",
+      "mode": "fixture-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Supplemental CapEx support is acknowledged only when structured renovation inputs are absent."
+    },
+    {
+      "testName": "Wave1 market survey cannot replace rent roll",
+      "mode": "fixture-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Unstructured market survey support is QA-reviewed rather than promoted to rent roll."
+    },
+    {
+      "testName": "Wave1 explicit loan terms fixture anchors",
+      "mode": "fixture-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Motherload loan fixture contains balance, rate, amortization, and LTV anchors."
+    },
+    {
+      "testName": "Wave1 generic debt rate parser is scoped",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Generic Rate/Fixed Rate/Loan Rate fallback exists only in loan-term parser path."
+    },
+    {
+      "testName": "Wave1 incomplete debt does not fabricate DSCR",
+      "mode": "wave1-static",
+      "expected": "pass",
+      "actual": "pass",
+      "result": "PASS",
+      "notes": "Debt gaps remain disclosed and verdict-capped rather than modeled."
+    },
+    {
+      "testName": "missing-rent-roll: job status",
+      "mode": "mock-lifecycle",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: error code",
+      "mode": "mock-lifecycle",
+      "expected": "MISSING_REQUIRED_DOCUMENTS|missing|required|structured financial artifacts",
+      "actual": "MISSING_REQUIRED_DOCUMENTS",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: failure reason",
+      "mode": "mock-lifecycle",
+      "expected": "rent roll|structured financial artifacts|missing",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts: rent roll.",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: artifact present t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: artifact present missing_required_documents",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: artifact absent rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: public output omits Occupancy",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: public output omits Unit Mix",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: public output omits Market Rent Gap",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-rent-roll: public output omits rent_to_market_gap",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required T12 exists, rent roll is absent."
+    },
+    {
+      "testName": "missing-t12: job status",
+      "mode": "mock-lifecycle",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: error code",
+      "mode": "mock-lifecycle",
+      "expected": "MISSING_REQUIRED_DOCUMENTS|missing|required|structured financial artifacts",
+      "actual": "MISSING_REQUIRED_DOCUMENTS",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: failure reason",
+      "mode": "mock-lifecycle",
+      "expected": "t12|operating statement|structured financial artifacts|missing",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts: T12 operating statement.",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: artifact present rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: artifact present missing_required_documents",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: artifact absent t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits Effective Gross Income",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits Operating Expenses",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits Net Operating Income",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits Expense Ratio",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits NOI Margin",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "missing-t12: public output omits Break-even Occupancy",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Required rent roll exists, T12 is absent."
+    },
+    {
+      "testName": "unsupported-capex-only: job status",
+      "mode": "mock-lifecycle",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: failure reason",
+      "mode": "mock-lifecycle",
+      "expected": "required|structured financial artifacts|missing",
+      "actual": "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: artifact present supporting_document_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: artifact present missing_required_documents",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: artifact absent t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: artifact absent rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: artifact absent renovation_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: public output omits CapEx Amount",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: public output omits Renovation ROI",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: public output omits Payback",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: public output omits Rent Lift",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "unsupported-capex-only: public output omits Renovation Scope",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "Only unstructured supplemental CapEx support exists."
+    },
+    {
+      "testName": "scale-mismatch: job status",
+      "mode": "mock-lifecycle",
+      "expected": "failed",
+      "actual": "failed",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: error code",
+      "mode": "mock-lifecycle",
+      "expected": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+      "actual": "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: failure reason",
+      "mode": "mock-lifecycle",
+      "expected": "materially inconsistent|scale mismatch|financial values",
+      "actual": "InvestorIQ extracted financial values from the uploaded documents, but the operating statement and rent roll are materially inconsistent.",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: artifact present t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: artifact present rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: artifact present document_financial_scale_mismatch",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: public output omits silently reconciled",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: public output omits adjusted to match",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "scale-mismatch: public output omits normalized income",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "T12 income and rent roll annual in-place rent are materially inconsistent."
+    },
+    {
+      "testName": "partial-rent-roll-sample: job status",
+      "mode": "mock-lifecycle",
+      "expected": "published",
+      "actual": "published",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: artifact present t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: artifact present rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: public output includes Total Units 12",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: public output omits Market Rent Gap \\(Avg\\)",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: public output omits Rent Roll Distribution",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: public output omits Annual In-Place Rent \\$[0-9]",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: public output omits Annual Market Rent \\$[0-9]",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: artifact payload is_partial_sample",
+      "mode": "mock-lifecycle",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "partial-rent-roll-sample: artifact payload total_units",
+      "mode": "mock-lifecycle",
+      "expected": "12",
+      "actual": "12",
+      "result": "PASS",
+      "notes": "A partial rent roll sample exists with trusted total unit count only."
+    },
+    {
+      "testName": "incomplete-debt: job status",
+      "mode": "mock-lifecycle",
+      "expected": "published",
+      "actual": "published",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: report row presence",
+      "mode": "mock-lifecycle",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact present t12_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact present rent_roll_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact present loan_term_sheet_parsed",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact present report_qa_flags",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output includes DSCR \\(Not Assessed\\)",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output includes Review - Debt Coverage Constraint",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output includes Debt sizing balance not provided",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output includes Composite Score",
+      "mode": "mock-lifecycle",
+      "expected": "present",
+      "actual": "present",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output omits DSCR \\(Computed\\)",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: public output omits \\b1\\.[0-9]{2}x\\b",
+      "mode": "mock-lifecycle",
+      "expected": "absent",
+      "actual": "absent",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact payload loan_amount",
+      "mode": "mock-lifecycle",
+      "expected": "null",
+      "actual": "null",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact payload interest_rate",
+      "mode": "mock-lifecycle",
+      "expected": "5.85",
+      "actual": "5.85",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "incomplete-debt: artifact payload amort_years",
+      "mode": "mock-lifecycle",
+      "expected": "30",
+      "actual": "30",
+      "result": "PASS",
+      "notes": "T12 and rent roll are complete, but uploaded debt context is incomplete."
+    },
+    {
+      "testName": "Fixture package inventory",
+      "mode": "fixtures",
+      "expected": "fixtures discovered",
+      "actual": "4 discovered",
+      "result": "PASS",
+      "notes": "Final_Testing (14 entries); tests/e2e/fixtures (2 entries); !Fictitious Property Documents to Upload (5 entries); 124 Richmond Street, London, ON (5 entries)"
+    },
+    {
+      "testName": "Published report text assertions",
+      "mode": "html/pdf",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Set E2E_REPORT_PATHS or pass --report <path> after regenerating a report."
+    },
+    {
+      "testName": "Clean Screening publishes",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Clean Underwriting publishes",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Messy Underwriting publishes when supported",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Missing Rent Roll fails closed",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Missing T12 fails closed",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Unsupported CapEx-only fails closed",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    },
+    {
+      "testName": "Job outcome / no report row assertions",
+      "mode": "dry-run",
+      "expected": "configured input",
+      "actual": "not configured",
+      "result": "SKIP",
+      "notes": "Skipped by default to avoid live Supabase/DocRaptor side effects. Use regenerated report paths for output checks."
+    }
+  ]
+}
