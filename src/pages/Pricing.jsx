@@ -658,22 +658,13 @@ export default function PricingPage() {
                           <td key={ci} style={{
                             padding:   '9px 12px',
                             textAlign: 'center',
-                            color:     val ? T.green : T.ink4,
-                            fontSize:  11,
-                            fontFamily:"'DM Mono', monospace",
-                            letterSpacing:'0.08em',
-                            textTransform:'uppercase',
-                            fontWeight: 500,
+                            color:     val ? T.ink2 : T.ink4,
+                            fontSize:  13,
+                            fontFamily:"'DM Sans', sans-serif",
+                            fontWeight: val ? 400 : 300,
+                            lineHeight: 1.55,
                           }}>
-                            <span style={{
-                              display: 'inline-block',
-                              minWidth: 92,
-                              padding: '4px 8px',
-                              border: `1px solid ${val ? 'rgba(15,35,24,0.18)' : T.hairlineMid}`,
-                              background: val ? 'rgba(201,168,76,0.16)' : 'rgba(208,204,196,0.18)',
-                            }}>
-                              {val ? 'Included' : 'Not included'}
-                            </span>
+                            {val ? 'Included' : 'Not included'}
                           </td>
                         ))}
                       </tr>
