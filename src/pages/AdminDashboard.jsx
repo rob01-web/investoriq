@@ -305,19 +305,18 @@ export default function AdminDashboard() {
   const fetchUsers = useCallback(async (search = '') => {
     setUserLoading(true);
     try {
-      // 1. Get profiles
-      let q = supabase.from('profiles').select('id, full_name, role');
-      if (search.trim()) q = q.ilike('full_name', `%${search.trim()}%`);
-      const { data: profiles, error } = await q.order('full_name').limit(50);
+      // 1. Use SECURITY DEFINER RPC to bypass RLS on profiles
+      const { data: profiles, error } = await supabase
+        .rpc('get_all_profiles_for_admin');
       if (error) throw error;
 
-      // 2. Get unconsumed credits from report_purchases
+      // 2. Get unconsumed credits from report_purchases (UNRESTRICTED table)
       const { data: purchases } = await supabase
         .from('report_purchases')
         .select('user_id, product_type')
         .is('consumed_at', null);
 
-      // 3. Merge — count credits per user per type
+      // 3. Merge credit counts per user per type
       const creditMap = {};
       (purchases || []).forEach(p => {
         if (!creditMap[p.user_id]) creditMap[p.user_id] = { screening: 0, underwriting: 0 };
@@ -325,7 +324,12 @@ export default function AdminDashboard() {
         else if (p.product_type === 'underwriting') creditMap[p.user_id].underwriting++;
       });
 
-      const merged = (profiles || []).map(u => ({
+      // 4. Filter by search if provided
+      const filtered = (profiles || []).filter(u =>
+        !search.trim() || u.full_name?.toLowerCase().includes(search.trim().toLowerCase())
+      );
+
+      const merged = filtered.map(u => ({
         ...u,
         screening_credits:    creditMap[u.id]?.screening    ?? 0,
         underwriting_credits: creditMap[u.id]?.underwriting ?? 0,
