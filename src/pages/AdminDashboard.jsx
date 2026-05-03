@@ -253,7 +253,7 @@ export default function AdminDashboard() {
 
       // Total users
       const { count: totalUsers } = await supabase
-        .from('profiles').select('id', { count:'exact', head:true });
+        .from('users').select('id', { count:'exact', head:true });
 
       // Open issues
       const { count: openIssues } = await supabase
@@ -283,7 +283,7 @@ export default function AdminDashboard() {
         .from('report_jobs')
         .select(`id, property_address, user_id, created_at, status, report_type,
                  pdf_url, ai_t12_used, ai_rent_roll_used, error_message,
-                 profiles(email)`, { count:'exact' });
+                 users(email)`, { count:'exact' });
 
       if (filter !== 'all') q = q.eq('status', filter);
       if (search.trim()) q = q.ilike('property_address', `%${search.trim()}%`);
@@ -305,7 +305,7 @@ export default function AdminDashboard() {
     setUserLoading(true);
     try {
       let q = supabase
-        .from('profiles')
+        .from('users')
         .select('id, email, created_at, report_credits, total_reports_generated');
       if (search.trim()) q = q.ilike('email', `%${search.trim()}%`);
       const { data, error } = await q.order('created_at', { ascending:false }).limit(50);
@@ -403,7 +403,7 @@ export default function AdminDashboard() {
       if (!user) throw new Error();
       const newCredits = Math.max(0, (user.report_credits || 0) + delta);
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ report_credits: newCredits })
         .eq('id', userId);
       if (error) throw error;
@@ -646,7 +646,7 @@ export default function AdminDashboard() {
                                   {r.property_address || '—'}
                                 </div>
                               </TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.profiles?.email || r.user_id?.slice(0,8) || '—'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.users?.email || r.user_id?.slice(0,8) || '—'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{r.report_type || '—'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
                               <TblTd><StatusBadge status={r.status} /></TblTd>
