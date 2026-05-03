@@ -238,11 +238,15 @@ export default function AdminDashboard() {
     try {
       // Revenue MTD from report_purchases
       const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
+      // Revenue: count consumed purchases MTD × product price
       const { data: purchases } = await supabase
         .from('report_purchases')
-        .select('amount, created_at')
+        .select('product_type, consumed_at, created_at')
+        .not('consumed_at', 'is', null)
         .gte('created_at', startOfMonth.toISOString());
-      const revMTD = (purchases || []).reduce((s, p) => s + (p.amount || 0), 0);
+      const revMTD = (purchases || []).reduce((s, p) => {
+        return s + (p.product_type === 'underwriting' ? 149900 : 49900);
+      }, 0);
 
       // Reports today
       const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
@@ -301,12 +305,33 @@ export default function AdminDashboard() {
   const fetchUsers = useCallback(async (search = '') => {
     setUserLoading(true);
     try {
-      // profiles: id, full_name, role, report_credits
-      let q = supabase.from('profiles').select('id, full_name, role, report_credits');
+      // 1. Get profiles
+      let q = supabase.from('profiles').select('id, full_name, role');
       if (search.trim()) q = q.ilike('full_name', `%${search.trim()}%`);
-      const { data, error } = await q.order('report_credits', { ascending:false }).limit(50);
+      const { data: profiles, error } = await q.order('full_name').limit(50);
       if (error) throw error;
-      setUsers(data || []);
+
+      // 2. Get unconsumed credits from report_purchases
+      const { data: purchases } = await supabase
+        .from('report_purchases')
+        .select('user_id, product_type')
+        .is('consumed_at', null);
+
+      // 3. Merge — count credits per user per type
+      const creditMap = {};
+      (purchases || []).forEach(p => {
+        if (!creditMap[p.user_id]) creditMap[p.user_id] = { screening: 0, underwriting: 0 };
+        if (p.product_type === 'screening') creditMap[p.user_id].screening++;
+        else if (p.product_type === 'underwriting') creditMap[p.user_id].underwriting++;
+      });
+
+      const merged = (profiles || []).map(u => ({
+        ...u,
+        screening_credits:    creditMap[u.id]?.screening    ?? 0,
+        underwriting_credits: creditMap[u.id]?.underwriting ?? 0,
+      }));
+
+      setUsers(merged);
     } catch {
       toast({ title:'Failed to load users', variant:'destructive' });
     } finally { setUserLoading(false); }
@@ -393,22 +418,38 @@ export default function AdminDashboard() {
   }
 
   // ─── CREDIT ACTIONS ───────────────────────────────────────
-  async function adjustCredits(userId, delta) {
-    setCreditBusy(p => ({ ...p, [userId]:true }));
+  async function adjustCredits(userId, delta, productType = 'screening') {
+    setCreditBusy(p => ({ ...p, [`${userId}-${productType}`]:true }));
     try {
-      const user = users.find(u => u.id === userId);
-      if (!user) throw new Error();
-      const curCredits = user.report_credits || 0;
-      const newCredits = Math.max(0, curCredits + delta);
-      const { error } = await supabase
-        .from('profiles')
-        .update({ report_credits: newCredits })
-        .eq('id', userId);
-      if (error) throw error;
-      toast({ title: delta > 0 ? `+${delta} credit granted` : `${delta} credit removed` });
+      if (delta > 0) {
+        // Grant: insert unconsumed rows into report_purchases
+        const rows = Array.from({ length: delta }, () => ({
+          user_id:      userId,
+          product_type: productType,
+          consumed_at:  null,
+        }));
+        const { error } = await supabase.from('report_purchases').insert(rows);
+        if (error) throw error;
+        toast({ title: `+${delta} ${productType} credit granted` });
+      } else {
+        // Revoke: delete one unconsumed row of that type
+        const { data: rows, error: fetchErr } = await supabase
+          .from('report_purchases')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('product_type', productType)
+          .is('consumed_at', null)
+          .limit(Math.abs(delta));
+        if (fetchErr) throw fetchErr;
+        if (!rows || rows.length === 0) { toast({ title:'No credits to remove' }); return; }
+        const ids = rows.map(r => r.id);
+        const { error: delErr } = await supabase.from('report_purchases').delete().in('id', ids);
+        if (delErr) throw delErr;
+        toast({ title: `${delta} ${productType} credit removed` });
+      }
       await fetchUsers(userSearch);
     } catch { toast({ title:'Credit update failed', variant:'destructive' }); }
-    finally { setCreditBusy(p => ({ ...p, [userId]:false })); }
+    finally { setCreditBusy(p => ({ ...p, [`${userId}-${productType}`]:false })); }
   }
 
   // ─── ISSUE ACTIONS ────────────────────────────────────────
@@ -738,7 +779,8 @@ export default function AdminDashboard() {
                     <tr>
                       <TblTh>Name</TblTh>
                       <TblTh>Role</TblTh>
-                      <TblTh>Credits</TblTh>
+                      <TblTh>Screening</TblTh>
+                      <TblTh>Underwriting</TblTh>
                       <TblTh right>Adjust Credits</TblTh>
                     </tr>
                   </thead>
@@ -754,21 +796,30 @@ export default function AdminDashboard() {
                         <TblTd mono style={{ fontSize:10 }}>{u.full_name || '—'}</TblTd>
                         <TblTd mono style={{ fontSize:9 }}>{u.role || '—'}</TblTd>
                         <TblTd>
-                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: (u.report_credits||0) > 0 ? T.okGreen : T.errRed }}>
-                            {u.report_credits ?? 0}
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.screening_credits > 0 ? T.okGreen : T.errRed }}>
+                            {u.screening_credits ?? 0}
+                          </span>
+                        </TblTd>
+                        <TblTd>
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.underwriting_credits > 0 ? T.okGreen : T.errRed }}>
+                            {u.underwriting_credits ?? 0}
                           </span>
                         </TblTd>
                         <TblTd right>
-                          <div style={{ display:'flex', gap:5, justifyContent:'flex-end' }}>
-                            <Btn onClick={() => adjustCredits(u.id, -1)} disabled={creditBusy[u.id] || (u.report_credits ?? 0) <= 0} variant="danger">
-                              <Minus size={9} /> 1
+                          <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                            <Btn onClick={() => adjustCredits(u.id, 1, 'screening')} disabled={creditBusy[`${u.id}-screening`]} variant="success">
+                              <Plus size={9} /> Screen
                             </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, 1)} disabled={creditBusy[u.id]} variant="success">
+                            <Btn onClick={() => adjustCredits(u.id, 1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`]} variant="success">
+                              <Plus size={9} /> UW
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, -1, 'screening')} disabled={creditBusy[`${u.id}-screening`] || u.screening_credits <= 0} variant="danger">
+                              <Minus size={9} /> Screen
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, -1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`] || u.underwriting_credits <= 0} variant="danger">
                               <Plus size={9} /> 1
                             </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, 5)} disabled={creditBusy[u.id]} variant="success">
-                              <Plus size={9} /> 5
-                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, 5)} disabled={creditBusy[u.user_id]} variant="success">
                           </div>
                         </TblTd>
                       </tr>
