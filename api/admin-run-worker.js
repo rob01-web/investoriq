@@ -1316,9 +1316,9 @@ export default async function handler(req, res) {
         }
       }
 
-      const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
+         const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, created_at, property_name')
+        .select('id, user_id, status, created_at, property_name, report_type')
         .eq('status', 'scoring')
         .order('created_at', { ascending: true })
         .limit(Math.min(jobLimit, 5));
@@ -1717,33 +1717,37 @@ export default async function handler(req, res) {
           }
 
           if (job.user_id) {
-            const reportQuery = supabaseAdmin
-              .from('reports')
-              .select('id, storage_path, created_at')
-              .eq('user_id', job.user_id);
+  const reportQuery = supabaseAdmin
+    .from('reports')
+    .select('id, storage_path, created_at, report_type')
+    .eq('user_id', job.user_id);
 
-            if (job.property_name) {
-              reportQuery.eq('property_name', job.property_name);
-            }
+  if (job.property_name) {
+    reportQuery.eq('property_name', job.property_name);
+  }
 
-            if (job.created_at) {
-              reportQuery.gte('created_at', job.created_at);
-            }
+  if (job.report_type) {
+    reportQuery.eq('report_type', job.report_type);
+  }
 
-            const { data: existingReports, error: reportErr } = await reportQuery
-              .order('created_at', { ascending: false })
-              .limit(1);
+  if (job.created_at) {
+    reportQuery.gte('created_at', job.created_at);
+  }
 
-            if (reportErr) {
-              throw new Error(`Failed to check existing reports: ${reportErr.message}`);
-            }
+  const { data: existingReports, error: reportErr } = await reportQuery
+    .order('created_at', { ascending: false })
+    .limit(1);
 
-            if (existingReports && existingReports.length > 0 && existingReports[0].storage_path) {
-              reportId = existingReports[0].id;
-              storagePath = existingReports[0].storage_path;
-              generatorSource = 'existing_report';
-            }
-          }
+  if (reportErr) {
+    throw new Error(`Failed to check existing reports: ${reportErr.message}`);
+  }
+
+  if (existingReports && existingReports.length > 0 && existingReports[0].storage_path) {
+    reportId = existingReports[0].id;
+    storagePath = existingReports[0].storage_path;
+    generatorSource = 'existing_report';
+  }
+}
 
           if (!storagePath) {
             if (!baseUrl) {
