@@ -240,30 +240,29 @@ export default function AdminDashboard() {
       const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
       const { data: purchases } = await supabase
         .from('report_purchases')
-        .select('amount_paid, created_at')
+        .select('amount, created_at')
         .gte('created_at', startOfMonth.toISOString());
-
-      const revMTD = (purchases || []).reduce((s, p) => s + (p.amount_paid || 0), 0);
+      const revMTD = (purchases || []).reduce((s, p) => s + (p.amount || 0), 0);
 
       // Reports today
       const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
       const { count: rptToday } = await supabase
-        .from('report_jobs').select('id', { count:'exact', head:true })
+        .from('reports').select('id', { count:'exact', head:true })
         .gte('created_at', startOfDay.toISOString());
 
       // Total users
       const { count: totalUsers } = await supabase
-        .from('users').select('id', { count:'exact', head:true });
+        .from('profiles').select('id', { count:'exact', head:true });
 
       // Open issues
       const { count: openIssues } = await supabase
-        .from('support_issues').select('id', { count:'exact', head:true })
+        .from('report_issues').select('id', { count:'exact', head:true })
         .eq('status', 'open');
 
-      // Stuck jobs
+      // Stuck jobs — analysis_jobs in_progress > threshold
       const cutoff = new Date(Date.now() - STUCK_THRESHOLD_MINS * 60 * 1000).toISOString();
       const { data: stuck } = await supabase
-        .from('report_jobs').select('id, property_address, user_id, created_at, report_type')
+        .from('analysis_jobs').select('id, user_id, created_at')
         .eq('status', 'in_progress')
         .lt('created_at', cutoff)
         .order('created_at', { ascending:true });
@@ -279,14 +278,12 @@ export default function AdminDashboard() {
   const fetchReports = useCallback(async (page = 0, search = '', filter = 'all') => {
     setRptLoading(true);
     try {
+      // reports table: id, user_id, property_name, storage_path, created_at, report_type
       let q = supabase
-        .from('report_jobs')
-        .select(`id, property_address, user_id, created_at, status, report_type,
-                 pdf_url, ai_t12_used, ai_rent_roll_used, error_message,
-                 users(email)`, { count:'exact' });
+        .from('reports')
+        .select('id, user_id, property_name, storage_path, created_at, report_type', { count:'exact' });
 
-      if (filter !== 'all') q = q.eq('status', filter);
-      if (search.trim()) q = q.ilike('property_address', `%${search.trim()}%`);
+      if (search.trim()) q = q.ilike('property_name', `%${search.trim()}%`);
 
       const { data, count, error } = await q
         .order('created_at', { ascending:false })
@@ -304,11 +301,10 @@ export default function AdminDashboard() {
   const fetchUsers = useCallback(async (search = '') => {
     setUserLoading(true);
     try {
-      let q = supabase
-        .from('users')
-        .select('id, email, created_at, report_credits, total_reports_generated');
-      if (search.trim()) q = q.ilike('email', `%${search.trim()}%`);
-      const { data, error } = await q.order('created_at', { ascending:false }).limit(50);
+      // profiles: id, full_name, role, report_credits
+      let q = supabase.from('profiles').select('id, full_name, role, report_credits');
+      if (search.trim()) q = q.ilike('full_name', `%${search.trim()}%`);
+      const { data, error } = await q.order('report_credits', { ascending:false }).limit(50);
       if (error) throw error;
       setUsers(data || []);
     } catch {
@@ -319,9 +315,10 @@ export default function AdminDashboard() {
   // ─── ISSUES ───────────────────────────────────────────────
   const fetchIssues = useCallback(async (filter = 'open') => {
     try {
+      // report_issues: id, user_id, job_id, artifact_id, message, attachment_path, status, created_at, updated_at
       let q = supabase
-        .from('support_issues')
-        .select('id, created_at, status, job_id, user_id, message, property_name, report_type, job_status, attachment_url, attachment_path');
+        .from('report_issues')
+        .select('id, created_at, updated_at, status, job_id, artifact_id, user_id, message, attachment_path');
       if (filter !== 'all') q = q.eq('status', filter);
       const { data } = await q.order('created_at', { ascending:false }).limit(50);
       setIssues(data || []);
@@ -371,8 +368,8 @@ export default function AdminDashboard() {
     setRptBusy(p => ({ ...p, [`fail-${jobId}`]:true }));
     try {
       const { error } = await supabase
-        .from('report_jobs')
-        .update({ status:'failed', error_message:'Force-failed by admin' })
+        .from('analysis_jobs')
+        .update({ status:'failed' })
         .eq('id', jobId);
       if (error) throw error;
       toast({ title:'Job marked failed', description:'Credit restored if entitlement logic is in place.' });
@@ -385,7 +382,7 @@ export default function AdminDashboard() {
   async function deleteReport(jobId) {
     setRptBusy(p => ({ ...p, [`del-${jobId}`]:true }));
     try {
-      const { error } = await supabase.from('report_jobs').delete().eq('id', jobId);
+      const { error } = await supabase.from('reports').delete().eq('id', jobId);
       if (error) throw error;
       toast({ title:'Report deleted' });
       setConfirmDelete(null);
@@ -401,9 +398,10 @@ export default function AdminDashboard() {
     try {
       const user = users.find(u => u.id === userId);
       if (!user) throw new Error();
-      const newCredits = Math.max(0, (user.report_credits || 0) + delta);
+      const curCredits = user.report_credits || 0;
+      const newCredits = Math.max(0, curCredits + delta);
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({ report_credits: newCredits })
         .eq('id', userId);
       if (error) throw error;
@@ -447,14 +445,6 @@ export default function AdminDashboard() {
       await fetchIssues(issueFilter);
     } catch { toast({ title:'Regen failed', variant:'destructive' }); }
     finally { setIssuesBusy(p => ({ ...p, [`regen-${issueId}`]:false })); }
-  }
-
-  // ─── DETECT AI RECOVERY TYPE ──────────────────────────────
-  function aiType(r) {
-    if (r.ai_t12_used && r.ai_rent_roll_used) return 'both';
-    if (r.ai_t12_used) return 't12';
-    if (r.ai_rent_roll_used) return 'rr';
-    return null;
   }
 
   // ─── PAGE CHANGE ─────────────────────────────────────────
@@ -561,7 +551,7 @@ export default function AdminDashboard() {
                         {stuckJobs.map(j => (
                           <tr key={j.id}>
                             <TblTd mono>{j.id?.slice(0,8)}…</TblTd>
-                            <TblTd>{j.property_address || '—'}</TblTd>
+                            <TblTd>{j.property_name || j.user_id?.slice(0,8) || '—'}</TblTd>
                             <TblTd mono>{j.report_type || '—'}</TblTd>
                             <TblTd mono>{new Date(j.created_at).toLocaleString()}</TblTd>
                             <TblTd right>
@@ -595,12 +585,9 @@ export default function AdminDashboard() {
                   <select
                     value={rptFilter} onChange={e => { setRptFilter(e.target.value); setRptPage(0); }}
                     style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
-                    <option value="all">All statuses</option>
-                    <option value="published">Published</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="queued">Queued</option>
-                    <option value="failed">Failed</option>
-                    <option value="needs_documents">Needs Docs</option>
+                    <option value="all">All types</option>
+                    <option value="screening">Screening</option>
+                    <option value="underwriting">Underwriting</option>
                   </select>
                   <Btn onClick={() => fetchReports(rptPage, rptSearch, rptFilter)}>
                     <RefreshCcw size={9} /> Refresh
@@ -626,14 +613,12 @@ export default function AdminDashboard() {
                         <TblTh>Type</TblTh>
                         <TblTh>Created</TblTh>
                         <TblTh>Status</TblTh>
-                        <TblTh>AI</TblTh>
-                        <TblTh right>Actions</TblTh>
+                          <TblTh right>Actions</TblTh>
                       </tr>
                     </thead>
                     <tbody>
                       {reports.map((r, i) => {
                         const isExpanded = expandedRpt === r.id;
-                        const ai = aiType(r);
                         return (
                           <React.Fragment key={r.id}>
                             <tr
@@ -643,30 +628,25 @@ export default function AdminDashboard() {
                               <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:200 }}>
                                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                                   {isExpanded ? <ChevronUp size={10} color={T.ink4} /> : <ChevronDown size={10} color={T.ink4} />}
-                                  {r.property_address || '—'}
+                                  {r.property_name || '—'}
                                 </div>
                               </TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.users?.email || r.user_id?.slice(0,8) || '—'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || '—'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{r.report_type || '—'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
-                              <TblTd><StatusBadge status={r.status} /></TblTd>
-                              <TblTd>{ai && <AiBadge type={ai} />}</TblTd>
+                              <TblTd><StatusBadge status={r.report_type} /></TblTd>
                               <TblTd right onClick={e => e.stopPropagation()}>
                                 <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                                  {r.pdf_url && (
-                                    <Btn onClick={() => window.open(r.pdf_url, '_blank')} variant="ghost">
+                                  {r.storage_path && (
+                                    <Btn onClick={() => window.open(r.storage_path, '_blank')} variant="ghost">
                                       <Eye size={9} /> View
                                     </Btn>
                                   )}
                                   <Btn onClick={() => regenReport(r.id)} disabled={rptBusy[`regen-${r.id}`]} variant="warn">
                                     <RotateCcw size={9} /> Regen
                                   </Btn>
-                                  {r.status === 'in_progress' && (
-                                    <Btn onClick={() => forceFailJob(r.id)} disabled={rptBusy[`fail-${r.id}`]} variant="danger">
-                                      <XCircle size={9} /> Fail
-                                    </Btn>
-                                  )}
-                                  <Btn onClick={() => setConfirmDelete({ id:r.id, addr:r.property_address })} disabled={rptBusy[`del-${r.id}`]} variant="danger">
+
+                                  <Btn onClick={() => setConfirmDelete({ id:r.id, addr:r.property_name })} disabled={rptBusy[`del-${r.id}`]} variant="danger">
                                     <Trash2 size={9} /> Del
                                   </Btn>
                                 </div>
@@ -697,16 +677,10 @@ export default function AdminDashboard() {
                                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
                                           <div>{ai ? <AiBadge type={ai} /> : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None — deterministic only</span>}</div>
                                         </div>
-                                        {r.error_message && (
+                                        {r.storage_path && (
                                           <div style={{ gridColumn:'1/-1' }}>
-                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.errRed, marginBottom:4 }}>Error</div>
-                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.errRed, background:T.errBg, padding:'8px 10px', border:`1px solid ${T.errBorder}` }}>{r.error_message}</div>
-                                          </div>
-                                        )}
-                                        {r.pdf_url && (
-                                          <div style={{ gridColumn:'1/-1' }}>
-                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>PDF URL</div>
-                                            <a href={r.pdf_url} target="_blank" rel="noreferrer"
+                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Storage Path</div>
+                                            <a href={r.storage_path} target="_blank" rel="noreferrer"
                                               style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.goldDark, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
                                               <ExternalLink size={9} /> Open Report PDF
                                             </a>
@@ -748,7 +722,7 @@ export default function AdminDashboard() {
               title="Users & Credits"
               action={
                 <div style={{ display:'flex', gap:8 }}>
-                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search email…" />
+                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search name…" />
                   <Btn onClick={() => fetchUsers(userSearch)}><RefreshCcw size={9} /> Refresh</Btn>
                 </div>
               }
@@ -762,21 +736,25 @@ export default function AdminDashboard() {
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
                   <thead>
                     <tr>
-                      <TblTh>Email</TblTh>
-                      <TblTh>Joined</TblTh>
-                      <TblTh>Reports</TblTh>
+                      <TblTh>Name</TblTh>
+                      <TblTh>Role</TblTh>
                       <TblTh>Credits</TblTh>
                       <TblTh right>Adjust Credits</TblTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u, i) => (
-                      <tr key={u.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                        <TblTd mono style={{ fontSize:10 }}>{u.email || '—'}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{new Date(u.created_at).toLocaleDateString()}</TblTd>
-                        <TblTd mono>{u.total_reports_generated ?? 0}</TblTd>
+                    {users.map((u, i) => {
+                      // Defensive: handle any column naming convention
+                      const userEmail    = u.email || u.user_email || '—';
+                      const userCredits  = u.report_credits ?? u.credits ?? u.screening_credits ?? null;
+                      const userReports  = u.total_reports_generated ?? u.reports_generated ?? u.report_count ?? '—';
+                      const userJoined   = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+                      return (
+                      <tr key={u.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                        <TblTd mono style={{ fontSize:10 }}>{u.full_name || '—'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{u.role || '—'}</TblTd>
                         <TblTd>
-                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.report_credits > 0 ? T.okGreen : T.errRed }}>
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: (u.report_credits||0) > 0 ? T.okGreen : T.errRed }}>
                             {u.report_credits ?? 0}
                           </span>
                         </TblTd>
@@ -794,7 +772,7 @@ export default function AdminDashboard() {
                           </div>
                         </TblTd>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               </div>
@@ -848,7 +826,7 @@ export default function AdminDashboard() {
                           <TblTd><StatusBadge status={issue.status || 'open'} /></TblTd>
                           <TblTd mono style={{ fontSize:9 }}>
                             <div>{issue.job_id?.slice(0,8) || '—'}</div>
-                            {issue.property_name && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>{issue.property_name}</div>}
+                            {issue.artifact_id && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>artifact: {issue.artifact_id.slice(0,8)}</div>}
                           </TblTd>
                           <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || '—'}</TblTd>
                           <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || '—'}</TblTd>
