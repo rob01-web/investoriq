@@ -2765,13 +2765,27 @@ export default async function handler(req, res) {
       "This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis."
     );
     finalHtml = replaceAll(
-      finalHtml,
-      "{{ASSUMPTIONS_DISCLOSURE}}",
-      allowAssumptions
-        ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. InvestorIQ does not invent missing data or fabricate market inputs."
-        : "Outputs are document-backed and framework-constrained. Missing inputs are not inferred."
-    );
-    if (effectiveReportMode === "screening_v1") {
+  finalHtml,
+  "{{ASSUMPTIONS_DISCLOSURE}}",
+  allowAssumptions
+    ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. InvestorIQ does not invent missing data or fabricate market inputs."
+    : "Outputs are document-backed and framework-constrained. Missing inputs are not inferred."
+);
+finalHtml = replaceAll(
+  finalHtml,
+  "{{UNIT_POSITIONING_SECTION_TITLE}}",
+  effectiveReportMode === "screening_v1"
+    ? "Unit-Level Rent Positioning"
+    : "Unit-Level Rent Positioning & Value Sensitivity"
+);
+finalHtml = replaceAll(
+  finalHtml,
+  "{{UNIT_POSITIONING_SECTION_SUBTITLE}}",
+  effectiveReportMode === "screening_v1"
+    ? "Market-rent gap based on uploaded rent roll"
+    : "Market-rent gap and implied value sensitivity"
+);
+if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
