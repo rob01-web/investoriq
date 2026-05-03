@@ -785,13 +785,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u, i) => {
-                      // Defensive: handle any column naming convention
-                      const userEmail    = u.email || u.user_email || '—';
-                      const userCredits  = u.report_credits ?? u.credits ?? u.screening_credits ?? null;
-                      const userReports  = u.total_reports_generated ?? u.reports_generated ?? u.report_count ?? '—';
-                      const userJoined   = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
-                      return (
+                    {users.map((u, i) => (
                       <tr key={u.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
                         <TblTd mono style={{ fontSize:10 }}>{u.full_name || '—'}</TblTd>
                         <TblTd mono style={{ fontSize:9 }}>{u.role || '—'}</TblTd>
