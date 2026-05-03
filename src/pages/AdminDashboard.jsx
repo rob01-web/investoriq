@@ -1,11 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet";
-import { FileText, Loader2, Users, BarChart3, RefreshCcw, Shield } from "lucide-react";
+import {
+  FileText, Loader2, Users, BarChart3, RefreshCcw, Shield,
+  AlertTriangle, ChevronDown, ChevronUp, Search, Trash2,
+  Eye, RotateCcw, XCircle, Plus, Minus, ExternalLink,
+  Activity, DollarSign, Zap, Clock, CheckCircle, Filter,
+  Bot, TrendingUp
+} from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 
-// DESIGN TOKENS
+// ─── DESIGN TOKENS ────────────────────────────────────────────
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -27,23 +33,25 @@ const T = {
   warnAmber:   '#7A4A00',
   warnBg:      '#FDF8EE',
   warnBorder:  '#E8D4A0',
+  infoBg:      '#F0F4FF',
+  infoBorder:  '#B8C8F0',
+  infoBlue:    '#1A3A7A',
 };
 
+const PAGE_SIZE = 20;
+const STUCK_THRESHOLD_MINS = 10;
+
+// ─── FONTS ────────────────────────────────────────────────────
 const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 `;
 
-// SHARED COMPONENTS
+// ─── SHARED COMPONENTS ────────────────────────────────────────
 function Card({ children, style = {} }) {
   return (
-    <div style={{
-      background:   T.white,
-      border:       `1px solid ${T.hairline}`,
-      padding:      '28px 32px',
-      marginBottom: 12,
-      ...style,
-    }}>
+    <div style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'24px 28px', marginBottom:10, ...style }}>
       {children}
     </div>
   );
@@ -51,627 +59,822 @@ function Card({ children, style = {} }) {
 
 function SectionHeader({ eyebrow, title, action }) {
   return (
-    <div style={{
-      display:        'flex',
-      alignItems:     'flex-start',
-      justifyContent: 'space-between',
-      marginBottom:   20,
-      paddingBottom:  12,
-      borderBottom:   `1px solid ${T.hairline}`,
-      gap:            12,
-    }}>
+    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:18, paddingBottom:12, borderBottom:`1px solid ${T.hairline}`, gap:12 }}>
       <div>
-        <p style={{
-          fontFamily:   "'DM Mono', monospace",
-          fontSize:     9,
-          letterSpacing:'0.2em',
-          textTransform:'uppercase',
-          color:        T.goldDark,
-          marginBottom: 4,
-        }}>{eyebrow}</p>
-        <h2 style={{
-          fontFamily:   "'Cormorant Garamond', Georgia, serif",
-          fontSize:     20,
-          fontWeight:   500,
-          letterSpacing:'-0.015em',
-          color:        T.ink,
-          lineHeight:   1.1,
-        }}>{title}</h2>
+        <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:T.goldDark, marginBottom:4 }}>{eyebrow}</p>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20, fontWeight:500, letterSpacing:'-0.015em', color:T.ink, lineHeight:1.1 }}>{title}</h2>
       </div>
       {action}
     </div>
   );
 }
 
-function StatBadge({ status }) {
+function StatusBadge({ status }) {
   const map = {
-    published:      { bg: T.okBg,   border: T.okBorder,   color: T.okGreen  },
-    queued:         { bg: T.warnBg, border: T.warnBorder,  color: T.warnAmber },
-    in_progress:    { bg: T.warnBg, border: T.warnBorder,  color: T.warnAmber },
-    failed:         { bg: T.errBg,  border: T.errBorder,   color: T.errRed   },
-    needs_documents:{ bg: '#F0F4FF',border: '#B8C8F0',     color: '#1A3A7A'  },
-    open:           { bg: T.errBg,  border: T.errBorder,   color: T.errRed   },
-    reviewing:      { bg: T.warnBg, border: T.warnBorder,  color: T.warnAmber },
-    resolved:       { bg: T.okBg,   border: T.okBorder,    color: T.okGreen  },
-    Completed:      { bg: T.okBg,   border: T.okBorder,    color: T.okGreen  },
-    Processing:     { bg: T.warnBg, border: T.warnBorder,  color: T.warnAmber },
+    published:       { bg:T.okBg,    border:T.okBorder,   color:T.okGreen   },
+    queued:          { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
+    in_progress:     { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
+    failed:          { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
+    needs_documents: { bg:T.infoBg,  border:T.infoBorder,  color:T.infoBlue  },
+    open:            { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
+    reviewing:       { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
+    resolved:        { bg:T.okBg,    border:T.okBorder,    color:T.okGreen   },
+    Completed:       { bg:T.okBg,    border:T.okBorder,    color:T.okGreen   },
+    Processing:      { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
+    stuck:           { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
   };
-  const s = map[status] || { bg: T.warm, border: T.hairline, color: T.ink4 };
+  const s = map[status] || { bg:T.warm, border:T.hairline, color:T.ink4 };
   return (
-    <span style={{
-      fontFamily:   "'DM Mono', monospace",
-      fontSize:     9,
-      letterSpacing:'0.14em',
-      textTransform:'uppercase',
-      padding:      '2px 8px',
-      background:   s.bg,
-      border:       `1px solid ${s.border}`,
-      color:        s.color,
-      whiteSpace:   'nowrap',
-    }}>{status || '-'}</span>
+    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', padding:'2px 8px', background:s.bg, border:`1px solid ${s.border}`, color:s.color, whiteSpace:'nowrap' }}>
+      {status || '-'}
+    </span>
   );
 }
 
-function GhostBtn({ children, onClick, style = {} }) {
-  const [hov, setHov] = useState(false);
+function AiBadge({ type }) {
+  if (!type) return null;
+  const label = type === 'both' ? 'AI: T12+RR' : type === 't12' ? 'AI: T12' : 'AI: RR';
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display:       'inline-flex',
-        alignItems:    'center',
-        gap:           6,
-        fontFamily:    "'DM Mono', monospace",
-        fontSize:      10,
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        padding:       '8px 16px',
-        background:    'transparent',
-        color:         hov ? T.ink : T.ink3,
-        border:        `1px solid ${hov ? T.hairlineMid : T.hairline}`,
-        cursor:        'pointer',
-        transition:    'all 0.15s',
-        ...style,
-      }}
-    >
+    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.12em', textTransform:'uppercase', padding:'2px 6px', background:'#EDE9FE', border:'1px solid #C4B5FD', color:'#4C1D95', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:3 }}>
+      <Bot size={9} /> {label}
+    </span>
+  );
+}
+
+function Btn({ children, onClick, disabled, variant='ghost', style={} }) {
+  const [hov, setHov] = useState(false);
+  const variants = {
+    ghost:   { bg:'transparent',      border:T.hairlineMid, color: hov ? T.ink  : T.ink3,    hbg:'transparent' },
+    danger:  { bg: hov ? T.errBg :'transparent', border:T.errBorder,  color:T.errRed,    hbg:T.errBg  },
+    success: { bg: hov ? T.okBg  :'transparent', border:T.okBorder,   color:T.okGreen,   hbg:T.okBg   },
+    warn:    { bg: hov ? T.warnBg:'transparent', border:T.warnBorder, color:T.warnAmber, hbg:T.warnBg },
+    primary: { bg: hov ? T.green :'#0F2318',     border:T.green,      color:T.white,     hbg:T.green  },
+  };
+  const v = variants[variant] || variants.ghost;
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:'inline-flex', alignItems:'center', gap:5, fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', padding:'5px 10px', background:v.bg, color:v.color, border:`1px solid ${v.border}`, cursor:disabled?'not-allowed':'pointer', opacity:disabled?0.4:1, transition:'all 0.15s', ...style }}>
       {children}
     </button>
   );
 }
 
-function PrimaryBtn({ children, onClick, disabled, style = {} }) {
-  const [hov, setHov] = useState(false);
+function SearchInput({ value, onChange, placeholder }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display:       'inline-flex',
-        alignItems:    'center',
-        gap:           6,
-        fontFamily:    "'DM Mono', monospace",
-        fontSize:      10,
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        padding:       '8px 16px',
-        background:    disabled ? T.hairline : hov ? T.gold : T.green,
-        color:         disabled ? T.ink4     : hov ? T.green : T.gold,
-        border:        `1px solid ${disabled ? T.hairlineMid : T.green}`,
-        cursor:        disabled ? 'not-allowed' : 'pointer',
-        transition:    'all 0.15s',
-        opacity:       disabled ? 0.6 : 1,
-        ...style,
-      }}
-    >
+    <div style={{ position:'relative', display:'inline-flex', alignItems:'center' }}>
+      <Search size={11} style={{ position:'absolute', left:9, color:T.ink4, pointerEvents:'none' }} />
+      <input
+        type="text" value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder || 'Search...'}
+        style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300, padding:'7px 10px 7px 28px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink, outline:'none', width:220 }}
+      />
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, accent }) {
+  return (
+    <div style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'16px 20px', borderTop:`3px solid ${accent || T.gold}` }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:T.ink4 }}>{label}</span>
+        {Icon && <Icon size={13} color={accent || T.goldDark} />}
+      </div>
+      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, lineHeight:1 }}>{value ?? '—'}</div>
+      {sub && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4, marginTop:4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(12,12,12,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <motion.div initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }}
+        style={{ background:T.white, border:`1px solid ${T.hairlineMid}`, padding:'28px 32px', maxWidth:400, width:'90%' }}>
+        <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:14, color:T.ink, marginBottom:20, lineHeight:1.55 }}>{message}</p>
+        <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+          <Btn onClick={onCancel}>Cancel</Btn>
+          <Btn onClick={onConfirm} variant="danger"><Trash2 size={10} /> Confirm Delete</Btn>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── TABLE HELPERS ────────────────────────────────────────────
+function TblTh({ children, right }) {
+  return (
+    <th style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.18em', textTransform:'uppercase', color:T.ink4, padding:'8px 10px', textAlign:right?'right':'left', borderBottom:`1px solid ${T.hairline}`, fontWeight:400, whiteSpace:'nowrap' }}>
       {children}
-    </button>
+    </th>
   );
 }
-
-function TblTh({ children, right = false }) {
+function TblTd({ children, mono, right, style={} }) {
   return (
-    <th style={{
-      fontFamily:   "'DM Mono', monospace",
-      fontSize:     9,
-      letterSpacing:'0.14em',
-      textTransform:'uppercase',
-      color:        T.ink3,
-      fontWeight:   400,
-      padding:      '0 10px 10px',
-      textAlign:    right ? 'right' : 'left',
-      background:   'none',
-      border:       'none',
-      borderBottom: `1.5px solid ${T.ink}`,
-      whiteSpace:   'nowrap',
-    }}>{children}</th>
+    <td style={{ fontFamily: mono ? "'DM Mono',monospace" : "'DM Sans',sans-serif", fontSize: mono ? 10 : 12, fontWeight:300, color:T.ink2, padding:'9px 10px', borderBottom:`1px solid ${T.hairline}`, textAlign:right?'right':'left', verticalAlign:'top', ...style }}>
+      {children}
+    </td>
   );
 }
 
-function TblTd({ children, mono = false, right = false, style = {} }) {
-  return (
-    <td style={{
-      fontFamily:  mono ? "'DM Mono', monospace" : "'DM Sans', sans-serif",
-      fontSize:    mono ? 9 : 12,
-      fontWeight:  300,
-      color:       T.ink2,
-      padding:     '9px 10px',
-      textAlign:   right ? 'right' : 'left',
-      borderBottom:`1px solid ${T.hairline}`,
-      letterSpacing: mono ? '0.06em' : 'normal',
-      ...style,
-    }}>{children}</td>
-  );
-}
-
-// MAIN COMPONENT
+// ─── MAIN COMPONENT ───────────────────────────────────────────
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [stats, setStats]           = useState({ totalUsers: 0, totalReports: 0, activeReports: 0 });
-  const [jobSummary, setJobSummary] = useState({ queued: 0, inProgress: 0, published: 0, failed: 0, needsDocuments: 0 });
-  const [recentReports, setRecentReports] = useState([]);
-  const [isAdmin, setIsAdmin]       = useState(false);
-  const [loading, setLoading]       = useState(false);
-  const [queueMetrics, setQueueMetrics]   = useState(null);
-  const [queueLoading, setQueueLoading]   = useState(false);
-  const [queueError, setQueueError]       = useState(null);
-  const [lastQueueMetricsAt, setLastQueueMetricsAt] = useState(null);
-  const [issueUpdating, setIssueUpdating] = useState({});
-  const [adminRunKey, setAdminRunKey] = useState(
-    () => (typeof window !== "undefined" ? localStorage.getItem("ADMIN_RUN_KEY") || "" : "")
-  );
+  const [adminRunKey, setAdminRunKey] = useState('');
+  const [authed, setAuthed]           = useState(false);
+  const [loading, setLoading]         = useState(false);
 
-  const fetchQueueMetrics = async () => {
-    if (!adminRunKey?.trim()) { setQueueError("Admin Run Key required."); return; }
-    setQueueLoading(true);
-    setQueueError(null);
+  // ── Command strip
+  const [cmdStats, setCmdStats]       = useState(null);
+  const [stuckJobs, setStuckJobs]     = useState([]);
+
+  // ── Reports
+  const [reports, setReports]         = useState([]);
+  const [rptTotal, setRptTotal]       = useState(0);
+  const [rptPage, setRptPage]         = useState(0);
+  const [rptSearch, setRptSearch]     = useState('');
+  const [rptFilter, setRptFilter]     = useState('all');
+  const [rptLoading, setRptLoading]   = useState(false);
+  const [expandedRpt, setExpandedRpt] = useState(null);
+  const [rptBusy, setRptBusy]         = useState({});
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // ── Users
+  const [users, setUsers]             = useState([]);
+  const [userSearch, setUserSearch]   = useState('');
+  const [userLoading, setUserLoading] = useState(false);
+  const [creditBusy, setCreditBusy]   = useState({});
+
+  // ── Issues
+  const [issues, setIssues]           = useState([]);
+  const [issueFilter, setIssueFilter] = useState('open');
+  const [issuesBusy, setIssuesBusy]   = useState({});
+
+  const searchTimer = useRef(null);
+
+  // ─── AUTH ─────────────────────────────────────────────────
+  async function handleAuth() {
+    if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
+    setLoading(true);
     try {
-      const res  = await fetch("/api/admin/queue-metrics", { method: "GET", headers: { Authorization: `Bearer ${adminRunKey.trim()}` } });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to load queue metrics.");
-      setQueueMetrics(data);
-      setLastQueueMetricsAt(new Date());
-    } catch (err) {
-      setQueueError(err?.message || "Failed to load queue metrics.");
-    } finally {
-      setQueueLoading(false);
+      const res = await fetch('/api/admin/run-eligible-jobs-once', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${adminRunKey.trim()}` },
+        body: JSON.stringify({ action:'ping' }),
+      });
+      if (res.status === 401 || res.status === 403) throw new Error('Unauthorized');
+      setAuthed(true);
+      toast({ title:'Access granted' });
+    } catch {
+      toast({ title:'Invalid admin key', variant:'destructive' });
+    } finally { setLoading(false); }
+  }
+
+  // ─── COMMAND STRIP ────────────────────────────────────────
+  const fetchCmdStats = useCallback(async () => {
+    try {
+      // Revenue MTD from report_purchases
+      const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
+      const { data: purchases } = await supabase
+        .from('report_purchases')
+        .select('amount_paid, created_at')
+        .gte('created_at', startOfMonth.toISOString());
+
+      const revMTD = (purchases || []).reduce((s, p) => s + (p.amount_paid || 0), 0);
+
+      // Reports today
+      const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+      const { count: rptToday } = await supabase
+        .from('report_jobs').select('id', { count:'exact', head:true })
+        .gte('created_at', startOfDay.toISOString());
+
+      // Total users
+      const { count: totalUsers } = await supabase
+        .from('profiles').select('id', { count:'exact', head:true });
+
+      // Open issues
+      const { count: openIssues } = await supabase
+        .from('support_issues').select('id', { count:'exact', head:true })
+        .eq('status', 'open');
+
+      // Stuck jobs
+      const cutoff = new Date(Date.now() - STUCK_THRESHOLD_MINS * 60 * 1000).toISOString();
+      const { data: stuck } = await supabase
+        .from('report_jobs').select('id, property_address, user_id, created_at, report_type')
+        .eq('status', 'in_progress')
+        .lt('created_at', cutoff)
+        .order('created_at', { ascending:true });
+
+      setStuckJobs(stuck || []);
+      setCmdStats({ revMTD, rptToday: rptToday || 0, totalUsers: totalUsers || 0, openIssues: openIssues || 0, stuckCount: (stuck || []).length });
+    } catch (e) {
+      console.error('cmdStats error', e);
     }
-  };
-
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      setLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const adminEmail = "hello@investoriq.tech";
-        setIsAdmin((user?.email || "").toLowerCase().trim() === adminEmail);
-
-        const { count: userCount }               = await supabase.from("users").select("*", { count: "exact", head: true });
-        const { count: reportCount, data: reports } = await supabase.from("properties").select("*", { count: "exact" }).order("created_at", { ascending: false }).limit(5);
-        const activeCount = (reports || []).filter((r) => r.status === "Processing").length;
-
-        const { count: queuedCount }        = await supabase.from("analysis_jobs").select("*", { count: "exact", head: true }).eq("status", "queued");
-        const { count: inProgressCount }    = await supabase.from("analysis_jobs").select("*", { count: "exact", head: true }).in("status", ["extracting","underwriting","scoring","rendering","pdf_generating","publishing"]);
-        const { count: publishedCount }     = await supabase.from("analysis_jobs").select("*", { count: "exact", head: true }).eq("status", "published");
-        const { count: failedCount }        = await supabase.from("analysis_jobs").select("*", { count: "exact", head: true }).eq("status", "failed");
-        const { count: needsDocumentsCount} = await supabase.from("analysis_jobs").select("*", { count: "exact", head: true }).eq("status", "needs_documents");
-
-        setStats({ totalUsers: userCount || 0, totalReports: reportCount || 0, activeReports: activeCount });
-        setRecentReports(reports || []);
-        setJobSummary({ queued: queuedCount || 0, inProgress: inProgressCount || 0, published: publishedCount || 0, failed: failedCount || 0, needsDocuments: needsDocumentsCount || 0 });
-      } catch (err) {
-        console.error("Error fetching admin data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAdminData();
-    fetchQueueMetrics();
-    const interval = setInterval(fetchQueueMetrics, 10 * 60 * 1000);
-    return () => clearInterval(interval);
   }, []);
-  // RENDER
+
+  // ─── REPORTS ──────────────────────────────────────────────
+  const fetchReports = useCallback(async (page = 0, search = '', filter = 'all') => {
+    setRptLoading(true);
+    try {
+      let q = supabase
+        .from('report_jobs')
+        .select(`id, property_address, user_id, created_at, status, report_type,
+                 pdf_url, ai_t12_used, ai_rent_roll_used, error_message,
+                 profiles(email)`, { count:'exact' });
+
+      if (filter !== 'all') q = q.eq('status', filter);
+      if (search.trim()) q = q.ilike('property_address', `%${search.trim()}%`);
+
+      const { data, count, error } = await q
+        .order('created_at', { ascending:false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      setReports(data || []);
+      setRptTotal(count || 0);
+    } catch (e) {
+      toast({ title:'Failed to load reports', variant:'destructive' });
+    } finally { setRptLoading(false); }
+  }, [toast]);
+
+  // ─── USERS ────────────────────────────────────────────────
+  const fetchUsers = useCallback(async (search = '') => {
+    setUserLoading(true);
+    try {
+      let q = supabase
+        .from('profiles')
+        .select('id, email, created_at, report_credits, total_reports_generated');
+      if (search.trim()) q = q.ilike('email', `%${search.trim()}%`);
+      const { data, error } = await q.order('created_at', { ascending:false }).limit(50);
+      if (error) throw error;
+      setUsers(data || []);
+    } catch {
+      toast({ title:'Failed to load users', variant:'destructive' });
+    } finally { setUserLoading(false); }
+  }, [toast]);
+
+  // ─── ISSUES ───────────────────────────────────────────────
+  const fetchIssues = useCallback(async (filter = 'open') => {
+    try {
+      let q = supabase
+        .from('support_issues')
+        .select('id, created_at, status, job_id, user_id, message, property_name, report_type, job_status, attachment_url, attachment_path');
+      if (filter !== 'all') q = q.eq('status', filter);
+      const { data } = await q.order('created_at', { ascending:false }).limit(50);
+      setIssues(data || []);
+    } catch { /* silent */ }
+  }, []);
+
+  // ─── INIT ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!authed) return;
+    fetchCmdStats();
+    fetchReports(0, '', 'all');
+    fetchUsers('');
+    fetchIssues('open');
+  }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues]);
+
+  // ─── DEBOUNCED SEARCH ────────────────────────────────────
+  useEffect(() => {
+    if (!authed) return;
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setRptPage(0);
+      fetchReports(0, rptSearch, rptFilter);
+    }, 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [rptSearch, rptFilter, authed, fetchReports]);
+
+  // ─── REPORT ACTIONS ───────────────────────────────────────
+  async function regenReport(jobId) {
+    if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
+    setRptBusy(p => ({ ...p, [`regen-${jobId}`]:true }));
+    try {
+      const res = await fetch('/api/admin/run-eligible-jobs-once', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${adminRunKey.trim()}` },
+        body: JSON.stringify({ action:'regenerate_pdf', job_id:jobId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error();
+      toast({ title:'Regeneration started' });
+      await fetchReports(rptPage, rptSearch, rptFilter);
+    } catch { toast({ title:'Regen failed', variant:'destructive' }); }
+    finally { setRptBusy(p => ({ ...p, [`regen-${jobId}`]:false })); }
+  }
+
+  async function forceFailJob(jobId) {
+    if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
+    setRptBusy(p => ({ ...p, [`fail-${jobId}`]:true }));
+    try {
+      const { error } = await supabase
+        .from('report_jobs')
+        .update({ status:'failed', error_message:'Force-failed by admin' })
+        .eq('id', jobId);
+      if (error) throw error;
+      toast({ title:'Job marked failed', description:'Credit restored if entitlement logic is in place.' });
+      await fetchReports(rptPage, rptSearch, rptFilter);
+      await fetchCmdStats();
+    } catch { toast({ title:'Force-fail failed', variant:'destructive' }); }
+    finally { setRptBusy(p => ({ ...p, [`fail-${jobId}`]:false })); }
+  }
+
+  async function deleteReport(jobId) {
+    setRptBusy(p => ({ ...p, [`del-${jobId}`]:true }));
+    try {
+      const { error } = await supabase.from('report_jobs').delete().eq('id', jobId);
+      if (error) throw error;
+      toast({ title:'Report deleted' });
+      setConfirmDelete(null);
+      await fetchReports(rptPage, rptSearch, rptFilter);
+      await fetchCmdStats();
+    } catch { toast({ title:'Delete failed', variant:'destructive' }); }
+    finally { setRptBusy(p => ({ ...p, [`del-${jobId}`]:false })); }
+  }
+
+  // ─── CREDIT ACTIONS ───────────────────────────────────────
+  async function adjustCredits(userId, delta) {
+    setCreditBusy(p => ({ ...p, [userId]:true }));
+    try {
+      const user = users.find(u => u.id === userId);
+      if (!user) throw new Error();
+      const newCredits = Math.max(0, (user.report_credits || 0) + delta);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ report_credits: newCredits })
+        .eq('id', userId);
+      if (error) throw error;
+      toast({ title: delta > 0 ? `+${delta} credit granted` : `${delta} credit removed` });
+      await fetchUsers(userSearch);
+    } catch { toast({ title:'Credit update failed', variant:'destructive' }); }
+    finally { setCreditBusy(p => ({ ...p, [userId]:false })); }
+  }
+
+  // ─── ISSUE ACTIONS ────────────────────────────────────────
+  async function updateIssue(issueId, status) {
+    if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
+    setIssuesBusy(p => ({ ...p, [issueId]:true }));
+    try {
+      const res = await fetch('/api/admin/queue-metrics', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${adminRunKey.trim()}` },
+        body: JSON.stringify({ issue_id:issueId, status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error();
+      toast({ title:'Updated' });
+      await fetchIssues(issueFilter);
+      await fetchCmdStats();
+    } catch { toast({ title:'Update failed', variant:'destructive' }); }
+    finally { setIssuesBusy(p => ({ ...p, [issueId]:false })); }
+  }
+
+  async function regenFromIssue(jobId, issueId) {
+    if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
+    setIssuesBusy(p => ({ ...p, [`regen-${issueId}`]:true }));
+    try {
+      const res = await fetch('/api/admin/run-eligible-jobs-once', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${adminRunKey.trim()}` },
+        body: JSON.stringify({ action:'regenerate_pdf', job_id:jobId, reason:`admin_issue_${issueId}` }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error();
+      toast({ title:'Regeneration started' });
+      await fetchIssues(issueFilter);
+    } catch { toast({ title:'Regen failed', variant:'destructive' }); }
+    finally { setIssuesBusy(p => ({ ...p, [`regen-${issueId}`]:false })); }
+  }
+
+  // ─── DETECT AI RECOVERY TYPE ──────────────────────────────
+  function aiType(r) {
+    if (r.ai_t12_used && r.ai_rent_roll_used) return 'both';
+    if (r.ai_t12_used) return 't12';
+    if (r.ai_rent_roll_used) return 'rr';
+    return null;
+  }
+
+  // ─── PAGE CHANGE ─────────────────────────────────────────
+  function goPage(p) {
+    setRptPage(p);
+    fetchReports(p, rptSearch, rptFilter);
+  }
+
+  const totalPages = Math.ceil(rptTotal / PAGE_SIZE);
+
+  // ─── LOCKED SCREEN ────────────────────────────────────────
+  if (!authed) {
+    return (
+      <>
+        <style>{FONTS}</style>
+        <Helmet><title>Admin — InvestorIQ</title></Helmet>
+        <div style={{ minHeight:'100vh', background:T.green, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+            style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'40px 48px', maxWidth:420, width:'100%' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
+              <Shield size={18} color={T.goldDark} />
+              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:T.goldDark }}>Admin Access</span>
+            </div>
+            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, marginBottom:24, letterSpacing:'-0.02em' }}>InvestorIQ Command Centre</h1>
+            <input
+              type="password" placeholder="Admin run key"
+              value={adminRunKey} onChange={e => setAdminRunKey(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAuth()}
+              style={{ width:'100%', fontFamily:"'DM Mono',monospace", fontSize:12, padding:'12px 14px', border:`1px solid ${T.hairlineMid}`, background:T.warm, color:T.ink, outline:'none', marginBottom:12, boxSizing:'border-box' }}
+            />
+            <button onClick={handleAuth} disabled={loading}
+              style={{ width:'100%', fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', padding:'13px 0', background:T.green, color:T.white, border:'none', cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1 }}>
+              {loading ? 'Verifying...' : 'Authenticate →'}
+            </button>
+          </motion.div>
+        </div>
+      </>
+    );
+  }
+
+  // ─── COMMAND CENTRE ───────────────────────────────────────
   return (
     <>
       <style>{FONTS}</style>
+      <Helmet><title>Admin Command Centre — InvestorIQ</title></Helmet>
 
-      <Helmet>
-        <title>Admin Console - InvestorIQ</title>
-        <meta name="description" content="Administrative overview of user activity, report performance, and platform usage." />
-      </Helmet>
+      {confirmDelete && (
+        <ConfirmModal
+          message={`Permanently delete report for "${confirmDelete.addr || 'this property'}"? This cannot be undone.`}
+          onConfirm={() => deleteReport(confirmDelete.id)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
 
-      <div style={{ minHeight: '100vh', background: T.warm, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ minHeight:'100vh', background:T.warm }}>
 
-        {/* PAGE HEADER */}
-        <div style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position:'absolute', top:0, bottom:0, left:40, width:1, background:'linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.4) 20%, rgba(201,168,76,0.4) 80%, transparent 100%)', pointerEvents:'none' }} />
-
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 48px 36px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, flexWrap:'wrap' }}
-          >
-            <div>
-              <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(201,168,76,0.45)', marginBottom:8 }}>
-                InvestorIQ - Admin Console
-              </p>
-              <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'clamp(24px,3vw,34px)', fontWeight:500, letterSpacing:'-0.02em', color:'#FFFFFF', lineHeight:1.05, marginBottom:6 }}>
-                Operational Overview
-              </h1>
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.4)', lineHeight:1.6 }}>
-                Queue health, issue triage, and platform metrics.
-              </p>
-            </div>
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignSelf:'flex-end' }}>
-              <GhostBtn
-                onClick={() => window.location.reload()}
-                style={{ borderColor:'rgba(255,255,255,0.18)', color:'rgba(255,255,255,0.4)' }}
-              >
-                <RefreshCcw style={{ width:11, height:11 }} /> Reload
-              </GhostBtn>
-            </div>
-          </motion.div>
+        {/* ── TOP BAR ──────────────────────────────────── */}
+        <div style={{ background:T.green, padding:'14px 32px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(255,255,255,0.08)` }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Shield size={14} color={T.gold} />
+            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:T.gold }}>InvestorIQ Command Centre</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <Activity size={11} color='rgba(255,255,255,0.4)' />
+            <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:'rgba(255,255,255,0.4)', letterSpacing:'0.12em' }}>LIVE</span>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ADE80', display:'inline-block', animation:'pulse 2s infinite' }} />
+          </div>
         </div>
 
-        {/* MAIN CONTENT */}
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 48px 64px' }}>
+        <div style={{ maxWidth:1400, margin:'0 auto', padding:'24px 24px 48px' }}>
 
-          {/* Admin Run Key */}
-          <Card style={{ marginBottom: 16 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-              <Shield style={{ width:16, height:16, color:T.goldDark, flexShrink:0 }} />
-              <div>
-                <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:T.goldDark, marginBottom:3 }}>Admin Authentication</p>
-                <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300, color:T.ink3 }}>Required to access admin endpoints and queue operations.</p>
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:12, alignItems:'flex-start', flexWrap:'wrap' }}>
-              <div style={{ flex:1, minWidth:200, maxWidth:340 }}>
-                <label style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, display:'block', marginBottom:7 }}>
-                  Admin Run Key
-                </label>
-                <input
-                  type="password"
-                  value={adminRunKey}
-                  onChange={(e) => setAdminRunKey(e.target.value)}
-                  onBlur={(e) => localStorage.setItem("ADMIN_RUN_KEY", e.target.value || "")}
-                  placeholder="Enter admin key"
-                  style={{
-                    width:'100%', fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300,
-                    color:T.ink, background:T.white, border:`1px solid ${T.hairlineMid}`,
-                    padding:'10px 12px', outline:'none', boxSizing:'border-box',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = T.gold; }}
-                  onBlur={(e)  => { e.target.style.borderColor = T.hairlineMid; }}
-                />
-                {!adminRunKey.trim() && (
-                  <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.errRed, marginTop:6, letterSpacing:'0.08em' }}>
-                    Admin Run Key required to access admin endpoints.
-                  </p>
-                )}
-              </div>
-              <PrimaryBtn onClick={fetchQueueMetrics} disabled={!adminRunKey.trim()} style={{ alignSelf:'flex-end', marginBottom:2 }}>
-                {queueLoading ? <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} /> : null}
-                {queueLoading ? 'Loading...' : 'Fetch metrics'}
-              </PrimaryBtn>
-            </div>
-          </Card>
+          {/* ── ZONE 1: COMMAND STRIP ────────────────────── */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:16 }}>
+            <StatCard icon={DollarSign} label="Revenue MTD" value={cmdStats ? `$${(cmdStats.revMTD/100).toLocaleString('en-CA', { minimumFractionDigits:0 })}` : '—'} sub="Canadian dollars" accent={T.goldDark} />
+            <StatCard icon={FileText} label="Reports Today" value={cmdStats?.rptToday ?? '—'} sub="generated today" accent='#1A4A22' />
+            <StatCard icon={Users} label="Total Users" value={cmdStats?.totalUsers ?? '—'} sub="registered accounts" accent={T.infoBlue} />
+            <StatCard icon={AlertTriangle} label="Open Issues" value={cmdStats?.openIssues ?? '—'} sub="pending support" accent={cmdStats?.openIssues > 0 ? T.errRed : T.ink4} />
+            <StatCard icon={Clock} label="Stuck Jobs" value={cmdStats?.stuckCount ?? '—'} sub={`>${STUCK_THRESHOLD_MINS}min in_progress`} accent={cmdStats?.stuckCount > 0 ? T.errRed : T.ink4} />
+          </div>
 
-          {/* Operations notice (admin only) */}
-          {isAdmin && (
-            <div style={{
-              padding:'12px 16px', background:T.warm,
-              border:`1px solid ${T.hairline}`, borderLeft:`3px solid ${T.goldDark}`,
-              marginBottom:12, display:'flex', alignItems:'center', gap:12,
-            }}>
-              <Shield style={{ width:14, height:14, color:T.goldDark, flexShrink:0 }} />
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink3 }}>
-                Queue processing runs automatically every few minutes.
-              </p>
-            </div>
-          )}
-
-          {/* LOADING */}
-          {loading ? (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'64px 0', gap:12 }}>
-              <Loader2 style={{ width:20, height:20, color:T.gold, animation:'spin 1s linear infinite' }} />
-              <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink3 }}>Loading platform data...</span>
-            </div>
-          ) : (
-            <>
-
-              {/* JOB STATUS STRIP */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:12 }}>
-                {[
-                  { label:'Queued',          val: jobSummary.queued },
-                  { label:'In Progress',     val: jobSummary.inProgress },
-                  { label:'Needs Documents', val: jobSummary.needsDocuments },
-                  { label:'Published',       val: jobSummary.published },
-                  { label:'Failed',          val: jobSummary.failed },
-                ].map(({ label, val }) => (
-                  <div key={label} style={{
-                    background:T.white, border:`1px solid ${T.hairline}`,
-                    padding:'16px 12px', textAlign:'center',
-                  }}>
-                    <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>{label}</p>
-                    <p style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, lineHeight:1 }}>{val}</p>
+          {/* ── ZONE 2: STUCK JOBS ALERT ─────────────────── */}
+          <AnimatePresence>
+            {stuckJobs.length > 0 && (
+              <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }}>
+                <div style={{ background:T.errBg, border:`1px solid ${T.errBorder}`, padding:'16px 20px', marginBottom:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                    <AlertTriangle size={13} color={T.errRed} />
+                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:T.errRed }}>
+                      {stuckJobs.length} Stuck Job{stuckJobs.length !== 1 ? 's' : ''} — In Progress &gt;{STUCK_THRESHOLD_MINS} Minutes
+                    </span>
                   </div>
-                ))}
-              </div>
-
-              {/* PLATFORM STATS */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:12 }}>
-                {[
-                  { icon: Users,    label:'Total Users',   val: stats.totalUsers   },
-                  { icon: FileText, label:'Total Reports',  val: stats.totalReports  },
-                  { icon: BarChart3,label:'Active Reports', val: stats.activeReports },
-                ].map(({ icon: Icon, label, val }) => (
-                  <div key={label} style={{
-                    background:T.white, border:`1px solid ${T.hairline}`,
-                    padding:'24px 20px', display:'flex', alignItems:'center', gap:16,
-                  }}>
-                    <Icon style={{ width:20, height:20, color:T.goldDark, flexShrink:0 }} />
-                    <div>
-                      <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:5 }}>{label}</p>
-                      <p style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, lineHeight:1 }}>{val}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* MAIN CONTENT */}
-              <Card>
-                <SectionHeader
-                  eyebrow="Queue Health"
-                  title="Recent Jobs"
-                  action={
-                    <GhostBtn onClick={fetchQueueMetrics}>
-                      {queueLoading
-                        ? <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />
-                        : <RefreshCcw style={{ width:11, height:11 }} />}
-                      {queueLoading ? 'Loading...' : 'Refresh'}
-                    </GhostBtn>
-                  }
-                />
-
-                {lastQueueMetricsAt && (
-                  <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4, letterSpacing:'0.08em', marginBottom:12 }}>
-                    Last fetched: {lastQueueMetricsAt.toLocaleString()}
-                  </p>
-                )}
-
-                {queueError && (
-                  <div style={{ padding:'10px 14px', background:T.errBg, border:`1px solid ${T.errBorder}`, borderLeft:`3px solid ${T.errBorder}`, marginBottom:16, fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.errRed }}>
-                    {queueError}
-                  </div>
-                )}
-
-                {queueMetrics && (
                   <div style={{ overflowX:'auto' }}>
                     <table style={{ width:'100%', borderCollapse:'collapse' }}>
                       <thead>
                         <tr>
                           <TblTh>Job ID</TblTh>
                           <TblTh>Property</TblTh>
-                          <TblTh>Status</TblTh>
-                          <TblTh>Reason</TblTh>
-                          <TblTh>Created</TblTh>
+                          <TblTh>Type</TblTh>
                           <TblTh>Started</TblTh>
-                          <TblTh>User</TblTh>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(queueMetrics?.recent_jobs || []).length === 0 ? (
-                          <tr><td colSpan="7" style={{ padding:'20px 10px', textAlign:'center', fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4 }}>No recent jobs found.</td></tr>
-                        ) : (
-                          queueMetrics.recent_jobs.map((job, i) => (
-                            <tr key={job.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                              <TblTd mono>{job.id}</TblTd>
-                              <TblTd style={{ fontWeight:400, color:T.ink }}>{job.property_name || "-"}</TblTd>
-                              <TblTd><StatBadge status={job.status} /></TblTd>
-                              <TblTd style={{ maxWidth:260, fontSize:12, color:T.ink3, whiteSpace:'normal', lineHeight:1.45 }}>
-                                {job.status === 'failed'
-                                  ? (() => {
-                                      const reason = String(job.failure_reason || job.error_message || '').trim();
-                                      if (!reason) return 'No failure reason recorded.';
-                                      return reason.length > 120 ? `${reason.slice(0, 120)}...` : reason;
-                                    })()
-                                  : '-' }
-                              </TblTd>
-                              <TblTd mono>{job.created_at ? new Date(job.created_at).toLocaleString() : '-' }</TblTd>
-                              <TblTd mono>{(job.started_at || job.created_at) ? new Date(job.started_at || job.created_at).toLocaleString() : '-' }</TblTd>
-                              <TblTd mono>{job.user_id}</TblTd>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-
-              {/* ISSUE INBOX */}
-              <Card>
-                <SectionHeader eyebrow="Support" title="Issue Inbox" />
-
-                {queueMetrics?.issues_error ? (
-                  <p style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink4, letterSpacing:'0.1em' }}>DATA NOT AVAILABLE</p>
-                ) : (queueMetrics?.issues || []).length === 0 ? (
-                  <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4 }}>No issues reported.</p>
-                ) : (
-                  <div style={{ overflowX:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                      <thead>
-                        <tr>
-                          <TblTh>Created</TblTh>
-                          <TblTh>Status</TblTh>
-                          <TblTh>Job ID</TblTh>
-                          <TblTh>User ID</TblTh>
-                          <TblTh>Message</TblTh>
-                          <TblTh>Attachment</TblTh>
                           <TblTh right>Actions</TblTh>
                         </tr>
                       </thead>
                       <tbody>
-                        {(queueMetrics?.issues || []).map((issue, i) => {
-                          const message    = issue?.message || "";
-                          const truncated  = message.length > 120 ? `${message.slice(0, 120)}...` : message;
-                          const isUpdating = Boolean(issueUpdating[issue.id]);
-                          const regenKey   = `regen-${issue.id}`;
-                          const isRegen    = Boolean(issueUpdating[regenKey]);
-                          return (
-                            <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                              <TblTd mono>{issue.created_at ? new Date(issue.created_at).toLocaleString() : '-' }</TblTd>
-                              <TblTd><StatBadge status={issue.status || 'open'} /></TblTd>
-                              <TblTd mono>
-                                <div>{issue.job_id || '-'}</div>
-                                {(issue.property_name || issue.report_type || issue.job_status) && (
-                                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, letterSpacing:'normal', marginTop:4, lineHeight:1.45 }}>
-                                    {issue.property_name || 'Property unavailable'}
-                                    {issue.report_type ? ` | ${issue.report_type}` : '-' }
-                                    {issue.job_status ? ` | ${issue.job_status}` : '-' }
-                                  </div>
-                                )}
-                              </TblTd>
-                              <TblTd mono>{issue.user_id || '-'}</TblTd>
-                              <TblTd style={{ maxWidth:200, color:T.ink3, fontSize:12 }}>{truncated}</TblTd>
-                              <TblTd>
-                                {issue.attachment_url ? (
-                                  <a href={issue.attachment_url} target="_blank" rel="noreferrer"
-                                    style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.goldDark, textDecoration:'none' }}>
-                                    View ->
-                                  </a>
-                                ) : issue.attachment_path ? (
-                                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>DATA NOT AVAILABLE</span>
-                                ) : '-' }
-                              </TblTd>
-                              <TblTd right>
-                                <div style={{ display:'flex', gap:6, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                                  {issue.status !== "reviewing" && (
-                                    <button
-                                      disabled={isUpdating}
-                                      onClick={async () => {
-                                        if (!adminRunKey?.trim()) { toast({ title:"Admin Run Key required", variant:"destructive" }); return; }
-                                        try {
-                                          setIssueUpdating((p) => ({ ...p, [issue.id]: true }));
-                                          const res  = await fetch("/api/admin/queue-metrics", { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${adminRunKey.trim()}`}, body:JSON.stringify({ issue_id:issue.id, status:"reviewing" }) });
-                                          const data = await res.json().catch(() => ({}));
-                                          if (!res.ok || !data?.ok) throw new Error("Update failed");
-                                          toast({ title:"Updated" });
-                                          await fetchQueueMetrics();
-                                        } catch { toast({ title:"Update failed", variant:"destructive" }); }
-                                        finally { setIssueUpdating((p) => ({ ...p, [issue.id]: false })); }
-                                      }}
-                                      style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', padding:'4px 10px', background:'transparent', border:`1px solid ${T.hairlineMid}`, color:T.ink3, cursor:isUpdating?'not-allowed':'pointer', opacity:isUpdating?0.5:1 }}
-                                    >
-                                      Reviewing
-                                    </button>
-                                  )}
-                                  {issue.status !== "resolved" && (
-                                    <button
-                                      disabled={isUpdating}
-                                      onClick={async () => {
-                                        if (!adminRunKey?.trim()) { toast({ title:"Admin Run Key required", variant:"destructive" }); return; }
-                                        try {
-                                          setIssueUpdating((p) => ({ ...p, [issue.id]: true }));
-                                          const res  = await fetch("/api/admin/queue-metrics", { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${adminRunKey.trim()}`}, body:JSON.stringify({ issue_id:issue.id, status:"resolved" }) });
-                                          const data = await res.json().catch(() => ({}));
-                                          if (!res.ok || !data?.ok) throw new Error("Update failed");
-                                          toast({ title:"Updated" });
-                                          await fetchQueueMetrics();
-                                        } catch { toast({ title:"Update failed", variant:"destructive" }); }
-                                        finally { setIssueUpdating((p) => ({ ...p, [issue.id]: false })); }
-                                      }}
-                                      style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', padding:'4px 10px', background:'transparent', border:`1px solid ${T.hairlineMid}`, color:T.okGreen, cursor:isUpdating?'not-allowed':'pointer', opacity:isUpdating?0.5:1 }}
-                                    >
-                                      Resolved
-                                    </button>
-                                  )}
-                                  <button
-                                    disabled={isRegen || !issue.job_id}
-                                    onClick={async () => {
-                                      if (!issue.job_id) return;
-                                      if (!adminRunKey?.trim()) { toast({ title:"Admin Run Key required", variant:"destructive" }); return; }
-                                      try {
-                                        setIssueUpdating((p) => ({ ...p, [regenKey]: true }));
-                                        const res  = await fetch("/api/admin/run-eligible-jobs-once", { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${adminRunKey.trim()}`}, body:JSON.stringify({ action:"regenerate_pdf", job_id:issue.job_id, reason:`admin_issue_${issue.id}` }) });
-                                        const data = await res.json().catch(() => ({}));
-                                        if (!res.ok || !data?.ok) throw new Error("Regeneration failed");
-                                        toast({ title:"Regeneration started", description:"PDF regeneration started for the same job." });
-                                        await fetchQueueMetrics();
-                                      } catch { toast({ title:"Regeneration failed", description:"Unable to start regeneration.", variant:"destructive" }); }
-                                      finally { setIssueUpdating((p) => ({ ...p, [regenKey]: false })); }
-                                    }}
-                                    style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', padding:'4px 10px', background:'transparent', border:`1px solid ${T.hairlineMid}`, color:T.warnAmber, cursor:isRegen||!issue.job_id?'not-allowed':'pointer', opacity:isRegen||!issue.job_id?0.4:1 }}
-                                    title={!issue.job_id ? "No job id" : undefined}
-                                  >
-                                    Regen
-                                  </button>
-                                </div>
-                                <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, textAlign:'right', marginTop:4, lineHeight:1.5 }}>
-                                  Regen runs PDF generation against the same job. No new job, no credit consumed.
-                                </div>
-                              </TblTd>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-
-              {/* RECENT REPORTS */}
-              <Card>
-                <SectionHeader
-                  eyebrow="Properties"
-                  title="Recent Reports"
-                  action={
-                    <GhostBtn onClick={() => window.location.reload()}>
-                      <RefreshCcw style={{ width:11, height:11 }} /> Refresh
-                    </GhostBtn>
-                  }
-                />
-
-                {recentReports.length === 0 ? (
-                  <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>
-                    No recent reports available.
-                  </p>
-                ) : (
-                  <div style={{ overflowX:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                      <thead>
-                        <tr>
-                          <TblTh>Property</TblTh>
-                          <TblTh>User</TblTh>
-                          <TblTh>Created</TblTh>
-                          <TblTh>Status</TblTh>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentReports.map((r, i) => (
-                          <tr key={r.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                            <TblTd style={{ fontWeight:400, color:T.ink }}>{r.property_address || '-'}</TblTd>
-                            <TblTd mono>{r.user_email || '-'}</TblTd>
-                            <TblTd mono>{new Date(r.created_at).toLocaleDateString()}</TblTd>
-                            <TblTd><StatBadge status={r.status} /></TblTd>
+                        {stuckJobs.map(j => (
+                          <tr key={j.id}>
+                            <TblTd mono>{j.id?.slice(0,8)}…</TblTd>
+                            <TblTd>{j.property_address || '—'}</TblTd>
+                            <TblTd mono>{j.report_type || '—'}</TblTd>
+                            <TblTd mono>{new Date(j.created_at).toLocaleString()}</TblTd>
+                            <TblTd right>
+                              <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                                <Btn onClick={() => regenReport(j.id)} disabled={rptBusy[`regen-${j.id}`]} variant="warn">
+                                  <RotateCcw size={9} /> Regen
+                                </Btn>
+                                <Btn onClick={() => forceFailJob(j.id)} disabled={rptBusy[`fail-${j.id}`]} variant="danger">
+                                  <XCircle size={9} /> Force-Fail
+                                </Btn>
+                              </div>
+                            </TblTd>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                )}
-              </Card>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            </>
-          )}
+          {/* ── ZONE 3: REPORTS TABLE ────────────────────── */}
+          <Card>
+            <SectionHeader
+              eyebrow="Properties"
+              title="Reports"
+              action={
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                  <SearchInput value={rptSearch} onChange={setRptSearch} placeholder="Search property…" />
+                  <select
+                    value={rptFilter} onChange={e => { setRptFilter(e.target.value); setRptPage(0); }}
+                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
+                    <option value="all">All statuses</option>
+                    <option value="published">Published</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="queued">Queued</option>
+                    <option value="failed">Failed</option>
+                    <option value="needs_documents">Needs Docs</option>
+                  </select>
+                  <Btn onClick={() => fetchReports(rptPage, rptSearch, rptFilter)}>
+                    <RefreshCcw size={9} /> Refresh
+                  </Btn>
+                </div>
+              }
+            />
+
+            {rptLoading ? (
+              <div style={{ textAlign:'center', padding:'32px 0' }}>
+                <Loader2 size={18} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
+              </div>
+            ) : reports.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No reports found.</p>
+            ) : (
+              <>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                    <thead>
+                      <tr>
+                        <TblTh>Property</TblTh>
+                        <TblTh>User</TblTh>
+                        <TblTh>Type</TblTh>
+                        <TblTh>Created</TblTh>
+                        <TblTh>Status</TblTh>
+                        <TblTh>AI</TblTh>
+                        <TblTh right>Actions</TblTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((r, i) => {
+                        const isExpanded = expandedRpt === r.id;
+                        const ai = aiType(r);
+                        return (
+                          <React.Fragment key={r.id}>
+                            <tr
+                              style={{ background: i % 2 === 1 ? T.warm : T.white, cursor:'pointer' }}
+                              onClick={() => setExpandedRpt(isExpanded ? null : r.id)}
+                            >
+                              <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:200 }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                  {isExpanded ? <ChevronUp size={10} color={T.ink4} /> : <ChevronDown size={10} color={T.ink4} />}
+                                  {r.property_address || '—'}
+                                </div>
+                              </TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.profiles?.email || r.user_id?.slice(0,8) || '—'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.report_type || '—'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
+                              <TblTd><StatusBadge status={r.status} /></TblTd>
+                              <TblTd>{ai && <AiBadge type={ai} />}</TblTd>
+                              <TblTd right onClick={e => e.stopPropagation()}>
+                                <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                                  {r.pdf_url && (
+                                    <Btn onClick={() => window.open(r.pdf_url, '_blank')} variant="ghost">
+                                      <Eye size={9} /> View
+                                    </Btn>
+                                  )}
+                                  <Btn onClick={() => regenReport(r.id)} disabled={rptBusy[`regen-${r.id}`]} variant="warn">
+                                    <RotateCcw size={9} /> Regen
+                                  </Btn>
+                                  {r.status === 'in_progress' && (
+                                    <Btn onClick={() => forceFailJob(r.id)} disabled={rptBusy[`fail-${r.id}`]} variant="danger">
+                                      <XCircle size={9} /> Fail
+                                    </Btn>
+                                  )}
+                                  <Btn onClick={() => setConfirmDelete({ id:r.id, addr:r.property_address })} disabled={rptBusy[`del-${r.id}`]} variant="danger">
+                                    <Trash2 size={9} /> Del
+                                  </Btn>
+                                </div>
+                              </TblTd>
+                            </tr>
+
+                            {/* Expanded job detail */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={7} style={{ padding:0, background:T.infoBg, borderBottom:`1px solid ${T.hairline}` }}>
+                                    <motion.div
+                                      initial={{ opacity:0, height:0 }}
+                                      animate={{ opacity:1, height:'auto' }}
+                                      exit={{ opacity:0, height:0 }}
+                                      style={{ padding:'14px 20px', overflow:'hidden' }}
+                                    >
+                                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, fontSize:12, fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:T.ink3 }}>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Job ID</div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.id}</div>
+                                        </div>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>User ID</div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.user_id || '—'}</div>
+                                        </div>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
+                                          <div>{ai ? <AiBadge type={ai} /> : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None — deterministic only</span>}</div>
+                                        </div>
+                                        {r.error_message && (
+                                          <div style={{ gridColumn:'1/-1' }}>
+                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.errRed, marginBottom:4 }}>Error</div>
+                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.errRed, background:T.errBg, padding:'8px 10px', border:`1px solid ${T.errBorder}` }}>{r.error_message}</div>
+                                          </div>
+                                        )}
+                                        {r.pdf_url && (
+                                          <div style={{ gridColumn:'1/-1' }}>
+                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>PDF URL</div>
+                                            <a href={r.pdf_url} target="_blank" rel="noreferrer"
+                                              style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.goldDark, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
+                                              <ExternalLink size={9} /> Open Report PDF
+                                            </a>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </motion.div>
+                                  </td>
+                                </tr>
+                              )}
+                            </AnimatePresence>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:14, paddingTop:12, borderTop:`1px solid ${T.hairline}` }}>
+                    <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4 }}>
+                      {rptTotal} reports · Page {rptPage + 1} of {totalPages}
+                    </span>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <Btn onClick={() => goPage(rptPage - 1)} disabled={rptPage === 0}>← Prev</Btn>
+                      <Btn onClick={() => goPage(rptPage + 1)} disabled={rptPage >= totalPages - 1}>Next →</Btn>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+
+          {/* ── ZONE 4: USERS & CREDITS ──────────────────── */}
+          <Card>
+            <SectionHeader
+              eyebrow="Accounts"
+              title="Users & Credits"
+              action={
+                <div style={{ display:'flex', gap:8 }}>
+                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search email…" />
+                  <Btn onClick={() => fetchUsers(userSearch)}><RefreshCcw size={9} /> Refresh</Btn>
+                </div>
+              }
+            />
+            {userLoading ? (
+              <div style={{ textAlign:'center', padding:'24px 0' }}><Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} /></div>
+            ) : users.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No users found.</p>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      <TblTh>Email</TblTh>
+                      <TblTh>Joined</TblTh>
+                      <TblTh>Reports</TblTh>
+                      <TblTh>Credits</TblTh>
+                      <TblTh right>Adjust Credits</TblTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u, i) => (
+                      <tr key={u.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                        <TblTd mono style={{ fontSize:10 }}>{u.email || '—'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{new Date(u.created_at).toLocaleDateString()}</TblTd>
+                        <TblTd mono>{u.total_reports_generated ?? 0}</TblTd>
+                        <TblTd>
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.report_credits > 0 ? T.okGreen : T.errRed }}>
+                            {u.report_credits ?? 0}
+                          </span>
+                        </TblTd>
+                        <TblTd right>
+                          <div style={{ display:'flex', gap:5, justifyContent:'flex-end' }}>
+                            <Btn onClick={() => adjustCredits(u.id, -1)} disabled={creditBusy[u.id] || (u.report_credits ?? 0) <= 0} variant="danger">
+                              <Minus size={9} /> 1
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, 1)} disabled={creditBusy[u.id]} variant="success">
+                              <Plus size={9} /> 1
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, 5)} disabled={creditBusy[u.id]} variant="success">
+                              <Plus size={9} /> 5
+                            </Btn>
+                          </div>
+                        </TblTd>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* ── ZONE 5: ISSUES QUEUE ─────────────────────── */}
+          <Card>
+            <SectionHeader
+              eyebrow="Support"
+              title="Issues Queue"
+              action={
+                <div style={{ display:'flex', gap:8 }}>
+                  <select
+                    value={issueFilter} onChange={e => { setIssueFilter(e.target.value); fetchIssues(e.target.value); }}
+                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
+                    <option value="open">Open</option>
+                    <option value="reviewing">Reviewing</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="all">All</option>
+                  </select>
+                  <Btn onClick={() => fetchIssues(issueFilter)}><RefreshCcw size={9} /> Refresh</Btn>
+                </div>
+              }
+            />
+            {issues.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>
+                {issueFilter === 'open' ? '🎉 No open issues.' : 'No issues found.'}
+              </p>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      <TblTh>Date</TblTh>
+                      <TblTh>Status</TblTh>
+                      <TblTh>Job / Property</TblTh>
+                      <TblTh>User</TblTh>
+                      <TblTh>Message</TblTh>
+                      <TblTh right>Actions</TblTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {issues.map((issue, i) => {
+                      const isUpdating = issuesBusy[issue.id];
+                      const isRegen    = issuesBusy[`regen-${issue.id}`];
+                      const truncated  = issue.message?.length > 80 ? issue.message.slice(0, 80) + '…' : issue.message;
+                      return (
+                        <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString() : '—'}</TblTd>
+                          <TblTd><StatusBadge status={issue.status || 'open'} /></TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>
+                            <div>{issue.job_id?.slice(0,8) || '—'}</div>
+                            {issue.property_name && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>{issue.property_name}</div>}
+                          </TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || '—'}</TblTd>
+                          <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || '—'}</TblTd>
+                          <TblTd right>
+                            <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                              {issue.status !== 'reviewing' && (
+                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Reviewing</Btn>
+                              )}
+                              {issue.status !== 'resolved' && (
+                                <Btn onClick={() => updateIssue(issue.id, 'resolved')} disabled={isUpdating} variant="success">
+                                  <CheckCircle size={9} /> Resolve
+                                </Btn>
+                              )}
+                              {issue.job_id && (
+                                <Btn onClick={() => regenFromIssue(issue.job_id, issue.id)} disabled={isRegen || !issue.job_id} variant="ghost">
+                                  <RotateCcw size={9} /> Regen
+                                </Btn>
+                              )}
+                            </div>
+                          </TblTd>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
         </div>
       </div>
     </>
