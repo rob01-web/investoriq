@@ -1031,12 +1031,17 @@
 
 ### Exact next task / resume point
 - Immediate resume point
-  - select final clean public sample package
-  - if a T12-columnar sample is available, regenerate / validate it against the new total-column parser path
-  - regenerate final public samples with clean property names only
-  - run E2E report-path assertions on final PDFs
-  - decide whether aggressive property-name sample sanitizer should be removed or admin/demo-gated before production
-  - do not flip DocRaptor production or publish public samples until sample package path is clean
+  - keep DocRaptor in test mode
+  - run live test-mode report validation:
+    - T12-columnar sample if available
+    - clean Screening public-candidate sample
+    - clean Underwriting public-candidate sample
+    - optional fail-closed test
+  - run PDF copy checklist on each published report
+  - only after those pass, proceed to controlled DocRaptor production-mode smoke
+  - only after production smoke passes, regenerate final public samples and run report-path E2E assertions
+  - final public samples must use clean property names only
+  - do not publish public samples until production PDF mode is verified and report-path assertions pass
   - do not overstate AI support publicly; AI/fallback/QA language remains internal only
 
 - AFTER THAT
@@ -1312,6 +1317,56 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - real credit restoration
     - real Dashboard upload flow
   - live flow has still been manually validated through prior report generation; harness is the non-live safety net
+- May 3 end-of-night launch-path update:
+  - `npm run test:e2e`: `156 PASS / 0 FAIL / 8 SKIP`
+  - direct Wave 4: `85 PASS / 0 FAIL / 8 SKIP`
+  - direct Wave 4 overwrote `tests/e2e/results/latest-e2e-results.json`
+  - current sequence remains:
+    - live test-mode report validation first
+    - DocRaptor production-mode smoke second
+    - final public sample generation only after report-path assertions pass
+  - confirmed remaining test gaps:
+    - default E2E run has no final PDFs configured
+    - report-path assertions exist through `--report` / `test:e2e:report`
+    - parser coverage includes one Jan-Dec plus `TTM Total` case
+    - T12 variants not separately covered: `Annual`, `Annual Total`, `T12`, `Trailing 12`, and monthly dollar columns with adjacent percent columns
+    - appraisal later-null artifact masking earlier valid cap-rate support is not covered as an E2E fixture
+    - worker-state simulator does not execute `api/admin-run-worker.js` directly
+    - report generation failure before publish remains mostly static / simulator-level
+    - `needs_documents` remains in Dashboard display / query code as legacy-row display risk, but current worker path does not appear to set it
+  - DocRaptor production path truth:
+    - live generator requires both `DOCRAPTOR_MODE=production` and `ALLOW_PRODUCTION_PDF=true`
+    - `DOCRAPTOR_API_KEY` supplies auth
+    - `DOCRAPTOR_TEST_MODE` is only used in admin regeneration event logging and does not control actual generator output
+    - `scripts/generate-sample-pdf.js` is hardcoded `TEST_MODE = true` and must not be used for public samples
+  - production smoke sequence:
+    - create / validate a clean-name public-candidate job while still in test mode
+    - flip only `DOCRAPTOR_MODE=production` and `ALLOW_PRODUCTION_PDF=true`
+    - redeploy production
+    - admin-regenerate that already-validated clean job
+    - do not publicly link or share the smoke PDF
+    - confirm latest `report_qa_flags` does not include `DOCRAPTOR_NOT_PRODUCTION_MODE`
+    - confirm no DocRaptor watermark / test bands
+    - run report-path E2E assertions on downloaded PDF / text output
+  - rollback if smoke fails:
+    - set `DOCRAPTOR_MODE=test` or remove it
+    - set `ALLOW_PRODUCTION_PDF=false` or remove it
+    - redeploy required
+  - live test-mode checklist before DocRaptor production:
+    - T12-columnar live sample if available
+    - clean Screening public-candidate sample
+    - clean Underwriting public-candidate sample
+    - optional fail-closed test
+  - stop / go rule:
+    - GO to DocRaptor production smoke only if live parser proof passes, clean Screening and clean Underwriting publish with no public-output defects, and any fail-closed test restores credit with no report row
+    - STOP if any live report fabricates core metrics, silently accepts missing required docs, emits public AI / BUY / SELL language, has stale sample naming, fails DSCR verdict cap, or creates a report on required-doc failure
+  - public legacy sample route:
+    - `public/reports/sample-report.html` was patched locally to a neutral placeholder and production hard-refresh / reset confirmed `https://investoriq.tech/reports/sample-report.html` now renders the neutral InvestorIQ Sample Materials placeholder
+    - old Riverbend Heights static sample with BUY / IQ-assisted wording is no longer visible at that route
+    - treat `public/reports/sample-report.html` P0 as production-verified closed
+    - `src/lib/pdfSections.js` still contains legacy `STRONG BUY` but is P1 unless reintroduced into active routes
+    - do not use `public/reports/sample-report.html`, `api/html/sample-report.html`, or `scripts/generate-sample-pdf.js` for public samples
+    - current sample PDFs must come only from the approved live generation path after DocRaptor production smoke passes
 - Current covered scenarios:
   - clean Screening
   - clean Underwriting
