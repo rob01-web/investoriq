@@ -817,13 +817,12 @@ export default function AdminDashboard() {
                               <Minus size={9} /> Screen
                             </Btn>
                             <Btn onClick={() => adjustCredits(u.id, -1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`] || u.underwriting_credits <= 0} variant="danger">
-                              <Plus size={9} /> 1
+                              <Minus size={9} /> UW
                             </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, 5)} disabled={creditBusy[u.user_id]} variant="success">
                           </div>
                         </TblTd>
                       </tr>
-                    );})}
+                    ))}
                   </tbody>
                 </table>
               </div>
