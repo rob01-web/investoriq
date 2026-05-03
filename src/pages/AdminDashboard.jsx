@@ -310,15 +310,13 @@ export default function AdminDashboard() {
         .rpc('get_all_profiles_for_admin');
       if (error) throw error;
 
-      // 2. Get unconsumed credits from report_purchases (UNRESTRICTED table)
+      // 2. Use SECURITY DEFINER RPC to bypass RLS on report_purchases
       const { data: purchases } = await supabase
-        .from('report_purchases')
-        .select('user_id, product_type')
-        .is('consumed_at', null);
+        .rpc('get_all_purchases_for_admin');
 
-      // 3. Merge credit counts per user per type
+      // 3. Merge credit counts — only unconsumed rows = available credits
       const creditMap = {};
-      (purchases || []).forEach(p => {
+      (purchases || []).filter(p => !p.consumed_at).forEach(p => {
         if (!creditMap[p.user_id]) creditMap[p.user_id] = { screening: 0, underwriting: 0 };
         if (p.product_type === 'screening') creditMap[p.user_id].screening++;
         else if (p.product_type === 'underwriting') creditMap[p.user_id].underwriting++;
