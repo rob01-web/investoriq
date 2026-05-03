@@ -180,7 +180,9 @@ function TblTd({ children, mono, right, style={} }) {
 // ─── MAIN COMPONENT ───────────────────────────────────────────
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [adminRunKey, setAdminRunKey] = useState('');
+  const [adminRunKey, setAdminRunKey] = useState(
+    () => typeof window !== 'undefined' ? localStorage.getItem('ADMIN_RUN_KEY') || '' : ''
+  );
   const [authed, setAuthed]           = useState(false);
   const [loading, setLoading]         = useState(false);
 
@@ -223,6 +225,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ action:'ping' }),
       });
       if (res.status === 401 || res.status === 403) throw new Error('Unauthorized');
+      localStorage.setItem('ADMIN_RUN_KEY', adminRunKey.trim());
       setAuthed(true);
       toast({ title:'Access granted' });
     } catch {
