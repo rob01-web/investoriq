@@ -10,9 +10,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
-import FinalReviewQueue from "@/components/Admin/FinalReviewQueue";
-import BulkCreditGrantModal from "@/components/Admin/BulkCreditGrantModal";
-import UserDrilldown from "@/components/Admin/UserDrilldown";
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────
 const T = {
@@ -209,8 +206,6 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch]   = useState('');
   const [userLoading, setUserLoading] = useState(false);
   const [creditBusy, setCreditBusy]   = useState({});
-  const [grantUser, setGrantUser]     = useState(null);   // user object → BulkCreditGrantModal
-  const [drillUser, setDrillUser]     = useState(null);   // user object → UserDrilldown
 
   // ── Issues
   const [issues, setIssues]           = useState([]);
@@ -622,17 +617,6 @@ export default function AdminDashboard() {
             )}
           </AnimatePresence>
 
-          {/* ── ZONE 2.5: FINAL REVIEW QUEUE ─────────────── */}
-          <Card>
-            <FinalReviewQueue
-              adminRunKey={adminRunKey}
-              onChange={() => {
-                fetchCmdStats();
-                fetchReports(rptPage, rptSearch, rptFilter);
-              }}
-            />
-          </Card>
-
           {/* ── ZONE 3: REPORTS TABLE ────────────────────── */}
           <Card>
             <SectionHeader
@@ -819,12 +803,6 @@ export default function AdminDashboard() {
                         </TblTd>
                         <TblTd right>
                           <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                            <Btn onClick={() => setDrillUser(u)} variant="ghost" data-testid={`view-user-${u.id}`}>
-                              View
-                            </Btn>
-                            <Btn onClick={() => setGrantUser(u)} variant="ghost" data-testid={`grant-user-${u.id}`}>
-                              Grant…
-                            </Btn>
                             <Btn onClick={() => adjustCredits(u.id, 1, 'screening')} disabled={creditBusy[`${u.id}-screening`]} variant="success">
                               <Plus size={9} /> Screen
                             </Btn>
@@ -925,26 +903,6 @@ export default function AdminDashboard() {
           </Card>
 
         </div>
-
-        {/* ── Account modals (rendered above all zones) ── */}
-        {grantUser && (
-          <BulkCreditGrantModal
-            user={grantUser}
-            adminRunKey={adminRunKey}
-            onClose={() => setGrantUser(null)}
-            onGranted={() => {
-              fetchUsers(userSearch);
-              fetchCmdStats();
-            }}
-          />
-        )}
-        {drillUser && (
-          <UserDrilldown
-            user={drillUser}
-            adminRunKey={adminRunKey}
-            onClose={() => setDrillUser(null)}
-          />
-        )}
       </div>
     </>
   );
