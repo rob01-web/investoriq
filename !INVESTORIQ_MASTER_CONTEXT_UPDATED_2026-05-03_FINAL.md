@@ -1,10 +1,10 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 3, 2026 - same-name Screening/Underwriting report-reuse P0 patched, deployed, and live-retested closed; live validation resumed before DocRaptor production smoke.
+**Last updated:** May 3, 2026 - same-name Screening/Underwriting report-reuse P0 patched, deployed, and live-retested closed; Screening-only Section 04 wording polish patched/deployed/validated; next session begins with more test-mode validation before DocRaptor production smoke.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
-- - **May 3 live validation status - SAME-NAME REPORT-REUSE P0 CLOSED:**
+- **May 3 live validation status - SAME-NAME REPORT-REUSE P0 CLOSED:**
   - Public legacy sample route P0 is closed: `/reports/sample-report.html` is neutral in repo truth and live deployment truth.
   - During live DocRaptor test-mode validation, a P0 was discovered before production PDF smoke:
     - user submitted one Screening and one Underwriting report with the exact same property name: `124 Richmond Street, London, ON`
@@ -20,7 +20,7 @@
     - scoring job query now selects `report_type`
     - existing report lookup now selects and filters by `report_type`
     - Screening and Underwriting can no longer reuse each other's report artifacts through that path
-  - Live retest passed after deploy:
+  - Live same-name retest passed after deploy:
     - same property name: `124 Richmond Street, London, ON`
     - Screening job `62c045cc-498f-418d-8c54-65a83557b5e5` published
     - Screening report `7417c32a-55bc-4fec-a0a6-457114acb5ef`
@@ -31,9 +31,35 @@
     - two distinct `reports` rows exist
     - two distinct PDF storage paths exist
     - Dashboard Report History showed both reports after manual refresh
+  - May 3 Section 04 wording polish:
+    - `api/report-template-runtime.html` now tokenizes Section 04 title/subtitle
+    - `api/generate-client-report.js` now fills the tokens by report mode
+    - Screening renders `Unit-Level Rent Positioning` and `Market-rent gap based on uploaded rent roll`
+    - Underwriting keeps `Unit-Level Rent Positioning & Value Sensitivity` and `Market-rent gap and implied value sensitivity`
+    - `node --check api/generate-client-report.js` passed
+    - `npm run build` passed
+    - committed files: `api/report-template-runtime.html`, `api/generate-client-report.js`
+  - Post-polish live test-mode PDFs validated:
+    - `124 Richmond Street, London, ON - Screening 2.pdf` = PASS for Screening-only wording
+    - `124 Richmond Street, London, ON - 2.pdf` = PASS for Underwriting wording preservation
+    - `124 Richmond Street, London, ON (MESSY) - 2.pdf` = PASS for Underwriting wording preservation and messy stress evidence
+    - no raw `{{UNIT_POSITIONING_SECTION_TITLE}}` or `{{UNIT_POSITIONING_SECTION_SUBTITLE}}` tokens appeared in parsed report text
+  - Worker-kick observation:
+    - one manual worker kick was not enough to complete all three queued live test reports
+    - a second worker kick completed the set
+    - treat as current operator behavior / monitored ops limitation, not a launch blocker unless jobs remain stuck indefinitely
+  - Intentional test-mode/public-sample hygiene items remain:
+    - report titles may include testing suffixes such as `- 2`
+    - uploaded filenames may include internal QA terms such as `Test`, `CLEAN`, `MESSY`, and `UNSUPPORTED`
+    - DocRaptor remains in test mode until controlled production smoke
+    - these are known presentation/sample-package issues, not engine-trust failures
   - Current conclusion:
     - same-name Screening/Underwriting cross-type report reuse P0 is patched, deployed, and live-validated closed
-    - DocRaptor production smoke may resume only after final test-mode report content checks and clean public-candidate sample package selection
+    - Screening-only wording polish is patched, deployed, and live-validated closed
+    - DocRaptor production smoke may resume only after final test-mode public-candidate checks and clean sample package selection
+  - Tomorrow morning resume note:
+    - user wants to begin the next session with more testing
+    - start with test-mode validation / report-path checks before DocRaptor production smoke
 - Latest status through May 2, 2026:
   - 124 Richmond Screening, Clean Underwriting, and Messy Underwriting were regenerated and validated against the current report checks
   - Screening passed current report checks
@@ -633,6 +659,15 @@
   - `api/report-template-runtime.html` static Methodology headings are unnumbered: `InvestorIQ Estimates`, `Methodology Notes`, `Data Limitations & Missing Inputs`
   - `api/generate-client-report.js` whole-property rent-to-market gap basis standardized to in-place rent denominator
     - validation wording: `($219,240 - $186,780) / $186,780 = 17.4%`
+- May 3 Section 04 wording polish completed:
+  - `api/report-template-runtime.html` uses Section 04 title/subtitle tokens
+  - `api/generate-client-report.js` populates tokens by report mode
+  - Screening now renders `Unit-Level Rent Positioning` / `Market-rent gap based on uploaded rent roll`
+  - Underwriting preserves `Unit-Level Rent Positioning & Value Sensitivity` / `Market-rent gap and implied value sensitivity`
+  - post-deploy validation PDFs confirmed Screening and both Underwriting variants render correctly
+  - no unresolved unit-positioning tokens appeared in parsed report text
+  - item is CLOSED
+
 - May 2 report polish / validation completed:
   - `Target Rent (Post-Reno)` and `Monthly Lift` wording replaced with neutral rent-positioning language:
     - `Documented Market Rent`
@@ -1021,6 +1056,7 @@
 - DCF exact document-derived cap-rate consistency: completed and validated.
 - Final Richmond / Forest regression suite: passed.
 - Final layout polish pass: closed.
+- May 3 Screening-only Section 04 wording polish: closed and live-validated.
 
 - Purchase-assumption DSCR note:
   - current engine correctly refuses to use purchase assumption terms as current-debt DSCR when no debt balance is provided
@@ -1044,7 +1080,7 @@
   - remove or admin/demo-gate aggressive property-name sample sanitizer in normal generation
 
 - STILL OPEN
-    - **P0 closed:** existing-report reuse was patched so Screening and Underwriting cannot reuse each other's report artifacts when property names match; same-name Screening + Underwriting retest passed live before DocRaptor production smoke.
+  - **P0 active launch blocker:** patch existing-report reuse so Screening and Underwriting can never reuse each other's report artifacts when property names match; retest same-name Screening + Underwriting before DocRaptor production smoke.
   - AI recovery Underwriting control is complete enough for launch confidence:
     - AI T12 Underwriting = PASS
     - compact AI Rent Roll Underwriting = PASS
@@ -1074,20 +1110,31 @@
   - Codex-first / micro-patch workflow
 
 ### Exact next task / resume point
-### Exact next task / resume point
 
-- **Immediate resume point - post-P0 live validation / public-sample readiness:**
+- **Immediate resume point - May 4 more testing before DocRaptor production smoke:**
   - Same-name Screening/Underwriting report-reuse P0 is patched, deployed, and live-retested closed.
+  - Screening-only Section 04 wording polish is patched, deployed, and live-validated closed.
+  - Begin tomorrow morning with more testing as requested by the user.
   - Do **not** proceed directly to public sample publication.
-  - Continue final test-mode PDF content validation and public-candidate sample selection before DocRaptor production smoke.
+  - Do **not** flip DocRaptor production mode until final test-mode public-candidate Screening and Underwriting outputs are clean.
+  - Recommended next test sequence:
+    - run or review one more clean Screening public-candidate sample in test mode
+    - run or review one more clean Underwriting public-candidate sample in test mode
+    - if available, run a T12-columnar live sample to validate the Jan-Dec plus total-column parser patch in the live flow
+    - optionally run one fail-closed case to verify no report row is created and credit is restored
+    - run report-path E2E assertions against downloaded PDFs/text outputs where possible
   - Known remaining non-engine blockers:
-    - DocRaptor test watermark / test bands remain until controlled production smoke
-    - internal QA filenames such as `Test`, `CLEAN`, `MESSY`, and `UNSUPPORTED` must not appear in final public/Ken sample Uploaded Files
-    - final public sample package must use clean filenames and clean property names
+    - DocRaptor watermark/test bands remain until controlled production smoke
+    - final public/Ken sample titles must be clean, with no testing suffixes such as `- 2`
+    - final public/Ken Uploaded Files must use clean filenames, with no `Test`, `CLEAN`, `MESSY`, or `UNSUPPORTED`
+    - final public sample package must be separate from stress-test packages
   - Live validation results after P0 closure:
     - Screening `124 Richmond Street, London, ON` = PASS
     - Clean Underwriting `124 Richmond Street, London, ON` = PASS as validation proof
     - Messy Underwriting `124 Richmond Street, London, ON (MESSY)` = PASS as stress proof, not public/Ken sample
+    - post-polish Screening `124 Richmond Street, London, ON - Screening 2.pdf` = PASS for Screening-only Section 04 wording
+    - post-polish Clean Underwriting `124 Richmond Street, London, ON - 2.pdf` = PASS for Underwriting Section 04 wording preservation
+    - post-polish Messy Underwriting `124 Richmond Street, London, ON (MESSY) - 2.pdf` = PASS for Underwriting Section 04 wording preservation
   - Report content checks passed in parsed text:
     - no BUY / SELL
     - no AI / AI-assisted / IQ-assisted public wording
@@ -1097,66 +1144,31 @@
     - no `Monthly Lift`
     - no dangling `DATA NOT AVAILABLE`
     - DSCR below `1.25x` correctly caps displayed verdict at `Review - Debt Coverage Constraint`
+    - no raw unit-positioning title/subtitle tokens appeared after the May 3 template/generator polish patch
   - Clean and messy underwriting prove the engine is materially stable:
     - Clean Underwriting DSCR `1.09x`, composite `75/100`, verdict `Review - Debt Coverage Constraint`
     - Messy Underwriting DSCR `1.00x`, composite `75/100`, verdict `Review - Debt Coverage Constraint`
     - messy vacancy allowance correctly reduced EGI/NOI by `$5,788`
-  - Next work:
-    - optional tiny wording polish:
-      - Screening-only `Unit-Level Rent Positioning & Value Sensitivity` -> `Unit-Level Rent Positioning`
-      - Screening-only subtitle `Market-rent gap and implied value sensitivity` -> `Market-rent gap based on uploaded rent roll`
-      - Underwriting can keep `Value Sensitivity` wording because it includes cap-rate value sensitivity
-    - prepare clean public-candidate upload package with clean filenames
-    - run final test-mode clean Screening and clean Underwriting public-candidate samples
-    - visually confirm DocRaptor watermark/test-band state
-    - then perform controlled DocRaptor production smoke:
-      - set `DOCRAPTOR_MODE=production`
-      - set `ALLOW_PRODUCTION_PDF=true`
-      - redeploy
-      - admin-regenerate one already-validated clean job
-      - confirm no `DOCRAPTOR_NOT_PRODUCTION_MODE` QA flag
-      - confirm no watermark/test bands
-      - run report-path E2E assertions
+  - Worker-kick note:
+    - one manual worker kick was not enough to complete all three queued live test reports
+    - second worker kick completed the set
+    - monitor only; do not treat as a report-core blocker unless jobs become stuck
+  - Controlled DocRaptor production smoke remains later:
+    - set `DOCRAPTOR_MODE=production`
+    - set `ALLOW_PRODUCTION_PDF=true`
+    - redeploy
+    - admin-regenerate one already-validated clean job
+    - confirm no `DOCRAPTOR_NOT_PRODUCTION_MODE` QA flag
+    - confirm no watermark/test bands
+    - run report-path E2E assertions
   - Stop/go rule:
     - GO to DocRaptor production smoke only after final test-mode public-candidate Screening and Underwriting publish cleanly with no public-output defects.
     - STOP if any report reuses another report artifact, fabricates core metrics, silently accepts missing required docs, emits public AI / BUY / SELL language, fails DSCR verdict cap, or produces test/internal filenames in final public sample output.
-- **Immediate resume point - P0 report-reuse blocker:**
-  - Do **not** proceed to DocRaptor production smoke yet.
-  - Do **not** regenerate final public samples yet.
-  - Do **not** rerun same-name Underwriting validation until patched and deployed.
-  - Use Codex-first investigation on `api/generate-client-report.js` for existing-report reuse logic.
-  - Inspect `api/admin-run-worker.js` only if required to understand how report-generation results are handled.
-  - Determine exactly why Underwriting reused the Screening report when property name/user matched.
-  - Apply minimal anchor-locked patch so existing-report reuse cannot cross `report_type`; if safer, disable existing-report reuse in live generation unless it is job-scoped or provably safe.
-  - Add or update a targeted E2E/simulator assertion if current harness can cover same user/property name with different report types.
-  - Validate with `node --check api/generate-client-report.js`; if worker touched, also `node --check api/admin-run-worker.js`; run relevant E2E command if test added.
-
-- **Required retest after patch/deploy:**
-  - Submit one Screening and one Underwriting with exact same property name: `124 Richmond Street, London, ON`.
-  - Expected `reports` table result: two rows, one `screening`, one `underwriting`.
-  - Expected storage result: two distinct report ids and two distinct PDF storage paths.
-  - Expected Dashboard result: Report History shows both reports after manual Refresh.
-  - Expected content result: Underwriting PDF is actually Underwriting, not the Screening PDF.
-  - Expected entitlement result: Screening and Underwriting purchases are consumed only by their correct report jobs.
-
-- **After P0 is closed:**
-  - Keep DocRaptor in test mode.
-  - Resume live test-mode report validation:
-    - T12-columnar sample if available
-    - clean Screening public-candidate sample
-    - clean Underwriting public-candidate sample
-    - optional fail-closed test
-  - Run PDF copy checklist on each published report.
-  - Only after those pass, proceed to controlled DocRaptor production-mode smoke.
-  - Only after production smoke passes, regenerate final public samples and run report-path E2E assertions.
-  - Final public samples must use clean property names only.
-  - Do not publish public samples until production PDF mode is verified and report-path assertions pass.
-  - Do not overstate AI support publicly; AI/fallback/QA language remains internal only.
 
 - Use anchor-locked minimal diffs only.
 - No refactors.
 - No random patching.
-- Codex investigation before worker / Dashboard / parser patches.
+- Codex-first investigation before worker / Dashboard / parser patches when Codex is available; while Codex is unavailable, manual patches must remain file-upload verified and anchor-locked.
 - Worker success flow remains protected.
 - Dashboard remains manual-refresh / cautious posture.
 - Patch only real regressions found.
@@ -1430,13 +1442,18 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - final Ken Dunn sample package review
   - final readiness check / sample package selection
   - stop only if a new report-core math or document-integrity regression appears
-- May 3 live validation blocker:
+- May 3 end-of-day validation update:
+  - report-reuse P0 remains closed after live same-name retest
+  - Screening-only Section 04 wording polish is live-validated
+  - three fresh test-mode PDFs were reviewed after the polish patch
+  - clean/messy/test filename optics are known and intentional during testing only
+  - tomorrow morning should begin with more testing, not DocRaptor production smoke
+- May 3 live validation blocker status:
   - Public legacy sample route remains closed; `/reports/sample-report.html` is neutral live.
-  - Live test-mode Screening for `124 Richmond Street, London, ON` published correctly.
-  - Live test-mode Underwriting with the same property name reached `published` but reused the existing Screening report instead of creating an Underwriting report row/PDF.
-  - This consumed the Underwriting credit and sent a report-published email despite no Underwriting PDF being created.
-  - Manual entitlement remediation completed: the Underwriting purchase row was restored by clearing `job_id` and `consumed_at`; Screening purchase remains correctly consumed.
-  - Current sequence is blocked until existing-report reuse is fixed and retested.
+  - Same-name Screening/Underwriting existing-report reuse blocker was reproduced, diagnosed, patched in `api/admin-run-worker.js`, deployed, and live-retested closed.
+  - Bad Underwriting purchase remediation was completed by clearing the affected `report_purchases.job_id` and `consumed_at`; Screening purchase remained correctly consumed.
+  - Latest same-name retest produced separate Screening and Underwriting report rows/PDFs with `report_generation.source = generate-client-report` for both.
+  - Current sequence is no longer blocked by report reuse; it remains gated by final test-mode content checks, clean public-candidate package selection, and DocRaptor production smoke.
 - May 2 launch-readiness update:
   - harness layers are materially stronger after report assertions, mock lifecycle fixtures, worker-state simulation, parser-adversarial fixtures, and repo-wide public-output sweep
   - no product bugs remain from Waves 1-4 after the LTV parser patch and columnar T12 total-selection patch
@@ -1458,7 +1475,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - live test-mode report validation first
     - DocRaptor production-mode smoke second
     - final public sample generation only after report-path assertions pass
-  - current sequence is paused before DocRaptor production smoke until the May 3 existing-report reuse blocker is patched and same-name Screening/Underwriting retest passes.
+  - current sequence resumed after the May 3 existing-report reuse blocker was patched and same-name Screening/Underwriting retest passed; DocRaptor production smoke is still deferred until final test-mode public-candidate checks pass.
   - confirmed remaining test gaps:
     - default E2E run has no final PDFs configured
     - report-path assertions exist through `--report` / `test:e2e:report`
@@ -1487,7 +1504,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - set `ALLOW_PRODUCTION_PDF=false` or remove it
     - redeploy required
   - live test-mode checklist before DocRaptor production, after P0 reuse fix:
-    - same-name Screening + Underwriting retest must produce two distinct report rows/PDFs
+    - same-name Screening + Underwriting retest produced two distinct report rows/PDFs; repeat only if new evidence requires it
     - T12-columnar live sample if available
     - clean Screening public-candidate sample
     - clean Underwriting public-candidate sample
@@ -1514,7 +1531,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - rendering-stage failure remap to failed
   - Stripe quantity entitlement path
   - Dashboard visibility with caution
-- Launch-ready areas once active P0 is closed:
+- Launch-ready areas after active P0 closure:
   - pricing and positioning are aligned with institutional positioning and proprietary-system messaging
   - screening vs underwriting separation is materially clean
   - dashboard / admin support workflow is operational
@@ -1549,7 +1566,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
     - not public sample / Ken Dunn candidate
   - rendering-stage / pre-generation cross-document scale mismatch protection is now in place and validated
 - Still needed before Ken Dunn outreach:
-  - Patch and retest the May 3 existing-report reuse P0 before DocRaptor production smoke or public sample generation.
+  - Keep the May 3 existing-report reuse P0 closed; do not reopen unless new evidence appears. Continue final test-mode public-candidate validation before DocRaptor production smoke or public sample generation.
   - QA safeguard Phase 1 is implemented; do not build concierge hold/admin approval until after current cleanup unless a new blocker appears
   - create or select a clean Showcase package separate from Motherload stress testing
   - if available, regenerate / validate one T12-columnar sample after the parser total-selection patch
