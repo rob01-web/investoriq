@@ -35,3 +35,6 @@ coverage/
 *.lcov
 Project file.zip
 .vercel
+
+# Local reference / prototype folders
+InvestorIQ-Empire-v2-EMERGENT/
