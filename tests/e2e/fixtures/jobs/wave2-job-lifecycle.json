@@ -171,12 +171,12 @@
       "reports": [
         { "id": "mock-report-incomplete-debt", "status": "published" }
       ],
-      "public_output_text": "Deal Scorecard. DSCR (Not Assessed). DATA NOT AVAILABLE. Review - Debt Coverage Constraint. Debt sizing balance not provided. Composite Score 68 / 100.",
+      "public_output_text": "Deal Scorecard. Current Debt DSCR. Not assessed: current outstanding debt balance not provided. Review - Debt Coverage Constraint. Composite Score 68 / 100.",
       "expected": {
         "job_status": "published",
         "report_created": true,
         "present_artifact_types": ["t12_parsed", "rent_roll_parsed", "loan_term_sheet_parsed", "report_qa_flags"],
-        "present_public_patterns": ["DSCR \\(Not Assessed\\)", "Review - Debt Coverage Constraint", "Debt sizing balance not provided", "Composite Score"],
+        "present_public_patterns": ["Current Debt DSCR", "Review - Debt Coverage Constraint", "current outstanding debt balance not provided", "Composite Score"],
         "absent_public_patterns": ["DSCR \\(Computed\\)", "\\b1\\.[0-9]{2}x\\b"],
         "artifact_payload": {
           "type": "loan_term_sheet_parsed",

@@ -228,8 +228,8 @@ function runWave1BreakTests() {
     rows,
     "Wave1 incomplete debt does not fabricate DSCR",
     "wave1-static",
-    generator.includes("DSCR (Not Assessed)") &&
-      generator.includes("Debt sizing balance not provided") &&
+    generator.includes("Current Debt DSCR") &&
+      generator.includes("current outstanding debt balance not provided") &&
       generator.includes("Review - Debt Coverage Constraint") &&
       generator.includes("DSCR below 1.25x or not assessed applies a mandatory Review verdict cap"),
     "Debt gaps remain disclosed and verdict-capped rather than modeled."

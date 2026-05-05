@@ -947,7 +947,7 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
     rows.push(["Estimated Annual Debt Service", formatCurrency(annualDebtService)]);
   }
   if (Number.isFinite(acquisitionDscr) && acquisitionDscr > 0) {
-    rows.push(["Acquisition DSCR", formatMultiple(acquisitionDscr, 2)]);
+    rows.push(["Proposed Acquisition DSCR", formatMultiple(acquisitionDscr, 2)]);
   }
 
   return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
@@ -3643,8 +3643,8 @@ if (effectiveReportMode === "screening_v1") {
       } else {
         riskBullets.push(
           loanTermSheetTermsPayload
-            ? "Debt terms were partially identified, but no debt sizing balance was provided; DSCR and current-debt service are not assessed."
-            : "Debt terms were not included in the uploaded documents; DSCR and refinance risk are not assessed in this report."
+            ? "Debt terms were partially identified, but no current outstanding debt balance was provided. Current debt service is not assessed because no current outstanding debt balance was provided."
+            : "Debt terms were not included in the uploaded documents; Current Debt DSCR and refinance risk are not assessed in this report."
         );
       }
     }
@@ -4917,9 +4917,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         totalPoints += 0; maxPoints += 10;
         const dscrNotAssessedDebtSizingMissing = Boolean(loanTermSheetTermsPayload);
         scoreRows.push({
-          label: "DSCR (Not Assessed)",
+          label: "Current Debt DSCR",
           value: dscrNotAssessedDebtSizingMissing
-            ? "Not assessed: debt sizing balance not provided"
+            ? "Not assessed: current outstanding debt balance not provided"
             : DATA_NOT_AVAILABLE,
           pts: 0,
           max: 10,
@@ -5243,15 +5243,15 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
               addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
             }
           } else {
-            addRisk("DSCR", "Debt terms incomplete", "Requires balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
+            addRisk("Current Debt DSCR", "Current debt terms incomplete", "Requires current debt balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
           }
         } else {
           addRisk(
-            "DSCR",
-            loanTermSheetTermsPayload ? "Debt sizing balance not provided" : "No debt doc uploaded",
+            "Current Debt DSCR",
+            loanTermSheetTermsPayload ? "Current outstanding debt balance not provided" : "No current debt document uploaded",
             loanTermSheetTermsPayload
-              ? "Debt terms were partially identified; DSCR and current-debt service are not assessed"
-              : "Debt terms were not included in the uploaded documents",
+              ? "Current debt service is not assessed because no current outstanding debt balance was provided."
+              : "Current debt terms were not included in the uploaded documents",
             "NOT ASSESSED",
             "#9CA3AF"
           );
@@ -5685,12 +5685,12 @@ try {
     debtTermsPresent &&
     !dscrAssessedFromDebtRows &&
     htmlString.includes("DSCR") &&
-    /DSCR[^<]{0,80}(?:Not Assessed|DATA NOT AVAILABLE)|Debt sizing balance not provided/i.test(htmlString)
+    /Current Debt DSCR[^<]{0,120}(?:Not Assessed|DATA NOT AVAILABLE)|current outstanding debt balance not provided/i.test(htmlString)
   ) {
     qaFlags.push({
       code: "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
       severity: "medium",
-      message: "The report indicates DSCR was not assessed even though debt-looking support or debt terms were present.",
+      message: "The report indicates Current Debt DSCR was not assessed even though debt-looking support or debt terms were present.",
       evidence: {
         debt_filename: debtLookingFile?.original_filename || null,
         has_debt_terms_payload: hasDebtTermsPayload(loanTermSheetTermsPayload) || hasDebtTermsPayload(mortgagePayload),
