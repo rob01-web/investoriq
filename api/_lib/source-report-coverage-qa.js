@@ -67,6 +67,7 @@ function findRenderedSignals(html) {
     ["dscr_current_debt_not_assessed", /DSCR and current-debt service are not assessed/i],
     ["debt_sizing_balance_not_provided", /debt sizing balance not provided/i],
     ["refinance_stability_not_produced", /Refinance Stability Classification not produced/i],
+    ["acquisition_financing_assumptions", /Proposed Acquisition Debt Sizing|Acquisition Financing Assumptions|Acquisition DSCR/i],
   ];
   return signalPatterns
     .filter(([, pattern]) => pattern.test(text))
@@ -101,6 +102,8 @@ function buildArtifactInventory(artifacts) {
     loan_term_sheet_parsed: {
       present: Boolean(loan),
       has_balance: hasPositive(loan?.loan_amount) || hasPositive(loan?.outstanding_balance),
+      has_derived_acquisition_debt: hasPositive(loan?.derived_acquisition_loan_amount),
+      has_purchase_price: hasPositive(loan?.purchase_price),
       has_payment: hasPositive(loan?.monthly_payment) || hasPositive(loan?.annual_debt_service),
       has_rate: hasPositive(loan?.interest_rate),
       has_amortization: hasPositive(loan?.amort_years),
@@ -217,6 +220,12 @@ export function buildSourceReportCoverageQa({
   const debtFiles = findFiles(files, /(purchase|assumption|financ|loan|debt|term|cmhc|ltv|amort|rate|mortgage)/i);
   const loan = artifactInventory.loan_term_sheet_parsed;
   const mortgage = artifactInventory.mortgage_statement_parsed;
+  const hasAcquisitionFinancingAssumptions =
+    loan.has_derived_acquisition_debt &&
+    loan.has_purchase_price &&
+    loan.has_rate &&
+    loan.has_amortization &&
+    renderedTextSignals.includes("acquisition_financing_assumptions");
   const hasDebtSizing =
     loan.has_balance ||
     loan.has_payment ||
@@ -226,6 +235,7 @@ export function buildSourceReportCoverageQa({
     isFullUnderwriting &&
     debtFiles.length > 0 &&
     !hasDebtSizing &&
+    !hasAcquisitionFinancingAssumptions &&
     /DSCR|current-debt service|Not assessed: debt sizing balance not provided|Debt sizing balance not provided|Debt terms incomplete/i.test(htmlText)
   ) {
     addFlag(flags, {

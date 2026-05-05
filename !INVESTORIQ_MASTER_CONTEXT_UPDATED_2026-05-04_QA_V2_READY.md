@@ -1,9 +1,124 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 5, 2026 - V2 audit completed; Dashboard-only freeze mitigations patched/monitored; Stripe webhook/domain entitlement incident fixed; next session should choose between extra-credit cleanup, advisory-only Rendered Report QA planning, or final sample validation.
+**Last updated:** May 5, 2026 - V2 audit completed; Dashboard-only freeze mitigations patched/monitored; Stripe webhook/domain entitlement incident fixed; QA Phase 1A/1B/1C implemented; Forest City parser/extraction hardening implemented; separate acquisition-financing assumptions render path implemented; next session should run one fresh Forest City Full Underwriting job from scratch and inspect QA artifacts plus final PDF.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 5 QA Phase 1A / 1B / 1C Implemented
+- Phase 1A: Rendered Report QA Advisory:
+  - artifact type: `rendered_report_qa_advisory`
+  - helper: `api/_lib/qa-review.js`
+  - called from `api/generate-client-report.js`
+  - advisory-only, internal-only, no blocking, no worker lifecycle changes, no report rewriting, and no financial value changes
+  - default timeout is `15000` ms via `QA_REVIEW_TIMEOUT_MS`
+  - kill switch: `QA_REVIEW_ENABLED=false`
+  - deterministic false-positive post-filter removes:
+    - break-even occupancy vs current occupancy false contradiction
+    - absence of BUY / SELL / HOLD or investment recommendation language
+  - artifact includes `raw_model_score`, adjusted `score`, `removed_false_positive_count`, `findings`, `counts`, `qa_status`, `model_status`, `summary`, `model`, `usage`, `version`, and `timeout_ms`
+  - adjusted `score` is deterministically increased by `+10` per removed false positive, capped at `100`
+- Phase 1B: Source-to-Report Coverage QA:
+  - artifact type: `source_report_coverage_qa`
+  - helper: `api/_lib/source-report-coverage-qa.js`
+  - deterministic checks only; no AI call
+  - advisory-only and internal-only
+  - compares uploaded files, artifact inventory, rendered section/depth signals, report type/tier, and expected depth
+  - designed to catch: "This report is materially underdeveloped relative to its uploaded documents and report tier."
+  - Full Underwriting flags implemented: `FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED`, `T12_LINE_ITEM_DETAIL_MISSING`, `RENOVATION_DOC_NOT_STRUCTURED`, `PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT`, `FULL_UNDERWRITING_SUPPORT_UNDERUSED`, and `PUBLIC_SAMPLE_NOT_READY`
+  - shallow rendered-text signals include no line-item detail available, lump-sum T12, no structured CapEx modeling, DSCR/current debt not assessed, debt sizing balance not provided, refinance stability not produced, and acquisition financing assumptions when rendered
+  - smoke test: `tests/qa/source-report-coverage-qa-smoke.js`
+- Phase 1C: QA Fix Routing:
+  - artifact type: `qa_fix_routing`
+  - helper: `api/_lib/qa-fix-routing.js`
+  - advisory-only, internal-only, no blocking, no `qa_blocked`, no `qa_review_required`, and no worker lifecycle changes
+  - classifies QA findings into `display_fix`, `parser_gap`, `artifact_gap`, `render_gating_gap`, `source_insufficient`, and `public_sample_blocker`
+  - output includes `routes`, `route_counts`, `highest_severity`, `public_sample_ready`, `customer_delivery_action`, `admin_action_required`, `deterministic_auto_fix_available`, and `regenerate_recommended`
+  - `customer_delivery_action` currently remains `advisory_only_no_delivery_block`
+  - adds `PUBLIC_SAMPLE_REVIEW_HOLD` when medium/high parser, artifact, or render-gating routes exist
+  - smoke test: `tests/qa/qa-fix-routing-smoke.js`
+- QA rollup:
+  - `qa_review_summary` now summarizes rendered QA, coverage QA, fix routing, highest severity, public-sample readiness, regeneration recommendation, and admin-action signals.
+
+### May 5 Forest City Full Underwriting QA Breakthrough
+- Forest City Manor had 144 units and 5 uploaded docs but produced a constrained 13-page memo.
+- QA correctly identified that the report was underdeveloped relative to its uploaded package and Full Underwriting tier.
+- `source_report_coverage_qa` flagged:
+  - `T12_LINE_ITEM_DETAIL_MISSING`
+  - `RENOVATION_DOC_NOT_STRUCTURED`
+  - `PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT`
+  - `FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED`
+  - `FULL_UNDERWRITING_SUPPORT_UNDERUSED`
+  - `PUBLIC_SAMPLE_NOT_READY`
+- `qa_fix_routing` indicated:
+  - `public_sample_ready = false`
+  - `admin_action_required = true`
+  - `regenerate_recommended = true`
+  - `customer_delivery_action = advisory_only_no_delivery_block`
+- This proves the anti-whack-a-mole QA architecture is working: QA now diagnoses underdeveloped Full Underwriting outputs rather than silently treating them as sample-ready.
+
+### May 5 Forest City Root-Cause Parser / Extraction Fixes
+- Files patched:
+  - `api/parse/extract-job-text.js`
+  - `api/parse/parse-doc.js`
+- T12:
+  - root cause: text-based T12 branch extracted core totals but wrote `income_lines: []` and `expense_lines: []`
+  - fix: deterministic text-line extraction for `income_lines` and `expense_lines` when core T12 totals validate
+  - expense rows are kept only when they reconcile to total OpEx within tolerance
+  - expected next retest: lump-sum T12 fallback should clear if line items parse
+- Renovation:
+  - root cause: uploaded "docx" was actually ODT-style zipped XML, and Office text files were skipped by extraction
+  - fix: Office XML text extraction added for `.docx` / `.odt` style uploads using `word/document.xml` or `content.xml`
+  - supporting-doc classification now recognizes renovation / CapEx / budget docs
+  - `renovation_parsed` extraction added for total budget, budget rows/categories, budget note, execution note, and interpretation
+  - do not invent rent lift, ROI, payback, or per-unit assumptions unless explicitly present
+- Purchase assumptions:
+  - purchase price, LTV, rate, amortization, and cap/refi assumptions can now be extracted
+  - `derived_acquisition_loan_amount = purchase price x LTV` can be produced
+  - derived acquisition loan amount is tagged as an acquisition financing assumption and is **not** current outstanding debt
+
+### May 5 Derived Acquisition Debt / Acquisition Financing Doctrine
+- Separate acquisition-financing assumptions render path is implemented in `api/generate-client-report.js` and `api/report-template-runtime.html`.
+- Current locked doctrine:
+  - do not wire `derived_acquisition_loan_amount` into current debt/refi path
+  - do not use it as `mortgagePayload.outstanding_balance`
+  - do not label it current debt balance
+  - do not make Refinance Stability Classification use derived acquisition debt yet
+  - keep current DSCR/refi/current debt logic unchanged unless true current debt balance exists
+- Implemented Full Underwriting render path:
+  - `Proposed Acquisition Debt Sizing`
+  - labels: `Purchase Price`, `Documented LTV`, `Derived Acquisition Loan Amount`, `Interest Rate`, `Amortization`, `Estimated Annual Debt Service`, and `Acquisition DSCR`
+  - required wording: "Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance."
+  - if NOI, derived acquisition loan amount, rate, and amortization are available, the report calculates estimated annual debt service using mortgage constant and calculates `Acquisition DSCR`
+
+### Immediate Resume Point - Fresh Forest City Retest
+- Next task: run one fresh Forest City Full Underwriting job from scratch, not regeneration from old artifacts.
+- Retest inspection checklist:
+  - `t12_parsed`
+  - `renovation_parsed`
+  - `loan_term_sheet_parsed`
+  - `source_report_coverage_qa`
+  - `qa_fix_routing`
+  - `qa_review_summary`
+  - `rendered_report_qa_advisory`
+  - `report_qa_flags`
+  - final PDF
+- Expected retest outcome:
+  - T12 line items should render if new parser extracts them
+  - lump-sum T12 fallback should clear
+  - CapEx Budget Summary should render if `renovation_parsed` exists
+  - `Proposed Acquisition Debt Sizing` should render separately if `loan_term_sheet_parsed` includes purchase price, LTV, rate, amortization, and `derived_acquisition_loan_amount`
+  - DSCR/current debt may remain not assessed unless true current debt exists
+  - public-sample readiness should improve, but may remain false until all coverage QA routes agree
+
+### Later Screening-Specific QA To-Do
+- Do not work on this now.
+- Add Screening-specific Source-to-Report Coverage QA later.
+- Screening contract should check:
+  - T12 and rent roll fully used
+  - unsupported underwriting/debt/refi language did not leak into Screening
+  - raw data-gap language avoided
+  - Screening public-sample readiness assessed separately from Full Underwriting
 
 ### May 5 V2 EMERGENT Audit Decision + Safe Adoption Roadmap
 - Decision:
@@ -1231,7 +1346,7 @@
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
-  - QA safeguard Phase 1 is implemented for artifact/document-integrity risks; rendered-report editorial / sample-readiness QA is now the next architecture target, but first implementation should be advisory-only and file-truth reviewed before any patch.
+  - QA Phase 1A/1B/1C is implemented: rendered-report advisory QA, source-to-report coverage QA, QA fix routing, and QA rollup are now internal advisory artifacts.
   - Future AI work also includes chunking / large-text rent-roll recovery and clearer large-rent-roll CSV/XLSX guidance.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, and broader table / schema hygiene.
 
@@ -1249,15 +1364,14 @@
 
 ### Exact next task / resume point
 
-- **Immediate resume point - May 5 current state:**
+- **Immediate resume point - May 5 current state after QA/Forest City hardening:**
   - Dashboard freeze is open/monitored but not today's active blocker.
   - Stripe webhook/domain issue is fixed and must be added to launch checklist.
-  - Next likely task, user choice:
-    1. decide whether to keep/delete the extra 5 manually inserted underwriting credits
-    2. then resume V2/advisory QA layer planning or final sample validation
+  - Immediate next task is one fresh Forest City Full Underwriting job from scratch, followed by QA artifact and final PDF inspection.
+  - Optional operational cleanup remains: decide whether to keep/delete the extra 5 manually inserted underwriting credits.
   - Keep `investoriq.tech` and `www.investoriq.tech` attached to the current production Vercel project; confirm next Stripe checkout creates entitlements automatically with webhook 200.
   - Continue Dashboard freeze monitoring; leave `src/contexts/SupabaseAuthContext.jsx` auth fix deferred unless freeze/flicker returns.
-  - Resume V2 adoption carefully: next major architecture step is advisory-only Rendered Report QA insertion-point investigation; do not patch QA yet without current file-truth review.
+  - Resume V2 adoption carefully: V2 remains reference/blueprint only; useful ideas must continue to be manually rebuilt against current repo truth.
   - Continue final public/Ken sample path: clean public sample package selection; no test suffixes / testing filenames for final samples; DocRaptor production smoke only after test-mode public-candidate outputs are clean.
   - Preserve current closed fixes:
     - report_type-scoped existing-report reuse
@@ -1523,9 +1637,16 @@ Trigger condition:
 Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
 ## 10.3 AI/Admin QA Safeguard Layer / Rendered Report QA Direction
+- May 5 implementation status:
+  - Rendered Report QA Advisory is implemented as `rendered_report_qa_advisory`.
+  - Source-to-Report Coverage QA is implemented as `source_report_coverage_qa`.
+  - QA Fix Routing is implemented as `qa_fix_routing`.
+  - QA rollup is implemented as `qa_review_summary`.
+  - All remain advisory-only and internal-only. No QA blocking, no `qa_review_required`, no worker lifecycle change, no report rewriting, and no financial value changes.
+  - The next validation action is a fresh Forest City Full Underwriting retest from scratch, not more QA planning.
 - May 5 V2 audit refinement:
   - V2 QA architecture is conceptually valuable but not safely implemented for wholesale merge.
-  - First safe Rendered Report QA implementation should be advisory-only:
+  - First safe Rendered Report QA implementation was built as advisory-only:
     - inspect final rendered HTML/text after token replacement and section stripping
     - write internal `analysis_artifacts` QA artifact only
     - do not block publication in Phase 1
@@ -1577,18 +1698,18 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - market survey / support-doc classification review
   - cap-rate / appraisal support not used or masked
   - DocRaptor non-production mode as internal QA flag
-- Phase 1 lesson:
-  - it worked for artifact / document-integrity risks
-  - it is not yet final rendered-PDF editorial or sample-readiness QA
-  - it did not catch `Underwritting`, `CLEAN` / `MESSY` / `Test` sample naming, rent-gap basis inconsistency, stale static Methodology headings in already-generated PDFs, overstrong `Target Rent (Post-Reno)` wording, dangling `DATA NOT AVAILABLE`, or verdict/copy optics
-- Possible Phase 1.2 rendered-report QA flags:
+- Earlier Phase 1 lesson, now superseded by Phase 1A/1B/1C:
+  - original deterministic `report_qa_flags` worked for artifact / document-integrity risks
+  - rendered-output and sample-readiness gaps are now addressed by `rendered_report_qa_advisory`, `source_report_coverage_qa`, `qa_fix_routing`, and `qa_review_summary`
+  - these artifacts remain advisory-only and must be reviewed against live retest evidence before any future hold/block behavior is considered
+- Rendered/report-readiness QA examples now covered or candidates for continued advisory monitoring:
   - `Underwritting`
   - `CLEAN`, `MESSY`, or `Test` in public sample property name
   - old `12.1 / 12.2 / 12.3` methodology headings
   - rendered `DATA NOT AVAILABLE`
   - `Target Rent (Post-Reno)` when no structured renovation artifact exists
   - mixed rent-gap basis if both `17.4%` and `14.8%` appear
-- Do not overbuild tonight; tomorrow priority is cleanup and validation.
+- Current priority is fresh Forest City validation and artifact inspection, not additional broad QA architecture work.
 - Future / deferred direction:
   - optional manual approval gate for initial high-value / concierge workflows
   - deterministic parser / calculation layer remains the source of truth
@@ -1615,13 +1736,13 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - override deterministic parsers
   - change NOI, rent, occupancy, debt, DSCR, cap rate, valuation, refinance, or deal score
   - publish unsupported assumptions
-- Possible outputs:
+- Possible future outputs after advisory evidence is reviewed:
   - internal QA warnings
   - admin review status
   - block publication pending review
   - customer-safe failed / needs-review message
   - support checklist for manual repair / retry
-- Rendered Report QA now needs advisory-only insertion-point investigation against current repo truth before implementation; the May 5 V2 audit is complete and does not authorize wholesale merge.
+- Rendered Report QA insertion-point investigation is complete for Phase 1A/1B/1C. The May 5 V2 audit still does not authorize wholesale merge.
 - Manual Admin QA Gate:
   - now a candidate pre-Ken Dunn / high-value concierge hardening option
   - reports may remain private until admin approval if this mode is adopted
@@ -1636,12 +1757,15 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Stripe webhook/domain entitlement incident is fixed; launch checklist must include Vercel domain verification and Stripe webhook 200 checks.
   - Dashboard freeze / lag is improved after Dashboard-only guard patch but remains OPEN / MONITORED, not solved.
   - `src/contexts/SupabaseAuthContext.jsx` auth-event short-circuit remains deferred unless freeze/flicker returns.
-  - Next likely work is either extra-credit cleanup, advisory-only Rendered Report QA planning, or final public/Ken sample validation.
+  - QA Phase 1A/1B/1C is implemented and advisory-only.
+  - Forest City parser/extraction hardening is implemented.
+  - Separate proposed acquisition debt sizing render path is implemented.
+  - Next likely work is one fresh Forest City Full Underwriting retest from scratch, then artifact/PDF inspection before public/Ken sample validation.
 - **May 4 QA/V2 strategy snapshot:**
   - Launch-readiness focus has shifted from core math/pipeline repair to rendered-report QA and institutional-readiness classification.
   - User wants a QA layer because each new property package can reveal new rendered-output / sample-readiness issues that manual review cannot scale against.
   - V2 showroom is promising, but must be audited against current repo truth before adoption.
-  - First action next session is Codex file-by-file audit of V2 against current repo at 9:33am.
+  - V2 file-by-file audit is complete; V2 remains reference/blueprint only.
   - If V2 is legitimate, user is open to adopting it, including QA layer / Final Review Queue concepts, but only after current fixes and schema realities are confirmed preserved.
   - Do not proceed to DocRaptor production smoke before the V2/QA audit decision is made, unless user explicitly chooses to defer V2.
 - **Current launch status as of May 3: UNPAUSED from report-reuse P0; final validation continues before DocRaptor production smoke and public sample generation.**

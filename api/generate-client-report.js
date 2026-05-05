@@ -904,6 +904,53 @@ function buildFinancingEnvelopeGrid(noi, units) {
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
+function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t12Payload, reportType, reportTier }) {
+  const normalizedReportType = String(reportType || "").toLowerCase();
+  const numericTier = Number(reportTier);
+  const isFullUnderwriting = normalizedReportType === "underwriting" || numericTier === 2;
+  if (!isFullUnderwriting || !loanTermSheetTermsPayload || typeof loanTermSheetTermsPayload !== "object") return "";
+
+  const purchasePrice = coerceNumber(loanTermSheetTermsPayload.purchase_price);
+  const ltv = coerceNumber(loanTermSheetTermsPayload.ltv);
+  const loanAmount = coerceNumber(loanTermSheetTermsPayload.derived_acquisition_loan_amount);
+  const ratePct = coerceNumber(loanTermSheetTermsPayload.interest_rate);
+  const amortYears = coerceNumber(loanTermSheetTermsPayload.amort_years);
+  if (
+    !Number.isFinite(purchasePrice) || purchasePrice <= 0 ||
+    !Number.isFinite(ltv) || ltv <= 0 ||
+    !Number.isFinite(loanAmount) || loanAmount <= 0 ||
+    !Number.isFinite(ratePct) || ratePct <= 0 ||
+    !Number.isFinite(amortYears) || amortYears <= 0
+  ) {
+    return "";
+  }
+
+  const noi = coerceNumber(t12Payload?.net_operating_income);
+  const mortgageConstant = computeMortgageConstant(ratePct / 100, amortYears);
+  const annualDebtService =
+    Number.isFinite(mortgageConstant) && mortgageConstant > 0
+      ? loanAmount * mortgageConstant
+      : null;
+  const acquisitionDscr =
+    Number.isFinite(noi) && noi > 0 && Number.isFinite(annualDebtService) && annualDebtService > 0
+      ? noi / annualDebtService
+      : null;
+  const rows = [
+    ["Purchase Price", formatCurrency(purchasePrice)],
+    ["Documented LTV", formatPercent1(ltv)],
+    ["Derived Acquisition Loan Amount", formatCurrency(loanAmount)],
+    ["Interest Rate", formatInterestRatePercent(ratePct)],
+    ["Amortization", `${Math.round(amortYears)} years`],
+  ];
+  if (Number.isFinite(annualDebtService) && annualDebtService > 0) {
+    rows.push(["Estimated Annual Debt Service", formatCurrency(annualDebtService)]);
+  }
+  if (Number.isFinite(acquisitionDscr) && acquisitionDscr > 0) {
+    rows.push(["Acquisition DSCR", formatMultiple(acquisitionDscr, 2)]);
+  }
+
+  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
+}
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
@@ -3878,6 +3925,16 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     finalHtml = finalHtml.replace(
       "{{DEBT_STRUCTURE}}",
       getNarrativeHtml("debtStructure")
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{ACQUISITION_FINANCING_ASSUMPTIONS}}",
+      buildAcquisitionFinancingAssumptionsHtml({
+        loanTermSheetTermsPayload,
+        t12Payload,
+        reportType,
+        reportTier,
+      })
     );
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_SUMMARY}}",
