@@ -4835,12 +4835,15 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       if (!hasDscrScore) {
         totalPoints += 0; maxPoints += 10;
+        const dscrNotAssessedDebtSizingMissing = Boolean(loanTermSheetTermsPayload);
         scoreRows.push({
           label: "DSCR (Not Assessed)",
-          value: DATA_NOT_AVAILABLE,
+          value: dscrNotAssessedDebtSizingMissing
+            ? "Not assessed: debt sizing balance not provided"
+            : DATA_NOT_AVAILABLE,
           pts: 0,
           max: 10,
-          band: loanTermSheetTermsPayload ? "Debt sizing balance not provided" : "Debt terms not provided",
+          band: dscrNotAssessedDebtSizingMissing ? "" : "Debt terms not provided",
         });
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
