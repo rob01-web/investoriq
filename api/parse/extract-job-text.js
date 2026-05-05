@@ -1,9 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
+import JSZip from 'jszip';
 import pdfParse from 'pdf-parse';
 import { analyzeTables } from '../../lib/textractClient.js';
 import { textractTablesToMatrix } from '../../lib/textractTablesToMatrix.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
+
+const extractOfficeText = async (buffer) => {
+  const zip = await JSZip.loadAsync(buffer);
+  const entry =
+    zip.file('word/document.xml') ||
+    zip.file('content.xml');
+  if (!entry) return '';
+  const xml = await entry.async('string');
+  return xml
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 const getRequestBody = (req) => {
   if (!req.body) return {};
@@ -96,10 +115,15 @@ export default async function handler(req, res) {
       const lowerName = String(file.original_filename || '').toLowerCase();
       const isPdf = mimeType === 'application/pdf';
       const isPlainText = mimeType === 'text/plain' || lowerName.endsWith('.txt');
+      const isOfficeText =
+        lowerName.endsWith('.docx') ||
+        lowerName.endsWith('.odt') ||
+        mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        mimeType === 'application/vnd.oasis.opendocument.text';
       const canTextract =
         mimeType === 'application/pdf' || mimeType === 'image/png' || mimeType === 'image/jpeg';
 
-      if (!canTextract && !isPlainText) {
+      if (!canTextract && !isPlainText && !isOfficeText) {
         skippedCount += 1;
         results.push({
           file_id: file.id,
@@ -192,6 +216,55 @@ export default async function handler(req, res) {
                 text,
                 excerpt,
                 method: 'plain_text',
+              },
+            },
+          ]);
+
+          if (artifactErr) {
+            throw new Error(artifactErr.message || 'Failed to write artifact');
+          }
+
+          await supabaseAdmin
+            .from('analysis_job_files')
+            .update({ parse_status: 'extracted', parse_error: null })
+            .eq('id', file.id)
+            .or('parse_status.is.null,parse_status.eq.pending,parse_status.eq.uploaded');
+
+          extractedCount += 1;
+          results.push({
+            file_id: file.id,
+            original_filename: file.original_filename,
+            status: 'extracted',
+            chars,
+          });
+          continue;
+        }
+
+        if (isOfficeText) {
+          const text = (await extractOfficeText(buffer)).trim();
+          if (!text) {
+            throw new Error('No readable Office document text extracted');
+          }
+          const excerpt = text.slice(0, 1200).trim();
+          const chars = text.length;
+
+          const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: file.user_id || null,
+              type: 'document_text_extracted',
+              bucket: 'internal',
+              object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
+              payload: {
+                file_id: file.id,
+                original_filename: file.original_filename,
+                bucket: file.bucket,
+                object_path: file.object_path,
+                bytes: buffer.length,
+                chars,
+                text,
+                excerpt,
+                method: 'office_xml',
               },
             },
           ]);

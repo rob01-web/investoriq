@@ -1079,12 +1079,19 @@ export default async function handler(req, res) {
       const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
       const has = (terms) => terms.some((t) => norm.includes(t));
       const countMatches = (terms) => terms.filter((t) => norm.includes(t)).length;
+      const nameNorm = String(fileRow?.original_filename || '').toUpperCase().replace(/\s+/g, ' ');
       const hasDebtHeader = has(['TERM SHEET', 'REFI TERMS', 'LOAN TERMS']);
       const compactDebtSignals = countMatches(['LTV', 'RATE', 'AM', 'LOAN', 'EXIT CAP', 'IO']);
       const hasFinancingValuePattern =
         /\d+(?:\.\d+)?\s*%/.test(norm) ||
         /\$\s*[\d,]+(?:\.\d{2})?/.test(norm) ||
         /\b\d+\s*(?:YRS|YR|YEARS)\b/.test(norm);
+      const renovationSignals = countMatches([
+        'RENOVATION', 'CAPEX', 'CAP EX', 'CAPITAL EXPENDITURE', 'CAPITAL BUDGET',
+        'TOTAL BUDGET', 'SCOPE OF WORK', 'UNIT TURNS', 'CONTINGENCY',
+      ]);
+      const renovationNameSignal = /renovation|capex|cap ex|capital|budget|scope/i.test(nameNorm);
+      if ((renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 3) return 'renovation';
       if (hasDebtHeader || (compactDebtSignals >= 3 && hasFinancingValuePattern)) return 'loan_term_sheet';
       if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
       if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
@@ -1960,6 +1967,48 @@ export default async function handler(req, res) {
               'net operating income', 'noi', 'net operating',
             ]);
 
+            const extractT12LineItemsFromText = (text, totalOpex) => {
+              const lines = String(text || '').split(/\r?\n/);
+              const amountOnLine = (pattern) => {
+                const line = lines.find((candidate) => pattern.test(candidate));
+                if (!line) return null;
+                const match = line.match(/-?\$\s*[\d,]+(?:\.\d{1,2})?|\(\s*\$?\s*[\d,]+(?:\.\d{1,2})?\s*\)/);
+                if (!match) return null;
+                let value = Number(match[0].replace(/[$,\s()]/g, ''));
+                if (!Number.isFinite(value)) return null;
+                if (/^\s*\(|-/.test(match[0])) value = -Math.abs(value);
+                return value;
+              };
+              const incomeLineSpecs = [
+                { label: 'Gross Potential Rent', pattern: /gross\s+potential\s+rent|gross\s+rental\s+income/i },
+                { label: 'Vacancy Loss', pattern: /vacancy\s+loss|vacancy/i },
+                { label: 'Effective Gross Income', pattern: /effective\s+gross\s+income|egi/i },
+              ];
+              const expenseLineSpecs = [
+                { label: 'Property Taxes', pattern: /property\s+taxes/i },
+                { label: 'Insurance', pattern: /insurance/i },
+                { label: 'Utilities', pattern: /utilities|water|hydro|gas/i },
+                { label: 'Repairs & Maintenance', pattern: /repairs|maintenance/i },
+                { label: 'Management Fee', pattern: /management\s+fee|property\s+management/i },
+              ];
+              const incomeLines = incomeLineSpecs
+                .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
+                .filter((row) => Number.isFinite(row.amount));
+              const expenseLines = expenseLineSpecs
+                .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
+                .filter((row) => Number.isFinite(row.amount) && row.amount > 0);
+              const expenseSum = expenseLines.reduce((sum, row) => sum + row.amount, 0);
+              const expenseTolerance = Number.isFinite(totalOpex) ? Math.max(5000, Math.abs(totalOpex) * 0.02) : null;
+              const expenseLinesValidated =
+                expenseLines.length >= 3 &&
+                (!Number.isFinite(totalOpex) || Math.abs(expenseSum - totalOpex) <= expenseTolerance);
+              return {
+                income_lines: incomeLines,
+                expense_lines: expenseLinesValidated ? expenseLines : [],
+                expense_lines_found: expenseLinesValidated ? expenseLines.length : 0,
+              };
+            };
+
             const parse_warnings = [];
             if (!Number.isFinite(gross_potential_rent)) parse_warnings.push('missing_gross_potential_rent');
             if (!Number.isFinite(effective_gross_income)) parse_warnings.push('missing_effective_gross_income');
@@ -2215,6 +2264,8 @@ export default async function handler(req, res) {
               return res.status(200).json({ ok: true, skipped: 1 });
             }
 
+            const textLineItems = extractT12LineItemsFromText(rawText, total_operating_expenses);
+
             await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
 
             const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
@@ -2239,9 +2290,12 @@ export default async function handler(req, res) {
                   effective_gross_income,
                   total_operating_expenses,
                   net_operating_income,
-                  income_lines: [],
-                  expense_lines: [],
-                  column_map: null,
+                  income_lines: textLineItems.income_lines,
+                  expense_lines: textLineItems.expense_lines,
+                  income_line_count: textLineItems.income_lines.length,
+                  expense_line_count: textLineItems.expense_lines.length,
+                  expense_lines_found: textLineItems.expense_lines_found,
+                  column_map: textLineItems.expense_lines_found > 0 ? { line_items: 'text_excerpt_lines' } : null,
                   parse_warnings,
                 },
               },
@@ -2797,7 +2851,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, inferred: 'supporting_documents_unclassified' });
     }
 
-    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'loan_term_sheet' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax' || effectiveDocType === 'insurance_policy' || effectiveDocType === 'bank_statement') {
+    if (effectiveDocType === 'mortgage_statement' || effectiveDocType === 'loan_term_sheet' || effectiveDocType === 'appraisal' || effectiveDocType === 'property_tax' || effectiveDocType === 'insurance_policy' || effectiveDocType === 'bank_statement' || effectiveDocType === 'renovation') {
       const artifactType = `${effectiveDocType}_parsed`;
       const parserName = effectiveDocType;
 
@@ -2865,7 +2919,7 @@ export default async function handler(req, res) {
         const parse_warnings = [];
 
         if (effectiveDocType === 'loan_term_sheet') {
-          const loan_amount = (() => {
+          let loan_amount = (() => {
             const candidates = [];
             const addCandidate = (value) => {
               const parsed = Number(String(value || '').replace(/,/g, ''));
@@ -2888,6 +2942,9 @@ export default async function handler(req, res) {
             }
             return candidates.length > 0 ? Math.max(...candidates) : null;
           })();
+          const purchase_price = extractDollarNear(rawText, [
+            'purchase price', 'acquisition price', 'contract price',
+          ]);
 
           const compact_interest_rate = (() => {
             const beforeLabel = rawText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:interest\s*rate|note\s*rate|coupon\s*rate)\b/i);
@@ -2967,16 +3024,70 @@ export default async function handler(req, res) {
               'exit cap', 'refi cap', 'cap rate', 'exit cap rate', 'refi cap rate',
             ]);
 
-          if (!loan_amount) parse_warnings.push('missing_loan_amount');
+          let derived_acquisition_loan_amount = null;
+          if (!loan_amount && Number.isFinite(purchase_price) && purchase_price > 0 && Number.isFinite(ltv) && ltv > 0 && ltv <= 100) {
+            derived_acquisition_loan_amount = Math.round(purchase_price * (ltv / 100));
+            parse_warnings.push('loan_amount_derived_from_purchase_price_and_ltv');
+          }
+          if (!loan_amount && !derived_acquisition_loan_amount) parse_warnings.push('missing_loan_amount');
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: 'text_excerpt',
             loan_amount,
+            purchase_price,
+            derived_acquisition_loan_amount,
+            debt_basis: derived_acquisition_loan_amount ? 'acquisition_financing_assumption' : null,
             interest_rate,
             ltv,
             amort_years,
             refi_cap_rate,
+            parse_warnings,
+          };
+        } else if (effectiveDocType === 'renovation') {
+          const total_budget = extractDollarNear(rawText, [
+            'total budget', 'renovation budget', 'capex budget', 'capital budget',
+          ]);
+          const compactText = rawText.replace(/\s+/g, ' ').trim();
+          const budgetSpecs = [
+            { category: 'Exterior / Curb Appeal', pattern: /exterior\s*\/\s*curb\s+appeal\s*:\s*\$?\s*([\d,]+(?:\.\d{1,2})?)([^$]*?)(?=common areas|unit turns|contingency|$)/i },
+            { category: 'Common Areas', pattern: /common\s+areas\s*:\s*\$?\s*([\d,]+(?:\.\d{1,2})?)([^$]*?)(?=unit turns|contingency|$)/i },
+            { category: 'Unit Turns', pattern: /unit\s+turns(?:\s*\([^)]+\))?\s*:\s*(?:\d+\s+units\s*@\s*\$?[\d,]+(?:\/each)?\s*)?\(?\$?\s*([\d,]+(?:\.\d{1,2})?)\)?([^$]*?)(?=contingency|$)/i },
+            { category: 'Contingency', pattern: /contingency(?:\s*\([^)]+\))?\s*:\s*\$?\s*([\d,]+(?:\.\d{1,2})?)([^$]*?)(?=$)/i },
+          ];
+          const budget_rows = budgetSpecs
+            .map((spec) => {
+              const match = compactText.match(spec.pattern);
+              if (!match) return null;
+              const amount = Number(String(match[1] || '').replace(/,/g, ''));
+              if (!Number.isFinite(amount) || amount <= 0) return null;
+              const scope = String(match[2] || '').replace(/^[\s:,-]+/, '').trim();
+              return {
+                category: spec.category,
+                estimated_cost: amount,
+                scope_of_work: scope,
+              };
+            })
+            .filter(Boolean);
+          const rowsTotal = budget_rows.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0);
+          if (!total_budget) parse_warnings.push('missing_total_budget');
+          if (budget_rows.length === 0) parse_warnings.push('missing_budget_line_items');
+          if (Number.isFinite(total_budget) && budget_rows.length > 0 && Math.abs(rowsTotal - total_budget) > Math.max(5000, total_budget * 0.02)) {
+            parse_warnings.push('budget_line_items_do_not_sum_to_total');
+          }
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: 'text_excerpt',
+            total_budget,
+            budget_rows,
+            budget_note: Number.isFinite(total_budget)
+              ? `Uploaded renovation budget identifies a total budget of $${Math.round(total_budget).toLocaleString('en-US')}.`
+              : 'Uploaded renovation budget was identified, but no verified total budget was extracted.',
+            execution_note: 'No implementation timing, rent lift, ROI, or payback inputs were included unless explicitly shown in structured source fields.',
+            interpretation: budget_rows.length > 0
+              ? 'Structured CapEx budget categories were extracted from the uploaded renovation source. Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions.'
+              : 'Renovation source was classified, but structured budget categories were not extracted.',
             parse_warnings,
           };
         } else if (effectiveDocType === 'mortgage_statement') {

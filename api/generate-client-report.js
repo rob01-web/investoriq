@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
+import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -5458,6 +5459,7 @@ try {
 } catch (err) {
   console.error("Failed to log report_html_integrity:", err);
 }
+let reportQaFlags = [];
 try {
   const qaFlags = [];
   let qaFileRows = Array.isArray(documentSources) ? documentSources : [];
@@ -5665,6 +5667,7 @@ try {
   }
 
   const qaSummary = getReportQaStatus(qaFlags);
+  reportQaFlags = qaFlags;
   const qaTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: qaErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -5775,6 +5778,7 @@ let docHtml = dedupeDataNotAvailableBySection(htmlString);
 let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";
+let qaFixRoutingResult = null;
 try {
   let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
   let coverageArtifacts = [];
@@ -5938,6 +5942,35 @@ try {
 }
 }
 try {
+  const qaFixRouting = buildQaFixRouting({
+    reportQaFlags,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    renderedReportQa: renderedQaResult,
+    reportType,
+    reportTier,
+    jobId: jobId || null,
+    userId: effectiveUserId || null,
+    propertyName: property_name || jobPropertyName || "Unknown",
+  });
+  qaFixRoutingResult = qaFixRouting;
+  const routingTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: routingErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "qa_fix_routing",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/qa_fix_routing/${routingTimestamp}.json`,
+      payload: qaFixRouting,
+    },
+  ]);
+  if (routingErr) {
+    console.error("Failed to write qa_fix_routing artifact:", routingErr);
+  }
+} catch (err) {
+  console.error("Failed to build qa_fix_routing artifact:", err?.message || err);
+}
+try {
   const summaryTimestamp = new Date().toISOString().replace(/:/g, "-");
   const coverageSeverity = sourceCoverageQaResult?.severity || "not_run";
   const renderedSeverity =
@@ -5968,11 +6001,16 @@ try {
         user_id: effectiveUserId || null,
         rendered_qa_status: renderedQaStatus,
         coverage_qa_status: sourceCoverageQaResult?.qa_status || "not_run",
+        fix_routing_status: qaFixRoutingResult ? "available" : "not_run",
+        fix_route_counts: qaFixRoutingResult?.route_counts || null,
+        regenerate_recommended: qaFixRoutingResult?.regenerate_recommended ?? false,
+        admin_action_required: qaFixRoutingResult?.admin_action_required ?? false,
         highest_severity: highestSeverity,
-        public_sample_ready: publicSampleReady,
+        public_sample_ready: qaFixRoutingResult?.public_sample_ready ?? publicSampleReady,
         related_artifact_types: [
           "rendered_report_qa_advisory",
           "source_report_coverage_qa",
+          "qa_fix_routing",
         ],
         timestamp: new Date().toISOString(),
       },
