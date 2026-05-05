@@ -173,6 +173,24 @@ function actionForReportFlag(flag, context = {}) {
       evidence: flag?.evidence || null,
     };
   }
+  if (code === "ACQUISITION_FINANCING_RENDER_MISSING") {
+    return {
+      code,
+      title: "Acquisition financing section did not render",
+      source_artifact: "report_qa_flags",
+      severity,
+      action_type: "render_gating_fix_required",
+      owner_area: "report_renderer",
+      recommended_next_step: "Inspect acquisition financing renderer, token replacement, and section gating.",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+      safe_to_auto_fix: false,
+      evidence: flag?.evidence || null,
+    };
+  }
   if (code === "DOCRAPTOR_NOT_PRODUCTION_MODE") {
     return {
       code,
@@ -269,15 +287,24 @@ function actionForCoverageFlag(flag) {
       evidence: flag?.evidence || null,
     };
   }
-  if (code === "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED" || code === "FULL_UNDERWRITING_SUPPORT_UNDERUSED") {
+  if (
+    code === "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED" ||
+    code === "FULL_UNDERWRITING_SUPPORT_UNDERUSED" ||
+    code === "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL" ||
+    code === "CONTRADICTORY_INSUFFICIENT_DATA_CLASSIFICATION"
+  ) {
     return {
       code,
-      title: "Full Underwriting depth underdeveloped",
+      title: code === "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL" || code === "CONTRADICTORY_INSUFFICIENT_DATA_CLASSIFICATION"
+        ? "Contradictory Insufficient Data classification"
+        : "Full Underwriting depth underdeveloped",
       source_artifact: "source_report_coverage_qa",
       severity,
       action_type: "render_gating_fix_required",
       owner_area: "report_renderer",
-      recommended_next_step: "Inspect parser artifacts and section gating before using as public sample or outreach report.",
+      recommended_next_step: code === "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL" || code === "CONTRADICTORY_INSUFFICIENT_DATA_CLASSIFICATION"
+        ? "Patch capital risk profile gating so core operating metrics prevent an Insufficient Data label."
+        : "Inspect parser artifacts and section gating before using as public sample or outreach report.",
       requires_code_patch: true,
       requires_regeneration: true,
       blocks_public_sample: true,

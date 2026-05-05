@@ -67,7 +67,7 @@ function findRenderedSignals(html) {
     ["dscr_current_debt_not_assessed", /DSCR and current-debt service are not assessed/i],
     ["debt_sizing_balance_not_provided", /debt sizing balance not provided/i],
     ["refinance_stability_not_produced", /Refinance Stability Classification not produced/i],
-    ["acquisition_financing_assumptions", /Proposed Acquisition Debt Sizing|Acquisition Financing Assumptions|Acquisition DSCR/i],
+    ["acquisition_financing_assumptions", /Proposed Acquisition Debt Sizing|Acquisition Financing Assumptions|Derived Acquisition Loan Amount|Acquisition DSCR|Derived from uploaded purchase assumptions/i],
   ];
   return signalPatterns
     .filter(([, pattern]) => pattern.test(text))
@@ -87,6 +87,7 @@ function buildArtifactInventory(artifacts) {
     rent_roll_parsed: {
       present: Boolean(rentRoll),
       unit_count: rentRoll?.unit_count ?? rentRoll?.total_units ?? rentRoll?.totalUnits ?? null,
+      occupancy: rentRoll?.occupancy ?? rentRoll?.occupancy_rate ?? rentRoll?.physical_occupancy ?? null,
       method: rentRoll?.method || null,
     },
     t12_parsed: {
@@ -171,6 +172,29 @@ export function buildSourceReportCoverageQa({
   const htmlText = typeof html === "string" ? html : "";
 
   const t12 = artifactInventory.t12_parsed;
+  const rentRoll = artifactInventory.rent_roll_parsed;
+  const hasCoreOperatingMetrics =
+    t12.present &&
+    t12.has_core_totals &&
+    hasPositive(rentRoll.unit_count);
+  if (
+    isFullUnderwriting &&
+    hasCoreOperatingMetrics &&
+    /(?:Operating Profile|Capital Risk Profile|CAPITAL RISK\s*PROFILE|SCREENING\s*SIGNAL)[\s\S]{0,160}Insufficient Data/i.test(htmlText)
+  ) {
+    addFlag(flags, {
+      code: "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL",
+      severity: "high",
+      category: "rendered_output_consistency",
+      message: "Rendered Full Underwriting classification says Insufficient Data even though core operating metrics are present.",
+      evidence: {
+        t12_has_core_totals: t12.has_core_totals,
+        unit_count: rentRoll.unit_count,
+        rendered_text_signals: ["insufficient_data_classification"],
+      },
+      routing: "render_gating_gap",
+    });
+  }
   const hasUsefulT12LineItems = t12.income_line_count >= 3 || t12.expense_line_count >= 3;
   if (
     t12.present &&
@@ -226,6 +250,15 @@ export function buildSourceReportCoverageQa({
     loan.has_rate &&
     loan.has_amortization &&
     renderedTextSignals.includes("acquisition_financing_assumptions");
+  const acquisitionFinancingCoverage = {
+    required_inputs_present:
+      loan.has_derived_acquisition_debt &&
+      loan.has_purchase_price &&
+      loan.has_rate &&
+      loan.has_amortization,
+    rendered: hasAcquisitionFinancingAssumptions,
+    current_debt_assessed: false,
+  };
   const hasDebtSizing =
     loan.has_balance ||
     loan.has_payment ||
@@ -247,6 +280,7 @@ export function buildSourceReportCoverageQa({
         filenames: debtFiles.map((file) => file.original_filename),
         loan_term_sheet: loan,
         mortgage_statement: mortgage,
+        acquisition_financing: acquisitionFinancingCoverage,
         rendered_text_signals: renderedTextSignals.filter((signal) =>
           ["dscr_current_debt_not_assessed", "debt_sizing_balance_not_provided", "refinance_stability_not_produced"].includes(signal)
         ),
@@ -309,6 +343,7 @@ export function buildSourceReportCoverageQa({
       message: "Multiple material support documents appear uploaded, but the rendered underwriting output remains constrained or omits expected depth.",
       evidence: {
         material_support_filenames: materialSupportFiles.map((file) => file.original_filename),
+        acquisition_financing: acquisitionFinancingCoverage,
         present_underwriting_sections: presentUnderwritingSections,
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
