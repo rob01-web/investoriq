@@ -241,6 +241,59 @@ if (failures.length === 0) {
   };
 };
 
+const parseT12CurrencyAmountFromLine = (line) => {
+  const text = String(line || '');
+  const match = text.match(/\(?-?\$\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?:\d+(?:\.\d+)?%)?\)?/);
+  if (!match) return null;
+  let value = Number(String(match[1] || '').replace(/,/g, ''));
+  if (!Number.isFinite(value)) return null;
+  if (/^\s*\(|^\s*-/.test(match[0])) value = -Math.abs(value);
+  return value;
+};
+
+export const extractT12LineItemsFromText = (text, totalOpex) => {
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const amountOnLine = (pattern) => {
+    for (const line of lines) {
+      if (!pattern.test(line)) continue;
+      const value = parseT12CurrencyAmountFromLine(line);
+      if (Number.isFinite(value)) return value;
+    }
+    return null;
+  };
+  const incomeLineSpecs = [
+    { label: 'Gross Potential Rent', pattern: /gross\s+potential\s+rent|gross\s+rental\s+income/i },
+    { label: 'Vacancy Loss', pattern: /vacancy\s+loss|vacancy/i },
+    { label: 'Effective Gross Income', pattern: /effective\s+gross\s+income|egi/i },
+  ];
+  const expenseLineSpecs = [
+    { label: 'Property Taxes', pattern: /property\s+taxes/i },
+    { label: 'Insurance', pattern: /^insurance\b|[^a-z]insurance\b/i },
+    { label: 'Utilities', pattern: /utilities|water|hydro|gas/i },
+    { label: 'Repairs & Maintenance', pattern: /repairs|maintenance/i },
+    { label: 'Management Fee', pattern: /management\s+fee|property\s+management/i },
+  ];
+  const incomeLines = incomeLineSpecs
+    .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
+    .filter((row) => Number.isFinite(row.amount));
+  const expenseLines = expenseLineSpecs
+    .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
+    .filter((row) => Number.isFinite(row.amount) && row.amount > 0);
+  const expenseSum = expenseLines.reduce((sum, row) => sum + row.amount, 0);
+  const expenseTolerance = Number.isFinite(totalOpex) ? Math.max(5000, Math.abs(totalOpex) * 0.02) : null;
+  const expenseLinesValidated =
+    expenseLines.length >= 3 &&
+    (!Number.isFinite(totalOpex) || Math.abs(expenseSum - totalOpex) <= expenseTolerance);
+  return {
+    income_lines: incomeLines,
+    expense_lines: expenseLinesValidated ? expenseLines : [],
+    expense_lines_found: expenseLinesValidated ? expenseLines.length : 0,
+  };
+};
+
 const deleteExistingT12Artifacts = async (supabaseAdmin, jobId, fileId) => {
   const { error } = await supabaseAdmin
     .from('analysis_artifacts')
@@ -1966,48 +2019,6 @@ export default async function handler(req, res) {
             const net_operating_income = extractDollarNear(rawText, [
               'net operating income', 'noi', 'net operating',
             ]);
-
-            const extractT12LineItemsFromText = (text, totalOpex) => {
-              const lines = String(text || '').split(/\r?\n/);
-              const amountOnLine = (pattern) => {
-                const line = lines.find((candidate) => pattern.test(candidate));
-                if (!line) return null;
-                const match = line.match(/-?\$\s*[\d,]+(?:\.\d{1,2})?|\(\s*\$?\s*[\d,]+(?:\.\d{1,2})?\s*\)/);
-                if (!match) return null;
-                let value = Number(match[0].replace(/[$,\s()]/g, ''));
-                if (!Number.isFinite(value)) return null;
-                if (/^\s*\(|-/.test(match[0])) value = -Math.abs(value);
-                return value;
-              };
-              const incomeLineSpecs = [
-                { label: 'Gross Potential Rent', pattern: /gross\s+potential\s+rent|gross\s+rental\s+income/i },
-                { label: 'Vacancy Loss', pattern: /vacancy\s+loss|vacancy/i },
-                { label: 'Effective Gross Income', pattern: /effective\s+gross\s+income|egi/i },
-              ];
-              const expenseLineSpecs = [
-                { label: 'Property Taxes', pattern: /property\s+taxes/i },
-                { label: 'Insurance', pattern: /insurance/i },
-                { label: 'Utilities', pattern: /utilities|water|hydro|gas/i },
-                { label: 'Repairs & Maintenance', pattern: /repairs|maintenance/i },
-                { label: 'Management Fee', pattern: /management\s+fee|property\s+management/i },
-              ];
-              const incomeLines = incomeLineSpecs
-                .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
-                .filter((row) => Number.isFinite(row.amount));
-              const expenseLines = expenseLineSpecs
-                .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
-                .filter((row) => Number.isFinite(row.amount) && row.amount > 0);
-              const expenseSum = expenseLines.reduce((sum, row) => sum + row.amount, 0);
-              const expenseTolerance = Number.isFinite(totalOpex) ? Math.max(5000, Math.abs(totalOpex) * 0.02) : null;
-              const expenseLinesValidated =
-                expenseLines.length >= 3 &&
-                (!Number.isFinite(totalOpex) || Math.abs(expenseSum - totalOpex) <= expenseTolerance);
-              return {
-                income_lines: incomeLines,
-                expense_lines: expenseLinesValidated ? expenseLines : [],
-                expense_lines_found: expenseLinesValidated ? expenseLines.length : 0,
-              };
-            };
 
             const parse_warnings = [];
             if (!Number.isFinite(gross_potential_rent)) parse_warnings.push('missing_gross_potential_rent');
