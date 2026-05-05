@@ -167,11 +167,12 @@ function actionForReportFlag(flag, context = {}) {
       (hasDerivedAcquisitionEvidence(flag?.evidence) || context.has_derived_acquisition_debt) &&
       !hasCurrentDebtBalanceEvidence(flag?.evidence) &&
       !context.has_current_debt_balance;
+    const derivedOnlyRendered = derivedOnly && context.acquisition_financing_rendered;
     return {
       code,
       title: derivedOnly ? "Current DSCR source limitation with acquisition financing present" : "Debt DSCR render gating review",
       source_artifact: "report_qa_flags",
-      severity,
+      severity: derivedOnlyRendered ? "low" : severity,
       action_type: derivedOnly ? "source_document_limitation" : "render_gating_fix_required",
       owner_area: derivedOnly ? "source_documents" : "report_renderer",
       recommended_next_step: derivedOnly
@@ -179,8 +180,8 @@ function actionForReportFlag(flag, context = {}) {
         : "Inspect debt artifacts and current DSCR render gating.",
       requires_code_patch: !derivedOnly,
       requires_regeneration: !derivedOnly,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      blocks_public_sample: !derivedOnlyRendered,
+      blocks_high_value_outreach: !derivedOnlyRendered,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };

@@ -3643,7 +3643,7 @@ if (effectiveReportMode === "screening_v1") {
       } else {
         riskBullets.push(
           loanTermSheetTermsPayload
-            ? "Debt terms were partially identified, but no current outstanding debt balance was provided. Current debt service is not assessed because no current outstanding debt balance was provided."
+            ? "Debt terms were identified from purchase-assumption support. Current debt service is not assessed because no current outstanding debt balance was provided."
             : "Debt terms were not included in the uploaded documents; Current Debt DSCR and refinance risk are not assessed in this report."
         );
       }
