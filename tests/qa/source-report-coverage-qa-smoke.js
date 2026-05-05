@@ -188,3 +188,87 @@ if (!acquisitionRenderedResult.rendered_text_signals.includes("acquisition_finan
   console.error("Missing acquisition_financing_assumptions rendered signal.");
   process.exit(1);
 }
+
+const acquisitionRenderedT12OnlyResult = buildSourceReportCoverageQa({
+  jobId: "forest-city-acquisition-rendered-t12-only-smoke",
+  userId: "user-smoke",
+  propertyName: "Forest City Manor",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "ForestCityManor_T12_2024-2025.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "2", original_filename: "ForestCityManor_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "3", original_filename: "ForestCityManor_PurchaseAssumptions.pdf", doc_type: "purchase_assumptions", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "4", original_filename: "ForestCityManor_RenovationBudget.docx", doc_type: "renovation_budget", mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 3200000,
+        total_operating_expenses: 1550000,
+        net_operating_income: 1650000,
+        income_lines: [],
+        expense_lines: [],
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 144,
+      },
+    },
+    {
+      type: "renovation_parsed",
+      payload: {
+        total_capex: 1200000,
+        scope_items: ["Interior upgrades"],
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 34500000,
+        ltv: 85,
+        interest_rate: 3.8,
+        amort_years: 40,
+        derived_acquisition_loan_amount: 29325000,
+        loan_amount: null,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  html: [
+    "<html><body>",
+    "<h1>Full Underwriting Report</h1>",
+    "<h2>Operating Statement</h2>",
+    "<p>No line-item detail available for this T12 format. All values are reported totals.</p>",
+    "<h2>Scenario Analysis</h2>",
+    "<h2>Risk Register</h2>",
+    "<h2>Debt Structure & Financing</h2>",
+    "<p>Proposed Acquisition Debt Sizing</p>",
+    "<p>Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p>",
+    "<table><tr><td>Derived Acquisition Loan Amount</td><td>$29,325,000</td></tr><tr><td>Acquisition DSCR</td><td>1.40x</td></tr></table>",
+    "<h2>Deal Scorecard</h2>",
+    "<h2>Discounted Cash Flow</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+    "</body></html>",
+  ].join("\n"),
+});
+
+const acquisitionRenderedT12OnlyActual = new Set(
+  acquisitionRenderedT12OnlyResult.deterministic_flags.map((flag) => flag.code)
+);
+if (!acquisitionRenderedT12OnlyActual.has("T12_LINE_ITEM_DETAIL_MISSING")) {
+  console.error("Expected T12_LINE_ITEM_DETAIL_MISSING to remain.");
+  process.exit(1);
+}
+if (acquisitionRenderedT12OnlyActual.has("PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT")) {
+  console.error("Purchase assumptions flag fired despite rendered acquisition financing.");
+  process.exit(1);
+}
+if (acquisitionRenderedT12OnlyActual.has("FULL_UNDERWRITING_SUPPORT_UNDERUSED")) {
+  console.error("Support underused should not duplicate the remaining T12-only issue.");
+  console.error("Actual flags:", Array.from(acquisitionRenderedT12OnlyActual).join(", "));
+  process.exit(1);
+}

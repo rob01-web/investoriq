@@ -93,17 +93,24 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
   const candidates = [];
   const inventoryLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
   if (inventoryLoan) candidates.push(inventoryLoan);
+  const renderedSignals = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
+    ? sourceReportCoverageQa.rendered_text_signals
+    : [];
+  let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
   for (const flag of Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : []) {
     if (flag?.evidence?.loan_term_sheet) candidates.push(flag.evidence.loan_term_sheet);
     if (flag?.evidence?.loan_term_sheet_parsed) candidates.push(flag.evidence.loan_term_sheet_parsed);
+    if (flag?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
   }
   for (const route of Array.isArray(qaFixRouting?.routes) ? qaFixRouting.routes : []) {
     if (route?.evidence?.loan_term_sheet) candidates.push(route.evidence.loan_term_sheet);
     if (route?.evidence?.loan_term_sheet_parsed) candidates.push(route.evidence.loan_term_sheet_parsed);
+    if (route?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
   }
   return {
     has_derived_acquisition_debt: candidates.some((candidate) => hasDerivedAcquisitionEvidence(candidate)),
     has_current_debt_balance: candidates.some((candidate) => hasCurrentDebtBalanceEvidence(candidate)),
+    acquisition_financing_rendered: acquisitionFinancingRendered,
   };
 }
 
@@ -132,20 +139,25 @@ function actionForReportFlag(flag, context = {}) {
       (hasDerivedAcquisitionEvidence(flag?.evidence) || context.has_derived_acquisition_debt) &&
       !hasCurrentDebtBalanceEvidence(flag?.evidence) &&
       !context.has_current_debt_balance;
+    const derivedOnlyRendered = derivedOnly && context.acquisition_financing_rendered;
     return {
       code,
-      title: derivedOnly ? "Acquisition financing mapping review" : "Debt balance extraction gap",
+      title: derivedOnlyRendered
+        ? "Acquisition financing is not current debt"
+        : derivedOnly ? "Acquisition financing mapping review" : "Debt balance extraction gap",
       source_artifact: "report_qa_flags",
-      severity,
-      action_type: derivedOnly ? "artifact_mapping_fix_required" : "parser_fix_required",
-      owner_area: derivedOnly ? "report_mapping" : "parser",
-      recommended_next_step: derivedOnly
+      severity: derivedOnlyRendered ? "low" : severity,
+      action_type: derivedOnlyRendered ? "no_action_false_positive" : derivedOnly ? "artifact_mapping_fix_required" : "parser_fix_required",
+      owner_area: derivedOnlyRendered ? "qa_calibration" : derivedOnly ? "report_mapping" : "parser",
+      recommended_next_step: derivedOnlyRendered
+        ? "No current debt balance action is required when proposed acquisition financing rendered separately and no true current debt balance was provided."
+        : derivedOnly
         ? "Render proposed acquisition financing separately and do not use it as current debt or refinance balance."
         : "Inspect the debt source and parser before treating current DSCR/refi outputs as complete.",
-      requires_code_patch: true,
-      requires_regeneration: true,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      requires_code_patch: !derivedOnlyRendered,
+      requires_regeneration: !derivedOnlyRendered,
+      blocks_public_sample: !derivedOnlyRendered,
+      blocks_high_value_outreach: !derivedOnlyRendered,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };

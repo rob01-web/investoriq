@@ -173,5 +173,69 @@ const cleanPlanWithoutRouting = buildQaActionPlan({
 });
 assert.equal(cleanPlanWithoutRouting.public_sample_ready, true);
 
+const acquisitionRenderedSourceQa = {
+  rendered_text_signals: ["acquisition_financing_assumptions"],
+  artifact_inventory: {
+    loan_term_sheet_parsed: {
+      present: true,
+      has_purchase_price: true,
+      has_derived_acquisition_debt: true,
+      has_balance: false,
+      has_rate: true,
+      has_amortization: true,
+    },
+  },
+  deterministic_flags: [
+    {
+      code: "T12_LINE_ITEM_DETAIL_MISSING",
+      severity: "medium",
+      message: "T12 line-item detail did not reach the report.",
+      evidence: { income_line_count: 0, expense_line_count: 0 },
+    },
+  ],
+};
+const acquisitionRenderedReportFlags = [
+  {
+    code: "DEBT_FILE_WITH_MISSING_BALANCE",
+    severity: "high",
+    message: "Debt file missing current balance.",
+    evidence: { parse_warning: "missing_loan_amount" },
+  },
+  {
+    code: "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
+    severity: "medium",
+    message: "DSCR not assessed with debt context.",
+    evidence: { has_debt_terms_payload: true },
+  },
+];
+const acquisitionRenderedRouting = buildQaFixRouting({
+  reportQaFlags: acquisitionRenderedReportFlags,
+  sourceReportCoverageQa: acquisitionRenderedSourceQa,
+  renderedReportQa: { findings: [] },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+const acquisitionRenderedPlan = buildQaActionPlan({
+  reportQaFlags: acquisitionRenderedReportFlags,
+  sourceReportCoverageQa: acquisitionRenderedSourceQa,
+  renderedReportQa: { findings: [] },
+  qaFixRouting: acquisitionRenderedRouting,
+  reportType: "underwriting",
+  reportTier: 2,
+});
+const acquisitionActionsByCode = Object.fromEntries(
+  acquisitionRenderedPlan.prioritized_actions.map((action) => [action.code, action])
+);
+
+assert.equal(acquisitionActionsByCode.T12_LINE_ITEM_DETAIL_MISSING.action_type, "parser_fix_required");
+assert.equal(acquisitionActionsByCode.DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT.action_type, "source_document_limitation");
+assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.action_type, "no_action_false_positive");
+assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.severity, "low");
+assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.requires_code_patch, false);
+assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.requires_regeneration, false);
+assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.blocks_high_value_outreach, false);
+assert.equal(Boolean(acquisitionActionsByCode.PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT), false);
+assert.equal(Boolean(acquisitionActionsByCode.ACQUISITION_FINANCING_RENDER_MISSING), false);
+
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));

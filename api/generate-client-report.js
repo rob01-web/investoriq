@@ -5608,6 +5608,14 @@ try {
     isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount);
   const acquisitionFinancingRendered =
     /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount/i.test(htmlString);
+  const acquisitionFinancingDerivedOnlyRendered =
+    acquisitionFinancingInputsUsable &&
+    acquisitionFinancingRendered &&
+    !isFinitePositive(loanTermSheetTermsPayload?.loan_amount) &&
+    !isFinitePositive(loanTermSheetTermsPayload?.outstanding_balance) &&
+    !isFinitePositive(mortgagePayload?.loan_amount) &&
+    !isFinitePositive(mortgagePayload?.outstanding_balance) &&
+    loanTermSheetTermsPayload?.debt_basis === "acquisition_financing_assumption";
 
   if (acquisitionFinancingInputsUsable && !acquisitionFinancingRendered) {
     qaFlags.push({
@@ -5627,6 +5635,7 @@ try {
   if (
     effectiveReportMode === "v1_core" &&
     !isFinitePositive(parsedDebtBalance) &&
+    !acquisitionFinancingDerivedOnlyRendered &&
     (debtArtifactWithMissingBalance || (debtLookingFile && debtTermsPresent))
   ) {
     const debtPayload =

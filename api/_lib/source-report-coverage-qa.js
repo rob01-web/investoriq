@@ -306,6 +306,7 @@ export function buildSourceReportCoverageQa({
     debtFiles.length > 0 ||
     artifactPresent(artifacts, "appraisal_parsed") ||
     artifactPresent(artifacts, "property_tax_parsed");
+  const minimumUnderwritingSectionCountMet = !isFullUnderwriting || presentUnderwritingSections >= 5;
   if (
     isFullUnderwriting &&
     supportPackageLooksBroad &&
@@ -330,10 +331,22 @@ export function buildSourceReportCoverageQa({
   const materialSupportFiles = files.filter((file) =>
     fileMatches(file, /(renov|capex|cap ex|capital|budget|purchase|assumption|financ|loan|debt|term|cmhc|ltv|amort|rate|mortgage|appraisal|tax)/i)
   );
+  const materialIssueCodes = flags
+    .filter((flag) => ["parser_gap", "artifact_gap", "admin_review_required", "render_gating_gap"].includes(flag.routing))
+    .map((flag) => flag.code);
+  const onlyT12LineItemIssue =
+    materialIssueCodes.length > 0 &&
+    materialIssueCodes.every((code) => code === "T12_LINE_ITEM_DETAIL_MISSING");
+  const supportPackageUsedExceptT12LineItems =
+    acquisitionFinancingCoverage.rendered &&
+    artifactInventory.renovation_parsed.present &&
+    minimumUnderwritingSectionCountMet &&
+    onlyT12LineItemIssue;
   if (
     isFullUnderwriting &&
     materialSupportFiles.length >= 2 &&
     supportPackageLooksBroad &&
+    !supportPackageUsedExceptT12LineItems &&
     (presentUnderwritingSections < 6 || flags.some((flag) => flag.routing === "artifact_gap" || flag.routing === "parser_gap"))
   ) {
     addFlag(flags, {
@@ -384,7 +397,7 @@ export function buildSourceReportCoverageQa({
       full_underwriting: isFullUnderwriting,
       support_package_looks_broad: supportPackageLooksBroad,
       present_underwriting_sections: presentUnderwritingSections,
-      minimum_underwriting_section_count_met: !isFullUnderwriting || presentUnderwritingSections >= 5,
+      minimum_underwriting_section_count_met: minimumUnderwritingSectionCountMet,
     },
     qa_status: summary.qa_status,
     severity: summary.severity,

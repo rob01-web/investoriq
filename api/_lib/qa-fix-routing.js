@@ -56,6 +56,44 @@ function routeCounts(routes) {
   return counts;
 }
 
+function hasDerivedAcquisitionEvidence(evidence) {
+  const loan = evidence?.loan_term_sheet || evidence?.loan_term_sheet_parsed || evidence?.debt_payload || evidence || {};
+  return Boolean(
+    loan?.has_purchase_price ||
+    loan?.has_derived_acquisition_debt ||
+    Number(loan?.purchase_price) > 0 ||
+    Number(loan?.derived_acquisition_loan_amount) > 0 ||
+    loan?.debt_basis === "acquisition_financing_assumption"
+  );
+}
+
+function hasCurrentDebtBalanceEvidence(evidence) {
+  const loan = evidence?.loan_term_sheet || evidence?.loan_term_sheet_parsed || evidence?.debt_payload || evidence || {};
+  return Boolean(
+    loan?.has_balance ||
+    Number(loan?.loan_amount) > 0 ||
+    Number(loan?.outstanding_balance) > 0 ||
+    Number(loan?.monthly_payment) > 0 ||
+    Number(loan?.annual_debt_service) > 0
+  );
+}
+
+function buildRoutingContext(sourceReportCoverageQa) {
+  const inventoryLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed || null;
+  const renderedSignals = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
+    ? sourceReportCoverageQa.rendered_text_signals
+    : [];
+  let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
+  for (const flag of Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : []) {
+    if (flag?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
+  }
+  return {
+    has_derived_acquisition_debt: hasDerivedAcquisitionEvidence(inventoryLoan),
+    has_current_debt_balance: hasCurrentDebtBalanceEvidence(inventoryLoan),
+    acquisition_financing_rendered: acquisitionFinancingRendered,
+  };
+}
+
 function routeDisplayFix(flag, source) {
   const code = String(flag?.code || "");
   const exactSafeCodes = new Set([
@@ -81,7 +119,7 @@ function routeDisplayFix(flag, source) {
   };
 }
 
-function routeParserGap(flag, source) {
+function routeParserGap(flag, source, context = {}) {
   const code = String(flag?.code || "");
   const parserGapCodes = new Set([
     "T12_LINE_ITEM_DETAIL_MISSING",
@@ -91,6 +129,28 @@ function routeParserGap(flag, source) {
     "DEBT_FILE_WITH_MISSING_BALANCE",
   ]);
   if (!parserGapCodes.has(code)) return null;
+  const derivedOnlyRendered =
+    code === "DEBT_FILE_WITH_MISSING_BALANCE" &&
+    (hasDerivedAcquisitionEvidence(flag?.evidence) || context.has_derived_acquisition_debt) &&
+    !hasCurrentDebtBalanceEvidence(flag?.evidence) &&
+    !context.has_current_debt_balance &&
+    context.acquisition_financing_rendered;
+  if (derivedOnlyRendered) {
+    return {
+      code,
+      source,
+      severity: "low",
+      category: flag?.category || "qa_calibration",
+      routing: "source_insufficient",
+      action: "no_current_debt_balance_action_when_acquisition_financing_rendered",
+      safe_auto_fix: false,
+      requires_regeneration: false,
+      admin_review_required: false,
+      public_sample_blocker: false,
+      message: "Proposed acquisition financing rendered separately; missing current debt balance is not a parser blocker.",
+      evidence: flag?.evidence || null,
+    };
+  }
   const routing = code === "RENOVATION_DOC_NOT_STRUCTURED" || code === "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT"
     ? "artifact_gap"
     : "parser_gap";
@@ -111,7 +171,7 @@ function routeParserGap(flag, source) {
   };
 }
 
-function routeRenderGap(flag, source) {
+function routeRenderGap(flag, source, context = {}) {
   const code = String(flag?.code || "");
   const renderGapCodes = new Set([
     "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
@@ -122,6 +182,28 @@ function routeRenderGap(flag, source) {
     "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
   ]);
   if (!renderGapCodes.has(code)) return null;
+  const derivedOnlyRendered =
+    code === "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT" &&
+    (hasDerivedAcquisitionEvidence(flag?.evidence) || context.has_derived_acquisition_debt) &&
+    !hasCurrentDebtBalanceEvidence(flag?.evidence) &&
+    !context.has_current_debt_balance &&
+    context.acquisition_financing_rendered;
+  if (derivedOnlyRendered) {
+    return {
+      code,
+      source,
+      severity: flag?.severity || "medium",
+      category: flag?.category || "source_document_limitation",
+      routing: "source_insufficient",
+      action: "keep_current_dscr_unassessed_without_true_current_debt_balance",
+      safe_auto_fix: false,
+      requires_regeneration: false,
+      admin_review_required: false,
+      public_sample_blocker: false,
+      message: flag?.message || "Current DSCR remains unassessed because only proposed acquisition financing was provided.",
+      evidence: flag?.evidence || null,
+    };
+  }
   return {
     code,
     source,
@@ -181,10 +263,10 @@ function routeRenderedFinding(finding) {
   }, "rendered_report_qa_advisory");
 }
 
-function routeFlag(flag, source) {
+function routeFlag(flag, source, context = {}) {
   return (
-    routeParserGap(flag, source) ||
-    routeRenderGap(flag, source) ||
+    routeParserGap(flag, source, context) ||
+    routeRenderGap(flag, source, context) ||
     routeSourceInsufficient(flag, source) ||
     routeDisplayFix(flag, source)
   );
@@ -201,15 +283,16 @@ export function buildQaFixRouting({
   propertyName = null,
 } = {}) {
   const routes = [];
+  const routingContext = buildRoutingContext(sourceReportCoverageQa);
 
   for (const flag of Array.isArray(reportQaFlags) ? reportQaFlags : []) {
-    const route = routeFlag(flag, "report_qa_flags");
+    const route = routeFlag(flag, "report_qa_flags", routingContext);
     if (route) addRoute(routes, route);
   }
 
   for (const flag of Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : []) {
     if (flag?.code === "PUBLIC_SAMPLE_NOT_READY") continue;
-    const route = routeFlag(flag, "source_report_coverage_qa");
+    const route = routeFlag(flag, "source_report_coverage_qa", routingContext);
     if (route) addRoute(routes, route);
   }
 
