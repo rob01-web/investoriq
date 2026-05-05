@@ -1,9 +1,95 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 4, 2026 - V2 / Rendered Report QA strategy added; next session begins at 9:33am with Codex file-by-file audit of InvestorIQ-Empire-v2 against current repo truth before any merge or patch.
+**Last updated:** May 5, 2026 - V2 audit completed; Dashboard-only freeze mitigations patched/monitored; Stripe webhook/domain entitlement incident fixed; next session should choose between extra-credit cleanup, advisory-only Rendered Report QA planning, or final sample validation.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 5 V2 EMERGENT Audit Decision + Safe Adoption Roadmap
+- Decision:
+  - V2 is not wholesale mergeable.
+  - V2 is reference/blueprint only.
+  - Current deterministic pipeline remains the source of truth.
+- High-value V2 concepts to adopt manually after current-file review:
+  - Rendered Report QA / Editorial QA
+  - Final Review Queue
+  - Admin Command Centre
+  - User Drilldown
+  - Bulk Credit Grant
+  - Dashboard freeze fixes
+- Must-not-merge areas:
+  - wholesale admin router
+  - wholesale worker changes
+  - direct admin publish/revision shortcuts
+  - unsafe credit restoration
+  - hardcoded model strings
+  - aggressive QA threshold `80`
+  - fake schema assumptions
+  - BUY/SELL or public AI language
+- Safe roadmap:
+  - Phase 0: stabilize current launch repo.
+  - Phase 1: advisory-only rendered-report QA artifact.
+  - Phase 1.5: deterministic critical kill flags.
+  - Phase 2: Final Review Queue read-only/display-first.
+  - Phase 3: controlled QA hold/admin review only after advisory proof.
+  - Phase 4: Admin Command Centre features after schema validation.
+  - Phase 5: post-launch expansion.
+- Explicitly locked:
+  - no QA blocking yet
+  - no `qa_review_required` yet
+  - no worker lifecycle changes yet
+  - no report content rewriting
+  - no financial value changes
+  - no AI public language
+  - current deterministic pipeline remains source of truth
+
+- **May 5 status update - V2 audit, Dashboard monitoring, Stripe webhook/domain fix:**
+  - V2 EMERGENT audit result:
+    - V2 is **not** wholesale mergeable.
+    - V2 remains valuable as blueprint/reference material and for selective manual cherry-picks only.
+    - High-value concepts: Rendered Report QA / Editorial QA, Final Review Queue, Admin Command Centre concepts, User Drilldown, Bulk Credit Grant, and Dashboard freeze fixes.
+    - Must-not-merge / high-risk areas: wholesale `api/admin/run-eligible-jobs-once.js`, wholesale worker lifecycle changes, direct admin publish/revision shortcuts, unsafe credit restoration that clears only `consumed_at`, hardcoded/unverified model strings such as `gpt-5.1`, aggressive default QA blocking threshold such as `80`, any `reports.status` assumptions, fake `report_purchases.report_type` or `report_purchases.consumed` assumptions, BUY/SELL sample language, and public AI / AI-assisted / IQ-assisted language.
+    - Safe V2 adoption doctrine: current repo remains the foundation; V2 is blueprint/reference only; rebuild useful pieces manually into current architecture; no blind file swaps; no broad merges; no worker/publication changes until separately audited.
+  - Rendered Report QA direction refined:
+    - InvestorIQ still wants Rendered Report QA / Editorial QA.
+    - First safe implementation should be advisory-only: inspect final rendered HTML/text after token replacement and section stripping; write internal `analysis_artifacts` QA artifact only; do not block publication in Phase 1; do not add `qa_review_required`; do not alter worker lifecycle; do not rewrite report content; do not change financial values; do not override deterministic parsers; do not expose AI publicly.
+    - Future blocking can be considered only after advisory data is reviewed.
+    - Recommended future blocking threshold posture remains permissive, e.g. `QA_BLOCK_BELOW_SCORE=60` plus critical kill flags, not aggressive default `80`.
+    - DocRaptor watermark and `Test` / `CLEAN` / `MESSY` / `Underwritting` naming are acceptable during intentional internal testing but are blockers for final public/Ken samples.
+  - Codex quota / workflow update:
+    - Codex usage was unavailable for roughly 3 days due to weekly quota.
+    - New operating rule: use ChatGPT plus uploaded current files for most investigation; use Codex mainly for narrow anchor-locked patches; Codex should run in Compressed Receipt Mode by default; one Codex task at a time; avoid broad audits unless necessary; investigation-first, no diff unless needed.
+    - Typical future flow: upload current file to ChatGPT, optionally upload V2/reference file, have ChatGPT compare and prepare a tiny Codex patch prompt, then Codex applies exact patch only.
+  - Dashboard freeze / lag May 5 update:
+    - Codex classified V2 dashboard freeze fixes as PARTIAL: Dashboard fetch guards / state equality guards were safe low-risk cherry-picks; `src/contexts/SupabaseAuthContext.jsx` auth-event short-circuit is valuable but medium risk and deferred unless needed.
+    - Patch applied only to `src/pages/Dashboard.jsx`: added in-flight guards for `fetchInProgressJobs`, `fetchRecentJobs`, and `fetchLatestFailedJob`; added equality guards for entitlements and latest failed-job state writes; removed dead/no-op effects while preserving `rentRollCoverage` clearing when `jobId` becomes null.
+    - No auth, worker, parser, report generation, Stripe, DocRaptor, polling, or auto-refresh behavior changed.
+    - Validation passed: `npm run build`; `git diff --check -- src/pages/Dashboard.jsx`.
+    - Manual post-patch testing: user typed in property-name box, clicked around, refreshed Dashboard, and observed no freeze for several minutes.
+    - `Dashboard.jsx` guard patch was applied and initially tested.
+    - Status remains **OPEN / MONITORED**, not solved. Manual-refresh/cautious Dashboard posture remains locked. Defer the V2 `SupabaseAuthContext.jsx` auth-event short-circuit unless freeze/flicker returns.
+  - Stripe/webhook entitlement incident May 5:
+    - User purchased 5 Underwriting credits with a 100% coupon. Stripe Checkout completed successfully with correct `productType=underwriting`, correct `userId`, and line item quantity 5.
+    - `metadata.quantity` displayed 1 because quantity can be adjusted inside Stripe Checkout after initial metadata is set; webhook correctly fetches actual line-item quantity and should not rely on metadata quantity.
+    - `report_purchases` initially showed 0 rows because Stripe webhook delivery failed with `307 Temporary Redirect` at `https://investoriq.tech/api/webhook`; webhook function did not appear in Vercel logs, so no `stripe_events` or entitlement rows were created.
+    - Root cause was domain configuration, not Dashboard or checkout-session code: Vercel Domains had `www.investoriq.tech` and `investoriq.vercel.app`, but apex `investoriq.tech` had disappeared from the current production project after V2/Vercel experimentation.
+    - The Stripe webhook got `307 Temporary Redirect` and never reached `/api/webhook`.
+    - Fix: re-added `investoriq.tech` to the current Vercel production project without redirect, kept it connected to Production, resent failed Stripe `checkout.session.completed`, and Stripe returned 200 OK with `{ received: true }`.
+    - Dashboard credits updated. Five webhook-created rows were present; Dashboard showed 10 underwriting credits because 5 manual SQL credits had also been inserted while webhook delivery was broken. No evidence of duplicate webhook processing.
+    - Current status: Stripe/webhook entitlement issue is **FIXED**. Domain configuration must remain part of launch checklist.
+  - Locked domain / webhook checklist:
+    - Vercel Domains must show valid production configuration for `investoriq.tech`, `www.investoriq.tech`, and `investoriq.vercel.app`.
+    - Launch checklist must include both apex and www domains attached directly to the current production Vercel project.
+    - `investoriq.tech` must not be redirect-only if Stripe webhook endpoint uses `https://investoriq.tech/api/webhook`.
+    - Stripe webhook delivery should show 200 OK for `checkout.session.completed`.
+    - If Stripe shows 307 Temporary Redirect, check Vercel Domains before patching code.
+    - Vercel logs should show `POST /api/webhook` when webhook reaches the function.
+    - Missing `POST /api/webhook` in Vercel logs plus Stripe 307 means request redirected before function invocation.
+  - Quantity metadata clarification:
+    - `api/create-checkout-session.js` sets line item quantity from request body and allows adjustable quantity 1-5 in Stripe Checkout.
+    - `metadata.quantity` may remain the original quantity if the user adjusts quantity in Stripe Checkout.
+    - `api/webhook.js` correctly fetches actual line-item quantity using Stripe line items and should not rely on `metadata.quantity`.
+    - Optional future improvement: log/artifact actual line-item quantity inserted by webhook.
 - **May 4 strategic update - Rendered Report QA / V2 audit direction:**
   - User is frustrated by the recurring late-stage loop: run a new property/report, discover another small QA/rendering/sample-readiness issue, patch, then discover different issues in the next report.
   - Root distinction is now explicit:
@@ -1135,15 +1221,17 @@
     - dual AI Underwriting recovery = PASS
     - long full-unit `.txt` rent-roll stress = acceptable fail-closed limitation evidence
   - Optional: run `SYNTH-QA-P05 Missing Rent Roll`.
-  - Low-dollar true live Stripe payment test if not yet completed.
+  - Verify next Stripe checkout creates entitlements automatically with 200 webhook delivery after the May 5 domain fix.
+  - Optional cleanup: decide whether to keep or delete the extra 5 manually inserted underwriting credits from the May 5 webhook outage workaround.
   - Ken Dunn sample package review.
   - Final readiness check / sample package selection.
-  - Dashboard freeze / lag remains a monitored launch-risk item, not solved.
+  - Dashboard freeze / lag remains a monitored launch-risk item, not solved; May 5 Dashboard-only guard patch improved local behavior but remains OPEN / MONITORED.
+  - Leave `src/contexts/SupabaseAuthContext.jsx` V2 auth-event short-circuit deferred unless freeze/flicker returns.
   - Worker remains frozen at the last known-good rollback unless a brand-new blocker appears.
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
   - If unsupported types remain unsupported pre-launch, tighten upload acceptance rather than pretending support exists.
-  - QA safeguard Phase 1 is implemented for artifact/document-integrity risks; rendered-report editorial / sample-readiness QA is now the active next architecture target pending V2 audit.
+  - QA safeguard Phase 1 is implemented for artifact/document-integrity risks; rendered-report editorial / sample-readiness QA is now the next architecture target, but first implementation should be advisory-only and file-truth reviewed before any patch.
   - Future AI work also includes chunking / large-text rent-roll recovery and clearer large-rent-roll CSV/XLSX guidance.
   - Optional later cleanup: SES helper cleanup, entitlement source-of-truth cleanup, Dashboard auto-visibility hardening, and broader table / schema hygiene.
 
@@ -1161,46 +1249,32 @@
 
 ### Exact next task / resume point
 
-- **Immediate resume point - 9:33am Codex V2 audit before any merge:**
-  - At exactly 9:33am when Codex access returns, first task is an investigation-only audit, not a patch.
-  - Upload/provide current repo plus InvestorIQ-Empire-v2 and ask Codex to compare file-by-file apples-to-apples.
-  - Goal is to determine whether V2 is legitimate and mergeable, whether pieces should be cherry-picked, or whether it should remain reference material only.
-  - Codex must classify each V2 file/change as:
-    - SAFE / worth adopting
-    - RISKY / needs redesign
-    - DO NOT MERGE
-    - ALREADY PRESENT
-    - OUTDATED / conflicts with current repo
-  - Required current-fix checklist during audit:
-    - report-type scoped existing-report reuse fix must remain
-    - Screening-only Section 04 wording patch must remain
-    - `reports` table has no `status` column
-    - `report_purchases` uses `product_type`, `job_id`, and `consumed_at`; no `report_type` and no `consumed` boolean
-    - credit restoration must clear both `job_id` and `consumed_at` when restoring a consumed purchase
-    - no public AI / AI-assisted / IQ-assisted language
-    - no BUY / SELL / recommendation language
-    - DSCR below 1.25x verdict cap must remain
-    - DocRaptor production guard must remain
-    - worker success flow and Dashboard manual-refresh posture must not be destabilized
-  - Specific V2 areas to audit:
-    - `api/_lib/qa-review.js` or equivalent QA helper
-    - `api/generate-client-report.js` QA integration
-    - `api/admin-run-worker.js` lifecycle/status handling
-    - `api/admin/run-eligible-jobs-once.js` admin router changes
-    - Final Review Queue UI
-    - User Drilldown UI
-    - Bulk Credit Grant UI and backend behavior
-    - Dashboard freeze fixes
-    - worker-kick GitHub Actions changes
-    - `.env` / `.env.example` / required env vars
-    - docs vs implementation consistency
-  - Desired outcome of audit:
-    - clear yes/no on wholesale merge
-    - list of must-not-merge blockers
-    - list of high-value cherry-pick candidates
-    - recommended safest implementation path for QA layer
-    - exact files to add/swap/cherry-pick only after audit passes
-  - No production deploy, no file swap, and no Dashboard/worker/schema-affecting patch until Codex audit is reviewed.
+- **Immediate resume point - May 5 current state:**
+  - Dashboard freeze is open/monitored but not today's active blocker.
+  - Stripe webhook/domain issue is fixed and must be added to launch checklist.
+  - Next likely task, user choice:
+    1. decide whether to keep/delete the extra 5 manually inserted underwriting credits
+    2. then resume V2/advisory QA layer planning or final sample validation
+  - Keep `investoriq.tech` and `www.investoriq.tech` attached to the current production Vercel project; confirm next Stripe checkout creates entitlements automatically with webhook 200.
+  - Continue Dashboard freeze monitoring; leave `src/contexts/SupabaseAuthContext.jsx` auth fix deferred unless freeze/flicker returns.
+  - Resume V2 adoption carefully: next major architecture step is advisory-only Rendered Report QA insertion-point investigation; do not patch QA yet without current file-truth review.
+  - Continue final public/Ken sample path: clean public sample package selection; no test suffixes / testing filenames for final samples; DocRaptor production smoke only after test-mode public-candidate outputs are clean.
+  - Preserve current closed fixes:
+    - report_type-scoped existing-report reuse
+    - Screening-only Section 04 wording
+    - DSCR below 1.25x verdict cap
+    - no `reports.status` queries
+    - `report_purchases` schema truth
+    - credit restoration clears both `job_id` and `consumed_at`
+    - no public AI language
+    - no BUY / SELL language
+    - DocRaptor production guard
+
+- **Historical May 4 V2 audit task - completed May 5 / superseded:**
+  - V2 audit found V2 is not wholesale mergeable.
+  - V2 should remain blueprint/reference material with selective manual cherry-picks only.
+  - Do not blind-swap any V2 file into current repo.
+  - High-value V2 concepts remain candidates after redesign/manual integration: advisory Rendered Report QA, Final Review Queue, User Drilldown, Bulk Credit Grant, and narrow Dashboard guard ideas.
 
 - **Immediate resume point - May 4 more testing before DocRaptor production smoke:**
   - Same-name Screening/Underwriting report-reuse P0 is patched, deployed, and live-retested closed.
@@ -1449,6 +1523,21 @@ Trigger condition:
 Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class.
 
 ## 10.3 AI/Admin QA Safeguard Layer / Rendered Report QA Direction
+- May 5 V2 audit refinement:
+  - V2 QA architecture is conceptually valuable but not safely implemented for wholesale merge.
+  - First safe Rendered Report QA implementation should be advisory-only:
+    - inspect final rendered HTML/text after token replacement and section stripping
+    - write internal `analysis_artifacts` QA artifact only
+    - do not block publication in Phase 1
+    - do not add `qa_review_required`
+    - do not alter worker lifecycle
+    - do not rewrite report content
+    - do not change financial values
+    - do not override deterministic parsers
+    - do not expose AI publicly
+  - Future blocking may be considered only after advisory data is reviewed.
+  - If future blocking is adopted, threshold posture should stay permissive, e.g. `QA_BLOCK_BELOW_SCORE=60` plus critical kill flags; do not copy V2's aggressive default `80`.
+  - V2 Final Review Queue / Admin Command Centre / User Drilldown / Bulk Credit Grant concepts are reference material only until manually rebuilt against current repo truth.
 - May 4 direction changed after repeated rendered-report QA findings and V2 showroom review:
   - user wants to move beyond narrow AI extraction and add a final rendered-report QA / Editorial QA layer
   - purpose is to stop the manual whack-a-mole loop of running new properties and discovering small-but-publicly-damaging issues one report at a time
@@ -1532,7 +1621,7 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - block publication pending review
   - customer-safe failed / needs-review message
   - support checklist for manual repair / retry
-- Rendered Report QA now needs Codex file-by-file audit of V2 against current repo before implementation or adoption.
+- Rendered Report QA now needs advisory-only insertion-point investigation against current repo truth before implementation; the May 5 V2 audit is complete and does not authorize wholesale merge.
 - Manual Admin QA Gate:
   - now a candidate pre-Ken Dunn / high-value concierge hardening option
   - reports may remain private until admin approval if this mode is adopted
@@ -1542,6 +1631,12 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Dashboard auto-visibility hardening
   - large-text rent-roll AI recovery: chunking, shorter prompt construction, CSV/XLSX steering, and clearer large-rent-roll fallback guidance
 ## 11. Launch Readiness Snapshot
+- **May 5 launch snapshot:**
+  - V2 is not wholesale mergeable; selective manual cherry-picks only.
+  - Stripe webhook/domain entitlement incident is fixed; launch checklist must include Vercel domain verification and Stripe webhook 200 checks.
+  - Dashboard freeze / lag is improved after Dashboard-only guard patch but remains OPEN / MONITORED, not solved.
+  - `src/contexts/SupabaseAuthContext.jsx` auth-event short-circuit remains deferred unless freeze/flicker returns.
+  - Next likely work is either extra-credit cleanup, advisory-only Rendered Report QA planning, or final public/Ken sample validation.
 - **May 4 QA/V2 strategy snapshot:**
   - Launch-readiness focus has shifted from core math/pipeline repair to rendered-report QA and institutional-readiness classification.
   - User wants a QA layer because each new property package can reveal new rendered-output / sample-readiness issues that manual review cannot scale against.

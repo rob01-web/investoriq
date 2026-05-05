@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
+import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -5767,6 +5768,105 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 let docHtml = dedupeDataNotAvailableBySection(htmlString);
+const renderedQaEnabled = String(process.env.QA_REVIEW_ENABLED || "true").toLowerCase() !== "false";
+if (!renderedQaEnabled) {
+  const renderedQaSkippedTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "worker_event",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/rendered_report_qa_advisory_skipped/${renderedQaSkippedTimestamp}.json`,
+        payload: {
+          event: "rendered_report_qa_advisory_skipped",
+          advisory_only: true,
+          no_public_surface: true,
+          reason: "QA_REVIEW_ENABLED=false",
+          report_type: reportType,
+          report_tier: reportTier,
+          html_length: docHtml.length,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (qaSkipWriteErr) {
+    console.error("Failed to write rendered_report_qa_advisory_skipped event:", qaSkipWriteErr);
+  }
+} else {
+try {
+  const renderedQaStartedAt = Date.now();
+  const renderedQa = await runRenderedReportQaAdvisory({
+    html: docHtml,
+    context: {
+      property_name: property_name || jobPropertyName || "Unknown",
+      report_type: reportType,
+      report_tier: reportTier,
+    },
+  });
+  const renderedQaTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: renderedQaErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "rendered_report_qa_advisory",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/rendered_report_qa_advisory/${renderedQaTimestamp}.json`,
+      payload: {
+        event: "rendered_report_qa_advisory",
+        advisory_only: true,
+        no_public_surface: true,
+        qa_status: renderedQa.status,
+        model_status: renderedQa.status,
+        score: renderedQa.score,
+        summary: renderedQa.summary,
+        counts: renderedQa.counts,
+        findings: renderedQa.findings,
+        model: renderedQa.model,
+        usage: renderedQa.usage,
+        version: renderedQa.version,
+        timeout_ms: renderedQa.timeout_ms,
+        report_type: reportType,
+        report_tier: reportTier,
+        html_length: docHtml.length,
+        elapsed_ms: Date.now() - renderedQaStartedAt,
+        timestamp: new Date().toISOString(),
+      },
+    },
+  ]);
+  if (renderedQaErr) {
+    console.error("Failed to write rendered_report_qa_advisory artifact:", renderedQaErr);
+  }
+} catch (err) {
+  console.error("Rendered report QA advisory failed:", err?.message || err);
+  const renderedQaFailureTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "worker_event",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/rendered_report_qa_advisory_failed/${renderedQaFailureTimestamp}.json`,
+        payload: {
+          event: "rendered_report_qa_advisory_failed",
+          advisory_only: true,
+          no_public_surface: true,
+          error: err?.message || String(err),
+          error_code: err?.code || null,
+          report_type: reportType,
+          report_tier: reportTier,
+          html_length: docHtml.length,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (qaFailureWriteErr) {
+    console.error("Failed to write rendered_report_qa_advisory_failed event:", qaFailureWriteErr);
+  }
+}
+}
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
     "Production PDF generation is disabled. Contact support to enable production output.";
