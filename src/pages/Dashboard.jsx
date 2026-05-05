@@ -322,6 +322,9 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const propertyInputRef = useRef(null);
   const analyzeInFlightRef = useRef(false);
   const hadActiveProcessingJobRef = useRef(false);
+  const inProgressFetchRef = useRef(false);
+  const recentJobsFetchRef = useRef(false);
+  const latestFailedFetchRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -480,30 +483,42 @@ const DASHBOARD_DIAG_MINIMAL = false;
 
   const fetchInProgressJobs = async () => {
     if (!profile?.id) return;
-    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason').eq('user_id', profile.id)
-      .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'])
-      .order('created_at', { ascending: false }).limit(10);
-    if (error) { console.error('Failed to fetch in-progress jobs:', error); return; }
-    const rows = data || [];
-    setInProgressJobs((prev) => {
-      const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}`).join('||');
-      return serialize(prev) === serialize(rows) ? prev : rows;
-    });
-    await fetchJobEvents(rows.map((job) => job.id));
+    if (inProgressFetchRef.current) return;
+    inProgressFetchRef.current = true;
+    try {
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason').eq('user_id', profile.id)
+        .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'])
+        .order('created_at', { ascending: false }).limit(10);
+      if (error) { console.error('Failed to fetch in-progress jobs:', error); return; }
+      const rows = data || [];
+      setInProgressJobs((prev) => {
+        const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}`).join('||');
+        return serialize(prev) === serialize(rows) ? prev : rows;
+      });
+      await fetchJobEvents(rows.map((job) => job.id));
+    } finally {
+      inProgressFetchRef.current = false;
+    }
   };
 
   const fetchRecentJobs = async () => {
     if (!profile?.id) return [];
-    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id)
-      .in('status', ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
-      .order('created_at', { ascending: false }).limit(25);
-    if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
-    const rows = data || [];
-    setRecentJobs((prev) => {
-      const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.report_type || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}|${job.error_message || ''}|${job.error_code || ''}`).join('||');
-      return serialize(prev) === serialize(rows) ? prev : rows;
-    });
-    return rows;
+    if (recentJobsFetchRef.current) return recentJobs;
+    recentJobsFetchRef.current = true;
+    try {
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id)
+        .in('status', ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
+        .order('created_at', { ascending: false }).limit(25);
+      if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
+      const rows = data || [];
+      setRecentJobs((prev) => {
+        const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.report_type || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}|${job.error_message || ''}|${job.error_code || ''}`).join('||');
+        return serialize(prev) === serialize(rows) ? prev : rows;
+      });
+      return rows;
+    } finally {
+      recentJobsFetchRef.current = false;
+    }
   };
 
   const fetchEntitlements = async () => {
@@ -512,14 +527,29 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (error) { console.error('Failed to fetch entitlements:', error); setEntitlements({ screening: null, underwriting: null, error: true }); return; }
     const screeningCount = (data || []).filter((row) => row.product_type === 'screening').length;
     const underwritingCount = (data || []).filter((row) => row.product_type === 'underwriting').length;
-    setEntitlements({ screening: screeningCount, underwriting: underwritingCount, error: false });
+    setEntitlements((prev) => {
+      if (prev && prev.screening === screeningCount && prev.underwriting === underwritingCount && prev.error === false) {
+        return prev;
+      }
+      return { screening: screeningCount, underwriting: underwritingCount, error: false };
+    });
   };
 
   const fetchLatestFailedJob = async () => {
     if (!profile?.id) return;
-    const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (error) { console.error('Failed to fetch failed job:', error); return; }
-    setLatestFailedJob(data || null);
+    if (latestFailedFetchRef.current) return;
+    latestFailedFetchRef.current = true;
+    try {
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (error) { console.error('Failed to fetch failed job:', error); return; }
+      setLatestFailedJob((prev) => {
+        if (!prev && !data) return prev;
+        if (prev?.id === data?.id && prev?.status === data?.status && prev?.error_code === data?.error_code) return prev;
+        return data || null;
+      });
+    } finally {
+      latestFailedFetchRef.current = false;
+    }
   };
 
   const handleCheckout = async () => {
@@ -625,14 +655,8 @@ useEffect(() => {
 }, [profile?.id, hasActiveProcessingJob]);
 
 useEffect(() => {
-  if (!jobId) { setRentRollCoverage(null); return; }
-  return;
+  if (!jobId) setRentRollCoverage(null);
 }, [jobId]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    return undefined;
-  }, [profile?.id]);
 
   useEffect(() => {
     if (DASHBOARD_DIAG_MINIMAL) return;
