@@ -80,17 +80,23 @@ function hasCurrentDebtBalanceEvidence(evidence) {
 
 function buildRoutingContext(sourceReportCoverageQa) {
   const inventoryLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed || null;
+  const inventoryRentRoll = sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed || null;
   const renderedSignals = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
     ? sourceReportCoverageQa.rendered_text_signals
     : [];
+  const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags)
+    ? sourceReportCoverageQa.deterministic_flags
+    : [];
   let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
-  for (const flag of Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : []) {
+  for (const flag of deterministicFlags) {
     if (flag?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
   }
   return {
     has_derived_acquisition_debt: hasDerivedAcquisitionEvidence(inventoryLoan),
     has_current_debt_balance: hasCurrentDebtBalanceEvidence(inventoryLoan),
     acquisition_financing_rendered: acquisitionFinancingRendered,
+    source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
+    rent_roll_present: Boolean(inventoryRentRoll?.present),
   };
 }
 
@@ -264,6 +270,26 @@ function routeRenderedFinding(finding) {
 }
 
 function routeFlag(flag, source, context = {}) {
+  if (
+    String(flag?.code || "") === "MARKET_SURVEY_CLASSIFICATION_REVIEW" &&
+    context.source_coverage_passed &&
+    context.rent_roll_present
+  ) {
+    return {
+      code: "MARKET_SURVEY_CLASSIFICATION_REVIEW",
+      source,
+      severity: "low",
+      category: flag?.category || "source_document_hygiene",
+      routing: "source_insufficient",
+      action: "market_survey_classification_note_only_when_rent_roll_parsed",
+      safe_auto_fix: false,
+      requires_regeneration: false,
+      admin_review_required: false,
+      public_sample_blocker: false,
+      message: flag?.message || "Market survey classification review is informational because rent roll parsing and source coverage passed.",
+      evidence: flag?.evidence || null,
+    };
+  }
   return (
     routeParserGap(flag, source, context) ||
     routeRenderGap(flag, source, context) ||

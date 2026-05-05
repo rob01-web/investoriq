@@ -17,8 +17,11 @@ function highestSeverity(actions) {
 
 function hasCriticalCompliance(actions) {
   return (Array.isArray(actions) ? actions : []).some((action) =>
-    normalizeSeverity(action?.severity) === "critical" ||
-    /BUY|SELL|HOLD|PUBLIC_LANGUAGE|RECOMMENDATION|VENDOR_LANGUAGE/i.test(String(action?.code || ""))
+    Boolean(action?.blocks_customer_delivery) &&
+    (
+      normalizeSeverity(action?.severity) === "critical" ||
+      /BUY|SELL|HOLD|PUBLIC_LANGUAGE|RECOMMENDATION|VENDOR_LANGUAGE/i.test(String(action?.code || ""))
+    )
   );
 }
 
@@ -93,11 +96,15 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
   const candidates = [];
   const inventoryLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
   if (inventoryLoan) candidates.push(inventoryLoan);
+  const inventoryRentRoll = sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed;
   const renderedSignals = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
     ? sourceReportCoverageQa.rendered_text_signals
     : [];
+  const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags)
+    ? sourceReportCoverageQa.deterministic_flags
+    : [];
   let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
-  for (const flag of Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : []) {
+  for (const flag of deterministicFlags) {
     if (flag?.evidence?.loan_term_sheet) candidates.push(flag.evidence.loan_term_sheet);
     if (flag?.evidence?.loan_term_sheet_parsed) candidates.push(flag.evidence.loan_term_sheet_parsed);
     if (flag?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
@@ -111,12 +118,32 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
     has_derived_acquisition_debt: candidates.some((candidate) => hasDerivedAcquisitionEvidence(candidate)),
     has_current_debt_balance: candidates.some((candidate) => hasCurrentDebtBalanceEvidence(candidate)),
     acquisition_financing_rendered: acquisitionFinancingRendered,
+    source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
+    rent_roll_present: Boolean(inventoryRentRoll?.present),
   };
 }
 
 function actionForReportFlag(flag, context = {}) {
   const code = String(flag?.code || "");
   const severity = flag?.severity || "medium";
+  if (code === "MARKET_SURVEY_CLASSIFICATION_REVIEW" && context.source_coverage_passed && context.rent_roll_present) {
+    return {
+      code,
+      title: "Market survey classification note",
+      source_artifact: "report_qa_flags",
+      severity: "low",
+      action_type: "no_action_false_positive",
+      owner_area: "qa_calibration",
+      recommended_next_step: "No code action required when market survey parsing failed safely, a real rent roll parsed, and source coverage passed.",
+      requires_code_patch: false,
+      requires_regeneration: false,
+      blocks_customer_delivery: false,
+      blocks_public_sample: false,
+      blocks_high_value_outreach: false,
+      safe_to_auto_fix: false,
+      evidence: flag?.evidence || null,
+    };
+  }
   if (code === "T12_TOTALS_ONLY") {
     return {
       code,
@@ -362,22 +389,53 @@ function actionForRenderedFinding(finding) {
     .filter(Boolean)
     .join(" ");
   if (!text) return null;
-  const compliance = /BUY|SELL|HOLD|investment recommendation|public.*(?:model|vendor)|vendor.*language/i.test(text);
+  const excerptText = String(finding?.excerpt || "");
+  const issueText = String(finding?.issue || finding?.message || "");
+  const actualReportText = [excerptText, issueText].filter(Boolean).join(" ");
+  const prohibitedPublicLanguage =
+    /\b(BUY|SELL|HOLD)\b/i.test(actualReportText) ||
+    /\b(?:recommend(?:ed|s|ation)?|advise[sd]?)\s+(?:purchase|acquisition|invest|investment|sale|sell|hold)\b/i.test(actualReportText) ||
+    /\b(?:AI-assisted|AI assisted|OpenAI|LLM|model-generated|vendor-generated)\b/i.test(actualReportText) ||
+    /\b(?:guaranteed|risk-free|cannot lose|certain return)\b/i.test(actualReportText);
+  const softComplianceReview =
+    String(finding?.category || "").toLowerCase() === "compliance" ||
+    /investment recommendation|recommendation language|rating|ratings/i.test(text);
   const display = /DATA NOT AVAILABLE|placeholder|template token|mojibake|insufficient data|not assessed/i.test(text);
-  if (!compliance && !display) return null;
+  if (!prohibitedPublicLanguage && !softComplianceReview && !display) return null;
+  if (softComplianceReview && !prohibitedPublicLanguage && !display) {
+    return {
+      code: "RENDERED_LANGUAGE_REVIEW",
+      title: "Rendered language review",
+      source_artifact: "rendered_report_qa_advisory",
+      severity: normalizeSeverity(finding?.severity) === "warn" ? "medium" : "low",
+      action_type: "no_action_false_positive",
+      owner_area: "qa_calibration",
+      recommended_next_step: "No deterministic code action required unless the excerpt contains prohibited recommendation, public model/vendor, guarantee, or fabricated-certainty language.",
+      requires_code_patch: false,
+      requires_regeneration: false,
+      blocks_customer_delivery: false,
+      blocks_public_sample: false,
+      blocks_high_value_outreach: false,
+      safe_to_auto_fix: false,
+      evidence: {
+        excerpt: finding?.excerpt || null,
+        suggested_review: finding?.suggested_review || null,
+      },
+    };
+  }
   return {
-    code: finding?.code || (compliance ? "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW" : "RENDERED_DISPLAY_REVIEW"),
-    title: compliance ? "Rendered compliance language review" : "Rendered display polish review",
+    code: finding?.code || (prohibitedPublicLanguage ? "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW" : "RENDERED_DISPLAY_REVIEW"),
+    title: prohibitedPublicLanguage ? "Rendered compliance language review" : "Rendered display polish review",
     source_artifact: "rendered_report_qa_advisory",
-    severity: compliance ? "critical" : finding?.severity || "medium",
-    action_type: compliance ? "code_patch_required" : "render_gating_fix_required",
+    severity: prohibitedPublicLanguage ? "critical" : finding?.severity || "medium",
+    action_type: prohibitedPublicLanguage ? "code_patch_required" : "render_gating_fix_required",
     owner_area: "report_renderer",
-    recommended_next_step: compliance
+    recommended_next_step: prohibitedPublicLanguage
       ? "Remove prohibited public language at the deterministic render source and regenerate."
       : "Patch deterministic rendering or section gating if the warning is valid.",
     requires_code_patch: true,
     requires_regeneration: true,
-    blocks_customer_delivery: compliance,
+    blocks_customer_delivery: prohibitedPublicLanguage,
     blocks_public_sample: true,
     blocks_high_value_outreach: true,
     safe_to_auto_fix: false,

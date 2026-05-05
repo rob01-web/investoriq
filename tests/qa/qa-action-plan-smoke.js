@@ -173,6 +173,119 @@ const cleanPlanWithoutRouting = buildQaActionPlan({
 });
 assert.equal(cleanPlanWithoutRouting.public_sample_ready, true);
 
+const softRenderedCompliancePlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: {
+    deterministic_flags: [],
+  },
+  renderedReportQa: {
+    findings: [
+      {
+        category: "compliance",
+        severity: "info",
+        issue: "Ensure language does not imply investment recommendations or ratings.",
+        excerpt: "InvestorIQ deal score components",
+        suggested_review: "Ensure language does not imply investment recommendations or ratings.",
+      },
+      {
+        category: "compliance",
+        severity: "warn",
+        issue: "Review factual debt constraint language.",
+        excerpt: "Base case DSCR of 1.00x falls below standard lender coverage thresholds.",
+        suggested_review: "Ensure the statement remains factual and not an investment recommendation.",
+      },
+    ],
+  },
+  qaFixRouting: null,
+});
+const softComplianceActions = softRenderedCompliancePlan.prioritized_actions;
+assert.equal(softRenderedCompliancePlan.customer_delivery_ready, true);
+assert.equal(softRenderedCompliancePlan.public_sample_ready, true);
+assert.equal(softRenderedCompliancePlan.high_value_outreach_ready, true);
+assert.equal(softRenderedCompliancePlan.action_counts.requires_code_patch, 0);
+assert.equal(
+  softComplianceActions.every((action) => action.action_type === "no_action_false_positive"),
+  true
+);
+assert.equal(
+  softComplianceActions.every((action) => action.code !== "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW"),
+  true
+);
+
+const hardRenderedCompliancePlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: { deterministic_flags: [] },
+  renderedReportQa: {
+    findings: [
+      {
+        category: "compliance",
+        severity: "critical",
+        issue: "Prohibited recommendation language appears.",
+        excerpt: "BUY this property based on the report.",
+        suggested_review: "Remove prohibited language.",
+      },
+    ],
+  },
+  qaFixRouting: null,
+});
+const hardComplianceAction = hardRenderedCompliancePlan.prioritized_actions[0];
+assert.equal(hardRenderedCompliancePlan.customer_delivery_ready, false);
+assert.equal(hardComplianceAction.code, "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW");
+assert.equal(hardComplianceAction.severity, "critical");
+assert.equal(hardComplianceAction.requires_code_patch, true);
+
+const marketSurveyRouting = buildQaFixRouting({
+  reportQaFlags: [
+    {
+      code: "MARKET_SURVEY_CLASSIFICATION_REVIEW",
+      severity: "medium",
+      message: "Market survey failed rent-roll validation.",
+      evidence: { contaminated_core_values: false },
+    },
+  ],
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      rent_roll_parsed: {
+        present: true,
+      },
+    },
+  },
+  renderedReportQa: { findings: [] },
+});
+const marketSurveyPlan = buildQaActionPlan({
+  reportQaFlags: [
+    {
+      code: "MARKET_SURVEY_CLASSIFICATION_REVIEW",
+      severity: "medium",
+      message: "Market survey failed rent-roll validation.",
+      evidence: { contaminated_core_values: false },
+    },
+  ],
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      rent_roll_parsed: {
+        present: true,
+      },
+    },
+  },
+  renderedReportQa: { findings: [] },
+  qaFixRouting: marketSurveyRouting,
+});
+const marketSurveyAction = marketSurveyPlan.prioritized_actions.find(
+  (action) => action.code === "MARKET_SURVEY_CLASSIFICATION_REVIEW"
+);
+assert.equal(marketSurveyAction.action_type, "no_action_false_positive");
+assert.equal(marketSurveyAction.owner_area, "qa_calibration");
+assert.equal(marketSurveyAction.requires_code_patch, false);
+assert.equal(marketSurveyAction.requires_regeneration, false);
+assert.equal(marketSurveyAction.blocks_customer_delivery, false);
+assert.equal(marketSurveyAction.blocks_public_sample, false);
+assert.equal(marketSurveyAction.blocks_high_value_outreach, false);
+
 const acquisitionRenderedSourceQa = {
   rendered_text_signals: ["acquisition_financing_assumptions"],
   artifact_inventory: {
