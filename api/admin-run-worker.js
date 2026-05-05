@@ -184,7 +184,7 @@ export default async function handler(req, res) {
         if (restorePurchaseId) {
           const { data: restoredPurchase } = await supabaseAdmin
             .from('report_purchases')
-            .update({ consumed_at: null })
+            .update({ consumed_at: null, job_id: null })
             .eq('id', restorePurchaseId)
             .not('consumed_at', 'is', null)
             .select('id')
@@ -1054,7 +1054,7 @@ export default async function handler(req, res) {
             if (restorePurchaseId) {
               const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
                 .from('report_purchases')
-                .update({ consumed_at: null })
+                .update({ consumed_at: null, job_id: null })
                 .eq('id', restorePurchaseId)
                 .not('consumed_at', 'is', null)
                 .select('id')
@@ -1422,7 +1422,7 @@ export default async function handler(req, res) {
             if (restorePurchaseId) {
               const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
                 .from('report_purchases')
-                .update({ consumed_at: null })
+                .update({ consumed_at: null, job_id: null })
                 .eq('id', restorePurchaseId)
                 .not('consumed_at', 'is', null)
                 .select('id')
@@ -1623,7 +1623,7 @@ export default async function handler(req, res) {
               if (restoreMismatchPurchaseId) {
                 const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
                   .from('report_purchases')
-                  .update({ consumed_at: null })
+                  .update({ consumed_at: null, job_id: null })
                   .eq('id', restoreMismatchPurchaseId)
                   .not('consumed_at', 'is', null)
                   .select('id')
@@ -1888,7 +1888,7 @@ export default async function handler(req, res) {
               if (restoreFailedPurchaseId) {
                 const { data: restoredPurchase } = await supabaseAdmin
                   .from('report_purchases')
-                  .update({ consumed_at: null })
+                  .update({ consumed_at: null, job_id: null })
                   .eq('id', restoreFailedPurchaseId)
                   .not('consumed_at', 'is', null)
                   .select('id')

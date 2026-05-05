@@ -124,6 +124,39 @@ function countFindings(findings) {
   };
 }
 
+function textOfFinding(finding) {
+  return [
+    finding?.issue,
+    finding?.suggested_review,
+    finding?.excerpt,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function isOnlyBreakEvenOccupancyFalsePositive(finding) {
+  const text = textOfFinding(finding);
+  const mentionsBreakEven = /break[- ]?even occupancy/.test(text);
+  const mentionsCurrentOccupancy = /current occupancy|occupancy rate/.test(text);
+  const contradictionOnly = /contradict|inconsistent|differs|different|mismatch/.test(text);
+  const mathConcern = /formula|calculation|impossible|unsupported|greater than 100|less than 0|negative/.test(text);
+  return mentionsBreakEven && mentionsCurrentOccupancy && contradictionOnly && !mathConcern;
+}
+
+function isOnlyRecommendationAbsenceFalsePositive(finding) {
+  const text = textOfFinding(finding);
+  const asksForRecommendation = /add|include|provide|should contain|missing|absence|absent|lacks|lack/.test(text);
+  const recommendationLanguage = /buy|sell|hold|investment recommendation|recommendation language|clear recommendation/.test(text);
+  const actualForbiddenLanguage = /excerpt[^]*\b(buy|sell|hold)\b/.test(text) && !asksForRecommendation;
+  return asksForRecommendation && recommendationLanguage && !actualForbiddenLanguage;
+}
+
+function filterAdvisoryFalsePositives(findings) {
+  const rows = Array.isArray(findings) ? findings : [];
+  return rows.filter((finding) => (
+    !isOnlyBreakEvenOccupancyFalsePositive(finding) &&
+    !isOnlyRecommendationAbsenceFalsePositive(finding)
+  ));
+}
+
 async function callReviewModel({ apiKey, model, userContent, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -217,15 +250,23 @@ export async function runRenderedReportQaAdvisory({
     userContent,
     timeoutMs,
   });
-  const findings = Array.isArray(review?.findings) ? review.findings : [];
+  const rawFindings = Array.isArray(review?.findings) ? review.findings : [];
+  const findings = filterAdvisoryFalsePositives(rawFindings);
+  const removedFindingCount = rawFindings.length - findings.length;
+  const counts = countFindings(findings);
+  const status =
+    counts.critical > 0 ? "review" :
+    counts.warn > 0 ? "warn" :
+    typeof review?.status === "string" ? review.status : "review";
 
   return {
     review: { ...review, findings },
     score: Number.isFinite(review?.score) ? review.score : null,
-    status: typeof review?.status === "string" ? review.status : "review",
+    status,
     summary: typeof review?.summary === "string" ? review.summary : "",
     findings,
-    counts: countFindings(findings),
+    counts,
+    removed_false_positive_count: removedFindingCount,
     model: usedModel,
     usage,
     version: REVIEW_VERSION,
@@ -237,6 +278,7 @@ export async function runRenderedReportQaAdvisory({
 export const __test__ = {
   stripHtmlForReview,
   countFindings,
+  filterAdvisoryFalsePositives,
   SYSTEM_PROMPT,
   RESPONSE_SCHEMA,
 };

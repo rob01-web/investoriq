@@ -57,6 +57,22 @@ function buildRenderedSections(html) {
   return { ...sections, section_count };
 }
 
+function findRenderedSignals(html) {
+  const text = typeof html === "string" ? html : "";
+  const signalPatterns = [
+    ["no_line_item_detail", /No line-item detail available/i],
+    ["lump_sum_t12", /Lump-Sum T12/i],
+    ["no_structured_capex_modeling", /no structured CapEx modeling/i],
+    ["renovation_not_converted", /not converted into verified structured renovation inputs/i],
+    ["dscr_current_debt_not_assessed", /DSCR and current-debt service are not assessed/i],
+    ["debt_sizing_balance_not_provided", /debt sizing balance not provided/i],
+    ["refinance_stability_not_produced", /Refinance Stability Classification not produced/i],
+  ];
+  return signalPatterns
+    .filter(([, pattern]) => pattern.test(text))
+    .map(([code]) => code);
+}
+
 function buildArtifactInventory(artifacts) {
   const t12 = latestArtifact(artifacts, "t12_parsed")?.payload || null;
   const rentRoll = latestArtifact(artifacts, "rent_roll_parsed")?.payload || null;
@@ -144,6 +160,7 @@ export function buildSourceReportCoverageQa({
   const files = uploadedFiles.map(normalizeFile);
   const artifactInventory = buildArtifactInventory(artifacts);
   const renderedSections = buildRenderedSections(html);
+  const renderedTextSignals = findRenderedSignals(html);
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericReportTier = Number(reportTier);
@@ -167,6 +184,9 @@ export function buildSourceReportCoverageQa({
         income_line_count: t12.income_line_count,
         expense_line_count: t12.expense_line_count,
         has_core_totals: t12.has_core_totals,
+        rendered_text_signals: renderedTextSignals.filter((signal) =>
+          ["no_line_item_detail", "lump_sum_t12"].includes(signal)
+        ),
       },
       routing: "parser_gap",
     });
@@ -186,6 +206,9 @@ export function buildSourceReportCoverageQa({
       evidence: {
         filenames: renovationFiles.map((file) => file.original_filename),
         renovation_artifact_present: artifactInventory.renovation_parsed.present,
+        rendered_text_signals: renderedTextSignals.filter((signal) =>
+          ["no_structured_capex_modeling", "renovation_not_converted"].includes(signal)
+        ),
       },
       routing: "artifact_gap",
     });
@@ -214,6 +237,9 @@ export function buildSourceReportCoverageQa({
         filenames: debtFiles.map((file) => file.original_filename),
         loan_term_sheet: loan,
         mortgage_statement: mortgage,
+        rendered_text_signals: renderedTextSignals.filter((signal) =>
+          ["dscr_current_debt_not_assessed", "debt_sizing_balance_not_provided", "refinance_stability_not_produced"].includes(signal)
+        ),
       },
       routing: "artifact_gap",
     });
@@ -251,6 +277,7 @@ export function buildSourceReportCoverageQa({
         present_underwriting_sections: presentUnderwritingSections,
         missing_key_sections: missingKeySections,
         rendered_section_count: renderedSections.section_count,
+        rendered_text_signals: renderedTextSignals,
       },
       routing: "admin_review_required",
     });
@@ -274,6 +301,7 @@ export function buildSourceReportCoverageQa({
         material_support_filenames: materialSupportFiles.map((file) => file.original_filename),
         present_underwriting_sections: presentUnderwritingSections,
         rendered_section_count: renderedSections.section_count,
+        rendered_text_signals: renderedTextSignals,
       },
       routing: "admin_review_required",
     });
@@ -305,6 +333,7 @@ export function buildSourceReportCoverageQa({
     uploaded_files: files,
     artifact_inventory: artifactInventory,
     rendered_sections: renderedSections,
+    rendered_text_signals: renderedTextSignals,
     deterministic_flags: flags,
     expected_depth: {
       full_underwriting: isFullUnderwriting,
@@ -322,5 +351,6 @@ export function buildSourceReportCoverageQa({
 
 export const __test__ = {
   buildRenderedSections,
+  findRenderedSignals,
   buildArtifactInventory,
 };

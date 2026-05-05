@@ -5772,6 +5772,9 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 let docHtml = dedupeDataNotAvailableBySection(htmlString);
+let sourceCoverageQaResult = null;
+let renderedQaResult = null;
+let renderedQaStatus = "not_run";
 try {
   let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
   let coverageArtifacts = [];
@@ -5811,6 +5814,7 @@ try {
     uploadedFiles: coverageFiles,
     artifacts: coverageArtifacts,
   });
+  sourceCoverageQaResult = sourceCoverageQa;
   const coverageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: coverageQaErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -5830,6 +5834,7 @@ try {
 }
 const renderedQaEnabled = String(process.env.QA_REVIEW_ENABLED || "true").toLowerCase() !== "false";
 if (!renderedQaEnabled) {
+  renderedQaStatus = "skipped";
   const renderedQaSkippedTimestamp = new Date().toISOString().replace(/:/g, "-");
   try {
     await supabase.from("analysis_artifacts").insert([
@@ -5865,6 +5870,8 @@ try {
       report_tier: reportTier,
     },
   });
+  renderedQaResult = renderedQa;
+  renderedQaStatus = renderedQa.status;
   const renderedQaTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: renderedQaErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -5899,6 +5906,7 @@ try {
     console.error("Failed to write rendered_report_qa_advisory artifact:", renderedQaErr);
   }
 } catch (err) {
+  renderedQaStatus = "failed";
   console.error("Rendered report QA advisory failed:", err?.message || err);
   const renderedQaFailureTimestamp = new Date().toISOString().replace(/:/g, "-");
   try {
@@ -5926,6 +5934,53 @@ try {
     console.error("Failed to write rendered_report_qa_advisory_failed event:", qaFailureWriteErr);
   }
 }
+}
+try {
+  const summaryTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const coverageSeverity = sourceCoverageQaResult?.severity || "not_run";
+  const renderedSeverity =
+    renderedQaResult?.counts?.critical > 0 ? "high" :
+    renderedQaResult?.counts?.warn > 0 ? "medium" :
+    renderedQaResult ? "low" :
+    renderedQaStatus === "failed" ? "medium" : "low";
+  const severityRank = { not_run: 0, low: 1, medium: 2, high: 3 };
+  const highestSeverity =
+    severityRank[coverageSeverity] >= severityRank[renderedSeverity]
+      ? coverageSeverity
+      : renderedSeverity;
+  const publicSampleReady =
+    !sourceCoverageQaResult?.deterministic_flags?.some((flag) => flag?.code === "PUBLIC_SAMPLE_NOT_READY") &&
+    highestSeverity !== "high";
+  const { error: summaryErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "qa_review_summary",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/qa_review_summary/${summaryTimestamp}.json`,
+      payload: {
+        event: "qa_review_summary",
+        advisory_only: true,
+        no_public_surface: true,
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        rendered_qa_status: renderedQaStatus,
+        coverage_qa_status: sourceCoverageQaResult?.qa_status || "not_run",
+        highest_severity: highestSeverity,
+        public_sample_ready: publicSampleReady,
+        related_artifact_types: [
+          "rendered_report_qa_advisory",
+          "source_report_coverage_qa",
+        ],
+        timestamp: new Date().toISOString(),
+      },
+    },
+  ]);
+  if (summaryErr) {
+    console.error("Failed to write qa_review_summary artifact:", summaryErr);
+  }
+} catch (err) {
+  console.error("Failed to build qa_review_summary artifact:", err?.message || err);
 }
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
