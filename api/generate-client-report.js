@@ -11,6 +11,7 @@ import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.j
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
+import { buildQaActionPlan } from "./_lib/qa-action-plan.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -6078,6 +6079,35 @@ try {
   }
 } catch (err) {
   console.error("Failed to build qa_review_summary artifact:", err?.message || err);
+}
+try {
+  const qaActionPlan = buildQaActionPlan({
+    reportQaFlags,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    renderedReportQa: renderedQaResult,
+    qaFixRouting: qaFixRoutingResult,
+    jobId: jobId || null,
+    userId: effectiveUserId || null,
+    propertyName: property_name || jobPropertyName || "Unknown",
+    reportType,
+    reportTier,
+  });
+  const actionPlanTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: actionPlanErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "qa_action_plan",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/qa_action_plan/${actionPlanTimestamp}.json`,
+      payload: qaActionPlan,
+    },
+  ]);
+  if (actionPlanErr) {
+    console.error("Failed to write qa_action_plan artifact:", actionPlanErr);
+  }
+} catch (err) {
+  console.error("Failed to build qa_action_plan artifact:", err?.message || err);
 }
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
