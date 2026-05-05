@@ -253,6 +253,10 @@ export async function runRenderedReportQaAdvisory({
   const rawFindings = Array.isArray(review?.findings) ? review.findings : [];
   const findings = filterAdvisoryFalsePositives(rawFindings);
   const removedFindingCount = rawFindings.length - findings.length;
+  const rawModelScore = Number.isFinite(review?.score) ? review.score : null;
+  const adjustedScore = rawModelScore === null
+    ? null
+    : Math.min(100, rawModelScore + (removedFindingCount * 10));
   const counts = countFindings(findings);
   const status =
     counts.critical > 0 ? "review" :
@@ -261,7 +265,8 @@ export async function runRenderedReportQaAdvisory({
 
   return {
     review: { ...review, findings },
-    score: Number.isFinite(review?.score) ? review.score : null,
+    raw_model_score: rawModelScore,
+    score: adjustedScore,
     status,
     summary: typeof review?.summary === "string" ? review.summary : "",
     findings,
