@@ -9,6 +9,7 @@ import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
+import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -5771,6 +5772,62 @@ let pdfResponse;
 // Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
 // renders them correctly regardless of charset detection.
 let docHtml = dedupeDataNotAvailableBySection(htmlString);
+try {
+  let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
+  let coverageArtifacts = [];
+  if (jobId) {
+    const { data: jobFiles, error: jobFilesErr } = await supabase
+      .from("analysis_job_files")
+      .select("id, original_filename, doc_type, mime_type, parse_status, parse_error")
+      .eq("job_id", jobId);
+    if (!jobFilesErr && Array.isArray(jobFiles)) {
+      coverageFiles = jobFiles;
+    }
+    const { data: artifactRows, error: artifactRowsErr } = await supabase
+      .from("analysis_artifacts")
+      .select("type, payload, created_at")
+      .eq("job_id", jobId)
+      .in("type", [
+        "rent_roll_parsed",
+        "t12_parsed",
+        "loan_term_sheet_parsed",
+        "mortgage_statement_parsed",
+        "renovation_parsed",
+        "appraisal_parsed",
+        "property_tax_parsed",
+      ])
+      .order("created_at", { ascending: false });
+    if (!artifactRowsErr && Array.isArray(artifactRows)) {
+      coverageArtifacts = artifactRows;
+    }
+  }
+  const sourceCoverageQa = buildSourceReportCoverageQa({
+    jobId: jobId || null,
+    userId: effectiveUserId || null,
+    propertyName: property_name || jobPropertyName || "Unknown",
+    reportType,
+    reportTier,
+    html: docHtml,
+    uploadedFiles: coverageFiles,
+    artifacts: coverageArtifacts,
+  });
+  const coverageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: coverageQaErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "source_report_coverage_qa",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/source_report_coverage_qa/${coverageQaTimestamp}.json`,
+      payload: sourceCoverageQa,
+    },
+  ]);
+  if (coverageQaErr) {
+    console.error("Failed to write source_report_coverage_qa artifact:", coverageQaErr);
+  }
+} catch (err) {
+  console.error("Failed to build source_report_coverage_qa artifact:", err?.message || err);
+}
 const renderedQaEnabled = String(process.env.QA_REVIEW_ENABLED || "true").toLowerCase() !== "false";
 if (!renderedQaEnabled) {
   const renderedQaSkippedTimestamp = new Date().toISOString().replace(/:/g, "-");
