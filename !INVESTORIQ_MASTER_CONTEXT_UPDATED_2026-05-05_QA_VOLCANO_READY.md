@@ -30,7 +30,7 @@
 - Harbourstone reversed-doc Underwriting before T12 line-item patch: published, but QA correctly found missing T12 line-item detail.
 - Harbourstone reversed-doc Underwriting after line-item patch: PASS, source coverage pass, `requires_code_patch: 0`.
 - Forest City Underwriting correct-slot: PASS / customer-deliverable, with current-debt/acquisition-financing wording polish only.
-- Forest City Screening reversed-doc: initially failed due to too-strict PDF T12 rescue signature and Dashboard hidden-failure bug; patch applied, retest pending.
+- Forest City Screening reversed-doc: PASS after PDF T12 rescue-signature and Dashboard failed-state patches.
 
 ### May 6 124 Richmond Validation Results
 - Renovation Strategy collapse/polish patch completed in `api/generate-client-report.js`.
@@ -161,6 +161,21 @@
   - `node tests/qa/t12-line-items-smoke.js`
   - `git diff --check -- api/parse/parse-doc.js src/pages/Dashboard.jsx`
   - `npm run build`.
+- Retest after patch:
+  - T12 PDF intentionally uploaded through Rent Roll slot.
+  - Rent Roll XLSX intentionally uploaded through T12 slot.
+  - Result: PASS.
+  - Screening published.
+  - `ForestCityManor_T12_2024-2025.pdf` ended as `doc_type: t12` and parsed.
+  - `ForestCityManor_RentRoll.xlsx` ended as `doc_type: rent_roll` and parsed.
+  - `t12_parsed` exists.
+  - `rent_roll_parsed` exists.
+  - `source_report_coverage_qa: pass`.
+  - `deterministic_flags: []`.
+  - `qa_action_plan.requires_code_patch: 0`.
+  - `customer_delivery_ready: true`.
+  - `safe_to_regenerate_now: true`.
+  - Only remaining blocker was `DOCRAPTOR_NOT_PRODUCTION_MODE` for public/Ken sample use.
 
 ### May 6 Intake-Resilience Audit Findings
 - Files inspected:
@@ -197,27 +212,38 @@
   - no worker lifecycle redesign
   - no QA blocking
   - no Dashboard polling/refresh redesign.
+- Patch 1 completed:
+  - file: `api/parse/parse-doc.js`
+  - root cause: supporting-doc inference did not consider strong required-financial content
+  - patch reused `detectRequiredFinancialDocTypeFromText(text)` inside `inferDocTypeFromText`
+  - strong T12 content uploaded as Supporting can now infer `t12`
+  - strong rent-roll content uploaded as Supporting can now infer `rent_roll`
+  - existing deterministic parser branches remain the acceptance gate.
+- Patch 1 validation passed:
+  - `node --check api/parse/parse-doc.js`
+  - `node tests/qa/t12-line-items-smoke.js`
+  - `git diff --check -- api/parse/parse-doc.js`.
 
 ### May 6 Evening Immediate Resume Point
 - Immediate next task:
-  - Retest Forest City Screening with reversed docs again after the PDF T12 signature and Dashboard failed-state patches.
-- Retest setup:
-  - T12 PDF -> Rent Roll slot
-  - Rent Roll XLSX -> T12 slot.
+  - Run support-slot rescue tests after Patch 1.
+- Retest 1:
+  - Forest City Screening: T12 PDF uploaded as Supporting, Rent Roll XLSX uploaded normally.
+- Retest 2:
+  - Forest City Screening: Rent Roll XLSX uploaded as Supporting, T12 PDF uploaded normally.
 - Pass criteria:
-  - `parser_doc_type_rescue` appears for `ForestCityManor_T12_2024-2025.pdf`
-  - `declared_doc_type = rent_roll`
-  - `detected_doc_type = t12`
+  - final `doc_type` becomes `t12` or `rent_roll` as appropriate
   - `t12_parsed` exists
   - `rent_roll_parsed` exists
   - Screening publishes
   - `source_report_coverage_qa: pass`
   - `deterministic_flags: []`
+  - `qa_action_plan.requires_code_patch: 0`
   - if anything fails, Dashboard visibly shows failed Screening job with report type.
 - After that:
   - run/review the next smallest intake-rescue patch from the audit:
-    - likely Patch 1: support-slot T12/rent-roll rescue
-    - then Patch 2: supporting-doc-in-required-slot rescue
+    - Patch 2: supporting-doc-in-required-slot rescue
+    - then refresh `analysis_job_files` after extraction only if stale file-row behavior is proven to cause a real issue
   - keep patching one small validated intake-rescue gap at a time
   - do not build a broad classifier service before Ken
   - do not change worker lifecycle unless stale file-row behavior is proven to cause a real issue.
