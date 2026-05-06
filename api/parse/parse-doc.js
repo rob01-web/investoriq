@@ -309,15 +309,18 @@ export const extractT12LineItemsFromText = (text, totalOpex) => {
   };
   const incomeLineSpecs = [
     { label: 'Gross Potential Rent', pattern: /gross\s+potential\s+rent|gross\s+rental\s+income/i },
+    { label: 'Other Income', pattern: /other\s+income|laundry|parking/i },
     { label: 'Vacancy Loss', pattern: /vacancy\s+loss|vacancy/i },
     { label: 'Effective Gross Income', pattern: /effective\s+gross\s+income|egi/i },
   ];
   const expenseLineSpecs = [
-    { label: 'Property Taxes', pattern: /property\s+taxes/i },
+    { label: 'Property Taxes', pattern: /property\s+taxes|real\s+estate\s+taxes/i },
     { label: 'Insurance', pattern: /^insurance\b|[^a-z]insurance\b/i },
     { label: 'Utilities', pattern: /utilities|water|hydro|gas/i },
     { label: 'Repairs & Maintenance', pattern: /repairs|maintenance/i },
     { label: 'Management Fee', pattern: /management\s+fee|property\s+management/i },
+    { label: 'Payroll / Admin', pattern: /payroll|admin/i },
+    { label: 'Garbage / Miscellaneous', pattern: /garbage|misc/i },
   ];
   const incomeLines = incomeLineSpecs
     .map((spec) => ({ label: spec.label, amount: amountOnLine(spec.pattern) }))
