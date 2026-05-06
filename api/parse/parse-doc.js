@@ -106,6 +106,49 @@ const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
 const isCsvName = (name) => String(name || '').toLowerCase().endsWith('.csv');
 const isCsvMime = (mime) => String(mime || '').toLowerCase().includes('csv');
 
+const detectRequiredFinancialDocTypeFromText = (text) => {
+  const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
+  if (norm.length < 40) return 'unknown';
+  const has = (terms) => terms.some((term) => norm.includes(term));
+  const count = (terms) => terms.filter((term) => norm.includes(term)).length;
+  const t12Score = count([
+    'GROSS RENTAL INCOME',
+    'GROSS POTENTIAL RENT',
+    'GROSS POTENTIAL INCOME',
+    'EFFECTIVE GROSS INCOME',
+    'TOTAL OPERATING EXPENSES',
+    'OPERATING EXPENSES',
+    'NET OPERATING INCOME',
+    ' NOI',
+  ]);
+  const rentRollScore = count([
+    'TOTAL UNITS',
+    'OCCUPIED UNITS',
+    'VACANT UNITS',
+    'OCCUPANCY',
+    'CURRENT RENT',
+    'IN-PLACE RENT',
+    'IN PLACE RENT',
+    'MARKET RENT',
+    'IN-PLACE ANNUAL RENT',
+    'MARKET ANNUAL RENT',
+    'RENT ROLL',
+    'UNIT ROSTER',
+  ]);
+  const hasT12Core =
+    has(['EFFECTIVE GROSS INCOME']) &&
+    has(['TOTAL OPERATING EXPENSES', 'OPERATING EXPENSES']) &&
+    has(['NET OPERATING INCOME', ' NOI']);
+  const hasRentRollCore =
+    has(['TOTAL UNITS', 'UNIT ROSTER', 'RENT ROLL']) &&
+    has(['OCCUPANCY', 'OCCUPIED UNITS', 'VACANT UNITS']) &&
+    has(['CURRENT RENT', 'IN-PLACE RENT', 'IN PLACE RENT', 'MARKET RENT', 'IN-PLACE ANNUAL RENT', 'MARKET ANNUAL RENT']);
+
+  if ((hasT12Core || t12Score >= 4) && t12Score >= rentRollScore + 2) return 't12';
+  if ((hasRentRollCore || rentRollScore >= 4) && rentRollScore >= t12Score + 2) return 'rent_roll';
+  return 'unknown';
+};
+
 const hasAnyValue = (row) => row.some((cell) => String(cell || '').trim() !== '');
 
 const isBlankRow = (row) => !row || row.every((cell) => String(cell || '').trim() === '');
@@ -1192,6 +1235,56 @@ export default async function handler(req, res) {
     }
     if (detectedDocType === 'debt_term_sheet') {
       detectedDocType = 'loan_term_sheet';
+    }
+
+    if (['rent_roll', 't12'].includes(String(declaredDocType || '').toLowerCase()) && !isTabularInput) {
+      try {
+        const { data: textArtifact } = await supabaseAdmin
+          .from('analysis_artifacts')
+          .select('payload')
+          .eq('job_id', jobId)
+          .eq('type', 'document_text_extracted')
+          .eq('payload->>file_id', String(fileRow.id))
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const fullText = String(textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '');
+        const textDetectedDocType = detectRequiredFinancialDocTypeFromText(fullText);
+        if (
+          textDetectedDocType !== 'unknown' &&
+          textDetectedDocType !== String(declaredDocType || '').toLowerCase()
+        ) {
+          detectedDocType = textDetectedDocType;
+          effectiveDocType = textDetectedDocType;
+          declaredTypeMismatch = true;
+          await supabaseAdmin.from('analysis_artifacts').insert([
+            {
+              job_id: jobId,
+              user_id: fileRow.user_id || null,
+              type: 'worker_event',
+              bucket: 'internal',
+              object_path: `analysis_jobs/${jobId}/worker_event/parser_doc_type_rescue/${fileRow.id}/${safeTimestamp(
+                nowIso
+              )}.json`,
+              payload: {
+                event: 'parser_doc_type_rescue',
+                original_filename: fileRow.original_filename || null,
+                declared_doc_type: declaredDocType,
+                detected_doc_type: textDetectedDocType,
+                rescue_attempted: true,
+                rescue_accepted: null,
+                rescue_stage: 'rerouted_before_validation',
+                rescue_validation_status: 'pending_parser_validation',
+                job_id: jobId,
+                file_id: fileRow.id,
+                timestamp: nowIso,
+              },
+            },
+          ]);
+        }
+      } catch (rescueErr) {
+        console.error('Required financial doc-type rescue failed:', rescueErr?.message || rescueErr);
+      }
     }
 
     if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
