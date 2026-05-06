@@ -115,8 +115,10 @@ const detectRequiredFinancialDocTypeFromText = (text) => {
     'GROSS RENTAL INCOME',
     'GROSS POTENTIAL RENT',
     'GROSS POTENTIAL INCOME',
+    'VACANCY LOSS',
     'EFFECTIVE GROSS INCOME',
     'TOTAL OPERATING EXPENSES',
+    'TOTAL EXPENSES',
     'OPERATING EXPENSES',
     'NET OPERATING INCOME',
     ' NOI',
@@ -137,7 +139,7 @@ const detectRequiredFinancialDocTypeFromText = (text) => {
   ]);
   const hasT12Core =
     has(['EFFECTIVE GROSS INCOME']) &&
-    has(['TOTAL OPERATING EXPENSES', 'OPERATING EXPENSES']) &&
+    has(['TOTAL OPERATING EXPENSES', 'TOTAL EXPENSES', 'OPERATING EXPENSES']) &&
     has(['NET OPERATING INCOME', ' NOI']);
   const hasRentRollCore =
     has(['TOTAL UNITS', 'UNIT ROSTER', 'RENT ROLL']) &&

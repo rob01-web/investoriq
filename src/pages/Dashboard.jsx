@@ -362,11 +362,11 @@ const DASHBOARD_DIAG_MINIMAL = false;
   ), [inProgressJobs, dismissedJobIds]);
 
   const failedJobsForDisplay = useMemo(() => (
-    inProgressJobs.filter((job) => {
+    recentJobs.filter((job) => {
       const dismissed = dismissedJobIds.has(String(job.id));
       return job.status === 'failed' && !dismissed;
     })
-  ), [inProgressJobs, dismissedJobIds]);
+  ), [recentJobs, dismissedJobIds]);
 
   const hasActiveProcessingJob = useMemo(() => (
     inProgressJobs.some((job) =>
@@ -540,11 +540,11 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (latestFailedFetchRef.current) return;
     latestFailedFetchRef.current = true;
     try {
-      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
       if (error) { console.error('Failed to fetch failed job:', error); return; }
       setLatestFailedJob((prev) => {
         if (!prev && !data) return prev;
-        if (prev?.id === data?.id && prev?.status === data?.status && prev?.error_code === data?.error_code) return prev;
+        if (prev?.id === data?.id && prev?.status === data?.status && prev?.error_code === data?.error_code && prev?.failure_reason === data?.failure_reason && prev?.error_message === data?.error_message && prev?.report_type === data?.report_type) return prev;
         return data || null;
       });
     } finally {
@@ -1239,6 +1239,7 @@ useEffect(() => {
                     </div>
                     <div style={failedMessageStatusStyle}>
                       {String(latestFailedJob.status || 'failed').toUpperCase()}
+                      {latestFailedJob.report_type ? ` - ${String(latestFailedJob.report_type).toUpperCase()}` : ''}
                       {latestFailedJob.error_code ? ` - ${latestFailedJob.error_code}` : ''}
                     </div>
                     <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
@@ -1759,7 +1760,7 @@ useEffect(() => {
                       <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
                     </div>
                     <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
-                      FAILED{job.error_code ? ` - ${job.error_code}` : ''}
+                      FAILED{job.report_type ? ` - ${String(job.report_type).toUpperCase()}` : ''}{job.error_code ? ` - ${job.error_code}` : ''}
                     </div>
                     {job.failure_reason && (
                       <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
