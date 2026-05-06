@@ -4262,22 +4262,39 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         }
         return String(row ?? "").trim().length > 0;
       });
-    const hasExplicitRenovationInput = Boolean(
-      (renovationPayload && typeof renovationPayload === "object" && (
-        hasMeaningfulRenovationRows(renovationPayload.budget_rows) ||
-        hasMeaningfulRenovationRows(renovationPayload.execution_rows) ||
-        hasMeaningfulRenovationText(renovationPayload.budget_note) ||
-        hasMeaningfulRenovationText(renovationPayload.execution_note) ||
-        hasMeaningfulRenovationText(renovationPayload.interpretation)
-      )) ||
-        (financials && typeof financials === "object" && (
-          hasMeaningfulRenovationRows(financials.renovation_budget_rows) ||
-          hasMeaningfulRenovationRows(financials.renovation_execution_rows) ||
-          hasMeaningfulRenovationText(financials.renovation_budget_note) ||
-          hasMeaningfulRenovationText(financials.renovation_execution_note) ||
-          hasMeaningfulRenovationText(financials.renovation_interpretation)
-        ))
+    const hasPositiveRenovationAmount = (value) => {
+      const parsed = coerceNumber(value);
+      return Number.isFinite(parsed) && parsed > 0;
+    };
+    const hasStructuredRenovationRows = (rows) =>
+      Array.isArray(rows) &&
+      rows.some((row) => {
+        if (!row || typeof row !== "object") return false;
+        const amount = coerceNumber(
+          row.estimated_cost ??
+            row.amount ??
+            row.cost ??
+            row.value ??
+            row.total ??
+            row.budget
+        );
+        return Number.isFinite(amount) && amount > 0;
+      });
+    const hasVerifiedRenovationAmount = Boolean(
+      hasPositiveRenovationAmount(renovationPayload?.total_budget) ||
+        hasPositiveRenovationAmount(renovationPayload?.total_capex) ||
+        hasPositiveRenovationAmount(renovationPayload?.renovation_budget) ||
+        hasPositiveRenovationAmount(financials?.renovation_total_budget) ||
+        hasPositiveRenovationAmount(financials?.renovation_total_capex)
     );
+    const hasVerifiedStructuredRenovationInput = Boolean(
+      hasVerifiedRenovationAmount ||
+        hasStructuredRenovationRows(renovationPayload?.budget_rows) ||
+        hasStructuredRenovationRows(renovationPayload?.execution_rows) ||
+        hasStructuredRenovationRows(financials?.renovation_budget_rows) ||
+        hasStructuredRenovationRows(financials?.renovation_execution_rows)
+    );
+    const hasExplicitRenovationInput = Boolean(hasVerifiedStructuredRenovationInput);
     const renovationFilenameTerms = [
       "capex",
       "cap ex",
@@ -4305,7 +4322,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
     const renovationAcknowledgmentHtml =
       !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Structured CapEx modeling was not produced because the file was not converted into verified structured renovation inputs. No CapEx amount, renovation scope, rent lift, ROI, or payback calculation has been modeled from that document. Renovation-related figures are excluded from quantitative outputs unless separately shown as structured document-derived inputs.`
+        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Uploaded renovation support was identified, but no verified structured CapEx budget was extracted. No renovation return, rent lift, ROI, or payback analysis is modeled.`
         : "";
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
@@ -4420,7 +4437,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
     }
     const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
-    const showRenovationSection = Boolean(
+    const showRenovationSection = hasExplicitRenovationInput && Boolean(
       (renovationBudgetRows || "").trim() ||
         (renovationExecutionRows || "").trim() ||
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
