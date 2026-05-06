@@ -1177,6 +1177,8 @@ export default async function handler(req, res) {
 
     // Text-based inference for supporting_documents PDFs
     function inferDocTypeFromText(text) {
+      const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
+      if (requiredFinancialType !== 'unknown') return requiredFinancialType;
       const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
       const has = (terms) => terms.some((t) => norm.includes(t));
       const countMatches = (terms) => terms.filter((t) => norm.includes(t)).length;

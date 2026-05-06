@@ -1,10 +1,245 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 5, 2026 evening - QA Action Layer / internal volcano implemented and live-tested; Forest City 8, 124 Richmond Clean 2, and 124 Richmond Messy 2 validated; T12 line-item extraction, proposed acquisition debt sizing, DSCR wording, QA calibration, and market-survey false-positive routing materially improved. Next session should resume with Codex quota restored, review the pending current-debt wording patch receipt if available, run one clean 124 Richmond validation after deploy, then run Forest City only if needed before DocRaptor production smoke / Ken Dunn sample selection.
+**Last updated:** May 6, 2026 evening - intake resilience and reversed-document validation became launch-critical. QA Action Layer remains advisory-only/internal-only. 124 Richmond Clean/Messy/Screening passed after renovation polish. Harbourstone reversed-doc rescue passed after content-based rerouting and T12 line-item extraction hardening. Forest City reversed Screening exposed a PDF T12 rescue-signature gap and Dashboard failed-state visibility bug; patches applied and Forest City reversed Screening retest is the immediate next task.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
 
+### May 6 Intake Resilience / Reversed-Document Hardening
+- Launch-critical intake doctrine is now explicit:
+  - Upload slot is a hint.
+  - Filename is a hint.
+  - Document content is the authority.
+  - Deterministic validation is the gatekeeper.
+  - Users may upload documents into the wrong slots, especially real-world customers who are busy, rushed, non-technical, or dyslexic.
+  - InvestorIQ must safely inspect content and reroute obvious mismatches where possible.
+  - Rerouting is allowed only when downstream deterministic validation passes.
+  - If validation fails, fail closed with clear report-type-specific messaging.
+  - Do not fabricate values.
+  - Do not loosen validation.
+  - Do not use filename as primary truth.
+  - Do not expose AI/model/vendor/internal parser language publicly.
+  - No BUY/SELL/HOLD.
+  - No worker lifecycle redesign unless separately justified.
+- This doctrine is required before Ken Dunn, syndicate members, public samples, or broader early-user exposure. The standard is not "hope users upload perfectly." The standard is "recover when content is obvious, fail closed when not defensible, and explain clearly."
+
+### May 6 Validation Scoreboard
+- 124 Richmond Clean 3: PASS.
+- 124 Richmond Messy 3: PASS.
+- 124 Richmond Messy Screening: PASS.
+- Harbourstone reversed-doc Underwriting before T12 line-item patch: published, but QA correctly found missing T12 line-item detail.
+- Harbourstone reversed-doc Underwriting after line-item patch: PASS, source coverage pass, `requires_code_patch: 0`.
+- Forest City Underwriting correct-slot: PASS / customer-deliverable, with current-debt/acquisition-financing wording polish only.
+- Forest City Screening reversed-doc: initially failed due to too-strict PDF T12 rescue signature and Dashboard hidden-failure bug; patch applied, retest pending.
+
+### May 6 124 Richmond Validation Results
+- Renovation Strategy collapse/polish patch completed in `api/generate-client-report.js`.
+- Root issue:
+  - `renovation_parsed` existed for 124 Richmond but no verified total budget, no budget rows, no scope rows, and no structured CapEx amount existed.
+  - The report was rendering weak/empty institutional-looking renovation scaffolding.
+- Implemented behavior:
+  - no empty Renovation Strategy budget/execution tables when no structured CapEx exists
+  - concise limitation wording: "Uploaded renovation support was identified, but no verified structured CapEx budget was extracted. No renovation return, rent lift, ROI, or payback analysis is modeled."
+  - no parser, worker, QA blocking, lifecycle, or financial logic changed.
+- 124 Richmond Clean 3 passed:
+  - `source_report_coverage_qa: pass`
+  - `qa_action_plan.requires_code_patch: 0`
+  - `customer_delivery_ready: true`
+  - `deterministic_flags: []`
+  - T12 line items rendered
+  - current debt/refi/DSCR rendered
+  - renovation empty table removed.
+- 124 Richmond Messy 3 passed:
+  - `source_report_coverage_qa: pass`
+  - `qa_action_plan.requires_code_patch: 0`
+  - `customer_delivery_ready: true`
+  - `deterministic_flags: []`
+  - messy T12 line items rendered, including vacancy allowance
+  - current debt/refi/DSCR rendered
+  - renovation empty table removed.
+- 124 Richmond Messy Screening passed:
+  - Screening compression held
+  - no underwriting/debt/refi/DCF/deal-score bloat
+  - T12 and rent roll verified
+  - `customer_delivery_ready: true`
+  - only DocRaptor test mode / sample packaging remained as public blockers.
+
+### May 6 Harbourstone Reversed-Document Rescue
+- User intentionally uploaded the T12 file into the Rent Roll slot and the rent roll file into the T12 slot.
+- Before rescue, Harbourstone failed and Dashboard blamed `rent_roll_ai_recovery_source.txt` as the T12, exposing both doc-type routing weakness and misleading failed-state guidance.
+- Patch B implemented in `api/parse/parse-doc.js`:
+  - strict content-signature detection for non-tabular required financial docs
+  - reroutes declared `rent_roll` to `t12` when T12 anchors are strong
+  - reroutes declared `t12` to `rent_roll` when rent-roll anchors are strong
+  - deterministic parser/recovery validation still controls artifact acceptance
+  - writes internal `parser_doc_type_rescue` worker event with declared/detected doc type and rescue fields.
+- Follow-up truth patch:
+  - `parser_doc_type_rescue` no longer claims `rescue_accepted: true` before validation
+  - now uses `rescue_accepted: null`, `rescue_stage: "rerouted_before_validation"`, and `rescue_validation_status: "pending_parser_validation"`
+  - actual accepted artifacts remain the proof of acceptance.
+- Harbourstone reversed-doc retest passed:
+  - report published
+  - `t12_ai_recovery_source.txt` final doc_type became `t12`
+  - `rent_roll_ai_recovery_source.txt` final doc_type became `rent_roll`
+  - AI rent-roll recovery accepted
+  - T12 parsed
+  - `source_report_coverage_qa` passed
+  - `qa_action_plan.requires_code_patch` became `0` after later T12 line-item patch
+  - `customer_delivery_ready: true`.
+- Product conclusion:
+  - content-based doc-type rescue works for TXT reversed T12/Rent Roll packages.
+
+### May 6 Harbourstone T12 Line-Item Extraction Patch
+- Harbourstone initially published safely after reversed-doc rescue but rendered lump-sum T12 because T12 expense line items did not reconcile.
+- QA correctly flagged:
+  - `T12_LINE_ITEM_DETAIL_MISSING`
+  - `FULL_UNDERWRITING_SUPPORT_UNDERUSED`.
+- Root cause:
+  - `extractT12LineItemsFromText` did not recognize Harbourstone-style labels:
+    - `Real estate taxes`
+    - `Payroll / admin`
+    - `Garbage / misc`
+  - and needed support for `other income / laundry / parking`.
+- Patch completed in:
+  - `api/parse/parse-doc.js`
+  - `tests/qa/t12-line-items-smoke.js`.
+- Added deterministic line-label support only.
+- No core T12 extraction, validation, worker lifecycle, QA blocking, or report generation changed.
+- Retest passed:
+  - Harbourstone Apartments 2 published
+  - T12 `income_line_count: 3`
+  - T12 `expense_line_count: 7`
+  - expense rows sum to `$425,000`
+  - lump-sum T12 fallback disappeared
+  - `source_report_coverage_qa: pass`
+  - `deterministic_flags: []`
+  - `qa_action_plan.requires_code_patch: 0`
+  - `customer_delivery_ready: true`
+  - only DocRaptor test mode and low market-survey no-action note remained.
+- Rendered expense rows included:
+  - Property Taxes `$124,000`
+  - Insurance `$42,500`
+  - Utilities `$82,000`
+  - Repairs & Maintenance `$78,000`
+  - Management Fee `$36,000`
+  - Payroll / Admin `$44,500`
+  - Garbage / Miscellaneous `$18,000`.
+
+### May 6 Forest City Reversed Screening Issue and Patch
+- User intentionally reversed Forest City Screening docs:
+  - T12 PDF uploaded through Rent Roll slot
+  - Rent Roll XLSX uploaded through T12 slot.
+- Forest City Underwriting passed when docs were not reversed.
+- Forest City Screening failed with `MISSING_STRUCTURED_FINANCIALS`, missing `["t12"]`.
+- Artifact truth:
+  - Forest City Rent Roll XLSX uploaded into T12 slot was correctly detected as `rent_roll` and parsed.
+  - Forest City T12 PDF uploaded into Rent Roll slot had extracted text with clear T12 anchors:
+    - Gross Potential Rent
+    - Vacancy Loss
+    - Effective Gross Income
+    - Expenses
+    - Total Expenses
+    - Net Operating Income.
+  - No `parser_doc_type_rescue` event appeared.
+- Codex investigation found:
+  - rescue did run for non-tabular/PDF-capable files, but content signature was too strict
+  - detection counted `Total Operating Expenses` / `Operating Expenses`, but not `Total Expenses` or `Vacancy Loss`
+  - therefore detected type remained `unknown` and the PDF stayed in the rent-roll path.
+- Patch applied:
+  - `api/parse/parse-doc.js` added `VACANCY LOSS` and `TOTAL EXPENSES` to strong T12 text rescue signature.
+- Separate Dashboard bug found:
+  - `failedJobsForDisplay` was built from `inProgressJobs`
+  - `fetchInProgressJobs` excludes `failed`
+  - therefore failed job notices could disappear from the main list
+  - `fetchLatestFailedJob` also omitted `report_type`.
+- Dashboard patch applied:
+  - failed-job notices now come from `recentJobs`, which includes `failed`
+  - latest failed job query includes `report_type`
+  - failed-state labels now show report type, so Screening vs Underwriting failures are clear.
+- Validation passed:
+  - `node --check api/parse/parse-doc.js`
+  - `node tests/qa/t12-line-items-smoke.js`
+  - `git diff --check -- api/parse/parse-doc.js src/pages/Dashboard.jsx`
+  - `npm run build`.
+
+### May 6 Intake-Resilience Audit Findings
+- Files inspected:
+  - `api/parse/parse-doc.js`
+  - `api/parse/extract-job-text.js`
+  - `api/admin-run-worker.js`
+  - `src/pages/Dashboard.jsx`
+  - `api/parse/classify-documents.js`.
+- Current intake-rescue coverage:
+  - `rent_roll` vs `t12`:
+    - Tabular XLSX/CSV: content classifier can detect `rent_roll` vs `t12` and update `analysis_job_files.doc_type`.
+    - Non-tabular PDF/TXT/DOC text: required-doc rescue can detect strong `rent_roll` vs `t12` mismatch and reroute before parser validation.
+  - Supporting docs uploaded as `supporting_documents`:
+    - text inference can classify `loan_term_sheet`, `mortgage_statement`, `appraisal`, `property_tax`, `insurance_policy`, `bank_statement`, `renovation`.
+  - Supporting docs uploaded as `loan_terms`:
+    - worker normalizes to `loan_term_sheet`.
+  - Debt/acquisition/renovation uploaded into wrong supporting slot:
+    - mostly covered if routed through `supporting_documents`.
+- Known gaps:
+  - P0: Core docs in supporting slot are not rescued. A clear T12/rent roll uploaded as supporting may remain unclassified or wrong supporting type, so worker may fail missing required artifacts.
+  - P0: Supporting docs in required slots are not rescued to supporting types. A loan term sheet, mortgage statement, renovation budget, appraisal, or tax bill uploaded into T12/rent-roll slot may be forced through required parser logic and fail.
+  - P1: Worker uses jobFiles fetched before `extract-job-text`; later doc-type changes rely on subsequent worker passes. Refreshing file rows after extraction/classification would be cleaner.
+  - P1: Dashboard guidance still infers failed file cause from current `analysis_job_files.doc_type`; better source is `worker_event` `missing_structured_financials.missing` plus report type.
+  - P2: `classify-documents.js` is separate from parse-time inference and may not reflect newer parser rescue rules.
+- Smallest safe patch plan:
+  1. Extend `inferDocTypeFromText` for supporting docs to return `t12` and `rent_roll` when strong required-doc content is present.
+  2. Extend required-doc text rescue to detect strong supporting-doc types (`loan_term_sheet`, `mortgage_statement`, `renovation`, `appraisal`, `property_tax`) when uploaded into `rent_roll` or `t12`, and reroute only when content is strong.
+  3. Refresh `analysis_job_files` after `extract-job-text` before worker decides missing structured docs.
+  4. Dashboard guidance should prefer `worker_event` `missing_structured_financials.missing` plus report type over guessing from one failed file row.
+- What not to patch before Ken:
+  - no broad new upload classifier service
+  - no validation loosening
+  - no AI as authoritative
+  - no worker lifecycle redesign
+  - no QA blocking
+  - no Dashboard polling/refresh redesign.
+
+### May 6 Evening Immediate Resume Point
+- Immediate next task:
+  - Retest Forest City Screening with reversed docs again after the PDF T12 signature and Dashboard failed-state patches.
+- Retest setup:
+  - T12 PDF -> Rent Roll slot
+  - Rent Roll XLSX -> T12 slot.
+- Pass criteria:
+  - `parser_doc_type_rescue` appears for `ForestCityManor_T12_2024-2025.pdf`
+  - `declared_doc_type = rent_roll`
+  - `detected_doc_type = t12`
+  - `t12_parsed` exists
+  - `rent_roll_parsed` exists
+  - Screening publishes
+  - `source_report_coverage_qa: pass`
+  - `deterministic_flags: []`
+  - if anything fails, Dashboard visibly shows failed Screening job with report type.
+- After that:
+  - run/review the next smallest intake-rescue patch from the audit:
+    - likely Patch 1: support-slot T12/rent-roll rescue
+    - then Patch 2: supporting-doc-in-required-slot rescue
+  - keep patching one small validated intake-rescue gap at a time
+  - do not build a broad classifier service before Ken
+  - do not change worker lifecycle unless stale file-row behavior is proven to cause a real issue.
+
+### Ken / External-User Intake Readiness Warning
+- Before opening InvestorIQ to Ken Dunn, syndicate members, or dozens of early users, intake resilience must be treated as launch-critical.
+- Required pre-Ken test matrix:
+  - clean Screening correct slots
+  - clean Underwriting correct slots
+  - messy Screening correct slots
+  - messy Underwriting correct slots
+  - T12/Rent Roll reversed Screening
+  - T12/Rent Roll reversed Underwriting
+  - T12 uploaded as Supporting
+  - Rent Roll uploaded as Supporting
+  - obvious loan/debt/renovation/tax/appraisal uploaded into wrong required slot
+  - missing required document fail-closed
+  - Dashboard visibly shows failed job with report type
+  - credit restored on pre-publication platform failure
+  - `qa_action_plan.requires_code_patch = 0` for public candidate reports.
+- Clean final public/Ken samples should use clean property names and clean filenames manually.
+- DocRaptor production mode remains required before public/Ken sample sharing.
 
 ### May 5 Evening QA Volcano / Final Validation Update
 - Major strategic shift completed today: InvestorIQ moved from passive QA smoke alarms to an internal QA Action Layer / "volcano" that turns report QA artifacts into operational command intelligence across all reports.
@@ -316,25 +551,10 @@
   - required wording: "Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance."
   - if NOI, derived acquisition loan amount, rate, and amortization are available, the report calculates estimated annual debt service using mortgage constant and calculates `Acquisition DSCR`
 
-### Immediate Resume Point - Fresh Forest City Retest
-- Next task: run one fresh Forest City Full Underwriting job from scratch, not regeneration from old artifacts.
-- Retest inspection checklist:
-  - `t12_parsed`
-  - `renovation_parsed`
-  - `loan_term_sheet_parsed`
-  - `source_report_coverage_qa`
-  - `qa_fix_routing`
-  - `qa_review_summary`
-  - `rendered_report_qa_advisory`
-  - `report_qa_flags`
-  - final PDF
-- Expected retest outcome:
-  - T12 line items should render if new parser extracts them
-  - lump-sum T12 fallback should clear
-  - CapEx Budget Summary should render if `renovation_parsed` exists
-  - `Proposed Acquisition Debt Sizing` should render separately if `loan_term_sheet_parsed` includes purchase price, LTV, rate, amortization, and `derived_acquisition_loan_amount`
-  - DSCR/current debt may remain not assessed unless true current debt exists
-  - public-sample readiness should improve, but may remain false until all coverage QA routes agree
+### Immediate Resume Point - Superseded by May 6 Evening Intake Work
+- The older fresh Forest City Full Underwriting retest plan was completed/superseded by May 6 validation and intake-resilience work.
+- Current immediate task is now the May 6 evening Forest City reversed Screening retest described near the top of this file.
+- Preserve this historical block only as context for the May 5/May 6 Forest City QA progression.
 
 ### Later Screening-Specific QA To-Do
 - Do not work on this now.
@@ -1589,29 +1809,26 @@
 
 ### Exact next task / resume point
 
-- **Immediate resume point - May 6 morning after May 5 QA volcano work:**
-  - User is out of Codex messages until evening/night; resume with Codex quota restored if available.
-  - First check whether Codex returned the current-debt limitation wording polish receipt. If yes, verify the patch receipt only; do not rerun tests until deployment state is clear.
-  - Do not add property-name word/number restrictions or global sample-hygiene flags. User intentionally uses `Clean`, `Messy`, and numbered suffixes during testing; production/public samples will use clean names later.
-  - Recent patch completed before shutdown: `MARKET_SURVEY_CLASSIFICATION_REVIEW` is downgraded to low `no_action_false_positive` when source coverage passes, rent roll exists, and deterministic flags are empty. No code patch, regeneration, customer block, public sample block, or high-value outreach block in that clean context.
-  - Next best code patch if Codex is available and no wording patch receipt is pending: Renovation Strategy section collapse/polish when `renovation_parsed` exists but no verified budget or scope rows exist. This is visible polish for 124 Richmond, not a core underwriting blocker.
-  - Next validation run after deploy: re-run 124 Richmond Clean first.
-  - Pass criteria for 124 Richmond Clean:
+- **Immediate resume point - May 6 evening after intake-resilience work:**
+  - Retest Forest City Screening with reversed required docs:
+    - T12 PDF -> Rent Roll slot
+    - Rent Roll XLSX -> T12 slot.
+  - Pass criteria:
+    - `parser_doc_type_rescue` appears for `ForestCityManor_T12_2024-2025.pdf`
+    - `declared_doc_type = rent_roll`
+    - `detected_doc_type = t12`
+    - `t12_parsed` exists
+    - `rent_roll_parsed` exists
+    - Screening publishes
     - `source_report_coverage_qa: pass`
-    - `qa_action_plan` has no critical `PUBLIC_LANGUAGE_COMPLIANCE_REVIEW`
-    - `customer_delivery_ready: true`
-    - `requires_code_patch: 0`
-    - T12 line items render
-    - current debt/refi/DSCR render
-    - no `Insufficient Data` cover
-    - no BUY/SELL/HOLD
-    - no public AI/model/vendor language
-  - Expected remaining internal items after successful 124 rerun:
-    - `DOCRAPTOR_NOT_PRODUCTION_MODE` until production mode is flipped
-    - possibly low/no-action market survey classification note
-    - possibly soft rendered language review
-    - possible renovation source limitation if not polished.
-  - After clean 124 rerun, run Forest City only if acquisition/current-debt wording or QA calibration needs confirmation.
+    - `deterministic_flags: []`
+    - if anything fails, Dashboard visibly shows failed Screening job with report type.
+  - After that, continue the intake-resilience audit patch plan one small validated patch at a time:
+    - Patch 1 candidate: support-slot T12/rent-roll rescue
+    - Patch 2 candidate: supporting-doc-in-required-slot rescue
+    - Patch 3 only if proven needed: refresh `analysis_job_files` after text extraction before missing-structured-financial decisions.
+  - Do not build a broad classifier service before Ken.
+  - Do not change worker lifecycle unless stale file-row behavior is proven to cause a real issue.
   - Do not flip DocRaptor production until final test-mode public-candidate outputs are clean.
 
 - **Immediate resume point - May 5 current state after QA/Forest City hardening:**
