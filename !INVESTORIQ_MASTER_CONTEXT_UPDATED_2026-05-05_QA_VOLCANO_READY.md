@@ -1,9 +1,234 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 5, 2026 - V2 audit completed; Dashboard-only freeze mitigations patched/monitored; Stripe webhook/domain entitlement incident fixed; QA Phase 1A/1B/1C implemented; Forest City parser/extraction hardening implemented; separate acquisition-financing assumptions render path implemented; next session should run one fresh Forest City Full Underwriting job from scratch and inspect QA artifacts plus final PDF.
+**Last updated:** May 5, 2026 evening - QA Action Layer / internal volcano implemented and live-tested; Forest City 8, 124 Richmond Clean 2, and 124 Richmond Messy 2 validated; T12 line-item extraction, proposed acquisition debt sizing, DSCR wording, QA calibration, and market-survey false-positive routing materially improved. Next session should resume with Codex quota restored, review the pending current-debt wording patch receipt if available, run one clean 124 Richmond validation after deploy, then run Forest City only if needed before DocRaptor production smoke / Ken Dunn sample selection.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+
+### May 5 Evening QA Volcano / Final Validation Update
+- Major strategic shift completed today: InvestorIQ moved from passive QA smoke alarms to an internal QA Action Layer / "volcano" that turns report QA artifacts into operational command intelligence across all reports.
+- New artifact implemented:
+  - `qa_action_plan`
+  - bucket: `internal`
+  - advisory-only
+  - no public surface
+  - no worker lifecycle changes
+  - no publication blocking
+  - no `qa_blocked`
+  - no `qa_review_required`
+  - no financial value changes
+  - no report rewriting
+- `qa_action_plan` consumes/rolls up:
+  - `report_qa_flags`
+  - `rendered_report_qa_advisory`
+  - `source_report_coverage_qa`
+  - `qa_fix_routing`
+  - `qa_review_summary`
+- Output fields include:
+  - `delivery_recommendation`
+  - `customer_delivery_ready`
+  - `public_sample_ready`
+  - `high_value_outreach_ready`
+  - `regenerate_recommended`
+  - `safe_to_regenerate_now`
+  - `prioritized_actions`
+  - `action_counts`
+  - `root_cause_summary`
+  - `requires_code_patch`
+  - `requires_regeneration`
+  - public/high-value/customer block flags
+- Doctrine remains locked:
+  - QA Action Layer is internal only.
+  - Users must never see wording like "not sample-ready," QA scores, QA blockers, AI QA, model names, or internal action-plan labels.
+  - AI/QA may flag issues but must not write accepted report values or override deterministic financial logic.
+
+### May 5 Rollback Checkpoint
+- Pre-volcano rollback checkpoint captured before major QA Action Layer work:
+  - commit: `b3fc6d2`
+  - branch: `main`
+  - remote state: `origin/main`, `origin/HEAD`
+  - commit message: `updates`
+  - captured around May 5, 2026 at roughly 3:00 PM America/Toronto.
+- If the QA Action Layer work badly breaks the repo, rollback command is:
+  - `git reset --hard b3fc6d2`
+- Treat all May 5 QA Action Layer / volcano patches as reversible against that checkpoint.
+
+### May 5 QA Action Layer Hardening Completed
+- `QA_REVIEW_MODEL` is now environment-configurable through the QA review helper:
+  - reads `QA_REVIEW_MODEL`
+  - falls back to `OPENAI_REPORT_QA_MODEL`
+  - then falls back to current default model.
+- Recommended first production QA model upgrade:
+  - `QA_REVIEW_MODEL=gpt-4o`
+  - do not hardcode GPT-5.x strings without endpoint/structured-output validation.
+- Source Coverage QA now recognizes proposed acquisition financing separately from current debt when rendered text includes signals such as:
+  - `Proposed Acquisition Debt Sizing`
+  - `Derived Acquisition Loan Amount`
+  - `Proposed Acquisition DSCR`
+  - acquisition purchase-assumption disclosure.
+- Deterministic QA guard added for contradictory `Insufficient Data` classification:
+  - if Full Underwriting has core operating metrics but rendered cover/executive classification says `Insufficient Data`, flag as internal render-gating issue.
+- Deterministic QA guard added for acquisition financing render gaps:
+  - if parsed acquisition financing inputs exist but final HTML lacks `Proposed Acquisition Debt Sizing` / `Derived Acquisition Loan Amount`, flag as internal render issue.
+- QA routing calibrated so derived acquisition debt is not treated as missing current debt when acquisition financing is rendered separately and no true current debt balance exists.
+- `FULL_UNDERWRITING_SUPPORT_UNDERUSED` calibrated so it does not duplicate a T12-only parser-depth gap when acquisition financing, renovation parsing, and minimum section depth are present.
+- Soft rendered QA compliance notes are no longer escalated to critical blockers unless actual prohibited public language exists.
+- Critical public-language compliance now requires actual prohibited patterns, such as:
+  - BUY / SELL / HOLD
+  - explicit investment recommendation/advice language
+  - public AI/model/vendor claims
+  - AI-assisted/IQ-assisted style language
+  - guarantees or fabricated certainty.
+- Soft language such as `InvestorIQ deal score components`, factual DSCR constraint language, Review/Sensitized labels, and lender-threshold risk statements should route as low/medium language review or false positive, not critical customer-delivery blockers.
+- Market-survey classification review now downgrades to low `no_action_false_positive` when:
+  - source coverage passes
+  - real rent roll artifact exists
+  - deterministic flags are empty
+  - the market survey did not contaminate core rent-roll values.
+- Stronger market-survey routing remains available if source coverage fails, rent roll is absent, or market survey values contaminate core modeled data.
+
+### May 5 Forest City Manor 8 Validation Result
+- Forest City Manor 8 is the first materially clean acquisition-financing-only Full Underwriting validation after QA volcano work.
+- Report quality materially improved:
+  - 15 pages
+  - cover classification: `Document-Constrained Review`
+  - no `Insufficient Data` cover/executive failure
+  - core metrics render: 144 units, NOI `$1,723,435`, expense ratio `31.5%`, NOI margin `68.5%`
+  - `Proposed Acquisition Debt Sizing` renders
+  - `Derived Acquisition Loan Amount` renders as `$29,325,000`
+  - `Proposed Acquisition DSCR` renders as `1.21x`
+  - current debt/refi DSCR remains correctly not assessed because no true current outstanding debt balance exists
+  - disclosure correctly states derived acquisition debt is not current outstanding debt and is not used as current refinance debt balance.
+- T12 parser fix landed:
+  - `income_line_count: 3`
+  - `expense_line_count: 5`
+  - expense sum reconciles to OpEx `$793,685`
+  - report now renders Income Reconstruction and Operating Expenses instead of lump-sum T12 fallback.
+- Source Coverage QA result:
+  - `qa_status: pass`
+  - deterministic flags empty
+  - artifact inventory confirms T12 line detail, rent roll, loan term sheet/acquisition assumptions, and renovation artifact presence.
+- QA Action Plan for Forest City 8 is now quiet where it should be:
+  - no parser work needed
+  - no render-gating work needed
+  - no artifact-mapping work needed
+  - requires_code_patch: `0`
+  - customer_delivery_ready: `true`
+  - safe_to_regenerate_now: `true`
+- Remaining Forest City 8 items:
+  - `DOCRAPTOR_NOT_PRODUCTION_MODE` until production PDF mode is enabled
+  - `DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT` remains a source-document limitation for current debt/refi only, not a system failure.
+- Current-debt limitation wording polish was given to Codex at end of day:
+  - target copy should avoid repetition and say debt terms were identified from purchase-assumption support while current debt service is not assessed because no current outstanding debt balance was provided.
+  - if Codex returns a receipt next session, review it before rerunning tests.
+
+### May 5 124 Richmond Clean 2 and Messy 2 Regression Results
+- 124 Richmond Clean 2 and Messy 2 were run after Forest City 8 and proved the volcano/generalized parser fixes were not Forest City-specific.
+- Clean 2 report:
+  - 18 pages
+  - capital risk profile: `Sensitized`
+  - NOI `$72,170`
+  - DSCR `1.09x`
+  - T12 line items rendered: 3 income rows and 8 expense rows
+  - current debt/refi logic rendered with outstanding balance `$937,500`, interest `5.85%`, amortization `30 years`
+  - refinance shortfall/stress analysis rendered
+  - source coverage QA passed
+  - deterministic flags empty.
+- Messy 2 report:
+  - 18 pages
+  - capital risk profile: `Sensitized`
+  - NOI `$66,382`
+  - DSCR `1.00x`
+  - T12 line items rendered: 4 income rows including vacancy allowance, 8 expense rows
+  - current debt/refi logic rendered with outstanding balance `$937,500`, interest `5.85%`, amortization `30 years`
+  - refinance shortfall/stress analysis rendered
+  - source coverage QA passed
+  - deterministic flags empty.
+- The T12 line-item parser hardening generalized:
+  - Forest City PDF T12: 3 income / 5 expense rows
+  - 124 Richmond clean XLSX T12: 3 income / 8 expense rows
+  - 124 Richmond messy XLSX T12: 4 income / 8 expense rows
+- 124 Richmond exposed QA calibration rather than report-core failure:
+  - rendered AI QA soft compliance/language comments were initially over-escalated to critical public-language blockers
+  - patch completed to split actual prohibited language from soft cautionary notes.
+- Remaining 124 Richmond visible polish:
+  - property names intentionally include `CLEAN`, `MESSY`, and trailing test numbers during internal testing.
+  - do not globally sanitize or flag words/numbers in user-entered property names because real streets or property names may contain words like Clean, Messy, Test, Final, or numbers.
+  - final public/Ken samples should be generated with clean intentional property names rather than relying on sanitizer behavior.
+  - property name input must preserve user-entered names as source of truth; do not add broad word/number restrictions or global test-token warnings.
+- Renovation section still looks weak for 124 Richmond because structured CapEx/budget rows were not extracted from the uploaded CapEx support:
+  - section says renovation budget was identified but no verified total budget was extracted
+  - this is not a core underwriting blocker, but it is visible sample-polish work if 124 is used as public/Ken sample.
+- Optional later patch:
+  - collapse/polish Renovation Strategy section when `renovation_parsed` exists but no verified budget amount or scope rows exist.
+  - preferred wording: `Uploaded renovation support was identified, but no verified structured CapEx budget was extracted. No renovation return, rent lift, ROI, or payback analysis is modeled.`
+  - do not fabricate CapEx, rent lift, timing, ROI, payback, or scope.
+
+### May 5 T12 Line-Item Extraction Fix
+- Forest City T12 PDF source line items were confirmed to exist:
+  - 3 income rows
+  - 5 expense rows
+  - expense rows reconcile exactly to OpEx `$793,685`.
+- Root cause:
+  - `pdf-parse` glued amount and percent columns together, e.g. `$310,00012.30%`
+  - old regex parsed that as `31000012.3`
+  - OpEx reconciliation failed and all expense lines were dropped.
+- Patch completed in `api/parse/parse-doc.js`:
+  - T12 text line-item extraction moved to reusable exported helper `extractT12LineItemsFromText`
+  - currency parsing now stops before glued percent columns
+  - line matching skips header false matches with no amount
+  - OpEx reconciliation preserved before accepting expense lines.
+- Focused smoke test added:
+  - `tests/qa/t12-line-items-smoke.js`
+  - validates Forest City-style glued amount/percent PDF text produces 3 income rows, 5 expense rows, and expense sum `$793,685`.
+- New Codex validation rule after quota pressure:
+  - ask Codex to run only minimum validation required for touched files
+  - avoid broad smoke/e2e/test suites unless touched code directly requires it
+  - prefer `node --check` touched files plus one focused test.
+
+### May 5 Codex Quota / Workflow Update
+- Codex 5-hour window was nearly exhausted during QA volcano work; user later ran out of Codex messages until evening.
+- Updated operating posture:
+  - ChatGPT should do prioritization, prompt shaping, and file-based reasoning where possible.
+  - Codex should be used as a surgical patcher, not a broad researcher.
+  - Keep Codex prompts shorter and narrower.
+  - Use investigation-only Codex prompts when uncertain, then patch-only prompts after root cause is known.
+  - Do not ask Codex to run broad test suites by default.
+  - Minimum validation only unless user explicitly asks for more.
+- Preferred Codex validation language going forward:
+  - `Run only the minimum validation required for the touched file(s). Do not run broad smoke/e2e/test suites unless the touched code directly affects that suite or the prompt explicitly asks for it.`
+
+### Current Confidence / Ken Dunn Readiness as of May 5 Night
+- InvestorIQ is no longer in "prove the system works at all" mode.
+- Current state is final sample-readiness validation.
+- Confidence before final reruns: roughly high but not final Ken-ready until a couple of clean post-calibration samples are generated and visually checked.
+- Recommended remaining test count before Ken outreach:
+  - 1 clean 124 Richmond rerun after QA language calibration / market survey downgrade deploy
+  - 1 Forest City rerun only if the current-debt wording patch or acquisition/current debt calibration needs confirmation
+  - optionally 1 constrained/messy package only if time allows, to verify source limitation handling.
+- Ken outreach threshold:
+  - at least one clean current-debt/refi Full Underwriting public-candidate sample
+  - optionally one acquisition-financing Full Underwriting sample
+  - source coverage QA pass
+  - `qa_action_plan.requires_code_patch = 0`
+  - no critical/high action items except DocRaptor test mode before production flip
+  - clean cover classification
+  - T12 line items rendered when source supports them
+  - no public AI/model/vendor language
+  - no BUY/SELL/HOLD
+  - no dangling `DATA NOT AVAILABLE`
+  - no obvious test/internal filenames or property-name suffixes in final public/Ken sample package
+  - production DocRaptor PDF before sharing externally.
+
+### Property Name Doctrine - Locked May 5 Night
+- Do not globally ban, strip, or flag words/numbers entered in the property name box.
+- Rationale: real addresses or property names may legitimately include words such as Clean, Messy, Test, Final, QA, Screening, Underwriting, or trailing numbers.
+- During internal testing, user will continue using `Clean`, `Messy`, and numbered suffixes intentionally.
+- Production property-name behavior must preserve user-entered property names as source-of-truth display names, with only light safety/HTML cleanup and natural wrapping.
+- Final public/Ken samples should simply be generated with clean names and clean filenames after testing is complete.
+- Do not add broad sample-hygiene warnings based solely on property-name words or trailing numbers.
+- If future admin/demo mode exists, test-token cleanup may be gated explicitly behind admin/demo mode only, never default production behavior.
 
 ### May 5 QA Phase 1A / 1B / 1C Implemented
 - Phase 1A: Rendered Report QA Advisory:
@@ -1363,6 +1588,31 @@
   - Codex-first / micro-patch workflow
 
 ### Exact next task / resume point
+
+- **Immediate resume point - May 6 morning after May 5 QA volcano work:**
+  - User is out of Codex messages until evening/night; resume with Codex quota restored if available.
+  - First check whether Codex returned the current-debt limitation wording polish receipt. If yes, verify the patch receipt only; do not rerun tests until deployment state is clear.
+  - Do not add property-name word/number restrictions or global sample-hygiene flags. User intentionally uses `Clean`, `Messy`, and numbered suffixes during testing; production/public samples will use clean names later.
+  - Recent patch completed before shutdown: `MARKET_SURVEY_CLASSIFICATION_REVIEW` is downgraded to low `no_action_false_positive` when source coverage passes, rent roll exists, and deterministic flags are empty. No code patch, regeneration, customer block, public sample block, or high-value outreach block in that clean context.
+  - Next best code patch if Codex is available and no wording patch receipt is pending: Renovation Strategy section collapse/polish when `renovation_parsed` exists but no verified budget or scope rows exist. This is visible polish for 124 Richmond, not a core underwriting blocker.
+  - Next validation run after deploy: re-run 124 Richmond Clean first.
+  - Pass criteria for 124 Richmond Clean:
+    - `source_report_coverage_qa: pass`
+    - `qa_action_plan` has no critical `PUBLIC_LANGUAGE_COMPLIANCE_REVIEW`
+    - `customer_delivery_ready: true`
+    - `requires_code_patch: 0`
+    - T12 line items render
+    - current debt/refi/DSCR render
+    - no `Insufficient Data` cover
+    - no BUY/SELL/HOLD
+    - no public AI/model/vendor language
+  - Expected remaining internal items after successful 124 rerun:
+    - `DOCRAPTOR_NOT_PRODUCTION_MODE` until production mode is flipped
+    - possibly low/no-action market survey classification note
+    - possibly soft rendered language review
+    - possible renovation source limitation if not polished.
+  - After clean 124 rerun, run Forest City only if acquisition/current-debt wording or QA calibration needs confirmation.
+  - Do not flip DocRaptor production until final test-mode public-candidate outputs are clean.
 
 - **Immediate resume point - May 5 current state after QA/Forest City hardening:**
   - Dashboard freeze is open/monitored but not today's active blocker.
