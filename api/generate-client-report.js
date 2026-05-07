@@ -868,17 +868,32 @@ function buildT12PerUnitRows(egi, opex, noi, units) {
     )
     .join("");
 }
-function buildCapRateValueTable(noi, units) {
+function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
   const capRates = [0.05, 0.06, 0.07];
-  const rows = capRates
+  const docCapRate = toCapRatio(documentDerivedCapRate);
+  const addDocumentDerivedCapRate =
+    Number.isFinite(docCapRate) &&
+    docCapRate > 0 &&
+    !capRates.some((rate) => Math.abs(rate - docCapRate) < 0.0001);
+  const tableRates = [...capRates];
+  if (addDocumentDerivedCapRate) {
+    tableRates.push(docCapRate);
+  }
+  const rows = tableRates
     .map((r) => {
       const val = noi / r;
       const perUnit = Number.isFinite(units) && units > 0 ? val / units : null;
-      return `<tr><td>${(r * 100).toFixed(1)}%</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
+      const label = addDocumentDerivedCapRate && Math.abs(r - docCapRate) < 0.0001
+        ? `${formatCapPercentExact(r)} (document derived)`
+        : `${(r * 100).toFixed(1)}%`;
+      return `<tr><td>${label}</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
     })
     .join("");
-  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.</p></div>`;
+  const footnote = addDocumentDerivedCapRate
+    ? `Derived from reported NOI of ${formatCurrency(noi)}. Standardized framework benchmarks are shown with any valid document-derived cap rate.`
+    : `Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.`;
+  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -1402,7 +1417,7 @@ function buildScreeningIncomeForensicsHtml({
   const bulletsCard = bulletsHtml
     ? `<div class="card no-break" style="margin-top:6px;"><ul>${bulletsHtml}</ul></div>`
     : "";
-  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Income Drivers (share of EGI)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
+  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Positive Income Lines (% of EGI, before vacancy offset)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
 }
 function buildScreeningExpenseStructureHtml({
   t12Payload,
@@ -4019,7 +4034,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
             }
             return "";
           })()
-        : buildCapRateValueTable(coerceNumber(t12Payload?.net_operating_income), rrUnits)
+        : buildCapRateValueTable(
+            coerceNumber(t12Payload?.net_operating_income),
+            rrUnits,
+            mortgagePayload?.refi_cap_rate ?? loanTermSheetTermsPayload?.refi_cap_rate ?? appraisalCapRateBase
+          )
     );
     // Rent Upside Pathway card: full-width below the grid
     {
@@ -4324,7 +4343,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
     const renovationAcknowledgmentHtml =
       !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Uploaded renovation support was identified, but no verified structured CapEx budget was extracted. No renovation return, rent lift, ROI, or payback analysis is modeled.`
+        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Historical capital expenditure or renovation support was identified, but no verified forward-looking renovation budget, rent-lift plan, ROI, payback analysis, or implementation schedule was extracted. Historical CapEx is acknowledged but not modeled as a prospective renovation strategy.`
         : "";
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;

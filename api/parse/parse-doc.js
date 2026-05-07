@@ -906,6 +906,56 @@ const isPdfOrImage = (mime) => {
   );
 };
 
+export function extractAnnualPropertyTaxFromText(text) {
+  const source = String(text || '');
+  const labels = [
+    'annual property tax', 'total property tax', 'total taxes', 'tax amount due',
+    'amount due', 'municipal taxes', 'property tax', 'annual tax', 'total tax',
+    'taxes owing', 'tax amount', 'tax due', 'realty tax', 'municipal tax',
+  ];
+  let rejectedCandidate = false;
+  const isValidAnnualTax = (value, context) => {
+    if (!Number.isFinite(value)) return false;
+    const isYearLike = value >= 1900 && value <= 2100;
+    const hasYearContext = /\b(?:tax year|roll year|billing year|assessment year|year)\b/i.test(context);
+    if (isYearLike || (hasYearContext && value <= 5000) || value <= 5000) {
+      rejectedCandidate = true;
+      return false;
+    }
+    return true;
+  };
+
+  for (const label of labels) {
+    const idx = source.toLowerCase().indexOf(label);
+    if (idx === -1) continue;
+    const snippet = source.slice(idx, idx + 180);
+    const snippetLine = snippet.split(/\r?\n/)[0] || snippet;
+    const candidates = [
+      ...snippetLine.matchAll(/(?:\$\s*([\d,]+(?:\.\d{1,2})?)|(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?))/g),
+    ];
+    for (const match of candidates) {
+      const raw = match[1] || match[2] || '';
+      const val = parseFloat(raw.replace(/,/g, ''));
+      const matchStart = match.index || 0;
+      const context = snippetLine.slice(Math.max(0, matchStart - 40), matchStart + match[0].length + 40);
+      if (isValidAnnualTax(val, context)) {
+        return { value: val, rejectedCandidate };
+      }
+    }
+
+    const fallbackMatches = snippet.matchAll(/\$?\s*([\d,]+(?:\.\d{1,2})?)/g);
+    for (const match of fallbackMatches) {
+      const val = parseFloat(String(match[1] || '').replace(/,/g, ''));
+      const matchStart = match.index || 0;
+      const context = snippet.slice(Math.max(0, matchStart - 40), matchStart + match[0].length + 40);
+      if (isValidAnnualTax(val, context)) {
+        return { value: val, rejectedCandidate };
+      }
+    }
+  }
+  return { value: null, rejectedCandidate };
+}
+
 export function parseT12FromExtractedTables(tables) {
   const monthTokens = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
   const periodTokens = ['ytd', 'trailing 12', 't-12'];
@@ -3277,37 +3327,7 @@ export default async function handler(req, res) {
             parse_warnings,
           };
         } else if (effectiveDocType === 'property_tax') {
-          const extractAnnualTax = (text) => {
-            const labels = [
-              'annual property tax', 'total property tax', 'total taxes', 'tax amount due',
-              'amount due', 'municipal taxes', 'property tax', 'annual tax', 'total tax',
-              'taxes owing', 'tax amount', 'tax due', 'realty tax', 'municipal tax',
-            ];
-            let rejectedCandidate = false;
-            for (const label of labels) {
-              const idx = text.toLowerCase().indexOf(label);
-              if (idx === -1) continue;
-              const snippet = text.slice(idx, idx + 160);
-              const matches = snippet.matchAll(/\$?\s*([\d,]+(?:\.\d{1,2})?)/g);
-              for (const match of matches) {
-                const val = parseFloat(String(match[1] || '').replace(/,/g, ''));
-                if (!Number.isFinite(val)) continue;
-                const matchStart = match.index || 0;
-                const context = snippet
-                  .slice(Math.max(0, matchStart - 40), matchStart + match[0].length + 40)
-                  .toLowerCase();
-                const isYearLike = val >= 1900 && val <= 2100;
-                const hasYearContext = /\b(?:tax year|roll year|billing year|assessment year|year)\b/.test(context);
-                if (isYearLike || (hasYearContext && val <= 5000) || val <= 5000) {
-                  rejectedCandidate = true;
-                  continue;
-                }
-                return { value: val, rejectedCandidate };
-              }
-            }
-            return { value: null, rejectedCandidate };
-          };
-          const annualTaxResult = extractAnnualTax(rawText);
+          const annualTaxResult = extractAnnualPropertyTaxFromText(rawText);
           const annual_tax = annualTaxResult.value;
           const assessed_value = extractDollarNear(rawText, [
             'assessed value', 'assessment value', 'property assessment',
