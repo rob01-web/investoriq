@@ -61,7 +61,7 @@ function summarizeArtifact(row) {
     return {
       ...summary,
       total_units: payload?.total_units ?? payload?.unit_count ?? null,
-      occupancy: payload?.occupancy ?? payload?.totals?.occupancy ?? null,
+      occupancy: payload?.totals?.occupancy ?? payload?.occupancy ?? null,
       unit_count: Array.isArray(payload?.units) ? payload.units.length : null,
       unit_mix_count: Array.isArray(payload?.unit_mix) ? payload.unit_mix.length : null,
     };
@@ -115,6 +115,75 @@ function normalizeFindings(rows) {
   }));
 }
 
+function textOfFinding(finding) {
+  return [
+    finding?.code,
+    finding?.message,
+    finding?.suggested_review,
+    finding?.evidence?.summary,
+    finding?.evidence?.source,
+    finding?.evidence?.file,
+    finding?.evidence?.artifact_type,
+    finding?.evidence?.excerpt,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function hasProhibitedPublicRisk(text) {
+  return /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|fabricated certainty|certain(?:ty)?|unsupported accuracy|accuracy claim|accurate without support|error[- ]?free/.test(text);
+}
+
+function isFilenameTokenOnlyFinding(finding) {
+  const text = textOfFinding(finding);
+  const mentionsFilenameToken = /\b(unsupported|test|clean|messy|qa)\b/.test(text);
+  if (!mentionsFilenameToken) return false;
+  const filenameOnly = /filename|file name|named|token/.test(text);
+  const substantiveUse = /rendered report|relied on|modeled|quantitative|parsed value|parse_error|parse status|failed validation|contamination/.test(text);
+  return filenameOnly && !substantiveUse;
+}
+
+function isDeterministicLanguageGuaranteeFalsePositive(finding) {
+  const text = textOfFinding(finding);
+  const allowedMethodology =
+    /deterministic|document[- ]?(backed|driven)|framework[- ]?constrained|defined modeling frameworks|transparency and auditability|missing source data is not gap[- ]?filled/.test(text);
+  const guaranteeConcern = /guarantee|risk[- ]?free|accuracy|certainty|certain|assured/.test(text);
+  return allowedMethodology && guaranteeConcern && !hasProhibitedPublicRisk(text);
+}
+
+function extractRenderedOccupancy(text) {
+  const source = typeof text === "string" ? text : "";
+  const match = source.match(/\boccupancy\b[^0-9]{0,40}(\d{1,3}(?:\.\d+)?)\s*%/i);
+  if (!match) return null;
+  const pct = Number(match[1]);
+  return Number.isFinite(pct) ? pct / 100 : null;
+}
+
+function isOccupancyFalsePositive(finding, compactPayload) {
+  const text = textOfFinding(finding);
+  if (!/occupancy/.test(text) || !/conflict|inconsistent|contradict|mismatch|null|missing/.test(text)) {
+    return false;
+  }
+  const coverageOccupancy = Number(
+    compactPayload?.source_report_coverage_qa?.artifact_inventory?.rent_roll_parsed?.occupancy
+  );
+  const renderedOccupancy = extractRenderedOccupancy(compactPayload?.rendered_report_text);
+  return (
+    Number.isFinite(coverageOccupancy) &&
+    Number.isFinite(renderedOccupancy) &&
+    Math.abs(coverageOccupancy - renderedOccupancy) < 0.005
+  );
+}
+
+function filterSourcePackageFalsePositives(review, compactPayload) {
+  for (const field of FINDING_ARRAY_FIELDS) {
+    review[field] = normalizeFindings(review[field]).filter((finding) => (
+      !isFilenameTokenOnlyFinding(finding) &&
+      !isDeterministicLanguageGuaranteeFalsePositive(finding) &&
+      !isOccupancyFalsePositive(finding, compactPayload)
+    ));
+  }
+  return review;
+}
+
 function countAllFindings(review) {
   const counts = { total: 0, critical: 0, high: 0, medium: 0, low: 0, info: 0 };
   for (const field of FINDING_ARRAY_FIELDS) {
@@ -138,6 +207,12 @@ const SOURCE_PACKAGE_QA_PROMPT = [
   "You are an internal InvestorIQ source-package QA reviewer.",
   "Review uploaded file treatment, parsed artifact summaries, deterministic coverage QA, rendered QA, and rendered report text.",
   "Uploaded docs are the universe. Filename and upload slot are hints only. Document content is authority. Deterministic validation is the gatekeeper.",
+  "Filename and upload-slot tokens are never source truth. Do not infer unsupported status from filename tokens such as UNSUPPORTED, TEST, CLEAN, MESSY, or QA unless parse status, deterministic artifacts, or rendered reliance provide separate evidence.",
+  "Prioritize source_report_coverage_qa.artifact_inventory over compact raw parsed_artifacts when they differ. For example, if source_report_coverage_qa says rent_roll_parsed occupancy is 1, do not flag occupancy as null from a compact artifact summary.",
+  "Allowed methodology/disclosure terms include deterministic, document-backed, document-driven, framework-constrained, defined modeling frameworks, transparency and auditability, and missing source data is not gap-filled.",
+  "Those methodology terms are not guarantees or accuracy claims unless paired with explicit guarantees, risk-free language, fabricated certainty, or unsupported accuracy claims.",
+  "Missing supplemental parsed fields are not high severity when source_report_coverage_qa passes, deterministic_flags are empty, the report does not rely on that supplemental field, or the value is already represented in T12 or otherwise not required for the rendered analysis.",
+  "Pending or supporting documents are contamination risks only if the rendered report appears to rely on them quantitatively or makes unsupported claims from them.",
   "You may flag possible parser misses, unsupported-doc treatment, ignored documents, source/report inconsistencies, possible support contamination, and likely false-positive QA flags.",
   "You must not write accepted financial values, override deterministic parsers or math, or propose changing NOI, rent, occupancy, debt, DSCR, cap rate, valuation, refinance, or score outputs.",
   "Flag BUY, SELL, HOLD, investment recommendation/advice, public model/vendor claims, guarantees, fabricated certainty, and unsupported accuracy claims if present.",
@@ -297,9 +372,7 @@ export async function runSourcePackageQaAdvisory({
     userContent: JSON.stringify(compactPayload),
   });
 
-  for (const field of FINDING_ARRAY_FIELDS) {
-    review[field] = normalizeFindings(review[field]);
-  }
+  filterSourcePackageFalsePositives(review, compactPayload);
   const counts = countAllFindings(review);
   const highestSeverity = highestSeverityFromCounts(counts);
 
