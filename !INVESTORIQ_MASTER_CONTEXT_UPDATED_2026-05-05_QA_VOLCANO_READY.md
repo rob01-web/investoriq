@@ -1,9 +1,124 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 6, 2026 evening - intake resilience and reversed-document validation became launch-critical. QA Action Layer remains advisory-only/internal-only. 124 Richmond Clean/Messy/Screening passed after renovation polish. Harbourstone reversed-doc rescue passed after content-based rerouting and T12 line-item extraction hardening. Forest City reversed Screening exposed a PDF T12 rescue-signature gap and Dashboard failed-state visibility bug; patches applied and Forest City reversed Screening retest is the immediate next task.
+**Last updated:** May 7, 2026 evening - Supabase Security Advisor triage is effectively complete with two accepted warnings documented; Dashboard freeze RCA patch was applied in `SupabaseAuthContext`; intake-rescue Patch 2 passed on Forest City MIXUP; Source-to-Report Coverage QA occupancy inventory was calibrated to trusted rent-roll summary totals. QA Action Layer remains advisory-only/internal-only.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 7 Security, Dashboard Freeze, Intake Rescue, and QA Occupancy Calibration
+- Supabase Security Advisor triage:
+  - Supabase Security Advisor was reduced from launch-critical errors/warnings to only two accepted warnings.
+  - Security Patch 1:
+    - RLS enabled on `public.stripe_events`
+    - RLS enabled on `public.credit_transactions`
+    - RLS enabled on `public.report_credits`
+    - `public.view_user_dashboard` changed to `security_invoker`
+    - `public.view_user_dashboard` revoked from anon/authenticated
+    - Dashboard smoke passed afterward.
+  - Function EXECUTE hardening:
+    - anon execute removed from inspected functions
+    - authenticated execute preserved only for customer Dashboard RPCs:
+      - `consume_purchase_and_create_job(text, jsonb, jsonb)`
+      - `queue_job_for_processing(uuid)`
+    - `service_role` retained for server/internal functions.
+  - Function `search_path` hardening:
+    - fixed `search_path=public` on linted functions including:
+      - `__handle_new_user_old`
+      - `add_credit`
+      - `add_report_credits`
+      - `nullify_empty_property_name`
+      - `set_updated_at`
+      - `consume_revision_slot`
+      - `consume_purchase_and_create_job`
+      - `get_all_profiles_for_admin`
+      - `get_all_purchases_for_admin`
+  - Storage hardening:
+    - removed broad `staged_uploads` ALL policy
+    - replaced with authenticated INSERT-only `staged_uploads` policy
+    - removed universal authenticated storage upload policy with `check_expression=true`
+    - Dashboard upload smoke passed.
+  - Remaining accepted warnings:
+    1. `public.queue_job_for_processing(p_job_id uuid)` remains SECURITY DEFINER and executable by authenticated users temporarily. Generate Report depends on this RPC. Inspection showed `analysis_jobs` has select/insert-own policies but no narrow authenticated UPDATE policy, and `analysis_job_events` insert is service-role-only. Switching to SECURITY INVOKER now could break queueing/report generation. The function is internally `auth.uid()` / `user_id` ownership-guarded and only queues eligible jobs. Later hardening must add narrow RLS policies, convert to SECURITY INVOKER if safe, and retest Dashboard upload/generate/worker/publish/failure behavior.
+    2. Leaked Password Protection remains disabled because Supabase requires Pro Plan for HaveIBeenPwned protection. Other password rules were strengthened where available.
+- Dashboard freeze / root-cause work:
+  - Uploaded/reference file `INVESTORIQ_DASHBOARD_FREEZE_RCA.md` was reviewed.
+  - V2/Emergent RCA identified three applied fixes:
+    - `SupabaseAuthContext` auth-event short-circuit
+    - `Dashboard.jsx` fetch in-flight/equality guards
+    - dead Dashboard `useEffect` cleanup
+  - `Dashboard.jsx` guards had already been applied earlier.
+  - May 7 Codex investigation confirmed remaining render-storm source was `SupabaseAuthContext` auth/profile churn:
+    - `handleSession` reprocessed every auth event
+    - `fetchProfile` wrote `setProfile(data || null)` every time, even for identical profile rows
+    - Dashboard guards were already present.
+  - Patch applied in `src/contexts/SupabaseAuthContext.jsx`:
+    - added last token/user tracking refs
+    - short-circuits repeated auth events when access token and user id are unchanged
+    - added shallow profile equality helper
+    - skips `setProfile` when incoming profile row is identical
+    - preserves sign-in, sign-out, token refresh, user-change, profile error, and loading behavior
+    - clears refs on sign-out.
+  - Validation:
+    - `npm run build` passed
+    - `git diff --check` passed.
+  - Manual early retest:
+    - Dashboard upload/property typing/navigation/Stripe checkout return worked
+    - no obvious profiles request spam seen
+    - Dashboard freeze status is improved but still monitored, not declared permanently solved.
+  - If freezing still occurs after this patch, next steps are the RCA's optional long-term items:
+    - split `Dashboard.jsx` into memoized zones
+    - move polling/fetching into custom `useDashboardData(profileId)`
+    - consider Supabase Realtime later
+    - do not jump to those unless freeze persists.
+- Intake-rescue Patch 2:
+  - Forest City MIXUP retest used:
+    - Rent Roll XLSX uploaded normally
+    - `RenovationBudget.docx` uploaded into T12 slot
+    - T12 PDF uploaded as Supporting.
+  - Patch applied in `api/parse/parse-doc.js`:
+    - required-slot rescue now detects strong supporting-doc types when declared `doc_type` is `t12` or `rent_roll`
+    - supports reroute to `loan_term_sheet`, `mortgage_statement`, `renovation`, `appraisal`, `property_tax`, `insurance_policy`, `bank_statement`
+    - filename-assisted renovation detection is disabled in required-slot rescue
+    - `parser_doc_type_rescue` remains pending-validation style, not pre-accepted.
+  - Forest City MIXUP result:
+    - `ForestCityManor_RentRoll.xlsx` final `doc_type=rent_roll`, parsed
+    - `ForestCityManor_RenovationBudget.docx` final `doc_type=renovation`, parsed
+    - `ForestCityManor_T12_2024-2025.pdf` final `doc_type=t12`, parsed
+    - report published
+    - no `insufficient_t12_text_coverage` confusion from renovation file
+    - renovation section rendered structured budget rows with total budget `$1,850,000`.
+  - Intake-rescue Patch 2 status: PASS.
+- Source-to-Report Coverage QA occupancy calibration:
+  - Forest City MIXUP exposed an internal QA artifact mismatch:
+    - PDF rendered occupancy correctly as `96.0%`
+    - `source_report_coverage_qa` initially showed `rent_roll_parsed.occupancy = 0.75`.
+  - Codex investigation confirmed:
+    - renderer uses trusted `rentRollPayload.totals.occupancy` for partial/sample rent rolls when summary totals exist
+    - `source_report_coverage_qa` inventory was reading top-level/detail-derived occupancy first.
+  - Patch applied:
+    - `api/_lib/source-report-coverage-qa.js`
+    - `tests/qa/source-report-coverage-qa-smoke.js`.
+  - New QA inventory hierarchy:
+    1. `rentRoll.totals.occupancy` when finite and `0 <= value <= 1`
+    2. `totals.occupied_units / totals.total_units` when valid
+    3. existing top-level `occupancy` / `occupancy_rate` / `physical_occupancy` fallback.
+  - Smoke test added for top-level `0.75` vs trusted totals `0.96`; expected QA inventory occupancy `0.96`.
+  - Forest City MIXUP retest after patch:
+    - PDF occupancy still `96.0%`
+    - `source_report_coverage_qa.artifact_inventory.rent_roll_parsed.occupancy` now `0.96`
+    - old `0.75` mismatch fixed.
+  - This was internal QA calibration only; parser output, report rendering, report math, worker lifecycle, Dashboard, and QA blocking behavior were not changed.
+- Current state / next testing:
+  - Supabase security triage effectively complete with two accepted warnings documented.
+  - Dashboard root-cause auth-context patch deployed/tested early, still monitoring.
+  - Forest City MIXUP intake rescue passed.
+  - QA occupancy mismatch fixed and retested.
+  - Next Ken-readiness work should be one thing at a time.
+  - Recommended next single test:
+    - continue Dashboard idle stability monitoring first
+    - then run one clean Full Underwriting with debt/current-loan support when ready.
+  - Do not close user's Chrome tab group as part of testing; user relies on grouped tabs reopening daily.
+  - Continue one-step-at-a-time workflow.
 
 ### May 6 Intake Resilience / Reversed-Document Hardening
 - Launch-critical intake doctrine is now explicit:
@@ -296,15 +411,10 @@
   - upload UI still appears
   - no immediate visible Dashboard break
   - rollback not needed.
-- Security work is now a pre-Ken launch blocker.
-- Do not open InvestorIQ to external users until RLS / view / RPC / storage lints are remediated and smoke-tested.
-- Remaining security work:
-  - rerun Supabase Advisor
-  - generate exact SQL for function grants using exact function signatures
-  - harden SECURITY DEFINER / anon-executable RPCs carefully
-  - harden `staged_uploads` listing policy while preserving authenticated upload
-  - set function `search_path` where needed
-  - retest Dashboard, upload, job creation, worker run, Stripe webhook, legal acceptance, and AdminDashboard.
+- Superseded by May 7 security triage:
+  - Supabase Advisor is now down to two accepted warnings documented above.
+  - Function grants, `search_path`, and `staged_uploads` policy hardening were completed and smoke-tested.
+  - Remaining security follow-up is controlled later hardening of `queue_job_for_processing` after narrow RLS policies are designed and retested.
 
 ### May 5 Evening QA Volcano / Final Validation Update
 - Major strategic shift completed today: InvestorIQ moved from passive QA smoke alarms to an internal QA Action Layer / "volcano" that turns report QA artifacts into operational command intelligence across all reports.
@@ -616,10 +726,11 @@
   - required wording: "Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance."
   - if NOI, derived acquisition loan amount, rate, and amortization are available, the report calculates estimated annual debt service using mortgage constant and calculates `Acquisition DSCR`
 
-### Immediate Resume Point - Superseded by May 6 Evening Intake Work
+### Immediate Resume Point - Superseded by May 7 Evening Work
 - The older fresh Forest City Full Underwriting retest plan was completed/superseded by May 6 validation and intake-resilience work.
-- Current immediate task is now the May 6 evening Forest City reversed Screening retest described near the top of this file.
-- Preserve this historical block only as context for the May 5/May 6 Forest City QA progression.
+- The May 6 Forest City reversed Screening and May 7 Forest City MIXUP intake-rescue work both passed.
+- Current immediate task is now Dashboard idle stability monitoring, then one clean Full Underwriting with debt/current-loan support.
+- Preserve this historical block only as context for the May 5/May 6/May 7 Forest City QA progression.
 
 ### Later Screening-Specific QA To-Do
 - Do not work on this now.
@@ -1850,8 +1961,7 @@
   - Optional cleanup: decide whether to keep or delete the extra 5 manually inserted underwriting credits from the May 5 webhook outage workaround.
   - Ken Dunn sample package review.
   - Final readiness check / sample package selection.
-  - Dashboard freeze / lag remains a monitored launch-risk item, not solved; May 5 Dashboard-only guard patch improved local behavior but remains OPEN / MONITORED.
-  - Leave `src/contexts/SupabaseAuthContext.jsx` V2 auth-event short-circuit deferred unless freeze/flicker returns.
+  - Dashboard freeze / lag remains a monitored launch-risk item, not solved; May 7 `SupabaseAuthContext` auth/profile-churn patch is applied and early manual testing improved behavior, but continue monitoring.
   - Worker remains frozen at the last known-good rollback unless a brand-new blocker appears.
   - Do not build a `Final_Testing` batch harness before Ken Dunn.
   - Broader accepted-file-type hardening remains open for `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, and image text extraction.
@@ -1874,24 +1984,18 @@
 
 ### Exact next task / resume point
 
-- **Immediate resume point - May 6 evening after intake-resilience work:**
-  - Retest Forest City Screening with reversed required docs:
-    - T12 PDF -> Rent Roll slot
-    - Rent Roll XLSX -> T12 slot.
-  - Pass criteria:
-    - `parser_doc_type_rescue` appears for `ForestCityManor_T12_2024-2025.pdf`
-    - `declared_doc_type = rent_roll`
-    - `detected_doc_type = t12`
-    - `t12_parsed` exists
-    - `rent_roll_parsed` exists
-    - Screening publishes
-    - `source_report_coverage_qa: pass`
-    - `deterministic_flags: []`
-    - if anything fails, Dashboard visibly shows failed Screening job with report type.
-  - After that, continue the intake-resilience audit patch plan one small validated patch at a time:
-    - Patch 1 candidate: support-slot T12/rent-roll rescue
-    - Patch 2 candidate: supporting-doc-in-required-slot rescue
-    - Patch 3 only if proven needed: refresh `analysis_job_files` after text extraction before missing-structured-financial decisions.
+- **Immediate resume point - May 7 evening after security, Dashboard freeze, intake, and QA occupancy calibration:**
+  - Continue Dashboard idle stability monitoring first; the `SupabaseAuthContext` render-storm patch is applied but not declared permanently solved.
+  - Then run one clean Full Underwriting with debt/current-loan support when ready.
+  - Inspect:
+    - report publication
+    - current debt balance/rate/amortization parsing
+    - current DSCR/refi rendering
+    - `source_report_coverage_qa`
+    - `qa_action_plan.requires_code_patch`
+    - Dashboard responsiveness during idle/return-from-checkout flows.
+  - Do not close the user's Chrome tab group as part of testing; grouped tabs are intentionally reopened daily.
+  - Continue one-step-at-a-time workflow.
   - Do not build a broad classifier service before Ken.
   - Do not change worker lifecycle unless stale file-row behavior is proven to cause a real issue.
   - Do not flip DocRaptor production until final test-mode public-candidate outputs are clean.
@@ -1902,7 +2006,7 @@
   - Immediate next task is one fresh Forest City Full Underwriting job from scratch, followed by QA artifact and final PDF inspection.
   - Optional operational cleanup remains: decide whether to keep/delete the extra 5 manually inserted underwriting credits.
   - Keep `investoriq.tech` and `www.investoriq.tech` attached to the current production Vercel project; confirm next Stripe checkout creates entitlements automatically with webhook 200.
-  - Continue Dashboard freeze monitoring; leave `src/contexts/SupabaseAuthContext.jsx` auth fix deferred unless freeze/flicker returns.
+  - Continue Dashboard freeze monitoring; `src/contexts/SupabaseAuthContext.jsx` auth/profile-churn fix is now applied as of May 7.
   - Resume V2 adoption carefully: V2 remains reference/blueprint only; useful ideas must continue to be manually rebuilt against current repo truth.
   - Continue final public/Ken sample path: clean public sample package selection; no test suffixes / testing filenames for final samples; DocRaptor production smoke only after test-mode public-candidate outputs are clean.
   - Preserve current closed fixes:
@@ -2284,11 +2388,16 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Dashboard auto-visibility hardening
   - large-text rent-roll AI recovery: chunking, shorter prompt construction, CSV/XLSX steering, and clearer large-rent-roll fallback guidance
 ## 11. Launch Readiness Snapshot
+- **May 7 launch snapshot:**
+  - Supabase Security Advisor triage is effectively complete with two accepted warnings documented: `queue_job_for_processing` remains temporarily SECURITY DEFINER/authenticated for Generate Report safety, and leaked password protection requires Supabase Pro.
+  - Dashboard freeze / lag is improved after Dashboard fetch guards plus May 7 `SupabaseAuthContext` auth/profile-churn patch, but remains OPEN / MONITORED.
+  - Intake-rescue Patch 2 passed on Forest City MIXUP: supporting docs uploaded into required slots can reroute when content signature is strong and downstream parser validation passes.
+  - Source-to-Report Coverage QA occupancy inventory now follows trusted rent-roll summary totals before top-level/detail-derived occupancy.
+  - Next likely work is Dashboard idle stability monitoring, then one clean Full Underwriting with debt/current-loan support.
 - **May 5 launch snapshot:**
   - V2 is not wholesale mergeable; selective manual cherry-picks only.
   - Stripe webhook/domain entitlement incident is fixed; launch checklist must include Vercel domain verification and Stripe webhook 200 checks.
-  - Dashboard freeze / lag is improved after Dashboard-only guard patch but remains OPEN / MONITORED, not solved.
-  - `src/contexts/SupabaseAuthContext.jsx` auth-event short-circuit remains deferred unless freeze/flicker returns.
+  - Dashboard freeze / lag was improved after Dashboard-only guard patch; May 7 later added the `SupabaseAuthContext` auth/profile-churn patch.
   - QA Phase 1A/1B/1C is implemented and advisory-only.
   - Forest City parser/extraction hardening is implemented.
   - Separate proposed acquisition debt sizing render path is implemented.
