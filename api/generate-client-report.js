@@ -9,6 +9,7 @@ import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
+import { runSourcePackageQaAdvisory } from "./_lib/source-package-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan } from "./_lib/qa-action-plan.js";
@@ -5910,6 +5911,8 @@ let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";
 let qaFixRoutingResult = null;
+let sourcePackageQaFiles = [];
+let sourcePackageQaArtifacts = [];
 try {
   let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
   let coverageArtifacts = [];
@@ -5939,6 +5942,8 @@ try {
       coverageArtifacts = artifactRows;
     }
   }
+  sourcePackageQaFiles = coverageFiles;
+  sourcePackageQaArtifacts = coverageArtifacts;
   const sourceCoverageQa = buildSourceReportCoverageQa({
     jobId: jobId || null,
     userId: effectiveUserId || null,
@@ -6071,6 +6076,66 @@ try {
     console.error("Failed to write rendered_report_qa_advisory_failed event:", qaFailureWriteErr);
   }
 }
+}
+try {
+  const sourcePackageQaStartedAt = Date.now();
+  const sourcePackageQa = await runSourcePackageQaAdvisory({
+    html: docHtml,
+    uploadedFiles: sourcePackageQaFiles,
+    artifacts: sourcePackageQaArtifacts,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    renderedReportQa: renderedQaResult,
+    context: {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      property_name: property_name || jobPropertyName || "Unknown",
+      report_type: reportType,
+      report_tier: reportTier,
+    },
+  });
+  const sourcePackageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: sourcePackageQaErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "source_package_qa_advisory",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/source_package_qa_advisory/${sourcePackageQaTimestamp}.json`,
+      payload: {
+        ...sourcePackageQa,
+        elapsed_ms: Date.now() - sourcePackageQaStartedAt,
+      },
+    },
+  ]);
+  if (sourcePackageQaErr) {
+    console.error("Failed to write source_package_qa_advisory artifact:", sourcePackageQaErr);
+  }
+} catch (err) {
+  console.error("Source package QA advisory failed:", err?.message || err);
+  const sourcePackageQaFailureTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "worker_event",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/source_package_qa_advisory_failed/${sourcePackageQaFailureTimestamp}.json`,
+        payload: {
+          event: "source_package_qa_advisory_failed",
+          advisory_only: true,
+          no_public_surface: true,
+          error: err?.message || String(err),
+          error_code: err?.code || null,
+          report_type: reportType,
+          report_tier: reportTier,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (sourcePackageQaFailureWriteErr) {
+    console.error("Failed to write source_package_qa_advisory_failed event:", sourcePackageQaFailureWriteErr);
+  }
 }
 try {
   const qaFixRouting = buildQaFixRouting({

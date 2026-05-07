@@ -465,11 +465,11 @@
 - Treat all May 5 QA Action Layer / volcano patches as reversible against that checkpoint.
 
 ### May 5 QA Action Layer Hardening Completed
-- `QA_REVIEW_MODEL` is now environment-configurable through the QA review helper:
-  - reads `QA_REVIEW_MODEL`
-  - falls back to `OPENAI_REPORT_QA_MODEL`
-  - then falls back to current default model.
-- Recommended first production QA model upgrade:
+- QA model configuration is environment-configurable:
+  - rendered QA reads `QA_REVIEW_MODEL`, falls back to `OPENAI_REPORT_QA_MODEL`, then falls back to current default model
+  - source-package QA reads `QA_SOURCE_PACKAGE_MODEL`, falls back to `QA_REVIEW_MODEL`, then `OPENAI_REPORT_QA_MODEL`, then current default model.
+- Recommended launch-readiness QA model settings locally and in Vercel:
+  - `QA_SOURCE_PACKAGE_MODEL=gpt-4o`
   - `QA_REVIEW_MODEL=gpt-4o`
   - do not hardcode GPT-5.x strings without endpoint/structured-output validation.
 - Source Coverage QA now recognizes proposed acquisition financing separately from current debt when rendered text includes signals such as:
