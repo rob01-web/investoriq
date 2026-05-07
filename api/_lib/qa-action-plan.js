@@ -391,12 +391,12 @@ function actionForRenderedFinding(finding) {
   if (!text) return null;
   const excerptText = String(finding?.excerpt || "");
   const issueText = String(finding?.issue || finding?.message || "");
-  const actualReportText = [excerptText, issueText].filter(Boolean).join(" ");
+  const actualReportText = excerptText || issueText;
   const prohibitedPublicLanguage =
     /\b(BUY|SELL|HOLD)\b/i.test(actualReportText) ||
     /\b(?:recommend(?:ed|s|ation)?|advise[sd]?)\s+(?:purchase|acquisition|invest|investment|sale|sell|hold)\b/i.test(actualReportText) ||
     /\b(?:AI-assisted|AI assisted|OpenAI|LLM|model-generated|vendor-generated)\b/i.test(actualReportText) ||
-    /\b(?:guaranteed|risk-free|cannot lose|certain return)\b/i.test(actualReportText);
+    /\b(?:guaranteed|risk-free|cannot lose|certain return|error-free|fabricated certainty|unsupported accuracy)\b/i.test(actualReportText);
   const softComplianceReview =
     String(finding?.category || "").toLowerCase() === "compliance" ||
     /investment recommendation|recommendation language|rating|ratings/i.test(text);

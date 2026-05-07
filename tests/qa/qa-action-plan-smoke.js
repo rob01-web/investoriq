@@ -194,6 +194,13 @@ const softRenderedCompliancePlan = buildQaActionPlan({
         excerpt: "Base case DSCR of 1.00x falls below standard lender coverage thresholds.",
         suggested_review: "Ensure the statement remains factual and not an investment recommendation.",
       },
+      {
+        category: "compliance",
+        severity: "critical",
+        issue: "The report uses the term 'InvestorIQ estimates' which could imply proprietary or guaranteed accuracy.",
+        excerpt: "InvestorIQ estimates are document-backed and framework-constrained.",
+        suggested_review: "Review whether this implies guaranteed accuracy.",
+      },
     ],
   },
   qaFixRouting: null,

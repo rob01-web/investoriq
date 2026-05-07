@@ -168,11 +168,12 @@ function isOnlyRecommendationAbsenceFalsePositive(finding) {
 function isOnlyAllowedMethodologyLanguageFalsePositive(finding) {
   if (finding?.category !== "compliance") return false;
   const text = textOfFinding(finding);
+  const excerpt = String(finding?.excerpt || "").toLowerCase();
   const allowedMethodologyLanguage =
-    /document[- ]?(backed|driven)|deterministic|defined modeling frameworks|transparency and auditability|framework[- ]?constrained|missing source data is not gap[- ]?filled/.test(text);
+    /investoriq estimates|document[- ]?(backed|driven)|deterministic|defined modeling frameworks|standardized underwriting frameworks|transparency and auditability|framework[- ]?constrained|missing (?:source data|inputs) (?:is|are) not gap[- ]?filled|missing inputs are omitted|omitted rather than inferred/.test(text);
   if (!allowedMethodologyLanguage) return false;
   const prohibitedPattern =
-    /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|certain(?:ty)?|assured|accuracy claim|accurate without support|error[- ]?free/.test(text);
+    /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|certain(?:ty)?|assured|accuracy claim|accurate without support|error[- ]?free/.test(excerpt);
   return !prohibitedPattern;
 }
 
