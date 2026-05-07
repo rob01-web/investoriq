@@ -10,6 +10,31 @@ function hasPositive(value) {
   return Number.isFinite(n) && n > 0;
 }
 
+function validOccupancy(value) {
+  const n = asNumber(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
+}
+
+function deriveRentRollInventoryOccupancy(rentRoll) {
+  const totals = rentRoll?.totals && typeof rentRoll.totals === "object" ? rentRoll.totals : null;
+  const totalsOccupancy = validOccupancy(totals?.occupancy);
+  if (Number.isFinite(totalsOccupancy)) return totalsOccupancy;
+
+  const occupiedUnits = asNumber(totals?.occupied_units);
+  const totalUnits = asNumber(totals?.total_units);
+  if (Number.isFinite(occupiedUnits) && Number.isFinite(totalUnits) && totalUnits > 0) {
+    const derivedOccupancy = validOccupancy(occupiedUnits / totalUnits);
+    if (Number.isFinite(derivedOccupancy)) return derivedOccupancy;
+  }
+
+  return (
+    validOccupancy(rentRoll?.occupancy) ??
+    validOccupancy(rentRoll?.occupancy_rate) ??
+    validOccupancy(rentRoll?.physical_occupancy) ??
+    null
+  );
+}
+
 function latestArtifact(artifacts, type) {
   return (artifacts || []).find((row) => row?.type === type) || null;
 }
@@ -87,7 +112,7 @@ function buildArtifactInventory(artifacts) {
     rent_roll_parsed: {
       present: Boolean(rentRoll),
       unit_count: rentRoll?.unit_count ?? rentRoll?.total_units ?? rentRoll?.totalUnits ?? null,
-      occupancy: rentRoll?.occupancy ?? rentRoll?.occupancy_rate ?? rentRoll?.physical_occupancy ?? null,
+      occupancy: deriveRentRollInventoryOccupancy(rentRoll),
       method: rentRoll?.method || null,
     },
     t12_parsed: {

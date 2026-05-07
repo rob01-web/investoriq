@@ -117,6 +117,41 @@ if (!contradictionCodes.has("CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL")) {
   process.exit(1);
 }
 
+const rentRollSummaryOccupancyResult = buildSourceReportCoverageQa({
+  jobId: "forest-city-summary-occupancy-smoke",
+  userId: "user-smoke",
+  propertyName: "Forest City Manor",
+  reportType: "screening",
+  reportTier: 1,
+  uploadedFiles: [
+    { id: "1", original_filename: "ForestCityManor_T12_2024-2025.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "2", original_filename: "ForestCityManor_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 144,
+        occupancy: 0.75,
+        totals: {
+          summary_row_detected: true,
+          total_units: 144,
+          occupied_units: 138.24,
+          occupancy: 0.96,
+        },
+      },
+    },
+  ],
+  html: "<html><body><p>Occupancy: 96.0%</p></body></html>",
+});
+
+const inventoryOccupancy = rentRollSummaryOccupancyResult.artifact_inventory.rent_roll_parsed.occupancy;
+if (inventoryOccupancy !== 0.96) {
+  console.error("Expected rent roll inventory occupancy to prefer trusted summary totals.");
+  console.error("Actual occupancy:", inventoryOccupancy);
+  process.exit(1);
+}
+
 const acquisitionRenderedResult = buildSourceReportCoverageQa({
   jobId: "forest-city-acquisition-rendered-smoke",
   userId: "user-smoke",
