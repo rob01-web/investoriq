@@ -49,6 +49,10 @@ const SYSTEM_PROMPT = [
   "InvestorIQ reports intentionally avoid investment recommendations.",
   "Compliance findings should flag the presence of recommendation language, not its absence.",
   "",
+  "Allowed methodology language:",
+  "Normal InvestorIQ methodology/disclosure terms are not compliance issues by themselves, including document-backed, document-driven, deterministic, defined modeling frameworks, transparency and auditability, framework-constrained, and missing source data is not gap-filled.",
+  "Only flag these terms if they are paired with BUY, SELL, HOLD, explicit investment recommendation/advice, public AI/model/vendor claims, guarantees or risk-free language, fabricated certainty, or unsupported accuracy claims.",
+  "",
   "Flag issues across these categories:",
   "numbers: internal numeric consistency, unit/currency/period mismatches, headline metric contradictions.",
   "language: typos, mojibake, unfinished fragments, raw template tokens, stale headings, DATA NOT AVAILABLE leaks.",
@@ -161,11 +165,23 @@ function isOnlyRecommendationAbsenceFalsePositive(finding) {
   return asksForRecommendation && recommendationLanguage && !actualForbiddenLanguage;
 }
 
+function isOnlyAllowedMethodologyLanguageFalsePositive(finding) {
+  if (finding?.category !== "compliance") return false;
+  const text = textOfFinding(finding);
+  const allowedMethodologyLanguage =
+    /document[- ]?(backed|driven)|deterministic|defined modeling frameworks|transparency and auditability|framework[- ]?constrained|missing source data is not gap[- ]?filled/.test(text);
+  if (!allowedMethodologyLanguage) return false;
+  const prohibitedPattern =
+    /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|certain(?:ty)?|assured|accuracy claim|accurate without support|error[- ]?free/.test(text);
+  return !prohibitedPattern;
+}
+
 function filterAdvisoryFalsePositives(findings) {
   const rows = Array.isArray(findings) ? findings : [];
   return rows.filter((finding) => (
     !isOnlyBreakEvenOccupancyFalsePositive(finding) &&
-    !isOnlyRecommendationAbsenceFalsePositive(finding)
+    !isOnlyRecommendationAbsenceFalsePositive(finding) &&
+    !isOnlyAllowedMethodologyLanguageFalsePositive(finding)
   ));
 }
 
