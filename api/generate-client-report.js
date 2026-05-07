@@ -3176,12 +3176,14 @@ if (effectiveReportMode === "screening_v1") {
         null,
     };
     let execRefiLine = "";
+    let refiStabilityResult = null;
     if (effectiveReportMode === "v1_core") {
-      const refiTier = buildRefiStabilityModel({
+      refiStabilityResult = buildRefiStabilityModel({
         financials: refiFinancials,
         t12Payload,
         formatValue: formatCurrency,
-      })?.tier;
+      });
+      const refiTier = refiStabilityResult?.tier;
       const validRefiTiers = new Set([
         "Stable",
         "Sensitized",
@@ -3540,6 +3542,31 @@ if (effectiveReportMode === "screening_v1") {
         screeningClass = "Sensitized";
       }
     }
+    const currentDebtDscrForDisplay = (() => {
+      if (!mortgagePayload) return null;
+      const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
+      const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
+      const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
+      const annualNOI = coerceNumber(t12Payload?.net_operating_income);
+      if (!(loanAmt > 0 && annualRatePct > 0 && annualNOI > 0)) return null;
+      const monthlyRate = annualRatePct / 100 / 12;
+      const periods = amortYrs * 12;
+      const monthlyPayment = loanAmt * (monthlyRate * Math.pow(1 + monthlyRate, periods)) / (Math.pow(1 + monthlyRate, periods) - 1);
+      const dscr = annualNOI / (monthlyPayment * 12);
+      return Number.isFinite(dscr) && dscr > 0 ? dscr : null;
+    })();
+    const coverClassificationLabel = (() => {
+      if (effectiveReportMode === "v1_core") {
+        if (screeningClass === "Fragile") return "High Risk";
+        if (Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Constrained";
+        if (refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Constrained";
+        if (screeningClass === "Stable") return "Stable";
+        return "Review";
+      }
+      if (screeningClass === "Stable") return "Stable";
+      if (screeningClass === "Fragile") return "High Risk";
+      return "Review";
+    })();
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -3785,13 +3812,12 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
-      screeningClass || ""
+      coverClassificationLabel
     );
-    const verdictCssClass = screeningClass === "Stable" ? "verdict-stable"
-      : screeningClass === "Document-Constrained Review" ? "verdict-sensitized"
-      : screeningClass === "Sensitized" ? "verdict-sensitized"
-      : screeningClass === "Fragile" ? "verdict-fragile"
-      : screeningClass === "Insufficient Data" ? "verdict-insufficient"
+    const verdictCssClass = coverClassificationLabel === "Stable" ? "verdict-stable"
+      : coverClassificationLabel === "High Risk" ? "verdict-fragile"
+      : coverClassificationLabel === "Review" ? "verdict-sensitized"
+      : coverClassificationLabel === "Constrained" ? "verdict-sensitized"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
     // Verdict label tokens: differentiate screening triage vs underwriting capital profile
@@ -3821,13 +3847,14 @@ if (effectiveReportMode === "screening_v1") {
     // Cover asset snapshot: fills the bottom of the cover page
     {
       const snapRows = [];
+      const coverSnapshotValueStyle = "color:#F9FAFB;font-size:11px;font-weight:600;";
       const _coverRrUnits = Number(computedRentRoll?.total_units);
       const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
-      if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="color:#F9FAFB;font-size:11px;font-weight:600;">Multifamily - ${unitCount} Units</span></div>`);
+      if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
       const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
-      if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="color:#F9FAFB;font-size:11px;">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
+      if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
-snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><span style="color:#9CA3AF;font-size:11px;font-weight:600;">${modeLabel}</span></div>`);
+snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><span style="${coverSnapshotValueStyle}">${modeLabel}</span></div>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
@@ -3917,7 +3944,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       if (erPctStr) rows += `<tr><td>Expense Ratio</td><td style="font-weight:600;">${erPctStr}</td></tr>`;
       if (nmPctStr) rows += `<tr><td>NOI Margin</td><td style="font-weight:600;">${nmPctStr}</td></tr>`;
       if (beoStr)   rows += `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${beoStr}</td></tr>`;
-      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${screeningClass.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
+      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
       execVerdictExpansionHtml = profileCard;
     }
     const acquisitionFinancingAssumptionsHtml = buildAcquisitionFinancingAssumptionsHtml({
