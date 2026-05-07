@@ -1,6 +1,6 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 7, 2026 evening - Supabase Security Advisor triage is effectively complete with two accepted warnings documented; Dashboard freeze RCA patch was applied in `SupabaseAuthContext`; intake-rescue Patch 2 passed on Forest City MIXUP; Source-to-Report Coverage QA occupancy inventory was calibrated to trusted rent-roll summary totals. QA Action Layer remains advisory-only/internal-only.
+**Last updated:** May 7, 2026 evening/night - Supabase Security Advisor triage is effectively complete with two accepted warnings documented; Dashboard freeze RCA patch was applied and remains improved/monitored; intake-rescue Patch 2 passed; QA occupancy calibration is fixed; shared AI QA Doctrine, Source Package QA, and QA Manager architecture are implemented and validated. Latest 124 Richmond `qa_action_plan.requires_code_patch = 0`; only DocRaptor production mode remains a public/high-value blocker.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
@@ -119,6 +119,111 @@
     - then run one clean Full Underwriting with debt/current-loan support when ready.
   - Do not close user's Chrome tab group as part of testing; user relies on grouped tabs reopening daily.
   - Continue one-step-at-a-time workflow.
+
+### May 7 AI QA Doctrine / Source Package QA / QA Manager Milestone
+- Shared launch doctrine module created:
+  - `api/_lib/investoriq-qa-doctrine.js`.
+- Doctrine locks:
+  - uploaded documents are the universe
+  - filename and upload slot are hints only
+  - document content is authority
+  - deterministic parsers and validated artifacts are modeled truth
+  - deterministic calculations are financial truth
+  - AI QA may challenge but may not override accepted values
+  - any financial value affecting rent, occupancy, income, expenses, NOI, debt, DSCR, cap rate, valuation, refinance, score, or classification must be document-supported and deterministically validated or admin-approved
+  - no BUY / SELL / HOLD
+  - no public AI/model/vendor language
+  - no guarantees/risk-free/error-free/fabricated certainty
+  - missing/unusable data must be suppressed, section-gated, or disclosed
+  - unsupported/unstructured uploads may be listed and explicitly excluded from modeled outputs
+  - clean limitation disclosure is acceptable
+  - raw `DATA NOT AVAILABLE` flooding should be avoided where V1 safely collapses sections.
+- Files now wired to shared doctrine:
+  - `api/_lib/qa-review.js`
+  - `api/_lib/source-package-qa.js`
+  - `api/_lib/qa-manager-review.js`
+  - `api/_lib/qa-action-plan.js`
+  - `tests/qa/qa-doctrine-smoke.js`.
+- Source Package QA:
+  - `source_package_qa_advisory` now exists and runs on `gpt-4o-2024-08-06` when env is set to:
+    - `QA_SOURCE_PACKAGE_MODEL=gpt-4o`
+    - `QA_REVIEW_MODEL=gpt-4o`
+  - Reviews uploaded file inventory, parse statuses/errors, parsed artifact summaries, source coverage QA, rendered QA, and rendered report text.
+  - Internal/advisory-only and cannot mutate report values, artifacts, parser output, worker state, or publication state.
+  - May challenge parser misses, ignored docs, false unsupported classifications, source/report inconsistencies, and likely QA false positives.
+- QA Manager Review:
+  - added `api/_lib/qa-manager-review.js`
+  - artifact type: `qa_manager_review`
+  - model fallback:
+    - `QA_MANAGER_MODEL`
+    - then `QA_SOURCE_PACKAGE_MODEL`
+    - then `QA_REVIEW_MODEL`
+    - then `OPENAI_REPORT_QA_MODEL`
+    - then safe default
+  - recommended explicit launch env:
+    - `QA_MANAGER_MODEL=gpt-4o`
+    - `QA_SOURCE_PACKAGE_MODEL=gpt-4o`
+    - `QA_REVIEW_MODEL=gpt-4o`
+  - reviews:
+    - `rendered_report_qa_advisory`
+    - `source_package_qa_advisory`
+    - `source_report_coverage_qa`
+    - `qa_fix_routing`
+    - `report_qa_flags`
+    - rendered report text
+  - classifies decisions into:
+    - `real_parser_or_artifact_risk`
+    - `real_source_report_contradiction`
+    - `real_public_language_risk`
+    - `source_document_limitation`
+    - `production_config_only`
+    - `false_positive`
+    - `admin_review_optional`
+    - `no_action`
+  - Advisory-only and cannot output replacement financial values or mutated report copy.
+- QA Action Plan integration:
+  - `qa_action_plan` now optionally consumes `qaManagerReview`.
+  - QA Manager decisions can suppress rendered/source-package false positives.
+  - Deterministic hard rules still win.
+  - Actual rendered excerpts are the source for public-language escalation, not speculative AI suggestions.
+  - Customer delivery must not be blocked unless there is actual prohibited public language or deterministic evidence confirms a source/report contradiction or parser/artifact defect.
+  - QA Manager decisions are advisory and cannot change deterministic financial values.
+- Latest 124 Richmond validation after QA Manager calibration:
+  - Latest Full Underwriting PDF remained materially strong:
+    - `100.0%` occupancy
+    - NOI `$72,170`
+    - DSCR `1.09x`
+    - Refinance Shortfall Under Stress
+    - detailed T12 line items
+    - rent roll distribution
+    - scorecard capped at `Review - Debt Coverage Constraint`
+    - clear methodology and data transparency language
+    - unsupported/unstructured uploads explicitly excluded from modeled outputs.
+  - Latest artifacts:
+    - `source_report_coverage_qa = pass`
+    - `deterministic_flags = []`
+    - `source_package_qa_advisory` exists
+    - `qa_manager_review` exists and used `gpt-4o-2024-08-06`
+    - `qa_action_plan.customer_delivery_ready = true`
+    - `qa_action_plan.requires_code_patch = 0`
+    - `qa_action_plan.safe_to_regenerate_now = true`.
+  - `qa_action_plan` now contains only:
+    - `DOCRAPTOR_NOT_PRODUCTION_MODE` as the public/high-value blocker
+    - `MARKET_SURVEY_CLASSIFICATION_REVIEW` downgraded to `no_action_false_positive`.
+  - Prior noisy items were correctly classified by QA Manager as false positives and did not become action-plan blockers:
+    - unsupported document reference
+    - Sensitized term usage.
+- Current launch implication:
+  - AI QA architecture is no longer just a smoke alarm.
+  - Current architecture:
+    - AI QA Analyst finds issues.
+    - AI QA Manager judges issues.
+    - deterministic `qa_action_plan` routes only valid actions.
+    - AI cannot mutate financial truth.
+  - This is the major anti-whack-a-mole milestone.
+  - The only current public/Ken blocker for the latest 124 Richmond test is DocRaptor production mode / watermark.
+  - Do not flip DocRaptor production until final clean public-candidate package is selected and test-mode output is clean.
+  - Continue one thing at a time.
 
 ### May 6 Intake Resilience / Reversed-Document Hardening
 - Launch-critical intake doctrine is now explicit:
