@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,6 +19,15 @@ import { useToast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 
+const profilesEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => Object.is(a[key], b[key]));
+};
+
 export const AuthProvider = ({ children }) => {
   const { toast } = useToast();
 
@@ -25,11 +35,28 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const profileRef = useRef(null);
+  const userRef = useRef(null);
+  const lastTokenRef = useRef('');
+  const loadingRef = useRef(true);
+  const lastFetchedUserIdRef = useRef(null);
+
+  const setProfileIfChanged = useCallback((nextProfile) => {
+    setProfile((prev) => {
+      if (profilesEqual(prev, nextProfile)) {
+        profileRef.current = prev;
+        return prev;
+      }
+      profileRef.current = nextProfile;
+      return nextProfile;
+    });
+  }, []);
 
   /** Fetch the current user's profile from Supabase */
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
-      setProfile(null);
+      lastFetchedUserIdRef.current = null;
+      setProfileIfChanged(null);
       return;
     }
 
@@ -43,17 +70,32 @@ export const AuthProvider = ({ children }) => {
       console.error('Error fetching profile:', error);
     }
 
-    setProfile(data || null);
+    lastFetchedUserIdRef.current = userId;
+    setProfileIfChanged(data || null);
     return data;
-  }, []);
+  }, [setProfileIfChanged]);
 
   /** Handle Supabase session updates and maintain user state */
   const handleSession = useCallback(
     async (session) => {
+      const nextToken = session?.access_token || '';
+      const nextUser = session?.user ?? null;
+      const nextUserId = nextUser?.id || null;
+      const previousUserId = userRef.current?.id || null;
+      const unchangedSession =
+        lastTokenRef.current === nextToken &&
+        previousUserId === nextUserId;
+
+      if (unchangedSession && !loadingRef.current) {
+        return;
+      }
+
+      lastTokenRef.current = nextToken;
+      userRef.current = nextUser;
       setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      await fetchProfile(currentUser?.id);
+      setUser(nextUser);
+      await fetchProfile(nextUserId);
+      loadingRef.current = false;
       setLoading(false);
     },
     [fetchProfile]
@@ -129,7 +171,11 @@ export const AuthProvider = ({ children }) => {
   /** Log out the current user and reset local profile state */
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
-    setProfile(null);
+    profileRef.current = null;
+    userRef.current = null;
+    lastTokenRef.current = '';
+    lastFetchedUserIdRef.current = null;
+    setProfileIfChanged(null);
 
     if (error) {
       toast({
@@ -139,7 +185,7 @@ export const AuthProvider = ({ children }) => {
       });
     }
     return { error };
-  }, [toast]);
+  }, [toast, setProfileIfChanged]);
 
   /** Context value available across the app */
   const value = useMemo(
