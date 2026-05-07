@@ -27,6 +27,24 @@ function deriveRentRollInventoryOccupancy(rentRoll) {
     if (Number.isFinite(derivedOccupancy)) return derivedOccupancy;
   }
 
+  const unitRows = Array.isArray(rentRoll?.units) ? rentRoll.units : [];
+  if (unitRows.length > 0) {
+    const occupiedFromRows = unitRows.reduce((count, row) => {
+      const statusText = String(row?.status ?? row?.lease_status ?? row?.unit_status ?? "").toLowerCase();
+      if (/\bvacan(?:t|cy)\b/.test(statusText)) return count;
+      const rent = asNumber(
+        row?.current_rent ??
+          row?.in_place_rent ??
+          row?.rent ??
+          row?.monthly_rent ??
+          row?.actual_rent
+      );
+      return Number.isFinite(rent) && rent > 0 ? count + 1 : count;
+    }, 0);
+    const rowOccupancy = validOccupancy(occupiedFromRows / unitRows.length);
+    if (Number.isFinite(rowOccupancy)) return rowOccupancy;
+  }
+
   return (
     validOccupancy(rentRoll?.occupancy) ??
     validOccupancy(rentRoll?.occupancy_rate) ??

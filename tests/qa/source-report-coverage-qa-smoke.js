@@ -152,6 +152,40 @@ if (inventoryOccupancy !== 0.96) {
   process.exit(1);
 }
 
+const rentRollUnitRowOccupancyResult = buildSourceReportCoverageQa({
+  jobId: "richmond-unit-row-occupancy-smoke",
+  userId: "user-smoke",
+  propertyName: "124 Richmond Street",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "124Richmond_T12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "2", original_filename: "124Richmond_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 12,
+        occupancy: 0,
+        units: Array.from({ length: 12 }, (_, index) => ({
+          unit: String(index + 1),
+          current_rent: 1200 + index,
+          status: "leased",
+        })),
+      },
+    },
+  ],
+  html: "<html><body><p>Occupancy: 100.0%</p></body></html>",
+});
+
+const unitRowOccupancy = rentRollUnitRowOccupancyResult.artifact_inventory.rent_roll_parsed.occupancy;
+if (unitRowOccupancy !== 1) {
+  console.error("Expected rent roll inventory occupancy to fall back to unit rows with positive rents.");
+  console.error("Actual occupancy:", unitRowOccupancy);
+  process.exit(1);
+}
+
 const acquisitionRenderedResult = buildSourceReportCoverageQa({
   jobId: "forest-city-acquisition-rendered-smoke",
   userId: "user-smoke",
