@@ -1176,7 +1176,8 @@ export default async function handler(req, res) {
     }
 
     // Text-based inference for supporting_documents PDFs
-    function inferDocTypeFromText(text) {
+    function inferDocTypeFromText(text, options = {}) {
+      const allowFilenameHint = options.allowFilenameHint !== false;
       const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
       if (requiredFinancialType !== 'unknown') return requiredFinancialType;
       const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
@@ -1194,7 +1195,7 @@ export default async function handler(req, res) {
         'TOTAL BUDGET', 'SCOPE OF WORK', 'UNIT TURNS', 'CONTINGENCY',
       ]);
       const renovationNameSignal = /renovation|capex|cap ex|capital|budget|scope/i.test(nameNorm);
-      if ((renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 3) return 'renovation';
+      if ((allowFilenameHint && renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 3) return 'renovation';
       if (hasDebtHeader || (compactDebtSignals >= 3 && hasFinancingValuePattern)) return 'loan_term_sheet';
       if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
       if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
@@ -1256,7 +1257,25 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         const fullText = String(textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '');
-        const textDetectedDocType = detectRequiredFinancialDocTypeFromText(fullText);
+        const supportedRequiredSlotRescueTypes = new Set([
+          't12',
+          'rent_roll',
+          'loan_term_sheet',
+          'mortgage_statement',
+          'renovation',
+          'appraisal',
+          'property_tax',
+          'insurance_policy',
+          'bank_statement',
+        ]);
+        const requiredFinancialType = detectRequiredFinancialDocTypeFromText(fullText);
+        const inferredDocType =
+          requiredFinancialType !== 'unknown'
+            ? requiredFinancialType
+            : inferDocTypeFromText(fullText, { allowFilenameHint: false });
+        const textDetectedDocType = supportedRequiredSlotRescueTypes.has(inferredDocType)
+          ? inferredDocType
+          : 'unknown';
         if (
           textDetectedDocType !== 'unknown' &&
           textDetectedDocType !== String(declaredDocType || '').toLowerCase()
