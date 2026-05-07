@@ -64,6 +64,90 @@ function normalizeDecision(decision) {
   };
 }
 
+function coveragePassed(sourceReportCoverageQa) {
+  return (
+    sourceReportCoverageQa?.qa_status === "pass" &&
+    (!Array.isArray(sourceReportCoverageQa?.deterministic_flags) ||
+      sourceReportCoverageQa.deterministic_flags.length === 0)
+  );
+}
+
+function hasUnsupportedExclusionDisclosure(text) {
+  const source = String(text || "");
+  return (
+    /not used quantitatively/i.test(source) ||
+    /excluded from modeled outputs/i.test(source) ||
+    /unsupported or unstructured uploads remain excluded/i.test(source)
+  );
+}
+
+function hasClassificationContext(text) {
+  const source = String(text || "");
+  return (
+    /capital risk profile/i.test(source) ||
+    /primary pressure point/i.test(source) ||
+    /DSCR|refinance|lender threshold|coverage threshold/i.test(source) ||
+    /expense ratio|NOI margin|break[- ]?even occupancy/i.test(source) ||
+    /standardized underwriting threshold/i.test(source)
+  );
+}
+
+function normalizeManagerDecisions(decisions, context = {}) {
+  const renderedText = context.renderedText || "";
+  const sourceCoverage = context.sourceReportCoverageQa || null;
+  return (Array.isArray(decisions) ? decisions : []).map((decision) => {
+    const normalized = normalizeDecision(decision);
+    const text = [
+      normalized.source_code,
+      normalized.rationale,
+      normalized.evidence_excerpt,
+      normalized.recommended_action_type,
+    ].join(" ");
+    const unsupportedReference =
+      /unsupported|unstructured|pending|supporting document/i.test(text) &&
+      !/relied on quantitatively|quantitatively relies|modeled value|unsupported claim/i.test(text);
+    if (
+      unsupportedReference &&
+      coveragePassed(sourceCoverage) &&
+      hasUnsupportedExclusionDisclosure(renderedText)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+
+    const classificationTerm =
+      /\b(Sensitized|Stable|Fragile|Refinance Shortfall Under Stress)\b/i.test(text);
+    if (
+      classificationTerm &&
+      hasClassificationContext(renderedText) &&
+      !containsProhibitedPublicLanguage(normalized.evidence_excerpt)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+
+    return normalized;
+  });
+}
+
 function countDecisions(decisions) {
   const counts = { total: 0, critical: 0, high: 0, medium: 0, low: 0, info: 0, by_classification: {} };
   for (const decision of Array.isArray(decisions) ? decisions : []) {
@@ -89,6 +173,8 @@ const QA_MANAGER_PROMPT = [
   "Treat source_report_coverage_qa, deterministic_flags, report_qa_flags, and rendered report text as higher authority than AI speculation.",
   "Treat actual rendered excerpt text as the source for public-language escalation, not speculative suggested_review wording.",
   "Do not treat unsupported, pending, or supporting documents as issues merely because they are listed if the report says unstructured/unsupported docs are excluded from modeled outputs and source coverage passes.",
+  "If rendered text says documents are not used quantitatively, excluded from modeled outputs, or unsupported/unstructured uploads remain excluded, do not classify the listing of those files as a contradiction unless the report also relies on them quantitatively.",
+  "Do not classify institutional classification terms such as Sensitized, Stable, Fragile, or Refinance Shortfall Under Stress as public-language risk when nearby report context includes Capital Risk Profile, Primary Pressure Point, DSCR/refi explanations, threshold language, expense ratio, NOI margin, or break-even occupancy.",
   "Do flag if the rendered report quantitatively relies on an unsupported/unparsed document or contradicts the exclusion disclosure.",
   "Do flag plausible parser misses only when deterministic/source evidence supports the miss.",
   "You may recommend action categories only. Do not output replacement financial values. Do not mutate report copy. Do not change artifacts, reports, jobs, or lifecycle state.",
@@ -246,7 +332,10 @@ export async function runQaManagerReview({
     timeoutMs,
     userContent: JSON.stringify(payload),
   });
-  const decisions = (Array.isArray(review?.decisions) ? review.decisions : []).map(normalizeDecision);
+  const decisions = normalizeManagerDecisions(review?.decisions, {
+    renderedText: payload.rendered_report_text,
+    sourceReportCoverageQa,
+  });
   const counts = countDecisions(decisions);
 
   return {
@@ -273,7 +362,10 @@ export async function runQaManagerReview({
 
 export const __test__ = {
   normalizeDecision,
+  normalizeManagerDecisions,
   countDecisions,
+  hasUnsupportedExclusionDisclosure,
+  hasClassificationContext,
   stripHtmlForManager,
   containsProhibitedPublicLanguage,
   QA_MANAGER_PROMPT,
