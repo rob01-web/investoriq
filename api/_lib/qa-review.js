@@ -1,3 +1,8 @@
+import {
+  INVESTORIQ_QA_DOCTRINE,
+  isAllowedMethodologyOnlyText,
+} from "./investoriq-qa-doctrine.js";
+
 const REVIEW_VERSION = "2026.05.05.1";
 // Fallback follows the existing project convention used by extraction-recovery helpers.
 const DEFAULT_MODEL =
@@ -33,6 +38,7 @@ function stripHtmlForReview(html) {
 
 const SYSTEM_PROMPT = [
   "You are an internal institutional real estate report reviewer.",
+  INVESTORIQ_QA_DOCTRINE,
   "Review only the finalized report text provided by the user.",
   "Do not rewrite the report. Do not invent facts. Do not propose new financial values.",
   "Do not override deterministic source documents, parsers, calculations, debt, DSCR, NOI, rent, cap rate, valuation, refinance, or score outputs.",
@@ -48,11 +54,6 @@ const SYSTEM_PROMPT = [
   "Do not request, recommend, or suggest adding BUY, SELL, HOLD, or investment recommendation language.",
   "InvestorIQ reports intentionally avoid investment recommendations.",
   "Compliance findings should flag the presence of recommendation language, not its absence.",
-  "",
-  "Allowed methodology language:",
-  "Normal InvestorIQ methodology/disclosure terms are not compliance issues by themselves, including document-backed, document-driven, deterministic, defined modeling frameworks, transparency and auditability, framework-constrained, and missing source data is not gap-filled.",
-  "Only flag these terms if they are paired with BUY, SELL, HOLD, explicit investment recommendation/advice, public AI/model/vendor claims, guarantees or risk-free language, fabricated certainty, or unsupported accuracy claims.",
-  "",
   "Flag issues across these categories:",
   "numbers: internal numeric consistency, unit/currency/period mismatches, headline metric contradictions.",
   "language: typos, mojibake, unfinished fragments, raw template tokens, stale headings, DATA NOT AVAILABLE leaks.",
@@ -167,14 +168,7 @@ function isOnlyRecommendationAbsenceFalsePositive(finding) {
 
 function isOnlyAllowedMethodologyLanguageFalsePositive(finding) {
   if (finding?.category !== "compliance") return false;
-  const text = textOfFinding(finding);
-  const excerpt = String(finding?.excerpt || "").toLowerCase();
-  const allowedMethodologyLanguage =
-    /investoriq estimates|document[- ]?(backed|driven)|deterministic|defined modeling frameworks|standardized underwriting frameworks|transparency and auditability|framework[- ]?constrained|missing (?:source data|inputs) (?:is|are) not gap[- ]?filled|missing inputs are omitted|omitted rather than inferred/.test(text);
-  if (!allowedMethodologyLanguage) return false;
-  const prohibitedPattern =
-    /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|certain(?:ty)?|assured|accuracy claim|accurate without support|error[- ]?free/.test(excerpt);
-  return !prohibitedPattern;
+  return isAllowedMethodologyOnlyText(finding);
 }
 
 function filterAdvisoryFalsePositives(findings) {

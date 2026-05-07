@@ -1,3 +1,10 @@
+import {
+  INVESTORIQ_QA_DOCTRINE,
+  containsProhibitedPublicLanguage,
+  isAllowedMethodologyOnlyText,
+  isFilenameHintOnlyText,
+} from "./investoriq-qa-doctrine.js";
+
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
   process.env.QA_SOURCE_PACKAGE_MODEL ||
@@ -129,24 +136,15 @@ function textOfFinding(finding) {
 }
 
 function hasProhibitedPublicRisk(text) {
-  return /\b(buy|sell|hold)\b|investment recommendation|investment advice|recommend(?:ed|ation) to invest|ai[- ]?assisted|\bai\b|llm|openai|model vendor|vendor model|guarantee(?:d|s)?|risk[- ]?free|fabricated certainty|certain(?:ty)?|unsupported accuracy|accuracy claim|accurate without support|error[- ]?free/.test(text);
+  return containsProhibitedPublicLanguage(text);
 }
 
 function isFilenameTokenOnlyFinding(finding) {
-  const text = textOfFinding(finding);
-  const mentionsFilenameToken = /\b(unsupported|test|clean|messy|qa)\b/.test(text);
-  if (!mentionsFilenameToken) return false;
-  const filenameOnly = /filename|file name|named|token/.test(text);
-  const substantiveUse = /rendered report|relied on|modeled|quantitative|parsed value|parse_error|parse status|failed validation|contamination/.test(text);
-  return filenameOnly && !substantiveUse;
+  return isFilenameHintOnlyText(finding);
 }
 
 function isDeterministicLanguageGuaranteeFalsePositive(finding) {
-  const text = textOfFinding(finding);
-  const allowedMethodology =
-    /deterministic|document[- ]?(backed|driven)|framework[- ]?constrained|defined modeling frameworks|transparency and auditability|missing source data is not gap[- ]?filled/.test(text);
-  const guaranteeConcern = /guarantee|risk[- ]?free|accuracy|certainty|certain|assured/.test(text);
-  return allowedMethodology && guaranteeConcern && !hasProhibitedPublicRisk(text);
+  return isAllowedMethodologyOnlyText(finding);
 }
 
 function extractRenderedOccupancy(text) {
@@ -205,12 +203,10 @@ function highestSeverityFromCounts(counts) {
 
 const SOURCE_PACKAGE_QA_PROMPT = [
   "You are an internal InvestorIQ source-package QA reviewer.",
+  INVESTORIQ_QA_DOCTRINE,
   "Review uploaded file treatment, parsed artifact summaries, deterministic coverage QA, rendered QA, and rendered report text.",
-  "Uploaded docs are the universe. Filename and upload slot are hints only. Document content is authority. Deterministic validation is the gatekeeper.",
   "Filename and upload-slot tokens are never source truth. Do not infer unsupported status from filename tokens such as UNSUPPORTED, TEST, CLEAN, MESSY, or QA unless parse status, deterministic artifacts, or rendered reliance provide separate evidence.",
   "Prioritize source_report_coverage_qa.artifact_inventory over compact raw parsed_artifacts when they differ. For example, if source_report_coverage_qa says rent_roll_parsed occupancy is 1, do not flag occupancy as null from a compact artifact summary.",
-  "Allowed methodology/disclosure terms include deterministic, document-backed, document-driven, framework-constrained, defined modeling frameworks, transparency and auditability, and missing source data is not gap-filled.",
-  "Those methodology terms are not guarantees or accuracy claims unless paired with explicit guarantees, risk-free language, fabricated certainty, or unsupported accuracy claims.",
   "Missing supplemental parsed fields are not high severity when source_report_coverage_qa passes, deterministic_flags are empty, the report does not rely on that supplemental field, or the value is already represented in T12 or otherwise not required for the rendered analysis.",
   "Pending or supporting documents are contamination risks only if the rendered report appears to rely on them quantitatively or makes unsupported claims from them.",
   "You may flag possible parser misses, unsupported-doc treatment, ignored documents, source/report inconsistencies, possible support contamination, and likely false-positive QA flags.",

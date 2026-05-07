@@ -1,3 +1,5 @@
+import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
+
 const ACTION_PLAN_VERSION = "phase_1_action_plan_2026_05_05";
 
 const severityRank = { low: 1, medium: 2, high: 3, critical: 4 };
@@ -392,11 +394,7 @@ function actionForRenderedFinding(finding) {
   const excerptText = String(finding?.excerpt || "");
   const issueText = String(finding?.issue || finding?.message || "");
   const actualReportText = excerptText || issueText;
-  const prohibitedPublicLanguage =
-    /\b(BUY|SELL|HOLD)\b/i.test(actualReportText) ||
-    /\b(?:recommend(?:ed|s|ation)?|advise[sd]?)\s+(?:purchase|acquisition|invest|investment|sale|sell|hold)\b/i.test(actualReportText) ||
-    /\b(?:AI-assisted|AI assisted|OpenAI|LLM|model-generated|vendor-generated)\b/i.test(actualReportText) ||
-    /\b(?:guaranteed|risk-free|cannot lose|certain return|error-free|fabricated certainty|unsupported accuracy)\b/i.test(actualReportText);
+  const prohibitedPublicLanguage = containsProhibitedPublicLanguage(actualReportText);
   const softComplianceReview =
     String(finding?.category || "").toLowerCase() === "compliance" ||
     /investment recommendation|recommendation language|rating|ratings/i.test(text);
@@ -442,6 +440,85 @@ function actionForRenderedFinding(finding) {
     evidence: {
       excerpt: finding?.excerpt || null,
       suggested_review: finding?.suggested_review || null,
+    },
+  };
+}
+
+function isHardPublicLanguageExcerpt(text) {
+  return containsProhibitedPublicLanguage(text);
+}
+
+function managerSuppressesRenderedFinding(qaManagerReview, finding) {
+  const excerpt = String(finding?.excerpt || "").toLowerCase();
+  const code = String(finding?.code || finding?.issue || finding?.message || "").toLowerCase();
+  return (Array.isArray(qaManagerReview?.decisions) ? qaManagerReview.decisions : []).some((decision) => {
+    if (decision?.classification !== "false_positive" && decision?.classification !== "no_action") return false;
+    if (String(decision?.source_artifact || "").toLowerCase() !== "rendered_report_qa_advisory") return false;
+    const decisionCode = String(decision?.source_code || "").toLowerCase();
+    const decisionExcerpt = String(decision?.evidence_excerpt || "").toLowerCase();
+    return (
+      (decisionCode && code && (decisionCode === code || code.includes(decisionCode))) ||
+      (decisionExcerpt && excerpt && (decisionExcerpt.includes(excerpt) || excerpt.includes(decisionExcerpt)))
+    );
+  });
+}
+
+function actionForManagerDecision(decision) {
+  const classification = String(decision?.classification || "");
+  if (classification === "false_positive" || classification === "no_action") {
+    return null;
+  }
+
+  const actionTypeByClassification = {
+    real_parser_or_artifact_risk: "parser_fix_required",
+    real_source_report_contradiction: "render_gating_fix_required",
+    real_public_language_risk: "code_patch_required",
+    source_document_limitation: "source_document_limitation",
+    production_config_only: "production_config_only",
+    admin_review_optional: "model_review_recommended",
+  };
+  const ownerByClassification = {
+    real_parser_or_artifact_risk: "parser",
+    real_source_report_contradiction: "report_renderer",
+    real_public_language_risk: "report_renderer",
+    source_document_limitation: "source_documents",
+    production_config_only: "production_config",
+    admin_review_optional: "qa_manager",
+  };
+  const actionType = actionTypeByClassification[classification];
+  if (!actionType) return null;
+
+  const hardPublicLanguage = classification === "real_public_language_risk" &&
+    isHardPublicLanguageExcerpt(decision?.evidence_excerpt);
+  const speculativePublicLanguage = classification === "real_public_language_risk" && !hardPublicLanguage;
+  const requiresCodePatch = hardPublicLanguage ||
+    (!speculativePublicLanguage &&
+      classification !== "admin_review_optional" &&
+      classification !== "source_document_limitation" &&
+      classification !== "production_config_only" &&
+      Boolean(decision?.requires_code_patch));
+
+  return {
+    code: decision?.source_code || "QA_MANAGER_REVIEW",
+    title: decision?.rationale || "QA manager review decision",
+    source_artifact: "qa_manager_review",
+    severity: hardPublicLanguage ? "critical" : normalizeSeverity(decision?.severity),
+    action_type: hardPublicLanguage ? "code_patch_required" : speculativePublicLanguage ? "model_review_recommended" : actionType,
+    owner_area: speculativePublicLanguage ? "qa_manager" : ownerByClassification[classification],
+    recommended_next_step: speculativePublicLanguage
+      ? "Review manually only if actual rendered excerpt contains prohibited public language."
+      : decision?.recommended_action_type || "Review QA manager decision.",
+    requires_code_patch: requiresCodePatch,
+    requires_regeneration: Boolean(decision?.requires_regeneration) && requiresCodePatch,
+    blocks_customer_delivery: hardPublicLanguage,
+    blocks_public_sample: !speculativePublicLanguage && (Boolean(decision?.blocks_public_sample) || hardPublicLanguage),
+    blocks_high_value_outreach: !speculativePublicLanguage && (Boolean(decision?.blocks_high_value_outreach) || hardPublicLanguage),
+    safe_to_auto_fix: false,
+    evidence: {
+      classification,
+      source_artifact: decision?.source_artifact || null,
+      evidence_excerpt: decision?.evidence_excerpt || null,
+      rationale: decision?.rationale || null,
     },
   };
 }
@@ -492,6 +569,7 @@ export function buildQaActionPlan({
   sourceReportCoverageQa = null,
   renderedReportQa = null,
   qaFixRouting = null,
+  qaManagerReview = null,
   jobId = null,
   userId = null,
   propertyName = null,
@@ -514,7 +592,12 @@ export function buildQaActionPlan({
     if (action) pushAction(actions, action);
   }
   for (const finding of Array.isArray(renderedReportQa?.findings) ? renderedReportQa.findings : []) {
+    if (managerSuppressesRenderedFinding(qaManagerReview, finding)) continue;
     const action = actionForRenderedFinding(finding);
+    if (action) pushAction(actions, action);
+  }
+  for (const decision of Array.isArray(qaManagerReview?.decisions) ? qaManagerReview.decisions : []) {
+    const action = actionForManagerDecision(decision);
     if (action) pushAction(actions, action);
   }
 
@@ -560,6 +643,7 @@ export function buildQaActionPlan({
     notes: [
       "Internal advisory action plan only.",
       "Does not mutate reports, parser values, worker state, or publication state.",
+      "QA manager decisions are advisory and cannot change deterministic financial values.",
       "Derived acquisition financing must remain separate from current debt and refinance balance logic.",
     ],
   };

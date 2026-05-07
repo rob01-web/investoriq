@@ -241,6 +241,98 @@ assert.equal(hardComplianceAction.code, "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW");
 assert.equal(hardComplianceAction.severity, "critical");
 assert.equal(hardComplianceAction.requires_code_patch, true);
 
+const managerSuppressedMethodologyPlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: { deterministic_flags: [] },
+  renderedReportQa: {
+    findings: [
+      {
+        category: "compliance",
+        severity: "critical",
+        issue: "The report uses the term 'InvestorIQ estimates' which could imply proprietary or guaranteed accuracy.",
+        excerpt: "InvestorIQ estimates are document-backed and framework-constrained.",
+        suggested_review: "Review whether this implies guaranteed accuracy.",
+      },
+    ],
+  },
+  qaFixRouting: null,
+  qaManagerReview: {
+    decisions: [
+      {
+        source_code: "The report uses the term 'InvestorIQ estimates' which could imply proprietary or guaranteed accuracy.",
+        source_artifact: "rendered_report_qa_advisory",
+        classification: "false_positive",
+        severity: "info",
+        rationale: "Allowed methodology language.",
+        evidence_excerpt: "InvestorIQ estimates are document-backed and framework-constrained.",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(managerSuppressedMethodologyPlan.customer_delivery_ready, true);
+assert.equal(managerSuppressedMethodologyPlan.action_counts.requires_code_patch, 0);
+assert.equal(managerSuppressedMethodologyPlan.prioritized_actions.length, 0);
+
+const managerUnsupportedFilenamePlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  renderedReportQa: { findings: [] },
+  qaFixRouting: null,
+  qaManagerReview: {
+    decisions: [
+      {
+        source_code: "UNSUPPORTED_FILENAME_TOKEN_ONLY",
+        source_artifact: "source_package_qa_advisory",
+        classification: "false_positive",
+        severity: "info",
+        rationale: "Filename token alone is not source truth.",
+        evidence_excerpt: "UNSUPPORTED_capex.xlsx",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(managerUnsupportedFilenamePlan.customer_delivery_ready, true);
+assert.equal(managerUnsupportedFilenamePlan.prioritized_actions.length, 0);
+
+const managerSpeculativePublicLanguagePlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: { deterministic_flags: [] },
+  renderedReportQa: { findings: [] },
+  qaFixRouting: null,
+  qaManagerReview: {
+    decisions: [
+      {
+        source_code: "SPECULATIVE_PUBLIC_LANGUAGE_REVIEW",
+        source_artifact: "source_package_qa_advisory",
+        classification: "real_public_language_risk",
+        severity: "critical",
+        rationale: "Speculative public-language concern without hard excerpt.",
+        evidence_excerpt: "InvestorIQ estimates are document-backed.",
+        recommended_action_type: "code_patch_required",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(managerSpeculativePublicLanguagePlan.customer_delivery_ready, true);
+assert.equal(managerSpeculativePublicLanguagePlan.action_counts.requires_code_patch, 0);
+
 const marketSurveyRouting = buildQaFixRouting({
   reportQaFlags: [
     {

@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.js";
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 import { runSourcePackageQaAdvisory } from "./_lib/source-package-qa.js";
+import { runQaManagerReview } from "./_lib/qa-manager-review.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan } from "./_lib/qa-action-plan.js";
@@ -5911,6 +5912,8 @@ let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";
 let qaFixRoutingResult = null;
+let qaManagerReviewResult = null;
+let sourcePackageQaResult = null;
 let sourcePackageQaFiles = [];
 let sourcePackageQaArtifacts = [];
 try {
@@ -6093,6 +6096,7 @@ try {
       report_tier: reportTier,
     },
   });
+  sourcePackageQaResult = sourcePackageQa;
   const sourcePackageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: sourcePackageQaErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -6167,6 +6171,68 @@ try {
   console.error("Failed to build qa_fix_routing artifact:", err?.message || err);
 }
 try {
+  const qaManagerStartedAt = Date.now();
+  const qaManagerReview = await runQaManagerReview({
+    html: docHtml,
+    renderedReportQa: renderedQaResult,
+    sourcePackageQa: sourcePackageQaResult,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    qaFixRouting: qaFixRoutingResult,
+    reportQaFlags,
+    context: {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      property_name: property_name || jobPropertyName || "Unknown",
+      report_type: reportType,
+      report_tier: reportTier,
+    },
+  });
+  qaManagerReviewResult = qaManagerReview;
+  const managerTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: managerErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "qa_manager_review",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/qa_manager_review/${managerTimestamp}.json`,
+      payload: {
+        ...qaManagerReview,
+        elapsed_ms: Date.now() - qaManagerStartedAt,
+      },
+    },
+  ]);
+  if (managerErr) {
+    console.error("Failed to write qa_manager_review artifact:", managerErr);
+  }
+} catch (err) {
+  console.error("QA manager review failed:", err?.message || err);
+  const managerFailureTimestamp = new Date().toISOString().replace(/:/g, "-");
+  try {
+    await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "worker_event",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/qa_manager_review_failed/${managerFailureTimestamp}.json`,
+        payload: {
+          event: "qa_manager_review_failed",
+          advisory_only: true,
+          no_public_surface: true,
+          error: err?.message || String(err),
+          error_code: err?.code || null,
+          report_type: reportType,
+          report_tier: reportTier,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch (managerFailureWriteErr) {
+    console.error("Failed to write qa_manager_review_failed event:", managerFailureWriteErr);
+  }
+}
+try {
   const summaryTimestamp = new Date().toISOString().replace(/:/g, "-");
   const coverageSeverity = sourceCoverageQaResult?.severity || "not_run";
   const renderedSeverity =
@@ -6206,7 +6272,9 @@ try {
         related_artifact_types: [
           "rendered_report_qa_advisory",
           "source_report_coverage_qa",
+          "source_package_qa_advisory",
           "qa_fix_routing",
+          "qa_manager_review",
         ],
         timestamp: new Date().toISOString(),
       },
@@ -6224,6 +6292,7 @@ try {
     sourceReportCoverageQa: sourceCoverageQaResult,
     renderedReportQa: renderedQaResult,
     qaFixRouting: qaFixRoutingResult,
+    qaManagerReview: qaManagerReviewResult,
     jobId: jobId || null,
     userId: effectiveUserId || null,
     propertyName: property_name || jobPropertyName || "Unknown",
