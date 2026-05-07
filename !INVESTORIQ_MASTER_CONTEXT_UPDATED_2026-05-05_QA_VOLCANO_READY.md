@@ -267,6 +267,45 @@
 - Clean final public/Ken samples should use clean property names and clean filenames manually.
 - DocRaptor production mode remains required before public/Ken sample sharing.
 
+### May 6 Night Supabase Security Advisor Update
+- Supabase Security Advisor flagged launch-critical security lints:
+  - `public.view_user_dashboard` SECURITY DEFINER
+  - RLS disabled on `public.stripe_events`, `public.credit_transactions`, `public.report_credits`
+  - SECURITY DEFINER functions executable by anon/public
+  - `staged_uploads` bucket listing policy too broad.
+- Codex security audit found:
+  - `view_user_dashboard` has no repo references
+  - `stripe_events` is server-only in `api/webhook.js` using service role
+  - `credit_transactions` has no repo references
+  - `report_credits` table has no repo references and is separate from `profiles.report_credits` column
+  - `legal_acceptances` is server-only in `api/legal-acceptance.js` using service role
+  - `staged_uploads` upload is needed, but listing/download is not used by frontend
+  - `consume_purchase_and_create_job` and `queue_job_for_processing` are active authenticated Dashboard RPCs
+  - worker/admin RPCs are server-only and should not be anon callable
+  - admin dashboard RPCs must enforce admin server-side.
+- Security Patch 1 was applied manually in Supabase SQL:
+  - enabled RLS on `public.stripe_events`
+  - enabled RLS on `public.credit_transactions`
+  - enabled RLS on `public.report_credits`
+  - set `public.view_user_dashboard` to `security_invoker`
+  - revoked `public.view_user_dashboard` access from anon and authenticated.
+- Immediate smoke result after Security Patch 1:
+  - Dashboard still loads
+  - credits still display
+  - Report History still loads
+  - upload UI still appears
+  - no immediate visible Dashboard break
+  - rollback not needed.
+- Security work is now a pre-Ken launch blocker.
+- Do not open InvestorIQ to external users until RLS / view / RPC / storage lints are remediated and smoke-tested.
+- Remaining security work:
+  - rerun Supabase Advisor
+  - generate exact SQL for function grants using exact function signatures
+  - harden SECURITY DEFINER / anon-executable RPCs carefully
+  - harden `staged_uploads` listing policy while preserving authenticated upload
+  - set function `search_path` where needed
+  - retest Dashboard, upload, job creation, worker run, Stripe webhook, legal acceptance, and AdminDashboard.
+
 ### May 5 Evening QA Volcano / Final Validation Update
 - Major strategic shift completed today: InvestorIQ moved from passive QA smoke alarms to an internal QA Action Layer / "volcano" that turns report QA artifacts into operational command intelligence across all reports.
 - New artifact implemented:
