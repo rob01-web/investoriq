@@ -1,0 +1,24 @@
+Unit,Unit Type,Status,In-Place Rent,Market Rent,Sq Ft
+E01,1BR,Occupied,500,575,600
+E02,1BR,Occupied,500,575,600
+E03,1BR,Occupied,500,575,600
+E04,1BR,Occupied,500,575,600
+E05,1BR,Occupied,500,575,600
+E06,1BR,Occupied,500,575,600
+E07,1BR,Occupied,500,575,600
+E08,1BR,Occupied,500,575,600
+E09,1BR,Occupied,500,575,600
+E10,1BR,Occupied,500,575,600
+E11,1BR,Occupied,500,575,600
+E12,1BR,Occupied,500,575,600
+E13,1BR,Occupied,500,575,600
+E14,1BR,Occupied,500,575,600
+E15,1BR,Occupied,500,575,600
+E16,1BR,Occupied,500,575,600
+E17,1BR,Occupied,500,575,600
+E18,1BR,Occupied,500,575,600
+E19,1BR,Occupied,500,575,600
+E20,1BR,Occupied,500,575,600
+SUMMARY,Total Units,20,Occupied Units,20,Occupancy,100.00%
+SUMMARY,Annual In-Place Rent,120000,Annual Market Rent,138000,,
+Note,Fictitious test document prepared for InvestorIQ validation only.,,,,

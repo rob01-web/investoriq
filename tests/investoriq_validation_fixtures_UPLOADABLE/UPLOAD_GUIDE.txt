@@ -1,0 +1,19 @@
+InvestorIQ uploadable validation fixtures
+
+This ZIP contains only .csv and .pdf files because .md files are not accepted by the dashboard.
+
+For each test:
+- Upload the Rent Roll .csv into the Rent Roll slot.
+- Upload the T12 .csv into the T12 slot.
+- Upload all other .pdf files as Supporting Documents.
+- Do not upload the README PDFs unless you want them listed as supporting docs; they are only for your reference.
+
+Recommended first test:
+01_true_current_debt_underwriting
+Property name: Maplewell Court FINAL
+Report type: Full Underwriting
+Upload:
+- Rent_Roll_Maplewell_Court.csv
+- T12_Maplewell_Court.csv
+- Debt_Summary_Maplewell_Court.pdf
+- Property_Tax_Bill_Maplewell.pdf

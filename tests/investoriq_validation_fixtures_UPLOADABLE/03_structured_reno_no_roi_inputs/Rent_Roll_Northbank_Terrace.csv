@@ -1,0 +1,33 @@
+Unit,Unit Type,Status,In-Place Rent,Market Rent,Sq Ft
+N01,1BR,Occupied,1250,1400,620
+N02,1BR,Occupied,1250,1400,620
+N03,1BR,Occupied,1250,1400,620
+N04,1BR,Occupied,1250,1400,620
+N05,1BR,Occupied,1250,1400,620
+N06,1BR,Occupied,1250,1400,620
+N07,1BR,Occupied,1250,1400,620
+N08,1BR,Occupied,1250,1400,620
+N09,1BR,Occupied,1250,1400,620
+N10,1BR,Occupied,1250,1400,620
+N11,1BR,Occupied,1250,1400,620
+N12,1BR,Occupied,1250,1400,620
+N13,1BR,Occupied,1250,1400,620
+N14,1BR,Occupied,1250,1400,620
+N15,1BR,Occupied,1250,1400,620
+N16,2BR,Occupied,1550,1700,810
+N17,2BR,Occupied,1550,1700,810
+N18,2BR,Occupied,1550,1700,810
+N19,2BR,Occupied,1550,1700,810
+N20,2BR,Occupied,1550,1700,810
+N21,2BR,Occupied,1550,1700,810
+N22,2BR,Occupied,1550,1700,810
+N23,2BR,Occupied,1550,1700,810
+N24,2BR,Occupied,1550,1700,810
+N25,2BR,Occupied,1550,1700,810
+N26,2BR,Occupied,1550,1700,810
+N27,2BR,Occupied,1550,1700,810
+N28,2BR,Occupied,1550,1700,810
+N29,2BR,Vacant,0,1700,810
+N30,2BR,Vacant,0,1700,810
+SUMMARY,Total Units,30,Occupied Units,28,Occupancy,93.33%
+Note,Fictitious test document prepared for InvestorIQ validation only.,,,,
