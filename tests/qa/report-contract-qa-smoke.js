@@ -154,4 +154,45 @@ const cleanLimitation = buildReportContractQa({
 assert.equal(cleanLimitation.customer_delivery_ready, true);
 assert.equal(cleanLimitation.violations.length, 0);
 
+const expenseSensitivityAfterDrivers = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Expense Drivers</h2>",
+    "<ol><li>Property Taxes: 30.0%</li><li>Insurance: 10.0%</li></ol>",
+    "<h2>Expense Ratio Sensitivity</h2>",
+    "<table><tr><td>60%</td><td>Implied NOI</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(expenseSensitivityAfterDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_CONTRACT"), false);
+
+const validDscrPressure = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Primary Pressure Point: DSCR of 1.06x constrains refinance capacity below standard lender coverage thresholds.</p><p>Expense Ratio 41.0%</p>",
+});
+assert.equal(validDscrPressure.violations.some((v) => v.code === "PRIMARY_PRESSURE_POINT_STABLE_METRIC_CONTRACT"), false);
+
+const stableExpensePressure = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Primary Pressure Point: Expense Ratio 41.0%</p>",
+});
+assert.equal(stableExpensePressure.violations.some((v) => v.code === "PRIMARY_PRESSURE_POINT_STABLE_METRIC_CONTRACT"), true);
+
+const strongDscrPressure = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Primary Pressure Point: DSCR of 1.40x</p>",
+});
+assert.equal(strongDscrPressure.violations.some((v) => v.code === "PRIMARY_PRESSURE_POINT_STABLE_METRIC_CONTRACT"), true);
+
 console.log("report-contract-qa smoke PASS");

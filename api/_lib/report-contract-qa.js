@@ -52,6 +52,22 @@ function windowAfter(text, pattern, chars = 1400) {
   return text.slice(match.index, match.index + chars);
 }
 
+function subsectionAfter(text, pattern, stopPatterns = [], chars = 1400) {
+  const raw = windowAfter(text, pattern, chars);
+  if (!raw) return "";
+  let end = raw.length;
+  for (const stopPattern of stopPatterns) {
+    const match = stopPattern.exec(raw);
+    if (match && match.index > 0 && match.index < end) end = match.index;
+  }
+  return raw.slice(0, end);
+}
+
+function primaryPressurePointLine(text) {
+  const match = /Primary Pressure Point\s*:?\s*([^\n]+)/i.exec(text);
+  return match ? match[0].trim() : "";
+}
+
 function hasBadMoneyRow(section, { allowNegative = false } = {}) {
   const lines = String(section || "").split(/\n+/).map((line) => line.trim()).filter(Boolean);
   return lines.some((line) => {
@@ -173,7 +189,18 @@ export function buildReportContractQa({
     }
   }
 
-  const incomeWindow = windowAfter(text, /Top Positive Income Lines|Top Income Drivers/i);
+  const tableStopPatterns = [
+    /Expense Ratio Sensitivity/i,
+    /Expense Composition/i,
+    /NOI Sensitivity/i,
+    /Break[- ]?even/i,
+    /Operating Statement/i,
+    /Data Coverage/i,
+    /Scenario Analysis/i,
+    /Top Expense Drivers/i,
+    /Expense Drivers/i,
+  ];
+  const incomeWindow = subsectionAfter(text, /Top Positive Income Lines|Top Income Drivers/i, tableStopPatterns);
   if (incomeWindow) {
     const badIncomeLabel =
       /\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(incomeWindow);
@@ -188,10 +215,10 @@ export function buildReportContractQa({
     }
   }
 
-  const expenseWindow = windowAfter(text, /Top Expense Drivers|Expense Drivers/i);
+  const expenseWindow = subsectionAfter(text, /Top Expense Drivers|Top 3 Expense Drivers|Expense Drivers/i, tableStopPatterns);
   if (expenseWindow) {
     const badExpenseLabel =
-      /\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|NOI)\b/i.test(expenseWindow);
+      /\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(expenseWindow);
     if (badExpenseLabel || hasBadMoneyRow(expenseWindow, { allowNegative: true })) {
       addViolation(violations, {
         code: "TOP_EXPENSE_DRIVERS_CONTRACT",
@@ -277,15 +304,19 @@ export function buildReportContractQa({
     });
   }
 
-  const pressureWindow = windowAfter(text, /Primary Pressure Point/i, 500);
+  const pressureWindow = primaryPressurePointLine(text);
+  const dscrMatch = /\bDSCR\b[^0-9]{0,30}([0-9]+(?:\.[0-9]+)?)x/i.exec(pressureWindow);
+  const dscrValue = dscrMatch ? Number(dscrMatch[1]) : null;
   if (
     pressureWindow &&
-    (
-      /Expense Ratio[^0-9]{0,30}(?:[0-4]?\d(?:\.\d)?|5[0-4](?:\.\d)?)%/i.test(pressureWindow) ||
-      /NOI Margin[^0-9]{0,30}(?:4[6-9](?:\.\d)?|[5-9]\d(?:\.\d)?)%/i.test(pressureWindow) ||
-      /Occupancy[^0-9]{0,30}(?:9[1-9](?:\.\d)?|100(?:\.0)?)%/i.test(pressureWindow) ||
-      /DSCR[^0-9]{0,30}(?:1\.(?:3[5-9]|[4-9]\d)|[2-9]\.\d+)x/i.test(pressureWindow)
-    ) &&
+    (Number.isFinite(dscrValue)
+      ? dscrValue >= 1.35
+      : (
+        /Expense Ratio[^0-9]{0,30}(?:[0-4]?\d(?:\.\d)?|5[0-4](?:\.\d)?)%/i.test(pressureWindow) ||
+        /NOI Margin[^0-9]{0,30}(?:4[6-9](?:\.\d)?|[5-9]\d(?:\.\d)?)%/i.test(pressureWindow) ||
+        /Occupancy[^0-9]{0,30}(?:9[1-9](?:\.\d)?|100(?:\.0)?)%/i.test(pressureWindow) ||
+        /Break[- ]?even Occupancy[^0-9]{0,30}(?:[0-6]?\d(?:\.\d)?)%/i.test(pressureWindow)
+      )) &&
     !/supports|strong|well-covered|cushion/i.test(pressureWindow)
   ) {
     addViolation(violations, {

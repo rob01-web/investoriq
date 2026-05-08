@@ -11,6 +11,7 @@ import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.j
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 import { runSourcePackageQaAdvisory } from "./_lib/source-package-qa.js";
 import { runQaManagerReview } from "./_lib/qa-manager-review.js";
+import { buildQaDirectorReview } from "./_lib/qa-director-review.js";
 import { buildReportContractQa } from "./_lib/report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
@@ -1683,6 +1684,7 @@ function buildScreeningNoiStabilityHtml({
     });
   }
   const rankedDrivers = stabilityDrivers
+    .filter((driver) => Number(driver?.severity) > 0)
     .slice()
     .sort((a, b) => b.severity - a.severity)
     .slice(0, 3)
@@ -5978,6 +5980,7 @@ let renderedQaStatus = "not_run";
 let qaFixRoutingResult = null;
 let qaManagerReviewResult = null;
 let reportContractQaResult = null;
+let qaActionPlanResult = null;
 let sourcePackageQaResult = null;
 let sourcePackageQaFiles = [];
 let sourcePackageQaArtifacts = [];
@@ -6371,6 +6374,7 @@ try {
           "qa_fix_routing",
           "qa_manager_review",
           "report_contract_qa",
+          "qa_director_review",
         ],
         timestamp: new Date().toISOString(),
       },
@@ -6396,6 +6400,7 @@ try {
     reportType,
     reportTier,
   });
+  qaActionPlanResult = qaActionPlan;
   const actionPlanTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: actionPlanErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -6412,6 +6417,38 @@ try {
   }
 } catch (err) {
   console.error("Failed to build qa_action_plan artifact:", err?.message || err);
+}
+try {
+  const qaDirectorReview = buildQaDirectorReview({
+    jobId: jobId || null,
+    userId: effectiveUserId || null,
+    propertyName: property_name || jobPropertyName || "Unknown",
+    reportType,
+    reportTier,
+    reportContractQa: reportContractQaResult,
+    qaActionPlan: qaActionPlanResult,
+    renderedReportQa: renderedQaResult,
+    sourcePackageQa: sourcePackageQaResult,
+    qaManagerReview: qaManagerReviewResult,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    html: docHtml,
+  });
+  const directorTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: directorErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "qa_director_review",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/qa_director_review/${directorTimestamp}.json`,
+      payload: qaDirectorReview,
+    },
+  ]);
+  if (directorErr) {
+    console.error("Failed to write qa_director_review artifact:", directorErr);
+  }
+} catch (err) {
+  console.error("Failed to build qa_director_review artifact:", err?.message || err);
 }
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
