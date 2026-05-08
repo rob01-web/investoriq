@@ -82,6 +82,15 @@ function hasUnsupportedExclusionDisclosure(text) {
   );
 }
 
+function hasCurrentDebtLimitationDisclosure(text) {
+  const source = String(text || "");
+  return (
+    /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source) ||
+    /Current Debt DSCR[^.]{0,120}current outstanding debt balance not provided/i.test(source) ||
+    /Current debt service is not assessed because no current outstanding debt balance was provided/i.test(source)
+  );
+}
+
 function hasClassificationContext(text) {
   const source = String(text || "");
   return (
@@ -131,6 +140,47 @@ function normalizeManagerDecisions(decisions, context = {}) {
       classificationTerm &&
       hasClassificationContext(renderedText) &&
       !containsProhibitedPublicLanguage(normalized.evidence_excerpt)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+
+    const currentDebtClarity =
+      /current debt|current dscr|refinance|debt coverage/i.test(text) &&
+      /unclear|not clear|confusing|not assessed|missing|not produced/i.test(text);
+    if (
+      currentDebtClarity &&
+      hasCurrentDebtLimitationDisclosure(renderedText) &&
+      /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt/i.test(renderedText)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+
+    const constrainedLanguage =
+      /\b(Document-Constrained Review|Constrained)\b/i.test(text) &&
+      !containsProhibitedPublicLanguage(normalized.evidence_excerpt);
+    if (
+      constrainedLanguage &&
+      /CORE INPUT COVERAGE CONFIRMED|Data Coverage|Current debt coverage and refinance sufficiency were not produced/i.test(renderedText)
     ) {
       return {
         ...normalized,

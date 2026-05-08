@@ -521,6 +521,19 @@ function stripMarkedSection(html, key) {
   );
   return html.replace(re, "");
 }
+function replaceMarkedSection(html, key, replacement = "") {
+  const token = String(key || "");
+  if (!token) return html;
+  const begin = `<!-- BEGIN ${token} -->`;
+  const end = `<!-- END ${token} -->`;
+  if (!html.includes(begin) || !html.includes(end)) return html;
+  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(
+    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
+    "g"
+  );
+  return html.replace(re, replacement);
+}
 function stripT12DetailSubsection(html, headingText) {
   if (!html) return html;
   const escapedHeading = String(headingText || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -3973,6 +3986,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       reportType,
       reportTier,
     });
+    const hasProposedAcquisitionFinancing = Boolean(String(acquisitionFinancingAssumptionsHtml || "").trim());
+    const hasTrueCurrentDebtBalance = Boolean(
+      isFinitePositive(mortgagePayload?.outstanding_balance) ||
+      isFinitePositive(mortgagePayload?.loan_amount)
+    );
+    const acquisitionOnlyDebt = effectiveReportMode === "v1_core" && hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
@@ -4021,6 +4040,28 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       "{{ACQUISITION_FINANCING_ASSUMPTIONS}}",
       acquisitionFinancingAssumptionsHtml
     );
+    if (acquisitionOnlyDebt) {
+      finalHtml = replaceMarkedSection(
+        finalHtml,
+        "SECTION_7_DEBT",
+        `<!-- BEGIN SECTION_7_DEBT -->
+<section class="section page-break">
+  <div class="no-break">
+    <div class="section-header">
+      <span class="section-header-eyebrow">Section 03</span>
+      <span class="section-header-title">Debt Structure &amp; Financing</span>
+      <span class="section-header-sub">Proposed acquisition financing and current debt limitations</span>
+    </div>
+    <div class="card no-break">
+      <p class="subsection-title">Current Debt / Refinance Limitation</p>
+      <p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance. Proposed acquisition financing is shown separately and is not treated as current debt.</p>
+    </div>
+    ${acquisitionFinancingAssumptionsHtml}
+  </div>
+</section>
+<!-- END SECTION_7_DEBT -->`
+      );
+    }
     finalHtml = finalHtml.replace(
       "{{DEAL_SCORE_SUMMARY}}",
       getNarrativeHtml("dealScoreSummary")

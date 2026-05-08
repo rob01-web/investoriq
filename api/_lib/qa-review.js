@@ -147,6 +147,13 @@ function isOnlyBreakEvenOccupancyFalsePositive(finding) {
   if (exactKnownFalsePositive) {
     return true;
   }
+  if (
+    /break[- ]?even occupancy/.test(text) &&
+    /(?:expense ratio|opex|operating expense|egi|effective gross income)/.test(text) &&
+    !/debt service|current debt|mortgage payment/.test(text)
+  ) {
+    return true;
+  }
   const mentionsBreakEven = /break[- ]?even occupancy/.test(text);
   const mentionsCurrentOccupancy = /current occupancy|occupancy rate/.test(text);
   const contradictionOnly = /contradict|inconsistent|differs|different|mismatch/.test(text);
@@ -173,12 +180,33 @@ function isOnlyAllowedMethodologyLanguageFalsePositive(finding) {
   return isAllowedMethodologyOnlyText(finding);
 }
 
+function isClearLimitationDisclosureFalsePositive(finding) {
+  const text = textOfFinding(finding);
+  if (/unsupported|unstructured/.test(text) && /excluded from modeled outputs|not used quantitatively/.test(text)) {
+    return true;
+  }
+  if (
+    /current debt|current dscr|refinance|debt coverage/.test(text) &&
+    /not produced|not assessed|not provided|no uploaded source provided a true current outstanding debt balance/.test(text)
+  ) {
+    return true;
+  }
+  if (/document[- ]constrained review/.test(text) && /core|t12|rent roll|coverage|data coverage|omitted|limitation/.test(text)) {
+    return true;
+  }
+  if (/\bconstrained\b/.test(text) && !/contradict|inconsistent|prohibited|recommendation|guarantee|buy|sell|hold/.test(text)) {
+    return true;
+  }
+  return false;
+}
+
 function filterAdvisoryFalsePositives(findings) {
   const rows = Array.isArray(findings) ? findings : [];
   return rows.filter((finding) => (
     !isOnlyBreakEvenOccupancyFalsePositive(finding) &&
     !isOnlyRecommendationAbsenceFalsePositive(finding) &&
-    !isOnlyAllowedMethodologyLanguageFalsePositive(finding)
+    !isOnlyAllowedMethodologyLanguageFalsePositive(finding) &&
+    !isClearLimitationDisclosureFalsePositive(finding)
   ));
 }
 

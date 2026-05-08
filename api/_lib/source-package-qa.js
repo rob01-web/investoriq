@@ -172,12 +172,39 @@ function isOccupancyFalsePositive(finding, compactPayload) {
   );
 }
 
+function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
+  const findingText = textOfFinding(finding);
+  const renderedText = String(compactPayload?.rendered_report_text || "").toLowerCase();
+  if (
+    /unsupported|unstructured/.test(findingText) &&
+    /unsupported or unstructured uploads remain excluded from modeled outputs|not used quantitatively|excluded from modeled outputs/.test(renderedText)
+  ) {
+    return true;
+  }
+  if (
+    /current debt|current dscr|refinance|debt coverage/.test(findingText) &&
+    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed/.test(renderedText) &&
+    /proposed acquisition debt sizing|derived acquisition loan amount|not current outstanding debt/.test(renderedText)
+  ) {
+    return true;
+  }
+  if (
+    /document[- ]constrained review|constrained/.test(findingText) &&
+    /core input coverage confirmed|data coverage|underwriting gaps|current debt coverage and refinance sufficiency were not produced/.test(renderedText) &&
+    !/buy|sell|hold|guarantee|risk-free|openai|llm/.test(findingText)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function filterSourcePackageFalsePositives(review, compactPayload) {
   for (const field of FINDING_ARRAY_FIELDS) {
     review[field] = normalizeFindings(review[field]).filter((finding) => (
       !isFilenameTokenOnlyFinding(finding) &&
       !isDeterministicLanguageGuaranteeFalsePositive(finding) &&
-      !isOccupancyFalsePositive(finding, compactPayload)
+      !isOccupancyFalsePositive(finding, compactPayload) &&
+      !isClearRenderedDisclosureFalsePositive(finding, compactPayload)
     ));
   }
   return review;

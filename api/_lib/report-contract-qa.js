@@ -233,6 +233,8 @@ export function buildReportContractQa({
   const derivedAcq = hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
   const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   if (derivedAcq && !currentDebt) {
+    const cleanCurrentDebtLimitation =
+      /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text);
     const hasSeparation =
       /Proposed Acquisition Debt Sizing/i.test(text) &&
       /Derived Acquisition Loan Amount/i.test(text) &&
@@ -240,6 +242,7 @@ export function buildReportContractQa({
       /not current outstanding debt/i.test(text) &&
       /not used as (?:a )?current refinance debt balance/i.test(text);
     const contaminated =
+      (/DSCR Sensitivity|Refinance Stress Test|Current Debt Coverage|Full Refinance Sufficiency/i.test(text) && !cleanCurrentDebtLimitation) ||
       /Current Debt DSCR\s*[:\n]\s*(?!Not assessed)/i.test(text) ||
       /Refinance Stability Classification\s*[:\n]\s*(?:Stable|Review|Constrained|Sensitized|Fragile|High Risk|Refinance Shortfall)/i.test(text) ||
       /current (?:outstanding )?(?:debt|refinance debt) balance[^.\n]{0,120}derived acquisition/i.test(text);
