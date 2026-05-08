@@ -1201,6 +1201,18 @@ function buildScreeningDataCoverageSummary({
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
+function isEligiblePositiveIncomeDriver(row) {
+  const label = String(row?.label || "").trim();
+  const amount = coerceNumber(row?.amount);
+  if (!label || !Number.isFinite(amount) || amount <= 0) return false;
+  return !/\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(label);
+}
+function isEligiblePositiveExpenseDriver(row) {
+  const label = String(row?.label || "").trim();
+  const amount = coerceNumber(row?.amount);
+  if (!label || !Number.isFinite(amount) || amount <= 0) return false;
+  return !/\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(label);
+}
 function buildScreeningIncomeForensicsHtml({
   t12Payload,
   computedRentRoll,
@@ -1271,9 +1283,11 @@ function buildScreeningIncomeForensicsHtml({
       )
     : [];
   const incomeLines = toRows(incomeLinesRaw)
+    .filter(isEligiblePositiveIncomeDriver)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
   const expenseLines = toRows(expenseLinesRaw)
+    .filter(isEligiblePositiveExpenseDriver)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
   const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
@@ -1522,7 +1536,7 @@ function buildScreeningExpenseStructureHtml({
       : expenseRowsFromBreakdown.length > 0
       ? expenseRowsFromBreakdown
       : expenseRowsFromLineItems
-  ).filter((r) => r.amount > 0);
+  ).filter(isEligiblePositiveExpenseDriver);
   const totalOpEx = allExpenseRows.reduce((s, r) => s + r.amount, 0);
   const expenseDriverRows = allExpenseRows
     .slice()
@@ -1549,7 +1563,7 @@ function buildScreeningExpenseStructureHtml({
     .slice()
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 3);
-  const top3Html = top3.length
+  const top3Html = top3.length >= 2
     ? `<div class="subsection-title" style="margin-top:10px;">Top 3 Expense Drivers</div><ol>${top3
         .map((x) => `<li>${escapeHtml(x.label)}: ${x.pct.toFixed(1)}%</li>`)
         .join("")}</ol>`
@@ -3270,14 +3284,15 @@ if (effectiveReportMode === "screening_v1") {
     const rankedDrivers = driverCandidates
       .slice()
       .sort((a, b) => b.severity - a.severity);
-    const driver1 = rankedDrivers[0] || null;
-    const driver2 = rankedDrivers[1] || null;
-    const driver3 = rankedDrivers[2] || null;
+    const pressureDrivers = rankedDrivers.filter((driver) => Number(driver?.severity) > 0);
+    const driver1 = pressureDrivers[0] || null;
+    const driver2 = pressureDrivers[1] || null;
+    const driver3 = pressureDrivers[2] || null;
     let primaryPressurePoint = driver1?.label
       ? driver1.value
         ? `${driver1.label} (${driver1.value})`
         : driver1.label
-      : DATA_NOT_AVAILABLE;
+      : "No material operating pressure point identified from available core metrics.";
     // For underwriting, override pressure point with DSCR-based language if mortgage available
     if (effectiveReportMode === "v1_core" && mortgagePayload) {
       const _la = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
@@ -3291,11 +3306,13 @@ if (effectiveReportMode === "screening_v1") {
         const _dscr = _an / (_mp * 12);
         if (Number.isFinite(_dscr) && _dscr > 0) {
           const _ds = formatMultiple(_dscr, 2);
-          primaryPressurePoint = _dscr < 1.25
-            ? `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`
-            : _dscr < 1.35
-            ? `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`
-            : `DSCR of ${_ds}: supports current debt service coverage`;
+          if (_dscr < 1.25) {
+            primaryPressurePoint = `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`;
+          } else if (_dscr < 1.35) {
+            primaryPressurePoint = `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`;
+          } else if (!driver1) {
+            primaryPressurePoint = "No material debt-coverage pressure point identified from available current debt metrics.";
+          }
         }
       }
     }
@@ -3893,8 +3910,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
-    // Ranked drivers are screening-only: suppress for underwriting mode
-    if (effectiveReportMode === "v1_core") {
+    // Ranked drivers are screening-only and only render when a true pressure driver exists.
+    if (effectiveReportMode === "v1_core" || !driver1) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_RANKED_DRIVERS");
     }
     // Build exec verdict expansion: classification framework + investment thesis
