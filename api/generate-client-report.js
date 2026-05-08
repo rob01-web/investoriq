@@ -11,6 +11,7 @@ import { INVESTORIQ_MASTER_PROMPT_V71 } from "../lib/investoriqMasterPromptV71.j
 import { runRenderedReportQaAdvisory } from "./_lib/qa-review.js";
 import { runSourcePackageQaAdvisory } from "./_lib/source-package-qa.js";
 import { runQaManagerReview } from "./_lib/qa-manager-review.js";
+import { buildReportContractQa } from "./_lib/report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan } from "./_lib/qa-action-plan.js";
@@ -5959,6 +5960,7 @@ let renderedQaResult = null;
 let renderedQaStatus = "not_run";
 let qaFixRoutingResult = null;
 let qaManagerReviewResult = null;
+let reportContractQaResult = null;
 let sourcePackageQaResult = null;
 let sourcePackageQaFiles = [];
 let sourcePackageQaArtifacts = [];
@@ -6279,6 +6281,36 @@ try {
   }
 }
 try {
+  const reportContractQa = buildReportContractQa({
+    jobId: jobId || null,
+    userId: effectiveUserId || null,
+    propertyName: property_name || jobPropertyName || "Unknown",
+    reportType,
+    reportTier,
+    html: docHtml,
+    artifacts: sourcePackageQaArtifacts,
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    reportQaFlags,
+  });
+  reportContractQaResult = reportContractQa;
+  const contractTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: contractErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "report_contract_qa",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/report_contract_qa/${contractTimestamp}.json`,
+      payload: reportContractQa,
+    },
+  ]);
+  if (contractErr) {
+    console.error("Failed to write report_contract_qa artifact:", contractErr);
+  }
+} catch (err) {
+  console.error("Failed to build report_contract_qa artifact:", err?.message || err);
+}
+try {
   const summaryTimestamp = new Date().toISOString().replace(/:/g, "-");
   const coverageSeverity = sourceCoverageQaResult?.severity || "not_run";
   const renderedSeverity =
@@ -6321,6 +6353,7 @@ try {
           "source_package_qa_advisory",
           "qa_fix_routing",
           "qa_manager_review",
+          "report_contract_qa",
         ],
         timestamp: new Date().toISOString(),
       },
@@ -6339,6 +6372,7 @@ try {
     renderedReportQa: renderedQaResult,
     qaFixRouting: qaFixRoutingResult,
     qaManagerReview: qaManagerReviewResult,
+    reportContractQa: reportContractQaResult,
     jobId: jobId || null,
     userId: effectiveUserId || null,
     propertyName: property_name || jobPropertyName || "Unknown",

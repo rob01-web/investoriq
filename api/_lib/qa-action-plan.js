@@ -523,6 +523,36 @@ function actionForManagerDecision(decision) {
   };
 }
 
+function actionForReportContractViolation(violation) {
+  if (!violation) return null;
+  const code = String(violation?.code || "REPORT_CONTRACT_VIOLATION");
+  const hardPublicOrDebug =
+    code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
+    String(violation?.category || "") === "public_language";
+  const materiallyMisleadingDebt =
+    code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT" ||
+    code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
+  const actionType = hardPublicOrDebug ? "code_patch_required" : "render_gating_fix_required";
+  return {
+    code,
+    title: violation?.message || "Rendered report contract violation",
+    source_artifact: "report_contract_qa",
+    severity: hardPublicOrDebug ? "critical" : normalizeSeverity(violation?.severity),
+    action_type: actionType,
+    owner_area: hardPublicOrDebug ? "report_renderer" : "qa_contract",
+    recommended_next_step: hardPublicOrDebug
+      ? "Remove prohibited public/internal/debug language at the deterministic render source and regenerate."
+      : "Patch deterministic renderer gating so the unsupported table, section, label, or report-type content cannot render.",
+    requires_code_patch: true,
+    requires_regeneration: true,
+    blocks_customer_delivery: Boolean(violation?.blocks_customer_delivery) && (hardPublicOrDebug || materiallyMisleadingDebt),
+    blocks_public_sample: Boolean(violation?.blocks_public_sample),
+    blocks_high_value_outreach: Boolean(violation?.blocks_high_value_outreach),
+    safe_to_auto_fix: false,
+    evidence: violation?.evidence || null,
+  };
+}
+
 function dedupeActions(actions) {
   const seen = new Set();
   return actions.filter((action) => {
@@ -570,6 +600,7 @@ export function buildQaActionPlan({
   renderedReportQa = null,
   qaFixRouting = null,
   qaManagerReview = null,
+  reportContractQa = null,
   jobId = null,
   userId = null,
   propertyName = null,
@@ -600,11 +631,16 @@ export function buildQaActionPlan({
     const action = actionForManagerDecision(decision);
     if (action) pushAction(actions, action);
   }
+  for (const violation of Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : []) {
+    const action = actionForReportContractViolation(violation);
+    if (action) pushAction(actions, action);
+  }
 
   const prioritizedActions = sortActions(dedupeActions(actions));
   const counts = summarizeCounts(prioritizedActions);
   const publicSampleReady =
     (qaFixRouting ? Boolean(qaFixRouting.public_sample_ready) : true) &&
+    (reportContractQa ? Boolean(reportContractQa.public_sample_ready) : true) &&
     !prioritizedActions.some((action) => action.blocks_public_sample);
   const highValueOutreachReady =
     publicSampleReady &&

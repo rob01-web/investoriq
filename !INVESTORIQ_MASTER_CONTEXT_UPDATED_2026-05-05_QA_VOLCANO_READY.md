@@ -1,9 +1,90 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 7, 2026 evening/night - Supabase Security Advisor triage is effectively complete with two accepted warnings documented; Dashboard freeze RCA patch was applied and remains improved/monitored; intake-rescue Patch 2 passed; QA occupancy calibration is fixed; shared AI QA Doctrine, Source Package QA, and QA Manager architecture are implemented and validated. Latest 124 Richmond `qa_action_plan.requires_code_patch = 0`; only DocRaptor production mode remains a public/high-value blocker.
+**Last updated:** May 8, 2026 morning - InvestorIQ is shifting from incremental report-by-report QA patching toward a 99.999% autonomous publication reliability architecture. The current QA stack remains internal/advisory and includes Rendered Report QA Advisory, Source-to-Report Coverage QA, Source Package QA, QA Manager Review, QA Action Plan, shared InvestorIQ QA Doctrine, and shared InvestorIQ Institutional Report QA Checklist. Recent Forest City Manor and Harbourstone defects prove checklist-based AI review is not enough by itself; the next fresh-chat task is to reason through the complete failure-class universe and design deterministic Report Contract QA / AI Director guardrails before broad implementation. DocRaptor remains in test mode until final outputs are clean.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 8 Autonomous Publication Reliability Doctrine / 99.999% Target
+- Strategic shift:
+  - InvestorIQ must stop walking from roughly 85% to 89% to 91% to 92% to 93% by patching one report defect at a time.
+  - The target is a major jump toward 99.999% autonomous report publication reliability this morning.
+  - Public/high-value outputs must not depend on Rob manually reading every PDF to catch avoidable renderer, parser, source-treatment, or presentation defects.
+- Reasonable-package standard:
+  - Screening users must upload meaningful T12 and Rent Roll support.
+  - Underwriting users must upload meaningful T12, Rent Roll, and supporting documents.
+  - InvestorIQ is not expected to generate a defensible report from documents containing only 1-3 meaningless numbers.
+  - For plausible real investor packages, InvestorIQ should recover, route, constrain, disclose, or fail closed intelligently instead of requiring repeated manual patching.
+- Current QA stack already exists:
+  - Rendered Report QA Advisory
+  - Source-to-Report Coverage QA
+  - Source Package QA
+  - QA Manager Review
+  - QA Action Plan
+  - shared InvestorIQ QA Doctrine
+  - shared InvestorIQ Institutional Report QA Checklist
+- Recent defects that triggered the doctrine shift:
+  - Top Positive Income Lines included EGI/subtotals/negative/zero rows.
+  - Forest City showed a stable Expense Ratio as Primary Pressure Point.
+  - Proposed acquisition financing vs current debt/refi display can still be confusing.
+  - Empty or misleading current-debt/refi blocks can render when true current debt is missing.
+  - AI QA and QA Manager improved the system, but advisory review does not make bad renderer output impossible by itself.
+- Reliability principles:
+  1. Stop patching examples; patch failure classes.
+  2. Every recurring issue must become one of:
+     - deterministic prevention rule
+     - deterministic QA detection rule
+     - AI analyst checklist item
+     - AI Manager/Director escalation rule
+     - customer-safe fail-closed rule
+  3. AI QA is not enough by itself. Renderer/parser paths must make known-bad outputs impossible where possible.
+  4. The QA checklist improves AI review, but hard Report Contract QA is needed to catch structural, renderer, and presentation defects deterministically.
+  5. Add a top-level AI Director concept:
+     - AI QA Analyst finds issues.
+     - Source Package QA reviews document/artifact treatment.
+     - QA Manager classifies/routes issues.
+     - AI Director audits the QA stack itself and asks: "Did QA miss anything that would embarrass InvestorIQ or prevent safe publication?"
+  6. AI Director must remain internal/advisory at first.
+  7. AI Director may not mutate financial values, parser artifacts, reports, jobs, worker state, scores, DSCR, NOI, cap rates, valuations, refinance outputs, or publication state.
+  8. Deterministic validation remains financial truth.
+  9. AI Director's mission is to prevent missed QA, not to author reports.
+  10. Ultimate product standard:
+      - 99.999% of reasonably complete packages publish defensibly.
+      - incomplete/contradictory/unusable packages fail closed with credit restored.
+      - public/high-value outputs should not depend on Rob manually reading every PDF.
+- Immediate next conversation agenda:
+  - Do not immediately give Codex a broad implementation prompt.
+  - First, in the fresh chat, reason through the complete universe of failure classes needed for 99.999% reliability.
+  - Build a full elite guardrail taxonomy covering:
+    - intake/doc-type routing
+    - required-doc completeness
+    - parser extraction
+    - cross-document consistency
+    - T12/rent-roll/debt/refi/cap-rate/math reconciliation
+    - support-doc contamination
+    - acquisition vs current debt separation
+    - section gating
+    - table integrity
+    - classification/pressure-point coherence
+    - public sample hygiene
+    - final rendered report/presentation polish
+    - QA false positives / false negatives
+    - AI QA blind spots
+    - AI Manager blind spots
+    - AI Director oversight
+    - customer-safe fail-closed behavior
+    - publication reliability vs public/high-value readiness
+  - Then decide the smallest high-leverage implementation plan that can jump the system toward 99.999% without burning Codex quota or destabilizing launch.
+  - Preserve Codex usage discipline: 47% weekly remaining, must last until May 12.
+  - No broad repo audit unless the fresh chat explicitly decides it is worth it.
+  - No worker lifecycle changes unless absolutely required.
+  - No parser/renderer refactors unless directly tied to a failure-class guardrail.
+  - Keep DocRaptor in test mode until final outputs are clean.
+- Current unresolved pre-Ken decision:
+  - Whether to implement one broad deterministic Rendered Report Contract QA layer now.
+  - Whether to add AI Director now or after one deterministic contract pass.
+  - Whether AI Director should be a new artifact type, likely `qa_director_review`, feeding into `qa_action_plan`.
+  - Whether public/high-value readiness should become stricter than customer delivery readiness while still aiming for nearly all customer reports to publish defensibly.
 
 ### May 7 Security, Dashboard Freeze, Intake Rescue, and QA Occupancy Calibration
 - Supabase Security Advisor triage:
