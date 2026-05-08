@@ -234,7 +234,9 @@ export function buildReportContractQa({
   const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
-      /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text);
+      /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,180}(?:current outstanding debt balance not provided|current debt service is not assessed|NOT ASSESSED)/i.test(text) ||
+      /current debt service is not assessed because no current outstanding debt balance was provided/i.test(text);
     const hasSeparation =
       /Proposed Acquisition Debt Sizing/i.test(text) &&
       /Derived Acquisition Loan Amount/i.test(text) &&
@@ -243,7 +245,9 @@ export function buildReportContractQa({
       /not used as (?:a )?current refinance debt balance/i.test(text);
     const contaminated =
       (/DSCR Sensitivity|Refinance Stress Test|Current Debt Coverage|Full Refinance Sufficiency/i.test(text) && !cleanCurrentDebtLimitation) ||
-      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed)/i.test(text) ||
+      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text) ||
+      /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text) ||
+      /Refinance Proceeds\s*\/\s*Debt Balance/i.test(text) ||
       /Refinance Stability Classification\s*[:\n]\s*(?:Stable|Review|Constrained|Sensitized|Fragile|High Risk|Refinance Shortfall)/i.test(text) ||
       /current (?:outstanding )?(?:debt|refinance debt) balance[^.\n]{0,120}derived acquisition/i.test(text);
     if (!hasSeparation || contaminated) {
@@ -276,7 +280,7 @@ export function buildReportContractQa({
   if (!currentDebt) {
     const currentDebtUnsupported =
       /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text) ||
-      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed)/i.test(text);
+      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text);
     if (currentDebtUnsupported) {
       addViolation(violations, {
         code: "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
