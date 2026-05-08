@@ -1,5 +1,6 @@
 import {
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   isAllowedMethodologyOnlyText,
 } from "./investoriq-qa-doctrine.js";
 
@@ -39,6 +40,7 @@ function stripHtmlForReview(html) {
 const SYSTEM_PROMPT = [
   "You are an internal institutional real estate report reviewer.",
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   "Review only the finalized report text provided by the user.",
   "Do not rewrite the report. Do not invent facts. Do not propose new financial values.",
   "Do not override deterministic source documents, parsers, calculations, debt, DSCR, NOI, rent, cap rate, valuation, refinance, or score outputs.",

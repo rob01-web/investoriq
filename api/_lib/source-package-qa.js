@@ -1,5 +1,6 @@
 import {
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   containsProhibitedPublicLanguage,
   isAllowedMethodologyOnlyText,
   isFilenameHintOnlyText,
@@ -204,6 +205,7 @@ function highestSeverityFromCounts(counts) {
 const SOURCE_PACKAGE_QA_PROMPT = [
   "You are an internal InvestorIQ source-package QA reviewer.",
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   "Review uploaded file treatment, parsed artifact summaries, deterministic coverage QA, rendered QA, and rendered report text.",
   "Filename and upload-slot tokens are never source truth. Do not infer unsupported status from filename tokens such as UNSUPPORTED, TEST, CLEAN, MESSY, or QA unless parse status, deterministic artifacts, or rendered reliance provide separate evidence.",
   "Prioritize source_report_coverage_qa.artifact_inventory over compact raw parsed_artifacts when they differ. For example, if source_report_coverage_qa says rent_roll_parsed occupancy is 1, do not flag occupancy as null from a compact artifact summary.",

@@ -118,6 +118,74 @@ Public/customer-facing reports must not mention:
 END DOCTRINE
 `.trim();
 
+export const INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST = `
+INVESTORIQ INSTITUTIONAL REPORT QA CHECKLIST
+
+1. Source-to-report integrity
+- Material report numbers must trace to uploaded documents, deterministic calculations, or disclosed framework assumptions.
+- Unsupported documents must not silently affect modeled outputs.
+- Uploaded-but-unused documents must be disclosed safely.
+- Clean structured values in source text with null or missing parsed artifacts should be flagged as possible parser misses.
+- Filename, upload slot, and doc_type are hints only. Document content is authority.
+
+2. Current debt vs proposed acquisition financing
+- Current debt, refinance, and current DSCR require true current outstanding debt or usable current-debt source support.
+- Derived acquisition debt must never be treated as current debt.
+- Proposed acquisition DSCR must be labeled separately from current debt DSCR.
+- If proposed acquisition financing exists but current debt is missing, current-debt/refi blocks must not appear confusing or empty.
+
+3. Classification and verdict coherence
+- Cover classification must match the primary constraint.
+- Do not show strong or stable metrics as the primary pressure point.
+- Material DSCR/refi constraints should drive Constrained outcomes.
+- If current DSCR is not assessed, do not imply the debt profile is stable.
+
+4. Table-title and row-content integrity
+- Table titles must match row contents.
+- Top Positive Income Lines must exclude EGI, effective gross income, total income, subtotals, negative rows, vacancy loss, and zero-dollar rows.
+- Top Expense Drivers must exclude totals and subtotals.
+- Worst 3 or weakness tables must not list harmless or strong metrics as weaknesses.
+- Empty headings, empty tables, orphaned sections, and stale labels must be flagged.
+
+5. Financial math and reconciliation
+- EGI, OpEx, and NOI must reconcile.
+- Expense ratio must equal OpEx / EGI.
+- NOI margin must equal NOI / EGI.
+- Rent roll annual rent should be directionally consistent with T12 GPR.
+- Current DSCR must tie to current NOI and current debt service when current debt exists.
+- Cap-rate value tables must label document-derived cap rates correctly.
+
+6. Section gating and missing data
+- Unsupported sections should collapse or show one clear limitation note.
+- Avoid repeated DATA NOT AVAILABLE.
+- No empty current-debt, refi, or sensitivity sections.
+
+7. Renovation / CapEx handling
+- Historical CapEx is not a forward-looking renovation strategy.
+- ROI, payback, rent lift, timing, and implementation schedules require structured forward-looking inputs.
+- Budget detail can be shown without inventing returns.
+
+8. Unsupported/support docs
+- Market surveys must not become rent rolls unless deterministic validation accepts them.
+- Appraisal, environmental, zoning, and other support docs must not contaminate unrelated artifacts.
+- Unsupported docs listed in Uploaded Files must be clearly excluded from modeled outputs where applicable.
+
+9. Public sample / high-value outreach readiness
+- No DocRaptor watermark.
+- No TEST, MESSY, CLEAN, UNSUPPORTED, QA, or source fixture filenames in public-facing samples.
+- No public AI, vendor, or model language.
+- No BUY, SELL, HOLD, or recommendation language.
+- No mojibake, typos, awkward punctuation, dangling periods, or internal debug wording.
+
+10. Visual/institutional presentation
+- Cover hierarchy should feel premium and institutional.
+- Typography and color treatment should be consistent.
+- Charts and tables must look intentional and institutional.
+- Warnings should be visible but not alarmist.
+
+END CHECKLIST
+`.trim();
+
 export const ALLOWED_METHODOLOGY_LANGUAGE_PATTERNS = [
   /investoriq estimates/i,
   /document[- ]?backed/i,

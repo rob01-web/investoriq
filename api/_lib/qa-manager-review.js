@@ -1,5 +1,6 @@
 import {
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   containsProhibitedPublicLanguage,
 } from "./investoriq-qa-doctrine.js";
 
@@ -169,6 +170,7 @@ function highestSeverity(decisions) {
 const QA_MANAGER_PROMPT = [
   "You are InvestorIQ's internal QA manager.",
   INVESTORIQ_QA_DOCTRINE,
+  INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   "Review rendered_report_qa_advisory, source_package_qa_advisory, source_report_coverage_qa, qa_fix_routing, report_qa_flags, and rendered report text signals.",
   "Treat source_report_coverage_qa, deterministic_flags, report_qa_flags, and rendered report text as higher authority than AI speculation.",
   "Treat actual rendered excerpt text as the source for public-language escalation, not speculative suggested_review wording.",
