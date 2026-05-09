@@ -86,6 +86,16 @@ function subsectionAfter(text, pattern, stopPatterns = [], chars = 1400) {
   return raw.slice(0, end);
 }
 
+function firstTableAfterHeading(html, headingPattern) {
+  const source = String(html || "");
+  const headingMatch = headingPattern.exec(source);
+  if (!headingMatch) return "";
+  const slice = source.slice(headingMatch.index);
+  const tableMatch = /<table\b[\s\S]*?<\/table>/i.exec(slice);
+  if (!tableMatch) return "";
+  return stripHtml(tableMatch[0]);
+}
+
 function primaryPressurePointLine(text) {
   const match = /Primary Pressure Point\s*:?\s*([^\n]+)/i.exec(text);
   return match ? match[0].trim() : "";
@@ -171,6 +181,7 @@ export function buildReportContractQa({
   sourceReportCoverageQa = null,
   reportQaFlags = [],
 } = {}) {
+  const rawHtml = String(html || "");
   const text = stripHtml(html);
   const lower = text.toLowerCase();
   const violations = [];
@@ -274,7 +285,7 @@ export function buildReportContractQa({
     /Top Expense Drivers/i,
     /Expense Drivers/i,
   ];
-  const incomeWindow = subsectionAfter(text, /Top Positive Income Lines|Top Income Drivers/i, tableStopPatterns);
+  const incomeWindow = firstTableAfterHeading(rawHtml, /Top Positive Income Lines|Top Income Drivers/i);
   if (incomeWindow) {
     const badIncomeLabel =
       /\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(incomeWindow);

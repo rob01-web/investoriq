@@ -91,6 +91,22 @@ function StatusBadge({ status }) {
   );
 }
 
+function SeverityBadge({ severity }) {
+  const map = {
+    critical: { bg:T.errBg, border:T.errBorder, color:T.errRed },
+    high: { bg:T.warnBg, border:T.warnBorder, color:T.warnAmber },
+    medium: { bg:T.infoBg, border:T.infoBorder, color:T.infoBlue },
+    low: { bg:T.okBg, border:T.okBorder, color:T.okGreen },
+    none: { bg:T.warm, border:T.hairline, color:T.ink4 },
+  };
+  const s = map[String(severity || "none").toLowerCase()] || map.none;
+  return (
+    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', padding:'2px 8px', background:s.bg, border:`1px solid ${s.border}`, color:s.color, whiteSpace:'nowrap' }}>
+      {severity || '-'}
+    </span>
+  );
+}
+
 function AiBadge({ type }) {
   if (!type) return null;
   const label = type === 'both' ? 'AI: T12+RR' : type === 't12' ? 'AI: T12' : 'AI: RR';
@@ -211,6 +227,8 @@ export default function AdminDashboard() {
   const [issues, setIssues]           = useState([]);
   const [issueFilter, setIssueFilter] = useState('open');
   const [issuesBusy, setIssuesBusy]   = useState({});
+  const [fixQueue, setFixQueue]       = useState([]);
+  const [fixQueueLoading, setFixQueueLoading] = useState(false);
 
   const searchTimer = useRef(null);
 
@@ -352,6 +370,25 @@ export default function AdminDashboard() {
     } catch { /* silent */ }
   }, []);
 
+  const fetchFixQueue = useCallback(async () => {
+    if (!adminRunKey.trim()) return;
+    setFixQueueLoading(true);
+    try {
+      const res = await fetch('/api/admin/queue-metrics', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to load fix queue');
+      setFixQueue(Array.isArray(data?.fix_queue) ? data.fix_queue : []);
+    } catch (e) {
+      console.error('fixQueue error', e);
+      setFixQueue([]);
+    } finally {
+      setFixQueueLoading(false);
+    }
+  }, [adminRunKey]);
+
   // ─── INIT ────────────────────────────────────────────────
   useEffect(() => {
     if (!authed) return;
@@ -359,7 +396,8 @@ export default function AdminDashboard() {
     fetchReports(0, '', 'all');
     fetchUsers('');
     fetchIssues('open');
-  }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues]);
+    fetchFixQueue();
+  }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues, fetchFixQueue]);
 
   // ─── DEBOUNCED SEARCH ────────────────────────────────────
   useEffect(() => {
@@ -618,6 +656,65 @@ export default function AdminDashboard() {
           </AnimatePresence>
 
           {/* ── ZONE 3: REPORTS TABLE ────────────────────── */}
+          <Card>
+            <SectionHeader
+              eyebrow="Internal"
+              title="Admin Review / Fix Queue"
+              action={<Btn onClick={fetchFixQueue} disabled={fixQueueLoading}><RefreshCcw size={9} /> Refresh</Btn>}
+            />
+            {fixQueueLoading ? (
+              <div style={{ textAlign:'center', padding:'24px 0' }}>
+                <Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
+              </div>
+            ) : fixQueue.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No review items require attention.</p>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      <TblTh>Property</TblTh>
+                      <TblTh>Report</TblTh>
+                      <TblTh>Severity</TblTh>
+                      <TblTh>Customer</TblTh>
+                      <TblTh>Public</TblTh>
+                      <TblTh>Outreach</TblTh>
+                      <TblTh>Patch</TblTh>
+                      <TblTh>Regen</TblTh>
+                      <TblTh>Owner</TblTh>
+                      <TblTh>Top Action</TblTh>
+                      <TblTh>Next Step</TblTh>
+                      <TblTh>Created</TblTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fixQueue.map((item, i) => (
+                      <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                        <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '—'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{item.report_type || '—'}</TblTd>
+                        <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{String(item.customer_delivery_ready)}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{String(item.public_sample_ready)}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{String(item.high_value_outreach_ready)}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{String(item.requires_code_patch)}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{String(item.requires_regeneration)}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{item.owner_area || '—'}</TblTd>
+                        <TblTd style={{ maxWidth:220 }}>
+                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink2, lineHeight:1.45 }}>
+                            <div>{item.top_action_code || '—'}</div>
+                            {item.top_action_title && <div style={{ color:T.ink4 }}>{item.top_action_title}</div>}
+                          </div>
+                        </TblTd>
+                        <TblTd style={{ maxWidth:260, fontSize:11, color:T.ink3 }}>{item.recommended_next_step || '—'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</TblTd>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
           <Card>
             <SectionHeader
               eyebrow="Properties"

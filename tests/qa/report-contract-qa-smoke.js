@@ -126,6 +126,21 @@ const badIncomeTable = buildReportContractQa({
 });
 assert.equal(badIncomeTable.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_CONTRACT"), true);
 
+const scopedIncomeTable = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Positive Income Lines (% of EGI, before vacancy offset)</h2>",
+    "<table><tr><td>Parking Income</td><td>$27,000</td></tr>",
+    "<tr><td>Laundry Income</td><td>$18,400</td></tr></table>",
+    "<h2>Operating Profile</h2>",
+    "<p>Vacancy allowance is reflected elsewhere in the report.</p>",
+  ].join("\n"),
+});
+assert.equal(scopedIncomeTable.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_CONTRACT"), false);
+
 const acquisitionArtifacts = [
   ...baseArtifacts,
   {

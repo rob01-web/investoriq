@@ -149,6 +149,45 @@ function resolveSafeAnnualRentTotal({
   if (Number.isFinite(rowAnnual)) return rowAnnual;
   return null;
 }
+function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
+  const balance = coerceNumber(mortgagePayload?.outstanding_balance ?? mortgagePayload?.loan_amount);
+  const interestRatePct = coerceNumber(mortgagePayload?.interest_rate);
+  const amortYears = coerceNumber(mortgagePayload?.amort_years);
+  const sourceMonthlyPayment = coerceNumber(
+    mortgagePayload?.monthly_payment ?? mortgagePayload?.monthly_debt_service
+  );
+  const computedMonthlyPayment =
+    Number.isFinite(balance) &&
+    balance > 0 &&
+    Number.isFinite(interestRatePct) &&
+    interestRatePct > 0 &&
+    Number.isFinite(amortYears) &&
+    amortYears > 0
+      ? balance * computeMortgageConstant(interestRatePct / 100, amortYears)
+      : null;
+  const annualDebtService = Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0
+    ? sourceMonthlyPayment * 12
+    : Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0
+    ? computedMonthlyPayment * 12
+    : null;
+  const dscr =
+    Number.isFinite(t12Noi) &&
+    t12Noi > 0 &&
+    Number.isFinite(annualDebtService) &&
+    annualDebtService > 0
+      ? t12Noi / annualDebtService
+      : null;
+  return {
+    balance,
+    interestRatePct,
+    amortYears,
+    sourceMonthlyPayment,
+    computedMonthlyPayment,
+    annualDebtService,
+    dscr,
+    hasSourcePayment: Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0,
+  };
+}
 function isFiniteNumber(x) {
   const n = Number(x);
   return Number.isFinite(n);
@@ -3367,24 +3406,15 @@ if (effectiveReportMode === "screening_v1") {
       : "No material operating pressure point identified from available core metrics.";
     // For underwriting, override pressure point with DSCR-based language if mortgage available
     if (effectiveReportMode === "v1_core" && mortgagePayload) {
-      const _la = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
-      const _rp = coerceNumber(mortgagePayload.interest_rate);
-      const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
-      const _an = coerceNumber(t12Payload?.net_operating_income);
-      if (_la > 0 && _rp > 0 && _an > 0) {
-        const _mr = (_rp / 100) / 12;
-        const _n = _ay * 12;
-        const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
-        const _dscr = _an / (_mp * 12);
-        if (Number.isFinite(_dscr) && _dscr > 0) {
-          const _ds = formatMultiple(_dscr, 2);
-          if (_dscr < 1.25) {
-            primaryPressurePoint = `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`;
-          } else if (_dscr < 1.35) {
-            primaryPressurePoint = `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`;
-          } else if (!driver1) {
-            primaryPressurePoint = "No material debt-coverage pressure point identified from available current debt metrics.";
-          }
+      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+        const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
+        if (currentDebtCoverage.dscr < 1.25) {
+          primaryPressurePoint = `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`;
+        } else if (currentDebtCoverage.dscr < 1.35) {
+          primaryPressurePoint = `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`;
+        } else if (!driver1) {
+          primaryPressurePoint = "No material debt-coverage pressure point identified from available current debt metrics.";
         }
       }
     }
@@ -3632,19 +3662,10 @@ if (effectiveReportMode === "screening_v1") {
         screeningClass = "Sensitized";
       }
     }
-    const currentDebtDscrForDisplay = (() => {
-      if (!mortgagePayload) return null;
-      const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
-      const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
-      const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
-      const annualNOI = coerceNumber(t12Payload?.net_operating_income);
-      if (!(loanAmt > 0 && annualRatePct > 0 && annualNOI > 0)) return null;
-      const monthlyRate = annualRatePct / 100 / 12;
-      const periods = amortYrs * 12;
-      const monthlyPayment = loanAmt * (monthlyRate * Math.pow(1 + monthlyRate, periods)) / (Math.pow(1 + monthlyRate, periods) - 1);
-      const dscr = annualNOI / (monthlyPayment * 12);
-      return Number.isFinite(dscr) && dscr > 0 ? dscr : null;
-    })();
+    const currentDebtDscrForDisplay = resolveCurrentDebtCoverage(
+      mortgagePayload,
+      coerceNumber(t12Payload?.net_operating_income)
+    )?.dscr;
     const coverClassificationLabel = (() => {
       if (effectiveReportMode === "v1_core") {
         if (screeningClass === "Fragile") return "High Risk";
@@ -3749,31 +3770,16 @@ if (effectiveReportMode === "screening_v1") {
     }
     // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
     if (effectiveReportMode === "v1_core") {
-      if (mortgagePayload) {
-        const _la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
-        const _rp = coerceNumber(mortgagePayload.interest_rate);
-        const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
-        const _an = coerceNumber(t12Payload?.net_operating_income);
-        if (_la > 0 && _rp > 0 && _an > 0) {
-          const _mr = (_rp / 100) / 12;
-          const _n = _ay * 12;
-          const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
-          const _dscr = _an / (_mp * 12);
-          if (Number.isFinite(_dscr) && _dscr > 0) {
-            const _ds = formatMultiple(_dscr, 2);
-            if (_dscr >= 1.35) {
-              upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
-            } else if (_dscr >= 1.25) {
-              riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
-            } else {
-              riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
-            }
-          }
+      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+        const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
+        if (currentDebtCoverage.dscr >= 1.35) {
+          upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
+        } else if (currentDebtCoverage.dscr >= 1.25) {
+          riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
+        } else {
+          riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
         }
-        const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
-          ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
-          : null;
-        if (_refiClass) riskBullets.push(_refiClass);
       } else {
         riskBullets.push(
           loanTermSheetTermsPayload
@@ -3781,6 +3787,10 @@ if (effectiveReportMode === "screening_v1") {
             : "Debt terms were not included in the uploaded documents; Current Debt DSCR and refinance risk are not assessed in this report."
         );
       }
+      const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
+        ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
+        : null;
+      if (_refiClass) riskBullets.push(_refiClass);
     }
     const upsideHtml = upsideBullets
       .slice(0, 3)
@@ -4845,6 +4855,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount
       );
       const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
+      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, noiBase);
       const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const baseCapPct = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? resolvedCapPct : 5.5;
       const capSource = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? "document-derived" : "stated default";
@@ -4872,8 +4883,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           let coverageDisplay = "N/A";
           let bg = "#F9FAFB";
           let fc = "#374151";
-          if (mc && mc > 0) {
-            const annualDs = debtBal * mc;
+          const annualDs =
+            rs.addPct === 0 && Number.isFinite(currentDebtCoverage.annualDebtService) && currentDebtCoverage.annualDebtService > 0
+              ? currentDebtCoverage.annualDebtService
+              : mc && mc > 0
+              ? debtBal * mc
+              : null;
+          if (Number.isFinite(annualDs) && annualDs > 0) {
             const coverage = annualDs > 0 ? noiBase / annualDs : 0;
             if (coverage > 0 && Number.isFinite(coverage)) {
               coverageDisplay = formatMultiple(coverage, 2);
@@ -4886,7 +4902,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           grid += `</tr>`;
         }
         grid += `</tbody></table>`;
-        grid += `<p class="small" style="margin-top:6px;">Current debt service coverage sensitivity using current debt balance under interest-rate scenarios only. Green = coverage >= 1.25 | Amber = 1.00-1.24 | Red = below 1.00</p>`;
+        grid += `<p class="small" style="margin-top:6px;">Base row uses source monthly debt service when provided; rate-shock rows use the current debt balance under interest-rate scenarios only. Green = coverage >= 1.25 | Amber = 1.00-1.24 | Red = below 1.00</p>`;
         refiCollapseGridHtml = grid;
       }
     }
@@ -5077,24 +5093,19 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       let hasDscrScore = false;
       let computedDscrForVerdict = null;
-      if (mortgagePayload) {
-        const loanAmt = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
-        const annualRatePct = coerceNumber(mortgagePayload.interest_rate);
-        const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
-        const annualNOI = coerceNumber(t12Payload?.net_operating_income);
-        if (loanAmt > 0 && annualRatePct > 0 && annualNOI > 0) {
-          const mr = (annualRatePct / 100) / 12;
-          const n = amortYrs * 12;
-          const mp = loanAmt * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
-          const dscr = annualNOI / (mp * 12);
-          if (Number.isFinite(dscr) && dscr > 0) {
-            computedDscrForVerdict = dscr;
-            const pts = dscr > 1.35 ? 10 : dscr >= 1.25 ? 7 : 3;
-            totalPoints += pts; maxPoints += 10;
-            scoreRows.push({ label: "DSCR (Computed)", value: formatMultiple(dscr, 2), pts, max: 10, band: dscr > 1.35 ? "Above 1.35x" : dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x" });
-            hasDscrScore = true;
-          }
-        }
+      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+        computedDscrForVerdict = currentDebtCoverage.dscr;
+        const pts = currentDebtCoverage.dscr > 1.35 ? 10 : currentDebtCoverage.dscr >= 1.25 ? 7 : 3;
+        totalPoints += pts; maxPoints += 10;
+        scoreRows.push({
+          label: currentDebtCoverage.hasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
+          value: formatMultiple(currentDebtCoverage.dscr, 2),
+          pts,
+          max: 10,
+          band: currentDebtCoverage.dscr > 1.35 ? "Above 1.35x" : currentDebtCoverage.dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x",
+        });
+        hasDscrScore = true;
       }
       if (!hasDscrScore) {
         totalPoints += 0; maxPoints += 10;
@@ -5459,20 +5470,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       // DSCR KPI card in exec summary
       {
         let execDscrText = null;
-        if (mortgagePayload) {
-          const _la = coerceNumber(mortgagePayload.loan_amount ?? mortgagePayload.outstanding_balance);
-          const _rp = coerceNumber(mortgagePayload.interest_rate);
-          const _ay = coerceNumber(mortgagePayload.amort_years) || 25;
-          const _an = coerceNumber(t12Payload?.net_operating_income);
-          if (_la > 0 && _rp > 0 && _an > 0) {
-            const _mr = (_rp / 100) / 12;
-            const _n = _ay * 12;
-            const _mp = _la * (_mr * Math.pow(1 + _mr, _n)) / (Math.pow(1 + _mr, _n) - 1);
-            const _dscr = _an / (_mp * 12);
-            if (Number.isFinite(_dscr) && _dscr > 0) {
-              execDscrText = formatMultiple(_dscr, 2);
-            }
-          }
+        const execCurrentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+        if (Number.isFinite(execCurrentDebtCoverage.dscr) && execCurrentDebtCoverage.dscr > 0) {
+          execDscrText = formatMultiple(execCurrentDebtCoverage.dscr, 2);
         }
         if (execDscrText) {
           finalHtml = replaceAll(finalHtml, "{{EXEC_DSCR_COMPUTED}}", execDscrText);
