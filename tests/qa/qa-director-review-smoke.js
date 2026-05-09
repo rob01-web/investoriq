@@ -53,4 +53,26 @@ const missedBuy = buildQaDirectorReview({
 assert.equal(missedBuy.missed_failure_classes.includes("hard_public_language_not_blocked"), true);
 assert.equal(missedBuy.customer_delivery_risk, "critical");
 
+const publicOutreachBlocked = buildQaDirectorReview({
+  html: "<p>Report body</p>",
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "PARSER_ARTIFACT_REVIEW",
+        severity: "high",
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.notEqual(publicOutreachBlocked.overall_director_decision, "no_missed_issue_detected");
+assert.equal(
+  publicOutreachBlocked.findings.some((finding) => finding.code === "QA_DIRECTOR_ACTION_PLAN_PUBLIC_OUTREACH_BLOCKER_PRESENT"),
+  true
+);
+
 console.log("qa-director-review smoke PASS");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { inferSupportingDocTypeFromText } from "../../api/parse/parse-doc.js";
+import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "../../api/parse/parse-doc.js";
 
 assert.equal(
   inferSupportingDocTypeFromText(
@@ -13,6 +13,28 @@ assert.equal(
   ),
   "mortgage_statement"
 );
+
+const maplewellDebtText = [
+  "Current Mortgage Statement - Maplewell Court Apartments",
+  "Debt Type: Existing mortgage / true current debt",
+  "Current outstanding principal balance: $2,100,000",
+  "Current monthly debt service: $13,625",
+  "Interest rate: 4.25% fixed",
+  "Amortization remaining: 23 years",
+  "This document represents true existing current debt, not proposed acquisition financing.",
+].join("\n");
+
+assert.equal(inferSupportingDocTypeFromText(maplewellDebtText), "mortgage_statement");
+const maplewellDebt = parseMortgageStatementFromText(maplewellDebtText, {
+  id: "maplewell-debt",
+  original_filename: "Debt_Summary_Maplewell_Court.pdf",
+});
+assert.equal(maplewellDebt.outstanding_balance, 2100000);
+assert.equal(maplewellDebt.monthly_payment, 13625);
+assert.equal(maplewellDebt.monthly_debt_service, 13625);
+assert.equal(maplewellDebt.interest_rate, 4.25);
+assert.equal(maplewellDebt.amort_years, 23);
+assert.deepEqual(maplewellDebt.parse_warnings, []);
 
 assert.equal(
   inferSupportingDocTypeFromText(

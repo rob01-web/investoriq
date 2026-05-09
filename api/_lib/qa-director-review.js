@@ -45,6 +45,15 @@ function hasActionPlanCustomerBlock(qaActionPlan) {
       qaActionPlan.prioritized_actions.some((action) => action?.blocks_customer_delivery));
 }
 
+function hasHighSeverityPublicOrOutreachAction(qaActionPlan) {
+  const highSeverity = new Set(["high", "critical"]);
+  return Array.isArray(qaActionPlan?.prioritized_actions) &&
+    qaActionPlan.prioritized_actions.some((action) =>
+      highSeverity.has(String(action?.severity || "").toLowerCase()) &&
+      (action?.blocks_public_sample === true || action?.blocks_high_value_outreach === true)
+    );
+}
+
 function riskFromFindings(findings, target) {
   const rank = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
   return findings.reduce((risk, finding) => {
@@ -130,6 +139,20 @@ export function buildQaDirectorReview({
       classification: "likely_missed_blocker",
       message: "Rendered text contains prohibited public language but QA Action Plan does not block customer delivery.",
       evidence_excerpt: text.match(/\b(?:BUY|SELL|HOLD|AI|OpenAI|LLM)\b.{0,120}/i)?.[0] || "",
+    });
+  }
+
+  if (hasHighSeverityPublicOrOutreachAction(qaActionPlan)) {
+    addFinding(findings, {
+      code: "QA_DIRECTOR_ACTION_PLAN_PUBLIC_OUTREACH_BLOCKER_PRESENT",
+      severity: "medium",
+      classification: "advisory_attention",
+      message: "QA Action Plan contains high-severity public-sample or high-value-outreach blockers that require attention.",
+      evidence: {
+        customer_delivery_ready: qaActionPlan?.customer_delivery_ready,
+        public_sample_ready: qaActionPlan?.public_sample_ready,
+        high_value_outreach_ready: qaActionPlan?.high_value_outreach_ready,
+      },
     });
   }
 

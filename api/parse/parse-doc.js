@@ -153,12 +153,17 @@ const detectRequiredFinancialDocTypeFromText = (text) => {
 
 const SUPPORTING_DOC_ALIASES = {
   mortgage_statement: [
+    'Current Mortgage Statement',
     'Existing mortgage',
     'Current mortgage',
+    'True current debt',
     'Current outstanding principal balance',
+    'Unpaid principal balance',
+    'Outstanding principal balance',
     'Current outstanding balance',
     'Principal balance',
     'Outstanding loan balance',
+    'Mortgage balance',
     'Current monthly debt service',
     'Monthly payment',
     'Regular payment',
@@ -231,6 +236,13 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
     has(['MARKET SURVEY', 'APPRAISAL SUMMARY', 'APPRAISAL EXCERPT', 'PHASE I ESA', 'ENVIRONMENTAL REPORT']);
   if (unsupportedSupportDoc) return 'supporting_documents_unclassified';
 
+  const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
+  const explicitCurrentDebtContext =
+    /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|outstanding\s+principal\s+balance|current\s+loan\s+balance|mortgage\s+balance|current\s+monthly\s+debt\s+service)\b/i.test(text);
+  if (explicitCurrentDebtContext && currentDebtSignals >= 2) {
+    return 'mortgage_statement';
+  }
+
   const acquisitionSignals = countMatches(SUPPORTING_DOC_ALIASES.loan_term_sheet);
   const acquisitionOnlyContext = has([
     'BORROWER TO BE DETERMINED',
@@ -244,7 +256,6 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
     return 'loan_term_sheet';
   }
 
-  const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
   if (!acquisitionOnlyContext && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
     return 'mortgage_statement';
   }
@@ -258,6 +269,111 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   if (has(['POLICY NUMBER', 'NAMED INSURED']) && countMatches(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE']) >= 2) return 'insurance_policy';
   if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && countMatches(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD']) >= 2) return 'bank_statement';
   return 'supporting_documents_unclassified';
+}
+
+const extractDollarNearText = (text, labels) => {
+  const lower = String(text || '').toLowerCase();
+  for (const label of labels) {
+    const idx = lower.indexOf(String(label || '').toLowerCase());
+    if (idx === -1) continue;
+    const snippet = String(text || '').slice(idx, idx + 140);
+    const match = snippet.match(/\$?\s*([\d,]+(?:\.\d{1,2})?)/);
+    if (match) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (Number.isFinite(val) && val > 500) return val;
+    }
+  }
+  return null;
+};
+
+const extractPercentNearText = (text, labels) => {
+  const lower = String(text || '').toLowerCase();
+  for (const label of labels) {
+    const idx = lower.indexOf(String(label || '').toLowerCase());
+    if (idx === -1) continue;
+    const snippet = String(text || '').slice(idx, idx + 100);
+    const match = snippet.match(/([\d]+(?:\.\d{1,4})?)\s*%/);
+    if (match) {
+      const val = parseFloat(match[1]);
+      if (Number.isFinite(val) && val > 0) return val;
+    }
+  }
+  return null;
+};
+
+const extractYearsNearText = (text, labels) => {
+  const lower = String(text || '').toLowerCase();
+  for (const label of labels) {
+    const idx = lower.indexOf(String(label || '').toLowerCase());
+    if (idx === -1) continue;
+    const snippet = String(text || '').slice(idx, idx + 100);
+    const match = snippet.match(/(\d{1,2})\s*(?:years?|yr)/i);
+    if (match) {
+      const val = parseInt(match[1], 10);
+      if (Number.isFinite(val) && val > 0) return val;
+    }
+  }
+  return null;
+};
+
+export function parseMortgageStatementFromText(rawText, fileRow = {}) {
+  const parse_warnings = [];
+  const outstanding_balance = extractDollarNearText(rawText, [
+    'current outstanding principal balance',
+    'unpaid principal balance',
+    'outstanding principal balance',
+    'current outstanding balance',
+    'outstanding balance',
+    'principal balance',
+    'current loan balance',
+    'mortgage balance',
+    'loan balance',
+    'outstanding loan',
+    'remaining balance',
+    'balance outstanding',
+  ]);
+  const interest_rate = extractPercentNearText(rawText, [
+    'interest rate',
+    'rate:',
+    'annual rate',
+    'note rate',
+  ]);
+  const monthly_payment = extractDollarNearText(rawText, [
+    'current monthly debt service',
+    'monthly debt service',
+    'monthly payment',
+    'regular payment',
+    'payment amount',
+    'principal and interest',
+    'p&i payment',
+    'total payment',
+  ]);
+  const amort_years = extractYearsNearText(rawText, [
+    'amortization remaining',
+    'remaining amortization',
+    'amortization',
+    'amortization period',
+    'amort period',
+  ]);
+  const lender_name_match = String(rawText || '').match(/(?:lender|bank|mortgagee)[:\s]+([A-Za-z0-9 &.,'-]{3,60})/i);
+  const lender_name = lender_name_match ? lender_name_match[1].trim() : null;
+
+  if (!outstanding_balance) parse_warnings.push('missing_outstanding_balance');
+  if (!interest_rate) parse_warnings.push('missing_interest_rate');
+  if (!monthly_payment) parse_warnings.push('missing_monthly_payment');
+
+  return {
+    file_id: fileRow?.id || null,
+    original_filename: fileRow?.original_filename || null,
+    method: 'text_excerpt',
+    lender_name,
+    outstanding_balance,
+    interest_rate,
+    monthly_payment,
+    monthly_debt_service: monthly_payment,
+    amort_years,
+    parse_warnings,
+  };
 }
 
 const hasAnyValue = (row) => row.some((cell) => String(cell || '').trim() !== '');
@@ -3759,38 +3875,7 @@ export default async function handler(req, res) {
             parse_warnings,
           };
         } else if (effectiveDocType === 'mortgage_statement') {
-          const outstanding_balance = extractDollarNear(rawText, [
-            'outstanding balance', 'principal balance', 'loan balance', 'outstanding loan',
-            'remaining balance', 'balance outstanding',
-          ]);
-          const interest_rate = extractPercentNear(rawText, [
-            'interest rate', 'rate:', 'annual rate', 'note rate',
-          ]);
-          const monthly_payment = extractDollarNear(rawText, [
-            'monthly payment', 'regular payment', 'payment amount', 'principal and interest',
-            'p&i payment', 'total payment',
-          ]);
-          const amort_years = extractYearsNear(rawText, [
-            'amortization', 'amortization period', 'amort period',
-          ]);
-          const lender_name_match = rawText.match(/(?:lender|bank|mortgagee)[:\s]+([A-Za-z0-9 &.,'-]{3,60})/i);
-          const lender_name = lender_name_match ? lender_name_match[1].trim() : null;
-
-          if (!outstanding_balance) parse_warnings.push('missing_outstanding_balance');
-          if (!interest_rate) parse_warnings.push('missing_interest_rate');
-          if (!monthly_payment) parse_warnings.push('missing_monthly_payment');
-
-          payload = {
-            file_id: fileRow.id,
-            original_filename: fileRow.original_filename,
-            method: 'text_excerpt',
-            lender_name,
-            outstanding_balance,
-            interest_rate,
-            monthly_payment,
-            amort_years,
-            parse_warnings,
-          };
+          payload = parseMortgageStatementFromText(rawText, fileRow);
         } else if (effectiveDocType === 'appraisal') {
           const appraised_value = extractDollarNear(rawText, [
             'appraised value', 'as-is value', 'market value', 'estimated value',
