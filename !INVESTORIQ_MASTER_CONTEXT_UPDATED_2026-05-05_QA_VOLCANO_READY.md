@@ -1,9 +1,127 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 8, 2026 evening - May 8 became the major anti-whack-a-mole implementation day. InvestorIQ now has deterministic Report Contract QA, deterministic QA Director, acquisition/current-debt renderer separation, advisory QA calibration, and T12/Rent Roll/supporting-doc parser alias hardening. Harbourstone Screening and Forest City acquisition-only Underwriting passed live contract validation. Immediate next step is to deploy the parser alias patches if needed and rerun Maplewell FINAL TEST 1 only. DocRaptor remains in test mode until final outputs are clean.
+**Last updated:** May 9, 2026 morning - Maplewell true-current-debt validation resumed after the May 8 Report Contract QA / QA Director / parser alias hardening milestone. InvestorIQ now has deterministic Report Contract QA, deterministic QA Director, acquisition/current-debt renderer separation, advisory QA calibration, and T12/Rent Roll/supporting-doc parser alias hardening. Harbourstone Screening and Forest City acquisition-only Underwriting passed live contract validation. Maplewell debt/current-mortgage parsing passed, Report Contract QA now catches the rent-roll annual-total contradiction, and the remaining Maplewell blocker is the actual annual market rent normalization/rendering bug. DocRaptor remains in test mode until final outputs are clean.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 9 Maplewell True-Current-Debt Validation / Admin Review Doctrine Update
+- Maplewell FINAL TEST 1 was run one step at a time.
+  - Product: Full Underwriting.
+  - Files:
+    - `T12_Maplewell_Court.csv`
+    - `Rent_Roll_Maplewell_Court.csv`
+    - `Debt_Summary_Maplewell_Court.pdf`
+    - `Property_Tax_Bill_Maplewell.pdf`
+- Property-name display bug:
+  - User entered `FINAL TEST 1` and later clean `Maplewell`.
+  - The PDF initially rendered `FINAL 1` because `sanitizePropertyNameDisplayText()` removed standalone `test`.
+  - Patch removed broad standalone `clean|messy|qa|test` stripping from `api/generate-client-report.js`.
+  - Doctrine reinforced:
+    - production property-name display must preserve user-entered property names as source-of-truth.
+    - do not globally strip or flag words or numbers like Test, Final, Clean, Messy, QA, Screening, Underwriting, or trailing numbers.
+- Debt parser/current mortgage issue:
+  - Maplewell debt PDF explicitly stated:
+    - Current Mortgage Statement
+    - Existing mortgage / true current debt
+    - Current outstanding principal balance: `$2,100,000`
+    - Current monthly debt service: `$13,625`
+    - Interest rate: `4.25%` fixed
+    - Amortization remaining: `23 years`
+    - not proposed acquisition financing.
+  - Initial parser incorrectly treated it as `loan_term_sheet` / missing balance, causing current DSCR/refi not assessed.
+  - Patch completed:
+    - `api/parse/parse-doc.js`
+    - `api/_lib/qa-director-review.js`
+    - `tests/qa/supporting-doc-classification-smoke.js`
+    - `tests/qa/qa-director-review-smoke.js`
+  - Strong current mortgage/current balance language now routes to `mortgage_statement` before acquisition/term-sheet routing.
+  - Current-debt aliases now extract:
+    - `outstanding_balance = 2100000`
+    - `monthly_payment/monthly_debt_service = 13625`
+    - `interest_rate = 4.25`
+    - `amort_years = 23`
+  - QA Director no longer returns `no_missed_issue_detected` when high-severity public/high-value blockers exist in `qa_action_plan`.
+  - Retest passed:
+    - debt file parsed as `mortgage_statement`
+    - current debt DSCR rendered
+    - Debt Structure Summary showed balance, rate, monthly P&I, DSCR, amortization.
+  - Preserve doctrine:
+    - proposed/acquisition financing remains separate.
+    - explicit current debt wins only with strong current/existing mortgage/current balance language.
+- Rent-roll annual market rent contradiction:
+  - Maplewell PDF rendered internally contradictory values:
+    - Weighted Avg Market Rent: `$1,888/month`
+    - Total Units: `48`
+    - Annual Market Rent (Total): `$21,744,000`
+    - implied average market rent = `$21,744,000 / 12 / 48 = $37,750/month/unit`.
+  - This was not acceptable and should have been caught by QA as a named internal contradiction.
+  - Patch completed:
+    - `api/_lib/report-contract-qa.js`
+    - `api/_lib/qa-action-plan.js`
+    - `tests/qa/report-contract-qa-smoke.js`
+  - Added deterministic `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION`.
+  - It compares:
+    - `annual_market_rent_total / 12 / total_units` against `weighted_avg_market_rent / avg_market_rent`
+    - `annual_in_place_rent_total / 12 / total_units` against `weighted_avg_in_place_rent / avg_in_place_rent`.
+  - If materially different, it emits high-severity evidence including:
+    - `total_units`
+    - `annual_market_rent_total`
+    - `weighted_avg_market_rent`
+    - `implied_avg_market_rent`
+    - `annual_in_place_rent_total`
+    - `weighted_avg_in_place_rent`
+    - `implied_avg_in_place_rent`.
+  - Routed in QA Action Plan to:
+    - `owner_area: rent_roll_normalizer`
+    - `action_type: render_gating_fix_required`
+    - `requires_code_patch: true`
+    - `requires_regeneration: true`
+    - `blocks_public_sample: true`
+    - `blocks_high_value_outreach: true`
+    - `blocks_customer_delivery: false` for now because QA remains advisory-only.
+  - Retest confirmed the flag fires correctly on Maplewell.
+  - Current issue still open:
+    - bad `$21,744,000` annual market rent value still renders.
+    - next patch must fix actual rent roll annual market rent normalization in generator/parser path.
+    - expected annual market rent should reconcile to roughly `48 x $1,888 x 12 = $1.087M`.
+- New Admin Review / Fix Queue doctrine:
+  - User wants early-stage InvestorIQ to slow down operationally and use the 24-business-hour delivery window for quality review when needed.
+  - Correct workflow:
+    - Parser extracts values.
+    - Deterministic validation/normalization builds source-of-truth artifacts.
+    - Report renders internally.
+    - QA detects parser misses, math contradictions, source/report inconsistencies, public-output issues, or high-severity render problems.
+    - If high-severity issue exists, route to Admin Review / Fix Queue before customer notification.
+    - Admin sees exact reason, source evidence, parsed artifact state, recommended fix owner area, and whether a code patch or structured override is needed.
+    - Admin may manually enter or approve missing source-backed structured values only when supported by uploaded documents.
+    - System regenerates deterministically.
+    - Admin reviews final PDF.
+    - Admin clicks `Notify User`.
+    - Only then does the published report appear in the user dashboard and send report-ready email.
+  - AI/QA may not silently change financial values.
+  - AI/QA may challenge the classification of a flag and identify parser/render misses.
+  - Admin-approved overrides must be structured, auditable, source-backed, and logged.
+  - Future dashboard enhancement:
+    - Add Admin Review Queue / Fix Queue to Admin Dashboard.
+    - Cards should show:
+      - report/property
+      - severity
+      - reason
+      - owner area
+      - source file/evidence
+      - parsed artifact issue
+      - recommended next step
+      - buttons later: View Artifacts, View PDF, Apply Override / Confirm Source Value, Regenerate, Approve Delivery, Notify User.
+  - Future statuses/lifecycle concepts to consider:
+    - `generated_internal`
+    - `admin_review_required`
+    - `approved_for_delivery`
+    - `published_to_customer`.
+  - Launch doctrine:
+    - fast when clean, reviewed when required.
+    - customer-facing copy still says reports may take up to 24 business hours.
+    - do not expose AI/model/vendor language publicly.
 
 ### May 8 Autonomous Publication Reliability Doctrine / 99.999% Target
 - Strategic shift:
@@ -358,26 +476,15 @@
 - Textract helps with PDF/image extraction, but CSV/XLSX parsing still needs robust deterministic header/label handling.
 
 #### Current Immediate Next Step After May 8
-- Deploy the parser alias patches if not already deployed.
-- Rerun only FINAL TEST 1 / Maplewell Court first.
+- Patch the actual Maplewell annual market rent normalization bug next.
 - Do not rerun all six synthetic packages at once.
+- Keep Maplewell as the only immediate visible math regression.
 - Expected Maplewell result:
-  - T12 parsed
-  - Rent Roll parsed
-  - Debt Summary parsed
-  - Property Tax parsed
-  - report publishes
-  - current-debt/DSCR/refi logic renders because true current debt is provided
-  - `report_contract_qa.contract_status = pass`
-  - `qa_director_review.overall_director_decision = no_missed_issue_detected`
-  - `qa_action_plan.customer_delivery_ready = true`
-  - only acceptable public/high-value blocker remains `DOCRAPTOR_NOT_PRODUCTION_MODE`.
-- If Maplewell passes, continue the remaining synthetic packages one at a time:
-  1. messy unsupported support docs
-  2. structured renovation no ROI inputs
-  3. structured renovation with rent lift
-  4. bad core missing rent roll fail-closed
-  5. cross-document financial mismatch fail-closed.
+  - debt/current-mortgage parser lane passes
+  - current debt DSCR renders
+  - Report Contract QA flags the rent-roll contradiction
+  - annual market rent normalizes to the weighted-average source of truth
+  - the PDF no longer renders an impossible annual market rent value.
 
 ### May 7 Security, Dashboard Freeze, Intake Rescue, and QA Occupancy Calibration
 - Supabase Security Advisor triage:
@@ -2890,9 +2997,10 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Current launch status:
     - not yet DocRaptor-production-ready
     - not yet Ken-ready until final clean samples are regenerated and checked
-    - anti-whack-a-mole architecture is materially stronger than the May 7 state.
+    - anti-whack-a-mole architecture is materially stronger than the May 7 state, but Maplewell still has one visible math contradiction.
   - Remaining public/high-value blocker still includes DocRaptor test mode.
-  - Immediate next validation is Maplewell FINAL TEST 1 only, then continue remaining synthetic lanes one at a time.
+  - Maplewell debt/current-mortgage parser lane is now passing, but the annual market rent normalization bug remains OPEN.
+  - Immediate next validation is the Maplewell annual market rent fix, then continue remaining synthetic lanes one at a time.
 - **May 7 launch snapshot:**
   - Supabase Security Advisor triage is effectively complete with two accepted warnings documented: `queue_job_for_processing` remains temporarily SECURITY DEFINER/authenticated for Generate Report safety, and leaked password protection requires Supabase Pro.
   - Dashboard freeze / lag is improved after Dashboard fetch guards plus May 7 `SupabaseAuthContext` auth/profile-churn patch, but remains OPEN / MONITORED.

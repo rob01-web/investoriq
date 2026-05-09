@@ -113,6 +113,42 @@ const coerceNumber = (value) => {
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 };
+function materiallyDifferent(a, b, absoluteTolerance = 10, relativeTolerance = 0.02) {
+  const left = Number(a);
+  const right = Number(b);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
+  const delta = Math.abs(left - right);
+  const scale = Math.max(Math.abs(left), Math.abs(right), 1);
+  return delta > absoluteTolerance && delta / scale > relativeTolerance;
+}
+function resolveSafeAnnualRentTotal({
+  totalUnits,
+  weightedAvgRent,
+  summaryAnnualTotal,
+  rowAnnualTotal,
+  isPartialSample = false,
+} = {}) {
+  const units = coerceNumber(totalUnits);
+  const weighted = coerceNumber(weightedAvgRent);
+  const summaryAnnual = coerceNumber(summaryAnnualTotal);
+  const rowAnnual = coerceNumber(rowAnnualTotal);
+  if (
+    !isPartialSample &&
+    Number.isFinite(units) &&
+    units > 0 &&
+    Number.isFinite(summaryAnnual) &&
+    Number.isFinite(weighted)
+  ) {
+    const impliedMonthly = summaryAnnual / 12 / units;
+    if (!materiallyDifferent(impliedMonthly, weighted)) return summaryAnnual;
+  }
+  if (!isPartialSample && Number.isFinite(units) && units > 0 && Number.isFinite(weighted)) {
+    return weighted * units * 12;
+  }
+  if (Number.isFinite(summaryAnnual)) return summaryAnnual;
+  if (Number.isFinite(rowAnnual)) return rowAnnual;
+  return null;
+}
 function isFiniteNumber(x) {
   const n = Number(x);
   return Number.isFinite(n);
@@ -2728,6 +2764,26 @@ export default async function handler(req, res) {
         totalInPlaceMonthly !== null ? totalInPlaceMonthly * 12 : null;
       const totalMarketAnnual =
         totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
+      const resolvedInPlaceAnnual = resolveSafeAnnualRentTotal({
+        totalUnits,
+        weightedAvgRent: Number.isFinite(summaryAvgInPlaceRent) ? summaryAvgInPlaceRent : avgInPlaceRent,
+        summaryAnnualTotal: summaryInPlaceAnnual,
+        rowAnnualTotal: totalInPlaceAnnual,
+        isPartialSample: isPartialRentRollSample,
+      });
+      const resolvedMarketAnnual = resolveSafeAnnualRentTotal({
+        totalUnits,
+        weightedAvgRent: Number.isFinite(summaryAvgMarketRent) ? summaryAvgMarketRent : avgMarketRent,
+        summaryAnnualTotal: summaryMarketAnnual,
+        rowAnnualTotal: totalMarketAnnual,
+        isPartialSample: isPartialRentRollSample,
+      });
+      const resolvedInPlaceMonthly = Number.isFinite(resolvedInPlaceAnnual)
+        ? resolvedInPlaceAnnual / 12
+        : null;
+      const resolvedMarketMonthly = Number.isFinite(resolvedMarketAnnual)
+        ? resolvedMarketAnnual / 12
+        : null;
       const unitMix = Object.entries(unitMixMap)
         .sort((a, b) => Number(a[0]) - Number(b[0]))
         .map(([bedKey, count]) => {
@@ -2761,11 +2817,13 @@ export default async function handler(req, res) {
         occupancy: Number.isFinite(summaryOccupancy) ? summaryOccupancy : isPartialRentRollSample ? null : occupancy,
         avg_in_place_rent: Number.isFinite(summaryAvgInPlaceRent) ? summaryAvgInPlaceRent : avgInPlaceRent ?? DATA_NOT_AVAILABLE,
         avg_market_rent: Number.isFinite(summaryAvgMarketRent) ? summaryAvgMarketRent : avgMarketRent ?? DATA_NOT_AVAILABLE,
-        total_in_place_monthly: Number.isFinite(summaryInPlaceMonthly) ? summaryInPlaceMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
-        total_market_monthly: Number.isFinite(summaryMarketMonthly) ? summaryMarketMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
-        total_in_place_annual: Number.isFinite(summaryInPlaceAnnual) ? summaryInPlaceAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
-        total_market_annual: Number.isFinite(summaryMarketAnnual) ? summaryMarketAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
-        rent_to_market_gap: Number.isFinite(summaryRentToMarketGap) ? summaryRentToMarketGap : null,
+        total_in_place_monthly: Number.isFinite(resolvedInPlaceMonthly) ? resolvedInPlaceMonthly : Number.isFinite(summaryInPlaceMonthly) ? summaryInPlaceMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
+        total_market_monthly: Number.isFinite(resolvedMarketMonthly) ? resolvedMarketMonthly : Number.isFinite(summaryMarketMonthly) ? summaryMarketMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
+        total_in_place_annual: Number.isFinite(resolvedInPlaceAnnual) ? resolvedInPlaceAnnual : Number.isFinite(summaryInPlaceAnnual) ? summaryInPlaceAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
+        total_market_annual: Number.isFinite(resolvedMarketAnnual) ? resolvedMarketAnnual : Number.isFinite(summaryMarketAnnual) ? summaryMarketAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        rent_to_market_gap: Number.isFinite(resolvedInPlaceAnnual) && Number.isFinite(resolvedMarketAnnual) && resolvedInPlaceAnnual > 0 && resolvedMarketAnnual > resolvedInPlaceAnnual
+          ? (resolvedMarketAnnual - resolvedInPlaceAnnual) / resolvedInPlaceAnnual
+          : Number.isFinite(summaryRentToMarketGap) ? summaryRentToMarketGap : null,
         is_partial_sample: isPartialRentRollSample,
         unit_mix: unitMix,
       };
@@ -6590,3 +6648,8 @@ try {
   } finally {
   }
 }
+
+export const __test__ = {
+  materiallyDifferent,
+  resolveSafeAnnualRentTotal,
+};
