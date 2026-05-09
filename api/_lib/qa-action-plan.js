@@ -529,6 +529,24 @@ function actionForReportContractViolation(violation) {
   const hardPublicOrDebug =
     code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
     String(violation?.category || "") === "public_language";
+  if (code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION") {
+    return {
+      code,
+      title: violation?.message || "Rent roll total normalization contradiction",
+      source_artifact: "report_contract_qa",
+      severity: "high",
+      action_type: "render_gating_fix_required",
+      owner_area: "rent_roll_normalizer",
+      recommended_next_step: "Inspect rent roll total normalization and regenerate.",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+      safe_to_auto_fix: false,
+      evidence: violation?.evidence || null,
+    };
+  }
   const materiallyMisleadingDebt =
     code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";

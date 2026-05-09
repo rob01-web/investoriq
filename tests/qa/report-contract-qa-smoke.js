@@ -43,6 +43,75 @@ const honestLumpSum = buildReportContractQa({
 assert.equal(honestLumpSum.violations.length, 0);
 assert.equal(honestLumpSum.customer_delivery_ready, true);
 
+const rentRollContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Rent Roll Summary</h2>",
+    "<table>",
+    "<tr><td>Total Units</td><td>48</td></tr>",
+    "<tr><td>Weighted Avg Market Rent</td><td>$1,888/month</td></tr>",
+    "<tr><td>Annual Market Rent (Total)</td><td>$21,744,000</td></tr>",
+    "<tr><td>Weighted Avg In-Place Rent</td><td>$1,700/month</td></tr>",
+    "<tr><td>Annual In-Place Rent (Total)</td><td>$979,200</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+assert.equal(
+  rentRollContradiction.violations.some((v) => v.code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"),
+  true
+);
+const rentRollContradictionViolation = rentRollContradiction.violations.find(
+  (v) => v.code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"
+);
+assert.equal(rentRollContradictionViolation.evidence.total_units, 48);
+assert.equal(rentRollContradictionViolation.evidence.annual_market_rent_total, 21744000);
+assert.equal(rentRollContradictionViolation.evidence.weighted_avg_market_rent, 1888);
+assert.equal(rentRollContradictionViolation.evidence.implied_avg_market_rent, 37750);
+assert.equal(rentRollContradictionViolation.evidence.annual_in_place_rent_total, 979200);
+assert.equal(rentRollContradictionViolation.evidence.weighted_avg_in_place_rent, 1700);
+assert.equal(rentRollContradictionViolation.evidence.implied_avg_in_place_rent, 1700);
+
+const rentRollContradictionPlan = buildQaActionPlan({
+  reportContractQa: rentRollContradiction,
+  sourceReportCoverageQa: baseCoverage,
+  renderedReportQa: { findings: [] },
+  qaFixRouting: null,
+  reportType: "underwriting",
+  reportTier: 2,
+});
+const rentRollAction = rentRollContradictionPlan.prioritized_actions.find(
+  (action) => action.code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"
+);
+assert.equal(rentRollAction.action_type, "render_gating_fix_required");
+assert.equal(rentRollAction.owner_area, "rent_roll_normalizer");
+assert.equal(rentRollAction.blocks_customer_delivery, false);
+assert.equal(rentRollAction.blocks_public_sample, true);
+assert.equal(rentRollAction.blocks_high_value_outreach, true);
+
+const rentRollConsistent = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Rent Roll Summary</h2>",
+    "<table>",
+    "<tr><td>Total Units</td><td>48</td></tr>",
+    "<tr><td>Weighted Avg Market Rent</td><td>$1,888/month</td></tr>",
+    "<tr><td>Annual Market Rent (Total)</td><td>$1,087,488</td></tr>",
+    "<tr><td>Weighted Avg In-Place Rent</td><td>$1,700/month</td></tr>",
+    "<tr><td>Annual In-Place Rent (Total)</td><td>$979,200</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+assert.equal(
+  rentRollConsistent.violations.some((v) => v.code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"),
+  false
+);
+
 const badIncomeTable = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

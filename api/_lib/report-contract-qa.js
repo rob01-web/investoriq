@@ -1,6 +1,6 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 
-const REPORT_CONTRACT_QA_VERSION = "2026.05.08.1";
+const REPORT_CONTRACT_QA_VERSION = "2026.05.09.1";
 
 function stripHtml(html) {
   if (typeof html !== "string") return "";
@@ -31,6 +31,29 @@ function latestPayload(artifacts, type) {
 function positive(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0;
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractLabeledNumber(text, labels) {
+  const source = String(text || "");
+  for (const label of Array.isArray(labels) ? labels : []) {
+    const pattern = new RegExp(`${escapeRegExp(label)}\\s*[:\\-]?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)`, "i");
+    const match = pattern.exec(source);
+    if (!match) continue;
+    const value = Number(String(match[1]).replace(/,/g, ""));
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function materiallyDifferent(expectedValue, actualValue) {
+  if (!Number.isFinite(expectedValue) || !Number.isFinite(actualValue)) return false;
+  const delta = Math.abs(expectedValue - actualValue);
+  const scale = Math.max(Math.abs(expectedValue), Math.abs(actualValue), 1);
+  return delta > 10 && delta / scale > 0.02;
 }
 
 function addViolation(violations, violation) {
@@ -151,6 +174,57 @@ export function buildReportContractQa({
   const text = stripHtml(html);
   const lower = text.toLowerCase();
   const violations = [];
+  const totalUnits = extractLabeledNumber(text, ["Total Units"]);
+  const annualMarketRentTotal = extractLabeledNumber(text, [
+    "Annual Market Rent (Total)",
+    "Annual Market Rent (100% Occupancy)",
+    "Annual Market Rent",
+  ]);
+  const weightedAvgMarketRent = extractLabeledNumber(text, [
+    "Weighted Avg Market Rent",
+    "Avg Market Rent",
+  ]);
+  const annualInPlaceRentTotal = extractLabeledNumber(text, [
+    "Annual In-Place Rent (Total)",
+    "Annual In-Place Rent",
+  ]);
+  const weightedAvgInPlaceRent = extractLabeledNumber(text, [
+    "Weighted Avg In-Place Rent",
+    "Avg In-Place Rent",
+    "Average In-Place Rent",
+  ]);
+  const impliedAvgMarketRent =
+    Number.isFinite(totalUnits) && totalUnits > 0 && Number.isFinite(annualMarketRentTotal)
+      ? annualMarketRentTotal / 12 / totalUnits
+      : null;
+  const impliedAvgInPlaceRent =
+    Number.isFinite(totalUnits) && totalUnits > 0 && Number.isFinite(annualInPlaceRentTotal)
+      ? annualInPlaceRentTotal / 12 / totalUnits
+      : null;
+
+  if (
+    materiallyDifferent(impliedAvgMarketRent, weightedAvgMarketRent) ||
+    materiallyDifferent(impliedAvgInPlaceRent, weightedAvgInPlaceRent)
+  ) {
+    addViolation(violations, {
+      code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+      severity: "high",
+      category: "report_contract",
+      message: "Rent roll annual totals do not reconcile to the displayed weighted average rents.",
+      evidence: {
+        total_units: Number.isFinite(totalUnits) ? totalUnits : null,
+        annual_market_rent_total: Number.isFinite(annualMarketRentTotal) ? annualMarketRentTotal : null,
+        weighted_avg_market_rent: Number.isFinite(weightedAvgMarketRent) ? weightedAvgMarketRent : null,
+        implied_avg_market_rent: Number.isFinite(impliedAvgMarketRent) ? impliedAvgMarketRent : null,
+        annual_in_place_rent_total: Number.isFinite(annualInPlaceRentTotal) ? annualInPlaceRentTotal : null,
+        weighted_avg_in_place_rent: Number.isFinite(weightedAvgInPlaceRent) ? weightedAvgInPlaceRent : null,
+        implied_avg_in_place_rent: Number.isFinite(impliedAvgInPlaceRent) ? impliedAvgInPlaceRent : null,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
 
   if (
     containsProhibitedPublicLanguage(text) ||
@@ -375,6 +449,8 @@ export function buildReportContractQa({
 
 export const __test__ = {
   stripHtml,
+  extractLabeledNumber,
+  materiallyDifferent,
   hasDerivedAcquisitionDebt,
   hasTrueCurrentDebt,
   hasStructuredRenovation,
