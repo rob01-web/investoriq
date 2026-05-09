@@ -462,7 +462,6 @@ function sanitizePropertyNameDisplayText(s) {
     .replace(/['"]\s*(?:clean|messy|qa|test)\s*['"]/gi, " ")
     .replace(/\b(?:clean|messy)\s+(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
     .replace(/\b(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
-    .replace(/\b(?:clean|messy|qa|test)\b/gi, " ")
     .replace(/\s*[-|:]\s*$/g, "")
     .replace(/^\s*[-|:]\s*/g, "")
     .replace(/\s{2,}/g, " ")
