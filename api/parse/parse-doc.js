@@ -151,6 +151,115 @@ const detectRequiredFinancialDocTypeFromText = (text) => {
   return 'unknown';
 };
 
+const SUPPORTING_DOC_ALIASES = {
+  mortgage_statement: [
+    'Existing mortgage',
+    'Current mortgage',
+    'Current outstanding principal balance',
+    'Current outstanding balance',
+    'Principal balance',
+    'Outstanding loan balance',
+    'Current monthly debt service',
+    'Monthly payment',
+    'Regular payment',
+    'Maturity date',
+    'Mortgagee',
+    'Existing lender',
+    'Current loan balance',
+  ],
+  loan_term_sheet: [
+    'Indicative acquisition financing',
+    'Proposed loan amount',
+    'Proposed LTV',
+    'Borrower to be determined',
+    'Purchaser',
+    'Acquisition financing',
+    'Refinance / acquisition financing',
+    'Loan amount at purchase price',
+    'Not a financing commitment',
+    'Term sheet',
+    'Loan-to-value',
+    'Exit cap',
+    'Refi cap',
+  ],
+  property_tax: [
+    'Property Tax Notice',
+    'Municipal Property Taxes',
+    'Realty Tax',
+    'Real Estate Taxes',
+    'Tax Bill',
+    'Tax Notice',
+    'Annual Taxes',
+    'Roll Number',
+    'Assessment Roll',
+    'Installments',
+  ],
+  renovation: [
+    'Renovation Budget',
+    'CapEx',
+    'Cap Ex',
+    'Capital Expenditure',
+    'Capital Budget',
+    'Scope of Work',
+    'Unit Turns',
+    'Contingency',
+    'Forward-looking renovation plan',
+    'Rent lift',
+    'Phasing',
+    'Payback',
+    'ROI',
+  ],
+};
+
+export function inferSupportingDocTypeFromText(text, options = {}) {
+  const allowFilenameHint = options.allowFilenameHint !== false;
+  const filename = options.filename || '';
+  const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
+  if (requiredFinancialType !== 'unknown') return requiredFinancialType;
+
+  const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
+  const has = (terms) => terms.some((t) => norm.includes(String(t || '').toUpperCase()));
+  const countMatches = (terms) => terms.filter((t) => norm.includes(String(t || '').toUpperCase())).length;
+  const nameNorm = String(filename || '').toUpperCase().replace(/\s+/g, ' ');
+  const hasFinancingValuePattern =
+    /\d+(?:\.\d+)?\s*%/.test(norm) ||
+    /\$\s*[\d,]+(?:\.\d{2})?/.test(norm) ||
+    /\b\d+\s*(?:YRS|YR|YEARS)\b/.test(norm);
+
+  const unsupportedSupportDoc =
+    has(['UNSUPPORTED']) &&
+    has(['MARKET SURVEY', 'APPRAISAL SUMMARY', 'APPRAISAL EXCERPT', 'PHASE I ESA', 'ENVIRONMENTAL REPORT']);
+  if (unsupportedSupportDoc) return 'supporting_documents_unclassified';
+
+  const acquisitionSignals = countMatches(SUPPORTING_DOC_ALIASES.loan_term_sheet);
+  const acquisitionOnlyContext = has([
+    'BORROWER TO BE DETERMINED',
+    'PURCHASER',
+    'ACQUISITION FINANCING',
+    'INDICATIVE ACQUISITION FINANCING',
+    'LOAN AMOUNT AT PURCHASE PRICE',
+    'NOT A FINANCING COMMITMENT',
+  ]);
+  if (acquisitionSignals >= 2 || has(['TERM SHEET', 'REFI TERMS', 'LOAN TERMS']) || (acquisitionSignals >= 1 && hasFinancingValuePattern)) {
+    return 'loan_term_sheet';
+  }
+
+  const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
+  if (!acquisitionOnlyContext && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
+    return 'mortgage_statement';
+  }
+
+  const renovationSignals = countMatches(SUPPORTING_DOC_ALIASES.renovation);
+  const renovationNameSignal = /renovation|capex|cap ex|capital|budget|scope/i.test(nameNorm);
+  if ((allowFilenameHint && renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 2) return 'renovation';
+
+  if (countMatches(SUPPORTING_DOC_ALIASES.property_tax) >= 2 || has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
+  if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
+  if (has(['POLICY NUMBER', 'NAMED INSURED']) && countMatches(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE']) >= 2) return 'insurance_policy';
+  if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && countMatches(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD']) >= 2) return 'bank_statement';
+  return 'supporting_documents_unclassified';
+}
+
 const hasAnyValue = (row) => row.some((cell) => String(cell || '').trim() !== '');
 
 const isBlankRow = (row) => !row || row.every((cell) => String(cell || '').trim() === '');
@@ -169,6 +278,139 @@ const headerTokenSet = [
   'status',
   'tenant',
 ];
+
+const RENT_ROLL_ALIASES = {
+  unit: [
+    'Unit',
+    'Suite',
+    'Unit Number',
+    'Unit #',
+    'Apt',
+    'Apt #',
+    'Apartment',
+    'Apartment Number',
+    'Suite Number',
+    'Unit ID',
+    'UnitID',
+    'Unit Name',
+    'Door',
+    'Premises',
+    'Premise',
+  ],
+  unit_type: [
+    'Unit Type',
+    'Type',
+    'Layout',
+    'Floor Plan',
+    'Floorplan',
+    'Bedroom Type',
+    'Beds',
+    'Bedrooms',
+    'BR',
+    'Plan',
+    'Model',
+    'Suite Type',
+    'Beds/Baths',
+    'Bed/Bath',
+    'BR/BA',
+    'Configuration',
+  ],
+  status: [
+    'Status',
+    'Occupancy Status',
+    'Occupied',
+    'Vacant',
+    'Lease Status',
+    'Unit Status',
+    'Occupancy',
+    'Occ Status',
+    'Availability',
+    'Available',
+    'Vacancy',
+    'Vacant/Occupied',
+  ],
+  in_place_rent: [
+    'In-Place Rent',
+    'In Place Rent',
+    'Current Rent',
+    'Rent',
+    'Monthly Rent',
+    'Current Monthly Rent',
+    'Monthly Charge',
+    'Contract Rent',
+    'Actual Rent',
+    'Lease Rent',
+    'Tenant Rent',
+    'Rent Amount',
+    'Base Rent',
+    'Scheduled Rent',
+    'Collected Rent',
+    'Residential Rent',
+  ],
+  market_rent: [
+    'Market Rent',
+    'Asking Rent',
+    'Legal Rent',
+    'Target Rent',
+    'Pro Forma Rent',
+    'Proforma Rent',
+    'Stabilized Rent',
+    'Estimated Market Rent',
+    'Market',
+    'Market Monthly Rent',
+    'Projected Rent',
+    'Asking',
+    'Street Rent',
+    'Target Monthly Rent',
+    'Post-Reno Rent',
+    'Renovated Rent',
+  ],
+  sqft: [
+    'Sq Ft',
+    'SQFT',
+    'SqFt',
+    'Sq. Ft.',
+    'SF',
+    'Area',
+    'Square Feet',
+    'Square Footage',
+    'Rentable SF',
+    'RSF',
+    'Size',
+    'Area SF',
+    'Unit Area',
+  ],
+  lease_dates: [
+    'Lease Start',
+    'Lease End',
+    'Start Date',
+    'End Date',
+    'Move In',
+    'Move-In Date',
+    'Expiration',
+    'Expiry',
+    'Term',
+  ],
+  total_units: ['Total Units', 'Unit Count', 'Number of Units', '# Units', 'Suites', 'Total Suites', 'Door Count'],
+  occupied_units: ['Occupied Units', 'Units Occupied', 'Occupied Suites', 'Occupied', 'Leased Units', 'Leased'],
+  vacant_units: ['Vacant Units', 'Units Vacant', 'Vacant Suites', 'Vacancy', 'Available Units'],
+  occupancy: ['Occupancy', 'Occupancy %', 'Physical Occupancy', 'Economic Occupancy', 'Leased %', 'Occupied %'],
+};
+
+const RENT_ROLL_EXACT_ONLY_ALIASES = new Set(
+  ['Unit', 'Suite', 'Apt', 'Apartment', 'Door', 'Premises', 'Premise', 'Type', 'Beds', 'Bedrooms', 'BR', 'Plan', 'Model', 'Status', 'Occupied', 'Vacant', 'Occupancy', 'Available', 'Vacancy', 'Rent', 'Market', 'Asking', 'SF', 'Area', 'Size', 'Leased'].map((value) =>
+    normalizeClassifierText(value)
+  )
+);
+
+const rentRollHeaderMatches = (header, alias) => {
+  const normalizedHeader = normalizeClassifierText(header);
+  const normalizedAlias = normalizeClassifierText(alias);
+  if (!normalizedHeader || !normalizedAlias) return false;
+  if (normalizedHeader === normalizedAlias) return true;
+  if (RENT_ROLL_EXACT_ONLY_ALIASES.has(normalizedAlias)) return false;
+  return normalizedHeader.includes(normalizedAlias);
+};
 
 const countHeaderTokens = (row) => {
   if (!Array.isArray(row)) return 0;
@@ -204,7 +446,206 @@ const extractNumericRight = (row, startIndex) => {
   return null;
 };
 
-const T12_TOTAL_HEADER_RE = /\b(?:ttm|t12|t-12|trailing\s*12|trailing\s*twelve|annual(?:\s*total)?|total)\b/i;
+const T12_VALUE_COLUMN_ALIASES = [
+  'Annual Total',
+  'Annual Amount',
+  'Annual',
+  'T12',
+  'T-12',
+  'TTM',
+  'TTM Amount',
+  'TTM Total',
+  'Trailing 12',
+  'Trailing Twelve',
+  'Trailing Twelve Months',
+  'Last Twelve Months',
+  'LTM',
+  'LTM Amount',
+  'T-12 Total',
+  'Total',
+  'Amount',
+  'Value',
+  'Actual',
+  'Actuals',
+  'Current Year',
+  'Year End',
+  'Year-End',
+  'Fiscal Year',
+  'FY',
+  'FY Total',
+  'CY',
+  'CY Total',
+  'Current Period',
+  'Period Total',
+  'Year to Date',
+  'YTD',
+  'YTD Actual',
+  'YTD Total',
+];
+
+const T12_LABEL_ALIASES = {
+  effective_gross_income: [
+    'Effective Gross Income',
+    'EGI',
+    'Total Effective Income',
+    'Effective Rental Income',
+    'Net Rental Income',
+    'Total Income After Vacancy',
+    'Rental Income Net of Vacancy',
+    'Gross Operating Income',
+    'GOI',
+    'Total Operating Income',
+    'Operating Income',
+    'Gross Income',
+    'Total Revenue',
+    'Operating Revenue',
+    'Rental Revenue Net of Vacancy',
+    'Income After Vacancy',
+    'Revenue After Vacancy',
+  ],
+  gross_potential_rent: [
+    'Gross Potential Rent',
+    'GPR',
+    'Gross Scheduled Rent',
+    'Scheduled Rent',
+    'Market Rent Potential',
+    'Potential Rental Income',
+    'Potential Gross Rent',
+    'Scheduled Rental Income',
+    'Gross Scheduled Income',
+    'Apartment Rent',
+    'Residential Rental Income',
+    'Base Rent',
+    'Contract Rent',
+    'Rental Revenue',
+    'Total Rental Income',
+    'Gross Potential Income',
+    'Gross Rental Income',
+    'Rental Income',
+    'Gross Rental Revenue',
+  ],
+  vacancy_loss: [
+    'Vacancy',
+    'Vacancy Loss',
+    'Vacancy / Credit Loss',
+    'Credit Loss',
+    'Collection Loss',
+    'Bad Debt',
+    'Concessions',
+    'Vacancy Allowance',
+    'Vacancy & Collection Loss',
+    'Vacancy and Credit Loss',
+    'Vacancy Deduction',
+    'Vacancy Reserve',
+    'Loss to Lease',
+    'Loss-to-Lease',
+    'Rent Loss',
+    'Bad Debt Expense',
+    'Concession Loss',
+    'Rent Concessions',
+  ],
+  total_operating_expenses: [
+    'Total Operating Expenses',
+    'Total Expenses',
+    'Operating Expenses',
+    'OpEx',
+    'Total OpEx',
+    'Expenses Total',
+    'Operating Expense Total',
+    'Total Operating Expense',
+    'Total Controllable Expenses',
+    'Total Property Expenses',
+    'Property Operating Expenses',
+    'Real Estate Operating Expenses',
+    'Expenses',
+  ],
+  net_operating_income: [
+    'Net Operating Income',
+    'NOI',
+    'Net Income from Operations',
+    'Operating NOI',
+    'Net Operating',
+    'Net Operating Revenue',
+    'Income Before Debt Service',
+    'Cash Flow Before Debt Service',
+    'Net Income Before Debt',
+    'Property NOI',
+    'Stabilized NOI',
+  ],
+  other_income: [
+    'Other Income',
+    'Laundry Income',
+    'Parking Income',
+    'Misc Income',
+    'Miscellaneous Income',
+    'Ancillary Income',
+    'Ancillary Revenue',
+    'Laundry Revenue',
+    'Parking Revenue',
+    'Storage Income',
+    'Storage Revenue',
+    'Pet Fees',
+    'Application Fees',
+    'Late Fees',
+    'Utility Recoveries',
+    'Utility Reimbursements',
+    'RUBS',
+    'Reimbursement Income',
+    'Admin Fees',
+  ],
+};
+
+const T12_EXPENSE_LINE_ALIASES = {
+  property_taxes: ['Property Taxes', 'Taxes', 'Real Estate Taxes'],
+  insurance: ['Insurance'],
+  utilities: ['Utilities', 'Water', 'Sewer', 'Gas', 'Hydro', 'Electricity'],
+  repairs_maintenance: ['Repairs', 'Maintenance', 'Repairs & Maintenance', 'Repairs and Maintenance'],
+  management: ['Management', 'Property Management', 'Management Fee'],
+  payroll_admin: ['Payroll', 'Superintendent', 'Admin', 'Administrative'],
+  garbage_misc: ['Garbage', 'Waste', 'Trash', 'Snow', 'Landscaping', 'Contract Services', 'Misc'],
+};
+
+const T12_EXACT_ONLY_ALIASES = new Set(
+  [
+    'Operating Income',
+    'Gross Income',
+    'Total Revenue',
+    'Operating Revenue',
+    'Expenses',
+    'Rental Income',
+    'Base Rent',
+    'Contract Rent',
+    'Rent Loss',
+    'Net Operating',
+    'Taxes',
+    'Management',
+    'Admin',
+    'Water',
+    'Gas',
+    'Hydro',
+    'Snow',
+    'Misc',
+  ].map((value) => normalizeClassifierText(value))
+);
+
+const isProjectedT12LabelWithoutActualContext = (label) => {
+  const normalizedLabel = normalizeClassifierText(label);
+  if (!/\b(?:proforma|proposed|projected|forecast|budget|stabilized)\b/.test(normalizedLabel)) return false;
+  return !/\b(?:actual|current|t12|ttm|ltm|trailing|annual|year|fiscal)\b/.test(normalizedLabel);
+};
+
+const labelMatchesT12Alias = (label, alias) => {
+  const normalizedLabel = normalizeClassifierText(label);
+  const normalizedAlias = normalizeClassifierText(alias);
+  if (!normalizedLabel || !normalizedAlias) return false;
+  if (isProjectedT12LabelWithoutActualContext(normalizedLabel)) return false;
+  if (normalizedLabel === normalizedAlias) return true;
+  if (T12_EXACT_ONLY_ALIASES.has(normalizedAlias)) return false;
+  return normalizedLabel.includes(normalizedAlias);
+};
+
+const T12_TOTAL_HEADER_RE =
+  /\b(?:ttm(?:\s*(?:amount|total))?|t\s*-?\s*12(?:\s*total)?|trailing\s*(?:12|twelve)(?:\s*months)?|last\s*twelve\s*months|ltm(?:\s*amount)?|annual(?:\s*(?:total|amount))?|total|amount|value|actuals?|current\s*year|year[-\s]*end|fiscal\s*year|fy(?:\s*total)?|cy(?:\s*total)?|current\s*period|period\s*total|year\s*to\s*date|ytd(?:\s*(?:actual|total))?)\b/i;
 const T12_MONTH_HEADER_RE = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 
 const getT12TotalColumnIndexes = (headerRows) => {
@@ -238,10 +679,10 @@ const parseT12TotalColumnValue = (row, totalColumnIndexes, key = null) => {
 };
 
 const labelRules = [
-  { key: 'gross_potential_rent', labels: ['gross potential rent', 'gpr', 'gross rental income', 'gross rental revenue', 'rental income'] },
-  { key: 'effective_gross_income', labels: ['effective gross income', 'egi'] },
-  { key: 'total_operating_expenses', labels: ['total operating expenses', 'operating expenses', 'total expenses'] },
-  { key: 'net_operating_income', labels: ['net operating income', 'noi'] },
+  { key: 'gross_potential_rent', labels: T12_LABEL_ALIASES.gross_potential_rent },
+  { key: 'effective_gross_income', labels: T12_LABEL_ALIASES.effective_gross_income },
+  { key: 'total_operating_expenses', labels: T12_LABEL_ALIASES.total_operating_expenses },
+  { key: 'net_operating_income', labels: T12_LABEL_ALIASES.net_operating_income },
 ];
 
 const numericFromCell = (value) => {
@@ -255,7 +696,7 @@ const isPlausibleT12Field = (key, value) => {
   return true;
 };
 
-const validateCoreT12Payload = (payload, parseBranch) => {
+export const validateCoreT12Payload = (payload, parseBranch) => {
   const effectiveGrossIncome = Number(payload?.effective_gross_income);
   const totalOperatingExpenses = Number(payload?.total_operating_expenses);
   const netOperatingIncome = Number(payload?.net_operating_income);
@@ -373,19 +814,31 @@ const getWorkbookRowMatrices = (workbook) =>
     .filter((entry) => Array.isArray(entry?.rows) && entry.rows.length > 0);
 
 const findHeaderIndex = (headerCells, tokenGroups) => {
-  const normalized = headerCells.map((cell) => normalizeClassifierText(cell));
-  for (let i = 0; i < normalized.length; i += 1) {
-    const header = normalized[i];
+  for (let i = 0; i < headerCells.length; i += 1) {
+    const header = headerCells[i];
     if (!header) continue;
     for (const token of tokenGroups) {
-      const normalizedToken = normalizeClassifierText(token);
-      if (header.includes(normalizedToken)) return i;
+      if (rentRollHeaderMatches(header, token)) return i;
     }
   }
   return -1;
 };
 
-const parseRentRollFromRowMatrices = (rowMatrices) => {
+const isMarketRentHeaderLabel = (value) => {
+  const label = normalizeClassifierText(value);
+  if (!label) return false;
+  return RENT_ROLL_ALIASES.market_rent.some((alias) => rentRollHeaderMatches(label, alias));
+};
+
+const rentRollStatusIsOccupied = (value) => {
+  const status = normalizeClassifierText(value);
+  if (!status) return null;
+  if (/\b(?:vacant|vacancy|available|down|model)\b/.test(status)) return false;
+  if (/\b(?:occupied|leased|current|tenant|rented)\b/.test(status)) return true;
+  return null;
+};
+
+export const parseRentRollFromRowMatrices = (rowMatrices) => {
   const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
   for (const matrix of matrices) {
     const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
@@ -394,12 +847,11 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
     let headerIdx = -1;
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i] || [];
-      const normalized = row.map((cell) => normalizeClassifierText(cell));
-      const hasUnitHeader = normalized.some((cell) =>
-        ['unit', 'apt', 'apartment', 'suite', 'unitid'].some((token) => cell.includes(token))
+      const hasUnitHeader = row.some((cell) =>
+        RENT_ROLL_ALIASES.unit.some((alias) => rentRollHeaderMatches(cell, alias))
       );
-      const hasRentHeader = normalized.some((cell) =>
-        ['currentrent', 'inplacerent', 'monthlyrent', 'rent'].some((token) => cell.includes(token))
+      const hasRentHeader = row.some((cell) =>
+        RENT_ROLL_ALIASES.in_place_rent.some((alias) => rentRollHeaderMatches(cell, alias)) && !isMarketRentHeaderLabel(cell)
       );
       if (hasUnitHeader && hasRentHeader) {
         headerIdx = i;
@@ -409,20 +861,21 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
     if (headerIdx === -1) continue;
 
     const header = rows[headerIdx] || [];
-    const unitIdx = findHeaderIndex(header, ['unit', 'unit number', 'unit #', 'apt', 'suite', 'apartment']);
-    let rentIdx = findHeaderIndex(header, ['current rent', 'in place rent', 'monthly rent']);
+    const unitIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.unit);
+    let rentIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.in_place_rent);
+    if (rentIdx !== -1 && isMarketRentHeaderLabel(header[rentIdx])) rentIdx = -1;
     if (rentIdx === -1) {
       rentIdx = header.findIndex((cell) => {
         const label = normalizeClassifierText(cell);
-        return label.includes('rent') && !label.includes('market') && !label.includes('asking');
+        return label.includes('rent') && !isMarketRentHeaderLabel(cell);
       });
     }
-    const marketRentIdx = findHeaderIndex(header, ['market rent', 'asking rent', 'market']);
-    const statusIdx = findHeaderIndex(header, ['status', 'occupied', 'vacant', 'occupancy']);
-    const unitTypeIdx = findHeaderIndex(header, ['type', 'unit type', 'layout', 'floor plan', '1br', '2br', '3br']);
-    const bedsIdx = findHeaderIndex(header, ['beds', 'bed', 'bedrooms', 'br']);
+    const marketRentIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.market_rent);
+    const statusIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.status);
+    const unitTypeIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.unit_type);
+    const bedsIdx = findHeaderIndex(header, ['beds', 'bed', 'bedrooms', 'br', 'bedroom type', 'beds/baths', 'bed/bath', 'br/ba']);
     const bathsIdx = findHeaderIndex(header, ['baths', 'bath', 'ba']);
-    const sqftIdx = findHeaderIndex(header, ['sqft', 'sq ft', 'sf', 'square feet']);
+    const sqftIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.sqft);
 
     const units = [];
     const unitMixMap = {};
@@ -574,9 +1027,11 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
       const sqft = sqftIdx !== -1 ? parseMoneyLike(row[sqftIdx]) : null;
 
       if (status) {
-        statusCount += 1;
-        const s = status.toLowerCase();
-        if (s.includes('occup')) occupiedCount += 1;
+        const occupied = rentRollStatusIsOccupied(status);
+        if (occupied !== null) {
+          statusCount += 1;
+          if (occupied) occupiedCount += 1;
+        }
       }
 
       let unitType = rawUnitType;
@@ -644,7 +1099,7 @@ const parseRentRollFromRowMatrices = (rowMatrices) => {
   return null;
 };
 
-const parseT12FromRowMatrices = (rowMatrices) => {
+export const parseT12FromRowMatrices = (rowMatrices) => {
   const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
   const entries = [];
   for (const matrix of matrices) {
@@ -681,42 +1136,55 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     net_operating_income: null,
   };
   const findValue = (synonyms) => {
-    const normalizedSynonyms = synonyms.map((s) => normalizeClassifierText(s));
     for (const entry of entries) {
-      if (normalizedSynonyms.some((term) => entry.label.includes(term))) {
+      if (synonyms.some((term) => labelMatchesT12Alias(entry.label, term))) {
         return entry;
       }
     }
     return null;
   };
   const sumValues = (synonyms) => {
-    const normalizedSynonyms = synonyms.map((s) => normalizeClassifierText(s));
     const matches = entries.filter((entry) =>
-      normalizedSynonyms.some((term) => entry.label.includes(term))
+      synonyms.some((term) => labelMatchesT12Alias(entry.label, term))
     );
     if (!matches.length) return null;
     return matches.reduce((sum, entry) => sum + entry.value, 0);
   };
 
   const grossRental = findValue(['gross rental income', 'rental income', 'gross rent']);
-  const laundryIncomeTotal = sumValues(['laundry', 'laundry income']);
-  const parkingIncomeTotal = sumValues(['parking', 'parking income']);
-  const otherIncomeTotal = sumValues(['other income', 'misc income']);
-  const vacancyLoss = findValue(['vacancy loss', 'vacancy']);
-  const egiDirect = findValue(['effective gross income', 'egi']);
-  const gprDirect = findValue(['gross potential rent', 'gpr', 'gpr rent']);
-  const totalOpexDirect = findValue(['total operating expenses', 'operating expenses', 'total expenses', 'total opex', 'opex']);
-  const noiDirect = findValue(['net operating income', 'noi']);
+  const laundryIncomeTotal = sumValues(['laundry income', 'laundry revenue']);
+  const parkingIncomeTotal = sumValues(['parking income', 'parking revenue']);
+  const otherIncomeTotal = sumValues([
+    'Other Income',
+    'Misc Income',
+    'Miscellaneous Income',
+    'Ancillary Income',
+    'Ancillary Revenue',
+    'Storage Income',
+    'Storage Revenue',
+    'Pet Fees',
+    'Application Fees',
+    'Late Fees',
+    'Utility Recoveries',
+    'Utility Reimbursements',
+    'RUBS',
+    'Reimbursement Income',
+    'Admin Fees',
+  ]);
+  const vacancyLoss = findValue(T12_LABEL_ALIASES.vacancy_loss);
+  const egiDirect = findValue(T12_LABEL_ALIASES.effective_gross_income);
+  const gprDirect = findValue(T12_LABEL_ALIASES.gross_potential_rent);
+  const totalOpexDirect = findValue(T12_LABEL_ALIASES.total_operating_expenses);
+  const noiDirect = findValue(T12_LABEL_ALIASES.net_operating_income);
 
   const expenseSynonyms = [
-    { key: 'property_taxes', synonyms: ['property taxes', 'taxes'] },
-    { key: 'insurance', synonyms: ['insurance'] },
-    { key: 'repairs_maintenance', synonyms: ['repairs', 'repairs maintenance', 'maintenance'] },
-    { key: 'landscaping_snow', synonyms: ['landscaping', 'snow', 'landscaping snow'] },
-    { key: 'utilities', synonyms: ['utilities', 'utilities water gas', 'water', 'gas'] },
-    { key: 'management', synonyms: ['management', 'property management'] },
-    { key: 'administrative', synonyms: ['administrative', 'admin'] },
-    { key: 'garbage_misc', synonyms: ['garbage', 'misc', 'garbage misc'] },
+    { key: 'property_taxes', synonyms: T12_EXPENSE_LINE_ALIASES.property_taxes },
+    { key: 'insurance', synonyms: T12_EXPENSE_LINE_ALIASES.insurance },
+    { key: 'repairs_maintenance', synonyms: T12_EXPENSE_LINE_ALIASES.repairs_maintenance },
+    { key: 'utilities', synonyms: T12_EXPENSE_LINE_ALIASES.utilities },
+    { key: 'management', synonyms: T12_EXPENSE_LINE_ALIASES.management },
+    { key: 'payroll_admin', synonyms: T12_EXPENSE_LINE_ALIASES.payroll_admin },
+    { key: 'garbage_misc', synonyms: T12_EXPENSE_LINE_ALIASES.garbage_misc },
   ];
 
   const expenseValues = {};
@@ -736,8 +1204,8 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     : Number.isFinite(grossRental?.value)
     ? grossRental.value
     : null;
-  const hasMinimumT12Coverage =
-    Number.isFinite(grossRental?.value) && expenseLinesFound >= 3;
+  const hasGrossRentalIncome = Number.isFinite(grossRental?.value) || Number.isFinite(gprDirect?.value);
+  const hasMinimumT12Coverage = hasGrossRentalIncome && expenseLinesFound >= 3;
   const vacancyAdjusted = Number.isFinite(vacancyLoss?.value)
     ? vacancyLoss.value > 0
       ? -vacancyLoss.value
@@ -772,7 +1240,13 @@ const parseT12FromRowMatrices = (rowMatrices) => {
   if (!isPlausibleT12Field('total_operating_expenses', total_operating_expenses)) total_operating_expenses = null;
   if (!isPlausibleT12Field('net_operating_income', net_operating_income)) net_operating_income = null;
 
-  if (!hasMinimumT12Coverage) {
+  const coreSummaryValidation = validateCoreT12Payload(
+    { effective_gross_income, total_operating_expenses, net_operating_income },
+    't12_core_summary_rows'
+  );
+  const acceptedCoreSummaryRows = !hasMinimumT12Coverage && coreSummaryValidation.ok;
+
+  if (!hasMinimumT12Coverage && !acceptedCoreSummaryRows) {
     gross_potential_rent = null;
     effective_gross_income = null;
     total_operating_expenses = null;
@@ -802,6 +1276,7 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     utilities: 'Utilities',
     management: 'Property Management',
     administrative: 'Administrative',
+    payroll_admin: 'Payroll / Admin',
     garbage_misc: 'Garbage & Miscellaneous',
   };
   const expense_lines = Object.entries(expenseValues).map(([key, value]) => ({
@@ -815,8 +1290,9 @@ const parseT12FromRowMatrices = (rowMatrices) => {
     total_operating_expenses: Number.isFinite(total_operating_expenses) ? total_operating_expenses : null,
     net_operating_income: Number.isFinite(net_operating_income) ? net_operating_income : null,
     expense_lines_found: expenseLinesFound,
-    has_gross_rental_income: Number.isFinite(grossRental?.value),
+    has_gross_rental_income: hasGrossRentalIncome,
     has_minimum_t12_coverage: hasMinimumT12Coverage,
+    core_summary_rows_accepted: acceptedCoreSummaryRows,
     income_lines,
     expense_lines,
     column_map,
@@ -995,7 +1471,7 @@ export function parseT12FromExtractedTables(tables) {
           Array.isArray(row) &&
           row.some((cell) => {
             const text = normalizeText(cell);
-            return text && rule.labels.some((label) => text.includes(label));
+            return text && rule.labels.some((label) => labelMatchesT12Alias(text, label));
           })
         )
       );
@@ -1044,7 +1520,7 @@ export function parseT12FromExtractedTables(tables) {
         if (found[rule.key] !== null) {
           continue;
         }
-        if (rule.labels.some((label) => cellText.includes(label))) {
+        if (rule.labels.some((label) => labelMatchesT12Alias(cellText, label))) {
           const totalColumnValue = parseT12TotalColumnValue(row, totalColumnIndexes, rule.key);
           if (totalColumnValue !== null) {
             found[rule.key] = totalColumnValue;
@@ -1227,32 +1703,10 @@ export default async function handler(req, res) {
 
     // Text-based inference for supporting_documents PDFs
     function inferDocTypeFromText(text, options = {}) {
-      const allowFilenameHint = options.allowFilenameHint !== false;
-      const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
-      if (requiredFinancialType !== 'unknown') return requiredFinancialType;
-      const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
-      const has = (terms) => terms.some((t) => norm.includes(t));
-      const countMatches = (terms) => terms.filter((t) => norm.includes(t)).length;
-      const nameNorm = String(fileRow?.original_filename || '').toUpperCase().replace(/\s+/g, ' ');
-      const hasDebtHeader = has(['TERM SHEET', 'REFI TERMS', 'LOAN TERMS']);
-      const compactDebtSignals = countMatches(['LTV', 'RATE', 'AM', 'LOAN', 'EXIT CAP', 'IO']);
-      const hasFinancingValuePattern =
-        /\d+(?:\.\d+)?\s*%/.test(norm) ||
-        /\$\s*[\d,]+(?:\.\d{2})?/.test(norm) ||
-        /\b\d+\s*(?:YRS|YR|YEARS)\b/.test(norm);
-      const renovationSignals = countMatches([
-        'RENOVATION', 'CAPEX', 'CAP EX', 'CAPITAL EXPENDITURE', 'CAPITAL BUDGET',
-        'TOTAL BUDGET', 'SCOPE OF WORK', 'UNIT TURNS', 'CONTINGENCY',
-      ]);
-      const renovationNameSignal = /renovation|capex|cap ex|capital|budget|scope/i.test(nameNorm);
-      if ((allowFilenameHint && renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 3) return 'renovation';
-      if (hasDebtHeader || (compactDebtSignals >= 3 && hasFinancingValuePattern)) return 'loan_term_sheet';
-      if (has(['OUTSTANDING BALANCE', 'MONTHLY PAYMENT']) && has(['MORTGAGE', 'PRINCIPAL', 'AMORTIZATION', 'INTEREST RATE', 'MATURITY', 'DSCR'])) return 'mortgage_statement';
-      if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
-      if (has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
-      if (has(['POLICY NUMBER', 'NAMED INSURED']) && countMatches(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE']) >= 2) return 'insurance_policy';
-      if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && countMatches(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD']) >= 2) return 'bank_statement';
-      return 'supporting_documents_unclassified';
+      return inferSupportingDocTypeFromText(text, {
+        allowFilenameHint: options.allowFilenameHint !== false,
+        filename: fileRow?.original_filename || '',
+      });
     }
 
     if (
@@ -2744,9 +3198,7 @@ export default async function handler(req, res) {
                   ) {
                     continue;
                   }
-                  const matched = synonyms.some((label) =>
-                    labelText.includes(normalizeText(label))
-                  );
+                  const matched = synonyms.some((label) => labelMatchesT12Alias(labelText, label));
                   if (!matched) continue;
                   const rowValue = applyRowMatch(key, row);
                   if (rowValue === null) continue;
@@ -2776,13 +3228,23 @@ export default async function handler(req, res) {
 
             const hasMinimumT12Coverage =
               parsedT12.has_gross_rental_income && Number(parsedT12.expense_lines_found || 0) >= 3;
-            if (!hasMinimumT12Coverage) {
+            const coreSummaryValidation = validateCoreT12Payload(
+              { effective_gross_income, total_operating_expenses, net_operating_income },
+              'csv_core_summary_rows'
+            );
+            const acceptedCoreSummaryRows = !hasMinimumT12Coverage && coreSummaryValidation.ok;
+            if (!hasMinimumT12Coverage && !acceptedCoreSummaryRows) {
               gross_potential_rent = null;
               effective_gross_income = null;
               total_operating_expenses = null;
               net_operating_income = null;
               if (!parse_warnings.includes('insufficient_t12_coverage')) {
                 parse_warnings.push('insufficient_t12_coverage');
+              }
+            } else if (acceptedCoreSummaryRows) {
+              parse_warnings.push('t12_core_values_accepted_from_summary_rows');
+              if (Number(parsedT12.expense_lines_found || 0) < 3 || !parsedT12.has_gross_rental_income) {
+                parse_warnings.push('limited_t12_line_item_detail');
               }
             }
 
@@ -2794,6 +3256,7 @@ export default async function handler(req, res) {
             ];
             const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
             let confidence = Math.min(presentCount / 4, 0.95);
+            if (acceptedCoreSummaryRows) confidence = Math.min(confidence, 0.85);
             if (presentCount === 0) {
               confidence = 0.1;
               parse_warnings.push('missing_all_required_t12_fields');
@@ -2812,6 +3275,12 @@ export default async function handler(req, res) {
               effective_gross_income,
               total_operating_expenses,
               net_operating_income,
+              income_lines: parsedT12.income_lines || [],
+              expense_lines: parsedT12.expense_lines || [],
+              expense_lines_found: parsedT12.expense_lines_found || 0,
+              has_gross_rental_income: parsedT12.has_gross_rental_income === true,
+              has_minimum_t12_coverage: hasMinimumT12Coverage,
+              core_summary_rows_accepted: acceptedCoreSummaryRows,
               column_map,
               parse_warnings,
             };
@@ -2832,13 +3301,27 @@ export default async function handler(req, res) {
 
             const hasMinimumT12Coverage =
               parsedT12.has_gross_rental_income && Number(parsedT12.expense_lines_found || 0) >= 3;
-            if (!hasMinimumT12Coverage) {
+            const coreSummaryValidation = validateCoreT12Payload(
+              {
+                effective_gross_income: found.effective_gross_income,
+                total_operating_expenses: found.total_operating_expenses,
+                net_operating_income: found.net_operating_income,
+              },
+              'xlsx_core_summary_rows'
+            );
+            const acceptedCoreSummaryRows = !hasMinimumT12Coverage && coreSummaryValidation.ok;
+            if (!hasMinimumT12Coverage && !acceptedCoreSummaryRows) {
               found.gross_potential_rent = null;
               found.effective_gross_income = null;
               found.total_operating_expenses = null;
               found.net_operating_income = null;
               if (!parse_warnings.includes('insufficient_t12_coverage')) {
                 parse_warnings.push('insufficient_t12_coverage');
+              }
+            } else if (acceptedCoreSummaryRows) {
+              parse_warnings.push('t12_core_values_accepted_from_summary_rows');
+              if (Number(parsedT12.expense_lines_found || 0) < 3 || !parsedT12.has_gross_rental_income) {
+                parse_warnings.push('limited_t12_line_item_detail');
               }
             }
 
@@ -2850,6 +3333,7 @@ export default async function handler(req, res) {
             ];
             const presentCount = requiredValues.filter((value) => Number.isFinite(value)).length;
             let confidence = Math.min(presentCount / 4, 0.95);
+            if (acceptedCoreSummaryRows) confidence = Math.min(confidence, 0.85);
             if (presentCount === 0) {
               confidence = 0.1;
               parse_warnings.push('missing_all_required_t12_fields');
@@ -2867,6 +3351,10 @@ export default async function handler(req, res) {
               ...found,
               income_lines: parsedT12.income_lines || [],
               expense_lines: parsedT12.expense_lines || [],
+              expense_lines_found: parsedT12.expense_lines_found || 0,
+              has_gross_rental_income: parsedT12.has_gross_rental_income === true,
+              has_minimum_t12_coverage: hasMinimumT12Coverage,
+              core_summary_rows_accepted: acceptedCoreSummaryRows,
               column_map: parsedT12.column_map,
               parse_warnings,
             };
