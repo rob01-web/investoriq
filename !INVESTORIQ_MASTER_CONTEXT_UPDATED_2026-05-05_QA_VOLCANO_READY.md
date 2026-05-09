@@ -1,6 +1,6 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 8, 2026 morning - InvestorIQ is shifting from incremental report-by-report QA patching toward a 99.999% autonomous publication reliability architecture. The current QA stack remains internal/advisory and includes Rendered Report QA Advisory, Source-to-Report Coverage QA, Source Package QA, QA Manager Review, QA Action Plan, shared InvestorIQ QA Doctrine, and shared InvestorIQ Institutional Report QA Checklist. Recent Forest City Manor and Harbourstone defects prove checklist-based AI review is not enough by itself; the next fresh-chat task is to reason through the complete failure-class universe and design deterministic Report Contract QA / AI Director guardrails before broad implementation. DocRaptor remains in test mode until final outputs are clean.
+**Last updated:** May 8, 2026 evening - May 8 became the major anti-whack-a-mole implementation day. InvestorIQ now has deterministic Report Contract QA, deterministic QA Director, acquisition/current-debt renderer separation, advisory QA calibration, and T12/Rent Roll/supporting-doc parser alias hardening. Harbourstone Screening and Forest City acquisition-only Underwriting passed live contract validation. Immediate next step is to deploy the parser alias patches if needed and rerun Maplewell FINAL TEST 1 only. DocRaptor remains in test mode until final outputs are clean.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
@@ -85,6 +85,299 @@
   - Whether to add AI Director now or after one deterministic contract pass.
   - Whether AI Director should be a new artifact type, likely `qa_director_review`, feeding into `qa_action_plan`.
   - Whether public/high-value readiness should become stricter than customer delivery readiness while still aiming for nearly all customer reports to publish defensibly.
+
+### May 8 99.999% QA Architecture / Report Contract / AI Director / Parser Hardening Milestone
+- May 8 became the major anti-whack-a-mole implementation day.
+- Strategic goal was to move InvestorIQ from approximately 85% manual QA confidence toward system-level autonomous publication reliability.
+- Definition remains:
+  - for reasonably complete real-world packages, InvestorIQ should either publish a defensible institutional document-driven report, or fail closed for a real source/document reason with credit restored.
+  - InvestorIQ is not expected to publish from garbage, meaningless T12s, meaningless rent rolls, or documents with only 1-3 random numbers.
+- Customer standard:
+  - users are grown investors/operators, not children.
+  - missing optional numbers should suppress or constrain affected sections, not necessarily fail the entire report.
+  - missing/invalid core docs like unusable T12 or unusable rent roll may still fail closed.
+  - reports should explain excluded or missing inputs where appropriate, without flooding raw `DATA NOT AVAILABLE` blocks.
+
+#### Implemented Patch 1 - Report Contract QA
+- Added deterministic internal `report_contract_qa` artifact.
+- Files included:
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/generate-client-report.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+- Contract checks include:
+  - public-language prohibitions
+  - report-type leakage
+  - income/expense table contracts
+  - current debt vs acquisition financing separation
+  - section gating
+  - classification / pressure-point coherence.
+- Wired `report_contract_qa` into report generation before `qa_action_plan`.
+- `qa_action_plan` now routes contract violations without changing publication flow.
+- This is internal/advisory/deterministic and does not mutate report values.
+
+#### Implemented Patch 2 - Renderer Prevention For Known Visible Failure Classes
+- File:
+  - `api/generate-client-report.js`
+- Added deterministic income-driver eligibility filtering.
+- Added deterministic expense-driver eligibility filtering.
+- Top Positive Income Lines now excludes:
+  - totals/subtotals
+  - EGI/GPR/NOI
+  - vacancy/loss/concession/bad debt
+  - zero/negative/non-finite rows.
+- Top Expense Drivers now excludes:
+  - totals/subtotals
+  - income/NOI labels
+  - zero/negative/non-finite rows.
+- Primary Pressure Point now requires severity greater than zero.
+- Stable metrics no longer become pressure points.
+- DSCR >= `1.35x` no longer overrides as a pressure point.
+
+#### Implemented Patch 3 / 3A - Stability Driver Suppression, Contract QA Calibration, And AI Director
+- Files included:
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/qa-director-review.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/qa-director-review-smoke.js`
+- Suppressed `Stability Drivers (Worst 3)` when all severities are zero.
+- Calibrated `TOP_EXPENSE_DRIVERS_CONTRACT` to evaluate only the actual expense-driver subsection.
+- Calibrated `PRIMARY_PRESSURE_POINT_STABLE_METRIC_CONTRACT` to inspect only the pressure-point line and allow constraining DSCR below `1.25x`.
+- Added deterministic internal `qa_director_review` artifact after `qa_action_plan`.
+- Director v1 checks for:
+  - QA false positives
+  - action-plan / contract mismatch
+  - missed hard public-language blockers.
+- AI Director / Director layer is internal and supervisory:
+  - audits the QA stack itself
+  - asks whether QA missed anything embarrassing or unsafe
+  - does not mutate financial values
+  - does not mutate report content
+  - does not alter worker/publication state.
+
+#### Implemented Patch 4 - Acquisition-Only Debt Render Path And Advisory Calibration
+- Files included:
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/qa-review.js`
+  - `api/_lib/source-package-qa.js`
+  - `api/_lib/qa-manager-review.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+- Acquisition-only debt now replaces the Debt Structure section with:
+  - clean current-debt/refi limitation
+  - separate Proposed Acquisition Debt Sizing.
+- Current/refi headings and sensitivity blocks are suppressed when no true current outstanding debt balance exists.
+- `report_contract_qa` allows clean acquisition-only limitation language but still flags current/refi headings or current DSCR/refi output without true current debt.
+- Rendered QA, Source Package QA, and QA Manager now filter narrow false positives for:
+  - clear break-even language
+  - unsupported-doc disclosure
+  - current-debt limitation
+  - `Document-Constrained Review`
+  - `Constrained`
+  - methodology-language cases.
+- Added smoke coverage for acquisition-only pass/fail and true-current-debt allowance.
+
+#### Implemented Patch 5 - Current-Debt Limitation Contract QA Calibration
+- Purpose:
+  - Forest City PDF was visibly correct, but `report_contract_qa` still falsely blocked safe limitation language around Current Debt DSCR / `NOT ASSESSED`.
+- Files:
+  - `api/_lib/report-contract-qa.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+- Updated contract QA to treat safe limitation shape as allowed when report states:
+  - Current outstanding debt balance not provided
+  - `NOT ASSESSED`
+  - current debt service not assessed.
+- Preserved hard failure for real contamination:
+  - `Current Debt DSCR: 1.20x`
+  - DSCR/refi output using proposed acquisition debt
+  - refinance proceeds/debt balance output without true current debt
+  - Refinance Stability Classification with no true current outstanding debt.
+
+#### Validation Results From Live Reports
+- Harbourstone Screening:
+  - PASS
+  - Screening stayed in scope
+  - no underwriting/debt/refi/DCF/deal-score leakage
+  - `report_contract_qa.contract_status = pass`
+  - `qa_director_review.overall_director_decision = no_missed_issue_detected`
+  - `qa_action_plan.customer_delivery_ready = true`
+  - only expected public/high-value blocker was DocRaptor test mode.
+- Forest City Full Underwriting acquisition-only / no true current debt:
+  - PASS
+  - visible PDF correctly shows Current Debt / Refinance Limitation first, then Proposed Acquisition Debt Sizing separately
+  - no current DSCR/refi classification is rendered as if true current debt exists
+  - `report_contract_qa.contract_status = pass`
+  - `report_contract_qa.violations = []`
+  - `qa_director_review.overall_director_decision = no_missed_issue_detected`
+  - `qa_action_plan.customer_delivery_ready = true`
+  - only expected public/high-value blocker was DocRaptor test mode.
+- Mixed-slot upload test:
+  - T12 and Rent Roll slot mixup succeeded where content was obvious and deterministic validation passed.
+  - Confirms content authority / upload slot as hint doctrine.
+
+#### Important Current QA Doctrine After May 8
+- Whack-a-mole should now be treated as failure-class hardening, not report-example patching.
+- Final confidence still requires running representative lane tests:
+  - clean Screening
+  - Full Underwriting with acquisition-only debt
+  - Full Underwriting with true current debt
+  - messy support docs / unsupported docs
+  - renovation budget without ROI/rent lift
+  - renovation plan with rent lift inputs
+  - missing/bad core fail-closed
+  - cross-document financial mismatch fail-closed.
+- Report Contract QA + AI Director do not guarantee that garbage docs publish.
+- They are designed to catch/prevent visible embarrassing report-structure failures and QA false-negative gaps.
+
+#### Synthetic Validation Fixture Issue
+- Gemini/Codex-style synthetic validation packages were created for six remaining lanes:
+  1. true current debt underwriting
+  2. messy unsupported support docs
+  3. structured renovation with no ROI inputs
+  4. structured renovation with rent lift
+  5. bad core missing rent roll
+  6. cross-document financial mismatch.
+- Initial uploadable fixture package used T12/Rent Roll CSV and support-doc PDFs.
+- All six failed initially.
+- Investigation of TEST 1 / Maplewell showed:
+  - Rent Roll parsed
+  - Debt Summary parsed
+  - Property Tax parsed
+  - T12 failed with `invalid_core_t12_values:invalid_effective_gross_income`.
+- This was not a QA architecture failure.
+- It exposed a real parser robustness gap:
+  - T12 CSV visibly contained core line items and values.
+  - Parser still failed because the T12 path was too narrow around headers/coverage.
+  - Example T12 had header `Line Item,TTM Amount`.
+  - System should not fail merely because value column is named `TTM Amount` instead of `Annual Total`.
+
+#### Implemented Patch 6A - T12 Parser Core-Value Acceptance And Alias Maps
+- Files:
+  - `api/parse/parse-doc.js`
+  - `tests/qa/t12-core-summary-smoke.js`
+- Added centralized T12 alias maps for:
+  - Effective Gross Income
+  - Gross Potential Rent
+  - Vacancy/Loss
+  - Total Operating Expenses
+  - NOI
+  - Other Income
+  - expense lines
+  - value columns.
+- Added value-column support for labels including:
+  - Annual Total
+  - Annual Amount
+  - Annual
+  - T12
+  - T-12
+  - TTM
+  - TTM Amount
+  - TTM Total
+  - Trailing 12
+  - Trailing Twelve
+  - Trailing Twelve Months
+  - Last Twelve Months
+  - LTM
+  - LTM Amount
+  - T-12 Total
+  - Total
+  - Amount
+  - Value
+  - Actual / Actuals
+  - Current Year
+  - Year End / Year-End
+  - Fiscal Year
+  - FY / FY Total
+  - CY / CY Total
+  - Current Period / Period Total
+  - Year to Date / YTD / YTD Actual / YTD Total.
+- Preserved valid EGI/OpEx/NOI summary rows when deterministic core equation validation passes.
+- Added warnings for:
+  - `t12_core_values_accepted_from_summary_rows`
+  - `limited_t12_line_item_detail`.
+- Confidence is capped lower for summary-only acceptance.
+- Fail-closed behavior preserved for:
+  - bad NOI equations
+  - sparse random values
+  - invalid EGI/OpEx/NOI
+  - non-reconciling T12 core values.
+- Smoke test proves:
+  - Maplewell-style `Line Item, TTM Amount` now parses
+  - alias summary rows parse
+  - bad NOI equation fails
+  - random sparse values fail.
+
+#### Implemented Patch 6B - Rent Roll Parser Alias Hardening
+- Files:
+  - `api/parse/parse-doc.js`
+  - `tests/qa/rent-roll-alias-smoke.js`
+- Added centralized Rent Roll alias maps for:
+  - Unit / Suite / Unit Number / Unit # / Apt / Apartment / Door / Premises
+  - Unit Type / Bedroom Type / Beds / BR / Floor Plan / Model / Configuration
+  - Status / Occupancy Status / Lease Status / Occupied / Vacant / Available
+  - In-Place Rent / Current Rent / Rent / Monthly Rent / Contract Rent / Actual Rent / Tenant Rent
+  - Market Rent / Asking Rent / Legal Rent / Target Rent / Pro Forma Rent / Stabilized Rent / Projected Rent / Post-Reno Rent / Renovated Rent
+  - Sq Ft / SQFT / SF / Area / Square Feet / Rentable SF / RSF / Unit Area
+  - lease date helper aliases
+  - summary aliases for total units, occupied units, vacant units, and occupancy.
+- Wired aliases into rent roll header detection.
+- Preserved existing unit-row validation and market-vs-in-place rent separation.
+- Added status occupancy handling for leased/current/tenant vs vacant/available.
+- Smoke tests prove:
+  - `Suite, Bedroom Type, Occupancy Status, Current Rent, Asking Rent, SF` parses
+  - `Unit #, BR, Status, Monthly Rent, Target Rent, Area` parses
+  - `Apt, Layout, Lease Status, Contract Rent, Pro Forma Rent, SqFt` parses
+  - vague totals with no credible unit/rent structure still fail.
+
+#### Implemented Patch 6C - Supporting Document Classification Aliases
+- Files:
+  - `api/parse/parse-doc.js`
+  - `tests/qa/supporting-doc-classification-smoke.js`
+- Added centralized supporting-doc classification aliases.
+- Hardened current mortgage vs proposed acquisition financing separation.
+- Expanded property tax and renovation/CapEx content signatures.
+- Unsupported market/appraisal/ESA docs remain unclassified.
+- No parser modeling/math/output changes beyond routing classification.
+- Smoke tests prove:
+  - existing mortgage/current balance classifies as `mortgage_statement`
+  - proposed acquisition financing with borrower TBD classifies as `loan_term_sheet`
+  - property tax notice classifies as `property_tax`
+  - historical CapEx note classifies as `renovation`
+  - unsupported market/appraisal/ESA remains `supporting_documents_unclassified`.
+
+#### May 8 Parser Doctrine
+- Alias matching identifies candidate fields.
+- Deterministic validation decides acceptance.
+- Core T12 rows with EGI/OpEx/NOI should parse if the accounting equation validates.
+- T12/Rent Roll should not fail because of normal real-world label variation.
+- Do not loosen validation to accept garbage.
+- Do not use market/target/pro forma rent as in-place rent.
+- Do not use proposed/acquisition financing as true current debt.
+- Do not use unsupported market/appraisal/ESA docs as controlling modeled inputs.
+- Textract helps with PDF/image extraction, but CSV/XLSX parsing still needs robust deterministic header/label handling.
+
+#### Current Immediate Next Step After May 8
+- Deploy the parser alias patches if not already deployed.
+- Rerun only FINAL TEST 1 / Maplewell Court first.
+- Do not rerun all six synthetic packages at once.
+- Expected Maplewell result:
+  - T12 parsed
+  - Rent Roll parsed
+  - Debt Summary parsed
+  - Property Tax parsed
+  - report publishes
+  - current-debt/DSCR/refi logic renders because true current debt is provided
+  - `report_contract_qa.contract_status = pass`
+  - `qa_director_review.overall_director_decision = no_missed_issue_detected`
+  - `qa_action_plan.customer_delivery_ready = true`
+  - only acceptable public/high-value blocker remains `DOCRAPTOR_NOT_PRODUCTION_MODE`.
+- If Maplewell passes, continue the remaining synthetic packages one at a time:
+  1. messy unsupported support docs
+  2. structured renovation no ROI inputs
+  3. structured renovation with rent lift
+  4. bad core missing rent roll fail-closed
+  5. cross-document financial mismatch fail-closed.
 
 ### May 7 Security, Dashboard Freeze, Intake Rescue, and QA Occupancy Calibration
 - Supabase Security Advisor triage:
@@ -2170,20 +2463,33 @@
 
 ### Exact next task / resume point
 
-- **Immediate resume point - May 7 evening after security, Dashboard freeze, intake, and QA occupancy calibration:**
-  - Continue Dashboard idle stability monitoring first; the `SupabaseAuthContext` render-storm patch is applied but not declared permanently solved.
-  - Then run one clean Full Underwriting with debt/current-loan support when ready.
+- **Immediate resume point - May 8 evening after Report Contract QA / AI Director / parser alias hardening:**
+  - Deploy the parser alias patches if not already deployed.
+  - Rerun Maplewell FINAL TEST 1 only.
+  - Do not run all six synthetic validation packages simultaneously.
   - Inspect:
-    - report publication
-    - current debt balance/rate/amortization parsing
-    - current DSCR/refi rendering
-    - `source_report_coverage_qa`
-    - `qa_action_plan.requires_code_patch`
-    - Dashboard responsiveness during idle/return-from-checkout flows.
-  - Do not close the user's Chrome tab group as part of testing; grouped tabs are intentionally reopened daily.
+    - `analysis_job_files` parse statuses
+    - generated PDF
+    - `report_contract_qa`
+    - `qa_director_review`
+    - `qa_action_plan`.
+  - Expected Maplewell result:
+    - T12 parsed
+    - Rent Roll parsed
+    - Debt Summary parsed
+    - Property Tax parsed
+    - report publishes
+    - current-debt/DSCR/refi logic renders because true current debt is provided
+    - `report_contract_qa.contract_status = pass`
+    - `qa_director_review.overall_director_decision = no_missed_issue_detected`
+    - `qa_action_plan.customer_delivery_ready = true`
+    - only acceptable public/high-value blocker remains `DOCRAPTOR_NOT_PRODUCTION_MODE`.
+  - If failure occurs, inspect `analysis_job_files` and artifacts for that single job before patching.
+  - If Maplewell passes, continue the remaining synthetic packages one at a time.
   - Continue one-step-at-a-time workflow.
-  - Do not build a broad classifier service before Ken.
-  - Do not change worker lifecycle unless stale file-row behavior is proven to cause a real issue.
+  - Preserve Codex usage discipline through May 12; use Codex for surgical changes only.
+  - ChatGPT should reason from uploaded files/artifacts first where possible.
+  - Do not close the user's Chrome tab group as part of testing; grouped tabs are intentionally reopened daily.
   - Do not flip DocRaptor production until final test-mode public-candidate outputs are clean.
 
 - **Immediate resume point - May 5 current state after QA/Forest City hardening:**
@@ -2574,6 +2880,19 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Dashboard auto-visibility hardening
   - large-text rent-roll AI recovery: chunking, shorter prompt construction, CSV/XLSX steering, and clearer large-rent-roll fallback guidance
 ## 11. Launch Readiness Snapshot
+- **May 8 launch snapshot:**
+  - Report QA architecture is materially upgraded:
+    - deterministic Report Contract QA
+    - deterministic QA Director
+    - acquisition/current debt separation
+    - QA advisory calibration
+    - T12/Rent Roll/supporting-doc alias hardening.
+  - Current launch status:
+    - not yet DocRaptor-production-ready
+    - not yet Ken-ready until final clean samples are regenerated and checked
+    - anti-whack-a-mole architecture is materially stronger than the May 7 state.
+  - Remaining public/high-value blocker still includes DocRaptor test mode.
+  - Immediate next validation is Maplewell FINAL TEST 1 only, then continue remaining synthetic lanes one at a time.
 - **May 7 launch snapshot:**
   - Supabase Security Advisor triage is effectively complete with two accepted warnings documented: `queue_job_for_processing` remains temporarily SECURITY DEFINER/authenticated for Generate Report safety, and leaked password protection requires Supabase Pro.
   - Dashboard freeze / lag is improved after Dashboard fetch guards plus May 7 `SupabaseAuthContext` auth/profile-churn patch, but remains OPEN / MONITORED.
