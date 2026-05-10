@@ -328,7 +328,7 @@ export default function AdminDashboard() {
     setUserError('');
     try {
       const params = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-      const res = await fetch(`/api/admin/users-credits${params}`, {
+      const res = await fetch(`/api/admin/queue-metrics?include_users=true${params ? `&${params.slice(1)}` : ''}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
       });

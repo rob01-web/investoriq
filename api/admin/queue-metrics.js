@@ -135,6 +135,7 @@ export default async function handler(req, res) {
     }
 
     const includeFixQueue = String(req.query?.include_fix_queue || "").toLowerCase() === "true";
+    const includeUsers = String(req.query?.include_users || "").toLowerCase() === "true";
     const statuses = [
       'queued',
       'extracting',
@@ -238,6 +239,40 @@ export default async function handler(req, res) {
       })
     );
 
+    let users = [];
+    let usersError = false;
+    let purchasesError = false;
+    if (includeUsers) {
+      const [profilesResult, purchasesResult] = await Promise.all([
+        supabaseAdmin.rpc('get_all_profiles_for_admin'),
+        supabaseAdmin.rpc('get_all_purchases_for_admin'),
+      ]);
+
+      usersError = Boolean(profilesResult.error);
+      purchasesError = Boolean(purchasesResult.error);
+
+      const creditMap = {};
+      if (!purchasesResult.error) {
+        for (const row of purchasesResult.data || []) {
+          if (!row || row.consumed_at) continue;
+          if (!row.user_id) continue;
+          if (!creditMap[row.user_id]) creditMap[row.user_id] = { screening: 0, underwriting: 0 };
+          if (row.product_type === 'screening') creditMap[row.user_id].screening += 1;
+          else if (row.product_type === 'underwriting') creditMap[row.user_id].underwriting += 1;
+        }
+      }
+
+      users = profilesResult.error
+        ? []
+        : (profilesResult.data || []).map((u) => ({
+            id: u.id || null,
+            full_name: u.full_name || null,
+            role: u.role || null,
+            screening_credits: creditMap[u.id]?.screening ?? 0,
+            underwriting_credits: creditMap[u.id]?.underwriting ?? 0,
+          }));
+    }
+
     let fixQueue = [];
     let fixQueueArtifactsErr = false;
     if (includeFixQueue) {
@@ -289,6 +324,9 @@ export default async function handler(req, res) {
       latest_failed_at: latestFailedErr ? null : latestFailed?.created_at || null,
       recent_jobs: recentJobsErr ? [] : recentJobs || [],
       issues: issuesErr ? [] : issuesWithUrls || [],
+      users: includeUsers ? users : [],
+      users_error: includeUsers ? usersError : false,
+      purchases_error: includeUsers ? purchasesError : false,
       fix_queue: includeFixQueue && !fixQueueArtifactsErr ? fixQueue : [],
       fix_queue_deferred: !includeFixQueue,
       issues_error: Boolean(issuesErr),
