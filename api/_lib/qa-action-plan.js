@@ -630,6 +630,94 @@ function deliveryRecommendation({ actions, publicSampleReady, customerReady }) {
   return "customer_deliverable";
 }
 
+function reasonCodeForAction(action) {
+  return String(action?.code || "");
+}
+
+export function buildDeliveryGateDecision({
+  sourceReportCoverageQa = null,
+  reportContractQa = null,
+  qaActionPlan = null,
+  qaDirectorReview = null,
+} = {}) {
+  const prioritizedActions = Array.isArray(qaActionPlan?.prioritized_actions) ? qaActionPlan.prioritized_actions : [];
+  const contractViolations = Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : [];
+  const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : [];
+  const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
+  const sourceLimitations = deterministicFlags.filter((flag) => {
+    const code = String(flag?.code || "");
+    return /missing|required|failed/i.test(code) || String(flag?.classification || "").toLowerCase() === "source_document_limitation";
+  });
+  const missingRequiredSource = sourceStatus === "needs_documents" || sourceStatus === "failed" || sourceLimitations.length > 0;
+  const reconciliationViolation = contractViolations.find((violation) =>
+    /RECONCILIATION_MISMATCH|CONTRADICTION/i.test(String(violation?.code || "")) ||
+    String(violation?.code || "") === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION" ||
+    /source_report_reconciliation|report_contradiction/i.test(String(violation?.category || ""))
+  ) || null;
+  const adminReviewAction = prioritizedActions.find((action) =>
+    action?.action_type === "admin_review_required" ||
+    /RECONCILIATION_MISMATCH/i.test(String(action?.code || "")) ||
+    (
+      action?.requires_code_patch === true &&
+      action?.requires_regeneration === true &&
+      ["report_renderer", "parser", "rent_roll_normalizer"].includes(String(action?.owner_area || ""))
+    ) ||
+    action?.blocks_customer_delivery === true
+  ) || null;
+  const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
+  const directorMismatch =
+    String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
+    Boolean(adminReviewAction || reconciliationViolation);
+
+  const sourceNeedsDocs = missingRequiredSource || Boolean(sourceDocumentAction);
+  if (sourceNeedsDocs && !adminReviewAction && !reconciliationViolation) {
+    const gateReason =
+      sourceDocumentAction?.code ||
+      sourceLimitations[0]?.code ||
+      sourceStatus ||
+      "SOURCE_DOCUMENT_LIMITATION";
+    return {
+      delivery_gate_status: "user_needs_documents",
+      reason_code: gateReason,
+      top_action_code: sourceDocumentAction?.code || sourceLimitations[0]?.code || null,
+      owner_area: sourceDocumentAction?.owner_area || "source_documents",
+      recommended_next_step: sourceDocumentAction?.recommended_next_step || "Request the missing required source documents or required source value before delivering the report.",
+      customer_delivery_ready: false,
+      public_sample_ready: false,
+      high_value_outreach_ready: false,
+    };
+  }
+
+  if (adminReviewAction || reconciliationViolation || directorMismatch) {
+    const topAction = adminReviewAction || reconciliationViolation || prioritizedActions[0] || null;
+    const reasonCode =
+      reasonCodeForAction(adminReviewAction) ||
+      reasonCodeForAction(reconciliationViolation) ||
+      String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
+    return {
+      delivery_gate_status: "admin_review_required",
+      reason_code: reasonCode,
+      top_action_code: topAction?.code || null,
+      owner_area: topAction?.owner_area || "report_renderer",
+      recommended_next_step: topAction?.recommended_next_step || "Hold delivery for Admin Fix Queue review.",
+      customer_delivery_ready: false,
+      public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
+      high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+    };
+  }
+
+  return {
+    delivery_gate_status: "deliverable",
+    reason_code: null,
+    top_action_code: prioritizedActions[0]?.code || null,
+    owner_area: prioritizedActions[0]?.owner_area || null,
+    recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
+    customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready),
+    public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
+    high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+  };
+}
+
 export function buildQaActionPlan({
   reportQaFlags = [],
   sourceReportCoverageQa = null,

@@ -15,7 +15,7 @@ import { buildQaDirectorReview } from "./_lib/qa-director-review.js";
 import { buildReportContractQa } from "./_lib/report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
-import { buildQaActionPlan } from "./_lib/qa-action-plan.js";
+import { buildQaActionPlan, buildDeliveryGateDecision } from "./_lib/qa-action-plan.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -6077,6 +6077,8 @@ let qaFixRoutingResult = null;
 let qaManagerReviewResult = null;
 let reportContractQaResult = null;
 let qaActionPlanResult = null;
+let qaDirectorReviewResult = null;
+let deliveryGateDecisionResult = null;
 let sourcePackageQaResult = null;
 let sourcePackageQaFiles = [];
 let sourcePackageQaArtifacts = [];
@@ -6529,6 +6531,7 @@ try {
     sourceReportCoverageQa: sourceCoverageQaResult,
     html: docHtml,
   });
+  qaDirectorReviewResult = qaDirectorReview;
   const directorTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: directorErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -6545,6 +6548,33 @@ try {
   }
 } catch (err) {
   console.error("Failed to build qa_director_review artifact:", err?.message || err);
+}
+try {
+  const deliveryGateDecision = buildDeliveryGateDecision({
+    sourceReportCoverageQa: sourceCoverageQaResult,
+    reportContractQa: reportContractQaResult,
+    qaActionPlan: qaActionPlanResult,
+    qaDirectorReview: qaDirectorReviewResult,
+  });
+  deliveryGateDecisionResult = deliveryGateDecision;
+  const gateTimestamp = new Date().toISOString().replace(/:/g, "-");
+  if (jobId) {
+    const { error: deliveryGateErr } = await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: effectiveUserId || null,
+        type: "delivery_gate_decision",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/delivery_gate_decision/${gateTimestamp}.json`,
+        payload: deliveryGateDecision,
+      },
+    ]);
+    if (deliveryGateErr) {
+      console.error("Failed to write delivery_gate_decision artifact:", deliveryGateErr);
+    }
+  }
+} catch (err) {
+  console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
 }
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
@@ -6589,13 +6619,16 @@ try {
   throw err;
 }
         // 10. Create DB row first so we have a deterministic report_id for storage
+    const holdDelivery =
+      deliveryGateDecisionResult?.delivery_gate_status &&
+      deliveryGateDecisionResult.delivery_gate_status !== "deliverable";
     const { data: reportRow, error: reportCreateError } = await supabase
       .from("reports")
       .insert({
   user_id: effectiveUserId,
             property_name: property_name || "Property",
   report_type: reportType,
-  storage_path: "pending",
+  storage_path: holdDelivery ? null : "pending",
 })
       .select("id")
       .single();
@@ -6618,27 +6651,41 @@ try {
       throw new Error("Failed to upload report to storage");
     }
     // 12. Update DB row with final storage_path
-    const { error: reportUpdateError } = await supabase
-      .from("reports")
-      .update({ storage_path: storagePath })
-      .eq("id", reportId);
-    if (reportUpdateError) {
-      console.error("Report DB Update Error:", reportUpdateError);
-      // Do not throw. The PDF is stored and we can still return the signed URL.
+    if (!holdDelivery) {
+      const { error: reportUpdateError } = await supabase
+        .from("reports")
+        .update({ storage_path: storagePath })
+        .eq("id", reportId);
+      if (reportUpdateError) {
+        console.error("Report DB Update Error:", reportUpdateError);
+        // Do not throw. The PDF is stored and we can still return the signed URL.
+      }
     }
     // 13. Generate Signed URL for immediate viewing (valid for 1 hour)
-    const { data: signedData, error: signedError } = await supabase.storage
-      .from("generated_reports")
-      .createSignedUrl(storagePath, 3600);
-    if (signedError) {
-      console.error("Signed URL Error:", signedError);
-      throw new Error("Failed to generate access link");
+    let signedData = { signedUrl: null };
+    if (!holdDelivery) {
+      const { data: signedResult, error: signedError } = await supabase.storage
+        .from("generated_reports")
+        .createSignedUrl(storagePath, 3600);
+      if (signedError) {
+        console.error("Signed URL Error:", signedError);
+        throw new Error("Failed to generate access link");
+      }
+      signedData = signedResult || signedData;
     }
     // 14. Return JSON with the report URL and report_id
     res.status(200).json({
       success: true,
       reportId,
       url: signedData.signedUrl,
+      delivery_gate_status: deliveryGateDecisionResult?.delivery_gate_status || "deliverable",
+      delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
+      delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
+      delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
+      delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
+      customer_delivery_ready: deliveryGateDecisionResult?.customer_delivery_ready ?? true,
+      public_sample_ready: deliveryGateDecisionResult?.public_sample_ready ?? true,
+      high_value_outreach_ready: deliveryGateDecisionResult?.high_value_outreach_ready ?? true,
     });
   } catch (err) {
     console.error("Error generating report:", err);

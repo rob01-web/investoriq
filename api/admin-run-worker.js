@@ -369,7 +369,7 @@ export default async function handler(req, res) {
     // Timeout guard: mark long-running jobs as failed
     const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
-      .select('id, user_id, status, started_at, created_at')
+      .select('id, user_id, status, started_at, created_at, error_code')
       .in('status', inProgressStatuses);
 
     if (inProgressError) {
@@ -380,6 +380,9 @@ export default async function handler(req, res) {
     }
 
     const timedOutJobs = (inProgressJobs || []).filter((job) => {
+      if (String(job.error_code || '') === 'ADMIN_REVIEW_REQUIRED') {
+        return false;
+      }
       const startedAt = job.started_at ? new Date(job.started_at) : null;
       const createdAt = job.created_at ? new Date(job.created_at) : null;
       const anchor = startedAt || createdAt;
@@ -1708,6 +1711,7 @@ export default async function handler(req, res) {
 
           let reportId = null;
           let storagePath = null;
+          let reportData = null;
           let generatorSource = 'generate-client-report';
           let generatorError = null;
           let generatorFailurePayload = null;
@@ -1801,7 +1805,7 @@ export default async function handler(req, res) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 }
               } else {
-                const reportData = await reportRes.json().catch(() => ({}));
+                reportData = await reportRes.json().catch(() => ({}));
                 if (!reportData?.reportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
@@ -1948,6 +1952,84 @@ export default async function handler(req, res) {
 
           if (pdfTransitionErr) {
             throw new Error(`Failed to write status transition artifact: ${pdfTransitionErr.message}`);
+          }
+
+          const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
+          if (deliveryGateStatus === 'user_needs_documents') {
+            const needsDocsUpdate = { status: 'needs_documents' };
+            if (supportsErrorCode) {
+              needsDocsUpdate.error_code = 'MISSING_REQUIRED_SOURCE_DATA';
+            }
+            if (supportsErrorMessage) {
+              needsDocsUpdate.error_message =
+                'Required source documents or values were missing for report delivery.';
+            }
+            const { error: needsDocsErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update(needsDocsUpdate)
+              .eq('id', job.id);
+            if (needsDocsErr) {
+              throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+            }
+
+            transitions.push({
+              job_id: job.id,
+              from_status: 'pdf_generating',
+              to_status: 'needs_documents',
+            });
+            passTransitions += 1;
+            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'pdf_generating',
+              'needs_documents',
+              { user_id: job.user_id, report_id: reportId, reason: reportData?.delivery_gate_reason_code || 'source_documents_missing' }
+            );
+            if (needsDocsTransitionErr) {
+              throw new Error(`Failed to write needs_documents status transition artifact: ${needsDocsTransitionErr.message}`);
+            }
+            await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
+              ...reportData,
+              timestamp: nowIso,
+            });
+            continue;
+          }
+
+          if (deliveryGateStatus === 'admin_review_required') {
+            const heldUpdate = { status: 'publishing' };
+            if (supportsErrorCode) {
+              heldUpdate.error_code = 'ADMIN_REVIEW_REQUIRED';
+            }
+            if (supportsErrorMessage) {
+              heldUpdate.error_message = 'Report held for admin review before delivery.';
+            }
+            const { error: heldErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update(heldUpdate)
+              .eq('id', job.id);
+            if (heldErr) {
+              throw new Error(`Failed to mark job held for admin review: ${heldErr.message}`);
+            }
+
+            transitions.push({
+              job_id: job.id,
+              from_status: 'pdf_generating',
+              to_status: 'publishing',
+            });
+            passTransitions += 1;
+            const heldTransitionErr = await writeStatusTransitionArtifact(
+              job.id,
+              'pdf_generating',
+              'publishing',
+              { user_id: job.user_id, report_id: reportId, reason: reportData?.delivery_gate_reason_code || 'admin_review_required' }
+            );
+            if (heldTransitionErr) {
+              throw new Error(`Failed to write held publishing status transition artifact: ${heldTransitionErr.message}`);
+            }
+            await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
+              ...reportData,
+              timestamp: nowIso,
+            });
+            continue;
           }
 
           const { error: publishingErr } = await supabaseAdmin

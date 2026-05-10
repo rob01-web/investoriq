@@ -39,18 +39,22 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   const actionPlan = artifactsByType.qa_action_plan?.payload || {};
   const director = artifactsByType.qa_director_review?.payload || {};
   const flags = artifactsByType.report_qa_flags?.payload || {};
+  const deliveryGate = artifactsByType.delivery_gate_decision?.payload || {};
   const normalizedPlan = normalizeActionPlan(actionPlan);
   const contractViolations = Array.isArray(contract?.violations) ? contract.violations : [];
   const contractSeverity = highestSeverityValue(contractViolations.map((violation) => violation?.severity));
   const directorSeverity = highestSeverityValue((director?.findings || []).map((finding) => finding?.severity));
   const flagsSeverity = normalizeSeverity((flags?.severity || (flags?.qa_status === "fail" ? "high" : "none")));
+  const deliveryGateStatus = String(deliveryGate?.delivery_gate_status || "").toLowerCase();
   const highestSeverity = highestSeverityValue([
     normalizedPlan.highest_severity,
     contractSeverity,
     directorSeverity,
     flagsSeverity,
+    deliveryGateStatus === 'admin_review_required' ? 'high' : deliveryGateStatus === 'user_needs_documents' ? 'medium' : 'none',
   ]);
   const shouldShow =
+    (deliveryGateStatus && deliveryGateStatus !== 'deliverable') ||
     normalizedPlan.public_sample_ready === false ||
     normalizedPlan.high_value_outreach_ready === false ||
     normalizedPlan.requires_code_patch === true ||
@@ -78,6 +82,8 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
     contract_status: contract?.contract_status || null,
     director_decision: director?.overall_director_decision || null,
     report_qa_flags_severity: flags?.severity || null,
+    delivery_gate_status: deliveryGate?.delivery_gate_status || null,
+    reason_code: deliveryGate?.reason_code || null,
   };
 }
 
@@ -279,7 +285,7 @@ export default async function handler(req, res) {
       const { data: fixQueueArtifacts, error: artifactsErr } = await supabaseAdmin
         .from('analysis_artifacts')
         .select('job_id, type, payload, created_at')
-        .in('type', ['qa_action_plan', 'report_contract_qa', 'qa_director_review', 'report_qa_flags'])
+        .in('type', ['qa_action_plan', 'report_contract_qa', 'qa_director_review', 'report_qa_flags', 'delivery_gate_decision'])
         .order('created_at', { ascending: false })
         .limit(25);
 

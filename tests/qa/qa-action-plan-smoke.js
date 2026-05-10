@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildQaActionPlan } from "../../api/_lib/qa-action-plan.js";
+import { buildQaActionPlan, buildDeliveryGateDecision } from "../../api/_lib/qa-action-plan.js";
 import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
 
 const sourceReportCoverageQa = {
@@ -448,6 +448,118 @@ assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.requires_re
 assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.blocks_high_value_outreach, false);
 assert.equal(Boolean(acquisitionActionsByCode.PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT), false);
 assert.equal(Boolean(acquisitionActionsByCode.ACQUISITION_FINANCING_RENDER_MISSING), false);
+
+const cleanGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(cleanGate.delivery_gate_status, "deliverable");
+
+const adminReviewGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: {
+    contract_status: "warn",
+    violations: [
+      {
+        code: "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+        severity: "high",
+        category: "source_report_reconciliation",
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+        action_type: "admin_review_required",
+        owner_area: "report_renderer",
+        recommended_next_step: "Align all rendered current-debt DSCR values.",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+  qaDirectorReview: { overall_director_decision: "advisory_attention" },
+});
+assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
+
+const rentRollGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: {
+    contract_status: "warn",
+    violations: [
+      {
+        code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+        severity: "high",
+        category: "report_contract",
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+        action_type: "render_gating_fix_required",
+        owner_area: "rent_roll_normalizer",
+        recommended_next_step: "Inspect rent roll total normalization and regenerate.",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+});
+assert.equal(rentRollGate.delivery_gate_status, "admin_review_required");
+
+const docRaptorOnlyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "DOCRAPTOR_NOT_PRODUCTION_MODE",
+        action_type: "production_config_only",
+        owner_area: "production_config",
+        recommended_next_step: "Enable and verify production PDF mode before public use.",
+        requires_code_patch: false,
+        requires_regeneration: true,
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(docRaptorOnlyGate.delivery_gate_status, "deliverable");
+assert.equal(docRaptorOnlyGate.public_sample_ready, false);
+
+const needsDocumentsGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "needs_documents",
+    deterministic_flags: [
+      { code: "MISSING_REQUIRED_DOCUMENTS", severity: "high" },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: { customer_delivery_ready: false, prioritized_actions: [] },
+});
+assert.equal(needsDocumentsGate.delivery_gate_status, "user_needs_documents");
 
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));

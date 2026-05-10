@@ -707,6 +707,11 @@ export default function AdminDashboard() {
                         <TblTd mono style={{ fontSize:9 }}>{item.owner_area || '—'}</TblTd>
                         <TblTd style={{ maxWidth:220 }}>
                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink2, lineHeight:1.45 }}>
+                            {item.delivery_gate_status && (
+                              <div style={{ color:T.errRed, textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                                {item.delivery_gate_status}{item.reason_code ? ` · ${item.reason_code}` : ''}
+                              </div>
+                            )}
                             <div>{item.top_action_code || '—'}</div>
                             {item.top_action_title && <div style={{ color:T.ink4 }}>{item.top_action_title}</div>}
                           </div>
