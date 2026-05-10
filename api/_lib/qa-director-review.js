@@ -117,6 +117,21 @@ export function buildQaDirectorReview({
     });
   }
 
+  if (
+    Array.isArray(reportContractQa?.violations) &&
+    reportContractQa.violations.some((violation) => violation?.code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH")
+  ) {
+    addFinding(findings, {
+      code: "QA_DIRECTOR_RECONCILIATION_MISMATCH_PRESENT",
+      severity: "medium",
+      classification: "advisory_attention",
+      message: "Report Contract QA contains a current-debt DSCR reconciliation mismatch that requires attention.",
+      evidence: {
+        report_contract_qa: true,
+      },
+    });
+  }
+
   const hasCriticalContract = Array.isArray(reportContractQa?.violations) &&
     reportContractQa.violations.some((violation) => violation?.severity === "critical" || violation?.blocks_customer_delivery);
   if (hasCriticalContract && !hasActionPlanCustomerBlock(qaActionPlan)) {

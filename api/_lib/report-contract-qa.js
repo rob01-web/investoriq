@@ -49,6 +49,35 @@ function extractLabeledNumber(text, labels) {
   return null;
 }
 
+function extractCurrentDebtDscrValues(text) {
+  const source = String(text || "");
+  const values = [];
+  const pushValue = (label, rawValue) => {
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return;
+    values.push({ label, value: Math.round(value * 100) / 100 });
+  };
+
+  for (const label of ["DSCR (Computed)", "DSCR (T12 NOI)"]) {
+    const match = new RegExp(`${escapeRegExp(label)}[^0-9]{0,80}([0-9]+(?:\\.[0-9]+)?)x`, "i").exec(source);
+    if (match) pushValue(label, match[1]);
+  }
+
+  const dealScorecardSection = subsectionAfter(source, /Deal Scorecard/i, [/Risk Register/i], 2000);
+  const dealScorecardMatch = /DSCR\s*\(Current Debt\)[^0-9]{0,80}?([0-9]+(?:\.[0-9]+)?)x/i.exec(dealScorecardSection);
+  if (dealScorecardMatch) pushValue("Deal Scorecard: DSCR (Current Debt)", dealScorecardMatch[1]);
+
+  const currentDebtCoverageSection = subsectionAfter(source, /Current Debt Coverage|Constraint Sensitivity/i, [/Deal Scorecard/i, /Risk Register/i], 2500);
+  const baseMatch = /\bBase(?:\s*Case)?\b[^0-9]{0,80}?([0-9]+(?:\.[0-9]+)?)x/i.exec(currentDebtCoverageSection);
+  if (baseMatch) pushValue("Current Debt Coverage: Base", baseMatch[1]);
+
+  const riskRegisterSection = subsectionAfter(source, /Risk Register/i, [/Deal Scorecard/i], 2000);
+  const riskRegisterMatch = /DSCR\s*\(Current Debt\)[^0-9]{0,80}?([0-9]+(?:\.[0-9]+)?)x/i.exec(riskRegisterSection);
+  if (riskRegisterMatch) pushValue("Risk Register: DSCR (Current Debt)", riskRegisterMatch[1]);
+
+  return values;
+}
+
 function materiallyDifferent(expectedValue, actualValue) {
   if (!Number.isFinite(expectedValue) || !Number.isFinite(actualValue)) return false;
   const delta = Math.abs(expectedValue - actualValue);
@@ -296,6 +325,29 @@ export function buildReportContractQa({
         category: "table_contract",
         message: "Top Positive Income Lines includes subtotal, negative, vacancy, zero, or non-positive-income rows.",
         evidence: { excerpt: incomeWindow.slice(0, 500) },
+      });
+    }
+  }
+
+  const currentDebtDscrValues = extractCurrentDebtDscrValues(text);
+  if (currentDebtDscrValues.length >= 2) {
+    const numericValues = currentDebtDscrValues.map((entry) => entry.value).filter((value) => Number.isFinite(value));
+    const minValue = Math.min(...numericValues);
+    const maxValue = Math.max(...numericValues);
+    if (maxValue - minValue > 0.05) {
+      addViolation(violations, {
+        code: "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+        severity: "high",
+        category: "source_report_reconciliation",
+        message: "Current-debt DSCR values disagree across rendered report sections.",
+        evidence: {
+          rendered_values: currentDebtDscrValues,
+          min_value: minValue,
+          max_value: maxValue,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
       });
     }
   }

@@ -5421,16 +5421,14 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           const color = marketRentPremiumRatio > 0.15 ? "#16a34a" : marketRentPremiumRatio > 0.05 ? "#1e40af" : "#6B7280";
           addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside | 5-15% = moderate | < 5% = minimal", flag, color);
         }
-        if (mortgagePayload) {
+      if (mortgagePayload) {
           const la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
           const rp = coerceNumber(mortgagePayload.interest_rate);
           const ay = coerceNumber(mortgagePayload.amort_years) || 25;
           const an = coerceNumber(t12Payload?.net_operating_income);
-          if (la > 0 && rp > 0 && an > 0) {
-            const mr = (rp / 100) / 12;
-            const n = ay * 12;
-            const mp = la * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
-            const dscr = an / (mp * 12);
+          const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, an);
+          if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+            const dscr = currentDebtCoverage.dscr;
             if (Number.isFinite(dscr) && dscr > 0) {
               const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
               const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";

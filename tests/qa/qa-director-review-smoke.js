@@ -75,4 +75,17 @@ assert.equal(
   true
 );
 
+const reconciliationMismatch = buildQaDirectorReview({
+  html: "<p>Report body</p>",
+  reportContractQa: {
+    violations: [{ code: "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH" }],
+  },
+  qaActionPlan: { customer_delivery_ready: true, prioritized_actions: [] },
+});
+assert.notEqual(reconciliationMismatch.overall_director_decision, "no_missed_issue_detected");
+assert.equal(
+  reconciliationMismatch.findings.some((finding) => finding.code === "QA_DIRECTOR_RECONCILIATION_MISMATCH_PRESENT"),
+  true
+);
+
 console.log("qa-director-review smoke PASS");

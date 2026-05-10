@@ -302,6 +302,70 @@ const currentDebtReport = buildReportContractQa({
 assert.equal(currentDebtReport.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
 assert.equal(currentDebtReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
 
+const currentDebtDscrMismatch = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...currentDebtArtifacts,
+    {
+      type: "mortgage_statement_parsed",
+      payload: {
+        outstanding_balance: 6000000,
+        monthly_payment: 13625,
+        interest_rate: 0.055,
+        amort_years: 25,
+      },
+    },
+  ],
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<p>DSCR (Computed): 7.10x</p>",
+    "<p>DSCR (T12 NOI): 7.10x</p>",
+    "<h3>Current Debt Coverage / Constraint Sensitivity</h3>",
+    "<table><tr><td>Base</td><td>7.10x</td></tr></table>",
+    "<h2>Deal Scorecard</h2>",
+    "<p>DSCR (Current Debt): 8.10x</p>",
+    "<h2>Risk Register</h2>",
+    "<table><tr><td>DSCR (Current Debt)</td><td>8.10x</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  currentDebtDscrMismatch.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH"),
+  true
+);
+
+const currentDebtDscrAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...currentDebtArtifacts,
+    {
+      type: "mortgage_statement_parsed",
+      payload: {
+        outstanding_balance: 6000000,
+        monthly_payment: 13625,
+        interest_rate: 0.055,
+        amort_years: 25,
+      },
+    },
+  ],
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<p>DSCR (Computed): 7.10x</p>",
+    "<p>DSCR (T12 NOI): 7.10x</p>",
+    "<h3>Current Debt Coverage / Constraint Sensitivity</h3>",
+    "<table><tr><td>Base</td><td>7.10x</td></tr></table>",
+    "<h2>Deal Scorecard</h2>",
+    "<p>DSCR (Current Debt): 7.10x</p>",
+    "<h2>Risk Register</h2>",
+    "<table><tr><td>DSCR (Current Debt)</td><td>7.10x</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  currentDebtDscrAligned.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH"),
+  false
+);
+
 const screeningLeak = buildReportContractQa({
   reportType: "screening",
   reportTier: 1,

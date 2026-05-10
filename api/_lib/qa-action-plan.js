@@ -547,6 +547,24 @@ function actionForReportContractViolation(violation) {
       evidence: violation?.evidence || null,
     };
   }
+  if (code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH") {
+    return {
+      code,
+      title: "Current debt DSCR reconciliation mismatch",
+      source_artifact: "report_contract_qa",
+      severity: "high",
+      action_type: "admin_review_required",
+      owner_area: "report_renderer",
+      recommended_next_step: "Align all rendered current-debt DSCR values to the source-of-truth current debt service basis before public sample or high-value outreach use.",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+      safe_to_auto_fix: false,
+      evidence: violation?.evidence || null,
+    };
+  }
   const materiallyMisleadingDebt =
     code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
