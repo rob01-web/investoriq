@@ -231,6 +231,7 @@ export default function AdminDashboard() {
   const [fixQueueLoading, setFixQueueLoading] = useState(false);
   const [fixQueueOpen, setFixQueueOpen] = useState(false);
   const [fixQueueError, setFixQueueError] = useState('');
+  const [userError, setUserError]     = useState('');
 
   const searchTimer = useRef(null);
 
@@ -324,40 +325,24 @@ export default function AdminDashboard() {
   // ─── USERS ────────────────────────────────────────────────
   const fetchUsers = useCallback(async (search = '') => {
     setUserLoading(true);
+    setUserError('');
     try {
-      // 1. Use SECURITY DEFINER RPC to bypass RLS on profiles
-      const { data: profiles, error } = await supabase
-        .rpc('get_all_profiles_for_admin');
-      if (error) throw error;
-
-      // 2. Use SECURITY DEFINER RPC to bypass RLS on report_purchases
-      const { data: purchases } = await supabase
-        .rpc('get_all_purchases_for_admin');
-
-      // 3. Merge credit counts — only unconsumed rows = available credits
-      const creditMap = {};
-      (purchases || []).filter(p => !p.consumed_at).forEach(p => {
-        if (!creditMap[p.user_id]) creditMap[p.user_id] = { screening: 0, underwriting: 0 };
-        if (p.product_type === 'screening') creditMap[p.user_id].screening++;
-        else if (p.product_type === 'underwriting') creditMap[p.user_id].underwriting++;
+      const params = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+      const res = await fetch(`/api/admin/users-credits${params}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
       });
-
-      // 4. Filter by search if provided
-      const filtered = (profiles || []).filter(u =>
-        !search.trim() || u.full_name?.toLowerCase().includes(search.trim().toLowerCase())
-      );
-
-      const merged = filtered.map(u => ({
-        ...u,
-        screening_credits:    creditMap[u.id]?.screening    ?? 0,
-        underwriting_credits: creditMap[u.id]?.underwriting ?? 0,
-      }));
-
-      setUsers(merged);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to load users');
+      setUsers(Array.isArray(data?.users) ? data.users : []);
+      if (data?.users_error || data?.purchases_error) {
+        setUserError('Users & Credits loaded with partial data.');
+      }
     } catch {
+      setUserError('Failed to load users');
       toast({ title:'Failed to load users', variant:'destructive' });
     } finally { setUserLoading(false); }
-  }, [toast]);
+  }, [adminRunKey, toast]);
 
   // ─── ISSUES ───────────────────────────────────────────────
   const fetchIssues = useCallback(async (filter = 'open') => {
@@ -888,6 +873,11 @@ export default function AdminDashboard() {
                 </div>
               }
             />
+            {userError && !userLoading && (
+              <div style={{ marginBottom:12, padding:'12px 14px', background:T.warnBg, border:`1px solid ${T.warnBorder}`, color:T.warnAmber, fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300 }}>
+                {userError}
+              </div>
+            )}
             {userLoading ? (
               <div style={{ textAlign:'center', padding:'24px 0' }}><Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} /></div>
             ) : users.length === 0 ? (
