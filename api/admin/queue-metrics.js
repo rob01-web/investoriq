@@ -134,6 +134,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    const includeFixQueue = String(req.query?.include_fix_queue || "").toLowerCase() === "true";
     const statuses = [
       'queued',
       'extracting',
@@ -237,44 +238,50 @@ export default async function handler(req, res) {
       })
     );
 
-    const { data: fixQueueArtifacts, error: fixQueueArtifactsErr } = await supabaseAdmin
-      .from('analysis_artifacts')
-      .select('job_id, type, payload, created_at')
-      .in('type', ['qa_action_plan', 'report_contract_qa', 'qa_director_review', 'report_qa_flags'])
-      .order('created_at', { ascending: false })
-      .limit(200);
+    let fixQueue = [];
+    let fixQueueArtifactsErr = false;
+    if (includeFixQueue) {
+      const { data: fixQueueArtifacts, error: artifactsErr } = await supabaseAdmin
+        .from('analysis_artifacts')
+        .select('job_id, type, payload, created_at')
+        .in('type', ['qa_action_plan', 'report_contract_qa', 'qa_director_review', 'report_qa_flags'])
+        .order('created_at', { ascending: false })
+        .limit(25);
 
-    const artifactsByJob = {};
-    for (const row of fixQueueArtifacts || []) {
-      if (!row?.job_id) continue;
-      if (!artifactsByJob[row.job_id]) artifactsByJob[row.job_id] = {};
-      if (!artifactsByJob[row.job_id][row.type]) {
-        artifactsByJob[row.job_id][row.type] = row;
+      fixQueueArtifactsErr = Boolean(artifactsErr);
+
+      const artifactsByJob = {};
+      for (const row of fixQueueArtifacts || []) {
+        if (!row?.job_id) continue;
+        if (!artifactsByJob[row.job_id]) artifactsByJob[row.job_id] = {};
+        if (!artifactsByJob[row.job_id][row.type]) {
+          artifactsByJob[row.job_id][row.type] = row;
+        }
       }
-    }
 
-    const fixQueueJobIds = Object.keys(artifactsByJob);
-    let jobsById = {};
-    if (fixQueueJobIds.length > 0) {
-      const { data: fixQueueJobs } = await supabaseAdmin
-        .from('analysis_jobs')
-        .select('id, property_name, report_type, status, created_at')
-        .in('id', fixQueueJobIds);
-      jobsById = Object.fromEntries((fixQueueJobs || []).map((job) => [job.id, job]));
-    }
+      const fixQueueJobIds = Object.keys(artifactsByJob);
+      let jobsById = {};
+      if (fixQueueJobIds.length > 0) {
+        const { data: fixQueueJobs } = await supabaseAdmin
+          .from('analysis_jobs')
+          .select('id, property_name, report_type, status, created_at')
+          .in('id', fixQueueJobIds);
+        jobsById = Object.fromEntries((fixQueueJobs || []).map((job) => [job.id, job]));
+      }
 
-    const fixQueue = fixQueueJobIds
-      .map((jobId) => buildFixQueueEntry({
-        job: jobsById[jobId] || { id: jobId },
-        artifactsByType: artifactsByJob[jobId] || {},
-      }))
-      .filter(Boolean)
-      .sort((a, b) => (
-        severityRank[normalizeSeverity(b.highest_severity)] - severityRank[normalizeSeverity(a.highest_severity)] ||
-        Number(Boolean(b.requires_code_patch)) - Number(Boolean(a.requires_code_patch)) ||
-        Number(Boolean(b.requires_regeneration)) - Number(Boolean(a.requires_regeneration)) ||
-        String(b.created_at || "").localeCompare(String(a.created_at || ""))
-      ));
+      fixQueue = fixQueueJobIds
+        .map((jobId) => buildFixQueueEntry({
+          job: jobsById[jobId] || { id: jobId },
+          artifactsByType: artifactsByJob[jobId] || {},
+        }))
+        .filter(Boolean)
+        .sort((a, b) => (
+          severityRank[normalizeSeverity(b.highest_severity)] - severityRank[normalizeSeverity(a.highest_severity)] ||
+          Number(Boolean(b.requires_code_patch)) - Number(Boolean(a.requires_code_patch)) ||
+          Number(Boolean(b.requires_regeneration)) - Number(Boolean(a.requires_regeneration)) ||
+          String(b.created_at || "").localeCompare(String(a.created_at || ""))
+        ));
+    }
 
     return res.status(200).json({
       counts_by_status: countsByStatus,
@@ -282,9 +289,10 @@ export default async function handler(req, res) {
       latest_failed_at: latestFailedErr ? null : latestFailed?.created_at || null,
       recent_jobs: recentJobsErr ? [] : recentJobs || [],
       issues: issuesErr ? [] : issuesWithUrls || [],
-      fix_queue: fixQueueArtifactsErr ? [] : fixQueue,
+      fix_queue: includeFixQueue && !fixQueueArtifactsErr ? fixQueue : [],
+      fix_queue_deferred: !includeFixQueue,
       issues_error: Boolean(issuesErr),
-      fix_queue_error: Boolean(fixQueueArtifactsErr),
+      fix_queue_error: includeFixQueue ? Boolean(fixQueueArtifactsErr) : false,
     });
   } catch (err) {
     console.error('queue-metrics error:', err);

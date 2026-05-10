@@ -229,6 +229,8 @@ export default function AdminDashboard() {
   const [issuesBusy, setIssuesBusy]   = useState({});
   const [fixQueue, setFixQueue]       = useState([]);
   const [fixQueueLoading, setFixQueueLoading] = useState(false);
+  const [fixQueueOpen, setFixQueueOpen] = useState(false);
+  const [fixQueueError, setFixQueueError] = useState('');
 
   const searchTimer = useRef(null);
 
@@ -372,18 +374,20 @@ export default function AdminDashboard() {
 
   const fetchFixQueue = useCallback(async () => {
     if (!adminRunKey.trim()) return;
+    setFixQueueOpen(true);
     setFixQueueLoading(true);
+    setFixQueueError('');
     try {
-      const res = await fetch('/api/admin/queue-metrics', {
+      const res = await fetch('/api/admin/queue-metrics?include_fix_queue=true', {
         method: 'GET',
         headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to load fix queue');
-      setFixQueue(Array.isArray(data?.fix_queue) ? data.fix_queue : []);
+      setFixQueue(Array.isArray(data?.fix_queue) ? data.fix_queue.slice(0, 10) : []);
     } catch (e) {
       console.error('fixQueue error', e);
-      setFixQueue([]);
+      setFixQueueError('Failed to load Fix Queue.');
     } finally {
       setFixQueueLoading(false);
     }
@@ -396,8 +400,7 @@ export default function AdminDashboard() {
     fetchReports(0, '', 'all');
     fetchUsers('');
     fetchIssues('open');
-    fetchFixQueue();
-  }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues, fetchFixQueue]);
+  }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues]);
 
   // ─── DEBOUNCED SEARCH ────────────────────────────────────
   useEffect(() => {
@@ -660,11 +663,29 @@ export default function AdminDashboard() {
             <SectionHeader
               eyebrow="Internal"
               title="Admin Review / Fix Queue"
-              action={<Btn onClick={fetchFixQueue} disabled={fixQueueLoading}><RefreshCcw size={9} /> Refresh</Btn>}
+              action={
+                <Btn onClick={fetchFixQueue} disabled={fixQueueLoading} variant={fixQueueOpen ? 'warn' : 'primary'}>
+                  <RefreshCcw size={9} />
+                  {fixQueueOpen ? 'Refresh Fix Queue' : 'Load Fix Queue'}
+                </Btn>
+              }
             />
-            {fixQueueLoading ? (
+            {!fixQueueOpen ? (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'18px 0 6px' }}>
+                <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, margin:0 }}>
+                  Fix Queue is deferred until explicitly loaded.
+                </p>
+                <Btn onClick={fetchFixQueue} disabled={fixQueueLoading} variant="primary">
+                  <RefreshCcw size={9} /> Load Fix Queue
+                </Btn>
+              </div>
+            ) : fixQueueLoading ? (
               <div style={{ textAlign:'center', padding:'24px 0' }}>
                 <Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
+              </div>
+            ) : fixQueueError ? (
+              <div style={{ padding:'18px 20px', background:T.errBg, border:`1px solid ${T.errBorder}`, color:T.errRed, fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300 }}>
+                {fixQueueError}
               </div>
             ) : fixQueue.length === 0 ? (
               <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No review items require attention.</p>
