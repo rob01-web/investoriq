@@ -488,6 +488,7 @@ function actionForManagerDecision(decision) {
   const actionType = actionTypeByClassification[classification];
   if (!actionType) return null;
 
+  const contradictionReview = classification === "real_source_report_contradiction";
   const hardPublicLanguage = classification === "real_public_language_risk" &&
     isHardPublicLanguageExcerpt(decision?.evidence_excerpt);
   const speculativePublicLanguage = classification === "real_public_language_risk" && !hardPublicLanguage;
@@ -503,16 +504,24 @@ function actionForManagerDecision(decision) {
     title: decision?.rationale || "QA manager review decision",
     source_artifact: "qa_manager_review",
     severity: hardPublicLanguage ? "critical" : normalizeSeverity(decision?.severity),
-    action_type: hardPublicLanguage ? "code_patch_required" : speculativePublicLanguage ? "model_review_recommended" : actionType,
-    owner_area: speculativePublicLanguage ? "qa_manager" : ownerByClassification[classification],
+    action_type: contradictionReview ? "admin_review_required" : hardPublicLanguage ? "code_patch_required" : speculativePublicLanguage ? "model_review_recommended" : actionType,
+    owner_area: contradictionReview ? "source_reconciliation" : speculativePublicLanguage ? "qa_manager" : ownerByClassification[classification],
     recommended_next_step: speculativePublicLanguage
       ? "Review manually only if actual rendered excerpt contains prohibited public language."
+      : contradictionReview
+      ? (decision?.recommended_action_type || decision?.rationale || "Verify source values against rendered report sections before delivery.")
       : decision?.recommended_action_type || "Review QA manager decision.",
     requires_code_patch: requiresCodePatch,
-    requires_regeneration: Boolean(decision?.requires_regeneration) && requiresCodePatch,
-    blocks_customer_delivery: hardPublicLanguage,
-    blocks_public_sample: !speculativePublicLanguage && (Boolean(decision?.blocks_public_sample) || hardPublicLanguage),
-    blocks_high_value_outreach: !speculativePublicLanguage && (Boolean(decision?.blocks_high_value_outreach) || hardPublicLanguage),
+    requires_regeneration: Boolean(decision?.requires_regeneration),
+    blocks_customer_delivery: contradictionReview
+      ? (Boolean(decision?.blocks_customer_delivery) || ["high", "critical"].includes(normalizeSeverity(decision?.severity)))
+      : hardPublicLanguage,
+    blocks_public_sample: contradictionReview
+      ? true
+      : !speculativePublicLanguage && (Boolean(decision?.blocks_public_sample) || hardPublicLanguage),
+    blocks_high_value_outreach: contradictionReview
+      ? true
+      : !speculativePublicLanguage && (Boolean(decision?.blocks_high_value_outreach) || hardPublicLanguage),
     safe_to_auto_fix: false,
     evidence: {
       classification,
@@ -654,6 +663,14 @@ export function buildDeliveryGateDecision({
     String(violation?.code || "") === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION" ||
     /source_report_reconciliation|report_contradiction/i.test(String(violation?.category || ""))
   ) || null;
+  const managerContradictionAction = prioritizedActions.find((action) =>
+    String(action?.source_artifact || "") === "qa_manager_review" &&
+    (
+      String(action?.evidence?.classification || "") === "real_source_report_contradiction" ||
+      action?.action_type === "admin_review_required" ||
+      (action?.blocks_customer_delivery === true && ["qa_manager", "source_reconciliation", "report_renderer"].includes(String(action?.owner_area || "")))
+    )
+  ) || null;
   const adminReviewAction = prioritizedActions.find((action) =>
     action?.action_type === "admin_review_required" ||
     /RECONCILIATION_MISMATCH/i.test(String(action?.code || "")) ||
@@ -663,7 +680,7 @@ export function buildDeliveryGateDecision({
       ["report_renderer", "parser", "rent_roll_normalizer"].includes(String(action?.owner_area || ""))
     ) ||
     action?.blocks_customer_delivery === true
-  ) || null;
+  ) || managerContradictionAction || null;
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
@@ -688,10 +705,11 @@ export function buildDeliveryGateDecision({
     };
   }
 
-  if (adminReviewAction || reconciliationViolation || directorMismatch) {
-    const topAction = adminReviewAction || reconciliationViolation || prioritizedActions[0] || null;
+  if (adminReviewAction || reconciliationViolation || directorMismatch || managerContradictionAction) {
+    const topAction = adminReviewAction || managerContradictionAction || reconciliationViolation || prioritizedActions[0] || null;
     const reasonCode =
       reasonCodeForAction(adminReviewAction) ||
+      reasonCodeForAction(managerContradictionAction) ||
       reasonCodeForAction(reconciliationViolation) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
     return {

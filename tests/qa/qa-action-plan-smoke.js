@@ -524,6 +524,37 @@ const rentRollGate = buildDeliveryGateDecision({
 });
 assert.equal(rentRollGate.delivery_gate_status, "admin_review_required");
 
+const managerContradictionPlan = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaManagerReview: {
+    decisions: [
+      {
+        classification: "real_source_report_contradiction",
+        severity: "high",
+        source_code: "rent_roll_vs_t12_gpr_discrepancy",
+        source_artifact: "qa_manager_review",
+        blocks_customer_delivery: true,
+        recommended_action_type: "admin_review_required",
+        rationale: "Verify the rendered rent roll and T12 source values before delivery.",
+      },
+    ],
+  },
+});
+const managerContradictionAction = managerContradictionPlan.prioritized_actions.find(
+  (action) => action.code === "rent_roll_vs_t12_gpr_discrepancy"
+);
+assert.equal(managerContradictionAction.action_type, "admin_review_required");
+assert.equal(managerContradictionAction.owner_area, "source_reconciliation");
+assert.equal(managerContradictionAction.blocks_customer_delivery, true);
+
+const managerContradictionGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: managerContradictionPlan,
+});
+assert.equal(managerContradictionGate.delivery_gate_status, "admin_review_required");
+
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
   reportContractQa: { contract_status: "pass", violations: [] },
