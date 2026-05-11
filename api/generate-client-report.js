@@ -6576,6 +6576,23 @@ try {
 } catch (err) {
   console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
 }
+if (deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required") {
+  return res.status(200).json({
+    ok: true,
+    success: true,
+    reportId: null,
+    storagePath: null,
+    url: null,
+    delivery_gate_status: deliveryGateDecisionResult.delivery_gate_status,
+    delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
+    delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
+    delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
+    delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
+    customer_delivery_ready: false,
+    public_sample_ready: deliveryGateDecisionResult?.public_sample_ready ?? true,
+    high_value_outreach_ready: deliveryGateDecisionResult?.high_value_outreach_ready ?? true,
+  });
+}
 if (docraptorMode === "production" && !allowProductionPdf) {
   const disabledMessage =
     "Production PDF generation is disabled. Contact support to enable production output.";

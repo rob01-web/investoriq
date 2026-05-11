@@ -1806,7 +1806,11 @@ export default async function handler(req, res) {
                 }
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
-                if (!reportData?.reportId) {
+                const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
+                if (deliveryGateStatus === 'admin_review_required') {
+                  reportId = reportData?.reportId || null;
+                  storagePath = reportData?.storagePath || null;
+                } else if (!reportData?.reportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
                   reportId = reportData.reportId;
