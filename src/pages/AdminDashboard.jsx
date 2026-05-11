@@ -501,7 +501,11 @@ export default function AdminDashboard() {
       if (!res.ok || !data?.ok) {
         throw new Error(data?.error || 'Controlled action failed');
       }
-      setFixQueueActionMessage(data?.message || 'Action completed.');
+      setFixQueueActionMessage(
+        action === 'mark_still_reviewing'
+          ? 'Still reviewing logged. Admin hold remains active.'
+          : data?.message || 'Action completed.'
+      );
       await fetchFixQueue();
       await refreshFixQueueDetail(jobId, selectedFixQueueTab);
     } catch (e) {
@@ -511,6 +515,10 @@ export default function AdminDashboard() {
       setFixQueueActionLoading('');
     }
   }, [adminRunKey, fetchFixQueue, fixQueueActionLoading, refreshFixQueueDetail, selectedFixQueueDetail, selectedFixQueueJobId, selectedFixQueueTab]);
+
+  const controlledActionLabel = useCallback((action, fallback) => (
+    fixQueueActionLoading === action ? `${fallback}...` : fallback
+  ), [fixQueueActionLoading]);
 
   // INIT
   useEffect(() => {
@@ -951,7 +959,7 @@ export default function AdminDashboard() {
                         variant="danger"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        Requeue failed job
+                        {controlledActionLabel('requeue_failed_job', 'Requeue failed job')}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
                         Only enabled when the selected job is failed.
@@ -968,7 +976,7 @@ export default function AdminDashboard() {
                         variant="warn"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        Retry queued job
+                        {controlledActionLabel('retry_worker_job', 'Retry queued job')}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
                         Only enabled when the selected job is queued.
@@ -988,7 +996,7 @@ export default function AdminDashboard() {
                         variant="ghost"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        Mark still reviewing
+                        {controlledActionLabel('mark_still_reviewing', 'Mark still reviewing')}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
                         Only enabled for admin-held publishing jobs.
@@ -998,6 +1006,11 @@ export default function AdminDashboard() {
                   {(fixQueueActionMessage || fixQueueActionError) && (
                     <div style={{ marginTop:10, padding:'8px 10px', border:`1px solid ${fixQueueActionError ? T.errBorder : T.okBorder}`, background:fixQueueActionError ? T.errBg : T.okBg, color:fixQueueActionError ? T.errRed : T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.55 }}>
                       {fixQueueActionError || fixQueueActionMessage}
+                    </div>
+                  )}
+                  {fixQueueActionLoading && (
+                    <div style={{ marginTop:8, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                      Action in progress.
                     </div>
                   )}
                 </div>
