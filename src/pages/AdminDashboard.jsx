@@ -435,13 +435,15 @@ export default function AdminDashboard() {
     }
   }, [adminRunKey]);
 
-  const refreshFixQueueDetail = useCallback(async (jobId, tab = 'job') => {
+  const refreshFixQueueDetail = useCallback(async (jobId, tab = 'job', preserveActionFeedback = false) => {
     if (!adminRunKey.trim() || !jobId || fixQueueDetailLoading) return;
     setSelectedFixQueueJobId(jobId);
     setSelectedFixQueueTab(tab);
     setFixQueueDetailError('');
-    setFixQueueActionMessage('');
-    setFixQueueActionError('');
+    if (!preserveActionFeedback) {
+      setFixQueueActionMessage('');
+      setFixQueueActionError('');
+    }
     setFixQueueDetailLoading(true);
     try {
       const res = await fetch(`/api/admin/queue-metrics?include_fix_queue_details=true&fix_queue_job_id=${encodeURIComponent(jobId)}`, {
@@ -507,7 +509,7 @@ export default function AdminDashboard() {
           : data?.message || 'Action completed.'
       );
       await fetchFixQueue();
-      await refreshFixQueueDetail(jobId, selectedFixQueueTab);
+      await refreshFixQueueDetail(jobId, selectedFixQueueTab, true);
     } catch (e) {
       console.error('fixQueue controlled action error', e);
       setFixQueueActionError(e?.message || 'Action failed.');
