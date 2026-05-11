@@ -653,6 +653,56 @@ function reasonCodeForAction(action) {
   return String(action?.code || "");
 }
 
+function classifyActionDeliveryImpact(action) {
+  const code = String(action?.code || "").toUpperCase();
+  const actionType = String(action?.action_type || "");
+  const ownerArea = String(action?.owner_area || "");
+  const blocksCustomer = Boolean(action?.blocks_customer_delivery);
+  const blocksPublic = Boolean(action?.blocks_public_sample);
+  const blocksOutreach = Boolean(action?.blocks_high_value_outreach);
+  const requiresPatch = Boolean(action?.requires_code_patch);
+  const requiresRegeneration = Boolean(action?.requires_regeneration);
+
+  const customerDeliveryBlockerCodes = new Set([
+    "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+    "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+    "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+  ]);
+  const publicOrOutreachOnlyCodes = new Set([
+    "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
+    "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
+    "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
+    "T12_LINE_ITEM_DETAIL_MISSING",
+    "RENOVATION_DOC_NOT_STRUCTURED",
+    "ACQUISITION_FINANCING_RENDER_MISSING",
+    "DOCRAPTOR_NOT_PRODUCTION_MODE",
+  ]);
+
+  if (blocksCustomer || customerDeliveryBlockerCodes.has(code)) {
+    return "customer_delivery_blocker";
+  }
+
+  if (
+    actionType === "source_document_limitation" ||
+    actionType === "production_config_only" ||
+    publicOrOutreachOnlyCodes.has(code) ||
+    ((blocksPublic || blocksOutreach) && (requiresPatch || requiresRegeneration) &&
+      ["report_renderer", "parser", "rent_roll_normalizer", "production_config"].includes(ownerArea))
+  ) {
+    return "public_or_outreach_only_blocker";
+  }
+
+  if (
+    actionType === "no_action_false_positive" ||
+    actionType === "model_review_recommended" ||
+    actionType === "admin_review_optional"
+  ) {
+    return "advisory_only";
+  }
+
+  return "advisory_only";
+}
+
 export function buildDeliveryGateDecision({
   sourceReportCoverageQa = null,
   reportContractQa = null,
@@ -660,6 +710,10 @@ export function buildDeliveryGateDecision({
   qaDirectorReview = null,
 } = {}) {
   const prioritizedActions = Array.isArray(qaActionPlan?.prioritized_actions) ? qaActionPlan.prioritized_actions : [];
+  const actionImpactRows = prioritizedActions.map((action) => ({
+    action,
+    impact: classifyActionDeliveryImpact(action),
+  }));
   const contractViolations = Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : [];
   const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : [];
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
@@ -681,23 +735,20 @@ export function buildDeliveryGateDecision({
       (action?.blocks_customer_delivery === true && ["qa_manager", "source_reconciliation", "report_renderer"].includes(String(action?.owner_area || "")))
     )
   ) || null;
-  const adminReviewAction = prioritizedActions.find((action) =>
-    action?.action_type === "admin_review_required" ||
-    /RECONCILIATION_MISMATCH/i.test(String(action?.code || "")) ||
-    (
-      action?.requires_code_patch === true &&
-      action?.requires_regeneration === true &&
-      ["report_renderer", "parser", "rent_roll_normalizer"].includes(String(action?.owner_area || ""))
-    ) ||
-    action?.blocks_customer_delivery === true
-  ) || managerContradictionAction || null;
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
+  const customerDeliveryBlockerAction =
+    actionImpactRows.find((row) => row.impact === "customer_delivery_blocker")?.action ||
+    null;
+  const publicOrOutreachOnlyAction =
+    actionImpactRows.find((row) => row.impact === "public_or_outreach_only_blocker")?.action ||
+    null;
+  const adminReviewAction = customerDeliveryBlockerAction || managerContradictionAction || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
     Boolean(adminReviewAction || reconciliationViolation);
 
   const sourceNeedsDocs = missingRequiredSource || Boolean(sourceDocumentAction);
-  if (sourceNeedsDocs && !adminReviewAction && !reconciliationViolation) {
+  if (sourceNeedsDocs && !customerDeliveryBlockerAction && !reconciliationViolation) {
     const gateReason =
       sourceDocumentAction?.code ||
       sourceLimitations[0]?.code ||
@@ -714,13 +765,15 @@ export function buildDeliveryGateDecision({
       high_value_outreach_ready: false,
     };
   }
+  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || reconciliationViolation || directorMismatch || managerContradictionAction);
 
-  if (adminReviewAction || reconciliationViolation || directorMismatch || managerContradictionAction) {
-    const topAction = adminReviewAction || managerContradictionAction || reconciliationViolation || prioritizedActions[0] || null;
+  if (customerDeliveryBlocked) {
+    const topAction = customerDeliveryBlockerAction || managerContradictionAction || reconciliationViolation || prioritizedActions[0] || null;
     const reasonCode =
       reasonCodeForAction(adminReviewAction) ||
       reasonCodeForAction(managerContradictionAction) ||
       reasonCodeForAction(reconciliationViolation) ||
+      reasonCodeForAction(customerDeliveryBlockerAction) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
     return {
       delivery_gate_status: "admin_review_required",
@@ -741,8 +794,14 @@ export function buildDeliveryGateDecision({
     owner_area: prioritizedActions[0]?.owner_area || null,
     recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
     customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready),
-    public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
-    high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+    public_sample_ready:
+      Boolean(qaActionPlan?.public_sample_ready) &&
+      !customerDeliveryBlockerAction &&
+      !publicOrOutreachOnlyAction,
+    high_value_outreach_ready:
+      Boolean(qaActionPlan?.high_value_outreach_ready) &&
+      !customerDeliveryBlockerAction &&
+      !publicOrOutreachOnlyAction,
   };
 }
 
