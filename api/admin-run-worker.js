@@ -366,6 +366,221 @@ export default async function handler(req, res) {
       });
     }
 
+    const controlledAction = String(req.body?.action || '').trim();
+    const controlledJobId = String(req.body?.job_id || '').trim();
+    const controlledNote = String(req.body?.note || req.body?.message || '').trim().slice(0, 240);
+    const controlledActions = new Set([
+      'requeue_failed_job',
+      'retry_worker_job',
+      'mark_still_reviewing',
+    ]);
+
+    const writeAdminControlAudit = async (job, actionName, result, meta = {}) => {
+      const auditPayload = {
+        event: `admin_control_${actionName}`,
+        action: actionName,
+        result,
+        previous_status: meta?.previous_status || null,
+        previous_error_code: meta?.previous_error_code || null,
+        note: meta?.note || null,
+        timestamp: nowIso,
+      };
+
+      const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, `admin_control_${actionName}`, auditPayload);
+      if (workerEventErr) {
+        return workerEventErr;
+      }
+
+      const { error: adminEventErr } = await supabaseAdmin.from('analysis_job_events').insert([
+        {
+          job_id: job.id,
+          actor: 'admin',
+          event_type: `admin_control_${actionName}`,
+          from_status: meta?.previous_status || null,
+          to_status: meta?.to_status || null,
+          created_at: nowIso,
+          meta: {
+            route: '/api/admin-run-worker',
+            result,
+            previous_error_code: meta?.previous_error_code || null,
+          },
+        },
+      ]);
+
+      return adminEventErr || null;
+    };
+
+    if (controlledAction) {
+      if (!controlledActions.has(controlledAction)) {
+        return res.status(400).json({ ok: false, error: 'Unsupported controlled action' });
+      }
+      if (!controlledJobId) {
+        return res.status(400).json({ ok: false, error: 'Missing job_id' });
+      }
+
+      const { data: controlJob, error: controlJobErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .select('id, user_id, status, error_code, error_message')
+        .eq('id', controlledJobId)
+        .maybeSingle();
+
+      if (controlJobErr || !controlJob?.id) {
+        return res.status(404).json({ ok: false, error: 'Job not found' });
+      }
+
+      if (String(controlJob.status || '') === 'published') {
+        const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          note: 'Published jobs are not eligible for controlled mutation.',
+        });
+        if (blockedErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+        }
+        return res.status(400).json({ ok: false, error: 'Published jobs are not eligible for controlled actions.' });
+      }
+
+      if (controlledAction === 'requeue_failed_job') {
+        if (String(controlJob.status || '') !== 'failed') {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Requeue requires a failed job.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(400).json({ ok: false, error: 'Requeue is only available for failed jobs.' });
+        }
+
+        const requeueUpdate = { status: 'queued' };
+        if (supportsFailedAt) {
+          requeueUpdate.failed_at = null;
+        }
+        if (supportsErrorCode) {
+          requeueUpdate.error_code = null;
+        }
+        if (supportsErrorMessage) {
+          requeueUpdate.error_message = null;
+        }
+
+        const { error: requeueErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update(requeueUpdate)
+          .eq('id', controlJob.id)
+          .eq('status', 'failed');
+
+        if (requeueErr) {
+          return res.status(500).json({ ok: false, error: `Failed to requeue job: ${requeueErr.message}` });
+        }
+
+        const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          to_status: 'queued',
+          note: 'Job requeued for worker processing.',
+        });
+        if (auditErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          action: controlledAction,
+          job_id: controlJob.id,
+          job_status: 'queued',
+          message: 'Job requeued for worker processing.',
+        });
+      }
+
+      if (controlledAction === 'retry_worker_job') {
+        const eligibleQueued = String(controlJob.status || '') === 'queued';
+        if (!eligibleQueued) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Retry requires a queued job.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(400).json({ ok: false, error: 'Retry is only available for queued jobs.' });
+        }
+
+        const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          to_status: controlJob.status,
+          note: 'Worker retry requested for an already queued job.',
+        });
+        if (auditErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          action: controlledAction,
+          job_id: controlJob.id,
+          job_status: controlJob.status,
+          message: 'Worker retry requested for an already queued job.',
+        });
+      }
+
+      if (controlledAction === 'mark_still_reviewing') {
+        const eligibleHeld =
+          String(controlJob.status || '') === 'publishing' &&
+          String(controlJob.error_code || '') === 'ADMIN_REVIEW_REQUIRED';
+        if (!eligibleHeld) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Still reviewing is only available for admin-held jobs.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(400).json({ ok: false, error: 'Still reviewing is only available for admin-held jobs.' });
+        }
+
+        const reviewNote = controlledNote || 'Admin review ongoing.';
+        const reviewUpdate = {};
+        if (supportsErrorMessage) {
+          reviewUpdate.error_message = reviewNote;
+        }
+
+        const { error: reviewErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .update(reviewUpdate)
+          .eq('id', controlJob.id)
+          .eq('status', 'publishing')
+          .eq('error_code', 'ADMIN_REVIEW_REQUIRED');
+
+        if (reviewErr) {
+          return res.status(500).json({ ok: false, error: `Failed to update admin review note: ${reviewErr.message}` });
+        }
+
+        const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          to_status: controlJob.status,
+          note: reviewNote,
+        });
+        if (auditErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          action: controlledAction,
+          job_id: controlJob.id,
+          job_status: controlJob.status,
+          message: reviewNote,
+        });
+      }
+
+      return res.status(400).json({ ok: false, error: 'Unsupported controlled action' });
+    }
+
     // Timeout guard: mark long-running jobs as failed
     const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')

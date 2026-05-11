@@ -11,7 +11,7 @@ import {
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 
-// â”€â”€â”€ DESIGN TOKENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// DESIGN TOKENS
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -41,14 +41,14 @@ const T = {
 const PAGE_SIZE = 20;
 const STUCK_THRESHOLD_MINS = 10;
 
-// â”€â”€â”€ FONTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// FONTS
 const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
   @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 `;
 
-// â”€â”€â”€ SHARED COMPONENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SHARED COMPONENTS
 function Card({ children, style = {} }) {
   return (
     <div style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'24px 28px', marginBottom:10, ...style }}>
@@ -182,7 +182,7 @@ function StatCard({ icon: Icon, label, value, sub, accent }) {
         <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:T.ink4 }}>{label}</span>
         {Icon && <Icon size={13} color={accent || T.goldDark} />}
       </div>
-      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, lineHeight:1 }}>{value ?? 'â€”'}</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:500, color:T.ink, lineHeight:1 }}>{value ?? '-'}</div>
       {sub && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4, marginTop:4 }}>{sub}</div>}
     </div>
   );
@@ -203,7 +203,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   );
 }
 
-// â”€â”€â”€ TABLE HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TABLE HELPERS
 function TblTh({ children, right }) {
   return (
     <th style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.18em', textTransform:'uppercase', color:T.ink4, padding:'8px 10px', textAlign:right?'right':'left', borderBottom:`1px solid ${T.hairline}`, fontWeight:400, whiteSpace:'nowrap' }}>
@@ -219,7 +219,7 @@ function TblTd({ children, mono, right, style={} }) {
   );
 }
 
-// â”€â”€â”€ MAIN COMPONENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// MAIN COMPONENT
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [adminRunKey, setAdminRunKey] = useState(
@@ -228,11 +228,11 @@ export default function AdminDashboard() {
   const [authed, setAuthed]           = useState(false);
   const [loading, setLoading]         = useState(false);
 
-  // â”€â”€ Command strip
+  // Command strip
   const [cmdStats, setCmdStats]       = useState(null);
   const [stuckJobs, setStuckJobs]     = useState([]);
 
-  // â”€â”€ Reports
+  // Reports
   const [reports, setReports]         = useState([]);
   const [rptTotal, setRptTotal]       = useState(0);
   const [rptPage, setRptPage]         = useState(0);
@@ -243,13 +243,13 @@ export default function AdminDashboard() {
   const [rptBusy, setRptBusy]         = useState({});
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // â”€â”€ Users
+  // Users
   const [users, setUsers]             = useState([]);
   const [userSearch, setUserSearch]   = useState('');
   const [userLoading, setUserLoading] = useState(false);
   const [creditBusy, setCreditBusy]   = useState({});
 
-  // â”€â”€ Issues
+  // Issues
   const [issues, setIssues]           = useState([]);
   const [issueFilter, setIssueFilter] = useState('open');
   const [issuesBusy, setIssuesBusy]   = useState({});
@@ -262,6 +262,9 @@ export default function AdminDashboard() {
   const [selectedFixQueueTab, setSelectedFixQueueTab] = useState('job');
   const [fixQueueDetailLoading, setFixQueueDetailLoading] = useState(false);
   const [fixQueueDetailError, setFixQueueDetailError] = useState('');
+  const [fixQueueActionLoading, setFixQueueActionLoading] = useState('');
+  const [fixQueueActionMessage, setFixQueueActionMessage] = useState('');
+  const [fixQueueActionError, setFixQueueActionError] = useState('');
   const [userError, setUserError]     = useState('');
   const fixQueueDetailPanelRef = useRef(null);
   const fixQueueForDisplay = useMemo(() => (
@@ -289,7 +292,7 @@ export default function AdminDashboard() {
     fixQueueDetailPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [selectedFixQueueJobId]);
 
-  // â”€â”€â”€ AUTH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // AUTH
   async function handleAuth() {
     if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
     setLoading(true);
@@ -308,12 +311,12 @@ export default function AdminDashboard() {
     } finally { setLoading(false); }
   }
 
-  // â”€â”€â”€ COMMAND STRIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // COMMAND STRIP
   const fetchCmdStats = useCallback(async () => {
     try {
       // Revenue MTD from report_purchases
       const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
-      // Revenue: count consumed purchases MTD Ã— product price
+      // Revenue: count consumed purchases MTD  product price
       const { data: purchases } = await supabase
         .from('report_purchases')
         .select('product_type, consumed_at, created_at')
@@ -338,7 +341,7 @@ export default function AdminDashboard() {
         .from('report_issues').select('id', { count:'exact', head:true })
         .eq('status', 'open');
 
-      // Stuck jobs â€” analysis_jobs in_progress > threshold
+      // Stuck jobs - analysis_jobs in_progress > threshold
       const cutoff = new Date(Date.now() - STUCK_THRESHOLD_MINS * 60 * 1000).toISOString();
       const { data: stuck } = await supabase
         .from('analysis_jobs').select('id, user_id, created_at')
@@ -353,7 +356,7 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // â”€â”€â”€ REPORTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // REPORTS
   const fetchReports = useCallback(async (page = 0, search = '', filter = 'all') => {
     setRptLoading(true);
     try {
@@ -376,7 +379,7 @@ export default function AdminDashboard() {
     } finally { setRptLoading(false); }
   }, [toast]);
 
-  // â”€â”€â”€ USERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // USERS
   const fetchUsers = useCallback(async (search = '') => {
     setUserLoading(true);
     setUserError('');
@@ -398,7 +401,7 @@ export default function AdminDashboard() {
     } finally { setUserLoading(false); }
   }, [adminRunKey, toast]);
 
-  // â”€â”€â”€ ISSUES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ISSUES
   const fetchIssues = useCallback(async (filter = 'open') => {
     try {
       // report_issues: id, user_id, job_id, artifact_id, message, attachment_path, status, created_at, updated_at
@@ -432,12 +435,13 @@ export default function AdminDashboard() {
     }
   }, [adminRunKey]);
 
-  const openFixQueueDetail = useCallback(async (jobId, tab = 'job') => {
+  const refreshFixQueueDetail = useCallback(async (jobId, tab = 'job') => {
     if (!adminRunKey.trim() || !jobId || fixQueueDetailLoading) return;
     setSelectedFixQueueJobId(jobId);
     setSelectedFixQueueTab(tab);
     setFixQueueDetailError('');
-    if (fixQueueDetailsById[jobId]) return;
+    setFixQueueActionMessage('');
+    setFixQueueActionError('');
     setFixQueueDetailLoading(true);
     try {
       const res = await fetch(`/api/admin/queue-metrics?include_fix_queue_details=true&fix_queue_job_id=${encodeURIComponent(jobId)}`, {
@@ -459,9 +463,56 @@ export default function AdminDashboard() {
     } finally {
       setFixQueueDetailLoading(false);
     }
-  }, [adminRunKey, fixQueueDetailLoading, fixQueueDetailsById]);
+  }, [adminRunKey, fixQueueDetailLoading]);
 
-  // â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const openFixQueueDetail = useCallback(async (jobId, tab = 'job') => {
+    if (!jobId) return;
+    if (fixQueueDetailsById[jobId]) {
+      setSelectedFixQueueJobId(jobId);
+      setSelectedFixQueueTab(tab);
+      setFixQueueDetailError('');
+      setFixQueueActionMessage('');
+      setFixQueueActionError('');
+      return;
+    }
+    await refreshFixQueueDetail(jobId, tab);
+  }, [fixQueueDetailsById, refreshFixQueueDetail]);
+
+  const runControlledFixQueueAction = useCallback(async (action) => {
+    const jobId = selectedFixQueueJobId;
+    const job = selectedFixQueueDetail?.job || null;
+    if (!adminRunKey.trim() || !jobId || !job || fixQueueActionLoading) return;
+    setFixQueueActionLoading(action);
+    setFixQueueActionMessage('');
+    setFixQueueActionError('');
+    try {
+      const res = await fetch('/api/admin-run-worker', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminRunKey.trim()}`,
+        },
+        body: JSON.stringify({
+          action,
+          job_id: jobId,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || 'Controlled action failed');
+      }
+      setFixQueueActionMessage(data?.message || 'Action completed.');
+      await fetchFixQueue();
+      await refreshFixQueueDetail(jobId, selectedFixQueueTab);
+    } catch (e) {
+      console.error('fixQueue controlled action error', e);
+      setFixQueueActionError(e?.message || 'Action failed.');
+    } finally {
+      setFixQueueActionLoading('');
+    }
+  }, [adminRunKey, fetchFixQueue, fixQueueActionLoading, refreshFixQueueDetail, selectedFixQueueDetail, selectedFixQueueJobId, selectedFixQueueTab]);
+
+  // INIT
   useEffect(() => {
     if (!authed) return;
     fetchCmdStats();
@@ -470,7 +521,7 @@ export default function AdminDashboard() {
     fetchIssues('open');
   }, [authed, fetchCmdStats, fetchReports, fetchUsers, fetchIssues]);
 
-  // â”€â”€â”€ DEBOUNCED SEARCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // DEBOUNCED SEARCH
   useEffect(() => {
     if (!authed) return;
     clearTimeout(searchTimer.current);
@@ -481,7 +532,7 @@ export default function AdminDashboard() {
     return () => clearTimeout(searchTimer.current);
   }, [rptSearch, rptFilter, authed, fetchReports]);
 
-  // â”€â”€â”€ REPORT ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // REPORT ACTIONS
   async function regenReport(jobId) {
     if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
     setRptBusy(p => ({ ...p, [`regen-${jobId}`]:true }));
@@ -528,7 +579,7 @@ export default function AdminDashboard() {
     finally { setRptBusy(p => ({ ...p, [`del-${jobId}`]:false })); }
   }
 
-  // â”€â”€â”€ CREDIT ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // CREDIT ACTIONS
   async function adjustCredits(userId, delta, productType = 'screening') {
     setCreditBusy(p => ({ ...p, [`${userId}-${productType}`]:true }));
     try {
@@ -563,7 +614,7 @@ export default function AdminDashboard() {
     finally { setCreditBusy(p => ({ ...p, [`${userId}-${productType}`]:false })); }
   }
 
-  // â”€â”€â”€ ISSUE ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ISSUE ACTIONS
   async function updateIssue(issueId, status) {
     if (!adminRunKey.trim()) { toast({ title:'Admin key required', variant:'destructive' }); return; }
     setIssuesBusy(p => ({ ...p, [issueId]:true }));
@@ -599,7 +650,7 @@ export default function AdminDashboard() {
     finally { setIssuesBusy(p => ({ ...p, [`regen-${issueId}`]:false })); }
   }
 
-  // â”€â”€â”€ PAGE CHANGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // PAGE CHANGE
   function goPage(p) {
     setRptPage(p);
     fetchReports(p, rptSearch, rptFilter);
@@ -607,12 +658,12 @@ export default function AdminDashboard() {
 
   const totalPages = Math.ceil(rptTotal / PAGE_SIZE);
 
-  // â”€â”€â”€ LOCKED SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // LOCKED SCREEN
   if (!authed) {
     return (
       <>
         <style>{FONTS}</style>
-        <Helmet><title>Admin â€” InvestorIQ</title></Helmet>
+        <Helmet><title>Admin - InvestorIQ</title></Helmet>
         <div style={{ minHeight:'100vh', background:T.green, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
             style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'40px 48px', maxWidth:420, width:'100%' }}>
@@ -629,7 +680,7 @@ export default function AdminDashboard() {
             />
             <button onClick={handleAuth} disabled={loading}
               style={{ width:'100%', fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', padding:'13px 0', background:T.green, color:T.white, border:'none', cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1 }}>
-              {loading ? 'Verifying...' : 'Authenticate â†’'}
+              {loading ? 'Verifying...' : 'Authenticate ->'}
             </button>
           </motion.div>
         </div>
@@ -637,11 +688,11 @@ export default function AdminDashboard() {
     );
   }
 
-  // â”€â”€â”€ COMMAND CENTRE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // COMMAND CENTRE
   return (
     <>
       <style>{FONTS}</style>
-      <Helmet><title>Admin Command Centre â€” InvestorIQ</title></Helmet>
+      <Helmet><title>Admin Command Centre - InvestorIQ</title></Helmet>
 
       {confirmDelete && (
         <ConfirmModal
@@ -653,7 +704,7 @@ export default function AdminDashboard() {
 
       <div style={{ minHeight:'100vh', background:T.warm }}>
 
-        {/* â”€â”€ TOP BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/*  TOP BAR  */}
         <div style={{ background:T.green, padding:'14px 32px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(255,255,255,0.08)` }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <Shield size={14} color={T.gold} />
@@ -668,16 +719,16 @@ export default function AdminDashboard() {
 
         <div style={{ maxWidth:1400, margin:'0 auto', padding:'24px 24px 48px' }}>
 
-          {/* â”€â”€ ZONE 1: COMMAND STRIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/*  ZONE 1: COMMAND STRIP  */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:16 }}>
-            <StatCard icon={DollarSign} label="Revenue MTD" value={cmdStats ? `$${(cmdStats.revMTD/100).toLocaleString('en-CA', { minimumFractionDigits:0 })}` : 'â€”'} sub="Canadian dollars" accent={T.goldDark} />
-            <StatCard icon={FileText} label="Reports Today" value={cmdStats?.rptToday ?? 'â€”'} sub="generated today" accent='#1A4A22' />
-            <StatCard icon={Users} label="Total Users" value={cmdStats?.totalUsers ?? 'â€”'} sub="registered accounts" accent={T.infoBlue} />
-            <StatCard icon={AlertTriangle} label="Open Issues" value={cmdStats?.openIssues ?? 'â€”'} sub="pending support" accent={cmdStats?.openIssues > 0 ? T.errRed : T.ink4} />
-            <StatCard icon={Clock} label="Stuck Jobs" value={cmdStats?.stuckCount ?? 'â€”'} sub={`>${STUCK_THRESHOLD_MINS}min in_progress`} accent={cmdStats?.stuckCount > 0 ? T.errRed : T.ink4} />
+            <StatCard icon={DollarSign} label="Revenue MTD" value={cmdStats ? `$${(cmdStats.revMTD/100).toLocaleString('en-CA', { minimumFractionDigits:0 })}` : '-'} sub="Canadian dollars" accent={T.goldDark} />
+            <StatCard icon={FileText} label="Reports Today" value={cmdStats?.rptToday ?? '-'} sub="generated today" accent='#1A4A22' />
+            <StatCard icon={Users} label="Total Users" value={cmdStats?.totalUsers ?? '-'} sub="registered accounts" accent={T.infoBlue} />
+            <StatCard icon={AlertTriangle} label="Open Issues" value={cmdStats?.openIssues ?? '-'} sub="pending support" accent={cmdStats?.openIssues > 0 ? T.errRed : T.ink4} />
+            <StatCard icon={Clock} label="Stuck Jobs" value={cmdStats?.stuckCount ?? '-'} sub={`>${STUCK_THRESHOLD_MINS}min in_progress`} accent={cmdStats?.stuckCount > 0 ? T.errRed : T.ink4} />
           </div>
 
-          {/* â”€â”€ ZONE 2: STUCK JOBS ALERT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/*  ZONE 2: STUCK JOBS ALERT  */}
           <AnimatePresence>
             {stuckJobs.length > 0 && (
               <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }}>
@@ -685,7 +736,7 @@ export default function AdminDashboard() {
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
                     <AlertTriangle size={13} color={T.errRed} />
                     <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:T.errRed }}>
-                      {stuckJobs.length} Stuck Job{stuckJobs.length !== 1 ? 's' : ''} â€” In Progress &gt;{STUCK_THRESHOLD_MINS} Minutes
+                      {stuckJobs.length} Stuck Job{stuckJobs.length !== 1 ? 's' : ''} - In Progress &gt;{STUCK_THRESHOLD_MINS} Minutes
                     </span>
                   </div>
                   <div style={{ overflowX:'auto' }}>
@@ -702,9 +753,9 @@ export default function AdminDashboard() {
                       <tbody>
                         {stuckJobs.map(j => (
                           <tr key={j.id}>
-                            <TblTd mono>{j.id?.slice(0,8)}â€¦</TblTd>
-                            <TblTd>{j.property_name || j.user_id?.slice(0,8) || 'â€”'}</TblTd>
-                            <TblTd mono>{j.report_type || 'â€”'}</TblTd>
+                            <TblTd mono>{j.id?.slice(0,8)}...</TblTd>
+                            <TblTd>{j.property_name || j.user_id?.slice(0,8) || '-'}</TblTd>
+                            <TblTd mono>{j.report_type || '-'}</TblTd>
                             <TblTd mono>{new Date(j.created_at).toLocaleString()}</TblTd>
                             <TblTd right>
                               <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
@@ -726,7 +777,7 @@ export default function AdminDashboard() {
             )}
           </AnimatePresence>
 
-          {/* â”€â”€ ZONE 3: REPORTS TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/*  ZONE 3: REPORTS TABLE  */}
           <Card>
             <SectionHeader
               eyebrow="Internal"
@@ -775,24 +826,24 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {fixQueueForDisplay.map((item, i) => {
-                      const displayTitle = item.display_title || item.top_action_title || item.top_action_code || 'â€”';
-                      const displayReason = item.display_reason || 'â€”';
-                      const displayNextStep = item.display_next_step || item.recommended_next_step || 'â€”';
-                      const displayCategory = item.display_category || item.owner_area || 'â€”';
-                      const displayPriority = item.display_priority || (String(item.delivery_gate_status || '').toLowerCase() === 'admin_review_required' ? 'Admin review required' : 'â€”');
+                      const displayTitle = item.display_title || item.top_action_title || item.top_action_code || '-';
+                      const displayReason = item.display_reason || '-';
+                      const displayNextStep = item.display_next_step || item.recommended_next_step || '-';
+                      const displayCategory = item.display_category || item.owner_area || '-';
+                      const displayPriority = item.display_priority || (String(item.delivery_gate_status || '').toLowerCase() === 'admin_review_required' ? 'Admin review required' : '-');
                       const isCustomerHold = item.customer_delivery_ready === false;
                       const isPublicBlocked = item.public_sample_ready === false;
                       const isOutreachBlocked = item.high_value_outreach_ready === false;
                       const actionBtnStyle = { padding:'4px 8px', background:T.white, borderColor:T.hairlineMid, color:T.ink2 };
                       return (
                         <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                          <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || 'â€”'}</TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{item.report_type || 'â€”'}</TblTd>
+                          <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '-'}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{item.report_type || '-'}</TblTd>
                           <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
                           <TblTd style={{ maxWidth:170 }}>
                             <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                               <StatusPill label={displayPriority} tone="warn" />
-                              {displayCategory !== 'â€”' && <div style={{ fontSize:11, color:T.ink3 }}>{displayCategory}</div>}
+                              {displayCategory !== '-' && <div style={{ fontSize:11, color:T.ink3 }}>{displayCategory}</div>}
                             </div>
                           </TblTd>
                           <TblTd style={{ maxWidth:240 }}>
@@ -814,7 +865,7 @@ export default function AdminDashboard() {
                             </div>
                           </TblTd>
                           <TblTd style={{ maxWidth:320, fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayNextStep}</TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : 'â€”'}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</TblTd>
                           <TblTd style={{ minWidth:260 }}>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                               <Btn title="View job details" onClick={() => openFixQueueDetail(item.job_id, 'job')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
@@ -850,7 +901,7 @@ export default function AdminDashboard() {
                       {selectedFixQueueItem?.property_name || selectedFixQueueDetail?.job?.property_name || 'Unnamed property'}
                     </div>
                     <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink3, marginTop:4 }}>
-                      {selectedFixQueueDetail?.job?.report_type || selectedFixQueueItem?.report_type || 'â€”'} Â· {selectedFixQueueDetail?.job?.status || selectedFixQueueItem?.delivery_gate_status || 'â€”'}
+                      {selectedFixQueueDetail?.job?.report_type || selectedFixQueueItem?.report_type || '-'}  -  {selectedFixQueueDetail?.job?.status || selectedFixQueueItem?.delivery_gate_status || '-'}
                     </div>
                   </div>
                 </div>
@@ -883,6 +934,74 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
+                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.warnBorder}`, background:'#FFF9EE' }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.warnAmber, marginBottom:6 }}>Controlled admin actions</div>
+                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
+                    Controlled admin action. Does not publish, notify customer, regenerate reports, or change credits.
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
+                    <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
+                      <Btn
+                        title="Requeue failed job"
+                        onClick={() => runControlledFixQueueAction('requeue_failed_job')}
+                        disabled={
+                          !!fixQueueActionLoading ||
+                          !(selectedFixQueueDetail?.job?.status === 'failed')
+                        }
+                        variant="danger"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Requeue failed job
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Only enabled when the selected job is failed.
+                      </div>
+                    </div>
+                    <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
+                      <Btn
+                        title="Retry queued job"
+                        onClick={() => runControlledFixQueueAction('retry_worker_job')}
+                        disabled={
+                          !!fixQueueActionLoading ||
+                          selectedFixQueueDetail?.job?.status !== 'queued'
+                        }
+                        variant="warn"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Retry queued job
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Only enabled when the selected job is queued.
+                      </div>
+                    </div>
+                    <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
+                      <Btn
+                        title="Mark still reviewing"
+                        onClick={() => runControlledFixQueueAction('mark_still_reviewing')}
+                        disabled={
+                          !!fixQueueActionLoading ||
+                          !(
+                            selectedFixQueueDetail?.job?.status === 'publishing' &&
+                            String(selectedFixQueueDetail?.job?.error_code || '') === 'ADMIN_REVIEW_REQUIRED'
+                          )
+                        }
+                        variant="ghost"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Mark still reviewing
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Only enabled for admin-held publishing jobs.
+                      </div>
+                    </div>
+                  </div>
+                  {(fixQueueActionMessage || fixQueueActionError) && (
+                    <div style={{ marginTop:10, padding:'8px 10px', border:`1px solid ${fixQueueActionError ? T.errBorder : T.okBorder}`, background:fixQueueActionError ? T.errBg : T.okBg, color:fixQueueActionError ? T.errRed : T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.55 }}>
+                      {fixQueueActionError || fixQueueActionMessage}
+                    </div>
+                  )}
+                </div>
+
                 {fixQueueDetailLoading && selectedFixQueueJobId ? (
                   <div style={{ textAlign:'center', padding:'18px 0', color:T.ink3, fontFamily:"'DM Sans',sans-serif", fontSize:12 }}>
                     <Loader2 size={14} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
@@ -895,12 +1014,12 @@ export default function AdminDashboard() {
                         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>Job Details</div>
                         {selectedFixQueueDetail?.job ? (
                           <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>
-                            <div><strong>Status:</strong> {selectedFixQueueDetail.job.status || 'â€”'}</div>
-                            <div><strong>Created:</strong> {selectedFixQueueDetail.job.created_at ? new Date(selectedFixQueueDetail.job.created_at).toLocaleString() : 'â€”'}</div>
-                            <div><strong>Started:</strong> {selectedFixQueueDetail.job.started_at ? new Date(selectedFixQueueDetail.job.started_at).toLocaleString() : 'â€”'}</div>
-                            <div><strong>Failed:</strong> {selectedFixQueueDetail.job.failed_at ? new Date(selectedFixQueueDetail.job.failed_at).toLocaleString() : 'â€”'}</div>
-                            <div><strong>Priority:</strong> {selectedFixQueueDetail?.qa?.display_priority || selectedFixQueueDetail?.qa?.highest_severity || 'â€”'}</div>
-                            <div><strong>Owner:</strong> {selectedFixQueueDetail?.qa?.owner_area || 'â€”'}</div>
+                            <div><strong>Status:</strong> {selectedFixQueueDetail.job.status || '-'}</div>
+                            <div><strong>Created:</strong> {selectedFixQueueDetail.job.created_at ? new Date(selectedFixQueueDetail.job.created_at).toLocaleString() : '-'}</div>
+                            <div><strong>Started:</strong> {selectedFixQueueDetail.job.started_at ? new Date(selectedFixQueueDetail.job.started_at).toLocaleString() : '-'}</div>
+                            <div><strong>Failed:</strong> {selectedFixQueueDetail.job.failed_at ? new Date(selectedFixQueueDetail.job.failed_at).toLocaleString() : '-'}</div>
+                            <div><strong>Priority:</strong> {selectedFixQueueDetail?.qa?.display_priority || selectedFixQueueDetail?.qa?.highest_severity || '-'}</div>
+                            <div><strong>Owner:</strong> {selectedFixQueueDetail?.qa?.owner_area || '-'}</div>
                           </div>
                         ) : (
                           <div style={{ fontSize:12, color:T.ink4 }}>No records found for this section.</div>
@@ -913,15 +1032,15 @@ export default function AdminDashboard() {
                         <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>QA / Action Plan</div>
                         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
                           <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>
-                            <div><strong>Delivery Gate:</strong> {selectedFixQueueDetail?.qa?.delivery_gate_status || 'â€”'}</div>
-                            <div><strong>Reason:</strong> {selectedFixQueueDetail?.qa?.reason_code || 'â€”'}</div>
-                            <div><strong>Contract:</strong> {selectedFixQueueDetail?.qa?.contract_status || 'â€”'}</div>
-                            <div><strong>Director:</strong> {selectedFixQueueDetail?.qa?.director_decision || 'â€”'}</div>
-                            <div><strong>QA Flags:</strong> {selectedFixQueueDetail?.qa?.report_qa_flags_severity || 'â€”'}</div>
+                            <div><strong>Delivery Gate:</strong> {selectedFixQueueDetail?.qa?.delivery_gate_status || '-'}</div>
+                            <div><strong>Reason:</strong> {selectedFixQueueDetail?.qa?.reason_code || '-'}</div>
+                            <div><strong>Contract:</strong> {selectedFixQueueDetail?.qa?.contract_status || '-'}</div>
+                            <div><strong>Director:</strong> {selectedFixQueueDetail?.qa?.director_decision || '-'}</div>
+                            <div><strong>QA Flags:</strong> {selectedFixQueueDetail?.qa?.report_qa_flags_severity || '-'}</div>
                           </div>
                           <div>
                             <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, marginBottom:6 }}>Next Step</div>
-                            <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>{selectedFixQueueDetail?.qa?.recommended_next_step || 'â€”'}</div>
+                            <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>{selectedFixQueueDetail?.qa?.recommended_next_step || '-'}</div>
                           </div>
                         </div>
                         <div style={{ marginTop:12 }}>
@@ -932,11 +1051,11 @@ export default function AdminDashboard() {
                             ) : selectedFixQueueDetail.qa.prioritized_actions.map((action) => (
                               <div key={action.code || action.title} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white }}>
                                 <div style={{ display:'flex', justifyContent:'space-between', gap:10, flexWrap:'wrap' }}>
-                                  <div style={{ fontSize:12, fontWeight:500, color:T.ink }}>{action.title || action.code || 'â€”'}</div>
-                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>{action.action_type || 'â€”'}</div>
+                                  <div style={{ fontSize:12, fontWeight:500, color:T.ink }}>{action.title || action.code || '-'}</div>
+                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>{action.action_type || '-'}</div>
                                 </div>
                                 <div style={{ fontSize:11, lineHeight:1.5, color:T.ink2, marginTop:4 }}>
-                                  {action.recommended_next_step || 'â€”'}
+                                  {action.recommended_next_step || '-'}
                                 </div>
                               </div>
                             ))}
@@ -954,9 +1073,9 @@ export default function AdminDashboard() {
                           ) : selectedFixQueueDetail.files.map((file) => (
                             <div key={file.id || `${file.doc_type}-${file.original_filename}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
                               <div style={{ fontWeight:500, color:T.ink }}>{file.original_filename || 'Unnamed file'}</div>
-                              <div>Type: {file.doc_type || 'â€”'} Â· Parse: {file.parse_status || 'â€”'}</div>
+                              <div>Type: {file.doc_type || '-'}  -  Parse: {file.parse_status || '-'}</div>
                               {file.parse_error && <div style={{ color:T.errRed }}>{file.parse_error}</div>}
-                              <div style={{ color:T.ink4 }}>{file.created_at ? new Date(file.created_at).toLocaleString() : 'â€”'}</div>
+                              <div style={{ color:T.ink4 }}>{file.created_at ? new Date(file.created_at).toLocaleString() : '-'}</div>
                             </div>
                           ))}
                         </div>
@@ -972,8 +1091,8 @@ export default function AdminDashboard() {
                           ) : selectedFixQueueDetail.artifacts.map((artifact, idx) => (
                             <div key={`${artifact.type || 'artifact'}-${idx}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
                               <div style={{ fontWeight:500, color:T.ink }}>{artifact.type || 'artifact'}</div>
-                              <div>{artifact.summary || 'â€”'}</div>
-                              <div style={{ color:T.ink4 }}>{artifact.bucket || 'â€”'} Â· {artifact.created_at ? new Date(artifact.created_at).toLocaleString() : 'â€”'}</div>
+                              <div>{artifact.summary || '-'}</div>
+                              <div style={{ color:T.ink4 }}>{artifact.bucket || '-'}  -  {artifact.created_at ? new Date(artifact.created_at).toLocaleString() : '-'}</div>
                             </div>
                           ))}
                         </div>
@@ -989,8 +1108,8 @@ export default function AdminDashboard() {
                           ) : selectedFixQueueDetail.worker_events.map((event, idx) => (
                             <div key={`${event.type || 'event'}-${idx}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
                               <div style={{ fontWeight:500, color:T.ink }}>{event.type || 'worker_event'}</div>
-                              <div>{event.summary || 'â€”'}</div>
-                              <div style={{ color:T.ink4 }}>{event.bucket || 'â€”'} Â· {event.created_at ? new Date(event.created_at).toLocaleString() : 'â€”'}</div>
+                              <div>{event.summary || '-'}</div>
+                              <div style={{ color:T.ink4 }}>{event.bucket || '-'}  -  {event.created_at ? new Date(event.created_at).toLocaleString() : '-'}</div>
                             </div>
                           ))}
                         </div>
@@ -1009,7 +1128,7 @@ export default function AdminDashboard() {
               title="Reports"
               action={
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <SearchInput value={rptSearch} onChange={setRptSearch} placeholder="Search propertyâ€¦" />
+                  <SearchInput value={rptSearch} onChange={setRptSearch} placeholder="Search property..." />
                   <select
                     value={rptFilter} onChange={e => { setRptFilter(e.target.value); setRptPage(0); }}
                     style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
@@ -1056,11 +1175,11 @@ export default function AdminDashboard() {
                               <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:200 }}>
                                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                                   {isExpanded ? <ChevronUp size={10} color={T.ink4} /> : <ChevronDown size={10} color={T.ink4} />}
-                                  {r.property_name || 'â€”'}
+                                  {r.property_name || '-'}
                                 </div>
                               </TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || 'â€”'}</TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.report_type || 'â€”'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || '-'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.report_type || '-'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
                               <TblTd><StatusBadge status={r.report_type} /></TblTd>
                               <TblTd right onClick={e => e.stopPropagation()}>
@@ -1099,11 +1218,11 @@ export default function AdminDashboard() {
                                         </div>
                                         <div>
                                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>User ID</div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.user_id || 'â€”'}</div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.user_id || '-'}</div>
                                         </div>
                                         <div>
                                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
-                                          <div>{ai ? <AiBadge type={ai} /> : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None â€” deterministic only</span>}</div>
+                                          <div>{ai ? <AiBadge type={ai} /> : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None - deterministic only</span>}</div>
                                         </div>
                                         {r.storage_path && (
                                           <div style={{ gridColumn:'1/-1' }}>
@@ -1131,11 +1250,11 @@ export default function AdminDashboard() {
                 {totalPages > 1 && (
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:14, paddingTop:12, borderTop:`1px solid ${T.hairline}` }}>
                     <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4 }}>
-                      {rptTotal} reports Â· Page {rptPage + 1} of {totalPages}
+                      {rptTotal} reports  -  Page {rptPage + 1} of {totalPages}
                     </span>
                     <div style={{ display:'flex', gap:6 }}>
-                      <Btn onClick={() => goPage(rptPage - 1)} disabled={rptPage === 0}>â† Prev</Btn>
-                      <Btn onClick={() => goPage(rptPage + 1)} disabled={rptPage >= totalPages - 1}>Next â†’</Btn>
+                      <Btn onClick={() => goPage(rptPage - 1)} disabled={rptPage === 0}>Prev</Btn>
+                      <Btn onClick={() => goPage(rptPage + 1)} disabled={rptPage >= totalPages - 1}>Next {"->"}</Btn>
                     </div>
                   </div>
                 )}
@@ -1143,14 +1262,14 @@ export default function AdminDashboard() {
             )}
           </Card>
 
-          {/* â”€â”€ ZONE 4: USERS & CREDITS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/*  ZONE 4: USERS & CREDITS  */}
           <Card>
             <SectionHeader
               eyebrow="Accounts"
               title="Users & Credits"
               action={
                 <div style={{ display:'flex', gap:8 }}>
-                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search nameâ€¦" />
+                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search name..." />
                   <Btn onClick={() => fetchUsers(userSearch)}><RefreshCcw size={9} /> Refresh</Btn>
                 </div>
               }
@@ -1179,8 +1298,8 @@ export default function AdminDashboard() {
                   <tbody>
                     {users.map((u, i) => (
                       <tr key={u.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                        <TblTd mono style={{ fontSize:10 }}>{u.full_name || 'â€”'}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{u.role || 'â€”'}</TblTd>
+                        <TblTd mono style={{ fontSize:10 }}>{u.full_name || '-'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{u.role || '-'}</TblTd>
                         <TblTd>
                           <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.screening_credits > 0 ? T.okGreen : T.errRed }}>
                             {u.screening_credits ?? 0}
@@ -1215,7 +1334,7 @@ export default function AdminDashboard() {
             )}
           </Card>
 
-          {/* â”€â”€ ZONE 5: ISSUES QUEUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/*  ZONE 5: ISSUES QUEUE  */}
           <Card>
             <SectionHeader
               eyebrow="Support"
@@ -1236,7 +1355,7 @@ export default function AdminDashboard() {
             />
             {issues.length === 0 ? (
               <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>
-                {issueFilter === 'open' ? 'ðŸŽ‰ No open issues.' : 'No issues found.'}
+                {issueFilter === 'open' ? 'No open issues.' : 'No issues found.'}
               </p>
             ) : (
               <div style={{ overflowX:'auto' }}>
@@ -1255,17 +1374,17 @@ export default function AdminDashboard() {
                     {issues.map((issue, i) => {
                       const isUpdating = issuesBusy[issue.id];
                       const isRegen    = issuesBusy[`regen-${issue.id}`];
-                      const truncated  = issue.message?.length > 80 ? issue.message.slice(0, 80) + 'â€¦' : issue.message;
+                      const truncated  = issue.message?.length > 80 ? issue.message.slice(0, 80) + '...' : issue.message;
                       return (
                         <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                          <TblTd mono style={{ fontSize:9 }}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString() : 'â€”'}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString() : '-'}</TblTd>
                           <TblTd><StatusBadge status={issue.status || 'open'} /></TblTd>
                           <TblTd mono style={{ fontSize:9 }}>
-                            <div>{issue.job_id?.slice(0,8) || 'â€”'}</div>
+                            <div>{issue.job_id?.slice(0,8) || '-'}</div>
                             {issue.artifact_id && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>artifact: {issue.artifact_id.slice(0,8)}</div>}
                           </TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || 'â€”'}</TblTd>
-                          <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || 'â€”'}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || '-'}</TblTd>
+                          <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || '-'}</TblTd>
                           <TblTd right>
                             <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
                               {issue.status !== 'reviewing' && (
