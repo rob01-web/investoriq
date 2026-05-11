@@ -62,6 +62,68 @@ function normalizeFixQueueDisplay(raw = {}) {
   };
 }
 
+function compactArtifactSummary(row = {}) {
+  const payload = row?.payload || {};
+  const type = String(row?.type || '').toLowerCase();
+  if (type === 'worker_event') {
+    return String(
+      payload.message ||
+      payload.reason ||
+      payload.stage ||
+      payload.event ||
+      'Worker event'
+    );
+  }
+  if (type === 'status_transition') {
+    return `Transition ${payload.from_status || 'unknown'} -> ${payload.to_status || 'unknown'}`;
+  }
+  if (type === 'delivery_gate_decision') {
+    return `Gate ${payload.delivery_gate_status || 'unknown'}${payload.reason_code ? ` · ${payload.reason_code}` : ''}`;
+  }
+  if (type === 'qa_action_plan') {
+    return `QA action plan${payload.delivery_recommendation ? ` · ${payload.delivery_recommendation}` : ''}`;
+  }
+  if (type === 'report_contract_qa') {
+    const count = Array.isArray(payload.violations) ? payload.violations.length : 0;
+    return `Report contract QA${payload.contract_status ? ` · ${payload.contract_status}` : ''}${count ? ` · ${count} violation${count === 1 ? '' : 's'}` : ''}`;
+  }
+  if (type === 'qa_director_review') {
+    return `QA director review${payload.overall_director_decision ? ` · ${payload.overall_director_decision}` : ''}`;
+  }
+  if (type === 'report_qa_flags') {
+    return `QA flags${payload.qa_status ? ` · ${payload.qa_status}` : ''}${payload.severity ? ` · ${payload.severity}` : ''}`;
+  }
+  return type || 'artifact';
+}
+
+function compactAction(action = {}) {
+  return {
+    code: action?.code || null,
+    title: action?.title || null,
+    action_type: action?.action_type || null,
+    owner_area: action?.owner_area || null,
+    severity: action?.severity || null,
+    blocks_customer_delivery: Boolean(action?.blocks_customer_delivery),
+    blocks_public_sample: Boolean(action?.blocks_public_sample),
+    blocks_high_value_outreach: Boolean(action?.blocks_high_value_outreach),
+    requires_code_patch: Boolean(action?.requires_code_patch),
+    requires_regeneration: Boolean(action?.requires_regeneration),
+    recommended_next_step: action?.recommended_next_step || null,
+  };
+}
+
+function compactFinding(finding = {}) {
+  return {
+    code: finding?.code || null,
+    title: finding?.title || null,
+    severity: finding?.severity || null,
+    classification: finding?.classification || null,
+    blocks_customer_delivery: Boolean(finding?.blocks_customer_delivery),
+    blocks_public_sample: Boolean(finding?.blocks_public_sample),
+    blocks_high_value_outreach: Boolean(finding?.blocks_high_value_outreach),
+  };
+}
+
 function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   const contract = artifactsByType.report_contract_qa?.payload || {};
   const actionPlan = artifactsByType.qa_action_plan?.payload || {};
@@ -131,6 +193,109 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   };
 }
 
+function buildFixQueueDetails({
+  job = null,
+  report = null,
+  files = [],
+  artifacts = [],
+  fixQueueRow = null,
+} = {}) {
+  const qaActionPlanArtifact = artifacts.find((row) => row?.type === 'qa_action_plan') || null;
+  const reportContractArtifact = artifacts.find((row) => row?.type === 'report_contract_qa') || null;
+  const directorArtifact = artifacts.find((row) => row?.type === 'qa_director_review') || null;
+  const deliveryGateArtifact = artifacts.find((row) => row?.type === 'delivery_gate_decision') || null;
+  const flagsArtifact = artifacts.find((row) => row?.type === 'report_qa_flags') || null;
+  const workerEvents = artifacts
+    .filter((row) => row?.type === 'worker_event' || row?.type === 'status_transition')
+    .slice(0, 12)
+    .map((row) => ({
+      type: row?.type || null,
+      bucket: row?.bucket || null,
+      created_at: row?.created_at || null,
+      summary: compactArtifactSummary(row),
+    }));
+  const internalArtifacts = artifacts
+    .filter((row) => !['worker_event', 'status_transition'].includes(String(row?.type || '')))
+    .slice(0, 12)
+    .map((row) => ({
+      type: row?.type || null,
+      bucket: row?.bucket || null,
+      created_at: row?.created_at || null,
+      summary: compactArtifactSummary(row),
+    }));
+
+  const qaActionPlan = qaActionPlanArtifact?.payload || {};
+  const reportContract = reportContractArtifact?.payload || {};
+  const director = directorArtifact?.payload || {};
+  const deliveryGate = deliveryGateArtifact?.payload || {};
+  const flags = flagsArtifact?.payload || {};
+
+  return {
+    job: job
+      ? {
+          id: job.id || null,
+          property_name: job.property_name || null,
+          report_type: job.report_type || null,
+          status: job.status || null,
+          created_at: job.created_at || null,
+          started_at: job.started_at || null,
+          failed_at: job.failed_at || null,
+          error_code: job.error_code || null,
+          error_message: job.error_message || null,
+        }
+      : null,
+    report: report
+      ? {
+          id: report.id || null,
+          storage_path: report.storage_path || null,
+          signed_url: report.signed_url || null,
+          created_at: report.created_at || null,
+        }
+      : null,
+    files: (files || []).map((file) => ({
+      id: file?.id || null,
+      doc_type: file?.doc_type || null,
+      original_filename: file?.original_filename || null,
+      parse_status: file?.parse_status || null,
+      parse_error: file?.parse_error || null,
+      created_at: file?.created_at || null,
+    })),
+    qa: {
+      delivery_gate_status: deliveryGate?.delivery_gate_status || fixQueueRow?.delivery_gate_status || null,
+      reason_code: deliveryGate?.reason_code || fixQueueRow?.reason_code || null,
+      top_action_code: qaActionPlan?.top_action_code || fixQueueRow?.top_action_code || null,
+      top_action_title: qaActionPlan?.top_action_title || fixQueueRow?.top_action_title || null,
+      owner_area: qaActionPlan?.owner_area || fixQueueRow?.owner_area || null,
+      recommended_next_step: qaActionPlan?.recommended_next_step || fixQueueRow?.recommended_next_step || null,
+      customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready ?? fixQueueRow?.customer_delivery_ready),
+      public_sample_ready: Boolean(qaActionPlan?.public_sample_ready ?? fixQueueRow?.public_sample_ready),
+      high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready ?? fixQueueRow?.high_value_outreach_ready),
+      highest_severity: qaActionPlan?.highest_severity || fixQueueRow?.highest_severity || null,
+      contract_status: reportContract?.contract_status || null,
+      director_decision: director?.overall_director_decision || null,
+      report_qa_flags_severity: flags?.severity || null,
+      delivery_recommendation: qaActionPlan?.delivery_recommendation || null,
+      prioritized_actions: Array.isArray(qaActionPlan?.prioritized_actions)
+        ? qaActionPlan.prioritized_actions.slice(0, 10).map(compactAction)
+        : [],
+      contract_violations: Array.isArray(reportContract?.violations)
+        ? reportContract.violations.slice(0, 10).map((violation) => ({
+            code: violation?.code || null,
+            title: violation?.title || null,
+            severity: violation?.severity || null,
+            category: violation?.category || null,
+            message: violation?.message || null,
+          }))
+        : [],
+      director_findings: Array.isArray(director?.findings)
+        ? director.findings.slice(0, 10).map(compactFinding)
+        : [],
+    },
+    artifacts: internalArtifacts,
+    worker_events: workerEvents,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
@@ -185,6 +350,8 @@ export default async function handler(req, res) {
     }
 
     const includeFixQueue = String(req.query?.include_fix_queue || "").toLowerCase() === "true";
+    const includeFixQueueDetails = String(req.query?.include_fix_queue_details || "").toLowerCase() === "true";
+    const fixQueueJobId = String(req.query?.fix_queue_job_id || req.query?.job_id || "").trim();
     const includeUsers = String(req.query?.include_users || "").toLowerCase() === "true";
     const statuses = [
       'queued',
@@ -368,6 +535,46 @@ export default async function handler(req, res) {
         ));
     }
 
+    let fixQueueDetails = null;
+    let fixQueueDetailsError = false;
+    if (includeFixQueueDetails) {
+      if (!fixQueueJobId) {
+        fixQueueDetailsError = true;
+      } else {
+        const { data: detailJob, error: detailJobErr } = await supabaseAdmin
+          .from('analysis_jobs')
+          .select('id, user_id, property_name, report_type, status, created_at, started_at, failed_at, error_code, error_message')
+          .eq('id', fixQueueJobId)
+          .maybeSingle();
+
+        if (detailJobErr || !detailJob?.id) {
+          fixQueueDetailsError = true;
+        } else {
+          const { data: detailFiles } = await supabaseAdmin
+            .from('analysis_job_files')
+            .select('id, doc_type, original_filename, parse_status, parse_error, created_at')
+            .eq('job_id', fixQueueJobId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          const { data: detailArtifacts } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('type, bucket, created_at, payload')
+            .eq('job_id', fixQueueJobId)
+            .in('type', ['qa_action_plan', 'report_contract_qa', 'qa_director_review', 'report_qa_flags', 'delivery_gate_decision', 'worker_event', 'status_transition'])
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          fixQueueDetails = buildFixQueueDetails({
+            job: detailJob,
+            files: detailFiles || [],
+            artifacts: detailArtifacts || [],
+            fixQueueRow: fixQueue.find((row) => row.job_id === detailJob.id) || null,
+          });
+        }
+      }
+    }
+
     return res.status(200).json({
       counts_by_status: countsByStatus,
       oldest_queued_at: oldestQueuedErr ? null : oldestQueued?.created_at || null,
@@ -381,6 +588,8 @@ export default async function handler(req, res) {
       fix_queue_deferred: !includeFixQueue,
       issues_error: Boolean(issuesErr),
       fix_queue_error: includeFixQueue ? Boolean(fixQueueArtifactsErr) : false,
+      fix_queue_details: includeFixQueueDetails ? fixQueueDetails : null,
+      fix_queue_details_error: includeFixQueueDetails ? fixQueueDetailsError : false,
     });
   } catch (err) {
     console.error('queue-metrics error:', err);

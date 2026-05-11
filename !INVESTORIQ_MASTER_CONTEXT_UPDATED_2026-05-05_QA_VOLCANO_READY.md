@@ -1,9 +1,270 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 9, 2026 morning - Maplewell true-current-debt validation resumed after the May 8 Report Contract QA / QA Director / parser alias hardening milestone. InvestorIQ now has deterministic Report Contract QA, deterministic QA Director, acquisition/current-debt renderer separation, advisory QA calibration, and T12/Rent Roll/supporting-doc parser alias hardening. Harbourstone Screening and Forest City acquisition-only Underwriting passed live contract validation. Maplewell debt/current-mortgage parsing passed, Report Contract QA now catches the rent-roll annual-total contradiction, and the remaining Maplewell blocker is the actual annual market rent normalization/rendering bug. DocRaptor remains in test mode until final outputs are clean.
+**Last updated:** May 11, 2026 morning - Admin Delivery Gate v1 and Admin Command Centre/Fix Queue are now implemented after Maplewell true-current-debt validation. Maplewell now correctly routes a source-level rent roll/T12 contradiction to admin review instead of publishing, the customer Dashboard shows Under Review for admin-held jobs, and the Admin Fix Queue has been upgraded with readable source-verification wording. DocRaptor remains in test mode until final clean outputs are selected.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+### May 9-11 Maplewell Admin Delivery Gate / Command Centre Milestone
+- Maplewell Full Underwriting true-current-debt lane became the primary live validation fixture after the May 8 parser/QA hardening milestone.
+- Uploaded Maplewell files:
+  - `T12_Maplewell_Court.csv`
+  - `Rent_Roll_Maplewell_Court.csv`
+  - `Debt_Summary_Maplewell_Court.pdf`
+  - `Property_Tax_Bill_Maplewell.pdf`
+- The debt document was confirmed as true current debt:
+  - outstanding balance `$2,100,000`
+  - monthly debt service `$13,625`
+  - interest rate `4.25%`
+  - amortization remaining `23 years`
+  - explicitly not proposed acquisition financing.
+- Property tax document was confirmed as `$186,000` annual property tax.
+- Maplewell exposed the exact failure class we were trying to eliminate:
+  - source documents parsed/published far enough to render the report
+  - but report output/QA did not initially enforce source-to-report consistency strongly enough before customer delivery.
+
+#### Property Name Display Fix
+- `api/generate-client-report.js`
+- Removed broad standalone `clean|messy|qa|test` stripping from `sanitizePropertyNameDisplayText()`.
+- User-entered property names like `FINAL TEST 1` must be preserved.
+- Production property name doctrine remains locked:
+  - preserve user-entered display name as source-of-truth
+  - light HTML/safety cleanup only
+  - do not globally remove words/numbers such as Test, Final, Clean, Messy, QA, Screening, Underwriting, or trailing numbers
+  - final public samples should be generated with clean intentional property names rather than relying on sanitizer tricks.
+
+#### Maplewell Current-Debt DSCR Fix
+- Files touched:
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/_lib/qa-director-review.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/qa-director-review-smoke.js`
+- Problem:
+  - Executive / Debt Summary / Sensitivity / Deal Scorecard DSCR showed about `7.10x`
+  - Risk Register still showed stale `8.10x`.
+- Root cause:
+  - Risk Register used a different DSCR source path than the current-debt source-of-truth helper.
+- Fix:
+  - Risk Register `DSCR (Current Debt)` now uses the same current-debt DSCR helper/source path as the rest of the report.
+  - For true current debt:
+    - source `monthly_payment` / `monthly_debt_service` is preferred when present
+    - amortized payment from balance/rate/amortization is fallback only.
+- Added deterministic `CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH` in `report_contract_qa`.
+- The DSCR contract compares rendered current-debt DSCR values across:
+  - `DSCR (Computed)`
+  - `DSCR (T12 NOI)`
+  - current-debt sensitivity base row
+  - Deal Scorecard
+  - Risk Register.
+- If rendered DSCR values differ materially, the contract emits a high-severity mismatch with rendered value evidence.
+- `qa_action_plan` routes the mismatch to admin review / report renderer.
+- `qa_director_review` can no longer return `no_missed_issue_detected` when this mismatch exists.
+
+#### Maplewell Rent Roll Annual Rent Normalization Fix
+- Files touched:
+  - `api/generate-client-report.js`
+  - `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Problem:
+  - PDF rendered impossible annual market rent `$21,744,000`.
+  - The same report also showed Weighted Avg Market Rent around `$1,888/month` and `48` units.
+- Root cause:
+  - `rentRollSummaryTotals.market_rent_annual` was trusted into `computedRentRoll.total_market_annual` even when internally contradictory.
+- Fix:
+  - Added deterministic annual-rent resolver.
+  - Validates `annual_market_rent_total / 12 / total_units` against weighted average market rent.
+  - Falls back to `weighted_avg_market_rent x total_units x 12` when summary annual total contradicts weighted average.
+  - Correct Maplewell annual market rent is roughly `$1.087M`, not `$21.744M`.
+  - Source data is not mutated; only computed/rendered annual total selection is normalized.
+
+#### Top Positive Income Lines False Positive / DSCR Alignment
+- Files touched:
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/admin/queue-metrics.js`
+  - `src/pages/AdminDashboard.jsx`
+  - `tests/qa/report-contract-qa-smoke.js`
+- `TOP_POSITIVE_INCOME_LINES_CONTRACT` was narrowed to inspect only the actual first rendered income table under the heading.
+- Current-debt DSCR source path was centralized so executive KPI, underwriting pressure point text, Deal Scorecard, and sensitivity base row stay aligned.
+- This reduced false-positive QA and DSCR display contradiction risk.
+
+#### Admin Delivery Gate v1 Implemented
+- Files touched:
+  - `api/generate-client-report.js`
+  - `api/admin-run-worker.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/admin/queue-metrics.js`
+  - `src/pages/AdminDashboard.jsx`
+  - `tests/qa/qa-action-plan-smoke.js`
+- Delivery doctrine is now implemented as a real gate:
+  1. Clean source package + clean parsing + clean reconciliation
+     - publish/customer-deliver normally.
+  2. Parser miss / mismatched number / report contradiction / source-report contradiction
+     - route to Admin Review / Fix Queue.
+     - do not mark customer-ready.
+     - do not send report-ready email.
+     - do not expose a downloadable report.
+  3. Legitimately missing required source data
+     - route to existing needs-documents / failed-with-clear-reason style lifecycle.
+     - do not invent or gap-fill.
+- Added deterministic `delivery_gate_status` values:
+  - `deliverable`
+  - `admin_review_required`
+  - `user_needs_documents`.
+- `generate-client-report.js` now writes `delivery_gate_decision` artifacts.
+- `admin-run-worker.js` consumes the gate result:
+  - deliverable continues to published/email path
+  - admin_review_required holds before publish/email
+  - user_needs_documents uses existing fail/needs-documents handling.
+- Important lifecycle fix:
+  - admin-review holds originally tried to create a report row with null/invalid storage path and returned 500.
+  - fixed so `delivery_gate_status === "admin_review_required"` returns clean HTTP 200 with:
+    - `ok: true`
+    - `reportId: null`
+    - `storagePath: null`
+    - `customer_delivery_ready: false`.
+  - Worker now accepts that as a held state, not a generation failure.
+- Admin-held jobs are currently stored as:
+  - `analysis_jobs.status = publishing`
+  - `error_code = ADMIN_REVIEW_REQUIRED`
+  - `error_message = Report held for admin review before delivery.`
+- Timeout safety patch:
+  - `api/admin-run-worker.js`
+  - timeout guard now selects `error_code`
+  - excludes `ADMIN_REVIEW_REQUIRED` jobs from stuck-job timeout failure.
+- This prevents admin-held jobs from later being treated as stuck publishing jobs.
+
+#### Customer Dashboard Under Review State
+- File touched:
+  - `src/pages/Dashboard.jsx`
+- Active jobs fetch now selects:
+  - `error_code`
+  - `error_message`
+- React serialize/equality guard includes those fields so status updates are detected.
+- Customer-facing display override:
+  - if `status === "publishing"` and `error_code === "ADMIN_REVIEW_REQUIRED"`, show badge/status as `UNDER REVIEW`, not `PUBLISHING`.
+- Customer-facing copy:
+  - `InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.`
+- The copy appears under the Active Jobs row where users are looking after report generation.
+- Step 03 timing copy was darkened/readability-improved:
+  - `Reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.`
+- Do not expose internal QA, parser, AI, vendor, delivery-gate, or error-code language to customers.
+
+#### Maplewell Source-Level Hold Correctness
+- Maplewell RETEST 3 correctly entered admin review instead of publishing.
+- Backend truth:
+  - `status = publishing`
+  - `error_code = ADMIN_REVIEW_REQUIRED`
+  - `error_message = Report held for admin review before delivery.`
+  - purchase remains linked.
+- The admin hold was correct because uploaded source docs are internally inconsistent:
+  - rent roll unit rows support:
+    - 48 units
+    - 46 occupied
+    - 2 vacant
+    - annual in-place rent around `$961,200`
+    - annual market rent around `$1,087,200`
+  - rent roll summary row and T12 GPR indicate materially different source totals:
+    - T12 Gross Potential Rent around `$1,850,000`
+    - rent roll summary annual totals around `$1.8M+`
+  - this is a real source-verification issue, not a debt or property tax issue.
+- Correct Admin Review reason:
+  - `Rent roll source totals require verification`
+- Correct admin reason text:
+  - `The unit-level rent roll totals do not reconcile cleanly against the rent roll summary totals and T12 gross potential rent. Admin review is required before delivery.`
+- Correct next step:
+  - `Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating.`
+- This is now the proof case for the new doctrine:
+  - Clean = publish.
+  - Mismatch = Admin Review / Fix Queue.
+  - Missing required docs = needs documents / failed-with-clear-reason.
+
+#### Admin Review / Fix Queue / Command Centre v1
+- Files touched:
+  - `api/admin/queue-metrics.js`
+  - `src/pages/AdminDashboard.jsx`
+- Fix Queue remains lazy/deferred behind Refresh/Load Fix Queue.
+- Freeze-safety rules remain locked:
+  - no eager artifact loading
+  - no polling
+  - no raw artifact payloads in browser
+  - no increased row limit
+  - no new API files
+  - no new large scans.
+- Earlier admin dashboard freeze was caused by eager Fix Queue artifact loading / expensive artifact reads.
+- Patch changed `queue-metrics` so default admin dashboard load does not query `analysis_artifacts`.
+- Fix Queue only loads when explicitly requested with `include_fix_queue=true`.
+- Fix Queue artifact query remains capped and compact.
+- Admin Dashboard Users & Credits RPC 403 issue:
+  - direct frontend RPC `get_all_profiles_for_admin` caused 403.
+  - Users & Credits loading was folded into existing protected `api/admin/queue-metrics?include_users=true`.
+  - deleted extra `api/admin/users-credits.js` to avoid Vercel Hobby serverless function limit.
+- Vercel Hobby function-count blocker:
+  - build failed because more than 12 serverless functions would be added.
+  - resolved by not adding the extra admin API file and reusing `queue-metrics`.
+- AdminDashboard blank page crash:
+  - latest Command Centre UI patch added `useMemo` but React import did not include it.
+  - fixed import to include `useMemo`:
+    - `import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";`
+- Command Centre display upgrade:
+  - Fix Queue now prefers read-time `display_*` fields.
+  - Existing old/stored artifacts are normalized at read time without rewriting artifacts.
+  - Known `rent_roll_vs_t12_gpr_discrepancy` maps to:
+    - `display_title: Rent roll source totals require verification`
+    - `display_reason: The unit-level rent roll totals do not reconcile cleanly against the rent roll summary totals and T12 gross potential rent. Admin review is required before delivery.`
+    - `display_next_step: Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating.`
+    - `display_category: Source verification`
+    - `display_priority: Admin review required`
+  - Fix Queue table now sorts visible rows with admin-review-required first, then severity, then newest.
+  - Replaced raw true/false display with readable chips for:
+    - customer hold/ready
+    - public blocked/ready
+    - outreach blocked/ready
+    - patch required
+    - regeneration required.
+  - Raw codes remain muted/debug only where useful.
+- Current Command Centre is still v1/read-only:
+  - no active Review Docs button yet
+  - no manual override field yet
+  - no Regenerate action yet
+  - no Notify User action yet.
+- Future Admin Command Centre v2 should add:
+  - View uploaded docs
+  - View parsed artifacts
+  - View internal held PDF if safely generated
+  - source-backed admin correction/override
+  - Regenerate
+  - Approve Delivery
+  - Notify User
+  - audit trail for admin-approved values.
+
+- Admin Dashboard Freeze / React Stability
+- Admin Dashboard memory spike occurred after initial Fix Queue eager-loading patch:
+  - Chrome memory jumped from around `1.8GB` to almost `6GB`.
+- Root cause was likely eager/large analysis_artifacts loading and React render pressure.
+- Fix:
+  - deferred Fix Queue loading
+  - capped artifact rows
+  - compact API response
+  - no raw payloads client-side.
+- After patch, admin dashboard loaded around `1.5GB` memory in observed Task Manager state.
+- Current freeze doctrine:
+  - React is not the problem by itself.
+  - The issue was data volume, eager loading, and render churn.
+  - Do not change stack.
+  - Keep admin/customer dashboards lazy, capped, equality-guarded, and manual-refresh oriented.
+- No external "make site faster" service is needed for this specific issue.
+- Continue to avoid broad dashboard rewrites.
+
+- Current Launch Truth as of May 11 Morning
+- Admin Delivery Gate v1 is now real.
+- Admin Command Centre / Fix Queue v1 is now real but read-only.
+- Maplewell source contradiction correctly held.
+- Customer Dashboard now shows Under Review for admin-held jobs.
+- Admin Dashboard still requires careful monitoring after the `useMemo` import fix and Command Centre display patch deploy.
+- DocRaptor production still not flipped.
+- Next immediate task is confirming Command Centre display after deploy, not more math patches.
 
 ### May 9 Maplewell True-Current-Debt Validation / Admin Review Doctrine Update
 - Maplewell FINAL TEST 1 was run one step at a time.

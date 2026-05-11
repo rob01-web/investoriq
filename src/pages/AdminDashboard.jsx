@@ -258,6 +258,11 @@ export default function AdminDashboard() {
   const [fixQueueLoading, setFixQueueLoading] = useState(false);
   const [fixQueueOpen, setFixQueueOpen] = useState(false);
   const [fixQueueError, setFixQueueError] = useState('');
+  const [fixQueueDetailsById, setFixQueueDetailsById] = useState({});
+  const [selectedFixQueueJobId, setSelectedFixQueueJobId] = useState(null);
+  const [selectedFixQueueTab, setSelectedFixQueueTab] = useState('job');
+  const [fixQueueDetailLoading, setFixQueueDetailLoading] = useState(false);
+  const [fixQueueDetailError, setFixQueueDetailError] = useState('');
   const [userError, setUserError]     = useState('');
   const fixQueueForDisplay = useMemo(() => (
     [...fixQueue].sort((a, b) => {
@@ -270,6 +275,12 @@ export default function AdminDashboard() {
       return statusRank(a) - statusRank(b) || aSeverity - bSeverity || bTime - aTime;
     })
   ), [fixQueue]);
+  const selectedFixQueueItem = useMemo(() => (
+    fixQueueForDisplay.find((item) => item.job_id === selectedFixQueueJobId) || null
+  ), [fixQueueForDisplay, selectedFixQueueJobId]);
+  const selectedFixQueueDetail = useMemo(() => (
+    selectedFixQueueJobId ? (fixQueueDetailsById[selectedFixQueueJobId] || null) : null
+  ), [fixQueueDetailsById, selectedFixQueueJobId]);
 
   const searchTimer = useRef(null);
 
@@ -415,6 +426,35 @@ export default function AdminDashboard() {
       setFixQueueLoading(false);
     }
   }, [adminRunKey]);
+
+  const openFixQueueDetail = useCallback(async (jobId, tab = 'job') => {
+    if (!adminRunKey.trim() || !jobId || fixQueueDetailLoading) return;
+    setSelectedFixQueueJobId(jobId);
+    setSelectedFixQueueTab(tab);
+    setFixQueueDetailError('');
+    if (fixQueueDetailsById[jobId]) return;
+    setFixQueueDetailLoading(true);
+    try {
+      const res = await fetch(`/api/admin/queue-metrics?include_fix_queue_details=true&fix_queue_job_id=${encodeURIComponent(jobId)}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to load Fix Queue details');
+      setFixQueueDetailsById((prev) => ({
+        ...prev,
+        [jobId]: data?.fix_queue_details || null,
+      }));
+      if (data?.fix_queue_details_error) {
+        setFixQueueDetailError('Some detail fields could not be loaded.');
+      }
+    } catch (e) {
+      console.error('fixQueue detail error', e);
+      setFixQueueDetailError('Failed to load details.');
+    } finally {
+      setFixQueueDetailLoading(false);
+    }
+  }, [adminRunKey, fixQueueDetailLoading, fixQueueDetailsById]);
 
   // ─── INIT ────────────────────────────────────────────────
   useEffect(() => {
@@ -725,6 +765,7 @@ export default function AdminDashboard() {
                       <TblTh>Reason</TblTh>
                       <TblTh>Next Step</TblTh>
                       <TblTh>Created</TblTh>
+                      <TblTh>Actions</TblTh>
                     </tr>
                   </thead>
                   <tbody>
@@ -737,6 +778,7 @@ export default function AdminDashboard() {
                       const isCustomerHold = item.customer_delivery_ready === false;
                       const isPublicBlocked = item.public_sample_ready === false;
                       const isOutreachBlocked = item.high_value_outreach_ready === false;
+                      const actionBtnStyle = { padding:'4px 8px', background:T.white, borderColor:T.hairlineMid, color:T.ink2 };
                       return (
                         <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
                           <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '—'}</TblTd>
@@ -768,11 +810,182 @@ export default function AdminDashboard() {
                           </TblTd>
                           <TblTd style={{ maxWidth:320, fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayNextStep}</TblTd>
                           <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</TblTd>
+                          <TblTd style={{ minWidth:260 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              <Btn title="View job details" onClick={() => openFixQueueDetail(item.job_id, 'job')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                                <Eye size={9} /> Job
+                              </Btn>
+                              <Btn title="View QA / action plan details" onClick={() => openFixQueueDetail(item.job_id, 'qa')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                                <Shield size={9} /> QA
+                              </Btn>
+                              <Btn title="View uploaded files" onClick={() => openFixQueueDetail(item.job_id, 'files')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                                <FileText size={9} /> Files
+                              </Btn>
+                              <Btn title="View parsed/internal artifact summary" onClick={() => openFixQueueDetail(item.job_id, 'artifacts')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                                <BarChart3 size={9} /> Artifacts
+                              </Btn>
+                              <Btn title="View worker events / log trail" onClick={() => openFixQueueDetail(item.job_id, 'events')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                                <Activity size={9} /> Events
+                              </Btn>
+                            </div>
+                          </TblTd>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {selectedFixQueueJobId && (
+              <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${T.hairline}` }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap', marginBottom:10 }}>
+                  <div>
+                    <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:T.goldDark, marginBottom:4 }}>Selected Item</p>
+                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20, fontWeight:500, color:T.ink, lineHeight:1.1 }}>
+                      {selectedFixQueueItem?.property_name || selectedFixQueueDetail?.job?.property_name || 'Unnamed property'}
+                    </div>
+                    <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink3, marginTop:4 }}>
+                      {selectedFixQueueDetail?.job?.report_type || selectedFixQueueItem?.report_type || '—'} · {selectedFixQueueDetail?.job?.status || selectedFixQueueItem?.delivery_gate_status || '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {fixQueueDetailError && (
+                  <div style={{ padding:'10px 12px', background:T.errBg, border:`1px solid ${T.errBorder}`, color:T.errRed, fontFamily:"'DM Sans',sans-serif", fontSize:12, marginBottom:12 }}>
+                    {fixQueueDetailError}
+                  </div>
+                )}
+
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
+                  {[
+                    ['job', 'Job'],
+                    ['qa', 'QA / Action Plan'],
+                    ['files', 'Files'],
+                    ['artifacts', 'Artifacts'],
+                    ['events', 'Events'],
+                  ].map(([key, label]) => (
+                    <Btn
+                      key={key}
+                      onClick={() => setSelectedFixQueueTab(key)}
+                      variant={selectedFixQueueTab === key ? 'warn' : 'ghost'}
+                      style={{ padding:'4px 8px' }}
+                    >
+                      {label}
+                    </Btn>
+                  ))}
+                </div>
+
+                {fixQueueDetailLoading && selectedFixQueueJobId ? (
+                  <div style={{ textAlign:'center', padding:'18px 0' }}>
+                    <Loader2 size={14} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:12 }}>
+                    {selectedFixQueueTab === 'job' && (
+                      <div style={{ padding:12, border:`1px solid ${T.hairline}`, background:T.warm }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>Job Details</div>
+                        <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>
+                          <div><strong>Status:</strong> {selectedFixQueueDetail?.job?.status || '—'}</div>
+                          <div><strong>Created:</strong> {selectedFixQueueDetail?.job?.created_at ? new Date(selectedFixQueueDetail.job.created_at).toLocaleString() : '—'}</div>
+                          <div><strong>Started:</strong> {selectedFixQueueDetail?.job?.started_at ? new Date(selectedFixQueueDetail.job.started_at).toLocaleString() : '—'}</div>
+                          <div><strong>Failed:</strong> {selectedFixQueueDetail?.job?.failed_at ? new Date(selectedFixQueueDetail.job.failed_at).toLocaleString() : '—'}</div>
+                          <div><strong>Priority:</strong> {selectedFixQueueDetail?.qa?.display_priority || selectedFixQueueDetail?.qa?.highest_severity || '—'}</div>
+                          <div><strong>Owner:</strong> {selectedFixQueueDetail?.qa?.owner_area || '—'}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFixQueueTab === 'qa' && (
+                      <div style={{ padding:12, border:`1px solid ${T.hairline}`, background:T.warm, gridColumn:'1 / -1' }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>QA / Action Plan</div>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
+                          <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>
+                            <div><strong>Delivery Gate:</strong> {selectedFixQueueDetail?.qa?.delivery_gate_status || '—'}</div>
+                            <div><strong>Reason:</strong> {selectedFixQueueDetail?.qa?.reason_code || '—'}</div>
+                            <div><strong>Contract:</strong> {selectedFixQueueDetail?.qa?.contract_status || '—'}</div>
+                            <div><strong>Director:</strong> {selectedFixQueueDetail?.qa?.director_decision || '—'}</div>
+                            <div><strong>QA Flags:</strong> {selectedFixQueueDetail?.qa?.report_qa_flags_severity || '—'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, marginBottom:6 }}>Next Step</div>
+                            <div style={{ fontSize:12, lineHeight:1.6, color:T.ink2 }}>{selectedFixQueueDetail?.qa?.recommended_next_step || '—'}</div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop:12 }}>
+                          <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, marginBottom:6 }}>Prioritized Actions</div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                            {(selectedFixQueueDetail?.qa?.prioritized_actions || []).length === 0 ? (
+                              <div style={{ fontSize:12, color:T.ink4 }}>No prioritized actions.</div>
+                            ) : selectedFixQueueDetail.qa.prioritized_actions.map((action) => (
+                              <div key={action.code || action.title} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', gap:10, flexWrap:'wrap' }}>
+                                  <div style={{ fontSize:12, fontWeight:500, color:T.ink }}>{action.title || action.code || '—'}</div>
+                                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>{action.action_type || '—'}</div>
+                                </div>
+                                <div style={{ fontSize:11, lineHeight:1.5, color:T.ink2, marginTop:4 }}>
+                                  {action.recommended_next_step || '—'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFixQueueTab === 'files' && (
+                      <div style={{ padding:12, border:`1px solid ${T.hairline}`, background:T.warm, gridColumn:'1 / -1' }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>Uploaded Files</div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {(selectedFixQueueDetail?.files || []).length === 0 ? (
+                            <div style={{ fontSize:12, color:T.ink4 }}>No uploaded files found.</div>
+                          ) : selectedFixQueueDetail.files.map((file) => (
+                            <div key={file.id || `${file.doc_type}-${file.original_filename}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
+                              <div style={{ fontWeight:500, color:T.ink }}>{file.original_filename || 'Unnamed file'}</div>
+                              <div>Type: {file.doc_type || '—'} · Parse: {file.parse_status || '—'}</div>
+                              {file.parse_error && <div style={{ color:T.errRed }}>{file.parse_error}</div>}
+                              <div style={{ color:T.ink4 }}>{file.created_at ? new Date(file.created_at).toLocaleString() : '—'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFixQueueTab === 'artifacts' && (
+                      <div style={{ padding:12, border:`1px solid ${T.hairline}`, background:T.warm, gridColumn:'1 / -1' }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>Internal Artifacts</div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {(selectedFixQueueDetail?.artifacts || []).length === 0 ? (
+                            <div style={{ fontSize:12, color:T.ink4 }}>No compact artifact summaries available.</div>
+                          ) : selectedFixQueueDetail.artifacts.map((artifact, idx) => (
+                            <div key={`${artifact.type || 'artifact'}-${idx}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
+                              <div style={{ fontWeight:500, color:T.ink }}>{artifact.type || 'artifact'}</div>
+                              <div>{artifact.summary || '—'}</div>
+                              <div style={{ color:T.ink4 }}>{artifact.bucket || '—'} · {artifact.created_at ? new Date(artifact.created_at).toLocaleString() : '—'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedFixQueueTab === 'events' && (
+                      <div style={{ padding:12, border:`1px solid ${T.hairline}`, background:T.warm, gridColumn:'1 / -1' }}>
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:8 }}>Worker Events / Log Trail</div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {(selectedFixQueueDetail?.worker_events || []).length === 0 ? (
+                            <div style={{ fontSize:12, color:T.ink4 }}>No worker events found.</div>
+                          ) : selectedFixQueueDetail.worker_events.map((event, idx) => (
+                            <div key={`${event.type || 'event'}-${idx}`} style={{ padding:'8px 10px', border:`1px solid ${T.hairline}`, background:T.white, fontSize:12, lineHeight:1.5, color:T.ink2 }}>
+                              <div style={{ fontWeight:500, color:T.ink }}>{event.type || 'worker_event'}</div>
+                              <div>{event.summary || '—'}</div>
+                              <div style={{ color:T.ink4 }}>{event.bucket || '—'} · {event.created_at ? new Date(event.created_at).toLocaleString() : '—'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
               </div>
             )}
           </Card>
