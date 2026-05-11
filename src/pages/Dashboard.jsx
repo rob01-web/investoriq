@@ -172,7 +172,8 @@ function GhostBtn({ children, onClick, disabled, style = {} }) {
 }
 
 // Status badge
-function StatusBadge({ status }) {
+function StatusBadge({ status, errorCode }) {
+  const adminReviewHeld = status === 'publishing' && String(errorCode || '') === 'ADMIN_REVIEW_REQUIRED';
   const map = {
     published:     { bg: T.okBg,      border: T.okBorder,    color: T.okGreen,   label: 'Published'    },
     queued:        { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Queued'       },
@@ -181,7 +182,9 @@ function StatusBadge({ status }) {
     scoring:       { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Scoring'      },
     rendering:     { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Rendering'    },
     pdf_generating:{ bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Generating'   },
-    publishing:    { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Publishing'   },
+    publishing:    adminReviewHeld
+      ? { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' }
+      : { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Publishing' },
     needs_documents:{ bg:'#F0F4FF',   border:'#B8C8F0',      color:'#1A3A7A',    label: 'Needs Docs'   },
     failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Failed'       },
   };
@@ -201,6 +204,13 @@ function StatusBadge({ status }) {
       {s.label}
     </span>
   );
+}
+
+function getCustomerFacingJobStatus(job) {
+  if (job?.status === 'publishing' && String(job?.error_code || '') === 'ADMIN_REVIEW_REQUIRED') {
+    return 'under review';
+  }
+  return String(job?.status || '').toLowerCase();
 }
 
 // File row
@@ -1270,7 +1280,7 @@ useEffect(() => {
               <div style={{ padding:'24px 0' }}>
                 {activeJobForRuns ? (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
-                    {(activeJobForRuns.property_name || activeJobForRuns.id || 'Unnamed Property')} - {activeJobForRuns.status}
+                    {(activeJobForRuns.property_name || activeJobForRuns.id || 'Unnamed Property')} - {getCustomerFacingJobStatus(activeJobForRuns)}
                   </div>
                 ) : (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
@@ -1680,6 +1690,7 @@ useEffect(() => {
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
+                    : activeJobForRuns?.status === 'publishing' && activeJobForRuns?.error_code === 'ADMIN_REVIEW_REQUIRED' ? 'Report under review. InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
@@ -1738,7 +1749,7 @@ useEffect(() => {
                         <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <StatusBadge status={job.status} />
+                        <StatusBadge status={job.status} errorCode={job.error_code} />
                         <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
                       </div>
                     </div>
