@@ -34,6 +34,34 @@ function normalizeActionPlan(plan = {}) {
   };
 }
 
+function normalizeFixQueueDisplay(raw = {}) {
+  const candidateCode = String(
+    raw?.top_action_code ||
+    raw?.code ||
+    raw?.reason_code ||
+    raw?.source_code ||
+    ''
+  ).trim();
+  const codeLower = candidateCode.toLowerCase();
+  const rentRollMismatch = codeLower === 'rent_roll_vs_t12_gpr_discrepancy';
+  if (rentRollMismatch) {
+    return {
+      display_title: 'Rent roll source totals require verification',
+      display_reason: 'The unit-level rent roll totals do not reconcile cleanly against the rent roll summary totals and T12 gross potential rent. Admin review is required before delivery.',
+      display_next_step: 'Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating.',
+      display_category: 'Source verification',
+      display_priority: 'Admin review required',
+    };
+  }
+  return {
+    display_title: raw?.top_action_title || null,
+    display_reason: raw?.display_reason || null,
+    display_next_step: raw?.recommended_next_step || null,
+    display_category: raw?.owner_area || null,
+    display_priority: raw?.delivery_gate_status === 'admin_review_required' ? 'Admin review required' : raw?.highest_severity || null,
+  };
+}
+
 function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   const contract = artifactsByType.report_contract_qa?.payload || {};
   const actionPlan = artifactsByType.qa_action_plan?.payload || {};
@@ -64,6 +92,17 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
 
   if (!shouldShow) return null;
 
+  const display = normalizeFixQueueDisplay({
+    top_action_code: normalizedPlan.top_action_code,
+    top_action_title: normalizedPlan.top_action_title,
+    recommended_next_step: normalizedPlan.recommended_next_step,
+    owner_area: normalizedPlan.owner_area,
+    highest_severity: highestSeverity,
+    delivery_gate_status: deliveryGate?.delivery_gate_status || null,
+    reason_code: deliveryGate?.reason_code || null,
+    source_code: normalizedPlan.top_action_code || null,
+  });
+
   return {
     job_id: job?.id || null,
     property_name: job?.property_name || contract?.property_name || null,
@@ -84,6 +123,11 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
     report_qa_flags_severity: flags?.severity || null,
     delivery_gate_status: deliveryGate?.delivery_gate_status || null,
     reason_code: deliveryGate?.reason_code || null,
+    display_title: display.display_title,
+    display_reason: display.display_reason,
+    display_next_step: display.display_next_step,
+    display_category: display.display_category,
+    display_priority: display.display_priority,
   };
 }
 

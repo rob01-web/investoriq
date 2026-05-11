@@ -107,6 +107,33 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function StatusPill({ label, tone = 'neutral' }) {
+  const styles =
+    tone === 'danger' ? { bg:'#FEF2F2', fg:'#B91C1C', border:'#FECACA' } :
+    tone === 'warn' ? { bg:'#FFF7ED', fg:'#B45309', border:'#FED7AA' } :
+    tone === 'info' ? { bg:'#EFF6FF', fg:'#1D4ED8', border:'#BFDBFE' } :
+    tone === 'success' ? { bg:'#F0FDF4', fg:'#15803D', border:'#BBF7D0' } :
+    { bg:T.warm, fg:T.ink3, border:T.hairline };
+  return (
+    <span style={{
+      display:'inline-flex',
+      alignItems:'center',
+      padding:'2px 7px',
+      border:`1px solid ${styles.border}`,
+      borderRadius:999,
+      background:styles.bg,
+      color:styles.fg,
+      fontFamily:"'DM Mono',monospace",
+      fontSize:9,
+      letterSpacing:'0.08em',
+      textTransform:'uppercase',
+      whiteSpace:'nowrap',
+    }}>
+      {label}
+    </span>
+  );
+}
+
 function AiBadge({ type }) {
   if (!type) return null;
   const label = type === 'both' ? 'AI: T12+RR' : type === 't12' ? 'AI: T12' : 'AI: RR';
@@ -232,6 +259,17 @@ export default function AdminDashboard() {
   const [fixQueueOpen, setFixQueueOpen] = useState(false);
   const [fixQueueError, setFixQueueError] = useState('');
   const [userError, setUserError]     = useState('');
+  const fixQueueForDisplay = useMemo(() => (
+    [...fixQueue].sort((a, b) => {
+      const statusRank = (item) => String(item?.delivery_gate_status || '').toLowerCase() === 'admin_review_required' ? 0 : 1;
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+      const aSeverity = severityOrder[String(a?.highest_severity || 'none').toLowerCase()] ?? 4;
+      const bSeverity = severityOrder[String(b?.highest_severity || 'none').toLowerCase()] ?? 4;
+      const aTime = new Date(a?.created_at || 0).getTime();
+      const bTime = new Date(b?.created_at || 0).getTime();
+      return statusRank(a) - statusRank(b) || aSeverity - bSeverity || bTime - aTime;
+    })
+  ), [fixQueue]);
 
   const searchTimer = useRef(null);
 
@@ -682,44 +720,57 @@ export default function AdminDashboard() {
                       <TblTh>Property</TblTh>
                       <TblTh>Report</TblTh>
                       <TblTh>Severity</TblTh>
-                      <TblTh>Customer</TblTh>
-                      <TblTh>Public</TblTh>
-                      <TblTh>Outreach</TblTh>
-                      <TblTh>Patch</TblTh>
-                      <TblTh>Regen</TblTh>
-                      <TblTh>Owner</TblTh>
-                      <TblTh>Top Action</TblTh>
+                      <TblTh>Status / Priority</TblTh>
+                      <TblTh>Issue</TblTh>
+                      <TblTh>Reason</TblTh>
                       <TblTh>Next Step</TblTh>
                       <TblTh>Created</TblTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {fixQueue.map((item, i) => (
-                      <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                        <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '—'}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{item.report_type || '—'}</TblTd>
-                        <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{String(item.customer_delivery_ready)}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{String(item.public_sample_ready)}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{String(item.high_value_outreach_ready)}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{String(item.requires_code_patch)}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{String(item.requires_regeneration)}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{item.owner_area || '—'}</TblTd>
-                        <TblTd style={{ maxWidth:220 }}>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink2, lineHeight:1.45 }}>
-                            {item.delivery_gate_status && (
-                              <div style={{ color:T.errRed, textTransform:'uppercase', letterSpacing:'0.12em' }}>
-                                {item.delivery_gate_status}{item.reason_code ? ` · ${item.reason_code}` : ''}
+                    {fixQueueForDisplay.map((item, i) => {
+                      const displayTitle = item.display_title || item.top_action_title || item.top_action_code || '—';
+                      const displayReason = item.display_reason || '—';
+                      const displayNextStep = item.display_next_step || item.recommended_next_step || '—';
+                      const displayCategory = item.display_category || item.owner_area || '—';
+                      const displayPriority = item.display_priority || (String(item.delivery_gate_status || '').toLowerCase() === 'admin_review_required' ? 'Admin review required' : '—');
+                      const isCustomerHold = item.customer_delivery_ready === false;
+                      const isPublicBlocked = item.public_sample_ready === false;
+                      const isOutreachBlocked = item.high_value_outreach_ready === false;
+                      return (
+                        <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                          <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '—'}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{item.report_type || '—'}</TblTd>
+                          <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
+                          <TblTd style={{ maxWidth:170 }}>
+                            <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                              <StatusPill label={displayPriority} tone="warn" />
+                              {displayCategory !== '—' && <div style={{ fontSize:11, color:T.ink3 }}>{displayCategory}</div>}
+                            </div>
+                          </TblTd>
+                          <TblTd style={{ maxWidth:240 }}>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, lineHeight:1.4 }}>{displayTitle}</div>
+                            {item.top_action_code && (
+                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4, marginTop:4 }}>
+                                {item.top_action_code}
                               </div>
                             )}
-                            <div>{item.top_action_code || '—'}</div>
-                            {item.top_action_title && <div style={{ color:T.ink4 }}>{item.top_action_title}</div>}
-                          </div>
-                        </TblTd>
-                        <TblTd style={{ maxWidth:260, fontSize:11, color:T.ink3 }}>{item.recommended_next_step || '—'}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</TblTd>
-                      </tr>
-                    ))}
+                          </TblTd>
+                          <TblTd style={{ maxWidth:320 }}>
+                            <div style={{ fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayReason}</div>
+                            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
+                              <StatusPill label={isCustomerHold ? 'Customer Hold' : 'Customer Ready'} tone={isCustomerHold ? 'warn' : 'success'} />
+                              <StatusPill label={isPublicBlocked ? 'Public Blocked' : 'Public Ready'} tone={isPublicBlocked ? 'warn' : 'success'} />
+                              <StatusPill label={isOutreachBlocked ? 'Outreach Blocked' : 'Outreach Ready'} tone={isOutreachBlocked ? 'warn' : 'success'} />
+                              {item.requires_code_patch && <StatusPill label="Patch Required" tone="danger" />}
+                              {item.requires_regeneration && <StatusPill label="Regeneration Required" tone="info" />}
+                            </div>
+                          </TblTd>
+                          <TblTd style={{ maxWidth:320, fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayNextStep}</TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</TblTd>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
