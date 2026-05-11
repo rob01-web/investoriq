@@ -124,6 +124,121 @@ function compactFinding(finding = {}) {
   };
 }
 
+function parseIsoMs(value) {
+  const ms = Date.parse(value || '');
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function minutesSince(value, nowMs) {
+  const ms = parseIsoMs(value);
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, (nowMs - ms) / 60000);
+}
+
+function includesProductionConfigBlocker(text = '') {
+  return String(text || '').toLowerCase().includes('production_config');
+}
+
+function buildAutomationRecommendations({ job = null, artifacts = [] } = {}) {
+  const recommendations = [];
+  const nowMs = Date.now();
+  const status = String(job?.status || '').toLowerCase();
+  const errorCode = String(job?.error_code || '').toLowerCase();
+  const ageMins = minutesSince(job?.started_at || job?.created_at, nowMs);
+  const workerEvents = (artifacts || []).filter((row) => row?.type === 'worker_event' || row?.type === 'status_transition');
+  const recentWorkerMinutes = workerEvents
+    .map((row) => minutesSince(row?.created_at, nowMs))
+    .filter((mins) => Number.isFinite(mins))
+    .sort((a, b) => a - b);
+  const latestWorkerMinutes = recentWorkerMinutes.length > 0 ? recentWorkerMinutes[0] : null;
+  const recentWorkerGap = latestWorkerMinutes === null ? null : latestWorkerMinutes;
+  const productionConfigHits = (artifacts || []).reduce((count, row) => {
+    const payloadText = JSON.stringify(row?.payload || {});
+    return count + (includesProductionConfigBlocker(payloadText) ? 1 : 0);
+  }, 0);
+  const hardDocumentBlockers = new Set([
+    'missing_structured_financials',
+    'missing_structured_financial_artifacts',
+    'missing_required_source_data',
+    'document_financial_scale_mismatch',
+  ]);
+
+  if (status === 'queued' && Number.isFinite(ageMins) && ageMins >= 10) {
+    recommendations.push({
+      recommendation: 'Queue backlog review',
+      reason: `Queued for ${Math.round(ageMins)} minutes without starting.`,
+      confidence: 'medium',
+      eligibility: 'manual review',
+      suggested_manual_action: 'Check worker availability and queue depth.',
+      blocked_reason: null,
+    });
+  }
+
+  if (['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating'].includes(status) && Number.isFinite(ageMins) && ageMins >= 60) {
+    recommendations.push({
+      recommendation: 'Stuck in-progress review',
+      reason: `Job has been ${status} for about ${Math.round(ageMins)} minutes.`,
+      confidence: 'high',
+      eligibility: 'manual review',
+      suggested_manual_action: 'Open the worker event trail and verify the last stage update.',
+      blocked_reason: null,
+    });
+  }
+
+  if (status === 'failed') {
+    const canRequeue = !hardDocumentBlockers.has(errorCode) && !includesProductionConfigBlocker(job?.failure_reason || '') && !includesProductionConfigBlocker(job?.error_message || '');
+    recommendations.push({
+      recommendation: canRequeue ? 'Requeue candidate' : 'Review blocker before requeue',
+      reason: canRequeue
+        ? `Failed job with ${job?.error_code || 'no error code'} appears eligible for a manual requeue review.`
+        : 'Failure appears tied to a document or configuration blocker.',
+      confidence: canRequeue ? 'medium' : 'low',
+      eligibility: canRequeue ? 'review before requeue' : 'not eligible',
+      suggested_manual_action: canRequeue
+        ? 'Confirm the failure cause, then use the controlled requeue action if appropriate.'
+        : 'Resolve the blocker before considering any requeue.',
+      blocked_reason: canRequeue ? null : 'Not safe to recommend auto-requeue.',
+    });
+  }
+
+  if (status === 'publishing' && errorCode === 'admin_review_required') {
+    recommendations.push({
+      recommendation: 'Human review required',
+      reason: 'Admin review hold is active and delivery remains blocked.',
+      confidence: 'high',
+      eligibility: 'human review only',
+      suggested_manual_action: 'Use the controlled admin actions panel to continue review.',
+      blocked_reason: 'This is a delivery gate hold, not an automation candidate.',
+    });
+  }
+
+  if (productionConfigHits >= 2) {
+    recommendations.push({
+      recommendation: 'Production config blocker pattern',
+      reason: `Repeated production_config blocker evidence found in ${productionConfigHits} recent artifacts.`,
+      confidence: 'medium',
+      eligibility: 'manual review',
+      suggested_manual_action: 'Review the production configuration issue before any further processing.',
+      blocked_reason: 'Repeated blocker pattern detected.',
+    });
+  }
+
+  if ((recentWorkerGap === null || recentWorkerGap >= 30) && status && status !== 'published') {
+    recommendations.push({
+      recommendation: 'No recent worker events',
+      reason: recentWorkerGap === null
+        ? 'No worker events were found for this job.'
+        : `Last worker event was about ${Math.round(recentWorkerGap)} minutes ago.`,
+      confidence: 'medium',
+      eligibility: 'manual review',
+      suggested_manual_action: 'Open the worker event trail and verify worker activity.',
+      blocked_reason: recentWorkerGap === null ? 'No recent worker events were found.' : null,
+    });
+  }
+
+  return recommendations.slice(0, 6);
+}
+
 function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   const contract = artifactsByType.report_contract_qa?.payload || {};
   const actionPlan = artifactsByType.qa_action_plan?.payload || {};
@@ -293,6 +408,7 @@ function buildFixQueueDetails({
     },
     artifacts: internalArtifacts,
     worker_events: workerEvents,
+    automation_recommendations: buildAutomationRecommendations({ job, artifacts }).slice(0, 6),
   };
 }
 

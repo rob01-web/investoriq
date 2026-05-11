@@ -1078,6 +1078,44 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.hairlineMid}`, background:T.warm }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink3, marginBottom:6 }}>Automation recommendations</div>
+                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
+                    Automation recommendations are read-only. No automatic action has been taken.
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {(selectedFixQueueDetail?.automation_recommendations || []).length === 0 ? (
+                      <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink4 }}>No records found for this section.</div>
+                    ) : selectedFixQueueDetail.automation_recommendations.map((item, idx) => (
+                      <div key={`${item.recommendation || 'recommendation'}-${idx}`} style={{ padding:10, border:`1px solid ${T.hairline}`, background:T.white }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:8 }}>
+                          <div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Recommendation</div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{item.recommendation || '-'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Reason</div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{item.reason || '-'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Confidence / Eligibility</div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{item.confidence || '-'} / {item.eligibility || '-'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Suggested Manual Action</div>
+                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{item.suggested_manual_action || '-'}</div>
+                          </div>
+                        </div>
+                        {item.blocked_reason && (
+                          <div style={{ marginTop:8, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                            Blocked reason: {item.blocked_reason}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {fixQueueDetailLoading && selectedFixQueueJobId ? (
                   <div style={{ textAlign:'center', padding:'18px 0', color:T.ink3, fontFamily:"'DM Sans',sans-serif", fontSize:12 }}>
                     <Loader2 size={14} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
