@@ -490,7 +490,7 @@ export default function AdminDashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminRunKey.trim()}`,
+          'x-admin-run-key': adminRunKey.trim(),
         },
         body: JSON.stringify({
           action,
