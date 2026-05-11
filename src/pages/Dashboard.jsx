@@ -1325,7 +1325,7 @@ useEffect(() => {
                 >
                   {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
                 </PrimaryBtn>
-                <div style={{ ...bodySmall, fontSize:12, color:T.ink3, marginTop:8, maxWidth:620 }}>
+                <div style={{ ...bodySmall, fontSize:12, lineHeight:1.6, color:T.ink2, fontWeight:400, marginTop:8, maxWidth:620 }}>
                   Reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
                 </div>
               </div>
@@ -1690,7 +1690,6 @@ useEffect(() => {
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
-                    : activeJobForRuns?.status === 'publishing' && activeJobForRuns?.error_code === 'ADMIN_REVIEW_REQUIRED' ? 'Report under review. InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
@@ -1727,7 +1726,7 @@ useEffect(() => {
             >
               {loading ? 'Processing...' : `Generate ${selectedReportType} report`}
             </PrimaryBtn>
-            <div style={{ ...bodySmall, fontSize:12, color:T.ink3, marginTop:8, maxWidth:620 }}>
+            <div style={{ ...bodySmall, fontSize:12, lineHeight:1.6, color:T.ink2, fontWeight:400, marginTop:8, maxWidth:620 }}>
               Reports are typically delivered within 1 business day. Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
             </div>
 
@@ -1744,9 +1743,16 @@ useEffect(() => {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {visibleInProgressJobs.map((job) => (
                     <div key={job.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${T.hairline}`, flexWrap:'wrap', gap:8 }}>
-                      <div>
-                        <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
-                        <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
+                      <div style={{ minWidth:0, flex:'1 1 260px' }}>
+                        <div>
+                          <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
+                          <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {job.status === 'publishing' && job.error_code === 'ADMIN_REVIEW_REQUIRED' && (
+                          <div style={{ color:T.ink2, fontSize:12, lineHeight:1.6, fontWeight:400, marginTop:6 }}>
+                            InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.
+                          </div>
+                        )}
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                         <StatusBadge status={job.status} errorCode={job.error_code} />
