@@ -1017,6 +1017,67 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
+                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.infoBorder}`, background:T.infoBg }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.infoBlue, marginBottom:6 }}>Delivery gate actions</div>
+                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
+                    Phase 3 actions are locked until delivery approval rules are finalized.
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
+                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                      <Btn
+                        title="Locked until delivery approval rules are finalized"
+                        disabled
+                        variant="primary"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Approve for customer delivery
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Disabled: approval rules not finalized.
+                      </div>
+                    </div>
+                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                      <Btn
+                        title="Locked until delivery approval rules are finalized"
+                        disabled
+                        variant="warn"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Regenerate report
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Disabled: regenerate is locked in Phase 3.
+                      </div>
+                    </div>
+                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                      <Btn
+                        title="Locked until delivery approval rules are finalized"
+                        disabled
+                        variant="ghost"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Override public sample block
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Disabled: public override not yet approved.
+                      </div>
+                    </div>
+                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                      <Btn
+                        title="Locked until delivery approval rules are finalized"
+                        disabled
+                        variant="ghost"
+                        style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
+                      >
+                        Override outreach block
+                      </Btn>
+                      <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Disabled: outreach override not yet approved.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {fixQueueDetailLoading && selectedFixQueueJobId ? (
                   <div style={{ textAlign:'center', padding:'18px 0', color:T.ink3, fontFamily:"'DM Sans',sans-serif", fontSize:12 }}>
                     <Loader2 size={14} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
