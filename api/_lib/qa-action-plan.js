@@ -468,6 +468,7 @@ function actionForManagerDecision(decision) {
   if (classification === "false_positive" || classification === "no_action") {
     return null;
   }
+  const sourceCode = String(decision?.source_code || "");
 
   const actionTypeByClassification = {
     real_parser_or_artifact_risk: "parser_fix_required",
@@ -492,16 +493,24 @@ function actionForManagerDecision(decision) {
   const hardPublicLanguage = classification === "real_public_language_risk" &&
     isHardPublicLanguageExcerpt(decision?.evidence_excerpt);
   const speculativePublicLanguage = classification === "real_public_language_risk" && !hardPublicLanguage;
+  const sourceTotalsVerification = sourceCode === "rent_roll_vs_t12_gpr_discrepancy";
   const requiresCodePatch = hardPublicLanguage ||
     (!speculativePublicLanguage &&
       classification !== "admin_review_optional" &&
       classification !== "source_document_limitation" &&
       classification !== "production_config_only" &&
       Boolean(decision?.requires_code_patch));
+  const adminReadableNextStep = sourceTotalsVerification
+    ? "Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating."
+    : "Review the uploaded source documents and parsed values. Confirm the correct source-backed value before regenerating.";
 
   return {
-    code: decision?.source_code || "QA_MANAGER_REVIEW",
-    title: decision?.rationale || "QA manager review decision",
+    code: sourceCode || "QA_MANAGER_REVIEW",
+    title: sourceTotalsVerification
+      ? "Rent roll source totals require verification"
+      : contradictionReview
+      ? "Source-document reconciliation requires verification"
+      : decision?.rationale || "QA manager review decision",
     source_artifact: "qa_manager_review",
     severity: hardPublicLanguage ? "critical" : normalizeSeverity(decision?.severity),
     action_type: contradictionReview ? "admin_review_required" : hardPublicLanguage ? "code_patch_required" : speculativePublicLanguage ? "model_review_recommended" : actionType,
@@ -509,7 +518,7 @@ function actionForManagerDecision(decision) {
     recommended_next_step: speculativePublicLanguage
       ? "Review manually only if actual rendered excerpt contains prohibited public language."
       : contradictionReview
-      ? (decision?.recommended_action_type || decision?.rationale || "Verify source values against rendered report sections before delivery.")
+      ? adminReadableNextStep
       : decision?.recommended_action_type || "Review QA manager decision.",
     requires_code_patch: requiresCodePatch,
     requires_regeneration: Boolean(decision?.requires_regeneration),
@@ -526,6 +535,7 @@ function actionForManagerDecision(decision) {
     evidence: {
       classification,
       source_artifact: decision?.source_artifact || null,
+      source_code: sourceCode || null,
       evidence_excerpt: decision?.evidence_excerpt || null,
       rationale: decision?.rationale || null,
     },

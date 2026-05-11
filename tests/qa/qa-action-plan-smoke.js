@@ -546,7 +546,31 @@ const managerContradictionAction = managerContradictionPlan.prioritized_actions.
 );
 assert.equal(managerContradictionAction.action_type, "admin_review_required");
 assert.equal(managerContradictionAction.owner_area, "source_reconciliation");
+assert.equal(managerContradictionAction.title, "Rent roll source totals require verification");
+assert.equal(
+  managerContradictionAction.recommended_next_step,
+  "Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating."
+);
 assert.equal(managerContradictionAction.blocks_customer_delivery, true);
+
+const genericContradictionAction = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaManagerReview: {
+    decisions: [
+      {
+        classification: "real_source_report_contradiction",
+        severity: "medium",
+        source_code: "source_value_mismatch",
+        source_artifact: "qa_manager_review",
+        blocks_customer_delivery: false,
+        recommended_action_type: "verify_calculation_and_source_data",
+        rationale: "Check the uploaded source documents against parsed values.",
+      },
+    ],
+  },
+}).prioritized_actions.find((action) => action.code === "source_value_mismatch");
+assert.equal(genericContradictionAction.recommended_next_step, "Review the uploaded source documents and parsed values. Confirm the correct source-backed value before regenerating.");
 
 const managerContradictionGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
