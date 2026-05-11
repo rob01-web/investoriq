@@ -284,6 +284,9 @@ export default function AdminDashboard() {
   const selectedFixQueueDetail = useMemo(() => (
     selectedFixQueueJobId ? (fixQueueDetailsById[selectedFixQueueJobId] || null) : null
   ), [fixQueueDetailsById, selectedFixQueueJobId]);
+  const selectedFixQueueSimulation = useMemo(() => (
+    selectedFixQueueDetail?.automation_simulation || null
+  ), [selectedFixQueueDetail]);
 
   const searchTimer = useRef(null);
 
@@ -1114,6 +1117,57 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.hairlineMid}`, background:T.warm }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink3, marginBottom:6 }}>Automation simulation</div>
+                  <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
+                    Simulation only. No automatic action has been taken.
+                  </div>
+                  {selectedFixQueueSimulation ? (
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:8 }}>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Proposed action</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{selectedFixQueueSimulation.proposed_action || '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Class</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{selectedFixQueueSimulation.automation_class || '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Confidence</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>
+                          {selectedFixQueueSimulation.confidence_score ?? '-'}
+                          {selectedFixQueueSimulation.confidence_label ? ` / ${selectedFixQueueSimulation.confidence_label}` : ''}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Escalation target</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{selectedFixQueueSimulation.escalation_target || '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Blocked reason</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{selectedFixQueueSimulation.blocked_reason || '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Required conditions</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>
+                          {Array.isArray(selectedFixQueueSimulation.required_conditions) && selectedFixQueueSimulation.required_conditions.length > 0
+                            ? selectedFixQueueSimulation.required_conditions.join('; ')
+                            : '-'}
+                        </div>
+                      </div>
+                      <div style={{ gridColumn:'1 / -1' }}>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:500, color:T.ink, marginBottom:4 }}>Rationale</div>
+                        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink2, lineHeight:1.5 }}>{selectedFixQueueSimulation.rationale || '-'}</div>
+                      </div>
+                      <div style={{ gridColumn:'1 / -1', fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
+                        Human review required: {selectedFixQueueSimulation.human_review_required ? 'Yes' : 'No'} | Executive override required: {selectedFixQueueSimulation.executive_override_required ? 'Yes' : 'No'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, color:T.ink4 }}>No records found for this section.</div>
+                  )}
                 </div>
 
                 {fixQueueDetailLoading && selectedFixQueueJobId ? (

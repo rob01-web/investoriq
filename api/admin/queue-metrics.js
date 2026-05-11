@@ -78,20 +78,20 @@ function compactArtifactSummary(row = {}) {
     return `Transition ${payload.from_status || 'unknown'} -> ${payload.to_status || 'unknown'}`;
   }
   if (type === 'delivery_gate_decision') {
-    return `Gate ${payload.delivery_gate_status || 'unknown'}${payload.reason_code ? ` · ${payload.reason_code}` : ''}`;
+    return `Gate ${payload.delivery_gate_status || 'unknown'}${payload.reason_code ? ` - ${payload.reason_code}` : ''}`;
   }
   if (type === 'qa_action_plan') {
-    return `QA action plan${payload.delivery_recommendation ? ` · ${payload.delivery_recommendation}` : ''}`;
+    return `QA action plan${payload.delivery_recommendation ? ` - ${payload.delivery_recommendation}` : ''}`;
   }
   if (type === 'report_contract_qa') {
     const count = Array.isArray(payload.violations) ? payload.violations.length : 0;
-    return `Report contract QA${payload.contract_status ? ` · ${payload.contract_status}` : ''}${count ? ` · ${count} violation${count === 1 ? '' : 's'}` : ''}`;
+    return `Report contract QA${payload.contract_status ? ` - ${payload.contract_status}` : ''}${count ? ` - ${count} violation${count === 1 ? '' : 's'}` : ''}`;
   }
   if (type === 'qa_director_review') {
-    return `QA director review${payload.overall_director_decision ? ` · ${payload.overall_director_decision}` : ''}`;
+    return `QA director review${payload.overall_director_decision ? ` - ${payload.overall_director_decision}` : ''}`;
   }
   if (type === 'report_qa_flags') {
-    return `QA flags${payload.qa_status ? ` · ${payload.qa_status}` : ''}${payload.severity ? ` · ${payload.severity}` : ''}`;
+    return `QA flags${payload.qa_status ? ` - ${payload.qa_status}` : ''}${payload.severity ? ` - ${payload.severity}` : ''}`;
   }
   return type || 'artifact';
 }
@@ -137,6 +137,14 @@ function minutesSince(value, nowMs) {
 
 function includesProductionConfigBlocker(text = '') {
   return String(text || '').toLowerCase().includes('production_config');
+}
+
+function textIncludesAny(text = '', needles = []) {
+  const haystack = String(text || '').toLowerCase();
+  return Array.isArray(needles) && needles.some((needle) => {
+    const value = String(needle || '').trim().toLowerCase();
+    return value ? haystack.includes(value) : false;
+  });
 }
 
 function buildAutomationRecommendations({ job = null, artifacts = [] } = {}) {
@@ -237,6 +245,236 @@ function buildAutomationRecommendations({ job = null, artifacts = [] } = {}) {
   }
 
   return recommendations.slice(0, 6);
+}
+
+function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = null } = {}) {
+  const nowMs = Date.now();
+  const status = String(job?.status || '').toLowerCase();
+  const errorCode = String(job?.error_code || '').toLowerCase();
+  const jobText = JSON.stringify({
+    status: job?.status || null,
+    error_code: job?.error_code || null,
+    error_message: job?.error_message || null,
+    failure_reason: job?.failure_reason || null,
+  }).toLowerCase();
+  const qaActionPlanArtifact = artifacts.find((row) => row?.type === 'qa_action_plan') || null;
+  const reportContractArtifact = artifacts.find((row) => row?.type === 'report_contract_qa') || null;
+  const deliveryGateArtifact = artifacts.find((row) => row?.type === 'delivery_gate_decision') || null;
+  const workerEvents = artifacts
+    .filter((row) => row?.type === 'worker_event' || row?.type === 'status_transition')
+    .slice(0, 12);
+  const latestWorkerEventMs = workerEvents
+    .map((row) => parseIsoMs(row?.created_at))
+    .filter((ms) => Number.isFinite(ms))
+    .sort((a, b) => b - a)[0] || null;
+  const ageMins = minutesSince(job?.started_at || job?.created_at, nowMs);
+  const workerGapMins = latestWorkerEventMs === null ? null : Math.max(0, (nowMs - latestWorkerEventMs) / 60000);
+  const qaActionPlan = qaActionPlanArtifact?.payload || {};
+  const reportContract = reportContractArtifact?.payload || {};
+  const deliveryGateStatus = String(deliveryGateArtifact?.payload?.delivery_gate_status || fixQueueRow?.delivery_gate_status || '').toLowerCase();
+  const hasSourceMismatch = Array.isArray(reportContract?.violations)
+    ? reportContract.violations.some((violation) => {
+        const haystack = [
+          violation?.code,
+          violation?.title,
+          violation?.category,
+          violation?.message,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes('reconciliation_mismatch') || haystack.includes('source_report_contradiction') || haystack.includes('contradiction');
+      })
+    : false;
+  const hasAdminHold = status === 'publishing' && errorCode === 'admin_review_required';
+  const forcePublishSignal = textIncludesAny([
+    jobText,
+    JSON.stringify(qaActionPlan || {}),
+    JSON.stringify(reportContract || {}),
+    JSON.stringify(deliveryGateArtifact?.payload || {}),
+    JSON.stringify(fixQueueRow || {}),
+  ].join(' '), [
+    'force publish',
+    'force_publish',
+    'qa bypass',
+    'qa_bypass',
+    'bypass qa',
+    'publish bypass',
+  ]);
+  const hasProductionConfigBlocker = [
+    jobText,
+    JSON.stringify(qaActionPlan || {}).toLowerCase(),
+    JSON.stringify(reportContract || {}).toLowerCase(),
+    JSON.stringify(deliveryGateArtifact?.payload || {}).toLowerCase(),
+    JSON.stringify(workerEvents || []).toLowerCase(),
+  ].some((text) => text.includes('production_config'));
+  const hardDocumentBlocker = [
+    'missing_structured_financials',
+    'missing_structured_financial_artifacts',
+    'missing_required_source_data',
+    'document_financial_scale_mismatch',
+    'missing_required_documents',
+  ].includes(errorCode) ||
+    jobText.includes('document integrity') ||
+    jobText.includes('missing structured') ||
+    jobText.includes('required source documents') ||
+    jobText.includes('could not be validated');
+  const publicBlock = Boolean(fixQueueRow?.public_sample_ready === false);
+  const outreachBlock = Boolean(fixQueueRow?.high_value_outreach_ready === false);
+  const inProgressStatuses = new Set(['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating']);
+
+  let automationClass = 'NO_ACTION';
+  let proposedAction = 'No action';
+  let confidenceScore = 100;
+  let confidenceLabel = 'high';
+  let humanReviewRequired = false;
+  let executiveOverrideRequired = false;
+  let requiredConditions = ['None'];
+  let blockedReason = null;
+  let suggestedDelayMinutes = null;
+  let escalationTarget = 'None';
+  let rationale = 'Job is already published or does not need automated handling.';
+
+  if (status === 'published') {
+    automationClass = 'NO_ACTION';
+    proposedAction = 'No action';
+    confidenceScore = 100;
+    confidenceLabel = 'high';
+    requiredConditions = ['Published job'];
+    escalationTarget = 'None';
+    rationale = 'Published jobs are not automation candidates.';
+  } else if (hasSourceMismatch || hasAdminHold || hasProductionConfigBlocker) {
+    automationClass = 'HUMAN_REVIEW_REQUIRED';
+    proposedAction = 'Human review';
+    confidenceScore = hasSourceMismatch ? 97 : 94;
+    confidenceLabel = 'high';
+    humanReviewRequired = true;
+    requiredConditions = hasSourceMismatch
+      ? ['Confirm source-backed values before any further action']
+      : hasAdminHold
+        ? ['Admin review hold remains active']
+        : ['Review production config blocker evidence'];
+    blockedReason = hasSourceMismatch
+      ? 'Source reconciliation mismatch detected.'
+      : hasAdminHold
+        ? 'Admin review hold is active.'
+        : 'Repeated production_config blocker detected.';
+    suggestedDelayMinutes = hasSourceMismatch ? 60 : hasAdminHold ? 30 : 45;
+    escalationTarget = 'Admin review';
+    rationale = hasSourceMismatch
+      ? 'Rendered or contracted values disagree across source-to-report checks.'
+      : hasAdminHold
+        ? 'Delivery gate is intentionally held for human review.'
+        : 'Repeated production_config blocker should be reviewed before automation.';
+  } else if (publicBlock || outreachBlock || forcePublishSignal) {
+    automationClass = 'EXECUTIVE_OVERRIDE_ONLY';
+    proposedAction = forcePublishSignal
+      ? 'Escalate for executive approval'
+      : publicBlock && outreachBlock
+        ? 'Override delivery blocks'
+        : publicBlock
+          ? 'Override public sample block'
+          : 'Override outreach block';
+    confidenceScore = 90;
+    confidenceLabel = 'high';
+    executiveOverrideRequired = true;
+    requiredConditions = [
+      'Executive approval',
+      forcePublishSignal
+        ? 'Confirm business reason before bypassing QA or publish controls'
+        : 'Confirm business reason for delivery override',
+    ];
+    blockedReason = forcePublishSignal
+      ? 'QA bypass or force publish requires executive approval.'
+      : 'Delivery block requires executive approval.';
+    suggestedDelayMinutes = 0;
+    escalationTarget = 'Executive approval';
+    rationale = forcePublishSignal
+      ? 'Force publish and QA bypass paths should not be overridden automatically.'
+      : 'Public sample or outreach readiness is blocked and should not be overridden automatically.';
+  } else if (status === 'failed' && hardDocumentBlocker) {
+    automationClass = 'BLOCKED_UNSAFE';
+    proposedAction = 'Do not automate';
+    confidenceScore = 96;
+    confidenceLabel = 'high';
+    requiredConditions = ['Resolve the document or integrity blocker first'];
+    blockedReason = 'Document or integrity blocker detected.';
+    suggestedDelayMinutes = null;
+    escalationTarget = 'Admin review';
+    rationale = 'Failure is tied to source documents or integrity checks.';
+  } else if (
+    status === 'failed' &&
+    !hardDocumentBlocker &&
+    !hasProductionConfigBlocker &&
+    !hasAdminHold &&
+    !hasSourceMismatch &&
+    textIncludesAny([jobText, JSON.stringify(qaActionPlan || {}), JSON.stringify(reportContract || {}), JSON.stringify(deliveryGateArtifact?.payload || {})].join(' '), [
+      'transient',
+      'system',
+      'timeout',
+      'network',
+      'unavailable',
+      'temporary',
+      'retryable',
+      'service unavailable',
+      'worker timeout',
+    ])
+  ) {
+    automationClass = 'SAFE_AUTOMATION';
+    proposedAction = 'Requeue failed job';
+    confidenceScore = 78;
+    confidenceLabel = 'medium';
+    humanReviewRequired = false;
+    executiveOverrideRequired = false;
+    requiredConditions = ['No document blocker detected', 'Failure appears transient or system-related'];
+    blockedReason = null;
+    suggestedDelayMinutes = 10;
+    escalationTarget = 'Operations';
+    rationale = 'The failure pattern looks transient and would normally be a manual requeue candidate.';
+  } else if (
+    (status === 'queued' && Number.isFinite(ageMins) && ageMins >= 10) ||
+    (inProgressStatuses.has(status) && Number.isFinite(ageMins) && ageMins >= 60) ||
+    ((workerGapMins === null || workerGapMins >= 30) && status !== 'published')
+  ) {
+    automationClass = 'SAFE_AUTOMATION';
+    proposedAction = status === 'queued' ? 'Retry queued job' : 'Review worker trail';
+    confidenceScore = 74;
+    confidenceLabel = 'medium';
+    requiredConditions = status === 'queued'
+      ? ['Queued long enough to justify review', 'No document blocker detected']
+      : ['No recent worker event or stage update', 'No document blocker detected'];
+    blockedReason = null;
+    suggestedDelayMinutes = status === 'queued' ? 15 : 10;
+    escalationTarget = 'Operations';
+    rationale = status === 'queued'
+      ? 'Queued job has aged enough to review as a controlled automation candidate.'
+      : 'Job appears stuck or stale based on worker activity timing.';
+  } else if (status === 'failed') {
+    automationClass = 'HUMAN_REVIEW_REQUIRED';
+    proposedAction = 'Escalate for human review';
+    confidenceScore = 66;
+    confidenceLabel = 'medium';
+    humanReviewRequired = true;
+    requiredConditions = ['Failure type is not clearly safe to automate'];
+    blockedReason = 'Failure classification is not safe for automatic handling.';
+    suggestedDelayMinutes = null;
+    escalationTarget = 'Admin review';
+    rationale = 'The failure does not match a safe automation path.';
+  }
+
+  return {
+    proposed_action: proposedAction,
+    automation_class: automationClass,
+    confidence_score: confidenceScore,
+    confidence_label: confidenceLabel,
+    human_review_required: humanReviewRequired,
+    executive_override_required: executiveOverrideRequired,
+    required_conditions: requiredConditions.slice(0, 4),
+    blocked_reason: blockedReason,
+    suggested_delay_minutes: suggestedDelayMinutes,
+    escalation_target: escalationTarget,
+    rationale,
+  };
 }
 
 function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
@@ -408,6 +646,7 @@ function buildFixQueueDetails({
     },
     artifacts: internalArtifacts,
     worker_events: workerEvents,
+    automation_simulation: buildAutomationSimulation({ job, artifacts, fixQueueRow }),
     automation_recommendations: buildAutomationRecommendations({ job, artifacts }).slice(0, 6),
   };
 }
