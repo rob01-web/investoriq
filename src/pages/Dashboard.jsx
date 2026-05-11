@@ -496,13 +496,13 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (inProgressFetchRef.current) return;
     inProgressFetchRef.current = true;
     try {
-      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason').eq('user_id', profile.id)
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, status, created_at, failure_reason, error_code, error_message').eq('user_id', profile.id)
         .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing'])
         .order('created_at', { ascending: false }).limit(10);
       if (error) { console.error('Failed to fetch in-progress jobs:', error); return; }
       const rows = data || [];
       setInProgressJobs((prev) => {
-        const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}`).join('||');
+        const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}|${job.error_code || ''}|${job.error_message || ''}`).join('||');
         return serialize(prev) === serialize(rows) ? prev : rows;
       });
       await fetchJobEvents(rows.map((job) => job.id));
