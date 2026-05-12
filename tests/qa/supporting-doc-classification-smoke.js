@@ -3,6 +3,7 @@ import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "
 import {
   __test__ as supportDocRecoveryTestHelpers,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+  shouldAttemptCurrentMortgageRecovery,
 } from "../../lib/ai-support-doc-recovery.js";
 
 assert.equal(
@@ -139,6 +140,33 @@ assert.equal(
     ].join("\n")
   ),
   true
+);
+
+assert.equal(
+  shouldAttemptCurrentMortgageRecovery(
+    [
+      "Current Mortgage Statement",
+      "Current outstanding principal balance: $2,100,000",
+      "Monthly payment: $13,625",
+      "Interest rate: 4.25%",
+      "Amortization remaining: 23 years",
+      "Existing lender: ABC Bank",
+    ].join("\n")
+  ),
+  true
+);
+
+assert.equal(
+  shouldAttemptCurrentMortgageRecovery(
+    [
+      "Indicative acquisition financing term sheet",
+      "Purchase Price: $3,500,000",
+      "LTV 65%",
+      "Amortization: 25 years",
+      "Interest Rate: 5.50%",
+    ].join("\n")
+  ),
+  false
 );
 
 assert.deepEqual(supportDocRecoveryTestHelpers.buildResponseSchema().required, [

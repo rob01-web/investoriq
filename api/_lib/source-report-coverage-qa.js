@@ -154,7 +154,7 @@ function buildArtifactInventory(artifacts) {
     },
     mortgage_statement_parsed: {
       present: Boolean(mortgage),
-      has_balance: hasPositive(mortgage?.loan_amount) || hasPositive(mortgage?.outstanding_balance),
+      has_balance: hasPositive(mortgage?.outstanding_balance),
       has_payment: hasPositive(mortgage?.monthly_payment) || hasPositive(mortgage?.annual_debt_service),
       has_rate: hasPositive(mortgage?.interest_rate),
       has_amortization: hasPositive(mortgage?.amort_years),

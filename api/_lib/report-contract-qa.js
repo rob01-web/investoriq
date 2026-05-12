@@ -180,16 +180,10 @@ function reportTypeIsScreening(reportType, reportTier) {
 }
 
 function hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) {
-  const loan = latestPayload(artifacts, "loan_term_sheet_parsed");
   const mortgage = latestPayload(artifacts, "mortgage_statement_parsed");
-  const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
   const invMortgage = sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed;
   return Boolean(
-    positive(loan?.loan_amount) ||
-    positive(loan?.outstanding_balance) ||
-    positive(mortgage?.loan_amount) ||
     positive(mortgage?.outstanding_balance) ||
-    invLoan?.has_balance ||
     invMortgage?.has_balance
   );
 }

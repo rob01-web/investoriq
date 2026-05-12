@@ -7,6 +7,7 @@ const { parseMortgageStatementFromText } = await import("../../api/parse/parse-d
 const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
+  validateCurrentMortgageCandidate,
 } = await import("../../lib/ai-support-doc-recovery.js");
 
 const acquisitionSourceText = [
@@ -195,6 +196,87 @@ const currentDebtParse = parseMortgageStatementFromText(currentDebtText, {
 });
 assert.equal(currentDebtParse.outstanding_balance, null);
 assert.equal(currentDebtParse.parse_warnings.includes("missing_outstanding_balance"), true);
+assert.equal(currentDebtParse.annual_debt_service, 201600);
+
+const currentMortgageSourceText = [
+  "Current Mortgage Statement",
+  "Current outstanding principal balance: $2,100,000",
+  "Monthly payment: $13,625",
+  "Current debt service: $163,500",
+  "Interest rate: 4.25% fixed",
+  "Amortization remaining: 23 years",
+  "Maturity date 2028-06-01",
+  "Existing lender: ABC Bank",
+  "This document represents true existing current debt, not proposed acquisition financing.",
+].join("\n");
+
+const currentMortgageCandidate = validateCurrentMortgageCandidate(
+  {
+    is_current_mortgage: true,
+    confidence: 0.95,
+    outstanding_balance: 2100000,
+    monthly_payment: 13625,
+    annual_debt_service: 163500,
+    interest_rate: 4.25,
+    amortization_years: 23,
+    maturity_date: "2028-06-01",
+    lender_name: "ABC Bank",
+    evidence: {
+      outstanding_balance: ["Current outstanding principal balance: $2,100,000"],
+      monthly_payment: ["Monthly payment: $13,625"],
+      annual_debt_service: ["Current debt service: $163,500"],
+      interest_rate: ["Interest rate: 4.25% fixed"],
+      amortization_years: ["Amortization remaining: 23 years"],
+      maturity_date: ["Maturity date 2028-06-01"],
+      lender_name: ["Existing lender: ABC Bank"],
+      warnings: [],
+    },
+  },
+  currentMortgageSourceText
+);
+
+assert.equal(currentMortgageCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(currentMortgageCandidate.ai_assisted, true);
+assert.equal(currentMortgageCandidate.validated, true);
+assert.equal(currentMortgageCandidate.outstanding_balance, 2100000);
+assert.equal(currentMortgageCandidate.monthly_payment, 13625);
+assert.equal(currentMortgageCandidate.annual_debt_service, 163500);
+assert.equal(currentMortgageCandidate.interest_rate, 4.25);
+assert.equal(currentMortgageCandidate.amortization_years, 23);
+assert.equal(currentMortgageCandidate.maturity_date, "2028-06-01");
+assert.equal(currentMortgageCandidate.lender_name, "ABC Bank");
+
+const currentMortgageNoBalanceCandidate = validateCurrentMortgageCandidate(
+  {
+    is_current_mortgage: true,
+    confidence: 0.95,
+    outstanding_balance: null,
+    monthly_payment: 13625,
+    annual_debt_service: null,
+    interest_rate: 4.25,
+    amortization_years: 23,
+    maturity_date: "2028-06-01",
+    lender_name: "ABC Bank",
+    evidence: {
+      monthly_payment: ["Monthly payment: $13,625"],
+      interest_rate: ["Interest rate: 4.25% fixed"],
+      amortization_years: ["Amortization remaining: 23 years"],
+      maturity_date: ["Maturity date 2028-06-01"],
+      lender_name: ["Existing lender: ABC Bank"],
+      warnings: [],
+    },
+  },
+  [
+    "Current Mortgage Statement",
+    "Monthly payment: $13,625",
+    "Interest rate: 4.25% fixed",
+    "Amortization remaining: 23 years",
+    "Maturity date 2028-06-01",
+    "Existing lender: ABC Bank",
+  ].join("\n")
+);
+assert.equal(currentMortgageNoBalanceCandidate.outstanding_balance, null);
+assert(currentMortgageNoBalanceCandidate.parse_warnings.includes("missing_outstanding_balance"));
 
 const t12WithLineItemsHtml = reportTestHelpers.buildT12SummaryHtml(
   {

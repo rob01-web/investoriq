@@ -3,7 +3,9 @@ import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
 import {
   recoverAcquisitionPurchaseAssumptionsWithAI,
+  recoverCurrentMortgageWithAI,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+  shouldAttemptCurrentMortgageRecovery,
 } from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
@@ -67,10 +69,11 @@ const writeAiSupportDocRecoveryDiagnostic = async ({
   userId,
   fileId,
   filename,
+  supportDocRecoveryType,
   initialDocType,
   declaredDocType,
   detectedDocType,
-  eligibleAcquisitionRecovery,
+  eligibleRecovery,
   diagnostics,
 }) => {
   if (!diagnostics || typeof diagnostics !== 'object') return;
@@ -79,10 +82,12 @@ const writeAiSupportDocRecoveryDiagnostic = async ({
     event: 'ai_support_doc_recovery_diagnostic',
     file_id: fileId || null,
     original_filename: filename || null,
+    support_doc_recovery_type: supportDocRecoveryType || null,
     initial_doc_type: initialDocType || null,
     declared_doc_type: declaredDocType || null,
     detected_doc_type: detectedDocType || null,
-    eligible_acquisition_recovery: eligibleAcquisitionRecovery === true,
+    eligible_recovery: eligibleRecovery === true,
+    eligible_acquisition_recovery: eligibleRecovery === true && supportDocRecoveryType === 'acquisition_purchase_assumptions',
     source_text_length: Number.isFinite(diagnostics.source_text_length)
       ? diagnostics.source_text_length
       : Number(diagnostics.source_text_length) || 0,
@@ -383,6 +388,23 @@ const extractYearsNearText = (text, labels) => {
   return null;
 };
 
+const extractDateNearText = (text, labels) => {
+  const lower = String(text || '').toLowerCase();
+  for (const label of labels) {
+    const idx = lower.indexOf(String(label || '').toLowerCase());
+    if (idx === -1) continue;
+    const snippet = String(text || '').slice(idx, idx + 120).trim();
+    const match =
+      snippet.match(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Za-z]{3,9}\s+\d{4}|\d{4})\b/) ||
+      snippet.match(/\b(?:maturity\s+date|due\s+date)[:\s-]*([^\n;]+)/i);
+    if (match) {
+      const value = String(match[1] || match[0] || '').trim();
+      if (value) return value;
+    }
+  }
+  return null;
+};
+
 export function parseMortgageStatementFromText(rawText, fileRow = {}) {
   const parse_warnings = [];
   const outstanding_balance = extractDollarNearText(rawText, [
@@ -424,6 +446,12 @@ export function parseMortgageStatementFromText(rawText, fileRow = {}) {
   ]);
   const lender_name_match = String(rawText || '').match(/(?:lender|bank|mortgagee)[:\s]+([A-Za-z0-9 &.,'-]{3,60})/i);
   const lender_name = lender_name_match ? lender_name_match[1].trim() : null;
+  const maturity_date = extractDateNearText(rawText, [
+    'maturity date',
+    'due date',
+    'matures',
+    'maturity',
+  ]);
 
   if (!outstanding_balance) parse_warnings.push('missing_outstanding_balance');
   if (!interest_rate) parse_warnings.push('missing_interest_rate');
@@ -438,7 +466,9 @@ export function parseMortgageStatementFromText(rawText, fileRow = {}) {
     interest_rate,
     monthly_payment,
     monthly_debt_service: monthly_payment,
+    annual_debt_service: Number.isFinite(monthly_payment) ? Math.round(monthly_payment * 12) : null,
     amort_years,
+    maturity_date,
     parse_warnings,
   };
 }
@@ -4006,10 +4036,11 @@ export default async function handler(req, res) {
               userId: fileRow.user_id || null,
               fileId: fileRow.id,
               filename: fileRow.original_filename,
+              supportDocRecoveryType: 'acquisition_purchase_assumptions',
               initialDocType: effectiveDocType,
               declaredDocType,
               detectedDocType,
-              eligibleAcquisitionRecovery,
+              eligibleRecovery: eligibleAcquisitionRecovery,
               diagnostics: acquisitionRecoveryDiagnostics,
             });
           }
@@ -4060,7 +4091,104 @@ export default async function handler(req, res) {
             parse_warnings,
           };
         } else if (effectiveDocType === 'mortgage_statement') {
-          payload = parseMortgageStatementFromText(rawText, fileRow);
+          const deterministicMortgagePayload = parseMortgageStatementFromText(rawText, fileRow);
+          const eligibleCurrentMortgageRecovery = shouldAttemptCurrentMortgageRecovery(rawText);
+          const currentMortgageRecoveryResult = eligibleCurrentMortgageRecovery
+            ? await recoverCurrentMortgageWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              })
+            : { payload: null, diagnostics: null };
+          const maybeAiCurrentMortgageRecovery = currentMortgageRecoveryResult?.payload || null;
+          const currentMortgageRecoveryDiagnostics = currentMortgageRecoveryResult?.diagnostics || null;
+          const mergeValidatedCurrentMortgageField = (aiValue, deterministicValue, predicate) => {
+            if (predicate(deterministicValue)) return deterministicValue;
+            if (predicate(aiValue)) return aiValue;
+            return null;
+          };
+          const isValidOutstandingBalance = (value) => Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidMonthlyPayment = (value) => Number.isFinite(value) && value > 0 && value <= 1000000;
+          const isValidAnnualDebtService = (value) => Number.isFinite(value) && value > 0 && value <= 12000000;
+          const isValidInterestRate = (value) => Number.isFinite(value) && value > 0 && value <= 30;
+          const isValidAmortYears = (value) => Number.isFinite(value) && value > 0 && value <= 50;
+          const isValidMaturityDate = (value) => typeof value === 'string' && value.length > 0;
+          const isValidLenderName = (value) => typeof value === 'string' && value.length > 0;
+
+          const validatedOutstandingBalance = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.outstanding_balance,
+            deterministicMortgagePayload.outstanding_balance,
+            isValidOutstandingBalance
+          );
+          const validatedMonthlyPayment = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.monthly_payment,
+            deterministicMortgagePayload.monthly_payment,
+            isValidMonthlyPayment
+          );
+          const validatedAnnualDebtService = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.annual_debt_service,
+            deterministicMortgagePayload.annual_debt_service,
+            isValidAnnualDebtService
+          );
+          const validatedInterestRate = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.interest_rate,
+            deterministicMortgagePayload.interest_rate,
+            isValidInterestRate
+          );
+          const validatedAmortYears = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.amortization_years ?? maybeAiCurrentMortgageRecovery?.amort_years,
+            deterministicMortgagePayload.amort_years,
+            isValidAmortYears
+          );
+          const validatedMaturityDate = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.maturity_date,
+            deterministicMortgagePayload.maturity_date,
+            isValidMaturityDate
+          );
+          const validatedLenderName = mergeValidatedCurrentMortgageField(
+            maybeAiCurrentMortgageRecovery?.lender_name,
+            deterministicMortgagePayload.lender_name,
+            isValidLenderName
+          );
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: maybeAiCurrentMortgageRecovery ? maybeAiCurrentMortgageRecovery.method : 'text_excerpt',
+            ai_assisted: Boolean(maybeAiCurrentMortgageRecovery),
+            validated: Boolean(maybeAiCurrentMortgageRecovery),
+            outstanding_balance: validatedOutstandingBalance,
+            loan_amount: validatedOutstandingBalance,
+            monthly_payment: validatedMonthlyPayment,
+            monthly_debt_service: validatedMonthlyPayment,
+            annual_debt_service: validatedAnnualDebtService,
+            interest_rate: validatedInterestRate,
+            amort_years: validatedAmortYears,
+            maturity_date: validatedMaturityDate,
+            lender_name: validatedLenderName,
+            parse_warnings: [
+              ...new Set([
+                ...deterministicMortgagePayload.parse_warnings,
+                ...(maybeAiCurrentMortgageRecovery?.parse_warnings || []),
+              ]),
+            ],
+            ai_recovery_evidence: maybeAiCurrentMortgageRecovery?.ai_recovery_evidence || null,
+          };
+          if (currentMortgageRecoveryDiagnostics) {
+            await writeAiSupportDocRecoveryDiagnostic({
+              supabaseAdmin,
+              jobId,
+              userId: fileRow.user_id || null,
+              fileId: fileRow.id,
+              filename: fileRow.original_filename,
+              supportDocRecoveryType: 'current_mortgage',
+              initialDocType: effectiveDocType,
+              declaredDocType,
+              detectedDocType,
+              eligibleRecovery: eligibleCurrentMortgageRecovery,
+              diagnostics: currentMortgageRecoveryDiagnostics,
+            });
+          }
         } else if (effectiveDocType === 'appraisal') {
           const appraised_value = extractDollarNear(rawText, [
             'appraised value', 'as-is value', 'market value', 'estimated value',

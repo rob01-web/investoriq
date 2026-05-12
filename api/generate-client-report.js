@@ -155,12 +155,13 @@ function resolveSafeAnnualRentTotal({
   return null;
 }
 function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
-  const balance = coerceNumber(mortgagePayload?.outstanding_balance ?? mortgagePayload?.loan_amount);
+  const balance = coerceNumber(mortgagePayload?.outstanding_balance);
   const interestRatePct = coerceNumber(mortgagePayload?.interest_rate);
   const amortYears = coerceNumber(mortgagePayload?.amort_years);
   const sourceMonthlyPayment = coerceNumber(
     mortgagePayload?.monthly_payment ?? mortgagePayload?.monthly_debt_service
   );
+  const sourceAnnualDebtService = coerceNumber(mortgagePayload?.annual_debt_service);
   const computedMonthlyPayment =
     Number.isFinite(balance) &&
     balance > 0 &&
@@ -170,12 +171,16 @@ function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
     amortYears > 0
       ? balance * computeMortgageConstant(interestRatePct / 100, amortYears)
       : null;
-  const annualDebtService = Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0
+  const annualDebtService = Number.isFinite(sourceAnnualDebtService) && sourceAnnualDebtService > 0
+    ? sourceAnnualDebtService
+    : Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0
     ? sourceMonthlyPayment * 12
     : Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0
     ? computedMonthlyPayment * 12
     : null;
   const dscr =
+    Number.isFinite(balance) &&
+    balance > 0 &&
     Number.isFinite(t12Noi) &&
     t12Noi > 0 &&
     Number.isFinite(annualDebtService) &&
@@ -191,6 +196,7 @@ function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
     annualDebtService,
     dscr,
     hasSourcePayment: Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0,
+    hasVerifiedOutstandingBalance: Number.isFinite(balance) && balance > 0,
   };
 }
 function currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload } = {}) {
@@ -237,6 +243,25 @@ function hasUsableDebtPayload(payload) {
   const hasAmort = Number.isFinite(amort) && amort > 0;
   const hasMonthlyPayment = Number.isFinite(monthlyPayment) && monthlyPayment > 0;
   return hasBalance && (hasMonthlyPayment || (hasRate && hasAmort));
+}
+function hasUsableCurrentMortgagePayload(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  const balance = Number(payload.outstanding_balance ?? "");
+  const payment = Number(payload.monthly_payment ?? payload.monthly_debt_service ?? "");
+  const annual = Number(payload.annual_debt_service ?? "");
+  const rate = Number(payload.interest_rate ?? "");
+  const amort = Number(payload.amort_years ?? "");
+  const lender = String(payload.lender_name || "").trim();
+  const maturity = String(payload.maturity_date || "").trim();
+  return Boolean(
+    (Number.isFinite(balance) && balance > 0) ||
+    (Number.isFinite(payment) && payment > 0) ||
+    (Number.isFinite(annual) && annual > 0) ||
+    (Number.isFinite(rate) && rate > 0) ||
+    (Number.isFinite(amort) && amort > 0) ||
+    lender ||
+    maturity
+  );
 }
 function hasDebtTermsPayload(payload) {
   if (!payload || typeof payload !== "object") return false;
@@ -2648,11 +2673,8 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         // Mortgage statement
-        // Only accept payload if it contains at least one usable numeric debt
-        // field. An empty {} would be truthy and block the loan_term_sheet
-        // fallback, causing silent debt recognition failure.
         const rawMortgagePayload = mortgageArtifact?.payload || null;
-        mortgagePayload = hasUsableDebtPayload(rawMortgagePayload) ? rawMortgagePayload : null;
+        mortgagePayload = hasUsableCurrentMortgagePayload(rawMortgagePayload) ? rawMortgagePayload : null;
         const { data: appraisalArtifacts } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -2675,10 +2697,6 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         propertyTaxPayload = propertyTaxArtifact?.payload || null;
-        // Loan term sheet fallback
-        // Used when no full mortgage statement was uploaded or parsed.
-        // Same usability guard applied: prevents empty payload from being
-        // treated as valid and producing silent downstream null values.
         const { data: loanTermSheetArtifact } = await supabase
           .from("analysis_artifacts")
           .select("payload")
@@ -2690,27 +2708,6 @@ export default async function handler(req, res) {
         const rawLoanTermSheetPayload = loanTermSheetArtifact?.payload || null;
         const loanTermSheetPayload = hasUsableDebtPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
         loanTermSheetTermsPayload = hasDebtTermsPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
-        // Fallback: use loan term sheet when mortgage statement was absent or unusable
-        if (!mortgagePayload && loanTermSheetPayload) {
-          mortgagePayload = loanTermSheetPayload;
-        }
-        // Normalize field names: bidirectional
-        // mortgage_statement_parsed uses outstanding_balance
-        // loan_term_sheet_parsed uses loan_amount
-        // Downstream DSCR blocks must be able to use either field.
-        // Copy whichever is missing so both fields are always present when one is.
-        if (mortgagePayload) {
-          const hasBal  = isFinitePositive(Number(mortgagePayload.outstanding_balance ?? ""));
-          const hasLoan = isFinitePositive(Number(mortgagePayload.loan_amount ?? ""));
-          if (!hasBal && hasLoan) {
-            // loan_term_sheet case: populate outstanding_balance from loan_amount
-            mortgagePayload = { ...mortgagePayload, outstanding_balance: mortgagePayload.loan_amount };
-          } else if (hasBal && !hasLoan) {
-            // mortgage_statement case: populate loan_amount from outstanding_balance
-            mortgagePayload = { ...mortgagePayload, loan_amount: mortgagePayload.outstanding_balance };
-          }
-        }
-
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -3312,29 +3309,22 @@ if (effectiveReportMode === "screening_v1") {
       refi_debt_balance:
         rawFinancials?.refi_debt_balance ??
         mortgagePayload?.outstanding_balance ??
-        mortgagePayload?.loan_amount ??
         null,
       refi_interest_rate:
         rawFinancials?.refi_interest_rate ??
         mortgagePayload?.interest_rate ??
-        loanTermSheetTermsPayload?.interest_rate ??
         null,
       refi_amort_years:
         rawFinancials?.refi_amort_years ??
         mortgagePayload?.amort_years ??
-        loanTermSheetTermsPayload?.amort_years ??
         null,
       refi_cap_rate_base:
         rawFinancials?.refi_cap_rate_base ??
         mortgagePayload?.refi_cap_rate ??
-        loanTermSheetTermsPayload?.refi_cap_rate ??
         appraisalCapRateBase ??
         null,
       refi_ltv_max:
-        mortgagePayload?.ltv ??
-        loanTermSheetTermsPayload?.ltv ??
-        rawFinancials?.refi_ltv_max ??
-        0.75,
+        rawFinancials?.refi_ltv_max ?? null,
       refi_dscr_min:
         rawFinancials?.refi_dscr_min ??
         1.25,
@@ -4106,8 +4096,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     });
     const hasProposedAcquisitionFinancing = Boolean(String(acquisitionFinancingAssumptionsHtml || "").trim());
     const hasTrueCurrentDebtBalance = Boolean(
-      isFinitePositive(mortgagePayload?.outstanding_balance) ||
-      isFinitePositive(mortgagePayload?.loan_amount)
+      isFinitePositive(mortgagePayload?.outstanding_balance)
     );
     const acquisitionOnlyDebt = effectiveReportMode === "v1_core" && hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
@@ -4861,7 +4850,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       if (mortgagePayload.lender_name) {
         dcRows.push(`<tr><td>Lender</td><td>${escapeHtml(String(mortgagePayload.lender_name))}</td></tr>`);
       }
-      const bal = coerceNumber(mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount);
+      const bal = coerceNumber(mortgagePayload.outstanding_balance);
       if (Number.isFinite(bal) && bal > 0) {
         dcRows.push(`<tr><td>Outstanding Balance</td><td>${formatCurrency(bal)}</td></tr>`);
       }
@@ -4876,7 +4865,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       const t12Noi = coerceNumber(t12Payload?.net_operating_income);
       let annualDs = null;
-      if (Number.isFinite(pni) && pni > 0) {
+      if (Number.isFinite(bal) && bal > 0 && Number.isFinite(pni) && pni > 0) {
         annualDs = pni * 12;
       } else if (
         Number.isFinite(bal) && bal > 0 &&
@@ -4902,9 +4891,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     if (mortgagePayload && t12Payload && effectiveReportMode === "v1_core") {
       const noiBase = coerceNumber(t12Payload.net_operating_income);
       const baseRatePct = coerceNumber(mortgagePayload.interest_rate); // e.g. 4.5
-      const debtBal = coerceNumber(
-        mortgagePayload.outstanding_balance ?? mortgagePayload.loan_amount
-      );
+      const debtBal = coerceNumber(mortgagePayload.outstanding_balance);
       const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, noiBase);
       const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
@@ -5471,7 +5458,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside | 5-15% = moderate | < 5% = minimal", flag, color);
         }
       if (mortgagePayload) {
-          const la = coerceNumber(mortgagePayload.outstanding_balance || mortgagePayload.loan_amount);
+          const la = coerceNumber(mortgagePayload.outstanding_balance);
           const rp = coerceNumber(mortgagePayload.interest_rate);
           const ay = coerceNumber(mortgagePayload.amort_years) || 25;
           const an = coerceNumber(t12Payload?.net_operating_income);
@@ -5792,9 +5779,8 @@ try {
     .map((row) => row.original_filename.toLowerCase())
     .join(" | ");
   const debtLookingFile = normalizedSourceFiles.find((row) =>
-    row.doc_type === "loan_term_sheet" ||
     row.doc_type === "mortgage_statement" ||
-    /(loan|debt|mortgage|financ|term|note)/i.test(row.original_filename)
+    /(current\s+debt|mortgage|outstanding\s+balance|unpaid\s+principal|loan\s+balance)/i.test(row.original_filename)
   );
   let parsedDebtArtifacts = [];
   if (jobId) {
@@ -5809,6 +5795,7 @@ try {
   }
   const debtArtifactWithMissingBalance = parsedDebtArtifacts.find((artifact) => {
     const payload = artifact?.payload || {};
+    if (artifact?.type !== "mortgage_statement_parsed") return false;
     const hasDebtTerms =
       hasDebtTermsPayload(payload) ||
       isFinitePositive(payload.monthly_payment) ||
@@ -5818,16 +5805,10 @@ try {
     const outstandingBalance = coerceNumber(payload.outstanding_balance);
     return hasDebtTerms && !isFinitePositive(loanAmount) && !isFinitePositive(outstandingBalance);
   });
-  const parsedDebtBalance = coerceNumber(
-    mortgagePayload?.outstanding_balance ??
-      mortgagePayload?.loan_amount ??
-      loanTermSheetTermsPayload?.outstanding_balance ??
-      loanTermSheetTermsPayload?.loan_amount
-  );
+  const parsedDebtBalance = coerceNumber(mortgagePayload?.outstanding_balance);
   const debtTermsPresent =
     Boolean(debtLookingFile) ||
-    hasDebtTermsPayload(mortgagePayload) ||
-    hasDebtTermsPayload(loanTermSheetTermsPayload);
+    hasDebtTermsPayload(mortgagePayload);
   const acquisitionFinancingInputsUsable =
     effectiveReportMode === "v1_core" &&
     isFinitePositive(loanTermSheetTermsPayload?.purchase_price) &&
@@ -5880,10 +5861,10 @@ try {
         artifact_type: debtArtifactWithMissingBalance?.type || null,
         doc_type: debtLookingFile?.doc_type || null,
         parse_status: debtLookingFile?.parse_status || null,
-        interest_rate: debtPayload?.interest_rate ?? null,
-        amort_years: debtPayload?.amort_years ?? null,
-        ltv: debtPayload?.ltv ?? null,
-        refi_cap_rate: debtPayload?.refi_cap_rate ?? null,
+      interest_rate: debtPayload?.interest_rate ?? null,
+      amort_years: debtPayload?.amort_years ?? null,
+      ltv: debtPayload?.ltv ?? null,
+      refi_cap_rate: debtPayload?.refi_cap_rate ?? null,
         parse_warning: Array.isArray(debtPayload?.parse_warnings)
           ? debtPayload.parse_warnings.find((warning) => warning === "missing_loan_amount") || null
           : null,

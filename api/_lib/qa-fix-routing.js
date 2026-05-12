@@ -68,10 +68,9 @@ function hasDerivedAcquisitionEvidence(evidence) {
 }
 
 function hasCurrentDebtBalanceEvidence(evidence) {
-  const loan = evidence?.loan_term_sheet || evidence?.loan_term_sheet_parsed || evidence?.debt_payload || evidence || {};
+  const loan = evidence?.mortgage_statement || evidence?.mortgage_statement_parsed || evidence || {};
   return Boolean(
     loan?.has_balance ||
-    Number(loan?.loan_amount) > 0 ||
     Number(loan?.outstanding_balance) > 0 ||
     Number(loan?.monthly_payment) > 0 ||
     Number(loan?.annual_debt_service) > 0

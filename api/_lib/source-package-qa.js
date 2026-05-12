@@ -85,9 +85,11 @@ function summarizeArtifact(row) {
     };
   }
   if (["loan_term_sheet_parsed", "mortgage_statement_parsed"].includes(row?.type)) {
+    const hasOutstandingBalance = Number(payload?.outstanding_balance) > 0;
+    const hasLoanAmount = Number(payload?.loan_amount) > 0;
     return {
       ...summary,
-      has_balance: Number(payload?.loan_amount) > 0 || Number(payload?.outstanding_balance) > 0,
+      has_balance: row?.type === "mortgage_statement_parsed" ? hasOutstandingBalance : hasLoanAmount || hasOutstandingBalance,
       has_payment: Number(payload?.monthly_payment) > 0 || Number(payload?.annual_debt_service) > 0,
       has_rate: Number(payload?.interest_rate) > 0,
       has_amortization: Number(payload?.amort_years) > 0,

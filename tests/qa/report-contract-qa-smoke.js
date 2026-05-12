@@ -321,6 +321,47 @@ const currentDebtReport = buildReportContractQa({
 assert.equal(currentDebtReport.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
 assert.equal(currentDebtReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
 
+const paymentOnlyMortgageArtifacts = [
+  ...baseArtifacts,
+  {
+    type: "mortgage_statement_parsed",
+    payload: {
+      monthly_payment: 13625,
+      annual_debt_service: 163500,
+      interest_rate: 0.0425,
+      amort_years: 23,
+      lender_name: "ABC Bank",
+    },
+  },
+];
+const paymentOnlyMortgageCoverage = {
+  ...baseCoverage,
+  artifact_inventory: {
+    ...baseCoverage.artifact_inventory,
+    mortgage_statement_parsed: {
+      present: true,
+      has_balance: false,
+      has_payment: true,
+      has_rate: true,
+      has_amortization: true,
+    },
+  },
+};
+const paymentOnlyMortgageReport = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: paymentOnlyMortgageArtifacts,
+  sourceReportCoverageQa: paymentOnlyMortgageCoverage,
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR / Not assessed / Current debt balance not provided / 0/10</p>",
+    "<p>Current debt service is not assessed because no current outstanding debt balance was provided.</p>",
+  ].join("\n"),
+});
+assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"), false);
+assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"), false);
+assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
+
 const currentDebtDscrMismatch = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
