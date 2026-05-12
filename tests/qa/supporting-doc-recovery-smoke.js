@@ -103,6 +103,32 @@ assert(partialAcquisitionHtml.includes("Acquisition debt sizing was not modeled 
 assert(partialAcquisitionHtml.includes("Estimated acquisition debt service was not modeled because amortization was not verified."));
 assert.equal(/AI|parser|Textract|vendor/i.test(partialAcquisitionHtml), false);
 
+const closingCostsExactCandidate = validateAcquisitionPurchaseAssumptionsCandidate(
+  {
+    ...acquisitionCandidate,
+    closing_costs_percent: 1.5,
+    evidence: {
+      ...acquisitionCandidate.evidence,
+      closing_costs_percent: ["Closing Costs: 1.5%"],
+    },
+  },
+  [
+    "Purchase Price: $3,750,000",
+    "LTV: 75%",
+    "Interest Rate: 5.85%",
+    "Amortization: 25 years",
+    "Going-In Cap Rate: 6.25%",
+    "Closing Costs: 1.5%",
+  ].join("\n")
+);
+const closingCostsExactHtml = reportTestHelpers.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: closingCostsExactCandidate,
+  t12Payload: { net_operating_income: 420000 },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert(closingCostsExactHtml.includes("<td>Closing Costs</td><td>1.5%</td>"));
+
 const noLtvCandidate = validateAcquisitionPurchaseAssumptionsCandidate(
   {
     ...acquisitionCandidate,
@@ -190,5 +216,38 @@ const t12WithLineItemsHtml = reportTestHelpers.buildT12SummaryHtml(
 );
 assert.equal(t12WithLineItemsHtml.includes("Lump-Sum T12"), false);
 assert.equal(t12WithLineItemsHtml.includes("No line-item detail available for this T12 format."), false);
+
+const dataCoverageSummaryHtml = reportTestHelpers.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1000000,
+    effective_gross_income: 950000,
+    total_operating_expenses: 400000,
+    net_operating_income: 550000,
+  },
+  computedRentRoll: {
+    total_units: 10,
+    occupancy: 0.9,
+    total_in_place_annual: 900000,
+    total_market_annual: 950000,
+  },
+  rentRollPayload: {
+    total_units: 10,
+    occupancy: 0.9,
+    totals: {
+      in_place_rent_annual: 900000,
+      market_rent_annual: 950000,
+    },
+  },
+  financials: {},
+  effectiveReportMode: "underwriting",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+});
+assert(
+  dataCoverageSummaryHtml.includes(
+    "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+  )
+);
+assert.equal(dataCoverageSummaryHtml.includes("Missing structured debt sizing prevents DSCR and current-debt assessment."), false);
 
 console.log("supporting-doc-recovery smoke PASS");

@@ -56,6 +56,11 @@ function formatPercent1(value) {
   const pct = n > 1.5 ? n : n * 100;
   return `${pct.toFixed(1)}%`;
 }
+function formatPercentExactDisplay(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return `${n.toFixed(1)}%`;
+}
 function formatCapPercentExact(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
@@ -1089,7 +1094,7 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
     Number.isFinite(ratePct) && ratePct > 0 ? ["Interest Rate", formatInterestRatePercent(ratePct)] : null,
     Number.isFinite(amortYears) && amortYears > 0 ? ["Amortization", `${Math.round(amortYears)} years`] : null,
     Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? ["Going-In Cap Rate", formatPercent1(goingInCapRate)] : null,
-    Number.isFinite(closingCostsPercent) && closingCostsPercent >= 0 ? ["Closing Costs", formatPercent1(closingCostsPercent)] : null,
+    Number.isFinite(closingCostsPercent) && closingCostsPercent >= 0 ? ["Closing Costs", formatPercentExactDisplay(closingCostsPercent)] : null,
   ].filter(Boolean);
   if (Number.isFinite(annualDebtService) && annualDebtService > 0) {
     rows.push(["Estimated Annual Debt Service", formatCurrency(annualDebtService)]);
@@ -1331,7 +1336,7 @@ function buildScreeningDataCoverageSummary({
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.</p>${coverageTableHtml}</div>`;
     }
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Missing structured debt sizing prevents DSCR and current-debt assessment.</p>${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified.</p>${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -6781,6 +6786,7 @@ try {
 
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
+  buildScreeningDataCoverageSummary,
   buildT12SummaryHtml,
   materiallyDifferent,
   resolveSafeAnnualRentTotal,

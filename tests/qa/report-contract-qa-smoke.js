@@ -220,6 +220,7 @@ const acquisitionWithScorecardNotAssessed = buildReportContractQa({
 });
 assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"), false);
 assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
+assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"), false);
 
 const contaminatedAcquisition = buildReportContractQa({
   reportType: "underwriting",

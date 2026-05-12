@@ -293,9 +293,15 @@ export function buildReportContractQa({
     /%%[A-Z0-9_]+%%/i,
   ]);
   const hasDealScorecardDscrPlaceholder =
-    /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
-    /Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
-    /DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text);
+    !(
+      /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|current outstanding debt balance not provided|current debt service is not assessed)/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|current outstanding debt balance not provided|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
+    ) &&
+    (
+      /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
+      /DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text)
+    );
   const hasMetricNaPlaceholder =
     /\b(?:DSCR|NOI|IRR|Cap Rate|Occupancy|Rent|Score|Value|Return|LTV|ROI|payback)\b[\s\S]{0,60}\bN\/A\b/i.test(text);
   const hasTemplateTokenLeak =
