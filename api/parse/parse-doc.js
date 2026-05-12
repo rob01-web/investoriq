@@ -61,6 +61,67 @@ const writeAiRentRollRecoveryDiagnostic = async ({
   }
 };
 
+const writeAiSupportDocRecoveryDiagnostic = async ({
+  supabaseAdmin,
+  jobId,
+  userId,
+  fileId,
+  filename,
+  initialDocType,
+  declaredDocType,
+  detectedDocType,
+  eligibleAcquisitionRecovery,
+  diagnostics,
+}) => {
+  if (!diagnostics || typeof diagnostics !== 'object') return;
+  const nowIso = new Date().toISOString();
+  const safePayload = {
+    event: 'ai_support_doc_recovery_diagnostic',
+    file_id: fileId || null,
+    original_filename: filename || null,
+    initial_doc_type: initialDocType || null,
+    declared_doc_type: declaredDocType || null,
+    detected_doc_type: detectedDocType || null,
+    eligible_acquisition_recovery: eligibleAcquisitionRecovery === true,
+    source_text_length: Number.isFinite(diagnostics.source_text_length)
+      ? diagnostics.source_text_length
+      : Number(diagnostics.source_text_length) || 0,
+    feature_enabled: diagnostics.feature_enabled === true,
+    openai_api_key_present: diagnostics.openai_api_key_present === true,
+    model: diagnostics.model || null,
+    recovery_attempted: diagnostics.openai_request_attempted === true,
+    openai_request_attempted: diagnostics.openai_request_attempted === true,
+    openai_response_status: Number.isFinite(diagnostics.openai_response_status)
+      ? diagnostics.openai_response_status
+      : null,
+    candidate_present: diagnostics.candidate_present === true,
+    validation_accepted: diagnostics.validation_accepted === true,
+    accepted_fields: Array.isArray(diagnostics.accepted_fields)
+      ? diagnostics.accepted_fields
+      : [],
+    rejection_reason: diagnostics.rejection_reason || null,
+    final_outcome: diagnostics.final_outcome || 'unknown_null',
+    timestamp: nowIso,
+  };
+
+  const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
+    {
+      job_id: jobId,
+      user_id: userId || null,
+      type: 'ai_support_doc_recovery_diagnostic',
+      bucket: 'internal',
+      object_path: `analysis_jobs/${jobId}/ai_support_doc_recovery_diagnostic/${fileId || 'unknown'}/${safeTimestamp(
+        nowIso
+      )}.json`,
+      payload: safePayload,
+    },
+  ]);
+
+  if (error) {
+    console.error('Failed to write AI support doc recovery diagnostic:', error.message);
+  }
+};
+
 const getRequestBody = (req) => {
   if (!req.body) return {};
   if (typeof req.body === 'string') {
@@ -3848,20 +3909,24 @@ export default async function handler(req, res) {
           const isValidClosingCostsPercent = (value) =>
             Number.isFinite(value) && value >= 0 && value <= 20;
 
-          const maybeAiAcquisitionRecovery =
+          const eligibleAcquisitionRecovery =
+            shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText) ||
             !Number.isFinite(purchase_price) ||
             !Number.isFinite(ltv) ||
             !Number.isFinite(interest_rate) ||
             !Number.isFinite(amort_years) ||
             !Number.isFinite(going_in_cap_rate) ||
-            !Number.isFinite(closing_costs_percent)
-              || shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText)
-              ? await recoverAcquisitionPurchaseAssumptionsWithAI({
-                  text: rawText,
-                  filename: fileRow.original_filename,
-                  jobId,
-                })
-              : null;
+            !Number.isFinite(closing_costs_percent);
+          const acquisitionRecoveryResult = eligibleAcquisitionRecovery
+            ? await recoverAcquisitionPurchaseAssumptionsWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              })
+            : { payload: null, diagnostics: null };
+          const maybeAiAcquisitionRecovery = acquisitionRecoveryResult?.payload || null;
+          const acquisitionRecoveryDiagnostics = acquisitionRecoveryResult?.diagnostics || null;
 
           const mergeValidatedAcquisitionField = (aiValue, deterministicValue, predicate) => {
             if (predicate(deterministicValue)) return deterministicValue;
@@ -3938,6 +4003,21 @@ export default async function handler(req, res) {
             parse_warnings,
             ai_recovery_evidence: maybeAiAcquisitionRecovery?.ai_recovery_evidence || null,
           };
+
+          if (acquisitionRecoveryDiagnostics) {
+            await writeAiSupportDocRecoveryDiagnostic({
+              supabaseAdmin,
+              jobId,
+              userId: fileRow.user_id || null,
+              fileId: fileRow.id,
+              filename: fileRow.original_filename,
+              initialDocType: effectiveDocType,
+              declaredDocType,
+              detectedDocType,
+              eligibleAcquisitionRecovery,
+              diagnostics: acquisitionRecoveryDiagnostics,
+            });
+          }
         } else if (effectiveDocType === 'renovation') {
           const total_budget = extractDollarNear(rawText, [
             'total budget', 'renovation budget', 'capex budget', 'capital budget',
@@ -4010,12 +4090,16 @@ export default async function handler(req, res) {
             parse_warnings,
           };
 
-          if (shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText)) {
-            const acquisitionRecovery = await recoverAcquisitionPurchaseAssumptionsWithAI({
+          const eligibleAcquisitionRecovery = shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText);
+          if (eligibleAcquisitionRecovery) {
+            const acquisitionRecoveryResult = await recoverAcquisitionPurchaseAssumptionsWithAI({
               text: rawText,
               filename: fileRow.original_filename,
               jobId,
+              includeDiagnostics: true,
             });
+            const acquisitionRecovery = acquisitionRecoveryResult?.payload || null;
+            const acquisitionRecoveryDiagnostics = acquisitionRecoveryResult?.diagnostics || null;
             if (acquisitionRecovery) {
               const acquisitionArtifactPayload = {
                 file_id: fileRow.id,
@@ -4048,6 +4132,20 @@ export default async function handler(req, res) {
               if (acquisitionArtifactErr) {
                 throw new Error(acquisitionArtifactErr.message || 'Failed to write acquisition artifact');
               }
+            }
+            if (acquisitionRecoveryDiagnostics) {
+              await writeAiSupportDocRecoveryDiagnostic({
+                supabaseAdmin,
+                jobId,
+                userId: fileRow.user_id || null,
+                fileId: fileRow.id,
+                filename: fileRow.original_filename,
+                initialDocType: effectiveDocType,
+                declaredDocType,
+                detectedDocType,
+                eligibleAcquisitionRecovery,
+                diagnostics: acquisitionRecoveryDiagnostics,
+              });
             }
           }
         } else if (effectiveDocType === 'property_tax') {
