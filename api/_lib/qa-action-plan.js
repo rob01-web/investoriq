@@ -586,6 +586,7 @@ function actionForReportContractViolation(violation) {
   }
   const materiallyMisleadingDebt =
     code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT" ||
+    code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
   const actionType = hardPublicOrDebug ? "code_patch_required" : "render_gating_fix_required";
   return {
@@ -652,6 +653,49 @@ function deliveryRecommendation({ actions, publicSampleReady, customerReady }) {
 function reasonCodeForAction(action) {
   return String(action?.code || "");
 }
+
+function uniqueCodes(values) {
+  return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+const customerPublishBlockingViolationCodes = new Set([
+  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+  "RENDERED_PLACEHOLDER_METRIC_VALUE",
+  "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  "RENDERED_TEMPLATE_TOKEN_LEAK",
+  "RENDERED_MOJIBAKE_LEAK",
+  "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
+  "HARD_PUBLIC_LANGUAGE_CONTRACT",
+  "INTERNAL_DEBUG_LANGUAGE_LEAK",
+  "REPORT_TYPE_SECTION_LEAK",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+]);
+
+const regenerationRequiredBlockerCodes = new Set([
+  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+  "RENDERED_PLACEHOLDER_METRIC_VALUE",
+  "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  "RENDERED_TEMPLATE_TOKEN_LEAK",
+  "RENDERED_MOJIBAKE_LEAK",
+  "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
+  "HARD_PUBLIC_LANGUAGE_CONTRACT",
+  "INTERNAL_DEBUG_LANGUAGE_LEAK",
+  "REPORT_TYPE_SECTION_LEAK",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+  "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+]);
 
 const managerContradictionLimitationCodes = new Set([
   "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
@@ -724,6 +768,166 @@ function isManagerContradictionCustomerBlocking(action, {
     deterministicBlocksCustomer;
 }
 
+function isCustomerPublishBlockingViolation(violation) {
+  if (!violation) return false;
+  const code = String(violation?.code || "").toUpperCase();
+  if (!code) return false;
+  if (Boolean(violation?.blocks_customer_delivery)) return true;
+  return customerPublishBlockingViolationCodes.has(code);
+}
+
+function isRegenerationRequiredViolation(violation) {
+  if (!violation) return false;
+  const code = String(violation?.code || "").toUpperCase();
+  return regenerationRequiredBlockerCodes.has(code);
+}
+
+function buildPublishEligibilitySummary({
+  deliveryGateStatus = "deliverable",
+  reasonCode = null,
+  sourceReportCoverageQa = null,
+  reportContractQa = null,
+  qaActionPlan = null,
+  prioritizedActions = [],
+  contractViolations = [],
+  deterministicFlags = [],
+  sourceNeedsDocs = false,
+  customerDeliveryBlockerAction = null,
+  managerContradictionAction = null,
+  managerContradictionBlocksCustomer = false,
+  reconciliationViolation = null,
+  publicOrOutreachOnlyAction = null,
+}) {
+  const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
+  const t12Ready = Boolean(sourceInventory?.t12_parsed?.present && sourceInventory?.t12_parsed?.has_core_totals);
+  const rentRollReady = Boolean(sourceInventory?.rent_roll_parsed?.present);
+  const requiredCoreCoverageReady = t12Ready && rentRollReady;
+
+  const deterministicPublicSampleBlockers = uniqueCodes(
+    (Array.isArray(deterministicFlags) ? deterministicFlags : [])
+      .filter((flag) => String(flag?.routing || "") === "public_sample_blocker")
+      .map((flag) => flag?.code)
+  );
+  const actionRows = Array.isArray(prioritizedActions) ? prioritizedActions : [];
+  const customerActionBlockers = actionRows
+    .filter((action) => isManagerContradictionAction(action) ? managerContradictionBlocksCustomer : classifyActionDeliveryImpact(action) === "customer_delivery_blocker")
+    .map((action) => action?.code);
+  const publicSampleActionBlockers = actionRows
+    .filter((action) => Boolean(action?.blocks_public_sample))
+    .map((action) => action?.code);
+  const outreachActionBlockers = actionRows
+    .filter((action) => Boolean(action?.blocks_high_value_outreach))
+    .map((action) => action?.code);
+  const advisoryOnlyFindings = uniqueCodes([
+    ...actionRows
+      .filter((action) => classifyActionDeliveryImpact(action) === "advisory_only")
+      .map((action) => action?.code),
+    ...((Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => !violation?.blocks_customer_delivery && !violation?.blocks_public_sample && !violation?.blocks_high_value_outreach)
+      .map((violation) => violation?.code)),
+  ]);
+
+  const contractCustomerBlockingViolations = uniqueCodes(
+    (Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => isCustomerPublishBlockingViolation(violation))
+      .map((violation) => violation?.code)
+  );
+  const contractPublicSampleBlockers = uniqueCodes(
+    (Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => Boolean(violation?.blocks_public_sample))
+      .map((violation) => violation?.code)
+  );
+  const contractOutreachBlockers = uniqueCodes(
+    (Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => Boolean(violation?.blocks_high_value_outreach))
+      .map((violation) => violation?.code)
+  );
+
+  const customerPublishBlockers = uniqueCodes([
+    ...(sourceNeedsDocs ? [
+      reasonCode,
+      customerDeliveryBlockerAction?.code,
+    ] : []),
+    ...contractCustomerBlockingViolations,
+    ...customerActionBlockers,
+    ...(managerContradictionAction && managerContradictionBlocksCustomer ? [managerContradictionAction.code] : []),
+    ...(reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation) ? [reconciliationViolation.code] : []),
+  ]);
+
+  const publicSampleBlockers = uniqueCodes([
+    ...contractPublicSampleBlockers,
+    ...publicSampleActionBlockers,
+    ...deterministicPublicSampleBlockers,
+    ...(qaActionPlan?.public_sample_ready === false && contractPublicSampleBlockers.length === 0 && publicSampleActionBlockers.length === 0
+      ? ["PUBLIC_SAMPLE_NOT_READY"]
+      : []),
+  ]);
+
+  const highValueOutreachBlockers = uniqueCodes([
+    ...contractOutreachBlockers,
+    ...outreachActionBlockers,
+    ...publicSampleBlockers,
+    ...(qaActionPlan?.high_value_outreach_ready === false &&
+      contractOutreachBlockers.length === 0 &&
+      outreachActionBlockers.length === 0 &&
+      publicSampleBlockers.length === 0
+      ? ["HIGH_VALUE_OUTREACH_NOT_READY"]
+      : []),
+  ]);
+
+  const regenerationRecommended = Boolean(
+    qaActionPlan?.regenerate_recommended ||
+    actionRows.some((action) => action?.requires_regeneration) ||
+    contractViolations.some((violation) => isRegenerationRequiredViolation(violation))
+  );
+  const regenerationRequiredForCustomerDelivery = Boolean(
+    customerPublishBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase()))
+  );
+  const regenerationRequiredForPublicSample = Boolean(
+    publicSampleBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase())) ||
+    highValueOutreachBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase()))
+  );
+  const regenerationRequired = regenerationRequiredForCustomerDelivery || regenerationRequiredForPublicSample;
+
+  const customerPublishEligible = Boolean(
+    deliveryGateStatus === "deliverable" &&
+    requiredCoreCoverageReady &&
+    !sourceNeedsDocs &&
+    customerPublishBlockers.length === 0 &&
+    !Boolean(reportContractQa?.customer_delivery_ready === false) &&
+    !Boolean(qaActionPlan?.customer_delivery_ready === false)
+  );
+
+  const publishDecisionReason = customerPublishEligible
+    ? "customer_publish_eligible"
+    : sourceNeedsDocs
+    ? `user_needs_documents:${reasonCode || customerPublishBlockers[0] || "SOURCE_DOCUMENT_LIMITATION"}`
+    : deliveryGateStatus === "admin_review_required"
+    ? `admin_review_required:${reasonCode || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
+    : customerPublishBlockers.length > 0
+    ? `customer_blocked:${customerPublishBlockers[0]}`
+    : publicSampleBlockers.length > 0 || highValueOutreachBlockers.length > 0
+    ? "customer_publish_ready_public_sample_or_outreach_blocked"
+    : requiredCoreCoverageReady
+    ? "customer_publish_ready"
+    : "customer_publish_not_ready";
+
+  return {
+    customer_publish_eligible: customerPublishEligible,
+    customer_publish_blockers: customerPublishBlockers,
+    public_sample_blockers: publicSampleBlockers,
+    high_value_outreach_blockers: highValueOutreachBlockers,
+    advisory_only_findings: advisoryOnlyFindings,
+    regeneration_recommended: regenerationRecommended,
+    regeneration_required_for_customer_delivery: regenerationRequiredForCustomerDelivery,
+    regeneration_required_for_public_sample: regenerationRequiredForPublicSample,
+    regeneration_required: regenerationRequired,
+    admin_review_required: deliveryGateStatus === "admin_review_required",
+    user_needs_documents: deliveryGateStatus === "user_needs_documents",
+    publish_decision_reason: publishDecisionReason,
+  };
+}
+
 function classifyActionDeliveryImpact(action) {
   const code = String(action?.code || "").toUpperCase();
   const actionType = String(action?.action_type || "");
@@ -737,6 +941,7 @@ function classifyActionDeliveryImpact(action) {
   const customerDeliveryBlockerCodes = new Set([
     "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
     "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+    "UNSUPPORTED_CURRENT_DEBT_RENDERED",
     "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
   ]);
   const publicOrOutreachOnlyCodes = new Set([
@@ -823,6 +1028,23 @@ export function buildDeliveryGateDecision({
       sourceLimitations[0]?.code ||
       sourceStatus ||
       "SOURCE_DOCUMENT_LIMITATION";
+    const publishEligibility = buildPublishEligibilitySummary({
+      deliveryGateStatus: "user_needs_documents",
+      reasonCode: gateReason,
+      sourceReportCoverageQa,
+      reportContractQa,
+      qaActionPlan,
+      prioritizedActions,
+      contractViolations,
+      deterministicFlags,
+      sourceNeedsDocs: true,
+      customerDeliveryBlockerAction,
+      managerContradictionAction,
+      managerContradictionBlocksCustomer,
+      reconciliationViolation,
+      publicOrOutreachOnlyAction,
+      adminReviewAction: null,
+    });
     return {
       delivery_gate_status: "user_needs_documents",
       reason_code: gateReason,
@@ -832,6 +1054,7 @@ export function buildDeliveryGateDecision({
       customer_delivery_ready: false,
       public_sample_ready: false,
       high_value_outreach_ready: false,
+      ...publishEligibility,
     };
   }
   const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || reconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null));
@@ -844,6 +1067,23 @@ export function buildDeliveryGateDecision({
       reasonCodeForAction(customerDeliveryBlockerAction) ||
       reasonCodeForAction(managerContradictionAction) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
+    const publishEligibility = buildPublishEligibilitySummary({
+      deliveryGateStatus: "admin_review_required",
+      reasonCode,
+      sourceReportCoverageQa,
+      reportContractQa,
+      qaActionPlan,
+      prioritizedActions,
+      contractViolations,
+      deterministicFlags,
+      sourceNeedsDocs,
+      customerDeliveryBlockerAction,
+      managerContradictionAction,
+      managerContradictionBlocksCustomer,
+      reconciliationViolation,
+      publicOrOutreachOnlyAction,
+      adminReviewAction: customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null,
+    });
     return {
       delivery_gate_status: "admin_review_required",
       reason_code: reasonCode,
@@ -853,8 +1093,27 @@ export function buildDeliveryGateDecision({
       customer_delivery_ready: false,
       public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
       high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+      ...publishEligibility,
     };
   }
+
+  const publishEligibility = buildPublishEligibilitySummary({
+    deliveryGateStatus: "deliverable",
+    reasonCode: null,
+    sourceReportCoverageQa,
+    reportContractQa,
+    qaActionPlan,
+    prioritizedActions,
+    contractViolations,
+    deterministicFlags,
+    sourceNeedsDocs,
+    customerDeliveryBlockerAction,
+    managerContradictionAction,
+    managerContradictionBlocksCustomer,
+    reconciliationViolation,
+    publicOrOutreachOnlyAction,
+    adminReviewAction: null,
+  });
 
   return {
     delivery_gate_status: "deliverable",
@@ -871,6 +1130,7 @@ export function buildDeliveryGateDecision({
       Boolean(qaActionPlan?.high_value_outreach_ready) &&
       !customerDeliveryBlockerAction &&
       !publicOrOutreachOnlyAction,
+    ...publishEligibility,
   };
 }
 
