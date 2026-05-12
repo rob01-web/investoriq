@@ -103,7 +103,7 @@ function replaceAll(str, token, value) {
   if (!str || !token) return str;
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
 }
-const DATA_NOT_AVAILABLE = "DATA NOT AVAILABLE (not present in uploaded documents)";
+const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
 const coerceNumber = (value) => {
   const raw = String(value ?? "").trim();
@@ -186,6 +186,27 @@ function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
     annualDebtService,
     dscr,
     hasSourcePayment: Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0,
+  };
+}
+function currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload } = {}) {
+  if (mortgagePayload) {
+    return {
+      value: "Not assessed",
+      explanation: "Current debt terms were not fully provided",
+      band: "Current debt balance, rate, and amortization not fully provided",
+    };
+  }
+  if (loanTermSheetTermsPayload) {
+    return {
+      value: "Not assessed",
+      explanation: "Current debt balance not provided",
+      band: "Current debt balance not provided",
+    };
+  }
+  return {
+    value: "Not assessed",
+    explanation: "No current debt document provided",
+    band: "No current debt document provided",
   };
 }
 function isFiniteNumber(x) {
@@ -562,7 +583,7 @@ function sanitizeTypography(html) {
 function dedupeDataNotAvailableBySection(html) {
   if (typeof html !== "string") return html;
   const sectionPattern = /<!-- BEGIN ([A-Z0-9_]+) -->([\s\S]*?)<!-- END \1 -->/g;
-  const shortDna = "DATA NOT AVAILABLE";
+  const shortDna = "Not assessed";
   return html.replace(sectionPattern, (full, token, body) => {
     if (typeof body !== "string" || !body.includes(DATA_NOT_AVAILABLE)) return full;
     if (token === "SECTION_8_DEAL_SCORE") {
@@ -3512,7 +3533,7 @@ if (effectiveReportMode === "screening_v1") {
     let miniSensitivityHtml = "";
     if (decisionContextInputs.some((v) => Number.isFinite(v))) {
       const formatDecisionValue = (v) =>
-        Number.isFinite(v) ? `${v.toFixed(1)}%` : DATA_NOT_AVAILABLE;
+        Number.isFinite(v) ? `${v.toFixed(1)}%` : "Not assessed";
       passChecks = [
         {
           label: "Expense Ratio < 55%",
@@ -3553,7 +3574,7 @@ if (effectiveReportMode === "screening_v1") {
             ? row.test(row.value)
               ? "PASS"
               : "FAIL"
-            : "DATA NOT AVAILABLE";
+            : "Not assessed";
           return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
             formatDecisionValue(row.value)
           )})</li>`;
@@ -3565,7 +3586,7 @@ if (effectiveReportMode === "screening_v1") {
             ? row.test(row.value)
               ? "TRIGGERED"
               : "NOT TRIGGERED"
-            : "DATA NOT AVAILABLE";
+            : "Not assessed";
           return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
             formatDecisionValue(row.value)
           )})</li>`;
@@ -5109,15 +5130,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       if (!hasDscrScore) {
         totalPoints += 0; maxPoints += 10;
-        const dscrNotAssessedDebtSizingMissing = Boolean(loanTermSheetTermsPayload);
+        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload });
         scoreRows.push({
           label: "Current Debt DSCR",
-          value: dscrNotAssessedDebtSizingMissing
-            ? "Not assessed: current outstanding debt balance not provided"
-            : DATA_NOT_AVAILABLE,
+          value: dscrNotAssessedCopy.value,
           pts: 0,
           max: 10,
-          band: dscrNotAssessedDebtSizingMissing ? "" : "Debt terms not provided",
+          band: dscrNotAssessedCopy.band,
         });
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
@@ -5427,27 +5446,26 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           const ay = coerceNumber(mortgagePayload.amort_years) || 25;
           const an = coerceNumber(t12Payload?.net_operating_income);
           const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, an);
-          if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
-            const dscr = currentDebtCoverage.dscr;
-            if (Number.isFinite(dscr) && dscr > 0) {
-              const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
-              const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-              addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
-            }
-          } else {
-            addRisk("Current Debt DSCR", "Current debt terms incomplete", "Requires current debt balance + rate + amortization", "NOT ASSESSED", "#9CA3AF");
+        if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+          const dscr = currentDebtCoverage.dscr;
+          if (Number.isFinite(dscr) && dscr > 0) {
+            const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
+            const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
+            addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
           }
         } else {
-          addRisk(
-            "Current Debt DSCR",
-            loanTermSheetTermsPayload ? "Current outstanding debt balance not provided" : "No current debt document uploaded",
-            loanTermSheetTermsPayload
-              ? "Current debt service is not assessed because no current outstanding debt balance was provided."
-              : "Current debt terms were not included in the uploaded documents",
-            "NOT ASSESSED",
-            "#9CA3AF"
-          );
+          const dscrNotAssessedCopy = currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload });
+          addRisk("Current Debt DSCR", dscrNotAssessedCopy.value, dscrNotAssessedCopy.explanation, "NOT ASSESSED", "#9CA3AF");
         }
+      } else {
+        addRisk(
+          "Current Debt DSCR",
+          currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload }).value,
+          currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload }).explanation,
+          "NOT ASSESSED",
+          "#9CA3AF"
+        );
+      }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
             `<p class="subsection-title" style="margin-bottom:8px;">Risk Register: Deterministic Signal Summary</p>` +
@@ -5866,7 +5884,7 @@ try {
     debtTermsPresent &&
     !dscrAssessedFromDebtRows &&
     htmlString.includes("DSCR") &&
-    /Current Debt DSCR[^<]{0,120}(?:Not Assessed|DATA NOT AVAILABLE)|current outstanding debt balance not provided/i.test(htmlString)
+    /Current Debt DSCR[^<]{0,120}(?:Not assessed|current outstanding debt balance not provided)|current outstanding debt balance not provided/i.test(htmlString)
   ) {
     qaFlags.push({
       code: "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",

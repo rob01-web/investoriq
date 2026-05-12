@@ -98,6 +98,42 @@ function addViolation(violations, violation) {
   });
 }
 
+function excerptAround(text, needle, radius = 140) {
+  const source = String(text || "");
+  const index = source.toUpperCase().indexOf(String(needle || "").toUpperCase());
+  if (index < 0) return source.slice(0, Math.min(source.length, radius * 2)).trim();
+  return source
+    .slice(Math.max(0, index - radius), Math.min(source.length, index + String(needle || "").length + radius))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function firstPatternExcerpt(text, patterns, radius = 140) {
+  const source = String(text || "");
+  for (const pattern of Array.isArray(patterns) ? patterns : []) {
+    const match = pattern.exec(source);
+    if (!match) continue;
+    return source
+      .slice(Math.max(0, match.index - radius), Math.min(source.length, match.index + match[0].length + radius))
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  return "";
+}
+
+function addRenderedLeakViolation(violations, { code, severity = "high", category = "report_contract", message, evidence, blocksCustomerDelivery = true }) {
+  addViolation(violations, {
+    code,
+    severity,
+    category,
+    message,
+    evidence,
+    blocks_customer_delivery: blocksCustomerDelivery,
+    blocks_public_sample: true,
+    blocks_high_value_outreach: true,
+  });
+}
+
 function windowAfter(text, pattern, chars = 1400) {
   const match = pattern.exec(text);
   if (!match) return "";
@@ -242,6 +278,127 @@ export function buildReportContractQa({
       ? annualInPlaceRentTotal / 12 / totalUnits
       : null;
 
+  const reportTypeIsScreeningReport = reportTypeIsScreening(reportType, reportTier);
+  const reportTypeLabel = reportTypeIsScreeningReport ? "screening" : "underwriting";
+
+  const leakProbeExcerpt = firstPatternExcerpt(text, [
+    /\bDATA NOT AVAILABLE\b/i,
+    /\bN\/A\b/i,
+    /\bundefined\b/i,
+    /\bnull\b/i,
+    /\bNaN\b/i,
+    /\[object Object\]/i,
+    /\{\{[^}]+\}\}/,
+    /__TOKEN__[A-Z0-9_]*__/i,
+    /%%[A-Z0-9_]+%%/i,
+  ]);
+  const hasDealScorecardDscrPlaceholder =
+    /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
+    /Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
+    /DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text);
+  const hasMetricNaPlaceholder =
+    /\b(?:DSCR|NOI|IRR|Cap Rate|Occupancy|Rent|Score|Value|Return|LTV|ROI|payback)\b[\s\S]{0,60}\bN\/A\b/i.test(text);
+  const hasTemplateTokenLeak =
+    /\{\{[^}]+\}\}|__TOKEN__|__[_A-Z0-9]+__|%%[A-Z0-9_]+%%/i.test(text);
+  const hasMojibakeLeak =
+    /â€|Â|â€¢|â†’|â€”|â€“|â€œ|â€|Ã[\x80-\xBF]/i.test(text);
+  const hasPublicLanguageLeak =
+    containsProhibitedPublicLanguage(text) ||
+    /\b(?:AI|OpenAI|LLM|model-generated|vendor-generated|investment advice|investment recommendation)\b/i.test(text) ||
+    /\bguaranteed\b|\brisk-free\b|\berror-free\b|\bcertain return\b/i.test(text);
+  const hasInternalDebugLeak =
+    /\badmin review\b/i.test(text) ||
+    /\bQA manager\b/i.test(text) ||
+    /\bQA director\b/i.test(text) ||
+    /\bparser\b/i.test(text) ||
+    /\bartifact\b/i.test(text) ||
+    /\binternal QA\b/i.test(text) ||
+    /\binternal debug\b/i.test(text) ||
+    /\binternal parser\b/i.test(text) ||
+    /\binternal artifact\b/i.test(text) ||
+    /\bworker_event\b/i.test(text) ||
+    /\bdelivery_gate\b/i.test(text);
+  const hasScreeningLeakInUnderwriting =
+    !reportTypeIsScreeningReport &&
+    /\b(?:Screening|Insufficient Data)\b/i.test(text);
+  const hasUnderwritingLeakInScreening =
+    reportTypeIsScreeningReport &&
+    /\b(?:Debt Structure|Current Debt Coverage|Refinance Stability Classification|Discounted Cash Flow|DCF|Deal Scorecard|Advanced Modeling|Final Recommendation|Renovation Strategy)\b/i.test(text);
+
+  if (hasDealScorecardDscrPlaceholder) {
+    addRenderedLeakViolation(violations, {
+      code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+      severity: "high",
+      message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+      evidence: { excerpt: firstPatternExcerpt(text, [/Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i]) || leakProbeExcerpt },
+    });
+  } else if (/\bDATA NOT AVAILABLE\b/i.test(text)) {
+    addRenderedLeakViolation(violations, {
+      code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+      severity: "high",
+      message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+      evidence: { excerpt: firstPatternExcerpt(text, [/\bDATA NOT AVAILABLE\b/i]) || leakProbeExcerpt },
+    });
+  }
+  if (hasMetricNaPlaceholder) {
+    addRenderedLeakViolation(violations, {
+      code: "RENDERED_PLACEHOLDER_METRIC_VALUE",
+      severity: "high",
+      message: "Rendered report uses N/A as a metric value where a clean omission or disclosure is required.",
+      evidence: { excerpt: firstPatternExcerpt(text, [/\bN\/A\b/i]) || leakProbeExcerpt },
+    });
+  }
+  if (/\bundefined\b/i.test(text) || /\bnull\b/i.test(text) || /\bNaN\b/i.test(text) || /\[object Object\]/i.test(text)) {
+    addRenderedLeakViolation(violations, {
+      code: "RENDERED_PLACEHOLDER_VALUE_LEAK",
+      severity: "high",
+      message: "Rendered report contains raw placeholder value leakage.",
+      evidence: { excerpt: leakProbeExcerpt },
+    });
+  }
+  if (hasTemplateTokenLeak) {
+    addRenderedLeakViolation(violations, {
+      code: "RENDERED_TEMPLATE_TOKEN_LEAK",
+      severity: "high",
+      message: "Rendered report contains unresolved template token remnants.",
+      evidence: { excerpt: leakProbeExcerpt },
+    });
+  }
+  if (hasMojibakeLeak) {
+    addRenderedLeakViolation(violations, {
+      code: "RENDERED_MOJIBAKE_LEAK",
+      severity: "high",
+      message: "Rendered report contains mojibake or encoding garbage.",
+      evidence: { excerpt: leakProbeExcerpt },
+    });
+  }
+  if (hasPublicLanguageLeak) {
+    addRenderedLeakViolation(violations, {
+      code: "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
+      severity: "critical",
+      category: "public_language",
+      message: "Rendered report contains prohibited public language.",
+      evidence: { excerpt: leakProbeExcerpt },
+      blocksCustomerDelivery: true,
+    });
+  }
+  if (hasInternalDebugLeak) {
+    addRenderedLeakViolation(violations, {
+      code: "INTERNAL_DEBUG_LANGUAGE_LEAK",
+      severity: "high",
+      message: "Rendered report contains internal or debug language that should not appear in customer-facing output.",
+      evidence: { excerpt: leakProbeExcerpt },
+    });
+  }
+  if (hasScreeningLeakInUnderwriting || hasUnderwritingLeakInScreening) {
+    addRenderedLeakViolation(violations, {
+      code: "REPORT_TYPE_SECTION_LEAK",
+      severity: "high",
+      message: "Rendered report contains section labels that conflict with the report type.",
+      evidence: { report_type: reportTypeLabel, excerpt: leakProbeExcerpt },
+    });
+  }
+
   if (
     materiallyDifferent(impliedAvgMarketRent, weightedAvgMarketRent) ||
     materiallyDifferent(impliedAvgInPlaceRent, weightedAvgInPlaceRent)
@@ -369,6 +526,10 @@ export function buildReportContractQa({
 
   const derivedAcq = hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
   const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
+  const hasCurrentDebtTermsSupport =
+    Boolean(sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed?.present) ||
+    Boolean(sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed?.present) ||
+    hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
       /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
@@ -401,7 +562,7 @@ export function buildReportContractQa({
 
   if (!hasStructuredRenovation(artifacts)) {
     const renovationUnsupported =
-      /Renovation (?:ROI|Return)|payback analysis|rent lift|implementation schedule/i.test(text) &&
+      /Renovation (?:ROI|Return)|value-add return|payback analysis|rent lift|phasing|implementation schedule/i.test(text) &&
       !/No renovation return, rent lift, ROI, or payback analysis is modeled|not modeled as a prospective renovation strategy|no verified forward-looking/i.test(text);
     if (renovationUnsupported) {
       addViolation(violations, {
@@ -414,17 +575,26 @@ export function buildReportContractQa({
     }
   }
 
-  if (!currentDebt) {
+  if (!currentDebt || !hasCurrentDebtTermsSupport) {
     const currentDebtUnsupported =
       /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,120}?(?:0\/10|Debt terms not provided)/i.test(text) ||
       /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text);
     if (currentDebtUnsupported) {
       addViolation(violations, {
-        code: "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+        code: "UNSUPPORTED_CURRENT_DEBT_RENDERED",
         severity: "critical",
         category: "section_gating_contract",
         message: "Current debt analysis rendered without true current debt balance support.",
-        evidence: { current_debt_balance_present: false },
+        evidence: {
+          current_debt_balance_present: false,
+          current_debt_terms_present: hasCurrentDebtTermsSupport,
+          excerpt: firstPatternExcerpt(text, [
+            /Current Debt DSCR[\s\S]{0,120}?(?:0\/10|Debt terms not provided)/i,
+            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i,
+            /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
+          ]),
+        },
         blocks_customer_delivery: true,
       });
     }
