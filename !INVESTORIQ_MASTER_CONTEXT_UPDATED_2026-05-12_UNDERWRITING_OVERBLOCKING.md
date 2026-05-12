@@ -1108,6 +1108,10 @@ After Codex returns file truth, classify the issue as renderer leak, contract fa
     - `QA_MANAGER_MODEL=gpt-4o`
     - `QA_SOURCE_PACKAGE_MODEL=gpt-4o`
     - `QA_REVIEW_MODEL=gpt-4o`
+  - supporting-doc recovery env:
+    - `ENABLE_AI_SUPPORT_DOC_RECOVERY=true`
+    - `OPENAI_SUPPORT_DOC_RECOVERY_MODEL=gpt-4.1-mini`
+    - `OPENAI_SUPPORT_DOC_RECOVERY_TIMEOUT_MS=55000`
   - reviews:
     - `rendered_report_qa_advisory`
     - `source_package_qa_advisory`
@@ -2124,9 +2128,11 @@ After Codex returns file truth, classify the issue as renderer leak, contract fa
   - production env model settings:
     - `OPENAI_T12_RECOVERY_MODEL=gpt-4o`
     - `OPENAI_RENT_ROLL_RECOVERY_MODEL=gpt-4o-mini`
+    - `OPENAI_SUPPORT_DOC_RECOVERY_MODEL=gpt-4.1-mini`
   - rationale:
     - T12 controls EGI, OpEx, NOI, DSCR, refinance, valuation, and score optics, so T12 recovery uses a stronger model than mini
     - compact rent roll recovery can remain on `gpt-4o-mini` unless failures appear
+    - supporting-doc recovery uses `gpt-4.1-mini` because it is a higher-leverage extraction layer and should follow stronger instruction fidelity than the cheapest mini path
     - model output remains candidate extraction only
     - deterministic validation and cross-document gates remain source of truth
     - public / customer copy must still not mention AI
