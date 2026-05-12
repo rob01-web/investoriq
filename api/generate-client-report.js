@@ -1042,21 +1042,40 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
   const ltv = coerceNumber(loanTermSheetTermsPayload.ltv);
   const loanAmount = coerceNumber(loanTermSheetTermsPayload.derived_acquisition_loan_amount);
   const ratePct = coerceNumber(loanTermSheetTermsPayload.interest_rate);
-  const amortYears = coerceNumber(loanTermSheetTermsPayload.amort_years);
-  if (
-    !Number.isFinite(purchasePrice) || purchasePrice <= 0 ||
-    !Number.isFinite(ltv) || ltv <= 0 ||
-    !Number.isFinite(loanAmount) || loanAmount <= 0 ||
-    !Number.isFinite(ratePct) || ratePct <= 0 ||
-    !Number.isFinite(amortYears) || amortYears <= 0
-  ) {
-    return "";
-  }
+  const amortYears = coerceNumber(loanTermSheetTermsPayload.amortization_years ?? loanTermSheetTermsPayload.amort_years);
+  const goingInCapRate = coerceNumber(loanTermSheetTermsPayload.going_in_cap_rate);
+  const closingCostsPercent = coerceNumber(loanTermSheetTermsPayload.closing_costs_percent);
+  const hasMeaningfulAcquisitionField = [
+    purchasePrice,
+    ltv,
+    loanAmount,
+    ratePct,
+    amortYears,
+    goingInCapRate,
+    closingCostsPercent,
+  ].some((value) => Number.isFinite(value) && value > 0);
+  if (!hasMeaningfulAcquisitionField) return "";
 
   const noi = coerceNumber(t12Payload?.net_operating_income);
+  const limitations = [];
+  if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+    limitations.push("Purchase price was not verified in the uploaded documents.");
+  }
+  if (!Number.isFinite(ltv) || ltv <= 0) {
+    limitations.push("Acquisition debt sizing was not modeled because LTV was not verified in the uploaded documents.");
+  }
+  if (!Number.isFinite(ratePct) || ratePct <= 0) {
+    limitations.push("Estimated acquisition debt service was not modeled because the interest rate was not verified.");
+  }
+  if (!Number.isFinite(amortYears) || amortYears <= 0) {
+    limitations.push("Estimated acquisition debt service was not modeled because amortization was not verified.");
+  }
   const mortgageConstant = computeMortgageConstant(ratePct / 100, amortYears);
   const annualDebtService =
-    Number.isFinite(mortgageConstant) && mortgageConstant > 0
+    Number.isFinite(loanAmount) &&
+    loanAmount > 0 &&
+    Number.isFinite(mortgageConstant) &&
+    mortgageConstant > 0
       ? loanAmount * mortgageConstant
       : null;
   const acquisitionDscr =
@@ -1064,12 +1083,14 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
       ? noi / annualDebtService
       : null;
   const rows = [
-    ["Purchase Price", formatCurrency(purchasePrice)],
-    ["Documented LTV", formatPercent1(ltv)],
-    ["Derived Acquisition Loan Amount", formatCurrency(loanAmount)],
-    ["Interest Rate", formatInterestRatePercent(ratePct)],
-    ["Amortization", `${Math.round(amortYears)} years`],
-  ];
+    Number.isFinite(purchasePrice) && purchasePrice > 0 ? ["Purchase Price", formatCurrency(purchasePrice)] : null,
+    Number.isFinite(ltv) && ltv > 0 ? ["Documented LTV", formatPercent1(ltv)] : null,
+    Number.isFinite(loanAmount) && loanAmount > 0 ? ["Derived Acquisition Loan Amount", formatCurrency(loanAmount)] : null,
+    Number.isFinite(ratePct) && ratePct > 0 ? ["Interest Rate", formatInterestRatePercent(ratePct)] : null,
+    Number.isFinite(amortYears) && amortYears > 0 ? ["Amortization", `${Math.round(amortYears)} years`] : null,
+    Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? ["Going-In Cap Rate", formatPercent1(goingInCapRate)] : null,
+    Number.isFinite(closingCostsPercent) && closingCostsPercent >= 0 ? ["Closing Costs", formatPercent1(closingCostsPercent)] : null,
+  ].filter(Boolean);
   if (Number.isFinite(annualDebtService) && annualDebtService > 0) {
     rows.push(["Estimated Annual Debt Service", formatCurrency(annualDebtService)]);
   }
@@ -1077,7 +1098,11 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
     rows.push(["Proposed Acquisition DSCR", formatMultiple(acquisitionDscr, 2)]);
   }
 
-  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
+  const limitationHtml = limitations.length
+    ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(limitations.join(" "))}</p>`
+    : "";
+
+  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
 }
 function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
   const f = financials && typeof financials === "object" ? financials : {};
@@ -1408,7 +1433,7 @@ function buildScreeningIncomeForensicsHtml({
     annualInPlace > 0
       ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Revenue Upside Quantification</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent (100% Occupancy)</td><td>${formatCurrency(annualMarket)}</td></tr><tr><td>Gross Rent Upside</td><td>${formatCurrency(annualMarket - annualInPlace)} (${(((annualMarket - annualInPlace) / annualInPlace) * 100).toFixed(1)}%)</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">All values document derived from uploaded rent roll. Market rents as stated in document.</p></div>`
       : "";
-  if (incomeLines.length < 2 || expenseLines.length < 2) {
+  if (incomeLines.length === 0 && expenseLines.length === 0) {
     // Lump-sum T12: no line items; return summary-level fallback card
     const egi = coerceNumber(t12Payload?.effective_gross_income);
     const opex = coerceNumber(t12Payload?.total_operating_expenses);
@@ -6755,6 +6780,8 @@ try {
 }
 
 export const __test__ = {
+  buildAcquisitionFinancingAssumptionsHtml,
+  buildT12SummaryHtml,
   materiallyDifferent,
   resolveSafeAnnualRentTotal,
 };

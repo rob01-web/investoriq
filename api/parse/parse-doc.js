@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
+import { recoverAcquisitionPurchaseAssumptionsWithAI } from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
 
@@ -3780,6 +3781,24 @@ export default async function handler(req, res) {
             return m ? Number(m[1]) : null;
           })();
 
+          const going_in_cap_rate =
+            extractPercentNear(rawText, [
+              'going in cap rate',
+              'going-in cap rate',
+              'entry cap rate',
+              'purchase cap rate',
+              'going in capitalization rate',
+            ]);
+
+          const closing_costs_percent =
+            extractPercentNear(rawText, [
+              'closing costs',
+              'closing cost',
+              'acquisition closing costs',
+              'transaction costs',
+              'acquisition costs',
+            ]);
+
           const interest_rate =
             compact_interest_rate ??
             extractPercentNear(rawText, [
@@ -3811,22 +3830,109 @@ export default async function handler(req, res) {
           let derived_acquisition_loan_amount = null;
           if (!loan_amount && Number.isFinite(purchase_price) && purchase_price > 0 && Number.isFinite(ltv) && ltv > 0 && ltv <= 100) {
             derived_acquisition_loan_amount = Math.round(purchase_price * (ltv / 100));
-            parse_warnings.push('loan_amount_derived_from_purchase_price_and_ltv');
+            if (!parse_warnings.includes('loan_amount_derived_from_purchase_price_and_ltv')) {
+              parse_warnings.push('loan_amount_derived_from_purchase_price_and_ltv');
+            }
           }
           if (!loan_amount && !derived_acquisition_loan_amount) parse_warnings.push('missing_loan_amount');
+
+          const isValidPurchasePrice = (value) =>
+            Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidLtv = (value) => Number.isFinite(value) && value > 0 && value <= 100;
+          const isValidInterestRate = (value) => Number.isFinite(value) && value > 0 && value <= 30;
+          const isValidAmortYears = (value) => Number.isFinite(value) && value > 0 && value <= 50;
+          const isValidCapRate = (value) => Number.isFinite(value) && value > 0 && value <= 20;
+          const isValidClosingCostsPercent = (value) =>
+            Number.isFinite(value) && value >= 0 && value <= 20;
+
+          const maybeAiAcquisitionRecovery =
+            !Number.isFinite(purchase_price) ||
+            !Number.isFinite(ltv) ||
+            !Number.isFinite(interest_rate) ||
+            !Number.isFinite(amort_years) ||
+            !Number.isFinite(going_in_cap_rate) ||
+            !Number.isFinite(closing_costs_percent)
+              ? await recoverAcquisitionPurchaseAssumptionsWithAI({
+                  text: rawText,
+                  filename: fileRow.original_filename,
+                  jobId,
+                })
+              : null;
+
+          const mergeValidatedAcquisitionField = (aiValue, deterministicValue, predicate) => {
+            if (predicate(deterministicValue)) return deterministicValue;
+            if (predicate(aiValue)) return aiValue;
+            return null;
+          };
+
+          const validatedPurchasePrice = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.purchase_price,
+            purchase_price,
+            isValidPurchasePrice
+          );
+          const validatedLtv = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.ltv,
+            ltv,
+            isValidLtv
+          );
+          const validatedInterestRate = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.interest_rate,
+            interest_rate,
+            isValidInterestRate
+          );
+          const validatedAmortYears = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.amortization_years ?? maybeAiAcquisitionRecovery?.amort_years,
+            amort_years,
+            isValidAmortYears
+          );
+          const validatedGoingInCapRate = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.going_in_cap_rate,
+            going_in_cap_rate,
+            isValidCapRate
+          );
+          const validatedClosingCostsPercent = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.closing_costs_percent,
+            closing_costs_percent,
+            isValidClosingCostsPercent
+          );
+
+          let validatedDerivedAcquisitionLoanAmount = derived_acquisition_loan_amount;
+          if (
+            !Number.isFinite(validatedDerivedAcquisitionLoanAmount) &&
+            Number.isFinite(validatedPurchasePrice) &&
+            validatedPurchasePrice > 0 &&
+            Number.isFinite(validatedLtv) &&
+            validatedLtv > 0 &&
+            validatedLtv <= 100
+          ) {
+            validatedDerivedAcquisitionLoanAmount = Math.round(validatedPurchasePrice * (validatedLtv / 100));
+            if (!parse_warnings.includes('loan_amount_derived_from_purchase_price_and_ltv')) {
+              parse_warnings.push('loan_amount_derived_from_purchase_price_and_ltv');
+            }
+          }
+
+          if (maybeAiAcquisitionRecovery && maybeAiAcquisitionRecovery.parse_warnings) {
+            parse_warnings.push(...maybeAiAcquisitionRecovery.parse_warnings);
+          }
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
-            method: 'text_excerpt',
+            method: maybeAiAcquisitionRecovery ? maybeAiAcquisitionRecovery.method : 'text_excerpt',
+            ai_assisted: Boolean(maybeAiAcquisitionRecovery),
+            validated: Boolean(maybeAiAcquisitionRecovery),
             loan_amount,
-            purchase_price,
-            derived_acquisition_loan_amount,
-            debt_basis: derived_acquisition_loan_amount ? 'acquisition_financing_assumption' : null,
-            interest_rate,
-            ltv,
-            amort_years,
+            purchase_price: validatedPurchasePrice,
+            derived_acquisition_loan_amount: validatedDerivedAcquisitionLoanAmount,
+            debt_basis: validatedDerivedAcquisitionLoanAmount ? 'acquisition_financing_assumption' : null,
+            interest_rate: validatedInterestRate,
+            ltv: validatedLtv,
+            amortization_years: validatedAmortYears,
+            amort_years: validatedAmortYears,
+            going_in_cap_rate: validatedGoingInCapRate,
+            closing_costs_percent: validatedClosingCostsPercent,
             refi_cap_rate,
             parse_warnings,
+            ai_recovery_evidence: maybeAiAcquisitionRecovery?.ai_recovery_evidence || null,
           };
         } else if (effectiveDocType === 'renovation') {
           const total_budget = extractDollarNear(rawText, [
