@@ -577,7 +577,7 @@ const managerContradictionGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: managerContradictionPlan,
 });
-assert.equal(managerContradictionGate.delivery_gate_status, "admin_review_required");
+assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },

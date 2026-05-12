@@ -6123,6 +6123,7 @@ try {
         "renovation_parsed",
         "appraisal_parsed",
         "property_tax_parsed",
+        "document_text_extracted",
       ])
       .order("created_at", { ascending: false });
     if (!artifactRowsErr && Array.isArray(artifactRows)) {

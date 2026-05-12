@@ -203,6 +203,24 @@ const acquisitionWithRiskRegisterLimitation = buildReportContractQa({
 assert.equal(acquisitionWithRiskRegisterLimitation.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
 assert.equal(acquisitionWithRiskRegisterLimitation.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
 
+const acquisitionWithScorecardNotAssessed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: acquisitionArtifacts,
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p>",
+    "<p>Derived Acquisition Loan Amount $7,000,000</p>",
+    "<p>Proposed Acquisition DSCR 1.20x</p>",
+    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance. Proposed acquisition financing is shown separately and is not treated as current debt.</p>",
+    "<h2>Deal Scorecard</h2>",
+    "<table><tr><td>Current Debt DSCR</td><td>Not assessed</td><td>0/10</td><td>Current debt balance not provided</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"), false);
+assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
+
 const contaminatedAcquisition = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

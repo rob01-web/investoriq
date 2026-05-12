@@ -576,10 +576,13 @@ export function buildReportContractQa({
   }
 
   if (!currentDebt || !hasCurrentDebtTermsSupport) {
-    const currentDebtUnsupported =
-      /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,120}?(?:0\/10|Debt terms not provided)/i.test(text) ||
+    const numericCurrentDebtDscrRendered =
       /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text);
+    const numericT12CurrentDebtDscrRendered =
+      /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text);
+    const currentDebtUnsupported =
+      numericT12CurrentDebtDscrRendered ||
+      numericCurrentDebtDscrRendered;
     if (currentDebtUnsupported) {
       addViolation(violations, {
         code: "UNSUPPORTED_CURRENT_DEBT_RENDERED",
@@ -590,7 +593,21 @@ export function buildReportContractQa({
           current_debt_balance_present: false,
           current_debt_terms_present: hasCurrentDebtTermsSupport,
           excerpt: firstPatternExcerpt(text, [
-            /Current Debt DSCR[\s\S]{0,120}?(?:0\/10|Debt terms not provided)/i,
+            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i,
+            /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
+          ]),
+        },
+        blocks_customer_delivery: true,
+      });
+      addViolation(violations, {
+        code: "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+        severity: "critical",
+        category: "section_gating_contract",
+        message: "Numeric current-debt analysis rendered without true current debt balance support.",
+        evidence: {
+          current_debt_balance_present: false,
+          current_debt_terms_present: hasCurrentDebtTermsSupport,
+          excerpt: firstPatternExcerpt(text, [
             /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i,
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
           ]),

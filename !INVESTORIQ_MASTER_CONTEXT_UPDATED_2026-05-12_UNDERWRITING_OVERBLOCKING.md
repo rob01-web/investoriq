@@ -1,9 +1,211 @@
 # InvestorIQ Master Context - May 2026
 
-**Last updated:** May 11, 2026 morning - Admin Delivery Gate v1 and Admin Command Centre/Fix Queue are now implemented after Maplewell true-current-debt validation. Maplewell now correctly routes a source-level rent roll/T12 contradiction to admin review instead of publishing, the customer Dashboard shows Under Review for admin-held jobs, and the Admin Fix Queue has been upgraded with readable source-verification wording. DocRaptor remains in test mode until final clean outputs are selected.
+
+## Fresh Chat Brief - May 12 Morning
+
+Use this prompt to start the next chat:
+
+```text
+We are continuing InvestorIQ from the updated master context. The current launch-critical issue is that Full Underwriting tests are repeatedly routing to Admin Review / Fix Queue instead of publishing. Forest City Final Test 3 is held with `UNSUPPORTED_CURRENT_DEBT_RENDERED` / `qa_contract`, severity critical, customer hold, public blocked, outreach blocked, patch required, regeneration required.
+
+This is now an underwriting overblocking crisis, not a one-off report bug. We must stop whack-a-mole. The goal this morning is to make clean Full Underwriting reports publish autonomously while true contradictions and truly unsupported current-debt/refi output still hold.
+
+Do not start by patching. First, prepare an investigation-only Codex prompt. Codex must trace the full path for Forest City Final Test 3:
+1. What exact rendered HTML/text triggered `UNSUPPORTED_CURRENT_DEBT_RENDERED`.
+2. Whether the report actually rendered unsupported current-debt/refi/DSCR analysis, or only safe limitation/acquisition-financing language.
+3. Whether parsed artifacts contain true current debt, proposed acquisition financing only, or both.
+4. How `report_contract_qa` classified the violation.
+5. How `qa_action_plan.buildDeliveryGateDecision()` promoted it into customer hold/admin review.
+6. Whether `qa_manager_review` or source coverage is amplifying source limitations into contradictions.
+7. Whether Admin Dashboard is making the hold harder to interpret because of information overload.
+
+Files to investigate first:
+- `api/generate-client-report.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/qa-action-plan.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/_lib/qa-manager-review.js`
+- `api/admin/queue-metrics.js`
+- `src/pages/AdminDashboard.jsx`
+
+Do not touch `api/admin-run-worker.js`, parser files, Stripe, Supabase schema, DocRaptor, email, public copy, or customer Dashboard unless investigation proves they are relevant.
+
+After Codex returns file truth, classify the issue as renderer leak, contract false positive, gate overpromotion, QA manager source-context drift, admin dashboard display confusion, or combination. Then patch the failure class once, not Forest City only.
+```
+
+
+**Last updated:** May 12, 2026 morning - Admin Delivery Gate v1 correctly prevents unsafe customer delivery, but live validation has exposed a new launch-critical overblocking problem: multiple Full Underwriting jobs are now being routed to Admin Review / Fix Queue instead of publishing. Forest City Final Test 3 is currently held with `UNSUPPORTED_CURRENT_DEBT_RENDERED` / `qa_contract`, even though Forest City is expected to be an acquisition-financing / no-true-current-debt lane and should publish when current-debt sections are safely constrained. The immediate priority is no longer adding more admin dashboard features or patching individual report examples. The priority is a repo-wide, file-truth investigation of the underwriting delivery gate, current-debt/acquisition-debt separation, QA contract promotion logic, and admin dashboard information design so clean underwriting reports can publish autonomously while true contradictions still hold.
 
 ## 1. Current Product State
 - InvestorIQ is in final validation and outreach-prep for Ken Dunn.
+
+
+### May 12 Morning - Launch-Critical Underwriting Overblocking / Admin Review Flood
+
+#### Current observed problem
+- User restarted testing after the May 11 Admin Delivery Gate / Command Centre work.
+- Forest City Final Test 3 is currently held in Admin Review / Fix Queue instead of publishing.
+- Admin queue visible state from screenshots:
+  - Property: `Forest City Final RE TEST 3`
+  - Report: `underwriting`
+  - Severity: `CRITICAL`
+  - Status/Priority: `ADMIN REVIEW REQUIRED`
+  - Stage/source: `qa_contract`
+  - Issue: `Current debt analysis rendered without true current debt balance support`
+  - Code: `UNSUPPORTED_CURRENT_DEBT_RENDERED`
+  - Reason column: `-`
+  - Next step: `Patch deterministic renderer gating so the unsupported table, section, label, or report-type content cannot render.`
+  - Badges shown: `CUSTOMER HOLD`, `PUBLIC BLOCKED`, `OUTREACH BLOCKED`, `PATCH REQUIRED`, `REGENERATION REQUIRED`.
+- Selected detail panel remains overwhelming:
+  - controlled admin actions
+  - delivery gate actions
+  - automation recommendations
+  - automation simulation
+  - job details
+  - action plan details
+  - many sections are visible at once.
+- User finds the Admin Dashboard confusing / information-overload-heavy.
+- Delivery Gate actions remain locked:
+  - `Approve for customer delivery`
+  - `Regenerate report`
+  - `Override public sample block`
+  - `Override outreach block`.
+- Automation recommendations correctly say no automatic action has been taken, but they add more visual complexity.
+- Automation simulation classifies the selected item as human review because admin review hold is active.
+- User is highly frustrated because every Full Underwriting test appears to route to review.
+- This is not acceptable for launch or for Ken Dunn.
+- InvestorIQ cannot require Rob to manually review dozens of reports per day.
+
+#### Why this is launch-critical
+- Admin Review / Fix Queue is valuable only for true exceptions:
+  - deterministic source contradiction
+  - unsupported rendered current debt/refi claims
+  - hard public/internal/debug language
+  - placeholder/mojibake/template leakage
+  - true missing required core source documents
+  - real source/report reconciliation mismatch.
+- Admin Review becomes a product failure if normal Full Underwriting packages repeatedly land there.
+- Correct launch behavior:
+  - clean Screening publishes
+  - clean Full Underwriting publishes
+  - acquisition-financing-only underwriting publishes with current-debt/refi limitation and separate proposed acquisition debt sizing
+  - true-current-debt underwriting publishes when true balance/service/rate/amortization are present and reconcile
+  - true source contradictions hold
+  - missing required docs fail closed / credit restored
+  - public/Ken sample readiness can be stricter than customer delivery, but should not block normal customer delivery without a true customer-delivery blocker.
+
+#### Current suspected failure class
+- This is no longer a one-off Forest City bug.
+- The likely systemic class is one or more of:
+  1. Renderer still emits a current-debt/refi table, label, metric, scorecard row, sensitivity row, or section heading when only acquisition/proposed debt exists.
+  2. `report_contract_qa` is correctly detecting unsupported current-debt rendering, but the renderer contract needs to make that output impossible.
+  3. `report_contract_qa` is over-detecting safe limitation language as unsupported current debt.
+  4. `qa_action_plan` / `buildDeliveryGateDecision()` is still too eager in promoting public-sample or outreach blockers into customer holds.
+  5. Acquisition-financing terms are still leaking into `mortgagePayload`, `refiFinancials`, scorecard, current-debt sensitivity, or report-contract evidence paths.
+  6. AI/QA review layers are still largely judging final rendered output instead of grounding decisions in actual uploaded files and accepted parsed artifacts.
+- Do not assume the right fix is another one-off Forest City patch.
+- Do not patch individual symptoms until Codex investigates the full current-debt/acquisition-debt render + contract + gate path.
+
+#### Important distinction to preserve
+- `UNSUPPORTED_CURRENT_DEBT_RENDERED` can be a correct hard customer blocker if the PDF actually renders current-debt/refi/DSCR analysis without true current debt.
+- It should not block if the PDF only renders safe limitation language such as:
+  - current outstanding debt balance not provided
+  - current debt service not assessed
+  - proposed acquisition debt sizing rendered separately
+  - acquisition debt is not current outstanding debt and is not used as refinance balance.
+- The investigation must distinguish:
+  - actual unsupported current-debt output
+  - safe limitation/disclosure output
+  - proposed acquisition debt output
+  - public-sample-depth polish
+  - customer-delivery safety.
+
+#### Current admin dashboard UX issue
+- Admin Dashboard is now functionally useful but visually overwhelming.
+- Fix Queue selected-item detail should move toward a simpler operator model:
+  - `Why is this held?`
+  - `Is customer delivery blocked?`
+  - `Is this only public/sample/outreach blocked?`
+  - `What exact rendered excerpt or artifact caused the hold?`
+  - `What should I do next?`
+  - `What action is allowed now?`
+- Hide or collapse lower-priority panels by default:
+  - automation recommendations
+  - automation simulation
+  - raw QA action plan
+  - raw artifact details
+  - verbose job details.
+- Keep read-only safety for now; do not add risky mutation buttons until delivery rules are fixed.
+
+#### Files most likely involved
+- `api/generate-client-report.js`
+  - current debt/refi rendering
+  - acquisition financing rendering
+  - `mortgagePayload` / `loanTermSheetTermsPayload`
+  - current debt DSCR fallback wording
+  - Deal Scorecard DSCR/current-debt rows
+  - Refinance Stability section gating
+  - risk register / sensitivity current-debt rows.
+- `api/_lib/report-contract-qa.js`
+  - `UNSUPPORTED_CURRENT_DEBT_RENDERED`
+  - `UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED`
+  - `ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT`
+  - safe limitation language allowances.
+- `api/_lib/qa-action-plan.js`
+  - `classifyActionDeliveryImpact()`
+  - `actionForReportContractViolation()`
+  - `buildDeliveryGateDecision()`
+  - `buildPublishEligibilitySummary()`.
+- `api/_lib/source-report-coverage-qa.js`
+  - source/debt/acquisition inventory interpretation
+  - depth/completeness warnings.
+- `api/_lib/qa-manager-review.js`
+  - possible source-context drift / contradiction overcalling.
+- `api/admin/queue-metrics.js`
+  - Fix Queue display reason / selected-detail payload.
+- `src/pages/AdminDashboard.jsx`
+  - information overload / panel hierarchy / selected-item detail UX.
+
+#### Files not to touch first
+- Do not start with `api/admin-run-worker.js`.
+  - Worker persists delivery gate results; it is likely not the policy source.
+- Do not start with parser patches.
+  - Forest City and related tests generally parse enough to render.
+  - This problem is downstream gate/render/contract behavior unless file-truth proves otherwise.
+- Do not touch Stripe, Supabase schema, email, DocRaptor, public copy, or customer Dashboard for this issue.
+- Do not patch single test fixtures.
+
+#### Codex investigation directive for next chat
+- First task in the fresh chat is a file-truth investigation, not a patch.
+- Inspect exact evidence for Forest City Final Test 3:
+  - rendered HTML excerpts that triggered `UNSUPPORTED_CURRENT_DEBT_RENDERED`
+  - report contract violation evidence
+  - qa action plan blockers
+  - delivery gate decision
+  - parsed debt/acquisition artifacts
+  - whether true current debt balance exists
+  - whether current-debt/refi sections actually rendered or only safe limitation language rendered.
+- Then classify the problem:
+  - renderer leak
+  - contract false positive
+  - gate overpromotion
+  - QA manager source-context drift
+  - admin display confusion
+  - combination.
+- Only after that, patch the failure class once.
+
+#### Stop / go rule for this morning
+- Stop if Codex proposes another narrow report-specific patch without tracing the whole failure path.
+- Go only after we can state:
+  - why Forest City is held
+  - whether the hold is legitimate
+  - what exact code path produced the hold
+  - what category of future reports would be affected
+  - how to prevent repeated clean Underwriting holds.
+- The goal this morning:
+  - clean underwriting reports publish autonomously
+  - true contradictions still hold
+  - Admin Queue becomes exception management, not daily report triage.
 
 ### May 9-11 Maplewell Admin Delivery Gate / Command Centre Milestone
 - Maplewell Full Underwriting true-current-debt lane became the primary live validation fixture after the May 8 parser/QA hardening milestone.
@@ -2830,6 +3032,35 @@
   - Codex-first / micro-patch workflow
 
 ### Exact next task / resume point
+
+- **Immediate resume point - May 12 morning underwriting overblocking crisis:**
+  - Start a fresh chat from this point.
+  - Do not run more live tests until the current Forest City Final Test 3 Admin Review hold is explained from file truth.
+  - Do not patch more one-off symptoms.
+  - First Codex task must be investigation-only.
+  - Investigate why `UNSUPPORTED_CURRENT_DEBT_RENDERED` is triggering on Forest City acquisition/no-true-current-debt underwriting.
+  - Inspect:
+    - `api/generate-client-report.js`
+    - `api/_lib/report-contract-qa.js`
+    - `api/_lib/qa-action-plan.js`
+    - `api/_lib/source-report-coverage-qa.js`
+    - `api/_lib/qa-manager-review.js`
+    - `api/admin/queue-metrics.js`
+    - `src/pages/AdminDashboard.jsx`
+    - current job artifacts for Forest City Final Test 3 if available.
+  - Required classification before any patch:
+    - renderer leak
+    - contract false positive
+    - gate overpromotion
+    - QA manager source-context drift
+    - admin dashboard display confusion
+    - combination.
+  - Required outcome:
+    - customer-delivery blockers are limited to true unsafe/unsupported output or true source contradictions.
+    - public/outreach/sample blockers do not prevent normal customer delivery.
+    - acquisition-only underwriting renders proposed acquisition debt separately and safe current-debt limitation language without being falsely held.
+    - true-current-debt underwriting still renders DSCR/refi only when true balance/service/rate/amortization are present.
+    - Admin Dashboard selected detail becomes simpler and less overwhelming after core gate behavior is fixed.
 
 - **Immediate resume point - May 8 evening after Report Contract QA / AI Director / parser alias hardening:**
   - Deploy the parser alias patches if not already deployed.

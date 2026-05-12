@@ -725,7 +725,6 @@ function isManagerContradictionCustomerBlocking(action, {
   if (!isManagerContradictionAction(action)) return false;
 
   const code = String(action?.code || "").toUpperCase();
-  const actionImpact = classifyActionDeliveryImpact(action);
   const hardPublicLanguage = containsProhibitedPublicLanguage(String(action?.evidence?.evidence_excerpt || ""));
 
   const contractBlocksCustomer = (Array.isArray(contractViolations) ? contractViolations : []).some((violation) => {
@@ -757,15 +756,7 @@ function isManagerContradictionCustomerBlocking(action, {
     );
   });
 
-  if (managerContradictionLimitationCodes.has(code)) {
-    return hardPublicLanguage || contractBlocksCustomer || deterministicBlocksCustomer;
-  }
-
-  return Boolean(action?.blocks_customer_delivery) ||
-    actionImpact === "customer_delivery_blocker" ||
-    hardPublicLanguage ||
-    contractBlocksCustomer ||
-    deterministicBlocksCustomer;
+  return hardPublicLanguage || contractBlocksCustomer || deterministicBlocksCustomer;
 }
 
 function isCustomerPublishBlockingViolation(violation) {

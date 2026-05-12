@@ -110,6 +110,15 @@ function summarizeArtifact(row) {
   if (row?.type === "property_tax_parsed") {
     return { ...summary, annual_tax: payload?.annual_tax ?? null };
   }
+  if (row?.type === "document_text_extracted") {
+    const excerpt = String(payload?.excerpt || payload?.text || "").slice(0, 1600).trim();
+    return {
+      ...summary,
+      original_filename: payload?.original_filename || null,
+      chars: payload?.chars ?? (typeof payload?.text === "string" ? payload.text.length : null),
+      excerpt,
+    };
+  }
   return summary;
 }
 
@@ -233,7 +242,7 @@ const SOURCE_PACKAGE_QA_PROMPT = [
   "You are an internal InvestorIQ source-package QA reviewer.",
   INVESTORIQ_QA_DOCTRINE,
   INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
-  "Review uploaded file treatment, parsed artifact summaries, deterministic coverage QA, rendered QA, and rendered report text.",
+  "Review uploaded file treatment, source document text excerpts, parsed artifact summaries, deterministic coverage QA, rendered QA, and rendered report text.",
   "Filename and upload-slot tokens are never source truth. Do not infer unsupported status from filename tokens such as UNSUPPORTED, TEST, CLEAN, MESSY, or QA unless parse status, deterministic artifacts, or rendered reliance provide separate evidence.",
   "Prioritize source_report_coverage_qa.artifact_inventory over compact raw parsed_artifacts when they differ. For example, if source_report_coverage_qa says rent_roll_parsed occupancy is 1, do not flag occupancy as null from a compact artifact summary.",
   "Missing supplemental parsed fields are not high severity when source_report_coverage_qa passes, deterministic_flags are empty, the report does not rely on that supplemental field, or the value is already represented in T12 or otherwise not required for the rendered analysis.",
