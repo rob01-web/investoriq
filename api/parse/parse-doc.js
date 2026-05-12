@@ -3911,14 +3911,7 @@ export default async function handler(req, res) {
           const isValidClosingCostsPercent = (value) =>
             Number.isFinite(value) && value >= 0 && value <= 20;
 
-          const eligibleAcquisitionRecovery =
-            shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText) ||
-            !Number.isFinite(purchase_price) ||
-            !Number.isFinite(ltv) ||
-            !Number.isFinite(interest_rate) ||
-            !Number.isFinite(amort_years) ||
-            !Number.isFinite(going_in_cap_rate) ||
-            !Number.isFinite(closing_costs_percent);
+          const eligibleAcquisitionRecovery = shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText);
           const acquisitionRecoveryResult = eligibleAcquisitionRecovery
             ? await recoverAcquisitionPurchaseAssumptionsWithAI({
                 text: rawText,

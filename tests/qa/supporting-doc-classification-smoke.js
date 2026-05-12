@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "../../api/parse/parse-doc.js";
-import { shouldAttemptAcquisitionPurchaseAssumptionsRecovery } from "../../lib/ai-support-doc-recovery.js";
+import {
+  __test__ as supportDocRecoveryTestHelpers,
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+} from "../../lib/ai-support-doc-recovery.js";
 
 assert.equal(
   inferSupportingDocTypeFromText(
@@ -137,5 +140,17 @@ assert.equal(
   ),
   true
 );
+
+assert.deepEqual(supportDocRecoveryTestHelpers.buildResponseSchema().required, [
+  "is_acquisition_purchase_assumptions",
+  "confidence",
+  "purchase_price",
+  "ltv",
+  "interest_rate",
+  "amortization_years",
+  "going_in_cap_rate",
+  "closing_costs_percent",
+  "evidence",
+]);
 
 console.log("supporting-doc-classification smoke PASS");
