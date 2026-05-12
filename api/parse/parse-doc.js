@@ -3,10 +3,12 @@ import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
 import {
   recoverAcquisitionPurchaseAssumptionsWithAI,
+  recoverAppraisalWithAI,
   recoverCurrentMortgageWithAI,
   recoverPropertyTaxWithAI,
   recoverRenovationWithAI,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+  shouldAttemptAppraisalRecovery,
   shouldAttemptCurrentMortgageRecovery,
   shouldAttemptPropertyTaxRecovery,
   shouldAttemptRenovationRecovery,
@@ -4318,6 +4320,94 @@ export default async function handler(req, res) {
             effective_gross_income,
             parse_warnings,
           };
+
+          const eligibleAppraisalRecovery = shouldAttemptAppraisalRecovery(rawText);
+          const appraisalRecoveryResult = eligibleAppraisalRecovery
+            ? await recoverAppraisalWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              })
+            : { payload: null, diagnostics: null };
+          const maybeAiAppraisalRecovery = appraisalRecoveryResult?.payload || null;
+          const appraisalRecoveryDiagnostics = appraisalRecoveryResult?.diagnostics || null;
+          const mergeValidatedAppraisalField = (aiValue, deterministicValue, predicate) => {
+            if (predicate(deterministicValue)) return deterministicValue;
+            if (predicate(aiValue)) return aiValue;
+            return null;
+          };
+          const isValidAppraisedValue = (value) =>
+            Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidCapRate = (value) => Number.isFinite(value) && value > 0 && value <= 20;
+          const isValidIncome = (value) => Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidAppraisalText = (value) => typeof value === 'string' && value.trim().length > 0;
+          const validatedAppraisedValue = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.appraised_value,
+            appraised_value,
+            isValidAppraisedValue
+          );
+          const validatedValuationDate = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.valuation_date,
+            null,
+            isValidAppraisalText
+          );
+          const validatedCapRate = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.cap_rate,
+            cap_rate,
+            isValidCapRate
+          );
+          const validatedEffectiveGrossIncome = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.effective_gross_income,
+            effective_gross_income,
+            isValidIncome
+          );
+          const validatedNoi = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.noi,
+            null,
+            isValidIncome
+          );
+          const validatedValueBasis = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.value_basis,
+            null,
+            isValidAppraisalText
+          );
+          const validatedAppraisalType = mergeValidatedAppraisalField(
+            maybeAiAppraisalRecovery?.appraisal_type,
+            null,
+            isValidAppraisalText
+          );
+          payload = {
+            file_id: fileRow.id,
+            original_filename: fileRow.original_filename,
+            method: maybeAiAppraisalRecovery ? maybeAiAppraisalRecovery.method : 'text_excerpt',
+            ai_assisted: Boolean(maybeAiAppraisalRecovery),
+            validated: Boolean(maybeAiAppraisalRecovery),
+            appraised_value: validatedAppraisedValue,
+            valuation_date: validatedValuationDate,
+            cap_rate: validatedCapRate,
+            effective_gross_income: validatedEffectiveGrossIncome,
+            noi: validatedNoi,
+            value_basis: validatedValueBasis,
+            appraisal_type: validatedAppraisalType,
+            parse_warnings,
+            ai_recovery_evidence: maybeAiAppraisalRecovery?.ai_recovery_evidence || null,
+          };
+          if (appraisalRecoveryDiagnostics) {
+            await writeAiSupportDocRecoveryDiagnostic({
+              supabaseAdmin,
+              jobId,
+              userId: fileRow.user_id || null,
+              fileId: fileRow.id,
+              filename: fileRow.original_filename,
+              supportDocRecoveryType: 'appraisal',
+              initialDocType: effectiveDocType,
+              declaredDocType,
+              detectedDocType,
+              eligibleRecovery: eligibleAppraisalRecovery,
+              diagnostics: appraisalRecoveryDiagnostics,
+            });
+          }
 
           const eligibleAcquisitionRecovery = shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText);
           if (eligibleAcquisitionRecovery) {

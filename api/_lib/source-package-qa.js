@@ -107,7 +107,15 @@ function summarizeArtifact(row) {
     };
   }
   if (row?.type === "appraisal_parsed") {
-    return { ...summary, value: payload?.value ?? payload?.appraised_value ?? null, cap_rate: payload?.cap_rate ?? null };
+    return {
+      ...summary,
+      value: payload?.value ?? payload?.appraised_value ?? null,
+      appraised_value: payload?.appraised_value ?? payload?.value ?? null,
+      cap_rate: payload?.cap_rate ?? null,
+      valuation_date: payload?.valuation_date ?? null,
+      value_basis: payload?.value_basis ?? null,
+      appraisal_type: payload?.appraisal_type ?? null,
+    };
   }
   if (row?.type === "property_tax_parsed") {
     return { ...summary, annual_tax: payload?.annual_tax ?? null };

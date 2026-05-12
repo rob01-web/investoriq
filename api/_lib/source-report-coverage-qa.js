@@ -172,6 +172,7 @@ function buildArtifactInventory(artifacts) {
     },
     appraisal_parsed: {
       present: Boolean(appraisal),
+      has_appraised_value: hasPositive(appraisal?.appraised_value) || hasPositive(appraisal?.value),
       has_cap_rate: hasPositive(appraisal?.cap_rate),
     },
     property_tax_parsed: {

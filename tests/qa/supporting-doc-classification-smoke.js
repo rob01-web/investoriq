@@ -3,6 +3,7 @@ import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "
 import {
   __test__ as supportDocRecoveryTestHelpers,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+  shouldAttemptAppraisalRecovery,
   shouldAttemptCurrentMortgageRecovery,
   shouldAttemptPropertyTaxRecovery,
   shouldAttemptRenovationRecovery,
@@ -103,6 +104,32 @@ assert.equal(
     ].join("\n")
   ),
   "supporting_documents_unclassified"
+);
+
+assert.equal(
+  shouldAttemptAppraisalRecovery(
+    [
+      "Appraisal Report",
+      "As-Is Value: $12,500,000",
+      "Valuation Date: 2025-03-31",
+      "Cap Rate: 4.99%",
+    ].join("\n")
+  ),
+  true
+);
+
+assert.equal(
+  shouldAttemptAppraisalRecovery(
+    [
+      "Purchase Assumptions",
+      "Purchase Price: $34,500,000",
+      "LTV: 85%",
+      "Interest Rate: 3.80%",
+      "Amortization: 40 years",
+      "Going-in Cap Rate: 4.99%",
+    ].join("\n")
+  ),
+  false
 );
 
 assert.equal(
@@ -263,6 +290,19 @@ assert.deepEqual(supportDocRecoveryTestHelpers.buildPropertyTaxResponseSchema().
   "tax_year",
   "assessed_value",
   "roll_number",
+  "evidence",
+]);
+
+assert.deepEqual(supportDocRecoveryTestHelpers.buildAppraisalResponseSchema().required, [
+  "is_appraisal_support",
+  "confidence",
+  "appraised_value",
+  "valuation_date",
+  "cap_rate",
+  "effective_gross_income",
+  "noi",
+  "value_basis",
+  "appraisal_type",
   "evidence",
 ]);
 

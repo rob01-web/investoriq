@@ -7,6 +7,7 @@ const { parseMortgageStatementFromText } = await import("../../api/parse/parse-d
 const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
+  validateAppraisalCandidate,
   validateCurrentMortgageCandidate,
   validatePropertyTaxCandidate,
   validateRenovationCandidate,
@@ -360,6 +361,107 @@ assert.equal(propertyTaxCandidate.annual_tax, 42300);
 assert.equal(propertyTaxCandidate.tax_year, "2025");
 assert.equal(propertyTaxCandidate.assessed_value, 12500000);
 assert.equal(propertyTaxCandidate.roll_number, "1234-567");
+
+const appraisalSourceText = [
+  "Appraisal Report",
+  "As-Is Value: $12,500,000",
+  "Valuation Date: 2025-03-31",
+  "Cap Rate: 4.99%",
+  "Effective Gross Income: $1,250,000",
+  "NOI: $625,000",
+  "Value Basis: as-is",
+  "Appraisal Type: full appraisal",
+].join("\n");
+
+const appraisalCandidate = validateAppraisalCandidate(
+  {
+    is_appraisal_support: true,
+    confidence: 0.95,
+    appraised_value: 12500000,
+    valuation_date: "2025-03-31",
+    cap_rate: 4.99,
+    effective_gross_income: 1250000,
+    noi: 625000,
+    value_basis: "as-is",
+    appraisal_type: "full appraisal",
+    evidence: {
+      appraised_value: ["As-Is Value: $12,500,000"],
+      valuation_date: ["Valuation Date: 2025-03-31"],
+      cap_rate: ["Cap Rate: 4.99%"],
+      effective_gross_income: ["Effective Gross Income: $1,250,000"],
+      noi: ["NOI: $625,000"],
+      value_basis: ["Value Basis: as-is"],
+      appraisal_type: ["Appraisal Type: full appraisal"],
+      warnings: [],
+    },
+  },
+  appraisalSourceText
+);
+
+assert.equal(appraisalCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(appraisalCandidate.appraised_value, 12500000);
+assert.equal(appraisalCandidate.valuation_date, "2025-03-31");
+assert.equal(appraisalCandidate.cap_rate, 4.99);
+assert.equal(appraisalCandidate.effective_gross_income, 1250000);
+assert.equal(appraisalCandidate.noi, 625000);
+assert.equal(appraisalCandidate.value_basis, "as_is");
+assert.equal(appraisalCandidate.appraisal_type, "full appraisal");
+
+assert.equal(
+  validateAppraisalCandidate(
+    {
+      is_appraisal_support: true,
+      confidence: 0.95,
+      appraised_value: 34500000,
+      valuation_date: null,
+      cap_rate: 4.99,
+      effective_gross_income: null,
+      noi: null,
+      value_basis: "as-is",
+      appraisal_type: null,
+      evidence: {
+        appraised_value: ["Purchase Price: $34,500,000"],
+        valuation_date: [],
+        cap_rate: ["Going-in Cap Rate: 4.99%"],
+        effective_gross_income: [],
+        noi: [],
+        value_basis: ["Value Basis: as-is"],
+        appraisal_type: [],
+        warnings: [],
+      },
+    },
+    "Purchase assumptions with acquisition financing signals."
+  ),
+  null
+);
+
+assert.equal(
+  validateAppraisalCandidate(
+    {
+      is_appraisal_support: true,
+      confidence: 0.95,
+      appraised_value: 12500000,
+      valuation_date: null,
+      cap_rate: 4.99,
+      effective_gross_income: null,
+      noi: null,
+      value_basis: "broker_opinion",
+      appraisal_type: null,
+      evidence: {
+        appraised_value: ["Broker opinion of value: $12,500,000"],
+        valuation_date: [],
+        cap_rate: ["Cap Rate: 4.99%"],
+        effective_gross_income: [],
+        noi: [],
+        value_basis: ["Broker opinion of value: $12,500,000"],
+        appraisal_type: [],
+        warnings: [],
+      },
+    },
+    "Broker opinion and market survey only."
+  ),
+  null
+);
 
 assert.equal(
   validatePropertyTaxCandidate(
