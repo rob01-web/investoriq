@@ -653,6 +653,77 @@ function reasonCodeForAction(action) {
   return String(action?.code || "");
 }
 
+const managerContradictionLimitationCodes = new Set([
+  "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
+  "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
+  "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
+  "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
+  "DEBT_FILE_WITH_MISSING_BALANCE",
+]);
+
+const managerContradictionCorroboratingCoverageCodes = new Set([
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL",
+  "T12_LINE_ITEM_DETAIL_MISSING",
+  "RENOVATION_DOC_NOT_STRUCTURED",
+]);
+
+function isManagerContradictionAction(action) {
+  return (
+    String(action?.source_artifact || "") === "qa_manager_review" &&
+    String(action?.evidence?.classification || "") === "real_source_report_contradiction"
+  );
+}
+
+function isManagerContradictionCustomerBlocking(action, {
+  contractViolations = [],
+  deterministicFlags = [],
+} = {}) {
+  if (!isManagerContradictionAction(action)) return false;
+
+  const code = String(action?.code || "").toUpperCase();
+  const actionImpact = classifyActionDeliveryImpact(action);
+  const hardPublicLanguage = containsProhibitedPublicLanguage(String(action?.evidence?.evidence_excerpt || ""));
+
+  const contractBlocksCustomer = (Array.isArray(contractViolations) ? contractViolations : []).some((violation) => {
+    if (!violation) return false;
+    const violationCode = String(violation?.code || "").toUpperCase();
+    if (
+      violationCode === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
+      String(violation?.category || "") === "public_language"
+    ) {
+      return true;
+    }
+    if (
+      violationCode === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH" ||
+      violationCode === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"
+    ) {
+      return true;
+    }
+    return classifyActionDeliveryImpact(actionForReportContractViolation(violation)) === "customer_delivery_blocker";
+  });
+
+  const deterministicBlocksCustomer = (Array.isArray(deterministicFlags) ? deterministicFlags : []).some((flag) => {
+    const flagCode = String(flag?.code || "").toUpperCase();
+    const routing = String(flag?.routing || "");
+    return (
+      flagCode &&
+      !managerContradictionLimitationCodes.has(flagCode) &&
+      managerContradictionCorroboratingCoverageCodes.has(flagCode) &&
+      ["parser_gap", "artifact_gap", "render_gating_gap", "admin_review_required"].includes(routing)
+    );
+  });
+
+  if (managerContradictionLimitationCodes.has(code)) {
+    return hardPublicLanguage || contractBlocksCustomer || deterministicBlocksCustomer;
+  }
+
+  return Boolean(action?.blocks_customer_delivery) ||
+    actionImpact === "customer_delivery_blocker" ||
+    hardPublicLanguage ||
+    contractBlocksCustomer ||
+    deterministicBlocksCustomer;
+}
+
 function classifyActionDeliveryImpact(action) {
   const code = String(action?.code || "").toUpperCase();
   const actionType = String(action?.action_type || "");
@@ -727,22 +798,20 @@ export function buildDeliveryGateDecision({
     String(violation?.code || "") === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION" ||
     /source_report_reconciliation|report_contradiction/i.test(String(violation?.category || ""))
   ) || null;
-  const managerContradictionAction = prioritizedActions.find((action) =>
-    String(action?.source_artifact || "") === "qa_manager_review" &&
-    (
-      String(action?.evidence?.classification || "") === "real_source_report_contradiction" ||
-      action?.action_type === "admin_review_required" ||
-      (action?.blocks_customer_delivery === true && ["qa_manager", "source_reconciliation", "report_renderer"].includes(String(action?.owner_area || "")))
-    )
-  ) || null;
+  const managerContradictionAction = prioritizedActions.find(isManagerContradictionAction) || null;
+  const managerContradictionBlocksCustomer = isManagerContradictionCustomerBlocking(managerContradictionAction, {
+    contractViolations,
+    deterministicFlags,
+  });
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
   const customerDeliveryBlockerAction =
-    actionImpactRows.find((row) => row.impact === "customer_delivery_blocker")?.action ||
+    actionImpactRows.find((row) => row.impact === "customer_delivery_blocker" && !isManagerContradictionAction(row.action))?.action ||
+    (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
     null;
   const publicOrOutreachOnlyAction =
     actionImpactRows.find((row) => row.impact === "public_or_outreach_only_blocker")?.action ||
     null;
-  const adminReviewAction = customerDeliveryBlockerAction || managerContradictionAction || null;
+  const adminReviewAction = customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
     Boolean(adminReviewAction || reconciliationViolation);
@@ -765,15 +834,15 @@ export function buildDeliveryGateDecision({
       high_value_outreach_ready: false,
     };
   }
-  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || reconciliationViolation || directorMismatch || managerContradictionAction);
+  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || reconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null));
 
   if (customerDeliveryBlocked) {
-    const topAction = customerDeliveryBlockerAction || managerContradictionAction || reconciliationViolation || prioritizedActions[0] || null;
+    const topAction = customerDeliveryBlockerAction || reconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
     const reasonCode =
       reasonCodeForAction(adminReviewAction) ||
-      reasonCodeForAction(managerContradictionAction) ||
       reasonCodeForAction(reconciliationViolation) ||
       reasonCodeForAction(customerDeliveryBlockerAction) ||
+      reasonCodeForAction(managerContradictionAction) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
     return {
       delivery_gate_status: "admin_review_required",
