@@ -6767,6 +6767,8 @@ try {
 
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
+  buildRenovationBudgetRows,
+  buildRenovationExecutionRows,
   buildScreeningDataCoverageSummary,
   buildT12SummaryHtml,
   materiallyDifferent,

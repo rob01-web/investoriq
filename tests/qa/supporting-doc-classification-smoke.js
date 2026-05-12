@@ -4,6 +4,8 @@ import {
   __test__ as supportDocRecoveryTestHelpers,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
   shouldAttemptCurrentMortgageRecovery,
+  shouldAttemptPropertyTaxRecovery,
+  shouldAttemptRenovationRecovery,
 } from "../../lib/ai-support-doc-recovery.js";
 
 assert.equal(
@@ -77,6 +79,18 @@ assert.equal(
     ].join("\n")
   ),
   "renovation"
+);
+
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Property Tax Notice",
+      "Annual Tax 2025 $42,300",
+      "Assessment Roll 1234-567",
+      "Installment schedule provided.",
+    ].join("\n")
+  ),
+  "property_tax"
 );
 
 assert.equal(
@@ -169,6 +183,53 @@ assert.equal(
   false
 );
 
+assert.equal(
+  shouldAttemptRenovationRecovery(
+    [
+      "Renovation Budget",
+      "Exterior / Curb Appeal: $45,000",
+      "Common Areas: $30,000",
+      "Unit Turns: $120,000",
+      "Contingency: $20,000",
+      "Total Budget: $215,000",
+    ].join("\n")
+  ),
+  true
+);
+
+assert.equal(
+  shouldAttemptRenovationRecovery(
+    [
+      "Capital plan summary",
+      "Historic CapEx only.",
+      "No forward-looking budget or implementation assumptions.",
+    ].join("\n")
+  ),
+  false
+);
+
+assert.equal(
+  shouldAttemptPropertyTaxRecovery(
+    [
+      "Property Tax Notice",
+      "Annual Taxes $38,400",
+      "Roll Number 1234-567-890",
+    ].join("\n")
+  ),
+  true
+);
+
+assert.equal(
+  shouldAttemptPropertyTaxRecovery(
+    [
+      "Assessment excerpt",
+      "Assessed value $12,500,000",
+      "No tax amount is stated here.",
+    ].join("\n")
+  ),
+  false
+);
+
 assert.deepEqual(supportDocRecoveryTestHelpers.buildResponseSchema().required, [
   "is_acquisition_purchase_assumptions",
   "confidence",
@@ -178,6 +239,30 @@ assert.deepEqual(supportDocRecoveryTestHelpers.buildResponseSchema().required, [
   "amortization_years",
   "going_in_cap_rate",
   "closing_costs_percent",
+  "evidence",
+]);
+
+assert.deepEqual(supportDocRecoveryTestHelpers.buildRenovationResponseSchema().required, [
+  "is_renovation_capex",
+  "confidence",
+  "total_budget",
+  "budget_rows",
+  "unit_count",
+  "per_unit_cost",
+  "timing_or_phasing",
+  "rent_lift",
+  "roi",
+  "payback_period",
+  "evidence",
+]);
+
+assert.deepEqual(supportDocRecoveryTestHelpers.buildPropertyTaxResponseSchema().required, [
+  "is_property_tax",
+  "confidence",
+  "annual_tax",
+  "tax_year",
+  "assessed_value",
+  "roll_number",
   "evidence",
 ]);
 

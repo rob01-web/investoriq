@@ -161,9 +161,14 @@ function buildArtifactInventory(artifacts) {
     },
     renovation_parsed: {
       present: Boolean(renovation),
-      has_capex_amount: hasPositive(renovation?.total_capex) || hasPositive(renovation?.renovation_budget),
+      has_capex_amount:
+        hasPositive(renovation?.total_budget) ||
+        hasPositive(renovation?.total_capex) ||
+        hasPositive(renovation?.renovation_budget) ||
+        (Array.isArray(renovation?.budget_rows) && renovation.budget_rows.length > 0),
       has_scope:
-        Array.isArray(renovation?.scope_items) && renovation.scope_items.length > 0,
+        (Array.isArray(renovation?.scope_items) && renovation.scope_items.length > 0) ||
+        (Array.isArray(renovation?.budget_rows) && renovation.budget_rows.some((row) => Boolean(row?.scope_of_work))),
     },
     appraisal_parsed: {
       present: Boolean(appraisal),

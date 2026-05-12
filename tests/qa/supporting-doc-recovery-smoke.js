@@ -8,6 +8,8 @@ const { __test__: reportTestHelpers } = await import("../../api/generate-client-
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
   validateCurrentMortgageCandidate,
+  validatePropertyTaxCandidate,
+  validateRenovationCandidate,
 } = await import("../../lib/ai-support-doc-recovery.js");
 
 const acquisitionSourceText = [
@@ -182,6 +184,248 @@ const noAmortHtml = reportTestHelpers.buildAcquisitionFinancingAssumptionsHtml({
 assert.equal(noAmortHtml.includes("Estimated Annual Debt Service"), false);
 assert.equal(noAmortHtml.includes("Proposed Acquisition DSCR"), false);
 assert(noAmortHtml.includes("Estimated acquisition debt service was not modeled because amortization was not verified."));
+
+const formatCurrency = (value) => `$${Number(value).toLocaleString("en-US")}`;
+
+const renovationSourceText = [
+  "Renovation Budget",
+  "Exterior / Curb Appeal: $45,000",
+  "Common Areas: $30,000",
+  "Unit Turns: $120,000",
+  "Contingency: $20,000",
+  "Total Budget: $215,000",
+  "Unit Count: 12",
+  "Per Unit Cost: $17,500",
+].join("\n");
+
+const renovationCandidate = validateRenovationCandidate(
+  {
+    is_renovation_capex: true,
+    confidence: 0.96,
+    total_budget: 215000,
+    budget_rows: [
+      {
+        category: "Exterior / Curb Appeal",
+        estimated_cost: 45000,
+        scope_of_work: "Exterior upgrades and curb appeal work",
+        evidence: ["Exterior / Curb Appeal: $45,000"],
+      },
+      {
+        category: "Common Areas",
+        estimated_cost: 30000,
+        scope_of_work: "Common area refresh",
+        evidence: ["Common Areas: $30,000"],
+      },
+      {
+        category: "Unit Turns",
+        estimated_cost: 120000,
+        scope_of_work: "Unit turns and make-ready",
+        evidence: ["Unit Turns: $120,000"],
+      },
+      {
+        category: "Contingency",
+        estimated_cost: 20000,
+        scope_of_work: "Project contingency",
+        evidence: ["Contingency: $20,000"],
+      },
+    ],
+    unit_count: 12,
+    per_unit_cost: 17500,
+    timing_or_phasing: null,
+    rent_lift: null,
+    roi: null,
+    payback_period: null,
+    evidence: {
+      total_budget: ["Total Budget: $215,000"],
+      budget_rows: ["Exterior / Curb Appeal: $45,000", "Common Areas: $30,000", "Unit Turns: $120,000", "Contingency: $20,000"],
+      unit_count: ["Unit Count: 12"],
+      per_unit_cost: ["Per Unit Cost: $17,500"],
+      timing_or_phasing: [],
+      rent_lift: [],
+      roi: [],
+      payback_period: [],
+      warnings: [],
+    },
+  },
+  renovationSourceText
+);
+
+assert.equal(renovationCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(renovationCandidate.total_budget, 215000);
+assert.equal(renovationCandidate.budget_rows.length, 4);
+assert.equal(renovationCandidate.unit_count, 12);
+assert.equal(renovationCandidate.per_unit_cost, 17500);
+assert.equal(renovationCandidate.timing_or_phasing, null);
+assert.equal(renovationCandidate.rent_lift, null);
+assert.equal(renovationCandidate.roi, null);
+assert.equal(renovationCandidate.payback_period, null);
+assert.equal(renovationCandidate.execution_rows.length, 2);
+assert.equal(reportTestHelpers.buildRenovationBudgetRows(renovationCandidate.budget_rows, formatCurrency).includes("Exterior / Curb Appeal"), true);
+assert.equal(reportTestHelpers.buildRenovationExecutionRows(renovationCandidate.execution_rows, formatCurrency).includes("Unit Count"), true);
+
+const renovationPartialCandidate = validateRenovationCandidate(
+  {
+    is_renovation_capex: true,
+    confidence: 0.95,
+    total_budget: 215000,
+    budget_rows: renovationCandidate.budget_rows,
+    unit_count: null,
+    per_unit_cost: null,
+    timing_or_phasing: null,
+    rent_lift: null,
+    roi: null,
+    payback_period: null,
+    evidence: {
+      total_budget: ["Total Budget: $215,000"],
+      budget_rows: ["Exterior / Curb Appeal: $45,000", "Common Areas: $30,000", "Unit Turns: $120,000", "Contingency: $20,000"],
+      unit_count: [],
+      per_unit_cost: [],
+      timing_or_phasing: [],
+      rent_lift: [],
+      roi: [],
+      payback_period: [],
+      warnings: [],
+    },
+  },
+  renovationSourceText
+);
+
+assert.equal(renovationPartialCandidate.total_budget, 215000);
+assert.equal(renovationPartialCandidate.timing_or_phasing, null);
+assert.equal(renovationPartialCandidate.rent_lift, null);
+assert.equal(renovationPartialCandidate.roi, null);
+assert.equal(renovationPartialCandidate.payback_period, null);
+assert.equal(renovationPartialCandidate.execution_rows.length, 0);
+assert.equal(reportTestHelpers.buildRenovationExecutionRows(renovationPartialCandidate.execution_rows, formatCurrency), "");
+
+assert.equal(
+  validateRenovationCandidate(
+    {
+      is_renovation_capex: true,
+      confidence: 0.95,
+      total_budget: null,
+      budget_rows: [],
+      unit_count: null,
+      per_unit_cost: null,
+      timing_or_phasing: null,
+      rent_lift: null,
+      roi: null,
+      payback_period: null,
+      evidence: {
+        total_budget: [],
+        budget_rows: [],
+        unit_count: [],
+        per_unit_cost: [],
+        timing_or_phasing: [],
+        rent_lift: [],
+        roi: [],
+        payback_period: [],
+        warnings: [],
+      },
+    },
+    "Renovation budget source without structured figures."
+  ),
+  null
+);
+
+const propertyTaxSourceText = [
+  "Property Tax Notice",
+  "Annual Tax 2025 $42,300",
+  "Tax Year 2025",
+  "Assessment Roll 1234-567",
+  "Assessed Value $12,500,000",
+].join("\n");
+
+const propertyTaxCandidate = validatePropertyTaxCandidate(
+  {
+    is_property_tax: true,
+    confidence: 0.95,
+    annual_tax: 42300,
+    tax_year: "2025",
+    assessed_value: 12500000,
+    roll_number: "1234-567",
+    evidence: {
+      annual_tax: ["Annual Tax 2025 $42,300"],
+      tax_year: ["Tax Year 2025"],
+      assessed_value: ["Assessed Value $12,500,000"],
+      roll_number: ["Assessment Roll 1234-567"],
+      warnings: [],
+    },
+  },
+  propertyTaxSourceText
+);
+
+assert.equal(propertyTaxCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(propertyTaxCandidate.annual_tax, 42300);
+assert.equal(propertyTaxCandidate.tax_year, "2025");
+assert.equal(propertyTaxCandidate.assessed_value, 12500000);
+assert.equal(propertyTaxCandidate.roll_number, "1234-567");
+
+assert.equal(
+  validatePropertyTaxCandidate(
+    {
+      is_property_tax: true,
+      confidence: 0.95,
+      annual_tax: 2025,
+      tax_year: "2025",
+      assessed_value: null,
+      roll_number: null,
+      evidence: {
+        annual_tax: ["Annual Tax 2025"],
+        tax_year: ["Tax Year 2025"],
+        assessed_value: [],
+        roll_number: [],
+        warnings: [],
+      },
+    },
+    "Property tax notice with year-like tax value."
+  ),
+  null
+);
+
+assert.equal(
+  validatePropertyTaxCandidate(
+    {
+      is_property_tax: true,
+      confidence: 0.95,
+      annual_tax: null,
+      tax_year: "2025",
+      assessed_value: 12500000,
+      roll_number: "1234-567",
+      evidence: {
+        annual_tax: [],
+        tax_year: ["Tax Year 2025"],
+        assessed_value: ["Assessed Value $12,500,000"],
+        roll_number: ["Assessment Roll 1234-567"],
+        warnings: [],
+      },
+    },
+    "Property tax notice without annual tax."
+  ),
+  null
+);
+
+assert.equal(
+  validatePropertyTaxCandidate(
+    {
+      is_property_tax: true,
+      confidence: 0.95,
+      annual_tax: null,
+      tax_year: "2025",
+      assessed_value: 12500000,
+      roll_number: "1234-567",
+      evidence: {
+        annual_tax: [],
+        tax_year: ["Tax Year 2025"],
+        assessed_value: ["Assessed Value $12,500,000"],
+        roll_number: ["Assessment Roll 1234-567"],
+        warnings: [],
+      },
+    },
+    "Assessment excerpt"
+  ),
+  null
+);
 
 const currentDebtText = [
   "Mortgage Statement",

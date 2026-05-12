@@ -4,8 +4,12 @@ import { analyzeTables } from '../../lib/textractClient.js';
 import {
   recoverAcquisitionPurchaseAssumptionsWithAI,
   recoverCurrentMortgageWithAI,
+  recoverPropertyTaxWithAI,
+  recoverRenovationWithAI,
   shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
   shouldAttemptCurrentMortgageRecovery,
+  shouldAttemptPropertyTaxRecovery,
+  shouldAttemptRenovationRecovery,
 } from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
@@ -4075,21 +4079,123 @@ export default async function handler(req, res) {
           if (Number.isFinite(total_budget) && budget_rows.length > 0 && Math.abs(rowsTotal - total_budget) > Math.max(5000, total_budget * 0.02)) {
             parse_warnings.push('budget_line_items_do_not_sum_to_total');
           }
+          const eligibleRenovationRecovery = shouldAttemptRenovationRecovery(rawText);
+          const renovationRecoveryResult = eligibleRenovationRecovery
+            ? await recoverRenovationWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              })
+            : { payload: null, diagnostics: null };
+          const maybeAiRenovationRecovery = renovationRecoveryResult?.payload || null;
+          const renovationRecoveryDiagnostics = renovationRecoveryResult?.diagnostics || null;
+          const mergeValidatedRenovationField = (aiValue, deterministicValue, predicate) => {
+            if (predicate(deterministicValue)) return deterministicValue;
+            if (predicate(aiValue)) return aiValue;
+            return null;
+          };
+          const isValidRenovationBudget = (value) =>
+            Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidPositiveCount = (value) =>
+            Number.isFinite(value) && value > 0 && value <= 100000;
+          const isValidRenovationText = (value) => typeof value === 'string' && value.trim().length > 0;
+          const validatedTotalBudget = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.total_budget,
+            total_budget,
+            isValidRenovationBudget
+          );
+          const validatedBudgetRows = budget_rows.length > 0
+            ? budget_rows
+            : Array.isArray(maybeAiRenovationRecovery?.budget_rows)
+              ? maybeAiRenovationRecovery.budget_rows
+              : [];
+          const validatedUnitCount = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.unit_count,
+            null,
+            isValidPositiveCount
+          );
+          const validatedPerUnitCost = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.per_unit_cost,
+            null,
+            isValidRenovationBudget
+          );
+          const validatedTimingOrPhasing = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.timing_or_phasing,
+            null,
+            isValidRenovationText
+          );
+          const validatedRentLift = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.rent_lift,
+            null,
+            isValidRenovationText
+          );
+          const validatedRoi = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.roi,
+            null,
+            isValidRenovationText
+          );
+          const validatedPaybackPeriod = mergeValidatedRenovationField(
+            maybeAiRenovationRecovery?.payback_period,
+            null,
+            isValidRenovationText
+          );
+          const validatedExecutionRows = Array.isArray(maybeAiRenovationRecovery?.execution_rows)
+            ? maybeAiRenovationRecovery.execution_rows
+            : [];
+          const execution_rows = [
+            ...(validatedUnitCount ? [{ metric: 'Unit Count', value: validatedUnitCount }] : []),
+            ...(validatedPerUnitCost ? [{ metric: 'Per Unit Cost', value: validatedPerUnitCost }] : []),
+            ...validatedExecutionRows,
+          ];
+          const budget_note = Number.isFinite(validatedTotalBudget)
+            ? `Uploaded renovation budget identifies a total budget of $${Math.round(validatedTotalBudget).toLocaleString('en-US')}.`
+            : validatedBudgetRows.length > 0
+              ? 'Uploaded renovation support includes structured line items, but no verified total budget was extracted.'
+              : 'Renovation support was identified, but no verified total budget or structured line items were extracted.';
+          const execution_note =
+            execution_rows.length > 0
+              ? 'Verified renovation timing, phasing, and return assumptions were retained where explicitly supported. Unverified return calculations were not modeled.'
+              : 'No implementation timing, rent lift, ROI, or payback inputs were included unless explicitly shown in structured source fields.';
+          const interpretation = validatedBudgetRows.length > 0
+            ? 'Structured CapEx budget categories were extracted from the uploaded renovation source. Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions.'
+            : 'Renovation support was identified, but no structured budget categories were extracted.';
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
-            method: 'text_excerpt',
-            total_budget,
-            budget_rows,
-            budget_note: Number.isFinite(total_budget)
-              ? `Uploaded renovation budget identifies a total budget of $${Math.round(total_budget).toLocaleString('en-US')}.`
-              : 'Uploaded renovation budget was identified, but no verified total budget was extracted.',
-            execution_note: 'No implementation timing, rent lift, ROI, or payback inputs were included unless explicitly shown in structured source fields.',
-            interpretation: budget_rows.length > 0
-              ? 'Structured CapEx budget categories were extracted from the uploaded renovation source. Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions.'
-              : 'Renovation source was classified, but structured budget categories were not extracted.',
+            method: maybeAiRenovationRecovery ? maybeAiRenovationRecovery.method : 'text_excerpt',
+            ai_assisted: Boolean(maybeAiRenovationRecovery),
+            validated: Boolean(maybeAiRenovationRecovery),
+            total_budget: validatedTotalBudget,
+            budget_rows: validatedBudgetRows,
+            unit_count: validatedUnitCount,
+            per_unit_cost: validatedPerUnitCost,
+            timing_or_phasing: validatedTimingOrPhasing,
+            rent_lift: validatedRentLift,
+            roi: validatedRoi,
+            payback_period: validatedPaybackPeriod,
+            execution_rows,
+            budget_note,
+            execution_note,
+            interpretation,
             parse_warnings,
+            ai_recovery_evidence: maybeAiRenovationRecovery?.ai_recovery_evidence || null,
           };
+          if (renovationRecoveryDiagnostics) {
+            await writeAiSupportDocRecoveryDiagnostic({
+              supabaseAdmin,
+              jobId,
+              userId: fileRow.user_id || null,
+              fileId: fileRow.id,
+              filename: fileRow.original_filename,
+              supportDocRecoveryType: 'renovation',
+              initialDocType: effectiveDocType,
+              declaredDocType,
+              detectedDocType,
+              eligibleRecovery: eligibleRenovationRecovery,
+              diagnostics: renovationRecoveryDiagnostics,
+            });
+          }
         } else if (effectiveDocType === 'mortgage_statement') {
           const deterministicMortgagePayload = parseMortgageStatementFromText(rawText, fileRow);
           const eligibleCurrentMortgageRecovery = shouldAttemptCurrentMortgageRecovery(rawText);
@@ -4283,14 +4389,78 @@ export default async function handler(req, res) {
             parse_warnings.push(annualTaxResult.rejectedCandidate ? 'implausible_annual_tax' : 'missing_annual_tax');
           }
 
+          const eligiblePropertyTaxRecovery = shouldAttemptPropertyTaxRecovery(rawText);
+          const propertyTaxRecoveryResult = eligiblePropertyTaxRecovery
+            ? await recoverPropertyTaxWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              })
+            : { payload: null, diagnostics: null };
+          const maybeAiPropertyTaxRecovery = propertyTaxRecoveryResult?.payload || null;
+          const propertyTaxRecoveryDiagnostics = propertyTaxRecoveryResult?.diagnostics || null;
+          const mergeValidatedPropertyTaxField = (aiValue, deterministicValue, predicate) => {
+            if (predicate(deterministicValue)) return deterministicValue;
+            if (predicate(aiValue)) return aiValue;
+            return null;
+          };
+          const isValidAnnualTax = (value) =>
+            Number.isFinite(value) && value >= 1000 && value <= 10000000 && (value < 1900 || value > 2100);
+          const isValidPositiveMoney = (value) => Number.isFinite(value) && value > 0 && value <= 1000000000;
+          const isValidString = (value) => typeof value === 'string' && value.trim().length > 0;
+          const validatedAnnualTax = mergeValidatedPropertyTaxField(
+            maybeAiPropertyTaxRecovery?.annual_tax,
+            annual_tax,
+            isValidAnnualTax
+          );
+          const validatedTaxYear = mergeValidatedPropertyTaxField(
+            maybeAiPropertyTaxRecovery?.tax_year,
+            null,
+            isValidString
+          );
+          const validatedAssessedValue = mergeValidatedPropertyTaxField(
+            maybeAiPropertyTaxRecovery?.assessed_value,
+            assessed_value,
+            isValidPositiveMoney
+          );
+          const validatedRollNumber = mergeValidatedPropertyTaxField(
+            maybeAiPropertyTaxRecovery?.roll_number,
+            null,
+            isValidString
+          );
+
           payload = {
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
-            method: 'text_excerpt',
-            annual_tax,
-            assessed_value,
+            method: maybeAiPropertyTaxRecovery ? maybeAiPropertyTaxRecovery.method : 'text_excerpt',
+            ai_assisted: Boolean(maybeAiPropertyTaxRecovery),
+            validated: Boolean(maybeAiPropertyTaxRecovery),
+            annual_tax: validatedAnnualTax,
+            assessed_value: validatedAssessedValue,
+            tax_year: validatedTaxYear,
+            roll_number: validatedRollNumber,
+            property_tax_note: Number.isFinite(validatedAnnualTax)
+              ? `Uploaded property tax support identifies an annual tax amount of $${Math.round(validatedAnnualTax).toLocaleString('en-US')}.`
+              : 'Property tax modeling was not included because no verified annual property tax amount was extracted.',
             parse_warnings,
+            ai_recovery_evidence: maybeAiPropertyTaxRecovery?.ai_recovery_evidence || null,
           };
+          if (propertyTaxRecoveryDiagnostics) {
+            await writeAiSupportDocRecoveryDiagnostic({
+              supabaseAdmin,
+              jobId,
+              userId: fileRow.user_id || null,
+              fileId: fileRow.id,
+              filename: fileRow.original_filename,
+              supportDocRecoveryType: 'property_tax',
+              initialDocType: effectiveDocType,
+              declaredDocType,
+              detectedDocType,
+              eligibleRecovery: eligiblePropertyTaxRecovery,
+              diagnostics: propertyTaxRecoveryDiagnostics,
+            });
+          }
         } else if (effectiveDocType === 'insurance_policy') {
           payload = {
             file_id: fileRow.id,
