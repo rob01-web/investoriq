@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import XLSX from 'xlsx';
 import { analyzeTables } from '../../lib/textractClient.js';
-import { recoverAcquisitionPurchaseAssumptionsWithAI } from '../../lib/ai-support-doc-recovery.js';
+import {
+  recoverAcquisitionPurchaseAssumptionsWithAI,
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery,
+} from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
 
@@ -3852,6 +3855,7 @@ export default async function handler(req, res) {
             !Number.isFinite(amort_years) ||
             !Number.isFinite(going_in_cap_rate) ||
             !Number.isFinite(closing_costs_percent)
+              || shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText)
               ? await recoverAcquisitionPurchaseAssumptionsWithAI({
                   text: rawText,
                   filename: fileRow.original_filename,
@@ -4005,6 +4009,47 @@ export default async function handler(req, res) {
             effective_gross_income,
             parse_warnings,
           };
+
+          if (shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText)) {
+            const acquisitionRecovery = await recoverAcquisitionPurchaseAssumptionsWithAI({
+              text: rawText,
+              filename: fileRow.original_filename,
+              jobId,
+            });
+            if (acquisitionRecovery) {
+              const acquisitionArtifactPayload = {
+                file_id: fileRow.id,
+                original_filename: fileRow.original_filename,
+                method: acquisitionRecovery.method,
+                ai_assisted: acquisitionRecovery.ai_assisted,
+                validated: acquisitionRecovery.validated,
+                purchase_price: acquisitionRecovery.purchase_price,
+                ltv: acquisitionRecovery.ltv,
+                interest_rate: acquisitionRecovery.interest_rate,
+                amortization_years: acquisitionRecovery.amortization_years,
+                amort_years: acquisitionRecovery.amort_years,
+                going_in_cap_rate: acquisitionRecovery.going_in_cap_rate,
+                closing_costs_percent: acquisitionRecovery.closing_costs_percent,
+                derived_acquisition_loan_amount: acquisitionRecovery.derived_acquisition_loan_amount,
+                debt_basis: acquisitionRecovery.debt_basis,
+                parse_warnings: acquisitionRecovery.parse_warnings,
+                ai_recovery_evidence: acquisitionRecovery.ai_recovery_evidence,
+              };
+              const { error: acquisitionArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: fileRow.user_id || null,
+                  type: 'loan_term_sheet_parsed',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${jobId}/loan_term_sheet/${fileRow.id}_acquisition.json`,
+                  payload: acquisitionArtifactPayload,
+                },
+              ]);
+              if (acquisitionArtifactErr) {
+                throw new Error(acquisitionArtifactErr.message || 'Failed to write acquisition artifact');
+              }
+            }
+          }
         } else if (effectiveDocType === 'property_tax') {
           const annualTaxResult = extractAnnualPropertyTaxFromText(rawText);
           const annual_tax = annualTaxResult.value;

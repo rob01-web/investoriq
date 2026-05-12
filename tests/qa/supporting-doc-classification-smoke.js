@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "../../api/parse/parse-doc.js";
+import { shouldAttemptAcquisitionPurchaseAssumptionsRecovery } from "../../lib/ai-support-doc-recovery.js";
 
 assert.equal(
   inferSupportingDocTypeFromText(
@@ -84,6 +85,43 @@ assert.equal(
     ].join("\n")
   ),
   "supporting_documents_unclassified"
+);
+
+assert.equal(
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery(
+    [
+      "Appraisal / Purchase Assumptions",
+      "Purchase Price: $12,500,000",
+      "LTV: 80%",
+      "Estimated Interest Rate: 4.10%",
+      "Amortization: 40 years",
+      "Closing Costs: 1.5%",
+    ].join("\n")
+  ),
+  true
+);
+
+assert.equal(
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery(
+    [
+      "Appraisal Report",
+      "As-Is Value: $12,500,000",
+      "Cap Rate: 4.99%",
+      "No purchase assumptions or financing terms are provided here.",
+    ].join("\n")
+  ),
+  false
+);
+
+assert.equal(
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery(
+    [
+      "Broker email summary",
+      "Looks like a strong deal with good upside and a healthy sponsorship story.",
+      "This note does not include purchase assumptions, LTV, rate, amortization, or closing costs.",
+    ].join("\n")
+  ),
+  false
 );
 
 console.log("supporting-doc-classification smoke PASS");
