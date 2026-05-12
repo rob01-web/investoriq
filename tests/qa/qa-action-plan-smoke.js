@@ -604,6 +604,38 @@ const docRaptorOnlyGate = buildDeliveryGateDecision({
 assert.equal(docRaptorOnlyGate.delivery_gate_status, "deliverable");
 assert.equal(docRaptorOnlyGate.public_sample_ready, false);
 
+const publicSampleOnlyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "PUBLIC_SAMPLE_NOT_READY",
+        action_type: "production_config_only",
+        owner_area: "production_config",
+        recommended_next_step: "Do not use for public sample yet.",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(publicSampleOnlyGate.delivery_gate_status, "deliverable");
+assert.equal(publicSampleOnlyGate.public_sample_ready, false);
+
+const aiOnlyAdvisoryGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: managerSpeculativePublicLanguagePlan,
+});
+assert.equal(aiOnlyAdvisoryGate.delivery_gate_status, "deliverable");
+
 const needsDocumentsGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
     qa_status: "needs_documents",
