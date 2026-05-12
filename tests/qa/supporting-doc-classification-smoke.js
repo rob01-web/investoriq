@@ -124,4 +124,18 @@ assert.equal(
   false
 );
 
+assert.equal(
+  shouldAttemptAcquisitionPurchaseAssumptionsRecovery(
+    [
+      "Purchase Assumptions",
+      "Purchase Price: $34,500,000",
+      "Going-in Cap Rate: 4.99%",
+      "LTV: 85%",
+      "Interest Rate: 3.80%",
+      "Amortization: 40 years",
+    ].join("\n")
+  ),
+  true
+);
+
 console.log("supporting-doc-classification smoke PASS");

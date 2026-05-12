@@ -94,6 +94,8 @@ const writeAiSupportDocRecoveryDiagnostic = async ({
     openai_response_status: Number.isFinite(diagnostics.openai_response_status)
       ? diagnostics.openai_response_status
       : null,
+    openai_error_message: diagnostics.openai_error_message || null,
+    openai_error_body: diagnostics.openai_error_body || null,
     candidate_present: diagnostics.candidate_present === true,
     validation_accepted: diagnostics.validation_accepted === true,
     accepted_fields: Array.isArray(diagnostics.accepted_fields)
