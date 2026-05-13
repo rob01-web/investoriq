@@ -38,6 +38,18 @@ assert.equal(renovationExecutionCardHtml.includes("ROI"), false);
 assert.equal(renovationExecutionCardHtml.includes("payback"), false);
 assert.equal(renovationExecutionCardHtml.includes("implementation schedule"), false);
 
+const renovationExecutionRowsHtml = reportTestHelpers.buildRenovationExecutionRows(
+  [
+    { metric_kind: "unit_count", value: 40 },
+    { metric_kind: "per_unit_cost", value: 25000 },
+  ],
+  formatCurrency
+);
+assert.equal(renovationExecutionRowsHtml.includes("Unit Count (unit turns scope)"), true);
+assert.equal(renovationExecutionRowsHtml.includes("Per Unit Cost (unit turns scope)"), true);
+assert.equal(renovationExecutionRowsHtml.includes("Unit Count</td><td>$40"), false);
+assert.equal(renovationExecutionRowsHtml.includes("Per Unit Cost</td><td>$25,000"), false);
+
 const headerOnlyRenovationReport = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

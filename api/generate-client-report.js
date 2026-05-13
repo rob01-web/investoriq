@@ -1040,7 +1040,13 @@ function summarizeRenovationExecutionRows(rows, formatValue) {
   for (const row of dedupeRenovationMetricRows(Array.isArray(rows) ? rows : [])) {
     if (!row || typeof row !== "object") continue;
     const metricKind = normalizeRenovationMetricKind(row);
-    const metric = String(row.metric ?? row.label ?? row.item ?? row.category ?? "").trim();
+    const metricSource = String(row.metric ?? row.label ?? row.item ?? row.category ?? "").trim();
+    const metric =
+      metricKind === "unit_count"
+        ? "Unit Count (unit turns scope)"
+        : metricKind === "per_unit_cost"
+        ? "Per Unit Cost (unit turns scope)"
+        : metricSource;
     const valueSource =
       row.value ??
       row.amount ??
