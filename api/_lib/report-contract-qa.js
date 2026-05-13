@@ -176,7 +176,32 @@ function firstTableAfterHeading(html, headingPattern) {
   const slice = source.slice(headingMatch.index);
   const tableMatch = /<table\b[\s\S]*?<\/table>/i.exec(slice);
   if (!tableMatch) return "";
-  return stripHtml(tableMatch[0]);
+  return tableMatch[0];
+}
+
+function hasMeaningfulTableBodyRows(tableHtml) {
+  const raw = String(tableHtml || "");
+  if (!raw) return false;
+  const rowMatches = raw.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+  const placeholderPatterns = [
+    /^(?:no data|data not available|n\/a|not available|none|—|–|-)\.?$/i,
+    /^no\s+(?:expense|income)?\s*(?:drivers?|lines?|rows?|items?)$/i,
+    /^no\s+meaningful\s+(?:rows?|data)$/i,
+    /^placeholder(?:\s+row)?$/i,
+  ];
+  return rowMatches.some((row) => {
+    const tdCells = row.match(/<td\b[\s\S]*?<\/td>/gi) || [];
+    if (tdCells.length === 0) return false;
+    const cellTexts = tdCells
+      .map((cell) => stripHtml(cell).replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    if (cellTexts.length === 0) return false;
+    const meaningfulCell = cellTexts.some((cellText) => {
+      if (placeholderPatterns.some((pattern) => pattern.test(cellText))) return false;
+      return /[A-Za-z0-9]/.test(cellText);
+    });
+    return meaningfulCell;
+  });
 }
 
 function primaryPressurePointLine(text) {
@@ -497,23 +522,11 @@ export function buildReportContractQa({
     }
   }
 
-  const tableStopPatterns = [
-    /Expense Ratio Sensitivity/i,
-    /Expense Composition/i,
-    /NOI Sensitivity/i,
-    /Break[- ]?even/i,
-    /Operating Statement/i,
-    /Data Coverage/i,
-    /Scenario Analysis/i,
-    /Top Expense Drivers/i,
-    /Expense Drivers/i,
-  ];
   const incomeWindow = firstTableAfterHeading(rawHtml, /Top Positive Income Lines|Top Income Drivers/i);
   if (incomeWindow) {
-    const hasHeaderOnlyTable =
-      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(incomeWindow) ||
-      !/<tbody>[\s\S]*?<tr\b/i.test(incomeWindow);
-    if (hasHeaderOnlyTable) {
+    const incomeText = stripHtml(incomeWindow);
+    const hasMeaningfulRows = hasMeaningfulTableBodyRows(incomeWindow);
+    if (!hasMeaningfulRows) {
       addViolation(violations, {
         code: "TOP_POSITIVE_INCOME_LINES_EMPTY_TABLE",
         severity: "high",
@@ -523,8 +536,8 @@ export function buildReportContractQa({
       });
     }
     const badIncomeLabel =
-      /\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(incomeWindow);
-    if (badIncomeLabel || hasBadMoneyRow(incomeWindow)) {
+      /\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(incomeText);
+    if (badIncomeLabel || hasBadMoneyRow(incomeText)) {
       addViolation(violations, {
         code: "TOP_POSITIVE_INCOME_LINES_CONTRACT",
         severity: "high",
@@ -558,12 +571,11 @@ export function buildReportContractQa({
     }
   }
 
-  const expenseWindow = subsectionAfter(text, /Top Expense Drivers|Top 3 Expense Drivers|Expense Drivers/i, tableStopPatterns);
+  const expenseWindow = firstTableAfterHeading(rawHtml, /Top Expense Drivers|Top 3 Expense Drivers|Expense Drivers/i);
   if (expenseWindow) {
-    const hasHeaderOnlyTable =
-      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(expenseWindow) ||
-      !/<tbody>[\s\S]*?<tr\b/i.test(expenseWindow);
-    if (hasHeaderOnlyTable) {
+    const expenseText = stripHtml(expenseWindow);
+    const hasMeaningfulRows = hasMeaningfulTableBodyRows(expenseWindow);
+    if (!hasMeaningfulRows) {
       addViolation(violations, {
         code: "TOP_EXPENSE_DRIVERS_EMPTY_TABLE",
         severity: "high",
@@ -573,8 +585,8 @@ export function buildReportContractQa({
       });
     }
     const badExpenseLabel =
-      /\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(expenseWindow);
-    if (badExpenseLabel || hasBadMoneyRow(expenseWindow, { allowNegative: true })) {
+      /\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(expenseText);
+    if (badExpenseLabel || hasBadMoneyRow(expenseText, { allowNegative: true })) {
       addViolation(violations, {
         code: "TOP_EXPENSE_DRIVERS_CONTRACT",
         severity: "high",

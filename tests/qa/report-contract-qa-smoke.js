@@ -554,12 +554,78 @@ const expenseSensitivityAfterDrivers = buildReportContractQa({
   sourceReportCoverageQa: baseCoverage,
   html: [
     "<h2>Top Expense Drivers</h2>",
-    "<ol><li>Property Taxes: 30.0%</li><li>Insurance: 10.0%</li></ol>",
+    "<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody><tr><td>Property Taxes</td><td>$120,000</td></tr><tr><td>Insurance</td><td>$60,000</td></tr></tbody></table>",
     "<h2>Expense Ratio Sensitivity</h2>",
     "<table><tr><td>60%</td><td>Implied NOI</td></tr></table>",
   ].join("\n"),
 });
 assert.equal(expenseSensitivityAfterDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_CONTRACT"), false);
+
+const populatedExpenseDrivers = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Top </p>",
+    "<h2>Top Expense Drivers</h2>",
+    "<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody><tr><td>Property Taxes</td><td>$120,000</td></tr><tr><td>Insurance</td><td>$60,000</td></tr></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(populatedExpenseDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_EMPTY_TABLE"), false);
+assert.equal(populatedExpenseDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_CONTRACT"), false);
+
+const populatedExpenseDriversNoTbody = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Expense Drivers</h2>",
+    "<table><tr><td>Property Taxes</td><td>$120,000</td></tr><tr><td>Insurance</td><td>$60,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(populatedExpenseDriversNoTbody.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_EMPTY_TABLE"), false);
+
+const placeholderExpenseDrivers = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Expense Drivers</h2>",
+    "<table><tbody><tr><td>No expense drivers</td><td>N/A</td></tr></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(placeholderExpenseDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_EMPTY_TABLE"), true);
+
+const headerOnlyExpenseDrivers = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Expense Drivers</h2>",
+    "<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(headerOnlyExpenseDrivers.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_EMPTY_TABLE"), true);
+
+const neighboringTopText = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Positive Income Lines (% of EGI, before vacancy offset)</h2>",
+    "<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody><tr><td>Management Fees</td><td>$20,000</td></tr></tbody></table>",
+    "<p>Top </p>",
+    "<h2>Expense Ratio Sensitivity</h2>",
+    "<table><tr><td>60%</td><td>Implied NOI</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(neighboringTopText.violations.some((v) => v.code === "TOP_EXPENSE_DRIVERS_EMPTY_TABLE"), false);
+assert.equal(neighboringTopText.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_EMPTY_TABLE"), false);
 
 const validDscrPressure = buildReportContractQa({
   reportType: "underwriting",

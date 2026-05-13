@@ -1,5 +1,237 @@
 # InvestorIQ Master Context - May 2026
 
+# May 13, 2026 Final Late Update - Forest City FINAL 6 Published / Launch Gates Added / Canonical Contracts Mostly Validated
+
+## Summary
+- Forest City Manor FINAL 6 successfully published as a 16-page Full Underwriting report after the May 13 canonical-contract hardening and system-wide QA/preflight work.
+- This was a major breakthrough after repeated whack-a-mole failures.
+- The system no longer failed at renderer/runtime scope level during this validation.
+- Core underwriting logic held.
+- The PDF is private-beta customer deliverable.
+- It is not yet Ken/public-sample ready because remaining blockers are QA false-positive/report-contract calibration and DocRaptor production mode.
+
+## Live validation result - Forest City Manor FINAL 6
+- Report type: Full Underwriting.
+- Uploaded package:
+  - T12
+  - Rent Roll
+  - BrokerEmail
+  - PurchaseAssumptions
+  - RenovationBudget
+- Result: published.
+- PDF length: 16 pages.
+- Cover metrics:
+  - 144 units
+  - NOI $1,723,435
+  - Expense Ratio 31.5%
+  - NOI Margin 68.5%
+  - Classification: Review
+- T12 / Rent Roll reconciliation was aligned:
+  - Rent Roll vs T12 GPR variance: 0.0%
+- No renderer crash occurred.
+- No `Current￾debt DSCR` hidden/control/mojibake issue appeared in the PDF.
+
+## Canonical contracts validated by Forest City FINAL 6
+1. Current debt / acquisition financing separation:
+   - Proposed acquisition financing rendered separately.
+   - Derived acquisition loan amount was not treated as current outstanding debt.
+   - Current Debt DSCR remained Not assessed.
+   - Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.
+   - No constrained/stressed/insufficient/shortfall refinance proceeds language rendered when refinance was not assessed.
+2. Refinance Stability:
+   - Rendered as Not Assessed.
+   - Limitation language was clean and institutional.
+   - Double-period bug was removed.
+3. Debt Structure:
+   - Proposed Acquisition Debt Sizing rendered clearly:
+     - Purchase Price $34,500,000
+     - Documented LTV 85.0%
+     - Derived Acquisition Loan Amount $29,325,000
+     - Interest Rate 3.80%
+     - Amortization 40 years
+     - Going-In Cap Rate 5.0%
+     - Closing Costs 1.5%
+     - Estimated Annual Debt Service $1,427,259
+     - Proposed Acquisition DSCR 1.21x
+   - Section correctly states this is not current outstanding debt and not used as a current refinance balance.
+4. Empty table collapse:
+   - Prior empty Top Positive Income Lines table no longer renders.
+   - Operating Profile now shows only populated Top Expense Drivers.
+5. Renovation rendering:
+   - No `Unit Count $40`.
+   - Unit Count renders as integer.
+   - Per Unit Cost renders as currency.
+   - Blank all-empty renovation columns are removed.
+   - Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions.
+6. DCF/scenario attribution:
+   - Scenario and DCF use clean attribution labels.
+   - Exit cap is document-derived.
+   - NOI growth and discount rate are standardized framework assumptions.
+   - Unsupported “stated” language did not appear.
+7. Support-doc taxonomy:
+   - Source Coverage QA now shows semantic/display labels:
+     - BrokerEmail.pdf -> display_doc_type broker_email
+     - PurchaseAssumptions.pdf -> display_doc_type purchase_assumptions
+     - RenovationBudget.docx -> display_doc_type renovation_budget
+   - Raw doc_type residue may still exist internally for traceability, but downstream semantic/display labels are correct.
+8. Source Coverage QA:
+   - Passed.
+   - T12 and rent roll core coverage were 100%.
+   - Acquisition assumptions were validated/supported and separated from current debt.
+9. QA Manager:
+   - No longer blocks supported acquisition assumptions.
+   - Proposed Acquisition DSCR concern is now correctly treated as false positive / no-action.
+10. Delivery gate:
+   - Customer delivery is eligible.
+   - Customer publish blockers are empty.
+   - Public sample and high-value outreach remain blocked by public-sample blockers only.
+
+## Remaining issues after Forest City FINAL 6
+1. Report Contract QA false positive:
+   - Artifact flagged `TOP_EXPENSE_DRIVERS_EMPTY_TABLE`.
+   - The PDF visibly contains populated Top Expense Drivers rows, so this appears to be a report-contract QA regex / excerpt false positive, not an actual PDF rendering failure.
+   - Classification: QA false positive / report-contract calibration issue.
+   - Customer delivery: not blocked.
+   - Public sample/high-value outreach: blocked until fixed.
+2. DocRaptor production mode:
+   - `DOCRAPTOR_NOT_PRODUCTION_MODE` remains expected while DocRaptor is in test mode.
+   - Classification: production config only.
+   - Customer/private beta: acceptable.
+   - Public/Ken sample: blocked until production PDF mode is enabled and verified.
+3. Upstream diagnostic residue:
+   - AI support-doc diagnostics may still show PurchaseAssumptions initially/detected as appraisal before semantic correction.
+   - Downstream semantic/display role is correct, so this is not currently a customer-facing blocker.
+   - Watch later, but do not reopen broad taxonomy unless it leaks into customer/public output or QA false blockers.
+
+## Runtime / whack-a-mole hardening completed today
+The repeated live renderer ReferenceErrors were recognized as one systemic class, not isolated bugs:
+- `rrVsGprPct is not defined`
+- `sourceReportCoverageQa is not defined`
+- `mortgagePayload is not defined`
+
+Fixes completed:
+- Added ordered renderer canonical-state helper:
+  - `buildRendererCanonicalState(...)`
+- Helper now builds:
+  - currentDebtAssessmentState
+  - sourceReportCoverageQa
+  - sourceReconciliationState
+  - sectionEligibility
+- Added/extended focused renderer smoke tests to execute canonical state and helper paths.
+- `buildScreeningDataCoverageSummary()` was made explicit-input safe by passing `mortgagePayload` and `loanTermSheetTermsPayload` instead of relying on hidden outer scope.
+- Added ESLint no-undef renderer scope guard:
+  - `eslint.renderer-scope.cjs`
+  - package script: `qa:renderer-scope`
+- `qa:renderer-scope` catches the repeated ReferenceError class before live testing.
+
+## System-wide QA/preflight gates added
+New package scripts added:
+- `qa:renderer`
+- `qa:contracts`
+- `qa:sources`
+- `qa:support-docs`
+- `qa:renovation`
+- `qa:messaging`
+- `qa:diff-check`
+- `qa:launch-core`
+- `qa:parsers`
+- `qa:recovery`
+- `qa:routing`
+- `qa:full`
+
+New rule:
+- Before routine live regeneration:
+  - `npm run qa:launch-core`
+  - `git status`
+- Before Ken Dunn, public samples, or release-candidate validation:
+  - `npm run qa:full`
+  - `git status`
+
+`qa:launch-core` includes:
+- renderer scope/runtime checks
+- report contract checks
+- source coverage checks
+- QA action / manager checks
+- support-doc taxonomy checks
+- renovation rendering checks
+- failed-state messaging checks
+- frontend build
+- diff check
+
+`qa:full` includes `qa:launch-core` plus:
+- parser tests
+- recovery tests
+- routing tests
+
+Doctrine:
+- No more live tests as QA discovery.
+- Live tests are validation only.
+- Local contract gates catch preventable failures first.
+
+## Latest product-readiness classification
+- Private beta customer deliverable: YES.
+- Full Underwriting core logic: materially green for acquisition-only/no-true-current-debt lane.
+- Canonical contracts: mostly validated.
+- Ken/public-sample ready: NO.
+- Remaining blockers before Ken/public sample:
+  1. Fix `TOP_EXPENSE_DRIVERS_EMPTY_TABLE` QA false positive / report-contract calibration.
+  2. Flip and verify DocRaptor production mode.
+  3. Regenerate a clean public-candidate sample with clean property name and clean filenames.
+  4. Run `npm run qa:full` before final Ken/public sample validation.
+
+## Next immediate action
+Do not run another broad test batch.
+Do not reopen whack-a-mole patching.
+The next likely Codex task should be a narrow report-contract QA calibration for the `TOP_EXPENSE_DRIVERS_EMPTY_TABLE` false positive:
+- The PDF visibly contains populated Top Expense Drivers.
+- Report Contract QA evidence excerpt was only `Top `.
+- Fix should target QA detection/excerpt scoping, not renderer output, unless file truth proves otherwise.
+- Then run `npm run qa:launch-core`.
+- After that, one regeneration only if needed.
+
+## Fresh chat brief to include
+Add this fresh chat prompt after the update:
+
+```text
+We are continuing InvestorIQ from the May 13 final late master context.
+
+Current state:
+- Forest City Manor FINAL 6 published as a 16-page Full Underwriting report.
+- Core canonical contracts mostly validated.
+- Acquisition financing stayed separate from current debt.
+- Current Debt DSCR remained Not assessed.
+- No fake refinance stress/proceeds language appeared.
+- Empty Top Positive Income Lines table was gone.
+- Renovation formatting improved.
+- DCF/scenario attribution labels were clean.
+- Support-doc semantic display labels worked.
+- Source Coverage QA passed.
+- QA Manager no longer blocked supported acquisition assumptions.
+- Delivery gate marked customer delivery eligible.
+
+Major system-wide guardrails added:
+- `qa:renderer-scope`
+- `qa:launch-core`
+- `qa:full`
+- New rule: live tests are validation only, not QA discovery.
+
+Remaining blockers:
+1. Report Contract QA false positive:
+   - `TOP_EXPENSE_DRIVERS_EMPTY_TABLE`
+   - PDF visibly contains populated Top Expense Drivers rows, so likely QA regex/excerpt false positive.
+   - Customer delivery is not blocked.
+   - Public/Ken/high-value outreach remains blocked.
+2. DocRaptor production mode:
+   - still in test mode.
+   - production config only.
+   - public/Ken sample blocked until enabled and verified.
+
+First task in the new chat:
+Do not run a live test first.
+Do not patch broadly.
+Prepare a narrow Codex prompt to investigate and fix the `TOP_EXPENSE_DRIVERS_EMPTY_TABLE` false positive system-wide in Report Contract QA. It should inspect whether the QA table detector is overmatching `Top Expense Drivers` despite populated rows, fix the detection/excerpt scoping, and add a focused regression test. It should not change renderer output unless investigation proves the PDF actually contains a header-only table.
+```
+
 # May 13, 2026 Late Update - Canonical Contract Batch Committed / Ready for One Live Underwriting Validation
 
 ## Fresh Chat Brief - May 13 Canonical Contracts Complete
