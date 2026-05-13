@@ -15,8 +15,31 @@ import {
 } from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
+import { buildSupportDocTaxonomyState } from '../_lib/report-surface-contracts.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
+
+const attachSupportDocTaxonomy = (payload, {
+  declaredDocType = null,
+  detectedDocType = null,
+  originalFilename = null,
+  rawText = null,
+} = {}) => {
+  const taxonomy = buildSupportDocTaxonomyState({
+    declaredDocType,
+    detectedDocType,
+    originalFilename,
+    rawText,
+    payload,
+  });
+  return {
+    ...payload,
+    semantic_doc_role: taxonomy.semantic_doc_role,
+    semantic_doc_role_confidence: taxonomy.semantic_doc_role_confidence,
+    semantic_doc_role_reason: taxonomy.semantic_doc_role_reason,
+    semantic_doc_family: taxonomy.semantic_doc_family,
+  };
+};
 
 const writeAiRentRollRecoveryDiagnostic = async ({
   supabaseAdmin,
@@ -4014,7 +4037,7 @@ export default async function handler(req, res) {
           if (maybeAiAcquisitionRecovery && maybeAiAcquisitionRecovery.parse_warnings) {
             parse_warnings.push(...maybeAiAcquisitionRecovery.parse_warnings);
           }
-          payload = {
+          payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: maybeAiAcquisitionRecovery ? maybeAiAcquisitionRecovery.method : 'text_excerpt',
@@ -4033,7 +4056,12 @@ export default async function handler(req, res) {
             refi_cap_rate,
             parse_warnings,
             ai_recovery_evidence: maybeAiAcquisitionRecovery?.ai_recovery_evidence || null,
-          };
+          }, {
+            declaredDocType,
+            detectedDocType,
+            originalFilename: fileRow.original_filename,
+            rawText,
+          });
 
           if (acquisitionRecoveryDiagnostics) {
             await writeAiSupportDocRecoveryDiagnostic({
@@ -4146,8 +4174,8 @@ export default async function handler(req, res) {
             ? maybeAiRenovationRecovery.execution_rows
             : [];
           const execution_rows = [
-            ...(validatedUnitCount ? [{ metric: 'Unit Count', value: validatedUnitCount }] : []),
-            ...(validatedPerUnitCost ? [{ metric: 'Per Unit Cost', value: validatedPerUnitCost }] : []),
+            ...(validatedUnitCount ? [{ metric: 'Unit Count', metric_kind: 'unit_count', value: validatedUnitCount }] : []),
+            ...(validatedPerUnitCost ? [{ metric: 'Per Unit Cost', metric_kind: 'per_unit_cost', value: validatedPerUnitCost }] : []),
             ...validatedExecutionRows,
           ];
           const budget_note = Number.isFinite(validatedTotalBudget)
@@ -4162,7 +4190,7 @@ export default async function handler(req, res) {
           const interpretation = validatedBudgetRows.length > 0
             ? 'Structured CapEx budget categories were extracted from the uploaded renovation source. Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions.'
             : 'Renovation support was identified, but no structured budget categories were extracted.';
-          payload = {
+          payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: maybeAiRenovationRecovery ? maybeAiRenovationRecovery.method : 'text_excerpt',
@@ -4182,7 +4210,12 @@ export default async function handler(req, res) {
             interpretation,
             parse_warnings,
             ai_recovery_evidence: maybeAiRenovationRecovery?.ai_recovery_evidence || null,
-          };
+          }, {
+            declaredDocType,
+            detectedDocType,
+            originalFilename: fileRow.original_filename,
+            rawText,
+          });
           if (renovationRecoveryDiagnostics) {
             await writeAiSupportDocRecoveryDiagnostic({
               supabaseAdmin,
@@ -4259,7 +4292,7 @@ export default async function handler(req, res) {
             deterministicMortgagePayload.lender_name,
             isValidLenderName
           );
-          payload = {
+          payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: maybeAiCurrentMortgageRecovery ? maybeAiCurrentMortgageRecovery.method : 'text_excerpt',
@@ -4281,7 +4314,12 @@ export default async function handler(req, res) {
               ]),
             ],
             ai_recovery_evidence: maybeAiCurrentMortgageRecovery?.ai_recovery_evidence || null,
-          };
+          }, {
+            declaredDocType,
+            detectedDocType,
+            originalFilename: fileRow.original_filename,
+            rawText,
+          });
           if (currentMortgageRecoveryDiagnostics) {
             await writeAiSupportDocRecoveryDiagnostic({
               supabaseAdmin,
@@ -4377,7 +4415,7 @@ export default async function handler(req, res) {
             null,
             isValidAppraisalText
           );
-          payload = {
+          payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: maybeAiAppraisalRecovery ? maybeAiAppraisalRecovery.method : 'text_excerpt',
@@ -4392,7 +4430,12 @@ export default async function handler(req, res) {
             appraisal_type: validatedAppraisalType,
             parse_warnings,
             ai_recovery_evidence: maybeAiAppraisalRecovery?.ai_recovery_evidence || null,
-          };
+          }, {
+            declaredDocType,
+            detectedDocType,
+            originalFilename: fileRow.original_filename,
+            rawText,
+          });
           if (appraisalRecoveryDiagnostics) {
             await writeAiSupportDocRecoveryDiagnostic({
               supabaseAdmin,
@@ -4420,7 +4463,7 @@ export default async function handler(req, res) {
             const acquisitionRecovery = acquisitionRecoveryResult?.payload || null;
             const acquisitionRecoveryDiagnostics = acquisitionRecoveryResult?.diagnostics || null;
             if (acquisitionRecovery) {
-              const acquisitionArtifactPayload = {
+              const acquisitionArtifactPayload = attachSupportDocTaxonomy({
                 file_id: fileRow.id,
                 original_filename: fileRow.original_filename,
                 method: acquisitionRecovery.method,
@@ -4437,7 +4480,12 @@ export default async function handler(req, res) {
                 debt_basis: acquisitionRecovery.debt_basis,
                 parse_warnings: acquisitionRecovery.parse_warnings,
                 ai_recovery_evidence: acquisitionRecovery.ai_recovery_evidence,
-              };
+              }, {
+                declaredDocType,
+                detectedDocType,
+                originalFilename: fileRow.original_filename,
+                rawText,
+              });
               const { error: acquisitionArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
                 {
                   job_id: jobId,
@@ -4520,7 +4568,7 @@ export default async function handler(req, res) {
             isValidString
           );
 
-          payload = {
+          payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
             method: maybeAiPropertyTaxRecovery ? maybeAiPropertyTaxRecovery.method : 'text_excerpt',
@@ -4535,7 +4583,12 @@ export default async function handler(req, res) {
               : 'Property tax modeling was not included because no verified annual property tax amount was extracted.',
             parse_warnings,
             ai_recovery_evidence: maybeAiPropertyTaxRecovery?.ai_recovery_evidence || null,
-          };
+          }, {
+            declaredDocType,
+            detectedDocType,
+            originalFilename: fileRow.original_filename,
+            rawText,
+          });
           if (propertyTaxRecoveryDiagnostics) {
             await writeAiSupportDocRecoveryDiagnostic({
               supabaseAdmin,

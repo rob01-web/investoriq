@@ -16,6 +16,17 @@ import { buildReportContractQa } from "./_lib/report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan, buildDeliveryGateDecision } from "./_lib/qa-action-plan.js";
+import {
+  buildAssumptionAttributionState,
+  buildCurrentDebtAssessmentState,
+  buildFullUnderwritingSectionEligibility,
+  dedupeRenovationMetricRows,
+  formatAssumptionAttributionLabel,
+  formatRenovationMetricValue,
+  normalizeRenovationMetricKind,
+  buildSourceReconciliationState,
+  sanitizeFinalCustomerHtml,
+} from "./_lib/report-surface-contracts.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -199,26 +210,53 @@ function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
     hasVerifiedOutstandingBalance: Number.isFinite(balance) && balance > 0,
   };
 }
-function currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload } = {}) {
-  if (mortgagePayload) {
+function currentDebtNotAssessedCopy({
+  currentDebtState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  t12Noi = null,
+} = {}) {
+  const state =
+    currentDebtState ||
+    buildCurrentDebtAssessmentState({
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Noi,
+    });
+  if (state?.current_debt_dscr_status === "computed" && Number.isFinite(state?.current_debt_dscr)) {
     return {
-      value: "Not assessed",
-      explanation: "Current debt terms were not fully provided",
-      band: "Current debt balance, rate, and amortization not fully provided",
+      value: formatMultiple(state.current_debt_dscr, 2),
+      explanation: "Current debt DSCR computed from verified current debt balance and debt service",
+      band: "Verified current debt balance and debt service",
     };
   }
-  if (loanTermSheetTermsPayload) {
-    return {
-      value: "Not assessed",
-      explanation: "Current debt balance not provided",
-      band: "Current debt balance not provided",
-    };
+  switch (state?.current_debt_limitation_reason_code) {
+    case "acquisition_only_not_current_debt":
+      return {
+        value: "Not assessed",
+        explanation: "Acquisition financing is shown separately and is not treated as current debt.",
+        band: "Proposed acquisition financing is not current outstanding debt",
+      };
+    case "no_current_outstanding_balance":
+      return {
+        value: "Not assessed",
+        explanation: "Current debt balance not provided",
+        band: "Current debt balance not provided",
+      };
+    case "incomplete_current_debt_terms":
+      return {
+        value: "Not assessed",
+        explanation: "Current debt terms were not fully provided",
+        band: "Current debt balance, rate, and amortization not fully provided",
+      };
+    case "no_current_debt_document":
+    default:
+      return {
+        value: "Not assessed",
+        explanation: "No current debt document provided",
+        band: "No current debt document provided",
+      };
   }
-  return {
-    value: "Not assessed",
-    explanation: "No current debt document provided",
-    band: "No current debt document provided",
-  };
 }
 function isFiniteNumber(x) {
   const n = Number(x);
@@ -562,8 +600,13 @@ function escapeHtml(value) {
 function normalizeExitCapSourceLabel(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return "";
-  const compact = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  if (compact === "document-derived") return "document derived";
+  const compact = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  if (compact === "document_derived") return "document derived";
+  if (compact === "standardized_framework" || compact === "standardized_framework_assumption") {
+    return "standardized framework assumption";
+  }
+  if (compact === "user_provided") return "user-provided";
+  if (compact === "unavailable") return "unavailable";
   return escapeHtml(raw);
 }
 function hasMeaningfulNarrative(html) {
@@ -594,20 +637,7 @@ function sanitizePropertyNameDisplayText(s) {
     .trim();
 }
 function sanitizeTypography(html) {
-  if (typeof html !== "string") return html;
-  return html
-    .replace(/[\u2013\u2014]/g, "-")      // en/em dash
-    .replace(/[\u2018\u2019]/g, "'")      // smart apostrophes
-    .replace(/[\u201C\u201D]/g, '"')      // smart quotes
-    .replace(/&(?:ndash|mdash);/g, "-")
-    .replace(/\u00b7/g, " | ")
-    .replace(/\u2212/g, "-")
-    .replace(/\u00c2\u00b7/g, " | ")
-    .replace(/\u00c3\u201a\u00c2\u00b7/g, " | ")
-    .replace(/\u00e2\u20ac\u201d/g, "-")
-    .replace(/\u00e2\u20ac\u201c/g, "-")
-    .replace(/\u00e2\u02c6\u2019/g, "-")
-    .replace(/\u00c3\u201a/g, "");
+  return sanitizeFinalCustomerHtml(html);
 }
 
 function dedupeDataNotAvailableBySection(html) {
@@ -961,9 +991,17 @@ function buildRenovationBudgetRows(rows, formatValue) {
       const cost = Number.isFinite(costNum)
         ? formatValue(costNum)
         : escapeHtml(costRaw);
-      const pctRaw = String(
-        row.percent_of_budget ?? row.percent ?? row.percentage ?? ""
-      ).trim();
+      const pctKind = normalizeRenovationMetricKind({
+        metric_kind: "percent_of_budget",
+        label: "percent of budget",
+      });
+      const pctRawValue = row.percent_of_budget ?? row.percent ?? row.percentage ?? "";
+      const pctValue = coerceNumber(pctRawValue);
+      const pct = formatRenovationMetricValue({
+        metricKind: pctKind,
+        value: pctValue,
+      });
+      const pctRaw = Number.isFinite(pctValue) ? pct : String(pctRawValue ?? "").trim();
       const objective = String(
         row.primary_objective ?? row.objective ?? row.note ?? ""
       ).trim();
@@ -979,15 +1017,26 @@ function buildRenovationBudgetRows(rows, formatValue) {
 }
 function buildRenovationExecutionRows(rows, formatValue) {
   if (!Array.isArray(rows) || rows.length === 0) return "";
-  return rows
+  return dedupeRenovationMetricRows(rows)
     .map((row) => {
       if (!row || typeof row !== "object") return "";
-      const metric = String(row.metric ?? row.label ?? row.item ?? "").trim();
-      const valueNum = coerceNumber(row.value ?? row.amount);
-      const valueRaw = String(row.value ?? row.amount ?? "").trim();
-      const value = Number.isFinite(valueNum)
-        ? formatValue(valueNum)
-        : escapeHtml(valueRaw);
+      const metricKind = normalizeRenovationMetricKind(row);
+      const metric = String(row.metric ?? row.label ?? row.item ?? row.category ?? "").trim();
+      const valueSource =
+        row.value ??
+        row.amount ??
+        row.estimated_cost ??
+        row.scope_of_work ??
+        row.percent_of_budget ??
+        row.percent ??
+        row.percentage ??
+        "";
+      const value = formatRenovationMetricValue({
+        metricKind,
+        value: valueSource,
+        formatCurrency: formatValue,
+        formatPercent: formatPercent1,
+      });
       if (!metric && !value) return "";
       return `<tr><td>${escapeHtml(metric)}</td><td>${value}</td></tr>`;
     })
@@ -1237,6 +1286,9 @@ function buildScreeningDataCoverageSummary({
   effectiveReportMode,
   supportingUnderwritingDocsUsed = false,
   hasUploadedFiles = false,
+  currentDebtAssessmentState = null,
+  sourceReconciliationState = null,
+  sectionEligibility = null,
 }) {
   const t12Checks = [
     {
@@ -1359,9 +1411,27 @@ function buildScreeningDataCoverageSummary({
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.</p>${coverageTableHtml}</div>`;
+      const currentDebtCoverageCopy =
+        currentDebtAssessmentState?.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" &&
+        !currentDebtAssessmentState?.has_true_current_debt_balance
+          ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+          : "Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.";
+      const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
+      const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
+        ? "Some Full Underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+        : "";
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}</div>`;
     }
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified.</p>${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
+    const currentDebtCoverageCopy =
+      currentDebtAssessmentState?.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" &&
+      !currentDebtAssessmentState?.has_true_current_debt_balance
+        ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+        : "Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified.";
+    const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
+    const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
+      ? "Some Full Underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+      : "";
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -1382,6 +1452,7 @@ function buildScreeningIncomeForensicsHtml({
   computedRentRoll,
   rentRollPayload,
   formatCurrency,
+  sourceReconciliationState = null,
 }) {
   const toRows = (collection) => {
     if (!collection) return [];
@@ -1527,14 +1598,7 @@ function buildScreeningIncomeForensicsHtml({
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
     ? marketPremiumPct / 100
     : NaN;
-  const rrAnnual = coerceNumber(
-    computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
-  );
-  const gpr = coerceNumber(t12Payload?.gross_potential_rent);
-  const rrVsGprPct =
-    Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0
-      ? (rrAnnual - gpr) / gpr
-      : null;
+  const rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
   const bullets = [];
   if (Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration >= 0.85) {
     bullets.push(
@@ -1758,14 +1822,11 @@ function buildScreeningNoiStabilityHtml({
   computedRentRoll,
   rentRollPayload,
   formatCurrency,
+  sourceReconciliationState = null,
 }) {
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
   const noi = coerceNumber(t12Payload?.net_operating_income);
-  const rrAnnual = coerceNumber(
-    computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
-  );
-  const gpr = coerceNumber(t12Payload?.gross_potential_rent);
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) {
     const noiMargin = noi / egi;
@@ -1791,9 +1852,8 @@ function buildScreeningNoiStabilityHtml({
       );
     }
   }
-  let rrVsGprPct = null;
-  if (Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0) {
-    rrVsGprPct = (rrAnnual - gpr) / gpr;
+  let rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
+  if (Number.isFinite(rrVsGprPct)) {
     rows.push(
       `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${formatPercent1(
         rrVsGprPct
@@ -3106,6 +3166,25 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
     }
     // 7. Inject ALL narrative sections (12)
+    const currentDebtAssessmentState = buildCurrentDebtAssessmentState({
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Noi: coerceNumber(t12Payload?.net_operating_income),
+    });
+    const sourceReconciliationState = buildSourceReconciliationState({
+      computedRentRoll,
+      rentRollPayload,
+      t12Payload,
+      sourceReportCoverageQa,
+    });
+    const sectionEligibility = buildFullUnderwritingSectionEligibility({
+      sourceReportCoverageQa: {
+        artifact_inventory: sourceReportCoverageQa?.artifact_inventory || {},
+        rendered_sections: sourceReportCoverageQa?.rendered_sections || {},
+      },
+      currentDebtState: currentDebtAssessmentState,
+      sourceReconciliationState,
+    });
     const execMetricsParts = [];
     const execUnits = coerceNumber(
       computedRentRoll?.total_units ??
@@ -3440,16 +3519,7 @@ if (effectiveReportMode === "screening_v1") {
     const driver1 = pressureDrivers[0] || null;
     const driver2 = pressureDrivers[1] || null;
     const driver3 = pressureDrivers[2] || null;
-    const rrAnnualForPressurePoint = coerceNumber(
-      computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
-    );
-    const gprForPressurePoint = coerceNumber(t12Payload?.gross_potential_rent);
-    const rrVsGprPct =
-      Number.isFinite(rrAnnualForPressurePoint) &&
-      Number.isFinite(gprForPressurePoint) &&
-      gprForPressurePoint > 0
-        ? (rrAnnualForPressurePoint - gprForPressurePoint) / gprForPressurePoint
-        : null;
+    const rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
     const hasSourceReconciliationVariance = Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
     let primaryPressurePoint = driver1?.label
       ? driver1.value
@@ -3720,7 +3790,7 @@ if (effectiveReportMode === "screening_v1") {
     const currentDebtDscrForDisplay = resolveCurrentDebtCoverage(
       mortgagePayload,
       coerceNumber(t12Payload?.net_operating_income)
-    )?.dscr;
+    )?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
     const coverClassificationLabel = (() => {
       if (effectiveReportMode === "v1_core") {
         if (screeningClass === "Fragile") return "High Risk";
@@ -3826,7 +3896,7 @@ if (effectiveReportMode === "screening_v1") {
     // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
     if (effectiveReportMode === "v1_core") {
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
-      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+      if (currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
         if (currentDebtCoverage.dscr >= 1.35) {
           upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
@@ -3836,10 +3906,16 @@ if (effectiveReportMode === "screening_v1") {
           riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
         }
       } else {
+        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          t12Noi: coerceNumber(t12Payload?.net_operating_income),
+        });
         riskBullets.push(
-          loanTermSheetTermsPayload
-            ? "Debt terms were identified from purchase-assumption support. Current debt service is not assessed because no current outstanding debt balance was provided."
-            : "Debt terms were not included in the uploaded documents; Current Debt DSCR and refinance risk are not assessed in this report."
+          currentDebtAssessmentState.current_debt_limitation_reason_code === "acquisition_only_not_current_debt"
+            ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+            : `${dscrNotAssessedCopy.explanation}. Current-debt DSCR and refinance capacity were not assessed.`
         );
       }
       const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
@@ -4108,10 +4184,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       reportType,
       reportTier,
     });
-    const hasProposedAcquisitionFinancing = Boolean(String(acquisitionFinancingAssumptionsHtml || "").trim());
-    const hasTrueCurrentDebtBalance = Boolean(
-      isFinitePositive(mortgagePayload?.outstanding_balance)
-    );
+    const hasProposedAcquisitionFinancing = currentDebtAssessmentState.has_proposed_acquisition_financing;
+    const hasTrueCurrentDebtBalance = currentDebtAssessmentState.has_true_current_debt_balance;
     const acquisitionOnlyDebt = effectiveReportMode === "v1_core" && hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
@@ -4162,6 +4236,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       acquisitionFinancingAssumptionsHtml
     );
     if (acquisitionOnlyDebt) {
+      const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        t12Noi: coerceNumber(t12Payload?.net_operating_income),
+      });
       finalHtml = replaceMarkedSection(
         finalHtml,
         "SECTION_7_DEBT",
@@ -4175,7 +4255,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     </div>
     <div class="card no-break">
       <p class="subsection-title">Current Debt / Refinance Limitation</p>
-      <p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance. Proposed acquisition financing is shown separately and is not treated as current debt.</p>
+      <p>${escapeHtml(currentDebtAssessmentState.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified." : `${currentDebtAssessmentCopy.explanation}. Current-debt DSCR and refinance capacity were not assessed.`)}</p>
     </div>
     ${acquisitionFinancingAssumptionsHtml}
   </div>
@@ -4395,6 +4475,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           computedRentRoll,
           rentRollPayload,
           formatCurrency,
+          sourceReconciliationState,
         });
     finalHtml = replaceAll(
       finalHtml,
@@ -4412,6 +4493,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       computedRentRoll,
       rentRollPayload,
       formatCurrency,
+      sourceReconciliationState,
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -4910,7 +4992,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, noiBase);
       const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const baseCapPct = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? resolvedCapPct : 5.5;
-      const capSource = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? "document-derived" : "stated default";
+      const capSource = buildAssumptionAttributionState({
+        sourceProvided: Number.isFinite(resolvedCapPct) && resolvedCapPct > 0,
+        frameworkProvided: true,
+      }).attribution;
+      const capSourceLabel = formatAssumptionAttributionLabel(capSource);
 
       if (Number.isFinite(noiBase) && noiBase > 0 && Number.isFinite(baseRatePct) && baseRatePct > 0 && Number.isFinite(debtBal) && debtBal > 0) {
         const LTV = 0.75;
@@ -4965,9 +5051,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
-      const exitCapSource = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? "document-derived" : "stated default";
-      const GROWTH = 0.03; // 3% annual NOI growth stated assumption
-      const DISCOUNT = 0.08; // 8% discount rate stated assumption
+      const exitCapSource = buildAssumptionAttributionState({
+        sourceProvided: Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0,
+        frameworkProvided: true,
+      }).attribution;
+      const exitCapSourceLabel = formatAssumptionAttributionLabel(exitCapSource);
+      const GROWTH = 0.03; // 3% annual NOI growth standardized framework assumption
+      const DISCOUNT = 0.08; // 8% discount rate standardized framework assumption
 
       if (Number.isFinite(noiYear0) && noiYear0 > 0) {
         const exitCapDec = exitCapPct / 100;
@@ -5001,7 +5091,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalPv)}</td>`;
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
-        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (stated) | Discount rate: 8.0% (stated) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)})</p>`;
+        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Discount rate: 8.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel})</p>`;
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
@@ -5022,7 +5112,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           }, 0);
           const rowBg = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
           const vs = isBase ? "-" : ((pvSum - totalPv) / totalPv * 100).toFixed(1) + "%";
-          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
+          tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${exitCapSourceLabel})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
         dcfTableHtml = tableHtml;
@@ -5036,7 +5126,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const noiBasis = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
-      const exitCapSource = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? "document-derived" : "5.5% stated";
+      const exitCapSource = buildAssumptionAttributionState({
+        sourceProvided: Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0,
+        frameworkProvided: true,
+      }).attribution;
+      const exitCapSourceLabel = formatAssumptionAttributionLabel(exitCapSource);
       const exitCapDec = exitCapPct / 100;
       if (Number.isFinite(noiBasis) && noiBasis > 0) {
         const growthRates = [
@@ -5067,7 +5161,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / exitCapDec)}</td>`;
         }
         sTbl += `</tr></tbody></table>`;
-        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${normalizeExitCapSourceLabel(exitCapSource)}). Scenario outputs are deterministic from document-backed inputs.</p>`;
+        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel}). Scenario outputs are deterministic from document-backed inputs.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         const capRateSensitivityRows = capRateRows.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
@@ -5084,7 +5178,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowCap = isBase ? exitCapPct : cap;
           const rowStyle = isBase ? ` style="background:#FEFCE8;font-weight:700;"` : ``;
-          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${normalizeExitCapSourceLabel(exitCapSource)})</span>` : ""}</td>`;
+          sTbl += `<tr${rowStyle}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${exitCapSourceLabel})</span>` : ""}</td>`;
           for (const s of growthRates) {
             const noi5 = noiBasis * Math.pow(1 + s.rate, 5);
             sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / (rowCap / 100))}</td>`;
@@ -5161,7 +5255,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       if (!hasDscrScore) {
         totalPoints += 0; maxPoints += 10;
-        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload });
+        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          t12Noi: coerceNumber(t12Payload?.net_operating_income),
+        });
         scoreRows.push({
           label: "Current Debt DSCR",
           value: dscrNotAssessedCopy.value,
@@ -5379,6 +5478,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       effectiveReportMode,
       supportingUnderwritingDocsUsed,
       hasUploadedFiles: Array.isArray(documentSources) && documentSources.length > 0 && Boolean(documentSourcesHtml),
+      currentDebtAssessmentState,
+      sourceReconciliationState,
+      sectionEligibility,
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -5485,14 +5587,25 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
             addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
           }
         } else {
-          const dscrNotAssessedCopy = currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload });
+          const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
+            currentDebtState: currentDebtAssessmentState,
+            mortgagePayload,
+            loanTermSheetTermsPayload,
+            t12Noi: coerceNumber(t12Payload?.net_operating_income),
+          });
           addRisk("Current Debt DSCR", dscrNotAssessedCopy.value, dscrNotAssessedCopy.explanation, "NOT ASSESSED", "#9CA3AF");
         }
       } else {
+        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          t12Noi: coerceNumber(t12Payload?.net_operating_income),
+        });
         addRisk(
           "Current Debt DSCR",
-          currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload }).value,
-          currentDebtNotAssessedCopy({ mortgagePayload, loanTermSheetTermsPayload }).explanation,
+          dscrNotAssessedCopy.value,
+          dscrNotAssessedCopy.explanation,
           "NOT ASSESSED",
           "#9CA3AF"
         );
@@ -6110,9 +6223,8 @@ if (!hasSectionTwelve) {
   return res.status(500).json({ error: "report_html_incomplete" });
 }
 let pdfResponse;
-// Replace multi-byte Unicode chars with HTML entities so DocRaptor/Prince
-// renders them correctly regardless of charset detection.
-let docHtml = dedupeDataNotAvailableBySection(htmlString);
+// Final customer-facing HTML surface used for both QA and DocRaptor.
+let docHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
 let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";

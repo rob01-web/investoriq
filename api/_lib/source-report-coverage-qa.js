@@ -1,5 +1,12 @@
 const COVERAGE_QA_VERSION = "2026.05.05.1";
 
+import {
+  buildCurrentDebtAssessmentState,
+  buildFullUnderwritingSectionEligibility,
+  buildSupportDocTaxonomyState,
+  buildSourceReconciliationState,
+} from "./report-surface-contracts.js";
+
 function asNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -85,6 +92,11 @@ function buildRenderedSections(html) {
   const text = typeof html === "string" ? html : "";
   const has = (pattern) => pattern.test(text);
   const sections = {
+    has_executive_summary_section: has(/Executive Summary|Operating Profile Summary|Capital Risk Profile|SECTION_1_EXEC/i),
+    has_operating_profile_section: has(/Operating Profile|Capital Risk Profile|Operating Profile Summary/i),
+    has_expense_structure_section: has(/Expense Structure|Expense Ratio Sensitivity|SECTION_3_EXPENSE/i),
+    has_noi_stability_section: has(/NOI Stability|Variance Flags \(Deterministic\)|SECTION_4_NOI/i),
+    has_data_coverage_section: has(/Data Coverage|Underwriting Gaps|Screening Notes/i),
     has_refi_stability_section: has(/Refinance Stress Test|SECTION_7_REFI_STABILITY/i),
     has_debt_section: has(/Debt Structure|Current Debt Coverage|SECTION_7_DEBT/i),
     has_operating_statement_section: has(/Operating Statement|Income Reconstruction|T12/i),
@@ -118,6 +130,22 @@ function findRenderedSignals(html) {
 }
 
 function buildArtifactInventory(artifacts) {
+  const supportTaxonomyFor = (row, fallbackDocType = null) => {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const taxonomy = buildSupportDocTaxonomyState({
+      declaredDocType: payload?.detected_doc_type || fallbackDocType || row?.type || null,
+      detectedDocType: payload?.detected_doc_type || fallbackDocType || row?.type || null,
+      originalFilename: payload?.original_filename || null,
+      rawText: payload?.excerpt || payload?.text || null,
+      payload,
+    });
+    return {
+      semantic_doc_role: payload?.semantic_doc_role || taxonomy.semantic_doc_role,
+      semantic_doc_role_confidence:
+        payload?.semantic_doc_role_confidence ?? taxonomy.semantic_doc_role_confidence,
+      semantic_doc_role_reason: payload?.semantic_doc_role_reason || taxonomy.semantic_doc_role_reason,
+    };
+  };
   const t12 = latestArtifact(artifacts, "t12_parsed")?.payload || null;
   const rentRoll = latestArtifact(artifacts, "rent_roll_parsed")?.payload || null;
   const loan = latestArtifact(artifacts, "loan_term_sheet_parsed")?.payload || null;
@@ -151,6 +179,7 @@ function buildArtifactInventory(artifacts) {
       has_payment: hasPositive(loan?.monthly_payment) || hasPositive(loan?.annual_debt_service),
       has_rate: hasPositive(loan?.interest_rate),
       has_amortization: hasPositive(loan?.amort_years),
+      ...supportTaxonomyFor(latestArtifact(artifacts, "loan_term_sheet_parsed"), "loan_term_sheet"),
     },
     mortgage_statement_parsed: {
       present: Boolean(mortgage),
@@ -158,6 +187,7 @@ function buildArtifactInventory(artifacts) {
       has_payment: hasPositive(mortgage?.monthly_payment) || hasPositive(mortgage?.annual_debt_service),
       has_rate: hasPositive(mortgage?.interest_rate),
       has_amortization: hasPositive(mortgage?.amort_years),
+      ...supportTaxonomyFor(latestArtifact(artifacts, "mortgage_statement_parsed"), "mortgage_statement"),
     },
     renovation_parsed: {
       present: Boolean(renovation),
@@ -169,15 +199,18 @@ function buildArtifactInventory(artifacts) {
       has_scope:
         (Array.isArray(renovation?.scope_items) && renovation.scope_items.length > 0) ||
         (Array.isArray(renovation?.budget_rows) && renovation.budget_rows.some((row) => Boolean(row?.scope_of_work))),
+      ...supportTaxonomyFor(latestArtifact(artifacts, "renovation_parsed"), "renovation"),
     },
     appraisal_parsed: {
       present: Boolean(appraisal),
       has_appraised_value: hasPositive(appraisal?.appraised_value) || hasPositive(appraisal?.value),
       has_cap_rate: hasPositive(appraisal?.cap_rate),
+      ...supportTaxonomyFor(latestArtifact(artifacts, "appraisal_parsed"), "appraisal"),
     },
     property_tax_parsed: {
       present: Boolean(propertyTax),
       has_annual_tax: hasPositive(propertyTax?.annual_tax),
+      ...supportTaxonomyFor(latestArtifact(artifacts, "property_tax_parsed"), "property_tax"),
     },
   };
 }
@@ -214,6 +247,29 @@ export function buildSourceReportCoverageQa({
   const artifactInventory = buildArtifactInventory(artifacts);
   const renderedSections = buildRenderedSections(html);
   const renderedTextSignals = findRenderedSignals(html);
+  const t12Payload = latestArtifact(artifacts, "t12_parsed")?.payload || null;
+  const mortgagePayload = latestArtifact(artifacts, "mortgage_statement_parsed")?.payload || null;
+  const loanTermSheetTermsPayload = latestArtifact(artifacts, "loan_term_sheet_parsed")?.payload || null;
+  const currentDebtState = buildCurrentDebtAssessmentState({
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    t12Noi: t12Payload?.net_operating_income,
+    sourceReportCoverageQa: { artifact_inventory: artifactInventory },
+  });
+  const sourceReconciliationState = buildSourceReconciliationState({
+    computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+    rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+    t12Payload,
+    sourceReportCoverageQa: { artifact_inventory: artifactInventory, rendered_text_signals: renderedTextSignals, deterministic_flags: [] },
+  });
+  const sectionEligibility = buildFullUnderwritingSectionEligibility({
+    sourceReportCoverageQa: {
+      artifact_inventory: artifactInventory,
+      rendered_sections: renderedSections,
+    },
+    currentDebtState,
+    sourceReconciliationState,
+  });
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericReportTier = Number(reportTier);
@@ -294,19 +350,13 @@ export function buildSourceReportCoverageQa({
   const loan = artifactInventory.loan_term_sheet_parsed;
   const mortgage = artifactInventory.mortgage_statement_parsed;
   const hasAcquisitionFinancingAssumptions =
-    loan.has_derived_acquisition_debt &&
-    loan.has_purchase_price &&
-    loan.has_rate &&
-    loan.has_amortization &&
+    currentDebtState.has_proposed_acquisition_financing &&
     renderedTextSignals.includes("acquisition_financing_assumptions");
   const acquisitionFinancingCoverage = {
     required_inputs_present:
-      loan.has_derived_acquisition_debt &&
-      loan.has_purchase_price &&
-      loan.has_rate &&
-      loan.has_amortization,
+      currentDebtState.has_proposed_acquisition_financing,
     rendered: hasAcquisitionFinancingAssumptions,
-    current_debt_assessed: false,
+    current_debt_assessed: currentDebtState.current_debt_dscr_status === "computed",
   };
   const hasDebtSizing =
     loan.has_balance ||
@@ -338,28 +388,60 @@ export function buildSourceReportCoverageQa({
     });
   }
 
+  if (
+    sourceReconciliationState?.status === "source_reconciliation_required" ||
+    sourceReconciliationState?.status === "parser_suspected"
+  ) {
+    addFlag(flags, {
+      code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+      severity: sourceReconciliationState?.status === "parser_suspected" ? "high" : "medium",
+      category: "source_reconciliation",
+      message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
+      evidence: {
+        source_reconciliation_state: sourceReconciliationState,
+        rendered_text_signals: renderedTextSignals,
+      },
+      routing: "public_sample_blocker",
+    });
+  }
+
   const keyUnderwritingSections = [
+    "has_executive_summary_section",
     "has_operating_statement_section",
+    "has_operating_profile_section",
+    "has_expense_structure_section",
+    "has_noi_stability_section",
+    "has_data_coverage_section",
     "has_scenario_section",
+    "has_renovation_section",
     "has_risk_section",
     "has_debt_section",
     "has_deal_score_section",
     "has_dcf_section",
     "has_advanced_modeling_section",
+    "has_methodology_section",
   ];
   const presentUnderwritingSections = keyUnderwritingSections.filter((key) => renderedSections[key]).length;
   const missingKeySections = keyUnderwritingSections.filter((key) => !renderedSections[key]);
+  const sectionStates = Object.values(sectionEligibility.sections || {});
+  const renderedEligibleSections = sectionStates.filter((entry) => entry.rendered && entry.eligible).length;
+  const eligibleSections = sectionStates.filter((entry) => entry.eligible);
+  const sourceConstrainedSections = sectionStates.filter((entry) => entry.source_constrained);
+  const underusedSections = sectionStates.filter((entry) => entry.underused);
   const supportPackageLooksBroad =
     files.length >= 4 ||
     renovationFiles.length > 0 ||
     debtFiles.length > 0 ||
     artifactPresent(artifacts, "appraisal_parsed") ||
     artifactPresent(artifacts, "property_tax_parsed");
-  const minimumUnderwritingSectionCountMet = !isFullUnderwriting || presentUnderwritingSections >= 5;
+  const minimumUnderwritingSectionCountMet = !isFullUnderwriting || renderedEligibleSections >= 5 || sourceConstrainedSections.length > 0;
   if (
     isFullUnderwriting &&
     supportPackageLooksBroad &&
-    (presentUnderwritingSections < 5 || !renderedSections.has_debt_section || !renderedSections.has_deal_score_section)
+    eligibleSections.length >= 5 &&
+    renderedEligibleSections < 5 &&
+    underusedSections.length === 0 &&
+    sourceConstrainedSections.length === 0
   ) {
     addFlag(flags, {
       code: "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
@@ -368,6 +450,11 @@ export function buildSourceReportCoverageQa({
       message: "The rendered underwriting report appears constrained relative to the uploaded support package and report tier.",
       evidence: {
         uploaded_file_count: files.length,
+        rendered_eligible_sections: renderedEligibleSections,
+        eligible_section_count: eligibleSections.length,
+        source_constrained_section_count: sourceConstrainedSections.length,
+        underused_section_count: underusedSections.length,
+        section_eligibility: sectionEligibility,
         present_underwriting_sections: presentUnderwritingSections,
         missing_key_sections: missingKeySections,
         rendered_section_count: renderedSections.section_count,
@@ -402,7 +489,7 @@ export function buildSourceReportCoverageQa({
     supportPackageLooksBroad &&
     optionalSupportArtifactPresent &&
     !supportPackageUsedExceptT12LineItems &&
-    (presentUnderwritingSections < 6 || flags.some((flag) => flag.routing === "artifact_gap" || flag.routing === "parser_gap"))
+    ((renderedEligibleSections < 6 && sourceConstrainedSections.length === 0) || flags.some((flag) => flag.routing === "artifact_gap" || flag.routing === "parser_gap"))
   ) {
     addFlag(flags, {
       code: "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
@@ -412,6 +499,11 @@ export function buildSourceReportCoverageQa({
       evidence: {
         material_support_filenames: materialSupportFiles.map((file) => file.original_filename),
         acquisition_financing: acquisitionFinancingCoverage,
+        rendered_eligible_sections: renderedEligibleSections,
+        eligible_section_count: eligibleSections.length,
+        source_constrained_section_count: sourceConstrainedSections.length,
+        underused_section_count: underusedSections.length,
+        section_eligibility: sectionEligibility,
         present_underwriting_sections: presentUnderwritingSections,
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
@@ -445,6 +537,9 @@ export function buildSourceReportCoverageQa({
     property_name: propertyName || null,
     uploaded_files: files,
     artifact_inventory: artifactInventory,
+    current_debt_state: currentDebtState,
+    source_reconciliation_state: sourceReconciliationState,
+    section_eligibility: sectionEligibility,
     rendered_sections: renderedSections,
     rendered_text_signals: renderedTextSignals,
     deterministic_flags: flags,

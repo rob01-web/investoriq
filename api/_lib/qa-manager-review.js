@@ -82,12 +82,17 @@ function hasUnsupportedExclusionDisclosure(text) {
   );
 }
 
-function hasCurrentDebtLimitationDisclosure(text) {
+function hasCurrentDebtLimitationDisclosure(text, currentDebtState = null) {
   const source = String(text || "");
+  const stateDisclosure =
+    currentDebtState?.current_debt_dscr_status !== "computed" &&
+    Boolean(currentDebtState?.current_debt_limitation_reason_code);
   return (
+    stateDisclosure ||
     /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source) ||
     /Current Debt DSCR[^.]{0,120}current outstanding debt balance not provided/i.test(source) ||
     /Current debt service is not assessed because no current outstanding debt balance was provided/i.test(source) ||
+    /Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified/i.test(source) ||
     /No current debt document provided/i.test(source) ||
     /Current debt terms were not fully provided/i.test(source) ||
     /Current debt service not assessed/i.test(source)
@@ -108,6 +113,7 @@ function hasClassificationContext(text) {
 function normalizeManagerDecisions(decisions, context = {}) {
   const renderedText = context.renderedText || "";
   const sourceCoverage = context.sourceReportCoverageQa || null;
+  const currentDebtState = sourceCoverage?.current_debt_state || null;
   return (Array.isArray(decisions) ? decisions : []).map((decision) => {
     const normalized = normalizeDecision(decision);
     const text = [
@@ -162,7 +168,7 @@ function normalizeManagerDecisions(decisions, context = {}) {
       /No current debt document provided|Current debt terms were not fully provided|Current debt service not assessed|Current debt balance not provided|Current outstanding debt balance not provided/i.test(text);
     if (
       currentDebtLimitationDisclosure &&
-      hasCurrentDebtLimitationDisclosure(renderedText) &&
+      hasCurrentDebtLimitationDisclosure(renderedText, currentDebtState) &&
       /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt/i.test(renderedText)
     ) {
       return {
@@ -183,7 +189,7 @@ function normalizeManagerDecisions(decisions, context = {}) {
       /unclear|not clear|confusing|not assessed|missing|not produced|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/i.test(text);
     if (
       currentDebtClarity &&
-      hasCurrentDebtLimitationDisclosure(renderedText) &&
+      hasCurrentDebtLimitationDisclosure(renderedText, currentDebtState) &&
       /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt/i.test(renderedText)
     ) {
       return {

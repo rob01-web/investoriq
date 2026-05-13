@@ -5,6 +5,7 @@ import {
   isAllowedMethodologyOnlyText,
   isFilenameHintOnlyText,
 } from "./investoriq-qa-doctrine.js";
+import { buildSupportDocTaxonomyState } from "./report-surface-contracts.js";
 
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
@@ -60,10 +61,24 @@ function compactFile(row) {
 
 function summarizeArtifact(row) {
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+  const taxonomy = buildSupportDocTaxonomyState({
+    declaredDocType: payload?.detected_doc_type || row?.doc_type || null,
+    detectedDocType: payload?.detected_doc_type || row?.doc_type || null,
+    originalFilename: payload?.original_filename || row?.original_filename || null,
+    rawText: payload?.excerpt || payload?.text || null,
+    payload,
+  });
+  const semanticDocRole = payload?.semantic_doc_role || taxonomy.semantic_doc_role;
+  const semanticDocRoleConfidence =
+    payload?.semantic_doc_role_confidence ?? taxonomy.semantic_doc_role_confidence;
+  const semanticDocRoleReason = payload?.semantic_doc_role_reason || taxonomy.semantic_doc_role_reason;
   const summary = {
     type: row?.type || null,
     method: payload?.method || null,
     parse_warnings: Array.isArray(payload?.parse_warnings) ? payload.parse_warnings.slice(0, 8) : [],
+    semantic_doc_role: semanticDocRole,
+    semantic_doc_role_confidence: semanticDocRoleConfidence,
+    semantic_doc_role_reason: semanticDocRoleReason,
   };
   if (row?.type === "rent_roll_parsed") {
     return {
@@ -194,6 +209,10 @@ function isOccupancyFalsePositive(finding, compactPayload) {
 function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   const findingText = textOfFinding(finding);
   const renderedText = String(compactPayload?.rendered_report_text || "").toLowerCase();
+  const currentDebtState = compactPayload?.source_report_coverage_qa?.current_debt_state || null;
+  const currentDebtNotAssessedDisclosure =
+    currentDebtState?.current_debt_dscr_status !== "computed" &&
+    Boolean(currentDebtState?.current_debt_limitation_reason_code);
   if (
     /unsupported|unstructured/.test(findingText) &&
     /unsupported or unstructured uploads remain excluded from modeled outputs|not used quantitatively|excluded from modeled outputs/.test(renderedText)
@@ -202,7 +221,9 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   }
   if (
     /current debt|current dscr|refinance|debt coverage/.test(findingText) &&
-    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/.test(renderedText) &&
+    (currentDebtNotAssessedDisclosure ||
+      /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/.test(renderedText)) &&
+    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current-debt dscr and refinance capacity were not assessed because no current outstanding debt balance was verified|proposed acquisition financing was modeled separately where validated/i.test(renderedText) &&
     /proposed acquisition debt sizing|derived acquisition loan amount|not current outstanding debt/.test(renderedText)
   ) {
     return true;
@@ -397,6 +418,7 @@ export async function runSourcePackageQaAdvisory({
             : [],
           artifact_inventory: sourceReportCoverageQa.artifact_inventory || null,
           rendered_text_signals: sourceReportCoverageQa.rendered_text_signals || [],
+          current_debt_state: sourceReportCoverageQa.current_debt_state || null,
         }
       : null,
     rendered_report_qa_advisory: renderedReportQa

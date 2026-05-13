@@ -95,6 +95,7 @@ function hasCurrentDebtBalanceEvidence(evidence) {
 
 function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null } = {}) {
   const candidates = [];
+  const currentDebtState = sourceReportCoverageQa?.current_debt_state || null;
   const inventoryLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
   if (inventoryLoan) candidates.push(inventoryLoan);
   const inventoryRentRoll = sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed;
@@ -116,8 +117,13 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
     if (route?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
   }
   return {
-    has_derived_acquisition_debt: candidates.some((candidate) => hasDerivedAcquisitionEvidence(candidate)),
-    has_current_debt_balance: candidates.some((candidate) => hasCurrentDebtBalanceEvidence(candidate)),
+    has_derived_acquisition_debt:
+      Boolean(currentDebtState?.has_proposed_acquisition_financing) ||
+      candidates.some((candidate) => hasDerivedAcquisitionEvidence(candidate)),
+    has_current_debt_balance:
+      Boolean(currentDebtState?.has_true_current_debt_balance) ||
+      candidates.some((candidate) => hasCurrentDebtBalanceEvidence(candidate)),
+    current_debt_state: currentDebtState,
     acquisition_financing_rendered: acquisitionFinancingRendered,
     source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
     rent_roll_present: Boolean(inventoryRentRoll?.present),
@@ -302,6 +308,28 @@ function actionForCoverageFlag(flag) {
       recommended_next_step: "Classify and extract structured CapEx budget data when the uploaded source contains budget cues.",
       requires_code_patch: true,
       requires_regeneration: true,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+      safe_to_auto_fix: false,
+      evidence: flag?.evidence || null,
+    };
+  }
+  if (code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED") {
+    const state = flag?.evidence?.source_reconciliation_state || {};
+    const parserSuspected = String(state?.status || "") === "parser_suspected";
+    return {
+      code,
+      title: "Rent roll and T12 reconciliation review",
+      source_artifact: "source_report_coverage_qa",
+      severity: parserSuspected ? "high" : "medium",
+      action_type: "source_document_limitation",
+      owner_area: "source_reconciliation",
+      recommended_next_step: parserSuspected
+        ? "Review the rent roll and T12 extraction path for a parser or normalization issue before public sample or outreach use."
+        : "Document the rent roll vs T12 variance, disclose it institutionally, and review before public sample or outreach use.",
+      requires_code_patch: false,
+      requires_regeneration: false,
+      blocks_customer_delivery: parserSuspected,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
       safe_to_auto_fix: false,
@@ -1279,6 +1307,8 @@ export function buildQaActionPlan({
     public_sample_ready: publicSampleReady,
     high_value_outreach_ready: highValueOutreachReady,
     launch_path_recommendation: launchPathRecommendation,
+    source_reconciliation_state: sourceReportCoverageQa?.source_reconciliation_state || null,
+    section_eligibility: sourceReportCoverageQa?.section_eligibility || null,
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: finalDeliveryStatus,

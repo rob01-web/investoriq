@@ -1,5 +1,7 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 
+import { buildCurrentDebtAssessmentState } from "./report-surface-contracts.js";
+
 const REPORT_CONTRACT_QA_VERSION = "2026.05.09.1";
 
 function stripHtml(html) {
@@ -46,7 +48,10 @@ function hasCurrentDebtNotAssessedPhrase(text) {
     /Current debt terms were not fully provided/i.test(source) ||
     /Current debt service not assessed/i.test(source) ||
     /Current debt service is not assessed/i.test(source) ||
-    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source)
+    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source) ||
+    /Proposed acquisition financing was modeled separately where validated/i.test(source)
+    ||
+    /Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified/i.test(source)
   );
 }
 
@@ -257,6 +262,14 @@ export function buildReportContractQa({
   const text = stripHtml(html);
   const lower = text.toLowerCase();
   const violations = [];
+  const t12Payload = latestPayload(artifacts, "t12_parsed") || null;
+  const currentDebtState =
+    sourceReportCoverageQa?.current_debt_state ||
+    buildCurrentDebtAssessmentState({
+      artifacts,
+      sourceReportCoverageQa,
+      t12Noi: t12Payload?.net_operating_income,
+    });
   const totalUnits = extractLabeledNumber(text, ["Total Units"]);
   const annualMarketRentTotal = extractLabeledNumber(text, [
     "Annual Market Rent (Total)",
@@ -299,8 +312,12 @@ export function buildReportContractQa({
     /__TOKEN__[A-Z0-9_]*__/i,
     /%%[A-Z0-9_]+%%/i,
   ]);
+  const safeCurrentDebtLimitationState =
+    currentDebtState?.current_debt_dscr_status !== "computed" &&
+    Boolean(currentDebtState?.current_debt_limitation_reason_code);
   const hasDealScorecardDscrPlaceholder =
     !(
+      safeCurrentDebtLimitationState ||
       /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)/i.test(text) ||
       /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
     ) &&
@@ -542,12 +559,13 @@ export function buildReportContractQa({
   const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   const hasCurrentDebtTermsSupport =
     Boolean(sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed?.present) ||
-    Boolean(sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed?.present) ||
-    hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
+    hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) ||
+    Boolean(currentDebtState?.has_current_debt_document);
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
       /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
       /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|NOT ASSESSED)/i.test(text) ||
+      safeCurrentDebtLimitationState ||
       hasCurrentDebtNotAssessedPhrase(text) ||
       /current debt service is not assessed because no current outstanding debt balance was provided/i.test(text);
     const hasSeparation =
@@ -607,6 +625,8 @@ export function buildReportContractQa({
         evidence: {
           current_debt_balance_present: false,
           current_debt_terms_present: hasCurrentDebtTermsSupport,
+          current_debt_state: currentDebtState?.current_debt_dscr_status || null,
+          current_debt_limitation_reason_code: currentDebtState?.current_debt_limitation_reason_code || null,
           excerpt: firstPatternExcerpt(text, [
             /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i,
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
