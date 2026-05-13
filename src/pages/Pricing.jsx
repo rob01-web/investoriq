@@ -200,7 +200,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           letterSpacing:'0',
           textTransform:'none',
         }}>
-          Founder&apos;s Pricing — locked for early subscribers.
+          Founder&apos;s Pricing - locked for early subscribers.
         </span>
       </div>
 
