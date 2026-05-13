@@ -106,4 +106,66 @@ assert.match(acquisitionOnlyDebtCopy.explanation, /Current-debt DSCR and refinan
 assert.equal(acquisitionOnlyDebtCopy.explanation.includes(".."), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(acquisitionOnlyDebtCopy.explanation), false);
 
+const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    units: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1087488,
+      market_rent_annual: 1117800,
+      summary_row_detected: true,
+    },
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9250,
+      interest_rate: 0.0625,
+      amort_years: 25,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "aligned",
+    variance_pct: null,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+});
+
+assert.match(screeningDataCoverageHtml, /Proposed acquisition financing is shown separately/i);
+assert.match(screeningDataCoverageHtml, /Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified/i);
+assert.equal(screeningDataCoverageHtml.includes("mortgagePayload"), false);
+assert.equal(/constrained|stressed|insufficient|shortfall/i.test(screeningDataCoverageHtml), false);
+
 console.log("generate-client-report rent-roll smoke PASS");
