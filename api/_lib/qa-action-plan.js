@@ -512,22 +512,44 @@ function actionForManagerDecision(decision) {
       : decision?.rationale || "QA manager review decision",
     source_artifact: "qa_manager_review",
     severity: hardPublicLanguage ? "critical" : normalizeSeverity(decision?.severity),
-    action_type: contradictionReview ? "admin_review_required" : hardPublicLanguage ? "code_patch_required" : speculativePublicLanguage ? "model_review_recommended" : actionType,
-    owner_area: contradictionReview ? "source_reconciliation" : speculativePublicLanguage ? "qa_manager" : ownerByClassification[classification],
+    action_type: sourceTotalsVerification
+      ? "source_document_limitation"
+      : contradictionReview
+      ? "admin_review_required"
+      : hardPublicLanguage
+      ? "code_patch_required"
+      : speculativePublicLanguage
+      ? "model_review_recommended"
+      : actionType,
+    owner_area: sourceTotalsVerification
+      ? "source_reconciliation"
+      : contradictionReview
+      ? "source_reconciliation"
+      : speculativePublicLanguage
+      ? "qa_manager"
+      : ownerByClassification[classification],
     recommended_next_step: speculativePublicLanguage
       ? "Review manually only if actual rendered excerpt contains prohibited public language."
+      : sourceTotalsVerification
+      ? adminReadableNextStep
       : contradictionReview
       ? adminReadableNextStep
       : decision?.recommended_action_type || "Review QA manager decision.",
     requires_code_patch: requiresCodePatch,
     requires_regeneration: Boolean(decision?.requires_regeneration),
-    blocks_customer_delivery: contradictionReview
+    blocks_customer_delivery: sourceTotalsVerification
+      ? false
+      : contradictionReview
       ? (Boolean(decision?.blocks_customer_delivery) || ["high", "critical"].includes(normalizeSeverity(decision?.severity)))
       : hardPublicLanguage,
-    blocks_public_sample: contradictionReview
+    blocks_public_sample: sourceTotalsVerification
+      ? true
+      : contradictionReview
       ? true
       : !speculativePublicLanguage && (Boolean(decision?.blocks_public_sample) || hardPublicLanguage),
-    blocks_high_value_outreach: contradictionReview
+    blocks_high_value_outreach: sourceTotalsVerification
+      ? true
+      : contradictionReview
       ? true
       : !speculativePublicLanguage && (Boolean(decision?.blocks_high_value_outreach) || hardPublicLanguage),
     safe_to_auto_fix: false,
@@ -903,10 +925,22 @@ function buildPublishEligibilitySummary({
     : "customer_publish_not_ready";
 
   return {
+    delivery_authority: "delivery_gate",
     customer_publish_eligible: customerPublishEligible,
     customer_publish_blockers: customerPublishBlockers,
     public_sample_blockers: publicSampleBlockers,
     high_value_outreach_blockers: highValueOutreachBlockers,
+    readiness_hierarchy: {
+      final_delivery_authority: "delivery_gate",
+      final_delivery_status: deliveryGateStatus,
+      customer_publish_eligible: customerPublishEligible,
+      customer_publish_blockers: customerPublishBlockers,
+      public_sample_ready: !publicSampleBlockers.length,
+      public_sample_blockers: publicSampleBlockers,
+      high_value_outreach_ready: !highValueOutreachBlockers.length,
+      high_value_outreach_blockers: highValueOutreachBlockers,
+      advisory_only_findings: advisoryOnlyFindings,
+    },
     advisory_only_findings: advisoryOnlyFindings,
     regeneration_recommended: regenerationRecommended,
     regeneration_required_for_customer_delivery: regenerationRequiredForCustomerDelivery,
@@ -1075,6 +1109,7 @@ export function buildDeliveryGateDecision({
       adminReviewAction: customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null,
     });
     return {
+      final_delivery_authority: "delivery_gate",
       delivery_gate_status: "admin_review_required",
       reason_code: reasonCode,
       top_action_code: topAction?.code || null,
@@ -1083,6 +1118,22 @@ export function buildDeliveryGateDecision({
       customer_delivery_ready: false,
       public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
       high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+      launch_path_recommendation:
+        Boolean(qaActionPlan?.customer_delivery_ready) &&
+        Boolean(qaActionPlan?.public_sample_ready) &&
+        Boolean(qaActionPlan?.high_value_outreach_ready)
+          ? "customer_deliverable"
+          : Boolean(qaActionPlan?.customer_delivery_ready)
+          ? "underwriting_private_beta_recommended"
+          : "screening_only_public_launch_recommended",
+      readiness_hierarchy: {
+        final_delivery_authority: "delivery_gate",
+        final_delivery_status: "admin_review_required",
+        customer_delivery_ready: false,
+        public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
+        high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+        advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
+      },
       ...publishEligibility,
     };
   }
@@ -1106,6 +1157,7 @@ export function buildDeliveryGateDecision({
   });
 
   return {
+    final_delivery_authority: "delivery_gate",
     delivery_gate_status: "deliverable",
     reason_code: null,
     top_action_code: prioritizedActions[0]?.code || null,
@@ -1120,6 +1172,30 @@ export function buildDeliveryGateDecision({
       Boolean(qaActionPlan?.high_value_outreach_ready) &&
       !customerDeliveryBlockerAction &&
       !publicOrOutreachOnlyAction,
+    launch_path_recommendation:
+      Boolean(qaActionPlan?.customer_delivery_ready) &&
+      Boolean(qaActionPlan?.public_sample_ready) &&
+      Boolean(qaActionPlan?.high_value_outreach_ready) &&
+      !customerDeliveryBlockerAction &&
+      !publicOrOutreachOnlyAction
+        ? "customer_deliverable"
+        : Boolean(qaActionPlan?.customer_delivery_ready)
+        ? "underwriting_private_beta_recommended"
+        : "screening_only_public_launch_recommended",
+    readiness_hierarchy: {
+      final_delivery_authority: "delivery_gate",
+      final_delivery_status: "deliverable",
+      customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready),
+      public_sample_ready:
+        Boolean(qaActionPlan?.public_sample_ready) &&
+        !customerDeliveryBlockerAction &&
+        !publicOrOutreachOnlyAction,
+      high_value_outreach_ready:
+        Boolean(qaActionPlan?.high_value_outreach_ready) &&
+        !customerDeliveryBlockerAction &&
+        !publicOrOutreachOnlyAction,
+      advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
+    },
     ...publishEligibility,
   };
 }
@@ -1178,6 +1254,10 @@ export function buildQaActionPlan({
   const customerReady = !hasCriticalCompliance(prioritizedActions);
   const regenerateRecommended = prioritizedActions.some((action) => action.requires_regeneration);
   const unsafeToAutoFixCount = prioritizedActions.filter((action) => !action.safe_to_auto_fix).length;
+  const finalDeliveryStatus = customerReady ? "delivery_gate_ready" : "delivery_gate_blocked";
+  const launchPathRecommendation = customerReady
+    ? (publicSampleReady && highValueOutreachReady ? "customer_deliverable" : "underwriting_private_beta_recommended")
+    : "screening_only_public_launch_recommended";
 
   return {
     event: "qa_action_plan",
@@ -1198,6 +1278,15 @@ export function buildQaActionPlan({
     customer_delivery_ready: customerReady,
     public_sample_ready: publicSampleReady,
     high_value_outreach_ready: highValueOutreachReady,
+    launch_path_recommendation: launchPathRecommendation,
+    readiness_hierarchy: {
+      final_delivery_authority: "delivery_gate",
+      final_delivery_status: finalDeliveryStatus,
+      customer_delivery_ready: customerReady,
+      public_sample_ready: publicSampleReady,
+      high_value_outreach_ready: highValueOutreachReady,
+      advisory_only_findings: counts.total,
+    },
     regenerate_recommended: regenerateRecommended,
     safe_to_regenerate_now: regenerateRecommended && !prioritizedActions.some((action) => action.requires_code_patch),
     unsafe_to_auto_fix_count: unsafeToAutoFixCount,

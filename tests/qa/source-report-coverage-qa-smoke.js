@@ -36,6 +36,13 @@ const result = buildSourceReportCoverageQa({
         amort_years: 25,
       },
     },
+    {
+      type: "appraisal_parsed",
+      payload: {
+        appraised_value: 34500000,
+        valuation_date: "2026-05-01",
+      },
+    },
   ],
   html: [
     "<html><body>",

@@ -20,6 +20,9 @@ function highestSeverityValue(values = []) {
 function normalizeActionPlan(plan = {}) {
   const prioritizedActions = Array.isArray(plan?.prioritized_actions) ? plan.prioritized_actions : [];
   const topAction = prioritizedActions[0] || null;
+  const hierarchy = plan?.readiness_hierarchy && typeof plan.readiness_hierarchy === 'object'
+    ? plan.readiness_hierarchy
+    : null;
   return {
     top_action_code: topAction?.code || null,
     top_action_title: topAction?.title || null,
@@ -31,6 +34,7 @@ function normalizeActionPlan(plan = {}) {
     high_value_outreach_ready: Boolean(plan?.high_value_outreach_ready),
     requires_code_patch: Boolean(plan?.action_counts?.requires_code_patch || prioritizedActions.some((action) => action?.requires_code_patch)),
     requires_regeneration: Boolean(plan?.regenerate_recommended || prioritizedActions.some((action) => action?.requires_regeneration)),
+    readiness_hierarchy: hierarchy,
   };
 }
 
@@ -53,12 +57,28 @@ function normalizeFixQueueDisplay(raw = {}) {
       display_priority: 'Admin review required',
     };
   }
+  const deliveryGateStatus = String(raw?.delivery_gate_status || '').toLowerCase();
+  const customerReady = Boolean(raw?.customer_delivery_ready);
+  const publicReady = Boolean(raw?.public_sample_ready);
+  const outreachReady = Boolean(raw?.high_value_outreach_ready);
+  const hierarchyPriority =
+    deliveryGateStatus === 'admin_review_required'
+      ? 'Admin review required'
+      : deliveryGateStatus === 'user_needs_documents'
+      ? 'Customer documents required'
+      : customerReady && publicReady && outreachReady
+      ? 'Delivery gate ready'
+      : customerReady && !publicReady && !outreachReady
+      ? 'Customer deliverable / public sample blocked'
+      : customerReady && publicReady && !outreachReady
+      ? 'Customer deliverable / outreach blocked'
+      : raw?.highest_severity || null;
   return {
     display_title: raw?.top_action_title || null,
     display_reason: raw?.display_reason || null,
     display_next_step: raw?.recommended_next_step || null,
     display_category: raw?.owner_area || null,
-    display_priority: raw?.delivery_gate_status === 'admin_review_required' ? 'Admin review required' : raw?.highest_severity || null,
+    display_priority: hierarchyPriority,
   };
 }
 
@@ -516,6 +536,9 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
     delivery_gate_status: deliveryGate?.delivery_gate_status || null,
     reason_code: deliveryGate?.reason_code || null,
     source_code: normalizedPlan.top_action_code || null,
+    customer_delivery_ready: normalizedPlan.customer_delivery_ready,
+    public_sample_ready: normalizedPlan.public_sample_ready,
+    high_value_outreach_ready: normalizedPlan.high_value_outreach_ready,
   });
 
   return {
@@ -538,6 +561,7 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
     report_qa_flags_severity: flags?.severity || null,
     delivery_gate_status: deliveryGate?.delivery_gate_status || null,
     reason_code: deliveryGate?.reason_code || null,
+    readiness_hierarchy: normalizedPlan.readiness_hierarchy || null,
     display_title: display.display_title,
     display_reason: display.display_reason,
     display_next_step: display.display_next_step,
@@ -628,6 +652,7 @@ function buildFixQueueDetails({
       director_decision: director?.overall_director_decision || null,
       report_qa_flags_severity: flags?.severity || null,
       delivery_recommendation: qaActionPlan?.delivery_recommendation || null,
+      readiness_hierarchy: qaActionPlan?.readiness_hierarchy || fixQueueRow?.readiness_hierarchy || null,
       prioritized_actions: Array.isArray(qaActionPlan?.prioritized_actions)
         ? qaActionPlan.prioritized_actions.slice(0, 10).map(compactAction)
         : [],

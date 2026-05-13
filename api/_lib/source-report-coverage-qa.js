@@ -391,10 +391,16 @@ export function buildSourceReportCoverageQa({
     artifactInventory.renovation_parsed.present &&
     minimumUnderwritingSectionCountMet &&
     onlyT12LineItemIssue;
+  const optionalSupportArtifactPresent =
+    acquisitionFinancingCoverage.rendered ||
+    artifactInventory.renovation_parsed.present ||
+    artifactInventory.appraisal_parsed.present ||
+    artifactInventory.property_tax_parsed.present;
   if (
     isFullUnderwriting &&
     materialSupportFiles.length >= 2 &&
     supportPackageLooksBroad &&
+    optionalSupportArtifactPresent &&
     !supportPackageUsedExceptT12LineItems &&
     (presentUnderwritingSections < 6 || flags.some((flag) => flag.routing === "artifact_gap" || flag.routing === "parser_gap"))
   ) {

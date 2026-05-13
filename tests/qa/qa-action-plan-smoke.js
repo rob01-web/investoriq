@@ -460,6 +460,11 @@ const cleanGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(cleanGate.delivery_gate_status, "deliverable");
+assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
+assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
+assert.equal(cleanGate.launch_path_recommendation, "customer_deliverable");
+assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
+assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
 
 const adminReviewGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -492,6 +497,11 @@ const adminReviewGate = buildDeliveryGateDecision({
   qaDirectorReview: { overall_director_decision: "advisory_attention" },
 });
 assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
+assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
+assert.equal(adminReviewGate.launch_path_recommendation, "screening_only_public_launch_recommended");
+assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
 
 const rentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -544,14 +554,15 @@ const managerContradictionPlan = buildQaActionPlan({
 const managerContradictionAction = managerContradictionPlan.prioritized_actions.find(
   (action) => action.code === "rent_roll_vs_t12_gpr_discrepancy"
 );
-assert.equal(managerContradictionAction.action_type, "admin_review_required");
+assert.equal(managerContradictionAction.action_type, "source_document_limitation");
 assert.equal(managerContradictionAction.owner_area, "source_reconciliation");
 assert.equal(managerContradictionAction.title, "Rent roll source totals require verification");
 assert.equal(
   managerContradictionAction.recommended_next_step,
   "Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating."
 );
-assert.equal(managerContradictionAction.blocks_customer_delivery, true);
+assert.equal(managerContradictionAction.blocks_customer_delivery, false);
+assert.equal(managerContradictionAction.blocks_public_sample, true);
 
 const genericContradictionAction = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -577,7 +588,29 @@ const managerContradictionGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: managerContradictionPlan,
 });
-assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
+assert.equal(managerContradictionGate.delivery_gate_status, "user_needs_documents");
+
+const sourceTotalsVerificationAction = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaManagerReview: {
+    decisions: [
+      {
+        classification: "real_source_report_contradiction",
+        severity: "high",
+        source_code: "rent_roll_vs_t12_gpr_discrepancy",
+        source_artifact: "qa_manager_review",
+        blocks_customer_delivery: false,
+        recommended_action_type: "admin_review_required",
+        rationale: "Confirm source totals before publication.",
+      },
+    ],
+  },
+}).prioritized_actions.find((action) => action.code === "rent_roll_vs_t12_gpr_discrepancy");
+assert.equal(sourceTotalsVerificationAction.action_type, "source_document_limitation");
+assert.equal(sourceTotalsVerificationAction.owner_area, "source_reconciliation");
+assert.equal(sourceTotalsVerificationAction.blocks_customer_delivery, false);
+assert.equal(sourceTotalsVerificationAction.blocks_public_sample, true);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },

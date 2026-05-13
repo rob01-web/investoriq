@@ -1581,11 +1581,11 @@ function buildScreeningIncomeForensicsHtml({
   if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     if (rrVsGprPct >= 0) {
       bullets.push(
-        `Rent roll annualized rent is +${formatPercent1(rrVsGprPct)} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is +${formatPercent1(rrVsGprPct)} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
       );
     } else {
       bullets.push(
-        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
       );
     }
   }
@@ -1811,11 +1811,11 @@ function buildScreeningNoiStabilityHtml({
       flags.push(
         `Rent roll annualized rent is +${formatPercent1(
           rrVsGprPct
-        )} vs T12 GPR (reconciliation flag).`
+        )} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
       );
     } else {
       flags.push(
-        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR (reconciliation flag).`
+        `Rent roll annualized rent is -${formatPercent1(Math.abs(rrVsGprPct))} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
       );
     }
   }
@@ -3440,11 +3440,15 @@ if (effectiveReportMode === "screening_v1") {
     const driver1 = pressureDrivers[0] || null;
     const driver2 = pressureDrivers[1] || null;
     const driver3 = pressureDrivers[2] || null;
+    const hasSourceReconciliationVariance = Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
     let primaryPressurePoint = driver1?.label
       ? driver1.value
         ? `${driver1.label} (${driver1.value})`
         : driver1.label
       : "No material operating pressure point identified from available core metrics.";
+    if (!driver1 && hasSourceReconciliationVariance) {
+      primaryPressurePoint = "Source reconciliation variance between rent roll and T12 gross potential rent requires review.";
+    }
     // For underwriting, override pressure point with DSCR-based language if mortgage available
     if (effectiveReportMode === "v1_core" && mortgagePayload) {
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
