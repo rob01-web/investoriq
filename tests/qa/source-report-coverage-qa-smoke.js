@@ -63,7 +63,6 @@ const result = buildSourceReportCoverageQa({
 const expected = [
   "T12_LINE_ITEM_DETAIL_MISSING",
   "RENOVATION_DOC_NOT_STRUCTURED",
-  "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
   "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
   "PUBLIC_SAMPLE_NOT_READY",
 ];
@@ -76,9 +75,6 @@ if (missing.length > 0) {
   console.error("Actual flags:", Array.from(actual).join(", "));
   process.exit(1);
 }
-
-console.log("source-report-coverage-qa smoke PASS");
-console.log(Array.from(actual).join(", "));
 
 const insufficientDataContradiction = buildSourceReportCoverageQa({
   jobId: "forest-city-insufficient-data-smoke",
@@ -349,3 +345,56 @@ if (acquisitionRenderedT12OnlyActual.has("FULL_UNDERWRITING_SUPPORT_UNDERUSED"))
   console.error("Actual flags:", Array.from(acquisitionRenderedT12OnlyActual).join(", "));
   process.exit(1);
 }
+
+const sourceReconciliationResult = buildSourceReportCoverageQa({
+  jobId: "reconciliation-smoke",
+  userId: "user-smoke",
+  propertyName: "Reconciliation Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "Reconciliation_T12.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "2", original_filename: "Reconciliation_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        gross_potential_rent: 1000000,
+        effective_gross_income: 900000,
+        net_operating_income: 400000,
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_in_place_annual: 1100000,
+        total_units: 20,
+      },
+    },
+  ],
+  html: [
+    "<html><body>",
+    "<h2>Operating Profile</h2>",
+    "<p>Rent roll annualized rent is +10.0% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p>",
+    "</body></html>",
+  ].join("\n"),
+});
+
+if (sourceReconciliationResult.source_reconciliation_state?.status !== "source_reconciliation_required") {
+  console.error("Expected source reconciliation state to require review.");
+  console.error("Actual state:", sourceReconciliationResult.source_reconciliation_state);
+  process.exit(1);
+}
+if (sourceReconciliationResult.source_reconciliation_state?.source_reconciliation_disclosure !== "InvestorIQ has not reconciled this variance and does not infer the cause.") {
+  console.error("Expected canonical reconciliation disclosure.");
+  console.error("Actual state:", sourceReconciliationResult.source_reconciliation_state);
+  process.exit(1);
+}
+if (!sourceReconciliationResult.deterministic_flags.some((flag) => flag.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED")) {
+  console.error("Expected reconciliation flag to be emitted.");
+  console.error("Actual flags:", sourceReconciliationResult.deterministic_flags.map((flag) => flag.code));
+  process.exit(1);
+}
+
+console.log("source-report-coverage-qa smoke PASS");

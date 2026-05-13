@@ -218,10 +218,19 @@ export function buildSupportDocTaxonomyState({
   const hasCurrentDebtSignals =
     [
       payload?.outstanding_balance,
-      payload?.monthly_payment,
-      payload?.annual_debt_service,
     ].some((value) => positiveNumber(value)) ||
-    (countText(["current mortgage", "existing mortgage", "outstanding principal", "unpaid principal", "current debt", "current outstanding balance", "mortgage balance"]) >= 2);
+    hasText([
+      "current mortgage statement",
+      "existing mortgage",
+      "true current debt",
+      "current debt",
+      "current outstanding balance",
+      "outstanding principal",
+      "unpaid principal",
+      "mortgage balance",
+      "current loan balance",
+      "current outstanding principal balance",
+    ]);
   const acquisitionPayloadSignalCount = [
     payload?.ltv,
     payload?.interest_rate,
@@ -265,10 +274,8 @@ export function buildSupportDocTaxonomyState({
   const hasAppraisalSignals =
     positiveNumber(payload?.appraised_value) ||
     positiveNumber(payload?.cap_rate) ||
-    positiveNumber(payload?.effective_gross_income) ||
-    positiveNumber(payload?.noi) ||
     hasText(["appraisal", "appraised value", "as-is value", "stabilized value", "value conclusion", "opinion of value", "valuation report", "market survey", "broker opinion"]);
-  const hasLoanTermSignals =
+  const hasStrongLoanTermSignals =
     [
       payload?.loan_amount,
       payload?.interest_rate,
@@ -285,7 +292,7 @@ export function buildSupportDocTaxonomyState({
     hasText(["broker", "email", "from:", "re:", "subject:", "sent:", "@"]) &&
     !hasPurchaseAssumptionSignals &&
     !hasCurrentDebtSignals &&
-    !hasLoanTermSignals;
+    !hasStrongLoanTermSignals;
 
   let semanticDocRole = "other_support";
   let semanticDocRoleReason = "fallback_other_support";
@@ -307,18 +314,18 @@ export function buildSupportDocTaxonomyState({
     semanticDocRole = "property_tax";
     semanticDocRoleReason = "property_tax_support_signals";
     confidence = 0.93;
+  } else if (hasBrokerEmailSignals && !hasStrongLoanTermSignals) {
+    semanticDocRole = "broker_email";
+    semanticDocRoleReason = "broker_email_support_signals";
+    confidence = 0.8;
   } else if (hasAppraisalSignals) {
     semanticDocRole = "appraisal";
     semanticDocRoleReason = "appraisal_support_signals";
     confidence = 0.9;
-  } else if (hasLoanTermSignals) {
+  } else if (hasStrongLoanTermSignals) {
     semanticDocRole = "loan_term_sheet";
     semanticDocRoleReason = "loan_term_support_signals";
     confidence = 0.88;
-  } else if (hasBrokerEmailSignals) {
-    semanticDocRole = "broker_email";
-    semanticDocRoleReason = "broker_email_support_signals";
-    confidence = 0.8;
   } else {
     const fallbackDocType = normalizeText(detectedDocType || declaredDocType || payload?.doc_type || "");
     if (fallbackDocType === "mortgage_statement") {
@@ -393,13 +400,13 @@ export function normalizeRenovationMetricKind(row = {}) {
     row?.item,
     row?.category,
     row?.scope_of_work,
-  ].filter(Boolean).join(" "));
+  ].filter(Boolean).join(" ")).replace(/[_/]+/g, " ");
   if (!raw) return "unknown";
-  if (/(^|\b)(unit count|units?|count)(\b|$)/i.test(raw)) return "unit_count";
   if (/(per[\s-]*unit[\s-]*cost|cost[\s-]*per[\s-]*unit|unit[\s-]*cost)/i.test(raw)) return "per_unit_cost";
   if (/(total budget|budget total|total capex|total renovation|capital budget|renovation budget)/i.test(raw)) return "total_budget";
   if (/(percent of budget|pct of budget|percentage of budget|budget share)/i.test(raw)) return "percent_of_budget";
   if (/(scope|category|objective|line item|description|text)/i.test(raw)) return "scope_category";
+  if (/\b(unit count|units?|count)\b/i.test(raw)) return "unit_count";
   return "unknown";
 }
 

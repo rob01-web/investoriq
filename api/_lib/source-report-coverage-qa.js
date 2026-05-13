@@ -133,9 +133,10 @@ function findRenderedSignals(html) {
 function buildArtifactInventory(artifacts) {
   const supportTaxonomyFor = (row, fallbackDocType = null) => {
     const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const semanticDocRoleHint = payload?.semantic_doc_role || null;
     const taxonomy = buildSupportDocTaxonomyState({
-      declaredDocType: payload?.detected_doc_type || fallbackDocType || row?.type || null,
-      detectedDocType: payload?.detected_doc_type || fallbackDocType || row?.type || null,
+      declaredDocType: semanticDocRoleHint || payload?.detected_doc_type || fallbackDocType || row?.type || null,
+      detectedDocType: semanticDocRoleHint || payload?.detected_doc_type || fallbackDocType || row?.type || null,
       originalFilename: payload?.original_filename || null,
       rawText: payload?.excerpt || payload?.text || null,
       payload,

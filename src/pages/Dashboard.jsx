@@ -800,7 +800,7 @@ useEffect(() => {
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
   const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
-  const failedPrePublicationLead = 'Generation halted due to document verification limits. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report. No report was published, and 1 report credit has been returned to your account. To try again, please start a new report request and upload the complete document package again, including all required and supporting documents.';
+  const failedPrePublicationLead = 'Generation failed before publication. No report was published. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report.';
   const getFailedFileGuidance = (files) => {
     const rows = Array.isArray(files) ? files : [];
     const normalized = rows.map((row) => ({

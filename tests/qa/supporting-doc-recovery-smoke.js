@@ -4,6 +4,10 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test";
 
 const { parseMortgageStatementFromText } = await import("../../api/parse/parse-doc.js");
+const {
+  buildAssumptionAttributionState,
+  formatAssumptionAttributionLabel,
+} = await import("../../api/_lib/report-surface-contracts.js");
 const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
@@ -263,6 +267,29 @@ assert.equal(renovationCandidate.payback_period, null);
 assert.equal(renovationCandidate.execution_rows.length, 2);
 assert.equal(reportTestHelpers.buildRenovationBudgetRows(renovationCandidate.budget_rows, formatCurrency).includes("Exterior / Curb Appeal"), true);
 assert.equal(reportTestHelpers.buildRenovationExecutionRows(renovationCandidate.execution_rows, formatCurrency).includes("Unit Count"), true);
+
+const renovationExecutionHtml = reportTestHelpers.buildRenovationExecutionRows(
+  [
+    { metric: "Unit Count", metric_kind: "unit_count", value: 40 },
+    { metric: "Unit Count", metric_kind: "unit_count", value: 40 },
+    { metric: "Per Unit Cost", metric_kind: "per_unit_cost", value: 17500 },
+    { metric: "Total Budget", metric_kind: "total_budget", value: 215000 },
+    { metric: "Budget Share", metric_kind: "percent_of_budget", value: 0.25 },
+  ],
+  formatCurrency
+);
+assert.equal((renovationExecutionHtml.match(/Unit Count/g) || []).length, 1);
+assert.equal(renovationExecutionHtml.includes("$40"), false);
+assert.equal(renovationExecutionHtml.includes("$17,500"), true);
+assert.equal(renovationExecutionHtml.includes("$215,000"), true);
+assert.equal(renovationExecutionHtml.includes("25.0%"), true);
+
+assert.equal(buildAssumptionAttributionState({ sourceProvided: true }).attribution, "document_derived");
+assert.equal(formatAssumptionAttributionLabel(buildAssumptionAttributionState({ sourceProvided: true }).attribution), "document-derived");
+assert.equal(buildAssumptionAttributionState({ userProvided: true }).attribution, "user_provided");
+assert.equal(buildAssumptionAttributionState({ frameworkProvided: true }).attribution, "standardized_framework");
+assert.equal(formatAssumptionAttributionLabel(buildAssumptionAttributionState({ frameworkProvided: true }).attribution), "standardized framework assumption");
+assert.equal(buildAssumptionAttributionState({}).attribution, "unavailable");
 
 const renovationPartialCandidate = validateRenovationCandidate(
   {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildQaActionPlan, buildDeliveryGateDecision } from "../../api/_lib/qa-action-plan.js";
 import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
+import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
 
 const sourceReportCoverageQa = {
   deterministic_flags: [
@@ -119,6 +120,20 @@ assert.equal(actionsByCode.DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT.action_type, "sou
 assert.equal(actionsByCode.DOCRAPTOR_NOT_PRODUCTION_MODE.action_type, "production_config_only");
 assert.equal(Boolean(actionsByCode.PUBLIC_SAMPLE_NOT_READY), false);
 assert.equal(/OpenAI|LLM|vendor/i.test(serialized), false);
+
+const sparsePlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: null,
+  renderedReportQa: null,
+  qaFixRouting: null,
+  qaManagerReview: null,
+  reportContractQa: null,
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.equal(sparsePlan.event, "qa_action_plan");
+assert.equal(sparsePlan.source_reconciliation_state, null);
+assert.equal(sparsePlan.section_eligibility, null);
 
 const sparseDebtFlagPlan = buildQaActionPlan({
   reportQaFlags: [
@@ -611,6 +626,34 @@ assert.equal(sourceTotalsVerificationAction.action_type, "source_document_limita
 assert.equal(sourceTotalsVerificationAction.owner_area, "source_reconciliation");
 assert.equal(sourceTotalsVerificationAction.blocks_customer_delivery, false);
 assert.equal(sourceTotalsVerificationAction.blocks_public_sample, true);
+
+const reconciliationState = buildSourceReconciliationState({
+  computedRentRoll: { total_in_place_annual: 1100000 },
+  t12Payload: { gross_potential_rent: 1000000 },
+});
+const reconciliationAction = buildQaActionPlan({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+        severity: "medium",
+        message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
+        evidence: {
+          source_reconciliation_state: reconciliationState,
+          rendered_text_signals: [],
+        },
+        routing: "public_sample_blocker",
+      },
+    ],
+    source_reconciliation_state: reconciliationState,
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+}).prioritized_actions.find((action) => action.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED");
+assert.equal(reconciliationAction.action_type, "source_document_limitation");
+assert.equal(reconciliationAction.owner_area, "source_reconciliation");
+assert.equal(reconciliationAction.blocks_customer_delivery, false);
+assert.equal(reconciliationAction.blocks_public_sample, true);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },

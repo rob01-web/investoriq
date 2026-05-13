@@ -317,6 +317,8 @@ function actionForCoverageFlag(flag) {
   if (code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED") {
     const state = flag?.evidence?.source_reconciliation_state || {};
     const parserSuspected = String(state?.status || "") === "parser_suspected";
+    const customerDeliveryBlocked = String(state?.customer_delivery_impact || "") === "block";
+    const publicOutreachBlocked = String(state?.public_outreach_impact || "") === "block_until_review";
     return {
       code,
       title: "Rent roll and T12 reconciliation review",
@@ -329,9 +331,9 @@ function actionForCoverageFlag(flag) {
         : "Document the rent roll vs T12 variance, disclose it institutionally, and review before public sample or outreach use.",
       requires_code_patch: false,
       requires_regeneration: false,
-      blocks_customer_delivery: parserSuspected,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      blocks_customer_delivery: customerDeliveryBlocked,
+      blocks_public_sample: publicOutreachBlocked,
+      blocks_high_value_outreach: publicOutreachBlocked,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };

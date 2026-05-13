@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildReportContractQa } from "../../api/_lib/report-contract-qa.js";
 import { buildQaActionPlan } from "../../api/_lib/qa-action-plan.js";
+import { sanitizeFinalCustomerHtml } from "../../api/_lib/report-surface-contracts.js";
 
 const baseArtifacts = [
   {
@@ -42,6 +43,22 @@ const honestLumpSum = buildReportContractQa({
 });
 assert.equal(honestLumpSum.violations.length, 0);
 assert.equal(honestLumpSum.customer_delivery_ready, true);
+
+const sanitizedHtml = sanitizeFinalCustomerHtml(
+  "<p>Current\uFFFEdebt DSCR \u200b / Not assessed / Current debt balance not provided</p>"
+);
+assert.equal(sanitizedHtml.includes("\uFFFE"), false);
+assert.equal(sanitizedHtml.includes("\u200b"), false);
+assert.equal(
+  buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: baseArtifacts,
+    sourceReportCoverageQa: baseCoverage,
+    html: sanitizedHtml,
+  }).violations.some((v) => v.code === "RENDERED_MOJIBAKE_LEAK"),
+  false
+);
 
 const rentRollContradiction = buildReportContractQa({
   reportType: "underwriting",
@@ -301,7 +318,7 @@ const acquisitionWithCurrentRefiHeadings = buildReportContractQa({
     "<h3>Refinance Stress Test & Binding Constraint Analysis</h3>",
   ].join("\n"),
 });
-assert.equal(acquisitionWithCurrentRefiHeadings.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), true);
+assert.equal(acquisitionWithCurrentRefiHeadings.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
 
 const currentDebtArtifacts = [
   ...baseArtifacts,

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { buildSupportDocTaxonomyState } from "../../api/_lib/report-surface-contracts.js";
 import { inferSupportingDocTypeFromText, parseMortgageStatementFromText } from "../../api/parse/parse-doc.js";
 import {
   __test__ as supportDocRecoveryTestHelpers,
@@ -209,6 +210,110 @@ assert.equal(
   ),
   false
 );
+
+const purchaseAssumptionsTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "purchase_assumptions",
+  detectedDocType: "appraisal",
+  originalFilename: "PurchaseAssumptions.pdf",
+  rawText: [
+    "Purchase Assumptions",
+    "Purchase Price: $34,500,000",
+    "LTV: 85%",
+    "Interest Rate: 3.80%",
+    "Amortization: 40 years",
+    "Going-in Cap Rate: 4.99%",
+  ].join("\n"),
+  payload: {
+    purchase_price: 34500000,
+    ltv: 85,
+    interest_rate: 3.8,
+    amortization_years: 40,
+    going_in_cap_rate: 4.99,
+  },
+});
+assert.equal(purchaseAssumptionsTaxonomy.semantic_doc_role, "purchase_assumptions");
+assert.notEqual(purchaseAssumptionsTaxonomy.semantic_doc_role, "appraisal");
+
+const brokerEmailTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "broker_email",
+  detectedDocType: "loan_term_sheet",
+  originalFilename: "BrokerEmail.pdf",
+  rawText: [
+    "From: broker@example.com",
+    "Subject: Acquisition note",
+    "Please review the opportunity and call if you want to discuss next steps.",
+    "This is a broker email and not a loan term sheet.",
+  ].join("\n"),
+  payload: {},
+});
+assert.equal(brokerEmailTaxonomy.semantic_doc_role, "broker_email");
+assert.notEqual(brokerEmailTaxonomy.semantic_doc_role, "loan_term_sheet");
+
+const renovationTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "renovation_budget",
+  detectedDocType: "renovation",
+  originalFilename: "RenovationBudget.docx",
+  rawText: [
+    "Renovation Budget",
+    "Exterior / Curb Appeal: $45,000",
+    "Common Areas: $30,000",
+    "Unit Turns: $120,000",
+    "Contingency: $20,000",
+    "Total Budget: $215,000",
+  ].join("\n"),
+  payload: {
+    total_budget: 215000,
+    budget_rows: [
+      { category: "Exterior / Curb Appeal", estimated_cost: 45000 },
+      { category: "Common Areas", estimated_cost: 30000 },
+      { category: "Unit Turns", estimated_cost: 120000 },
+      { category: "Contingency", estimated_cost: 20000 },
+    ],
+  },
+});
+assert.equal(renovationTaxonomy.semantic_doc_role, "renovation_budget");
+
+const currentMortgageTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "mortgage_statement",
+  detectedDocType: "mortgage_statement",
+  originalFilename: "CurrentMortgage.pdf",
+  rawText: [
+    "Current Mortgage Statement",
+    "Current outstanding principal balance: $2,100,000",
+    "Monthly payment: $13,625",
+    "Interest rate: 4.25%",
+    "Amortization remaining: 23 years",
+  ].join("\n"),
+  payload: {
+    outstanding_balance: 2100000,
+    monthly_payment: 13625,
+    interest_rate: 4.25,
+    amort_years: 23,
+  },
+});
+assert.equal(currentMortgageTaxonomy.semantic_doc_role, "current_mortgage_statement");
+
+const acquisitionFinancingTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "loan_term_sheet",
+  detectedDocType: "loan_term_sheet",
+  originalFilename: "AcquisitionFinancing.pdf",
+  rawText: [
+    "Indicative acquisition financing term sheet",
+    "Borrower to be determined by Purchaser",
+    "Loan amount at purchase price $3,500,000",
+    "Proposed LTV 65%",
+    "Not a financing commitment",
+  ].join("\n"),
+  payload: {
+    purchase_price: 3500000,
+    ltv: 65,
+    interest_rate: 5.5,
+    amortization_years: 25,
+    derived_acquisition_loan_amount: 2275000,
+  },
+});
+assert.equal(acquisitionFinancingTaxonomy.semantic_doc_role, "purchase_assumptions");
+assert.notEqual(acquisitionFinancingTaxonomy.semantic_doc_role, "current_mortgage_statement");
 
 assert.equal(
   shouldAttemptRenovationRecovery(

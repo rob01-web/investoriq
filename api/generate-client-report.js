@@ -2555,6 +2555,87 @@ function applyChartPlaceholders(html, charts = {}) {
   out = replaceAll(out, "{{BREAKEVEN_CHART_URL}}", merged.breakevenChartUrl);
   return out;
 }
+
+function buildRendererCanonicalState({
+  computedRentRoll = null,
+  rentRollPayload = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  t12Payload = null,
+  appraisalPayload = null,
+  propertyTaxPayload = null,
+}) {
+  const currentDebtAssessmentState = buildCurrentDebtAssessmentState({
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    t12Noi: coerceNumber(t12Payload?.net_operating_income),
+  });
+  const sourceReportCoverageQa = {
+    artifact_inventory: {
+      t12_parsed: {
+        present: Boolean(t12Payload),
+        has_core_totals:
+          Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) ||
+          Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)) ||
+          Number.isFinite(coerceNumber(t12Payload?.net_operating_income)),
+      },
+      rent_roll_parsed: {
+        present: Boolean(computedRentRoll || rentRollPayload),
+        total_units: coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units) ?? null,
+        has_total_units: Number.isFinite(coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)),
+      },
+      mortgage_statement_parsed: {
+        present: Boolean(mortgagePayload),
+        has_balance: Number.isFinite(coerceNumber(mortgagePayload?.outstanding_balance)),
+        has_payment:
+          Number.isFinite(coerceNumber(mortgagePayload?.monthly_payment)) ||
+          Number.isFinite(coerceNumber(mortgagePayload?.annual_debt_service)),
+        has_rate: Number.isFinite(coerceNumber(mortgagePayload?.interest_rate)),
+        has_amortization: Number.isFinite(coerceNumber(mortgagePayload?.amort_years)),
+      },
+      loan_term_sheet_parsed: {
+        present: Boolean(loanTermSheetTermsPayload),
+        has_derived_acquisition_debt: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)),
+        has_purchase_price: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price)),
+        has_rate: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.interest_rate)),
+        has_amortization: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.amortization_years ?? loanTermSheetTermsPayload?.amort_years)),
+      },
+      appraisal_parsed: {
+        present: Boolean(appraisalPayload),
+        has_appraised_value: Number.isFinite(coerceNumber(appraisalPayload?.appraised_value)),
+        has_cap_rate: Number.isFinite(coerceNumber(appraisalPayload?.cap_rate)),
+      },
+      property_tax_parsed: {
+        present: Boolean(propertyTaxPayload),
+        has_annual_tax: Number.isFinite(coerceNumber(propertyTaxPayload?.annual_tax)),
+      },
+    },
+    rendered_sections: {},
+    deterministic_flags: [],
+    rendered_text_signals: [],
+    qa_status: "not_run",
+  };
+  const sourceReconciliationState = buildSourceReconciliationState({
+    computedRentRoll,
+    rentRollPayload,
+    t12Payload,
+    sourceReportCoverageQa,
+  });
+  const sectionEligibility = buildFullUnderwritingSectionEligibility({
+    sourceReportCoverageQa: {
+      artifact_inventory: sourceReportCoverageQa?.artifact_inventory || {},
+      rendered_sections: sourceReportCoverageQa?.rendered_sections || {},
+    },
+    currentDebtState: currentDebtAssessmentState,
+    sourceReconciliationState,
+  });
+  return {
+    currentDebtAssessmentState,
+    sourceReportCoverageQa,
+    sourceReconciliationState,
+    sectionEligibility,
+  };
+}
 // ---------- Main Handler ----------
 export default async function handler(req, res) {
   let effectiveUserId = null;
@@ -3166,70 +3247,21 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
     }
     // 7. Inject ALL narrative sections (12)
-    const currentDebtAssessmentState = buildCurrentDebtAssessmentState({
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      t12Noi: coerceNumber(t12Payload?.net_operating_income),
-    });
-    const sourceReportCoverageQa = {
-      artifact_inventory: {
-        t12_parsed: {
-          present: Boolean(t12Payload),
-          has_core_totals:
-            Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) ||
-            Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)) ||
-            Number.isFinite(coerceNumber(t12Payload?.net_operating_income)),
-        },
-        rent_roll_parsed: {
-          present: Boolean(computedRentRoll || rentRollPayload),
-          total_units: coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units) ?? null,
-          has_total_units: Number.isFinite(coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)),
-        },
-        mortgage_statement_parsed: {
-          present: Boolean(mortgagePayload),
-          has_balance: Number.isFinite(coerceNumber(mortgagePayload?.outstanding_balance)),
-          has_payment:
-            Number.isFinite(coerceNumber(mortgagePayload?.monthly_payment)) ||
-            Number.isFinite(coerceNumber(mortgagePayload?.annual_debt_service)),
-          has_rate: Number.isFinite(coerceNumber(mortgagePayload?.interest_rate)),
-          has_amortization: Number.isFinite(coerceNumber(mortgagePayload?.amort_years)),
-        },
-        loan_term_sheet_parsed: {
-          present: Boolean(loanTermSheetTermsPayload),
-          has_derived_acquisition_debt: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)),
-          has_purchase_price: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price)),
-          has_rate: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.interest_rate)),
-          has_amortization: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.amortization_years ?? loanTermSheetTermsPayload?.amort_years)),
-        },
-        appraisal_parsed: {
-          present: Boolean(appraisalPayload),
-          has_appraised_value: Number.isFinite(coerceNumber(appraisalPayload?.appraised_value)),
-          has_cap_rate: Number.isFinite(coerceNumber(appraisalPayload?.cap_rate)),
-        },
-        property_tax_parsed: {
-          present: Boolean(propertyTaxPayload),
-          has_annual_tax: Number.isFinite(coerceNumber(propertyTaxPayload?.annual_tax)),
-        },
-      },
-      rendered_sections: {},
-      deterministic_flags: [],
-      rendered_text_signals: [],
-      qa_status: "not_run",
-    };
-    const sourceReconciliationState = buildSourceReconciliationState({
+    const {
+      currentDebtAssessmentState,
+      sourceReportCoverageQa,
+      sourceReconciliationState,
+      sectionEligibility,
+    } = buildRendererCanonicalState({
       computedRentRoll,
       rentRollPayload,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
       t12Payload,
-      sourceReportCoverageQa,
+      appraisalPayload,
+      propertyTaxPayload,
     });
-    const sectionEligibility = buildFullUnderwritingSectionEligibility({
-      sourceReportCoverageQa: {
-        artifact_inventory: sourceReportCoverageQa?.artifact_inventory || {},
-        rendered_sections: sourceReportCoverageQa?.rendered_sections || {},
-      },
-      currentDebtState: currentDebtAssessmentState,
-      sourceReconciliationState,
-    });
+    const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
     const execMetricsParts = [];
     const execUnits = coerceNumber(
       computedRentRoll?.total_units ??
@@ -3575,7 +3607,7 @@ if (effectiveReportMode === "screening_v1") {
       primaryPressurePoint = "Source reconciliation variance between rent roll and T12 gross potential rent requires review.";
     }
     // For underwriting, override pressure point with DSCR-based language if mortgage available
-    if (effectiveReportMode === "v1_core" && mortgagePayload) {
+    if (effectiveReportMode === "v1_core" && mortgagePayload && hasVerifiedCurrentDebtBalance) {
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
       if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
@@ -3839,8 +3871,8 @@ if (effectiveReportMode === "screening_v1") {
     const coverClassificationLabel = (() => {
       if (effectiveReportMode === "v1_core") {
         if (screeningClass === "Fragile") return "High Risk";
-        if (Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Constrained";
-        if (refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Constrained";
+        if (hasVerifiedCurrentDebtBalance && Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Constrained";
+        if (hasVerifiedCurrentDebtBalance && refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Constrained";
         if (screeningClass === "Stable") return "Stable";
         return "Review";
       }
@@ -3941,7 +3973,7 @@ if (effectiveReportMode === "screening_v1") {
     // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
     if (effectiveReportMode === "v1_core") {
       const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
-      if (currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+      if (hasVerifiedCurrentDebtBalance && currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
         if (currentDebtCoverage.dscr >= 1.35) {
           upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
@@ -3963,7 +3995,7 @@ if (effectiveReportMode === "screening_v1") {
             : `${dscrNotAssessedCopy.explanation}. Current-debt DSCR and refinance capacity were not assessed.`
         );
       }
-      const _refiClass = screeningClass && screeningClass !== "Insufficient Data"
+      const _refiClass = hasVerifiedCurrentDebtBalance && screeningClass && screeningClass !== "Insufficient Data"
         ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
         : null;
       if (_refiClass) riskBullets.push(_refiClass);
@@ -4398,7 +4430,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           `</tbody></table></div>` +
           `<div><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p>` +
           `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
-          `<p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the stated cap rate and remains conditional on market-rent capture and occupancy.</p></div>` +
+          `<p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the selected cap-rate assumption and remains conditional on market-rent capture and occupancy.</p></div>` +
           `</div></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", upsideHtml);
@@ -4746,6 +4778,19 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
     } else {
+      if (!hasVerifiedCurrentDebtBalance && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
+        const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          t12Noi: coerceNumber(t12Payload?.net_operating_income),
+        });
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{REFI_STABILITY_BLOCK}}",
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${escapeHtml(currentDebtAssessmentCopy.explanation)}. Refinance stability was not assessed because no true current debt balance was verified.</p></div>`
+        );
+      } else {
       const refiResult = buildRefiStabilityModel({
         financials: refiFinancials,
         t12Payload,
@@ -4782,6 +4827,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       } else {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+      }
       }
     }
     const showOperatingStatement = Boolean(
@@ -6938,6 +6984,7 @@ try {
 
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
+  buildRendererCanonicalState,
   buildRenovationBudgetRows,
   buildRenovationExecutionRows,
   buildScreeningDataCoverageSummary,

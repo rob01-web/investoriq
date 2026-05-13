@@ -61,9 +61,10 @@ function compactFile(row) {
 
 function summarizeArtifact(row) {
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+  const semanticDocRoleHint = payload?.semantic_doc_role || null;
   const taxonomy = buildSupportDocTaxonomyState({
-    declaredDocType: payload?.detected_doc_type || row?.doc_type || null,
-    detectedDocType: payload?.detected_doc_type || row?.doc_type || null,
+    declaredDocType: semanticDocRoleHint || payload?.detected_doc_type || row?.doc_type || null,
+    detectedDocType: semanticDocRoleHint || payload?.detected_doc_type || row?.doc_type || null,
     originalFilename: payload?.original_filename || row?.original_filename || null,
     rawText: payload?.excerpt || payload?.text || null,
     payload,

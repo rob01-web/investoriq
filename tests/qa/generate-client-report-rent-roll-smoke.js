@@ -27,4 +27,56 @@ const cleanAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
 
 assert.equal(cleanAnnualMarketRent, 1087488);
 
+const rendererCanonicalState = generatorTest.buildRendererCanonicalState({
+  computedRentRoll: { total_units: 48, total_in_place_annual: 1087488 },
+  rentRollPayload: { total_units: 48, total_in_place_annual: 1087488 },
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    monthly_payment: 9000,
+    interest_rate: 0.065,
+    amort_years: 30,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+  },
+  appraisalPayload: { appraised_value: 2250000, cap_rate: 0.0625 },
+  propertyTaxPayload: { annual_tax: 24000 },
+});
+
+assert.equal(rendererCanonicalState.currentDebtAssessmentState?.current_debt_dscr_status, "computed");
+assert.equal(rendererCanonicalState.sourceReconciliationState?.status, "aligned");
+assert.ok(rendererCanonicalState.sectionEligibility);
+
+const acquisitionOnlyCanonicalState = generatorTest.buildRendererCanonicalState({
+  mortgagePayload: {
+    monthly_payment: 9250,
+    interest_rate: 0.0625,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+  },
+});
+
+assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.has_true_current_debt_balance, false);
+assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.current_debt_limitation_reason_code, "acquisition_only_not_current_debt");
+
 console.log("generate-client-report rent-roll smoke PASS");
