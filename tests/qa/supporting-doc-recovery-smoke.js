@@ -700,7 +700,7 @@ const dataCoverageSummaryHtml = reportTestHelpers.buildScreeningDataCoverageSumm
 });
 assert(
   dataCoverageSummaryHtml.includes(
-    "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+    "Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs."
   )
 );
 assert.equal(dataCoverageSummaryHtml.includes("Missing structured debt sizing prevents DSCR and current-debt assessment."), false);
