@@ -4,6 +4,10 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
 const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const {
+  buildCurrentDebtAssessmentState,
+  formatCurrentDebtAssessmentCopy,
+} = await import("../../api/_lib/report-surface-contracts.js");
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,
@@ -78,5 +82,28 @@ const acquisitionOnlyCanonicalState = generatorTest.buildRendererCanonicalState(
 
 assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.has_true_current_debt_balance, false);
 assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.current_debt_limitation_reason_code, "acquisition_only_not_current_debt");
+
+const acquisitionOnlyDebtCopy = formatCurrentDebtAssessmentCopy({
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9250,
+      interest_rate: 0.0625,
+      amort_years: 25,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+});
+assert.equal(acquisitionOnlyDebtCopy.value, "Not assessed");
+assert.match(acquisitionOnlyDebtCopy.explanation, /Proposed acquisition financing is shown separately/i);
+assert.match(acquisitionOnlyDebtCopy.explanation, /Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified/i);
+assert.equal(acquisitionOnlyDebtCopy.explanation.includes(".."), false);
+assert.equal(/constrained|stressed|insufficient|shortfall/i.test(acquisitionOnlyDebtCopy.explanation), false);
 
 console.log("generate-client-report rent-roll smoke PASS");

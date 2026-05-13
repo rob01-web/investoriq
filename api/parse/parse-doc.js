@@ -38,6 +38,7 @@ const attachSupportDocTaxonomy = (payload, {
     semantic_doc_role_confidence: taxonomy.semantic_doc_role_confidence,
     semantic_doc_role_reason: taxonomy.semantic_doc_role_reason,
     semantic_doc_family: taxonomy.semantic_doc_family,
+    semantic_doc_display_label: taxonomy.semantic_doc_display_label,
   };
 };
 

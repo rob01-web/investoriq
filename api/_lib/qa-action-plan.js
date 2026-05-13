@@ -124,6 +124,7 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
       Boolean(currentDebtState?.has_true_current_debt_balance) ||
       candidates.some((candidate) => hasCurrentDebtBalanceEvidence(candidate)),
     current_debt_state: currentDebtState,
+    acquisition_assumption_state: sourceReportCoverageQa?.acquisition_assumption_state || null,
     acquisition_financing_rendered: acquisitionFinancingRendered,
     source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
     rent_roll_present: Boolean(inventoryRentRoll?.present),
@@ -133,6 +134,14 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
 function actionForReportFlag(flag, context = {}) {
   const code = String(flag?.code || "");
   const severity = flag?.severity || "medium";
+  const text = [
+    code,
+    flag?.message,
+    flag?.issue,
+    flag?.suggested_review,
+    flag?.rationale,
+    flag?.evidence?.summary,
+  ].filter(Boolean).join(" ");
   if (code === "MARKET_SURVEY_CLASSIFICATION_REVIEW" && context.source_coverage_passed && context.rent_roll_present) {
     return {
       code,
@@ -219,6 +228,51 @@ function actionForReportFlag(flag, context = {}) {
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };
+  }
+  if (
+    /unsupported.*acquisition.*assumptions|acquisition.*assumptions?.*unsupported|unsupported_acquisition_assumptions/i.test(text)
+  ) {
+    const acquisitionState = context.acquisition_assumption_state || null;
+    const supportedAcquisitionAssumptions = Boolean(
+      acquisitionState?.acquisition_assumptions_supported &&
+      acquisitionState?.has_validated_acquisition_assumptions &&
+      acquisitionState?.current_debt_separated &&
+      context.acquisition_financing_rendered &&
+      !context.has_current_debt_balance
+    );
+    return supportedAcquisitionAssumptions
+      ? {
+          code,
+          title: "Acquisition assumptions are document-supported and rendered separately",
+          source_artifact: "report_qa_flags",
+          severity: "low",
+          action_type: "no_action_false_positive",
+          owner_area: "qa_calibration",
+          recommended_next_step: "No action required when validated purchase assumptions are rendered separately and are not current debt.",
+          requires_code_patch: false,
+          requires_regeneration: false,
+          blocks_public_sample: false,
+          blocks_high_value_outreach: false,
+          blocks_customer_delivery: false,
+          safe_to_auto_fix: false,
+          evidence: flag?.evidence || null,
+        }
+      : {
+          code,
+          title: "Acquisition assumptions support review",
+          source_artifact: "report_qa_flags",
+          severity,
+          action_type: "source_document_limitation",
+          owner_area: "source_documents",
+          recommended_next_step: "Verify whether the acquisition assumptions are fully documented and supported before public sample or outreach use.",
+          requires_code_patch: false,
+          requires_regeneration: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+          blocks_customer_delivery: false,
+          safe_to_auto_fix: false,
+          evidence: flag?.evidence || null,
+        };
   }
   if (code === "ACQUISITION_FINANCING_RENDER_MISSING") {
     return {

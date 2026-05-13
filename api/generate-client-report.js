@@ -17,11 +17,13 @@ import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan, buildDeliveryGateDecision } from "./_lib/qa-action-plan.js";
 import {
+  buildAcquisitionAssumptionState,
   buildAssumptionAttributionState,
   buildCurrentDebtAssessmentState,
   buildFullUnderwritingSectionEligibility,
   dedupeRenovationMetricRows,
   formatAssumptionAttributionLabel,
+  formatCurrentDebtAssessmentCopy,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
   buildSourceReconciliationState,
@@ -216,47 +218,12 @@ function currentDebtNotAssessedCopy({
   loanTermSheetTermsPayload = null,
   t12Noi = null,
 } = {}) {
-  const state =
-    currentDebtState ||
-    buildCurrentDebtAssessmentState({
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      t12Noi,
-    });
-  if (state?.current_debt_dscr_status === "computed" && Number.isFinite(state?.current_debt_dscr)) {
-    return {
-      value: formatMultiple(state.current_debt_dscr, 2),
-      explanation: "Current debt DSCR computed from verified current debt balance and debt service",
-      band: "Verified current debt balance and debt service",
-    };
-  }
-  switch (state?.current_debt_limitation_reason_code) {
-    case "acquisition_only_not_current_debt":
-      return {
-        value: "Not assessed",
-        explanation: "Acquisition financing is shown separately and is not treated as current debt.",
-        band: "Proposed acquisition financing is not current outstanding debt",
-      };
-    case "no_current_outstanding_balance":
-      return {
-        value: "Not assessed",
-        explanation: "Current debt balance not provided",
-        band: "Current debt balance not provided",
-      };
-    case "incomplete_current_debt_terms":
-      return {
-        value: "Not assessed",
-        explanation: "Current debt terms were not fully provided",
-        band: "Current debt balance, rate, and amortization not fully provided",
-      };
-    case "no_current_debt_document":
-    default:
-      return {
-        value: "Not assessed",
-        explanation: "No current debt document provided",
-        band: "No current debt document provided",
-      };
-  }
+  return formatCurrentDebtAssessmentCopy({
+    currentDebtState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    t12Noi,
+  });
 }
 function isFiniteNumber(x) {
   const n = Number(x);
@@ -979,69 +946,157 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
   if (rows.length < 3) return "";
   return rows.join("");
 }
-function buildRenovationBudgetRows(rows, formatValue) {
-  if (!Array.isArray(rows) || rows.length === 0) return "";
-  return rows
+function summarizeRenovationBudgetRows(rows, formatValue) {
+  const visibleColumns = {
+    category: false,
+    scope: false,
+    cost: false,
+    percent: false,
+    objective: false,
+  };
+  const normalizedRows = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || typeof row !== "object") continue;
+    const category = String(row.category ?? row.line_item ?? row.item ?? "").trim();
+    const scope = String(row.scope_of_work ?? row.scope ?? "").trim();
+    const costNum = coerceNumber(row.estimated_cost ?? row.cost ?? row.amount);
+    const costRaw = String(row.estimated_cost ?? row.cost ?? row.amount ?? "").trim();
+    const cost = Number.isFinite(costNum) ? formatValue(costNum) : escapeHtml(costRaw);
+    const pctKind = normalizeRenovationMetricKind({
+      metric_kind: "percent_of_budget",
+      label: "percent of budget",
+    });
+    const pctRawValue = row.percent_of_budget ?? row.percent ?? row.percentage ?? "";
+    const pctValue = coerceNumber(pctRawValue);
+    const pct = formatRenovationMetricValue({
+      metricKind: pctKind,
+      value: pctValue,
+    });
+    const percent = Number.isFinite(pctValue) ? pct : String(pctRawValue ?? "").trim();
+    const objective = String(row.primary_objective ?? row.objective ?? row.note ?? "").trim();
+    if (!category && !scope && !cost && !percent && !objective) continue;
+    visibleColumns.category ||= Boolean(category);
+    visibleColumns.scope ||= Boolean(scope);
+    visibleColumns.cost ||= Boolean(cost);
+    visibleColumns.percent ||= Boolean(percent);
+    visibleColumns.objective ||= Boolean(objective);
+    normalizedRows.push({ category, scope, cost, percent, objective });
+  }
+  return { visibleColumns, rows: normalizedRows };
+}
+
+function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
+  const summary = summarizeRenovationBudgetRows(rows, formatValue);
+  const visibleColumns = columnVisibility || summary.visibleColumns;
+  const columns = [
+    { key: "category", label: "Category" },
+    { key: "scope", label: "Scope of Work" },
+    { key: "cost", label: "Estimated Cost" },
+    { key: "percent", label: "Percent of Budget" },
+    { key: "objective", label: "Primary Objective" },
+  ].filter((column) => visibleColumns[column.key]);
+  if (!columns.length || !summary.rows.length) return "";
+  return summary.rows
     .map((row) => {
-      if (!row || typeof row !== "object") return "";
-      const category = String(row.category ?? row.line_item ?? row.item ?? "").trim();
-      const scope = String(row.scope_of_work ?? row.scope ?? "").trim();
-      const costNum = coerceNumber(row.estimated_cost ?? row.cost ?? row.amount);
-      const costRaw = String(row.estimated_cost ?? row.cost ?? row.amount ?? "").trim();
-      const cost = Number.isFinite(costNum)
-        ? formatValue(costNum)
-        : escapeHtml(costRaw);
-      const pctKind = normalizeRenovationMetricKind({
-        metric_kind: "percent_of_budget",
-        label: "percent of budget",
-      });
-      const pctRawValue = row.percent_of_budget ?? row.percent ?? row.percentage ?? "";
-      const pctValue = coerceNumber(pctRawValue);
-      const pct = formatRenovationMetricValue({
-        metricKind: pctKind,
-        value: pctValue,
-      });
-      const pctRaw = Number.isFinite(pctValue) ? pct : String(pctRawValue ?? "").trim();
-      const objective = String(
-        row.primary_objective ?? row.objective ?? row.note ?? ""
-      ).trim();
-      if (!category && !scope && !cost && !pctRaw && !objective) return "";
-      return `<tr><td>${escapeHtml(category)}</td><td>${escapeHtml(
-        scope
-      )}</td><td>${cost}</td><td>${escapeHtml(pctRaw)}</td><td>${escapeHtml(
-        objective
-      )}</td></tr>`;
+      const cells = columns
+        .map((column) => {
+          const value = row[column.key] ?? "";
+          return `<td>${escapeHtml(value)}</td>`;
+        })
+        .join("");
+      return `<tr>${cells}</tr>`;
     })
-    .filter(Boolean)
     .join("");
 }
+
+function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE, columnVisibility = null) {
+  const summary = summarizeRenovationBudgetRows(rows, formatValue);
+  const visibleColumns = columnVisibility || summary.visibleColumns;
+  const columns = [
+    { key: "category", label: "Category" },
+    { key: "scope", label: "Scope of Work" },
+    { key: "cost", label: "Estimated Cost" },
+    { key: "percent", label: "Percent of Budget" },
+    { key: "objective", label: "Primary Objective" },
+  ].filter((column) => visibleColumns[column.key]);
+  if (!columns.length || !summary.rows.length) return "";
+  const rowsHtml = buildRenovationBudgetRows(rows, formatValue, visibleColumns);
+  return `<div class="no-break">
+    <p class="subsection-title">Renovation Budget Breakdown</p>
+    <table>
+      <thead>
+        <tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <p class="small" style="margin-top:8px;">
+      <strong>InvestorIQ:</strong> ${escapeHtml(note)}
+    </p>
+  </div>`;
+}
+
+function summarizeRenovationExecutionRows(rows, formatValue) {
+  const normalizedRows = [];
+  for (const row of dedupeRenovationMetricRows(Array.isArray(rows) ? rows : [])) {
+    if (!row || typeof row !== "object") continue;
+    const metricKind = normalizeRenovationMetricKind(row);
+    const metric = String(row.metric ?? row.label ?? row.item ?? row.category ?? "").trim();
+    const valueSource =
+      row.value ??
+      row.amount ??
+      row.estimated_cost ??
+      row.scope_of_work ??
+      row.percent_of_budget ??
+      row.percent ??
+      row.percentage ??
+      "";
+    const value = formatRenovationMetricValue({
+      metricKind,
+      value: valueSource,
+      formatCurrency: formatValue,
+      formatPercent: formatPercent1,
+    });
+    if (!metric || !value) continue;
+    normalizedRows.push({ metric, value });
+  }
+  return normalizedRows;
+}
+
 function buildRenovationExecutionRows(rows, formatValue) {
-  if (!Array.isArray(rows) || rows.length === 0) return "";
-  return dedupeRenovationMetricRows(rows)
-    .map((row) => {
-      if (!row || typeof row !== "object") return "";
-      const metricKind = normalizeRenovationMetricKind(row);
-      const metric = String(row.metric ?? row.label ?? row.item ?? row.category ?? "").trim();
-      const valueSource =
-        row.value ??
-        row.amount ??
-        row.estimated_cost ??
-        row.scope_of_work ??
-        row.percent_of_budget ??
-        row.percent ??
-        row.percentage ??
-        "";
-      const value = formatRenovationMetricValue({
-        metricKind,
-        value: valueSource,
-        formatCurrency: formatValue,
-        formatPercent: formatPercent1,
-      });
-      if (!metric && !value) return "";
-      return `<tr><td>${escapeHtml(metric)}</td><td>${value}</td></tr>`;
-    })
-    .filter(Boolean)
+  return summarizeRenovationExecutionRows(rows, formatValue)
+    .map((row) => `<tr><td>${escapeHtml(row.metric)}</td><td>${row.value}</td></tr>`)
     .join("");
+}
+
+function buildRenovationExecutionCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE) {
+  const normalizedRows = summarizeRenovationExecutionRows(rows, formatValue);
+  const rowsHtml = normalizedRows
+    .map((row) => `<tr><td>${escapeHtml(row.metric)}</td><td>${row.value}</td></tr>`)
+    .join("");
+  if (!rowsHtml) {
+    return note && note !== DATA_NOT_AVAILABLE
+      ? `<div style="margin-top:18px; page-break-before: avoid; break-before: avoid;">
+  <p class="small" style="margin-top:8px;">
+    <strong>InvestorIQ:</strong> ${escapeHtml(note)}
+  </p>
+</div>`
+      : "";
+  }
+  return `<div style="margin-top:18px; page-break-before: avoid; break-before: avoid;">
+    <p class="subsection-title">Cost Per Unit and Execution Phasing</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <p class="small" style="margin-top:8px;">
+      <strong>InvestorIQ:</strong> ${escapeHtml(note)}
+    </p>
+  </div>`;
 }
 function buildT12PerUnitRows(egi, opex, noi, units) {
   if (!Number.isFinite(units) || units <= 0) return "";
@@ -1411,10 +1466,16 @@ function buildScreeningDataCoverageSummary({
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">All required screening inputs were fully extracted from uploaded documents.</p>${coverageTableHtml}</div>`;
     }
     if (effectiveReportMode === "v1_core" && supportingUnderwritingDocsUsed) {
+      const currentDebtCoverageState = formatCurrentDebtAssessmentCopy({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        t12Noi: coerceNumber(t12Payload?.net_operating_income),
+      });
       const currentDebtCoverageCopy =
         currentDebtAssessmentState?.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" &&
         !currentDebtAssessmentState?.has_true_current_debt_balance
-          ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
+          ? currentDebtCoverageState.explanation
           : "Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.";
       const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
       const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
@@ -1422,11 +1483,17 @@ function buildScreeningDataCoverageSummary({
         : "";
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}</div>`;
     }
+    const currentDebtCoverageState = formatCurrentDebtAssessmentCopy({
+      currentDebtState: currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Noi: coerceNumber(t12Payload?.net_operating_income),
+    });
     const currentDebtCoverageCopy =
       currentDebtAssessmentState?.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" &&
       !currentDebtAssessmentState?.has_true_current_debt_balance
-        ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
-        : "Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified.";
+        ? currentDebtCoverageState.explanation
+        : `Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. ${currentDebtCoverageState.explanation}`;
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
     const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
       ? "Some Full Underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
@@ -1660,7 +1727,17 @@ function buildScreeningIncomeForensicsHtml({
   const bulletsCard = bulletsHtml
     ? `<div class="card no-break" style="margin-top:6px;"><ul>${bulletsHtml}</ul></div>`
     : "";
-  return `<div class="grid-2-balanced"><div class="card no-break"><p class="subsection-title">Top Positive Income Lines (% of EGI, before vacancy offset)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div><div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div></div>${concentrationLineHtml}${bulletsCard}`;
+  const incomeCard = incomeRowsHtml
+    ? `<div class="card no-break"><p class="subsection-title">Top Positive Income Lines (% of EGI, before vacancy offset)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div>`
+    : "";
+  const expenseCard = expenseRowsHtml
+    ? `<div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div>`
+    : "";
+  const driverCards =
+    incomeCard && expenseCard
+      ? `<div class="grid-2-balanced">${incomeCard}${expenseCard}</div>`
+      : incomeCard || expenseCard;
+  return `${driverCards}${concentrationLineHtml}${bulletsCard}`;
 }
 function buildScreeningExpenseStructureHtml({
   t12Payload,
@@ -2621,6 +2698,11 @@ function buildRendererCanonicalState({
     t12Payload,
     sourceReportCoverageQa,
   });
+  const acquisitionAssumptionState = buildAcquisitionAssumptionState({
+    loanTermSheetTermsPayload,
+    sourceReportCoverageQa,
+    currentDebtState: currentDebtAssessmentState,
+  });
   const sectionEligibility = buildFullUnderwritingSectionEligibility({
     sourceReportCoverageQa: {
       artifact_inventory: sourceReportCoverageQa?.artifact_inventory || {},
@@ -2633,6 +2715,7 @@ function buildRendererCanonicalState({
     currentDebtAssessmentState,
     sourceReportCoverageQa,
     sourceReconciliationState,
+    acquisitionAssumptionState,
     sectionEligibility,
   };
 }
@@ -3989,11 +4072,9 @@ if (effectiveReportMode === "screening_v1") {
           loanTermSheetTermsPayload,
           t12Noi: coerceNumber(t12Payload?.net_operating_income),
         });
-        riskBullets.push(
-          currentDebtAssessmentState.current_debt_limitation_reason_code === "acquisition_only_not_current_debt"
-            ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified."
-            : `${dscrNotAssessedCopy.explanation}. Current-debt DSCR and refinance capacity were not assessed.`
-        );
+      riskBullets.push(
+        dscrNotAssessedCopy.explanation
+      );
       }
       const _refiClass = hasVerifiedCurrentDebtBalance && screeningClass && screeningClass !== "Insufficient Data"
         ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
@@ -4313,12 +4394,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       acquisitionFinancingAssumptionsHtml
     );
     if (acquisitionOnlyDebt) {
-      const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-        t12Noi: coerceNumber(t12Payload?.net_operating_income),
-      });
+    const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
+      currentDebtState: currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Noi: coerceNumber(t12Payload?.net_operating_income),
+    });
       finalHtml = replaceMarkedSection(
         finalHtml,
         "SECTION_7_DEBT",
@@ -4332,7 +4413,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     </div>
     <div class="card no-break">
       <p class="subsection-title">Current Debt / Refinance Limitation</p>
-      <p>${escapeHtml(currentDebtAssessmentState.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" ? "Proposed acquisition financing was modeled separately where validated. Current-debt DSCR and refinance capacity were not assessed because no current outstanding debt balance was verified." : `${currentDebtAssessmentCopy.explanation}. Current-debt DSCR and refinance capacity were not assessed.`)}</p>
+      <p>${escapeHtml(currentDebtAssessmentCopy.explanation)}</p>
     </div>
     ${acquisitionFinancingAssumptionsHtml}
   </div>
@@ -4716,20 +4797,31 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
     }
+    const renovationBudgetSourceRows = hasExplicitRenovationInput
+      ? financials?.renovation_budget_rows || renovationPayload?.budget_rows || []
+      : [];
+    const renovationExecutionSourceRows = hasExplicitRenovationInput
+      ? financials?.renovation_execution_rows ||
+        renovationPayload?.execution_rows ||
+        []
+      : [];
     const renovationBudgetRows = hasExplicitRenovationInput
-      ? buildRenovationBudgetRows(
-          financials?.renovation_budget_rows || renovationPayload?.budget_rows || [],
-          formatCurrency
-        )
+      ? buildRenovationBudgetRows(renovationBudgetSourceRows, formatCurrency)
       : "";
     const renovationExecutionRows = hasExplicitRenovationInput
-      ? buildRenovationExecutionRows(
-          financials?.renovation_execution_rows ||
-            renovationPayload?.execution_rows ||
-            [],
-          formatCurrency
-        )
+      ? buildRenovationExecutionRows(renovationExecutionSourceRows, formatCurrency)
       : "";
+    const renovationReturnAssumptionsPresent = hasExplicitRenovationInput &&
+      [
+        financials?.renovation_timing_or_phasing,
+        financials?.renovation_rent_lift,
+        financials?.renovation_roi,
+        financials?.renovation_payback_period,
+        renovationPayload?.timing_or_phasing,
+        renovationPayload?.rent_lift,
+        renovationPayload?.roi,
+        renovationPayload?.payback_period,
+      ].some((value) => hasMeaningfulRenovationText(value));
     const renovationBudgetNote = hasExplicitRenovationInput
       ? String(
           financials?.renovation_budget_note ??
@@ -4738,11 +4830,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         ).trim() || DATA_NOT_AVAILABLE
       : DATA_NOT_AVAILABLE;
     const renovationExecutionNote = hasExplicitRenovationInput
-      ? String(
-          financials?.renovation_execution_note ??
-            renovationPayload?.execution_note ??
-            DATA_NOT_AVAILABLE
-        ).trim() || DATA_NOT_AVAILABLE
+      ? renovationReturnAssumptionsPresent
+        ? String(
+            financials?.renovation_execution_note ??
+              renovationPayload?.execution_note ??
+              DATA_NOT_AVAILABLE
+          ).trim() || DATA_NOT_AVAILABLE
+        : "Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions."
       : DATA_NOT_AVAILABLE;
     const renovationInterpretation = hasExplicitRenovationInput
       ? String(
@@ -4752,21 +4846,33 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
             DATA_NOT_AVAILABLE
         ).trim() || DATA_NOT_AVAILABLE
       : DATA_NOT_AVAILABLE;
-    finalHtml = replaceAll(finalHtml, "{{RENOVATION_BUDGET_ROWS}}", renovationBudgetRows);
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{RENOVATION_BUDGET_NOTE}}",
-      escapeHtml(renovationBudgetNote)
+    const renovationBudgetCardHtml = hasExplicitRenovationInput
+      ? buildRenovationBudgetCardHtml(
+          renovationBudgetSourceRows,
+          formatCurrency,
+          renovationBudgetNote
+        )
+      : "";
+    const renovationExecutionCardHtml = hasExplicitRenovationInput
+      ? buildRenovationExecutionCardHtml(
+          renovationExecutionSourceRows,
+          formatCurrency,
+          renovationExecutionNote
+        )
+      : "";
+    finalHtml = finalHtml.replace(
+      /<!-- RENOVATION BUDGET TABLE -->[\s\S]*?<!-- COST PER UNIT -->/,
+      () =>
+        renovationBudgetCardHtml
+          ? `${renovationBudgetCardHtml}\n\n  <!-- COST PER UNIT -->`
+          : "  <!-- COST PER UNIT -->"
     );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{RENOVATION_EXECUTION_ROWS}}",
-      renovationExecutionRows
-    );
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{RENOVATION_EXECUTION_NOTE}}",
-      escapeHtml(renovationExecutionNote)
+    finalHtml = finalHtml.replace(
+      /<!-- COST PER UNIT -->[\s\S]*?<!-- INTERPRETATION -->/,
+      () =>
+        renovationExecutionCardHtml
+          ? `${renovationExecutionCardHtml}\n\n  <!-- INTERPRETATION -->`
+          : "  <!-- INTERPRETATION -->"
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -4788,7 +4894,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         finalHtml = replaceAll(
           finalHtml,
           "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${escapeHtml(currentDebtAssessmentCopy.explanation)}. Refinance stability was not assessed because no true current debt balance was verified.</p></div>`
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${escapeHtml(currentDebtAssessmentCopy.explanation)}</p></div>`
         );
       } else {
       const refiResult = buildRefiStabilityModel({
@@ -4841,8 +4947,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     }
     const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
     const showRenovationSection = hasExplicitRenovationInput && Boolean(
-      (renovationBudgetRows || "").trim() ||
-        (renovationExecutionRows || "").trim() ||
+      (renovationBudgetCardHtml || "").trim() ||
+        (renovationExecutionCardHtml || "").trim() ||
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
         (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
     );
@@ -6985,8 +7091,12 @@ try {
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
   buildRendererCanonicalState,
+  buildScreeningIncomeForensicsHtml,
+  buildScreeningExpenseStructureHtml,
   buildRenovationBudgetRows,
+  buildRenovationBudgetCardHtml,
   buildRenovationExecutionRows,
+  buildRenovationExecutionCardHtml,
   buildScreeningDataCoverageSummary,
   buildT12SummaryHtml,
   materiallyDifferent,

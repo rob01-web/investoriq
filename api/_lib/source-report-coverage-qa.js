@@ -1,11 +1,13 @@
 const COVERAGE_QA_VERSION = "2026.05.05.1";
 
 import {
+  buildAcquisitionAssumptionState,
   buildCurrentDebtAssessmentState,
   buildFullUnderwritingSectionEligibility,
   buildSupportDocTaxonomyState,
   buildSourceReconciliationState,
   hasCurrentDebtSemanticState,
+  resolveSupportDocDisplayLabel,
 } from "./report-surface-contracts.js";
 
 function asNumber(value) {
@@ -69,11 +71,28 @@ function artifactPresent(artifacts, type) {
   return Boolean(latestArtifact(artifacts, type));
 }
 
-function normalizeFile(row) {
+function normalizeFile(row, taxonomyLookup = null) {
+  const fileId = String(row?.id || "");
+  const originalFilename = String(row?.original_filename || "");
+  const lookup =
+    (taxonomyLookup && (taxonomyLookup.get(fileId) || taxonomyLookup.get(originalFilename.toLowerCase()))) ||
+    null;
   return {
     id: row?.id || null,
-    original_filename: String(row?.original_filename || ""),
+    original_filename: originalFilename,
     doc_type: String(row?.doc_type || ""),
+    display_doc_type: lookup?.semantic_doc_display_label ||
+      resolveSupportDocDisplayLabel({
+        semanticDocRole: lookup?.semantic_doc_role || null,
+        semanticDocRoleConfidence: lookup?.semantic_doc_role_confidence ?? null,
+        originalFilename,
+        declaredDocType: row?.doc_type || null,
+        detectedDocType: row?.doc_type || null,
+        docType: row?.doc_type || null,
+      }),
+    semantic_doc_role: lookup?.semantic_doc_role || null,
+    semantic_doc_role_confidence: lookup?.semantic_doc_role_confidence ?? null,
+    semantic_doc_role_reason: lookup?.semantic_doc_role_reason || null,
     mime_type: String(row?.mime_type || ""),
     parse_status: String(row?.parse_status || ""),
     parse_error: row?.parse_error || null,
@@ -146,6 +165,8 @@ function buildArtifactInventory(artifacts) {
       semantic_doc_role_confidence:
         payload?.semantic_doc_role_confidence ?? taxonomy.semantic_doc_role_confidence,
       semantic_doc_role_reason: payload?.semantic_doc_role_reason || taxonomy.semantic_doc_role_reason,
+      semantic_doc_display_label:
+        payload?.semantic_doc_display_label || taxonomy.semantic_doc_display_label,
     };
   };
   const t12 = latestArtifact(artifacts, "t12_parsed")?.payload || null;
@@ -181,6 +202,14 @@ function buildArtifactInventory(artifacts) {
       has_payment: hasPositive(loan?.monthly_payment) || hasPositive(loan?.annual_debt_service),
       has_rate: hasPositive(loan?.interest_rate),
       has_amortization: hasPositive(loan?.amort_years),
+      purchase_price: loan?.purchase_price ?? null,
+      ltv: loan?.ltv ?? null,
+      interest_rate: loan?.interest_rate ?? null,
+      amortization_years: loan?.amortization_years ?? loan?.amort_years ?? null,
+      going_in_cap_rate: loan?.going_in_cap_rate ?? null,
+      closing_costs_percent: loan?.closing_costs_percent ?? null,
+      derived_acquisition_loan_amount: loan?.derived_acquisition_loan_amount ?? null,
+      debt_basis: loan?.debt_basis || null,
       ...supportTaxonomyFor(latestArtifact(artifacts, "loan_term_sheet_parsed"), "loan_term_sheet"),
     },
     mortgage_statement_parsed: {
@@ -217,6 +246,39 @@ function buildArtifactInventory(artifacts) {
   };
 }
 
+function buildSupportDocDisplayLookup(artifacts) {
+  const lookup = new Map();
+  for (const row of Array.isArray(artifacts) ? artifacts : []) {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const semanticDocRole = payload?.semantic_doc_role || null;
+    const semanticDocRoleConfidence = payload?.semantic_doc_role_confidence ?? null;
+    if (row?.type === "document_text_extracted" && !semanticDocRole && !payload?.semantic_doc_display_label) {
+      continue;
+    }
+    const semanticDocDisplayLabel =
+      payload?.semantic_doc_display_label ||
+      resolveSupportDocDisplayLabel({
+        semanticDocRole,
+        semanticDocRoleConfidence,
+        originalFilename: payload?.original_filename || row?.original_filename || null,
+        declaredDocType: payload?.detected_doc_type || row?.type || null,
+        detectedDocType: payload?.detected_doc_type || row?.type || null,
+        docType: row?.type || null,
+      });
+    const record = {
+      semantic_doc_role: semanticDocRole,
+      semantic_doc_role_confidence: semanticDocRoleConfidence,
+      semantic_doc_role_reason: payload?.semantic_doc_role_reason || null,
+      semantic_doc_display_label: semanticDocDisplayLabel,
+    };
+    const fileId = String(payload?.file_id || "").trim();
+    const filename = String(payload?.original_filename || "").trim().toLowerCase();
+    if (fileId) lookup.set(fileId, record);
+    if (filename) lookup.set(filename, record);
+  }
+  return lookup;
+}
+
 function addFlag(flags, flag) {
   flags.push(flag);
 }
@@ -245,7 +307,8 @@ export function buildSourceReportCoverageQa({
   uploadedFiles = [],
   artifacts = [],
 } = {}) {
-  const files = uploadedFiles.map(normalizeFile);
+  const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
+  const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
   const artifactInventory = buildArtifactInventory(artifacts);
   const renderedSections = buildRenderedSections(html);
   const renderedTextSignals = findRenderedSignals(html);
@@ -258,6 +321,20 @@ export function buildSourceReportCoverageQa({
     t12Noi: t12Payload?.net_operating_income,
     sourceReportCoverageQa: { artifact_inventory: artifactInventory },
   });
+  const acquisitionAssumptionState = buildAcquisitionAssumptionState({
+    loanTermSheetTermsPayload,
+    currentDebtState,
+    sourceReportCoverageQa: {
+      artifact_inventory: artifactInventory,
+      rendered_text_signals: renderedTextSignals,
+      deterministic_flags: [],
+    },
+  });
+  artifactInventory.loan_term_sheet_parsed = {
+    ...artifactInventory.loan_term_sheet_parsed,
+    validated_acquisition_assumptions: acquisitionAssumptionState.has_validated_acquisition_assumptions,
+    acquisition_assumption_state: acquisitionAssumptionState,
+  };
   const sourceReconciliationState = buildSourceReconciliationState({
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
@@ -544,6 +621,7 @@ export function buildSourceReportCoverageQa({
     uploaded_files: files,
     artifact_inventory: artifactInventory,
     current_debt_state: currentDebtState,
+    acquisition_assumption_state: acquisitionAssumptionState,
     source_reconciliation_state: sourceReconciliationState,
     section_eligibility: sectionEligibility,
     rendered_sections: renderedSections,

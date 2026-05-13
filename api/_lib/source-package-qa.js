@@ -5,7 +5,12 @@ import {
   isAllowedMethodologyOnlyText,
   isFilenameHintOnlyText,
 } from "./investoriq-qa-doctrine.js";
-import { buildSupportDocTaxonomyState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
+import {
+  buildAcquisitionAssumptionState,
+  buildSupportDocTaxonomyState,
+  hasCurrentDebtSemanticState,
+  resolveSupportDocDisplayLabel,
+} from "./report-surface-contracts.js";
 
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
@@ -48,11 +53,60 @@ function stripHtmlForSourcePackageQa(html) {
     : text;
 }
 
-function compactFile(row) {
+function buildSupportDocDisplayLookup(artifacts) {
+  const lookup = new Map();
+  for (const row of Array.isArray(artifacts) ? artifacts : []) {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const semanticDocRole = payload?.semantic_doc_role || null;
+    const semanticDocRoleConfidence = payload?.semantic_doc_role_confidence ?? null;
+    if (row?.type === "document_text_extracted" && !semanticDocRole && !payload?.semantic_doc_display_label) {
+      continue;
+    }
+    const semanticDocDisplayLabel =
+      payload?.semantic_doc_display_label ||
+      resolveSupportDocDisplayLabel({
+        semanticDocRole,
+        semanticDocRoleConfidence,
+        originalFilename: payload?.original_filename || row?.original_filename || null,
+        declaredDocType: payload?.detected_doc_type || row?.type || null,
+        detectedDocType: payload?.detected_doc_type || row?.type || null,
+        docType: row?.type || null,
+      });
+    const record = {
+      semantic_doc_role: semanticDocRole,
+      semantic_doc_role_confidence: semanticDocRoleConfidence,
+      semantic_doc_role_reason: payload?.semantic_doc_role_reason || null,
+      semantic_doc_display_label: semanticDocDisplayLabel,
+    };
+    const fileId = String(payload?.file_id || "").trim();
+    const filename = String(payload?.original_filename || "").trim().toLowerCase();
+    if (fileId) lookup.set(fileId, record);
+    if (filename) lookup.set(filename, record);
+  }
+  return lookup;
+}
+
+function compactFile(row, taxonomyLookup = null) {
+  const fileId = String(row?.id || "");
+  const originalFilename = String(row?.original_filename || "");
+  const lookup =
+    (taxonomyLookup && (taxonomyLookup.get(fileId) || taxonomyLookup.get(originalFilename.toLowerCase()))) ||
+    null;
   return {
     id: row?.id || null,
-    original_filename: String(row?.original_filename || ""),
+    original_filename: originalFilename,
     doc_type: String(row?.doc_type || ""),
+    display_doc_type: lookup?.semantic_doc_display_label ||
+      resolveSupportDocDisplayLabel({
+        semanticDocRole: lookup?.semantic_doc_role || null,
+        semanticDocRoleConfidence: lookup?.semantic_doc_role_confidence ?? null,
+        declaredDocType: row?.doc_type || null,
+        detectedDocType: row?.doc_type || null,
+        docType: row?.doc_type || null,
+      }),
+    semantic_doc_role: lookup?.semantic_doc_role || null,
+    semantic_doc_role_confidence: lookup?.semantic_doc_role_confidence ?? null,
+    semantic_doc_role_reason: lookup?.semantic_doc_role_reason || null,
     mime_type: String(row?.mime_type || ""),
     parse_status: String(row?.parse_status || ""),
     parse_error: row?.parse_error || null,
@@ -73,6 +127,8 @@ function summarizeArtifact(row) {
   const semanticDocRoleConfidence =
     payload?.semantic_doc_role_confidence ?? taxonomy.semantic_doc_role_confidence;
   const semanticDocRoleReason = payload?.semantic_doc_role_reason || taxonomy.semantic_doc_role_reason;
+  const semanticDocDisplayLabel =
+    payload?.semantic_doc_display_label || taxonomy.semantic_doc_display_label;
   const summary = {
     type: row?.type || null,
     method: payload?.method || null,
@@ -80,6 +136,7 @@ function summarizeArtifact(row) {
     semantic_doc_role: semanticDocRole,
     semantic_doc_role_confidence: semanticDocRoleConfidence,
     semantic_doc_role_reason: semanticDocRoleReason,
+    semantic_doc_display_label: semanticDocDisplayLabel,
   };
   if (row?.type === "rent_roll_parsed") {
     return {
@@ -103,6 +160,29 @@ function summarizeArtifact(row) {
   if (["loan_term_sheet_parsed", "mortgage_statement_parsed"].includes(row?.type)) {
     const hasOutstandingBalance = Number(payload?.outstanding_balance) > 0;
     const hasLoanAmount = Number(payload?.loan_amount) > 0;
+    const validatedAcquisitionAssumptions = Boolean(
+      Number(payload?.purchase_price) > 0 &&
+      Number(payload?.ltv) > 0 &&
+      Number(payload?.interest_rate) > 0 &&
+      Number(payload?.amortization_years ?? payload?.amort_years) > 0 &&
+      Number(payload?.derived_acquisition_loan_amount) > 0
+    );
+    const acquisitionAssumptionState =
+      row?.type === "loan_term_sheet_parsed"
+        ? buildAcquisitionAssumptionState({
+            loanTermSheetTermsPayload: payload,
+            sourceReportCoverageQa: {
+              artifact_inventory: {
+                loan_term_sheet_parsed: {
+                  semantic_doc_role: semanticDocRole,
+                  semantic_doc_role_confidence: semanticDocRoleConfidence,
+                  semantic_doc_display_label: semanticDocDisplayLabel,
+                },
+              },
+              rendered_text_signals: [],
+            },
+          })
+        : null;
     return {
       ...summary,
       has_balance: row?.type === "mortgage_statement_parsed" ? hasOutstandingBalance : hasLoanAmount || hasOutstandingBalance,
@@ -112,6 +192,8 @@ function summarizeArtifact(row) {
       has_purchase_price: Number(payload?.purchase_price) > 0,
       has_derived_acquisition_debt: Number(payload?.derived_acquisition_loan_amount) > 0,
       debt_basis: payload?.debt_basis || null,
+      validated_acquisition_assumptions: validatedAcquisitionAssumptions,
+      acquisition_assumption_state: acquisitionAssumptionState,
     };
   }
   if (row?.type === "renovation_parsed") {
@@ -211,6 +293,12 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   const findingText = textOfFinding(finding);
   const renderedText = String(compactPayload?.rendered_report_text || "").toLowerCase();
   const currentDebtState = compactPayload?.source_report_coverage_qa?.current_debt_state || null;
+  if (
+    /unsupported.*acquisition.*assumptions|acquisition.*assumptions?.*unsupported|purchase assumptions.*unsupported/i.test(findingText) ||
+    /unsupported_acquisition_assumptions/i.test(findingText)
+  ) {
+    return false;
+  }
   const currentDebtNotAssessedDisclosure =
     currentDebtState?.current_debt_dscr_status !== "computed" &&
     Boolean(currentDebtState?.current_debt_limitation_reason_code);
@@ -241,13 +329,36 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   return false;
 }
 
+function isSupportedAcquisitionAssumptionsFalsePositive(finding, compactPayload) {
+  const text = textOfFinding(finding);
+  const renderedText = String(compactPayload?.rendered_report_text || "").toLowerCase();
+  const sourceCoverage = compactPayload?.source_report_coverage_qa || {};
+  const acquisitionState =
+    sourceCoverage?.acquisition_assumption_state ||
+    sourceCoverage?.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state ||
+    compactPayload?.acquisition_assumption_state ||
+    null;
+  const supported =
+    Boolean(acquisitionState?.acquisition_assumptions_supported) &&
+    Boolean(acquisitionState?.current_debt_separated) &&
+    Boolean(acquisitionState?.has_validated_acquisition_assumptions);
+  return (
+    supported &&
+    /acquisition/.test(text) &&
+    /unsupported|unstructured|partial|missing/.test(text) &&
+    /purchase assumptions|acquisition financing|proposed acquisition debt sizing|derived acquisition loan amount/.test(renderedText) &&
+    /current debt.*not assessed|no current debt document provided|current debt terms were not fully provided|current-debt dscr and refinance capacity were not assessed|current debt service is not assessed because no current outstanding debt balance was provided|not current outstanding debt/i.test(renderedText)
+  );
+}
+
 function filterSourcePackageFalsePositives(review, compactPayload) {
   for (const field of FINDING_ARRAY_FIELDS) {
     review[field] = normalizeFindings(review[field]).filter((finding) => (
       !isFilenameTokenOnlyFinding(finding) &&
       !isDeterministicLanguageGuaranteeFalsePositive(finding) &&
       !isOccupancyFalsePositive(finding, compactPayload) &&
-      !isClearRenderedDisclosureFalsePositive(finding, compactPayload)
+      !isClearRenderedDisclosureFalsePositive(finding, compactPayload) &&
+      !isSupportedAcquisitionAssumptionsFalsePositive(finding, compactPayload)
     ));
   }
   return review;
@@ -280,6 +391,7 @@ const SOURCE_PACKAGE_QA_PROMPT = [
   "Filename and upload-slot tokens are never source truth. Do not infer unsupported status from filename tokens such as UNSUPPORTED, TEST, CLEAN, MESSY, or QA unless parse status, deterministic artifacts, or rendered reliance provide separate evidence.",
   "Prioritize source_report_coverage_qa.artifact_inventory over compact raw parsed_artifacts when they differ. For example, if source_report_coverage_qa says rent_roll_parsed occupancy is 1, do not flag occupancy as null from a compact artifact summary.",
   "Missing supplemental parsed fields are not high severity when source_report_coverage_qa passes, deterministic_flags are empty, the report does not rely on that supplemental field, or the value is already represented in T12 or otherwise not required for the rendered analysis.",
+  "When source_report_coverage_qa shows validated purchase assumptions with proposed acquisition financing rendered separately and no true current debt balance, do not flag the acquisition assumptions as unsupported merely because they are acquisition financing rather than current debt.",
   "Pending or supporting documents are contamination risks only if the rendered report appears to rely on them quantitatively or makes unsupported claims from them.",
   "You may flag possible parser misses, unsupported-doc treatment, ignored documents, source/report inconsistencies, possible support contamination, and likely false-positive QA flags.",
   "You must not write accepted financial values, override deterministic parsers or math, or propose changing NOI, rent, occupancy, debt, DSCR, cap rate, valuation, refinance, or score outputs.",
@@ -406,11 +518,12 @@ export async function runSourcePackageQaAdvisory({
     throw err;
   }
 
+  const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const compactPayload = {
     property_name: context.property_name || "Unknown",
     report_type: context.report_type || "Unknown",
     report_tier: context.report_tier ?? "Unknown",
-    uploaded_files: (Array.isArray(uploadedFiles) ? uploadedFiles : []).map(compactFile),
+    uploaded_files: (Array.isArray(uploadedFiles) ? uploadedFiles : []).map((row) => compactFile(row, taxonomyLookup)),
     parsed_artifacts: (Array.isArray(artifacts) ? artifacts : []).map(summarizeArtifact),
     source_report_coverage_qa: sourceReportCoverageQa
       ? {
@@ -422,8 +535,10 @@ export async function runSourcePackageQaAdvisory({
           artifact_inventory: sourceReportCoverageQa.artifact_inventory || null,
           rendered_text_signals: sourceReportCoverageQa.rendered_text_signals || [],
           current_debt_state: sourceReportCoverageQa.current_debt_state || null,
+          acquisition_assumption_state: sourceReportCoverageQa.acquisition_assumption_state || null,
         }
       : null,
+    acquisition_assumption_state: sourceReportCoverageQa?.acquisition_assumption_state || null,
     rendered_report_qa_advisory: renderedReportQa
       ? {
           status: renderedReportQa.status || null,
@@ -476,6 +591,7 @@ export const __test__ = {
   stripHtmlForSourcePackageQa,
   summarizeArtifact,
   countAllFindings,
+  filterSourcePackageFalsePositives,
   SOURCE_PACKAGE_QA_PROMPT,
   RESPONSE_SCHEMA,
 };

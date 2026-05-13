@@ -17,6 +17,12 @@ function normalizeText(value) {
     .toLowerCase();
 }
 
+function displayLabelForDocType(value) {
+  const normalized = normalizeText(value).replace(/[_/]+/g, " ");
+  if (!normalized) return "";
+  return normalized.replace(/\b([a-z])/g, (match) => match.toUpperCase()).replace(/\s+/g, " ").trim();
+}
+
 function positiveNumber(value) {
   const n = coerceNumber(value);
   return Number.isFinite(n) && n > 0;
@@ -197,6 +203,142 @@ export function hasCurrentDebtSemanticState(currentDebtState = null) {
   );
 }
 
+export function buildAcquisitionAssumptionState({
+  loanTermSheetTermsPayload = null,
+  sourceReportCoverageQa = null,
+  currentDebtState = null,
+  artifacts = [],
+} = {}) {
+  const inventory = sourceReportCoverageQa?.artifact_inventory || {};
+  const resolvedLoan =
+    loanTermSheetTermsPayload ||
+    latestArtifactPayload(artifacts, "loan_term_sheet_parsed") ||
+    inventory?.loan_term_sheet_parsed ||
+    null;
+  const loanInventory = inventory?.loan_term_sheet_parsed || {};
+  const semanticDocRole = String(
+    loanInventory?.semantic_doc_role || resolvedLoan?.semantic_doc_role || ""
+  ).trim() || null;
+  const semanticDocDisplayLabel = String(
+    loanInventory?.semantic_doc_display_label || resolvedLoan?.semantic_doc_display_label || ""
+  ).trim() || null;
+  const validatedFields = {
+    purchase_price: positiveNumber(resolvedLoan?.purchase_price),
+    ltv: positiveNumber(resolvedLoan?.ltv),
+    interest_rate: positiveNumber(resolvedLoan?.interest_rate),
+    amortization_years: positiveNumber(resolvedLoan?.amortization_years ?? resolvedLoan?.amort_years),
+    going_in_cap_rate: positiveNumber(resolvedLoan?.going_in_cap_rate),
+    closing_costs_percent: Number.isFinite(coerceNumber(resolvedLoan?.closing_costs_percent)) &&
+      coerceNumber(resolvedLoan?.closing_costs_percent) >= 0,
+    derived_acquisition_loan_amount: positiveNumber(resolvedLoan?.derived_acquisition_loan_amount),
+    debt_basis: String(resolvedLoan?.debt_basis || "").trim().length > 0,
+  };
+  const validatedFieldNames = Object.entries(validatedFields)
+    .filter(([, present]) => Boolean(present))
+    .map(([key]) => key);
+  const coreValidatedFieldNames = [
+    "purchase_price",
+    "ltv",
+    "interest_rate",
+    "amortization_years",
+    "derived_acquisition_loan_amount",
+  ];
+  const hasValidatedAcquisitionAssumptions = coreValidatedFieldNames.every((key) => Boolean(validatedFields[key]));
+  const hasProposedAcquisitionFinancing =
+    Boolean(currentDebtState?.has_proposed_acquisition_financing) ||
+    Boolean(loanInventory?.has_derived_acquisition_debt) ||
+    validatedFieldNames.some((key) => key === "derived_acquisition_loan_amount");
+  const hasTrueCurrentDebtBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
+  const acquisitionFinancingRendered = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
+    ? sourceReportCoverageQa.rendered_text_signals.includes("acquisition_financing_assumptions")
+    : false;
+  const currentDebtSeparated = hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
+  const semanticRoleSupported =
+    semanticDocRole === "purchase_assumptions" ||
+    semanticDocDisplayLabel === "purchase_assumptions";
+  const acquisitionAssumptionsSupported =
+    semanticRoleSupported &&
+    hasValidatedAcquisitionAssumptions &&
+    currentDebtSeparated &&
+    acquisitionFinancingRendered;
+  const acquisitionSupportStatus = acquisitionAssumptionsSupported
+    ? "validated_supported"
+    : hasValidatedAcquisitionAssumptions
+    ? "validated_partial"
+    : hasProposedAcquisitionFinancing
+    ? "partial_or_unsupported"
+    : "unsupported";
+  return {
+    semantic_doc_role: semanticDocRole,
+    semantic_doc_display_label: semanticDocDisplayLabel,
+    validated_fields: validatedFields,
+    validated_field_names: validatedFieldNames,
+    has_validated_acquisition_assumptions: hasValidatedAcquisitionAssumptions,
+    has_proposed_acquisition_financing: hasProposedAcquisitionFinancing,
+    has_true_current_debt_balance: hasTrueCurrentDebtBalance,
+    current_debt_separated: currentDebtSeparated,
+    acquisition_financing_rendered: acquisitionFinancingRendered,
+    acquisition_assumptions_supported: acquisitionAssumptionsSupported,
+    acquisition_support_status: acquisitionSupportStatus,
+  };
+}
+
+export function formatCurrentDebtAssessmentCopy({
+  currentDebtState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  t12Noi = null,
+} = {}) {
+  const state =
+    currentDebtState ||
+    buildCurrentDebtAssessmentState({
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Noi,
+    });
+  if (state?.current_debt_dscr_status === "computed" && Number.isFinite(state?.current_debt_dscr)) {
+    return {
+      value: formatMultiple(state.current_debt_dscr, 2),
+      explanation: "Current debt DSCR computed from verified current debt balance and debt service.",
+      band: "Verified current debt balance and debt service",
+      detail: "Current debt DSCR is assessed from verified current debt balance and debt service.",
+    };
+  }
+  const baseText =
+    "Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.";
+  switch (state?.current_debt_limitation_reason_code) {
+    case "acquisition_only_not_current_debt":
+      return {
+        value: "Not assessed",
+        explanation: `Proposed acquisition financing is shown separately and is not treated as current outstanding debt. ${baseText}`,
+        band: "Proposed acquisition financing is not current outstanding debt",
+        detail: "Proposed acquisition financing is shown separately and is not treated as current outstanding debt.",
+      };
+    case "no_current_outstanding_balance":
+      return {
+        value: "Not assessed",
+        explanation: baseText,
+        band: "Current debt balance not provided",
+        detail: baseText,
+      };
+    case "incomplete_current_debt_terms":
+      return {
+        value: "Not assessed",
+        explanation: "Current debt terms were not fully provided. " + baseText,
+        band: "Current debt balance, rate, and amortization not fully provided",
+        detail: "Current debt terms were not fully provided.",
+      };
+    case "no_current_debt_document":
+    default:
+      return {
+        value: "Not assessed",
+        explanation: "No current debt document provided. " + baseText,
+        band: "No current debt document provided",
+        detail: "No current debt document provided.",
+      };
+  }
+}
+
 export function buildSupportDocTaxonomyState({
   declaredDocType = null,
   detectedDocType = null,
@@ -351,12 +493,63 @@ export function buildSupportDocTaxonomyState({
     }
   }
 
+  const fallbackDisplayLabel = displayLabelForDocType(
+    detectedDocType || declaredDocType || payload?.doc_type || ""
+  ) || displayLabelForDocType(semanticDocRole);
+  const semanticDocDisplayLabel =
+    confidence >= 0.75
+      ? semanticDocRole
+      : fallbackDisplayLabel || semanticDocRole;
+
   return {
     semantic_doc_role: semanticDocRole,
     semantic_doc_role_confidence: confidence,
     semantic_doc_role_reason: semanticDocRoleReason,
     semantic_doc_family: "support_doc",
+    semantic_doc_display_label: semanticDocDisplayLabel,
   };
+}
+
+export function resolveSupportDocDisplayLabel({
+  semanticDocRole = null,
+  semanticDocRoleConfidence = null,
+  originalFilename = null,
+  declaredDocType = null,
+  detectedDocType = null,
+  docType = null,
+} = {}) {
+  const confidence = Number(semanticDocRoleConfidence);
+  if (semanticDocRole && Number.isFinite(confidence) && confidence >= 0.75) {
+    return semanticDocRole;
+  }
+  const filenameText = normalizeText(originalFilename);
+  const fallbackDocType = normalizeText(declaredDocType || detectedDocType || docType || "");
+  if (
+    /broker/.test(filenameText) &&
+    /email/.test(filenameText) &&
+    /loan[\s_-]*term[\s_-]*sheet|loan_term_sheet/.test(fallbackDocType)
+  ) {
+    return "broker_email";
+  }
+  if (
+    /purchase[\s_-]*assumptions|acquisition[\s_-]*assumptions|acquisition support/.test(filenameText) &&
+    /appraisal|valuation/.test(fallbackDocType)
+  ) {
+    return "purchase_assumptions";
+  }
+  if (/renov|capex|capital budget|capital expenditure/.test(filenameText)) {
+    return "renovation_budget";
+  }
+  if (
+    /(current|existing|outstanding).*(mortgage|debt)|mortgage|debt/.test(filenameText) &&
+    /loan[\s_-]*term[\s_-]*sheet|loan_term_sheet|mortgage_statement/.test(fallbackDocType)
+  ) {
+    return "current_mortgage_statement";
+  }
+  if (semanticDocRole) {
+    return semanticDocRole;
+  }
+  return displayLabelForDocType(fallbackDocType || "");
 }
 
 export function buildAssumptionAttributionState({

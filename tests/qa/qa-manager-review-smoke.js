@@ -13,6 +13,15 @@ const renderedText = [
 const sourceCoverage = {
   qa_status: "pass",
   deterministic_flags: [],
+  current_debt_state: {
+    has_proposed_acquisition_financing: true,
+    has_true_current_debt_balance: false,
+  },
+  acquisition_assumption_state: {
+    acquisition_assumptions_supported: true,
+    has_validated_acquisition_assumptions: true,
+    current_debt_separated: true,
+  },
 };
 
 const decisions = __test__.normalizeManagerDecisions(
@@ -49,6 +58,10 @@ const decisions = __test__.normalizeManagerDecisions(
   {
     renderedText,
     sourceReportCoverageQa: sourceCoverage,
+    sourcePackageQa: {
+      acquisition_assumption_state: sourceCoverage.acquisition_assumption_state,
+      source_report_coverage_qa: sourceCoverage,
+    },
   }
 );
 
@@ -79,11 +92,98 @@ const trueUnsupportedReliance = __test__.normalizeManagerDecisions(
   {
     renderedText,
     sourceReportCoverageQa: sourceCoverage,
+    sourcePackageQa: {
+      acquisition_assumption_state: sourceCoverage.acquisition_assumption_state,
+      source_report_coverage_qa: sourceCoverage,
+    },
   }
 );
 
 assert.equal(trueUnsupportedReliance[0].classification, "real_source_report_contradiction");
 assert.equal(trueUnsupportedReliance[0].requires_code_patch, true);
+
+const unsupportedAcquisitionAssumptions = __test__.normalizeManagerDecisions(
+  [
+    {
+      source_code: "unsupported_acquisition_assumptions",
+      source_artifact: "source_package_qa_advisory",
+      classification: "real_source_report_contradiction",
+      severity: "high",
+      rationale: "Acquisition assumptions are unsupported.",
+      evidence_excerpt: "unsupported acquisition assumptions",
+      recommended_action_type: "render_gating_fix_required",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    },
+  ],
+  {
+    renderedText: [
+      renderedText,
+      "Proposed Acquisition Debt Sizing",
+      "Derived Acquisition Loan Amount",
+      "Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.",
+    ].join(" "),
+    sourceReportCoverageQa: sourceCoverage,
+    sourcePackageQa: {
+      acquisition_assumption_state: sourceCoverage.acquisition_assumption_state,
+      source_report_coverage_qa: sourceCoverage,
+    },
+  }
+);
+
+assert.equal(unsupportedAcquisitionAssumptions[0].classification, "false_positive");
+assert.equal(unsupportedAcquisitionAssumptions[0].requires_code_patch, false);
+assert.equal(unsupportedAcquisitionAssumptions[0].blocks_public_sample, false);
+
+const partialAcquisitionSourceCoverage = {
+  qa_status: "pass",
+  deterministic_flags: [],
+  current_debt_state: {
+    has_proposed_acquisition_financing: true,
+    has_true_current_debt_balance: false,
+  },
+  acquisition_assumption_state: {
+    acquisition_assumptions_supported: false,
+    has_validated_acquisition_assumptions: false,
+    current_debt_separated: true,
+  },
+};
+const partialAcquisitionDecision = __test__.normalizeManagerDecisions(
+  [
+    {
+      source_code: "unsupported_acquisition_assumptions",
+      source_artifact: "source_package_qa_advisory",
+      classification: "real_source_report_contradiction",
+      severity: "high",
+      rationale: "Acquisition assumptions are partially unsupported.",
+      evidence_excerpt: "unsupported acquisition assumptions",
+      recommended_action_type: "render_gating_fix_required",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    },
+  ],
+  {
+    renderedText: [
+      renderedText,
+      "Proposed Acquisition Debt Sizing",
+      "Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.",
+    ].join(" "),
+    sourceReportCoverageQa: partialAcquisitionSourceCoverage,
+    sourcePackageQa: {
+      acquisition_assumption_state: partialAcquisitionSourceCoverage.acquisition_assumption_state,
+      source_report_coverage_qa: partialAcquisitionSourceCoverage,
+    },
+  }
+);
+
+assert.equal(partialAcquisitionDecision[0].classification, "real_source_report_contradiction");
+assert.equal(partialAcquisitionDecision[0].requires_code_patch, true);
 
 const safeCurrentDebtLimitation = __test__.normalizeManagerDecisions(
   [

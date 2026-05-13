@@ -261,6 +261,21 @@ if (!acquisitionRenderedResult.rendered_text_signals.includes("acquisition_finan
   console.error("Missing acquisition_financing_assumptions rendered signal.");
   process.exit(1);
 }
+if (acquisitionRenderedResult.acquisition_assumption_state?.has_validated_acquisition_assumptions !== true) {
+  console.error("Expected validated acquisition assumptions state.");
+  console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
+  process.exit(1);
+}
+if (acquisitionRenderedResult.acquisition_assumption_state?.acquisition_assumptions_supported !== true) {
+  console.error("Expected acquisition assumptions to be marked supported.");
+  console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
+  process.exit(1);
+}
+if (acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state?.acquisition_assumptions_supported !== true) {
+  console.error("Expected loan term sheet artifact inventory to carry supported acquisition state.");
+  console.error("Actual inventory:", acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed);
+  process.exit(1);
+}
 
 const acquisitionRenderedT12OnlyResult = buildSourceReportCoverageQa({
   jobId: "forest-city-acquisition-rendered-t12-only-smoke",
@@ -346,6 +361,55 @@ if (acquisitionRenderedT12OnlyActual.has("FULL_UNDERWRITING_SUPPORT_UNDERUSED"))
   process.exit(1);
 }
 
+const partialAcquisitionResult = buildSourceReportCoverageQa({
+  jobId: "partial-acquisition-smoke",
+  userId: "user-smoke",
+  propertyName: "Partial Acquisition Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "PartialAcquisition_PurchaseAssumptions.pdf", doc_type: "purchase_assumptions", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "2", original_filename: "PartialAcquisition_T12.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "3", original_filename: "PartialAcquisition_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        gross_potential_rent: 1000000,
+        effective_gross_income: 900000,
+        net_operating_income: 400000,
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_in_place_annual: 1100000,
+        total_units: 20,
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 34500000,
+        ltv: 85,
+      },
+    },
+  ],
+  html: "<html><body><h2>Debt Structure & Financing</h2><p>Proposed Acquisition Debt Sizing</p></body></html>",
+});
+
+if (partialAcquisitionResult.acquisition_assumption_state?.has_validated_acquisition_assumptions !== false) {
+  console.error("Expected partial acquisition assumptions to remain unvalidated.");
+  console.error("Actual state:", partialAcquisitionResult.acquisition_assumption_state);
+  process.exit(1);
+}
+if (partialAcquisitionResult.acquisition_assumption_state?.acquisition_assumptions_supported !== false) {
+  console.error("Expected partial acquisition assumptions to remain unsupported.");
+  console.error("Actual state:", partialAcquisitionResult.acquisition_assumption_state);
+  process.exit(1);
+}
+
 const sourceReconciliationResult = buildSourceReportCoverageQa({
   jobId: "reconciliation-smoke",
   userId: "user-smoke",
@@ -394,6 +458,55 @@ if (sourceReconciliationResult.source_reconciliation_state?.source_reconciliatio
 if (!sourceReconciliationResult.deterministic_flags.some((flag) => flag.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED")) {
   console.error("Expected reconciliation flag to be emitted.");
   console.error("Actual flags:", sourceReconciliationResult.deterministic_flags.map((flag) => flag.code));
+  process.exit(1);
+}
+
+const supportRolePrecedenceResult = buildSourceReportCoverageQa({
+  jobId: "support-role-precedence-smoke",
+  userId: "user-smoke",
+  propertyName: "Support Role Precedence",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "pa-1", original_filename: "PurchaseAssumptions.pdf", doc_type: "appraisal", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "be-1", original_filename: "BrokerEmail.pdf", doc_type: "loan_term_sheet", mime_type: "application/pdf", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        file_id: "pa-1",
+        original_filename: "PurchaseAssumptions.pdf",
+        semantic_doc_role: "purchase_assumptions",
+        semantic_doc_role_confidence: 0.96,
+        semantic_doc_display_label: "purchase_assumptions",
+        purchase_price: 34500000,
+        ltv: 85,
+        interest_rate: 3.8,
+        amortization_years: 40,
+        going_in_cap_rate: 4.99,
+      },
+    },
+    {
+      type: "document_text_extracted",
+      payload: {
+        file_id: "be-1",
+        original_filename: "BrokerEmail.pdf",
+        text: "From: broker@example.com\nSubject: update\nPlease call me about the deal.",
+      },
+    },
+  ],
+  html: "<html><body><p>Support role precedence</p></body></html>",
+});
+
+if (supportRolePrecedenceResult.uploaded_files?.[0]?.display_doc_type !== "purchase_assumptions") {
+  console.error("Expected purchase assumptions display role in source coverage uploaded files.");
+  console.error("Actual uploaded file:", supportRolePrecedenceResult.uploaded_files?.[0]);
+  process.exit(1);
+}
+if (supportRolePrecedenceResult.uploaded_files?.[1]?.display_doc_type !== "broker_email") {
+  console.error("Expected broker email display role in source coverage uploaded files.");
+  console.error("Actual uploaded file:", supportRolePrecedenceResult.uploaded_files?.[1]);
   process.exit(1);
 }
 

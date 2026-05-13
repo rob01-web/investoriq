@@ -143,6 +143,18 @@ const badIncomeTable = buildReportContractQa({
 });
 assert.equal(badIncomeTable.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_CONTRACT"), true);
 
+const headerOnlyIncomeTable = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Top Positive Income Lines (% of EGI, before vacancy offset)</h2>",
+    "<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(headerOnlyIncomeTable.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_EMPTY_TABLE"), true);
+
 const scopedIncomeTable = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -157,6 +169,27 @@ const scopedIncomeTable = buildReportContractQa({
   ].join("\n"),
 });
 assert.equal(scopedIncomeTable.violations.some((v) => v.code === "TOP_POSITIVE_INCOME_LINES_CONTRACT"), false);
+
+const headerOnlyRenovationBudgetTable = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Renovation Budget Breakdown</h2>",
+    "<table><thead><tr><th>Category</th><th>Scope of Work</th><th>Estimated Cost</th><th>Percent of Budget</th><th>Primary Objective</th></tr></thead><tbody></tbody></table>",
+    "<h2>Cost Per Unit and Execution Phasing</h2>",
+    "<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(
+  headerOnlyRenovationBudgetTable.violations.some((v) => v.code === "RENOVATION_BUDGET_EMPTY_TABLE"),
+  true
+);
+assert.equal(
+  headerOnlyRenovationBudgetTable.violations.some((v) => v.code === "RENOVATION_EXECUTION_EMPTY_TABLE"),
+  true
+);
 
 const acquisitionArtifacts = [
   ...baseArtifacts,

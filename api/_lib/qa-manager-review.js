@@ -3,7 +3,7 @@ import {
   INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   containsProhibitedPublicLanguage,
 } from "./investoriq-qa-doctrine.js";
-import { hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
+import { buildAcquisitionAssumptionState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
 
 const QA_MANAGER_REVIEW_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
@@ -85,9 +85,15 @@ function hasUnsupportedExclusionDisclosure(text) {
 
 function hasCurrentDebtLimitationDisclosure(text, currentDebtState = null) {
   const source = String(text || "");
+  const hasAcquisitionOnlyLane =
+    Boolean(currentDebtState?.has_proposed_acquisition_financing) &&
+    currentDebtState?.has_true_current_debt_balance === false;
   const stateDisclosure =
     currentDebtState?.current_debt_dscr_status !== "computed" &&
-    Boolean(currentDebtState?.current_debt_limitation_reason_code);
+    (
+      Boolean(currentDebtState?.current_debt_limitation_reason_code) ||
+      hasAcquisitionOnlyLane
+    );
   if (hasCurrentDebtSemanticState(currentDebtState)) {
     return stateDisclosure;
   }
@@ -100,6 +106,28 @@ function hasCurrentDebtLimitationDisclosure(text, currentDebtState = null) {
     /No current debt document provided/i.test(source) ||
     /Current debt terms were not fully provided/i.test(source) ||
     /Current debt service not assessed/i.test(source)
+  );
+}
+
+function hasValidatedAcquisitionAssumptionEvidence({ sourceReportCoverageQa = null, sourcePackageQa = null, renderedText = "" } = {}) {
+  const acquisitionState =
+    sourceReportCoverageQa?.acquisition_assumption_state ||
+    sourcePackageQa?.acquisition_assumption_state ||
+    sourcePackageQa?.source_report_coverage_qa?.acquisition_assumption_state ||
+    null;
+  const resolvedState =
+    acquisitionState ||
+    buildAcquisitionAssumptionState({
+      loanTermSheetTermsPayload:
+        sourcePackageQa?.source_report_coverage_qa?.artifact_inventory?.loan_term_sheet_parsed || null,
+      sourceReportCoverageQa,
+      currentDebtState: sourceReportCoverageQa?.current_debt_state || null,
+    });
+  return Boolean(
+    resolvedState?.acquisition_assumptions_supported &&
+    resolvedState?.has_validated_acquisition_assumptions &&
+    resolvedState?.current_debt_separated &&
+    /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt|Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified|Current debt service is not assessed because no current outstanding debt balance was provided|Current debt terms were not fully provided|No current debt document provided/i.test(String(renderedText || ""))
   );
 }
 
@@ -117,6 +145,7 @@ function hasClassificationContext(text) {
 function normalizeManagerDecisions(decisions, context = {}) {
   const renderedText = context.renderedText || "";
   const sourceCoverage = context.sourceReportCoverageQa || null;
+  const sourcePackageQa = context.sourcePackageQa || null;
   const currentDebtState = sourceCoverage?.current_debt_state || null;
   return (Array.isArray(decisions) ? decisions : []).map((decision) => {
     const normalized = normalizeDecision(decision);
@@ -126,9 +155,14 @@ function normalizeManagerDecisions(decisions, context = {}) {
       normalized.evidence_excerpt,
       normalized.recommended_action_type,
     ].join(" ");
+    const unsupportedAcquisitionAssumptions =
+      /unsupported.*acquisition.*assumptions|acquisition.*assumptions?.*unsupported|purchase assumptions.*unsupported/i.test(text) ||
+      /unsupported_acquisition_assumptions/i.test(text);
     const unsupportedReference =
       /unsupported|unstructured|pending|supporting document/i.test(text) &&
-      !/relied on quantitatively|quantitatively relies|modeled value|unsupported claim/i.test(text);
+      !/relied on quantitatively|quantitatively relies|modeled value|unsupported claim/i.test(text) &&
+      !/unsupported.*acquisition.*assumptions|acquisition.*assumptions?.*unsupported|purchase assumptions.*unsupported/i.test(text) &&
+      !/unsupported_acquisition_assumptions/i.test(text);
     if (
       unsupportedReference &&
       coveragePassed(sourceCoverage) &&
@@ -169,6 +203,7 @@ function normalizeManagerDecisions(decisions, context = {}) {
 
     const currentDebtLimitationDisclosure =
       /Current debt|Current Debt|current debt|current dscr|refinance|debt coverage/i.test(text) &&
+      !unsupportedAcquisitionAssumptions &&
       /No current debt document provided|Current debt terms were not fully provided|Current debt service not assessed|Current debt balance not provided|Current outstanding debt balance not provided/i.test(text);
     if (
       currentDebtLimitationDisclosure &&
@@ -190,11 +225,32 @@ function normalizeManagerDecisions(decisions, context = {}) {
 
     const currentDebtClarity =
       /current debt|current dscr|refinance|debt coverage/i.test(text) &&
+      !unsupportedAcquisitionAssumptions &&
       /unclear|not clear|confusing|not assessed|missing|not produced|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/i.test(text);
     if (
       currentDebtClarity &&
       hasCurrentDebtLimitationDisclosure(renderedText, currentDebtState) &&
       /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt/i.test(renderedText)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+    if (
+      unsupportedAcquisitionAssumptions &&
+      hasValidatedAcquisitionAssumptionEvidence({
+        sourceReportCoverageQa: sourceCoverage,
+        sourcePackageQa,
+        renderedText,
+      })
     ) {
       return {
         ...normalized,
@@ -258,6 +314,7 @@ const QA_MANAGER_PROMPT = [
   "Review rendered_report_qa_advisory, source_package_qa_advisory, source_report_coverage_qa, qa_fix_routing, report_qa_flags, and rendered report text signals.",
   "Treat source_report_coverage_qa, deterministic_flags, report_qa_flags, and rendered report text as higher authority than AI speculation.",
   "Treat actual rendered excerpt text as the source for public-language escalation, not speculative suggested_review wording.",
+  "When source_report_coverage_qa or source_package_qa shows validated purchase assumptions with proposed acquisition financing rendered separately and no true current debt balance, do not treat acquisition assumptions as unsupported merely because they are acquisition financing rather than current debt.",
   "Do not treat unsupported, pending, or supporting documents as issues merely because they are listed if the report says unstructured/unsupported docs are excluded from modeled outputs and source coverage passes.",
   "If rendered text says documents are not used quantitatively, excluded from modeled outputs, or unsupported/unstructured uploads remain excluded, do not classify the listing of those files as a contradiction unless the report also relies on them quantitatively.",
   "Do not classify institutional classification terms such as Sensitized, Stable, Fragile, or Refinance Shortfall Under Stress as public-language risk when nearby report context includes Capital Risk Profile, Primary Pressure Point, DSCR/refi explanations, threshold language, expense ratio, NOI margin, or break-even occupancy.",
@@ -421,6 +478,7 @@ export async function runQaManagerReview({
   const decisions = normalizeManagerDecisions(review?.decisions, {
     renderedText: payload.rendered_report_text,
     sourceReportCoverageQa,
+    sourcePackageQa,
   });
   const counts = countDecisions(decisions);
 
@@ -452,6 +510,7 @@ export const __test__ = {
   countDecisions,
   hasUnsupportedExclusionDisclosure,
   hasClassificationContext,
+  hasValidatedAcquisitionAssumptionEvidence,
   stripHtmlForManager,
   containsProhibitedPublicLanguage,
   QA_MANAGER_PROMPT,

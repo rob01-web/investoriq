@@ -510,6 +510,18 @@ export function buildReportContractQa({
   ];
   const incomeWindow = firstTableAfterHeading(rawHtml, /Top Positive Income Lines|Top Income Drivers/i);
   if (incomeWindow) {
+    const hasHeaderOnlyTable =
+      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(incomeWindow) ||
+      !/<tbody>[\s\S]*?<tr\b/i.test(incomeWindow);
+    if (hasHeaderOnlyTable) {
+      addViolation(violations, {
+        code: "TOP_POSITIVE_INCOME_LINES_EMPTY_TABLE",
+        severity: "high",
+        category: "table_contract",
+        message: "Top Positive Income Lines renders a table header without meaningful rows.",
+        evidence: { excerpt: incomeWindow.slice(0, 500) },
+      });
+    }
     const badIncomeLabel =
       /\b(?:Effective Gross Income|EGI|Gross Potential Rent|GPR|Total Income|Net Operating Income|NOI|subtotal|total|vacancy|loss|concession|bad debt|collection loss)\b/i.test(incomeWindow);
     if (badIncomeLabel || hasBadMoneyRow(incomeWindow)) {
@@ -548,6 +560,18 @@ export function buildReportContractQa({
 
   const expenseWindow = subsectionAfter(text, /Top Expense Drivers|Top 3 Expense Drivers|Expense Drivers/i, tableStopPatterns);
   if (expenseWindow) {
+    const hasHeaderOnlyTable =
+      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(expenseWindow) ||
+      !/<tbody>[\s\S]*?<tr\b/i.test(expenseWindow);
+    if (hasHeaderOnlyTable) {
+      addViolation(violations, {
+        code: "TOP_EXPENSE_DRIVERS_EMPTY_TABLE",
+        severity: "high",
+        category: "table_contract",
+        message: "Top Expense Drivers renders a table header without meaningful rows.",
+        evidence: { excerpt: expenseWindow.slice(0, 500) },
+      });
+    }
     const badExpenseLabel =
       /\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(expenseWindow);
     if (badExpenseLabel || hasBadMoneyRow(expenseWindow, { allowNegative: true })) {
@@ -557,6 +581,38 @@ export function buildReportContractQa({
         category: "table_contract",
         message: "Top Expense Drivers includes total, subtotal, zero, income, or NOI rows.",
         evidence: { excerpt: expenseWindow.slice(0, 500) },
+      });
+    }
+  }
+
+  const renovationBudgetWindow = subsectionAfter(rawHtml, /Renovation Budget Breakdown/i, [/Cost Per Unit and Execution Phasing/i, /Interpretation/i], 2600);
+  if (renovationBudgetWindow) {
+    const hasHeaderOnlyTable =
+      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(renovationBudgetWindow) ||
+      !/<tbody>[\s\S]*?<tr\b/i.test(renovationBudgetWindow);
+    if (hasHeaderOnlyTable) {
+      addViolation(violations, {
+        code: "RENOVATION_BUDGET_EMPTY_TABLE",
+        severity: "high",
+        category: "table_contract",
+        message: "Renovation Budget Breakdown renders a table header without meaningful rows.",
+        evidence: { excerpt: renovationBudgetWindow.slice(0, 700) },
+      });
+    }
+  }
+
+  const renovationExecutionWindow = subsectionAfter(rawHtml, /Cost Per Unit and Execution Phasing/i, [/Interpretation/i], 2200);
+  if (renovationExecutionWindow) {
+    const hasHeaderOnlyTable =
+      /<table\b[\s\S]*?<thead>[\s\S]*?<\/thead>[\s\S]*?<tbody>\s*(?:<!--[\s\S]*?-->\s*)*<\/tbody>/i.test(renovationExecutionWindow) ||
+      !/<tbody>[\s\S]*?<tr\b/i.test(renovationExecutionWindow);
+    if (hasHeaderOnlyTable) {
+      addViolation(violations, {
+        code: "RENOVATION_EXECUTION_EMPTY_TABLE",
+        severity: "high",
+        category: "table_contract",
+        message: "Cost Per Unit and Execution Phasing renders a table header without meaningful rows.",
+        evidence: { excerpt: renovationExecutionWindow.slice(0, 700) },
       });
     }
   }

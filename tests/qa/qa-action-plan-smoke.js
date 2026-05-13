@@ -464,6 +464,74 @@ assert.equal(acquisitionActionsByCode.DEBT_FILE_WITH_MISSING_BALANCE.blocks_high
 assert.equal(Boolean(acquisitionActionsByCode.PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT), false);
 assert.equal(Boolean(acquisitionActionsByCode.ACQUISITION_FINANCING_RENDER_MISSING), false);
 
+const supportedAcquisitionAssumptionsPlan = buildQaActionPlan({
+  reportQaFlags: [
+    {
+      code: "unsupported_acquisition_assumptions",
+      severity: "high",
+      message: "Unsupported acquisition assumptions.",
+      evidence: { summary: "Acquisition assumptions flagged." },
+    },
+  ],
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    rendered_text_signals: ["acquisition_financing_assumptions"],
+    current_debt_state: {
+      has_proposed_acquisition_financing: true,
+      has_true_current_debt_balance: false,
+    },
+    acquisition_assumption_state: {
+      acquisition_assumptions_supported: true,
+      has_validated_acquisition_assumptions: true,
+      current_debt_separated: true,
+    },
+  },
+  renderedReportQa: { findings: [] },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+const supportedAcquisitionAssumptionsAction = supportedAcquisitionAssumptionsPlan.prioritized_actions.find(
+  (action) => action.code === "unsupported_acquisition_assumptions"
+);
+assert.equal(supportedAcquisitionAssumptionsAction.action_type, "no_action_false_positive");
+assert.equal(supportedAcquisitionAssumptionsAction.blocks_public_sample, false);
+assert.equal(supportedAcquisitionAssumptionsAction.blocks_high_value_outreach, false);
+
+const partialAcquisitionAssumptionsPlan = buildQaActionPlan({
+  reportQaFlags: [
+    {
+      code: "unsupported_acquisition_assumptions",
+      severity: "high",
+      message: "Unsupported acquisition assumptions.",
+      evidence: { summary: "Acquisition assumptions flagged." },
+    },
+  ],
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    rendered_text_signals: ["acquisition_financing_assumptions"],
+    current_debt_state: {
+      has_proposed_acquisition_financing: true,
+      has_true_current_debt_balance: false,
+    },
+    acquisition_assumption_state: {
+      acquisition_assumptions_supported: false,
+      has_validated_acquisition_assumptions: false,
+      current_debt_separated: true,
+    },
+  },
+  renderedReportQa: { findings: [] },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+const partialAcquisitionAssumptionsAction = partialAcquisitionAssumptionsPlan.prioritized_actions.find(
+  (action) => action.code === "unsupported_acquisition_assumptions"
+);
+assert.equal(partialAcquisitionAssumptionsAction.action_type, "source_document_limitation");
+assert.equal(partialAcquisitionAssumptionsAction.blocks_public_sample, true);
+assert.equal(partialAcquisitionAssumptionsAction.blocks_high_value_outreach, true);
+
 const cleanGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
   reportContractQa: { contract_status: "pass", violations: [] },

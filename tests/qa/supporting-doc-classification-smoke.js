@@ -233,6 +233,7 @@ const purchaseAssumptionsTaxonomy = buildSupportDocTaxonomyState({
 });
 assert.equal(purchaseAssumptionsTaxonomy.semantic_doc_role, "purchase_assumptions");
 assert.notEqual(purchaseAssumptionsTaxonomy.semantic_doc_role, "appraisal");
+assert.equal(purchaseAssumptionsTaxonomy.semantic_doc_display_label, "purchase_assumptions");
 
 const brokerEmailTaxonomy = buildSupportDocTaxonomyState({
   declaredDocType: "broker_email",
@@ -248,6 +249,7 @@ const brokerEmailTaxonomy = buildSupportDocTaxonomyState({
 });
 assert.equal(brokerEmailTaxonomy.semantic_doc_role, "broker_email");
 assert.notEqual(brokerEmailTaxonomy.semantic_doc_role, "loan_term_sheet");
+assert.equal(brokerEmailTaxonomy.semantic_doc_display_label, "broker_email");
 
 const renovationTaxonomy = buildSupportDocTaxonomyState({
   declaredDocType: "renovation_budget",
@@ -272,6 +274,7 @@ const renovationTaxonomy = buildSupportDocTaxonomyState({
   },
 });
 assert.equal(renovationTaxonomy.semantic_doc_role, "renovation_budget");
+assert.equal(renovationTaxonomy.semantic_doc_display_label, "renovation_budget");
 
 const currentMortgageTaxonomy = buildSupportDocTaxonomyState({
   declaredDocType: "mortgage_statement",
@@ -292,6 +295,7 @@ const currentMortgageTaxonomy = buildSupportDocTaxonomyState({
   },
 });
 assert.equal(currentMortgageTaxonomy.semantic_doc_role, "current_mortgage_statement");
+assert.equal(currentMortgageTaxonomy.semantic_doc_display_label, "current_mortgage_statement");
 
 const acquisitionFinancingTaxonomy = buildSupportDocTaxonomyState({
   declaredDocType: "loan_term_sheet",
@@ -314,6 +318,7 @@ const acquisitionFinancingTaxonomy = buildSupportDocTaxonomyState({
 });
 assert.equal(acquisitionFinancingTaxonomy.semantic_doc_role, "purchase_assumptions");
 assert.notEqual(acquisitionFinancingTaxonomy.semantic_doc_role, "current_mortgage_statement");
+assert.equal(acquisitionFinancingTaxonomy.semantic_doc_display_label, "purchase_assumptions");
 
 assert.equal(
   shouldAttemptRenovationRecovery(
