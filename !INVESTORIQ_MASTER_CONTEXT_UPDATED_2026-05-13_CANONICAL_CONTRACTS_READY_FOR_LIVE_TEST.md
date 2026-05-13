@@ -1,5 +1,284 @@
 # InvestorIQ Master Context - May 2026
 
+# May 13, 2026 Late Update - Canonical Contract Batch Committed / Ready for One Live Underwriting Validation
+
+## Fresh Chat Brief - May 13 Canonical Contracts Complete
+
+Use this prompt to start the next chat:
+
+```text
+We are continuing InvestorIQ from the updated May 13 master context. The first action in this chat is a single live Full Underwriting validation test. Do not patch first. Do not run multiple tests. Do not start with new Codex prompts unless the live test result gives us a specific failure class.
+
+Current checkpoint:
+- The systemic reliability / whack-a-mole crisis was investigated at repo level.
+- Codex identified the recurring failure mechanism as insufficient canonical contracts, not isolated report bugs.
+- We stopped smoke-test theatre and implemented canonical contracts in four controlled batches, then committed them.
+- Commit checkpoint: `02942c3 updates` on `main`.
+- Working tree is clean.
+- Final static audit found the canonical contracts wired through the main paths and no obvious new `ReferenceError` class.
+- Decision from final audit: ready for one live Full Underwriting validation.
+
+Canonical contract work completed:
+1. Final customer-output sanitation contract
+   - `sanitizeFinalCustomerHtml()` is used at the customer HTML boundary.
+   - Final HTML going into QA / DocRaptor is sanitized for hidden/control characters, zero-width chars, replacement chars, U+FFFE/U+FFFF, soft hyphen, C0/C1 controls, and common mojibake sequences.
+   - Report Contract QA now inspects the same sanitized HTML surface.
+   - Purpose: stop `Current￾debt DSCR` / hidden-character variants from bypassing QA.
+
+2. Current debt / acquisition debt semantic state
+   - `buildCurrentDebtAssessmentState()` now drives current-debt state.
+   - State distinguishes true current debt, current debt service, proposed acquisition financing, current debt DSCR computed vs not assessed, and reason codes.
+   - Reason codes include `no_current_debt_document`, `no_current_outstanding_balance`, `incomplete_current_debt_terms`, and `acquisition_only_not_current_debt`.
+   - Renderer and QA now use semantic state for Current Debt DSCR, Data Coverage, Deal Scorecard, Risk Register, Debt Structure, and acquisition financing separation.
+   - Phrase checks still exist only as legacy fallback when semantic state is absent.
+   - Purpose: stop fixing current-debt/refi wording variants one phrase at a time.
+
+3. Source reconciliation semantic state
+   - `buildSourceReconciliationState()` now governs rent-roll vs T12 GPR/in-place rent variance.
+   - State includes annual rent, T12 GPR, variance pct, status, customer delivery impact, public/outreach impact, and disclosure language.
+   - Statuses include `aligned`, `source_reconciliation_required`, `parser_suspected`, and `insufficient_inputs`.
+   - Customer language must remain institutional: `InvestorIQ has not reconciled this variance and does not infer the cause.`
+   - Purpose: stop local rent-roll/T12 variance math and inconsistent reconciliation wording.
+
+4. Full Underwriting section eligibility contract
+   - `buildFullUnderwritingSectionEligibility()` now centralizes major section eligibility and source-constrained / rendered / underused state.
+   - Used by renderer and Source Coverage QA.
+   - Missing debt/refi sections should be source-constrained when no true current debt source exists, not treated as report underdevelopment.
+   - Purpose: stop inconsistent Full Underwriting depth warnings based on scattered section heuristics.
+
+5. Support-doc taxonomy contract
+   - `parse-doc.js` now attaches semantic metadata to support-doc payloads:
+     - `semantic_doc_role`
+     - `semantic_doc_role_confidence`
+     - `semantic_doc_role_reason`
+     - `semantic_doc_family`
+   - Roles include `purchase_assumptions`, `appraisal`, `current_mortgage_statement`, `loan_term_sheet`, `broker_email`, `renovation_budget`, `property_tax`, and `other_support`.
+   - Source Coverage QA and Source Package QA read semantic roles.
+   - Purchase assumptions should support acquisition financing without masquerading as appraisal unless actual appraisal evidence exists.
+   - Broker emails should not become loan term sheets unless actual loan-term signals exist.
+
+6. DCF/scenario assumption attribution contract
+   - Added canonical attribution labels:
+     - `document_derived`
+     - `user_provided`
+     - `standardized_framework`
+     - `unavailable`
+   - Renderer should no longer label framework defaults as `stated` unless explicitly source-provided.
+
+7. Renovation metric formatting contract
+   - Renovation execution rows now use metric-kind-aware formatting.
+   - `unit_count` renders as integer, not currency.
+   - `per_unit_cost` and `total_budget` render as currency.
+   - Rows are deduped by metric kind plus value.
+   - Purpose: stop `Unit Count $40` and duplicate Unit Count / Per Unit Cost rows.
+
+8. System failure entitlement restore guarantee
+   - `REPORT_GENERATION_FAILED` now routes through a shared restore helper in `api/admin-run-worker.js`.
+   - Restore writes Dashboard-compatible `worker_event` with `payload.event = entitlement_restored`.
+   - Helper is idempotent and checks existing `entitlement_restored` before restoring.
+   - If purchase is already restored/unconsumed but signal is missing, the worker writes the signal without double-crediting.
+   - If event write fails, it retries once.
+   - `analysis_jobs.purchase_id` is cleared only after the restore signal is successfully written.
+   - Purpose: Dashboard can confidently show `Generation failed - credit restored` when backend restoration actually occurred.
+
+Important recent runtime truth:
+- A previous live Forest City test failed with `ReferenceError: rrVsGprPct is not defined` in `api/generate-client-report.js`.
+- Vercel logs proved this was a renderer runtime bug, not source documents, DocRaptor, or Supabase.
+- Codex fixed the scope issue by defining `rrVsGprPct` in the correct outer scope.
+- A later Forest City FINAL 2 test published, but still exposed systemic report-quality issues before the canonical contract batches:
+  - hidden/control character path
+  - unsupported refi-constrained wording when current refi was not assessed
+  - support-doc classification confusion
+  - renovation Unit Count formatting/duplication
+  - DCF assumptions labelled `stated` when likely framework assumptions
+- Those classes are exactly what the canonical contract batches were designed to fix.
+
+Current no-test / test rule:
+- The user explicitly does not want more smoke-test theatre.
+- Do not ask Codex to run broad smoke tests.
+- Do not run multiple live tests.
+- The next action is exactly one controlled live Full Underwriting validation.
+
+First live test to run:
+- Full Underwriting
+- Same strong package: Forest City Manor FINAL / Forest City Manor FINAL 3 or similar clean new name
+- Include:
+  - T12
+  - Rent Roll
+  - Purchase assumptions / acquisition financing support
+  - Renovation budget
+  - Broker/supporting document
+
+After it finishes, inspect only these things first:
+1. Did it publish?
+2. Does the PDF contain `Current￾debt DSCR` or any hidden/mojibake/control characters?
+3. Does Current Debt DSCR show Not Assessed cleanly when no true current debt balance exists?
+4. Does proposed acquisition financing stay separate from current debt/refi?
+5. Does the report avoid saying refinance proceeds are constrained/stressed/insufficient when refinance was not assessed?
+6. Does rent-roll/T12 reconciliation wording look institutional and source-constrained if applicable?
+7. Does support-doc classification look sane, especially PurchaseAssumptions and BrokerEmail?
+8. Does renovation formatting avoid `Unit Count $40` and duplicate execution rows?
+9. Do DCF/scenario assumptions avoid unsupported `stated` labels?
+10. If it fails, does Dashboard show the customer-safe failure UX and credit-restored line when `entitlement_restored` exists?
+
+After the test, do not immediately patch. Classify any issue first as:
+- canonical contract failed
+- old bypass path still exists
+- PDF/DocRaptor surface issue
+- source-document issue
+- public/Ken polish only
+- customer blocker
+- production config only
+
+Current product readiness posture:
+- Not Ken/public-ready until one live post-contract Full Underwriting validation is inspected.
+- Screening still appears more stable, but the immediate plan is not to abandon Underwriting yet.
+- If the live post-contract Underwriting report is materially clean, continue toward Ken/public sample readiness.
+- If the same classes recur after canonical contracts, we must honestly reassess whether Full Underwriting should remain private beta while Screening launches first.
+```
+
+## May 13 Late Context Update - Canonical Contracts Replaced Whack-a-Mole Patching
+
+### Why this update matters
+- May 13 started as a systemic reliability crisis. The user was done with patch/test/patch/test loops and explicitly rejected more tiny report-specific fixes.
+- The core diagnosis became clear: old issues kept returning because the repo lacked enough canonical contracts. Too many report concepts still lived as duplicated renderer strings, phrase-based QA checks, heuristic source classifications, or scattered section gates.
+- The repair strategy shifted from report-specific fixes to canonical contracts that define the source-of-truth state for recurring classes.
+- Broad smoke tests were intentionally avoided because they were burning Codex quota without proving the live renderer paths.
+- Codex was instructed to use minimal validation only: `node --check` on changed files and `git diff --check`, unless a tiny helper test was absolutely necessary.
+
+### Full repo-wide reliability investigation findings
+- Codex investigated why repeated safeguards still allowed old issue classes to recur.
+- Top recurrence mechanisms identified:
+  1. duplicate renderer copy paths
+  2. phrase-based QA fallbacks acting as authority
+  3. support-doc artifact type being treated as truth
+  4. QA checking a different surface than the final customer/PDF output
+  5. scattered Full Underwriting depth/section gating
+  6. live renderer paths not covered by cheap smoke tests
+- The user rejected continuing to test until the repo’s canonical contracts were fixed.
+- The next work was split into four smaller Codex batches to reduce risk and preserve quota.
+
+### Canonical Contract Batch 1 - Output sanitation + current debt state
+- Files changed:
+  - `api/_lib/report-surface-contracts.js`
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/_lib/qa-manager-review.js`
+  - `api/_lib/source-package-qa.js`
+- Added shared final-output sanitizer and applied it before QA/render handoff and the DocRaptor boundary.
+- Sanitizer strips U+FFFE/U+FFFF, zero-width chars, soft hyphen, replacement chars, C0/C1 controls, and common mojibake sequences.
+- Final customer HTML now goes through the same sanitized surface that QA inspects.
+- Added shared current-debt semantic state helper.
+- Debt state now distinguishes computed vs not assessed and carries a limitation reason code.
+- Renderer now uses debt state for current-debt DSCR, limitation copy, Deal Scorecard, Risk Register, and Data Coverage wording.
+- QA layers now read the debt state where available rather than relying only on phrase variants.
+
+### Canonical Contract Batch 2 - Source reconciliation + section eligibility
+- Files changed:
+  - `api/_lib/report-surface-contracts.js`
+  - `api/generate-client-report.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/qa-action-plan.js`
+- Added `buildSourceReconciliationState()` for rent-roll vs T12 variance with status, customer/public impact, and disclosure text.
+- Renderer now uses the reconciliation state for operating bullets, NOI stability, executive pressure point, and data coverage copy.
+- Added `buildFullUnderwritingSectionEligibility()` as a shared section-state contract for major Full Underwriting sections.
+- Source Coverage QA now emits `source_reconciliation_state` and `section_eligibility` in its artifact payload.
+- Full Underwriting depth flags now key off section eligibility rather than raw section count only.
+- Missing debt/refi sections are treated as source-constrained when no true current debt exists.
+- QA Action Plan routes reconciliation review as `source_document_limitation` under `owner_area: source_reconciliation`, with public/outreach blocking when appropriate.
+
+### Canonical Contract Batch 3 - Support-doc taxonomy + attribution + renovation formatting
+- Files changed:
+  - `api/_lib/report-surface-contracts.js`
+  - `api/parse/parse-doc.js`
+  - `api/generate-client-report.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/source-package-qa.js`
+- Added shared support-doc taxonomy helper with semantic roles:
+  - `purchase_assumptions`
+  - `appraisal`
+  - `current_mortgage_statement`
+  - `loan_term_sheet`
+  - `broker_email`
+  - `renovation_budget`
+  - `property_tax`
+  - `other_support`
+- Parser payloads now carry:
+  - `semantic_doc_role`
+  - `semantic_doc_role_confidence`
+  - `semantic_doc_role_reason`
+  - `semantic_doc_family`
+- Source Coverage QA and Source Package QA now surface semantic roles instead of relying only on raw `doc_type`.
+- Appraisal-vs-purchase-assumptions ambiguity now resolves by semantic role.
+- Broker email no longer upgrades to loan-term-sheet unless actual loan-term signals are present.
+- Added canonical assumption-attribution contract: `document_derived`, `user_provided`, `standardized_framework`, `unavailable`.
+- DCF/scenario copy now uses canonical attribution labels instead of unsupported `stated` language.
+- Renovation execution rows now dedupe by metric kind plus value.
+- Renovation metric formatting is kind-aware: unit count renders as integer, per-unit cost and total budget render as currency, percentage renders as percent.
+
+### Canonical Contract Batch 4 - System failure entitlement restore guarantee
+- File changed:
+  - `api/admin-run-worker.js`
+- Added idempotent `restoreEntitlementForFailedJob()` helper for hard failures.
+- `REPORT_GENERATION_FAILED` now carries `error_code: REPORT_GENERATION_FAILED` in the failure worker event.
+- Restore attempt no longer depends on the `report_generation_failed` artifact insert succeeding.
+- Worker checks existing `entitlement_restored` before restoring, so it stays idempotent.
+- Restoration clears `consumed_at`, clears `job_id`, clears `analysis_jobs.purchase_id`, and writes Dashboard-compatible signal.
+- Existing document-failure restore branches were left intact.
+
+### Final wiring patch after integration audit
+- Integration audit status after the four batches was `concern`, not `fail`.
+- Contracts were wired, but two gaps remained:
+  1. phrase fallbacks still had too much authority in QA layers
+  2. entitlement restore could succeed while Dashboard did not see the `entitlement_restored` signal if event insert failed
+- Files changed:
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/qa-manager-review.js`
+  - `api/_lib/source-package-qa.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/admin-run-worker.js`
+- Added `hasCurrentDebtSemanticState()` as the shared semantic guard.
+- `report-contract-qa` treats current-debt phrase checks as fallback only when semantic state is absent.
+- `qa-manager-review` short-circuits current-debt limitation disclosure on semantic state instead of phrase matching first.
+- `source-package-qa` and `source-report-coverage-qa` demote phrase-based false-positive handling behind semantic current-debt state.
+- Acquisition-only / not-assessed state wins over phrase variants like `No current debt document provided`.
+- Entitlement signal reliability improved:
+  - if purchase is already restored/unconsumed but signal is missing, worker writes `entitlement_restored` without re-crediting
+  - if first insert fails, helper retries once
+  - if retry still fails, server logs job_id, purchase_id, and error_code
+  - job `purchase_id` is only cleared after restore signal is successfully written
+
+### Commit checkpoint
+- Codex committed the canonical contract work.
+- Current clean checkpoint:
+  - branch: `main`
+  - HEAD: `02942c3 updates`
+  - working tree: clean
+- Final static audit of committed state:
+  - `sanitizeFinalCustomerHtml()` is wired at customer HTML boundary
+  - `buildCurrentDebtAssessmentState()` drives current-debt paths
+  - `buildSourceReconciliationState()` and `buildFullUnderwritingSectionEligibility()` are consumed by renderer and QA
+  - support-doc taxonomy metadata is attached in `parse-doc.js`
+  - `REPORT_GENERATION_FAILED` routes through shared restore helper with `entitlement_restored` signal writing
+  - no obvious new runtime `ReferenceError` class found
+- Audit conclusion:
+  - ready for a single live Full Underwriting validation
+  - legacy phrase fallbacks remain, but are demoted behind semantic state and should be watched rather than treated as a stop sign
+
+### Next immediate action
+- Run exactly one live Full Underwriting validation.
+- Recommended package: Forest City Manor FINAL / equivalent strong package with T12, Rent Roll, purchase assumptions, renovation budget, and broker/supporting document.
+- Do not run multiple tests.
+- Do not patch first.
+- Do not ask Codex for more work before the live result.
+- Inspect the published PDF/artifacts carefully before classifying readiness.
+
+---
+
+
 # May 13, 2026 Morning Update - Systemic Reliability Crisis / Stop Whack-a-Mole
 
 ## Fresh Chat Brief - May 13 Systemic Investigation

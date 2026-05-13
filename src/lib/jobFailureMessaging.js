@@ -86,7 +86,19 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   const referenceCode = classification.referenceCode;
   const creditLine = creditRestored
     ? 'Your report credit has been returned to your account.'
-    : 'Credit status is being checked for this failed report.';
+    : null;
+  const restoredSystemFailureBody =
+    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
+  const pendingSystemFailureBody =
+    'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.';
+  const restoredDocumentFailureBody =
+    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
+  const pendingDocumentFailureBody =
+    'Generation failed before publication. No report was published. If this was a document verification issue, your report credit will be restored automatically.';
+  const restoredMismatchBody =
+    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
+  const pendingMismatchBody =
+    'Generation failed before publication. No report was published. If this was a document inconsistency issue, your report credit will be restored automatically.';
 
   if (classification.kind === 'admin_review') {
     return {
@@ -102,8 +114,8 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return {
       title: creditRestored ? 'Documents could not be verified - credit restored' : 'Documents could not be verified',
       body: creditRestored
-        ? 'InvestorIQ could not verify the required structured financial inputs from the uploaded documents. No report was published, and your report credit has been returned to your account.'
-        : 'InvestorIQ could not verify the required structured financial inputs from the uploaded documents. No report was published. We are checking the credit status for this submission.',
+        ? restoredDocumentFailureBody
+        : pendingDocumentFailureBody,
       nextStep: 'Please upload a complete T12 operating statement and rent roll, then generate again.',
       referenceCode,
       creditLine,
@@ -114,8 +126,8 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return {
       title: creditRestored ? 'Document inconsistency detected - credit restored' : 'Document inconsistency detected',
       body: creditRestored
-        ? 'InvestorIQ found a material inconsistency between the uploaded financial documents. No report was published, and your report credit has been returned to your account.'
-        : 'InvestorIQ found a material inconsistency between the uploaded financial documents. No report was published. We are checking the credit status for this submission.',
+        ? restoredMismatchBody
+        : pendingMismatchBody,
       nextStep: 'Please verify that the T12 and rent roll belong to the same property and reporting period before trying again.',
       referenceCode,
       creditLine,
@@ -126,8 +138,8 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return {
       title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
       body: creditRestored
-        ? 'InvestorIQ encountered a system issue while generating this report. No report was published, and your report credit has been returned to your account.'
-        : 'InvestorIQ encountered a system issue while generating this report. No report was published. We are checking the credit status for this submission.',
+        ? restoredSystemFailureBody
+        : pendingSystemFailureBody,
       nextStep: 'You can try generating again. If this repeats, contact hello@investoriq.tech and include the property name.',
       referenceCode,
       creditLine,

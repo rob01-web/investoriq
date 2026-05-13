@@ -1104,7 +1104,7 @@ useEffect(() => {
         title: 'Unable to queue report',
         description: creditRestored
           ? 'InvestorIQ could not start this report. No report was published, and your report credit has been returned to your account.'
-          : 'InvestorIQ could not start this report. No report was published. We are checking the credit status for this submission.',
+          : 'InvestorIQ could not start this report. No report was published. If this was a platform-side failure, your report credit will be restored automatically.',
         variant: 'destructive',
       });
     } finally { setLoading(false); analyzeInFlightRef.current = false; }
@@ -1305,9 +1305,6 @@ useEffect(() => {
                           </div>
                           <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
                             {copy.nextStep}
-                          </div>
-                          <div style={{ ...labelMono, display:'block', marginTop: 8, color: T.ink4 }}>
-                            Reference code: {copy.referenceCode}
                           </div>
                           {copy.creditLine && (
                             <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
@@ -1867,9 +1864,6 @@ useEffect(() => {
                           </div>
                           <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
                             {copy.nextStep}
-                          </div>
-                          <div style={{ ...labelMono, display:'block', marginTop:8, color:T.ink4 }}>
-                            Reference code: {copy.referenceCode}
                           </div>
                           {copy.creditLine && (
                             <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>

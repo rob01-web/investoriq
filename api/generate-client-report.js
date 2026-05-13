@@ -3171,6 +3171,51 @@ if (effectiveReportMode === "screening_v1") {
       loanTermSheetTermsPayload,
       t12Noi: coerceNumber(t12Payload?.net_operating_income),
     });
+    const sourceReportCoverageQa = {
+      artifact_inventory: {
+        t12_parsed: {
+          present: Boolean(t12Payload),
+          has_core_totals:
+            Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)) ||
+            Number.isFinite(coerceNumber(t12Payload?.effective_gross_income)) ||
+            Number.isFinite(coerceNumber(t12Payload?.net_operating_income)),
+        },
+        rent_roll_parsed: {
+          present: Boolean(computedRentRoll || rentRollPayload),
+          total_units: coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units) ?? null,
+          has_total_units: Number.isFinite(coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)),
+        },
+        mortgage_statement_parsed: {
+          present: Boolean(mortgagePayload),
+          has_balance: Number.isFinite(coerceNumber(mortgagePayload?.outstanding_balance)),
+          has_payment:
+            Number.isFinite(coerceNumber(mortgagePayload?.monthly_payment)) ||
+            Number.isFinite(coerceNumber(mortgagePayload?.annual_debt_service)),
+          has_rate: Number.isFinite(coerceNumber(mortgagePayload?.interest_rate)),
+          has_amortization: Number.isFinite(coerceNumber(mortgagePayload?.amort_years)),
+        },
+        loan_term_sheet_parsed: {
+          present: Boolean(loanTermSheetTermsPayload),
+          has_derived_acquisition_debt: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)),
+          has_purchase_price: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price)),
+          has_rate: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.interest_rate)),
+          has_amortization: Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.amortization_years ?? loanTermSheetTermsPayload?.amort_years)),
+        },
+        appraisal_parsed: {
+          present: Boolean(appraisalPayload),
+          has_appraised_value: Number.isFinite(coerceNumber(appraisalPayload?.appraised_value)),
+          has_cap_rate: Number.isFinite(coerceNumber(appraisalPayload?.cap_rate)),
+        },
+        property_tax_parsed: {
+          present: Boolean(propertyTaxPayload),
+          has_annual_tax: Number.isFinite(coerceNumber(propertyTaxPayload?.annual_tax)),
+        },
+      },
+      rendered_sections: {},
+      deterministic_flags: [],
+      rendered_text_signals: [],
+      qa_status: "not_run",
+    };
     const sourceReconciliationState = buildSourceReconciliationState({
       computedRentRoll,
       rentRollPayload,

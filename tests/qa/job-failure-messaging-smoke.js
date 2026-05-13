@@ -18,7 +18,7 @@ const systemFailureJob = {
 };
 const systemFailureCopy = buildCustomerFailureMessage(systemFailureJob, { creditRestored: true });
 assert.equal(systemFailureCopy.title, 'Generation failed - credit restored');
-assert.match(systemFailureCopy.body, /system issue/i);
+assert.match(systemFailureCopy.body, /Generation failed before publication/i);
 assert.match(systemFailureCopy.body, /returned to your account/i);
 assert.match(systemFailureCopy.nextStep, /try generating again/i);
 assert.equal(systemFailureCopy.referenceCode, 'REPORT_GENERATION_FAILED');
@@ -26,15 +26,16 @@ assert.match(systemFailureCopy.creditLine, /returned to your account/i);
 
 const systemFailureUnrestored = buildCustomerFailureMessage({ ...systemFailureJob, report_type: 'screening' });
 assert.equal(systemFailureUnrestored.title, 'Generation failed');
-assert.match(systemFailureUnrestored.body, /checking the credit status/i);
-assert.match(systemFailureUnrestored.creditLine, /credit status is being checked/i);
+assert.match(systemFailureUnrestored.body, /Generation failed before publication/i);
+assert.match(systemFailureUnrestored.body, /will be restored automatically/i);
+assert.equal(systemFailureUnrestored.creditLine, null);
 
 const mismatchCopy = buildCustomerFailureMessage({
   error_code: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH',
   failure_reason: 'InvestorIQ found a material inconsistency between the uploaded financial documents.',
 });
 assert.equal(mismatchCopy.title, 'Document inconsistency detected');
-assert.match(mismatchCopy.body, /material inconsistency/i);
+assert.match(mismatchCopy.body, /Generation failed before publication/i);
 assert.equal(mismatchCopy.referenceCode, 'DOCUMENT_FINANCIAL_SCALE_MISMATCH');
 
 const missingCopy = buildCustomerFailureMessage({
@@ -42,6 +43,7 @@ const missingCopy = buildCustomerFailureMessage({
   failure_reason: 'Required structured financial artifacts were missing.',
 });
 assert.equal(missingCopy.title, 'Documents could not be verified');
+assert.match(missingCopy.body, /Generation failed before publication/i);
 assert.match(missingCopy.nextStep, /upload a complete T12 operating statement and rent roll/i);
 
 const reviewCopy = buildCustomerFailureMessage({
