@@ -174,20 +174,66 @@ export default async function handler(req, res) {
         return { skipped: true };
       }
 
-      const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
+      const { data: purchaseRow, error: purchaseRowErr } = await supabaseAdmin
         .from('report_purchases')
-        .update({ consumed_at: null, job_id: null })
+        .select('id, consumed_at, job_id')
         .eq('id', restorePurchaseId)
-        .not('consumed_at', 'is', null)
-        .select('id')
         .maybeSingle();
 
-      if (restorePurchaseErr) {
-        throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
+      if (purchaseRowErr) {
+        throw new Error(`Failed to inspect purchase for entitlement restore: ${purchaseRowErr.message}`);
       }
 
-      if (!restoredPurchase?.id) {
+      if (!purchaseRow?.id) {
         return { skipped: true };
+      }
+
+      if (purchaseRow?.consumed_at) {
+        const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
+          .from('report_purchases')
+          .update({ consumed_at: null, job_id: null })
+          .eq('id', restorePurchaseId)
+          .not('consumed_at', 'is', null)
+          .select('id')
+          .maybeSingle();
+
+        if (restorePurchaseErr) {
+          throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
+        }
+
+        if (!restoredPurchase?.id) {
+          return { skipped: true };
+        }
+      }
+
+      const entitlementRestoredPayload = {
+        reason: restoreReason,
+        error_code: restoreErrorCode,
+        purchase_id: restorePurchaseId,
+        timestamp: nowIso,
+      };
+
+      let entitlementRestoredWriteErr = await writeWorkerEventArtifact(
+        job.id,
+        job.user_id,
+        'entitlement_restored',
+        entitlementRestoredPayload
+      );
+      if (entitlementRestoredWriteErr) {
+        entitlementRestoredWriteErr = await writeWorkerEventArtifact(
+          job.id,
+          job.user_id,
+          'entitlement_restored',
+          entitlementRestoredPayload
+        );
+      }
+
+      if (entitlementRestoredWriteErr) {
+        console.error(
+          `[worker] Failed to write entitlement_restored event for job ${job.id} purchase ${restorePurchaseId} code ${restoreErrorCode}:`,
+          entitlementRestoredWriteErr.message
+        );
+        return { restored: true, purchase_id: restorePurchaseId, signal_written: false };
       }
 
       const { error: clearPurchaseLinkErr } = await supabaseAdmin
@@ -200,18 +246,7 @@ export default async function handler(req, res) {
         throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
       }
 
-      const entitlementRestoredWriteErr = await writeWorkerEventArtifact(job.id, job.user_id, 'entitlement_restored', {
-        reason: restoreReason,
-        error_code: restoreErrorCode,
-        purchase_id: restorePurchaseId,
-        timestamp: nowIso,
-      });
-
-      if (entitlementRestoredWriteErr) {
-        throw new Error(`Failed to write entitlement_restored event: ${entitlementRestoredWriteErr.message}`);
-      }
-
-      return { restored: true, purchase_id: restorePurchaseId };
+      return { restored: true, purchase_id: restorePurchaseId, signal_written: true };
     };
 
     const recordJobFailure = async (job, stage, err) => {

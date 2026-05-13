@@ -1,6 +1,6 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 
-import { buildCurrentDebtAssessmentState } from "./report-surface-contracts.js";
+import { buildCurrentDebtAssessmentState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
 
 const REPORT_CONTRACT_QA_VERSION = "2026.05.09.1";
 
@@ -315,11 +315,17 @@ export function buildReportContractQa({
   const safeCurrentDebtLimitationState =
     currentDebtState?.current_debt_dscr_status !== "computed" &&
     Boolean(currentDebtState?.current_debt_limitation_reason_code);
+  const hasSemanticCurrentDebtState = hasCurrentDebtSemanticState(currentDebtState);
+  const currentDebtNotAssessedPhrase =
+    !hasSemanticCurrentDebtState &&
+    (
+      /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
+    );
   const hasDealScorecardDscrPlaceholder =
     !(
       safeCurrentDebtLimitationState ||
-      /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
+      currentDebtNotAssessedPhrase
     ) &&
     (
       /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
@@ -564,7 +570,7 @@ export function buildReportContractQa({
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
       /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|NOT ASSESSED)/i.test(text) ||
+      (hasSemanticCurrentDebtState ? safeCurrentDebtLimitationState : /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|NOT ASSESSED)/i.test(text)) ||
       safeCurrentDebtLimitationState ||
       hasCurrentDebtNotAssessedPhrase(text) ||
       /current debt service is not assessed because no current outstanding debt balance was provided/i.test(text);

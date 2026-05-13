@@ -5,7 +5,7 @@ import {
   isAllowedMethodologyOnlyText,
   isFilenameHintOnlyText,
 } from "./investoriq-qa-doctrine.js";
-import { buildSupportDocTaxonomyState } from "./report-surface-contracts.js";
+import { buildSupportDocTaxonomyState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
 
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
@@ -213,6 +213,7 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   const currentDebtNotAssessedDisclosure =
     currentDebtState?.current_debt_dscr_status !== "computed" &&
     Boolean(currentDebtState?.current_debt_limitation_reason_code);
+  const semanticCurrentDebtStatePresent = hasCurrentDebtSemanticState(currentDebtState);
   if (
     /unsupported|unstructured/.test(findingText) &&
     /unsupported or unstructured uploads remain excluded from modeled outputs|not used quantitatively|excluded from modeled outputs/.test(renderedText)
@@ -221,8 +222,9 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   }
   if (
     /current debt|current dscr|refinance|debt coverage/.test(findingText) &&
-    (currentDebtNotAssessedDisclosure ||
-      /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/.test(renderedText)) &&
+    ((semanticCurrentDebtStatePresent && currentDebtNotAssessedDisclosure) ||
+      (!semanticCurrentDebtStatePresent &&
+        /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/.test(renderedText))) &&
     /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current-debt dscr and refinance capacity were not assessed because no current outstanding debt balance was verified|proposed acquisition financing was modeled separately where validated/i.test(renderedText) &&
     /proposed acquisition debt sizing|derived acquisition loan amount|not current outstanding debt/.test(renderedText)
   ) {

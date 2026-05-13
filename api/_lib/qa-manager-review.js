@@ -3,6 +3,7 @@ import {
   INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   containsProhibitedPublicLanguage,
 } from "./investoriq-qa-doctrine.js";
+import { hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
 
 const QA_MANAGER_REVIEW_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =
@@ -87,6 +88,9 @@ function hasCurrentDebtLimitationDisclosure(text, currentDebtState = null) {
   const stateDisclosure =
     currentDebtState?.current_debt_dscr_status !== "computed" &&
     Boolean(currentDebtState?.current_debt_limitation_reason_code);
+  if (hasCurrentDebtSemanticState(currentDebtState)) {
+    return stateDisclosure;
+  }
   return (
     stateDisclosure ||
     /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source) ||

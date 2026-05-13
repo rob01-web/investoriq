@@ -5,6 +5,7 @@ import {
   buildFullUnderwritingSectionEligibility,
   buildSupportDocTaxonomyState,
   buildSourceReconciliationState,
+  hasCurrentDebtSemanticState,
 } from "./report-surface-contracts.js";
 
 function asNumber(value) {
@@ -363,11 +364,15 @@ export function buildSourceReportCoverageQa({
     loan.has_payment ||
     mortgage.has_balance ||
     mortgage.has_payment;
+  const currentDebtSemanticSafe =
+    currentDebtState?.current_debt_dscr_status !== "computed" &&
+    Boolean(currentDebtState?.current_debt_limitation_reason_code);
   if (
     isFullUnderwriting &&
     debtFiles.length > 0 &&
     !hasDebtSizing &&
     !hasAcquisitionFinancingAssumptions &&
+    (!hasCurrentDebtSemanticState(currentDebtState) || !currentDebtSemanticSafe) &&
     /Current Debt DSCR|current debt service|current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided|Debt terms incomplete/i.test(htmlText)
   ) {
     addFlag(flags, {

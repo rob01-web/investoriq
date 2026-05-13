@@ -183,6 +183,20 @@ export function buildCurrentDebtAssessmentState({
   };
 }
 
+export function hasCurrentDebtSemanticState(currentDebtState = null) {
+  return Boolean(
+    currentDebtState &&
+      (
+        currentDebtState.current_debt_dscr_status !== undefined ||
+        currentDebtState.current_debt_limitation_reason_code !== undefined ||
+        currentDebtState.has_true_current_debt_balance !== undefined ||
+        currentDebtState.has_current_debt_service !== undefined ||
+        currentDebtState.has_proposed_acquisition_financing !== undefined ||
+        currentDebtState.has_current_debt_document !== undefined
+      )
+  );
+}
+
 export function buildSupportDocTaxonomyState({
   declaredDocType = null,
   detectedDocType = null,
