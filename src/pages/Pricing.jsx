@@ -189,6 +189,19 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
         }}>
           Flat fee | One property
         </span>
+        <span style={{
+          fontFamily:   "'DM Sans', sans-serif",
+          fontSize:     11,
+          fontWeight:   400,
+          lineHeight:   1.45,
+          color:        tier.highlight ? 'rgba(255,255,255,0.86)' : T.ink3,
+          display:      'block',
+          marginTop:    6,
+          letterSpacing:'0',
+          textTransform:'none',
+        }}>
+          Founder&apos;s Pricing — locked for early subscribers.
+        </span>
       </div>
 
       {/* Description */}
