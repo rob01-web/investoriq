@@ -37,6 +37,19 @@ function escapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function hasCurrentDebtNotAssessedPhrase(text) {
+  const source = String(text || "");
+  return (
+    /Current debt balance not provided/i.test(source) ||
+    /No current debt document provided/i.test(source) ||
+    /Current outstanding debt balance not provided/i.test(source) ||
+    /Current debt terms were not fully provided/i.test(source) ||
+    /Current debt service not assessed/i.test(source) ||
+    /Current debt service is not assessed/i.test(source) ||
+    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source)
+  );
+}
+
 function extractLabeledNumber(text, labels) {
   const source = String(text || "");
   for (const label of Array.isArray(labels) ? labels : []) {
@@ -288,8 +301,8 @@ export function buildReportContractQa({
   ]);
   const hasDealScorecardDscrPlaceholder =
     !(
-      /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|current outstanding debt balance not provided|current debt service is not assessed)/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|current outstanding debt balance not provided|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
+      /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
     ) &&
     (
       /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
@@ -301,6 +314,7 @@ export function buildReportContractQa({
   const hasTemplateTokenLeak =
     /\{\{[^}]+\}\}|__TOKEN__|__[_A-Z0-9]+__|%%[A-Z0-9_]+%%/i.test(text);
   const hasMojibakeLeak =
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B\u200C\u200D\u2060\uFEFF\uFFFD\uFFFE\uFFFF]/.test(text) ||
     /â€|Â|â€¢|â†’|â€”|â€“|â€œ|â€|Ã[\x80-\xBF]/i.test(text);
   const hasPublicLanguageLeak =
     containsProhibitedPublicLanguage(text) ||
@@ -533,7 +547,8 @@ export function buildReportContractQa({
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
       /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,180}(?:current outstanding debt balance not provided|current debt service is not assessed|NOT ASSESSED)/i.test(text) ||
+      /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|NOT ASSESSED)/i.test(text) ||
+      hasCurrentDebtNotAssessedPhrase(text) ||
       /current debt service is not assessed because no current outstanding debt balance was provided/i.test(text);
     const hasSeparation =
       /Proposed Acquisition Debt Sizing/i.test(text) &&
@@ -543,7 +558,7 @@ export function buildReportContractQa({
       /not used as (?:a )?current refinance debt balance/i.test(text);
     const contaminated =
       (/DSCR Sensitivity|Refinance Stress Test|Current Debt Coverage|Full Refinance Sufficiency/i.test(text) && !cleanCurrentDebtLimitation) ||
-      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text) ||
+      /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i.test(text) ||
       /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text) ||
       /Refinance Proceeds\s*\/\s*Debt Balance/i.test(text) ||
       /Refinance Stability Classification\s*[:\n]\s*(?:Stable|Review|Constrained|Sensitized|Fragile|High Risk|Refinance Shortfall)/i.test(text) ||
@@ -593,7 +608,7 @@ export function buildReportContractQa({
           current_debt_balance_present: false,
           current_debt_terms_present: hasCurrentDebtTermsSupport,
           excerpt: firstPatternExcerpt(text, [
-            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i,
+            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i,
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
           ]),
         },
@@ -608,7 +623,7 @@ export function buildReportContractQa({
           current_debt_balance_present: false,
           current_debt_terms_present: hasCurrentDebtTermsSupport,
           excerpt: firstPatternExcerpt(text, [
-            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i,
+            /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i,
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
           ]),
         },

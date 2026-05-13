@@ -202,7 +202,7 @@ function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
   }
   if (
     /current debt|current dscr|refinance|debt coverage/.test(findingText) &&
-    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed/.test(renderedText) &&
+    /current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance|current outstanding debt balance not provided|current debt service is not assessed|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/.test(renderedText) &&
     /proposed acquisition debt sizing|derived acquisition loan amount|not current outstanding debt/.test(renderedText)
   ) {
     return true;

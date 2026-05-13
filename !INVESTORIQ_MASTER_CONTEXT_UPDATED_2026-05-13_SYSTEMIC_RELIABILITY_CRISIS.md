@@ -1,5 +1,195 @@
 # InvestorIQ Master Context - May 2026
 
+# May 13, 2026 Morning Update - Systemic Reliability Crisis / Stop Whack-a-Mole
+
+## Fresh Chat Brief - May 13 Systemic Investigation
+
+Use this prompt to start the next chat:
+
+```text
+We are continuing InvestorIQ from the updated master context. The current state is no longer “patch the next report bug.” The user is extremely frustrated because repeated Full Underwriting tests keep revealing either old issues coming back or new ones emerging, despite Report Contract QA, Source Coverage QA, Rendered Report QA, QA Manager, QA Director, delivery gate logic, AI recovery helpers, support-doc recovery, and many deterministic guardrails.
+
+Priority #1 in this chat is to talk through the system-level failure before writing any Codex prompts. Do not immediately propose another tiny patch. Do not treat Northbank, Forest City, or 124 Richmond as isolated one-off report bugs.
+
+Current recent test truth:
+- Forest City RETEST 9 became customer-deliverable and confirmed support-doc acquisition + renovation recovery working, but remained thinner than expected at 15 pages and still exposed polish/noise issues.
+- 124 Richmond Current Build RETEST 2 generated 17 pages and confirmed acquisition support-doc recovery, property tax recovery, renovation recovery, report contract pass, and customer publish eligibility. It also proved current build can produce richer rent-roll/unit-mix sections when data shape lines up.
+- Northbank Final Test 3 generated 17 pages from 4 files and exposed recurring/still-unresolved systemic issues: `DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER` came back on a safe “No current debt document provided” row, the `Current￾debt DSCR` hidden-character/mojibake path is still present, and a major Rent Roll vs T12 discrepancy (-51.4%) is flagged. Northbank also shows Offering Summary fields are underused.
+- Delivery gate / QA artifacts now sometimes disagree: delivery gate may say customer blocked by contract, QA action plan may say advisory/customer ready, QA Director may identify action-plan mismatch, and admin/public/outreach/customer classifications are not consistently aligned.
+
+The user’s concern:
+- We have implemented too many layers and still every test finds something.
+- Old issues return in variant form.
+- The AI/QA layers are not reliably catching or preventing embarrassing issues before publication.
+- We cannot keep fixing report-specific symptoms forever.
+- If InvestorIQ cannot be ready for Ken Dunn/outreach by the end of this week, the project may need to be stopped because of time and family financial pressure.
+
+Immediate objective:
+1. Diagnose WHY old issue classes keep returning despite guardrails.
+2. Identify whether the problem is duplicate logic, multiple copy/wording paths, inconsistent renderer state, stale QA evidence, overly brittle regex contracts, test fixture/data-shape inconsistency, artifact/renderer field mismatch, QA layer authority confusion, or a combination.
+3. Decide what kind of repo-wide investigation is required before any more implementation.
+4. Produce one investigation-first Codex prompt only after the discussion is complete.
+
+Do not start by patching. The next Codex task, when we create it, must be a repo-wide audit/investigation focused on failure recurrence, duplicate logic, QA blind spots, and policy/authority conflicts. It must not patch until root causes are classified.
+
+Key recent artifacts/issues to include in the investigation scope:
+- `DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER` was fixed for “Current debt balance not provided” but returned for “No current debt document provided.” This suggests copy-variant brittle matching, not a solved class.
+- `Current￾debt DSCR` hidden character appeared in Forest City / 124 / Northbank paths after attempted wording cleanup. This suggests duplicate wording constants or multiple renderer text paths.
+- Northbank source coverage flagged `FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED` and `RENT_ROLL_T12_DISCREPANCY`. Need distinguish true source mismatch from parser/fixture issue.
+- Delivery gate decision for Northbank says customer_publish_eligible false due to stale DSCR placeholder, while QA artifacts also show conflicting advisory/customer-ready language. Need trace authority hierarchy.
+- AI/QA layers flagged some items but still did not prevent recurrence or align decisions cleanly.
+- Full Underwriting depth is inconsistent: Forest City 15 pages, 124 and Northbank 17 pages, with sections appearing or disappearing based on data shape and gating.
+
+Likely investigation files:
+- `api/generate-client-report.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/qa-action-plan.js`
+- `api/_lib/qa-director-review.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/_lib/source-package-qa.js`
+- `api/_lib/qa-manager-review.js`
+- `api/_lib/qa-fix-routing.js`
+- `api/parse/parse-doc.js`
+- `lib/ai-support-doc-recovery.js`
+- relevant smoke tests for report contract, support-doc recovery/classification, source coverage, and QA action plan
+
+Working rule for this chat:
+- No more tiny patches first.
+- Talk through the systemic failure.
+- Then prepare one elite, investigation-only Codex prompt for a repo-wide reliability audit.
+```
+
+## May 13 Context Update
+
+### Current emotional / operational truth
+- The user is beyond frustrated because the project is again showing the pattern he explicitly wanted to escape: run a test, find old or new issues, patch, retest, find another issue.
+- The user does not want any more tiny report-specific Codex patch prompts until the system-level cause is understood.
+- This is now a systemic reliability / launch-readiness crisis, not a normal feature-polish session.
+- The user’s hard constraint is real: if InvestorIQ is not ready for launch/Ken Dunn outreach by the end of this week, the project may need to be abandoned because continued development is creating financial and emotional pressure.
+- The correct assistant posture is: calm, direct, no defensiveness, no “just one more patch” reflex, and no pretending the current system is launch-ready when repeated tests still surface recurring issues.
+
+### Product/pricing discussion from night before
+- User raised a serious positioning concern: Screening at $499 and Underwriting at $1,499 may create perceived-value backlash if Screening generates 9-10 pages and Underwriting generates 14-17 pages.
+- Assistant’s no-BS recommendation was to consider one unified product for launch:
+  - `InvestorIQ Underwriting Report`
+  - possible launch price: `$499 USD`
+  - rationale: lower buyer friction, high gross margin if approx. `$30` cost/report, less page-count resentment, more testing volume, more testimonials, and less Day-1 perfection pressure.
+- This pricing/product-structure decision remains open, but user paused it to continue testing first.
+- Pricing discussion should remain priority #1 after reliability testing, but should not distract from the immediate systemic QA failure investigation.
+
+### Support-doc recovery expansion milestone completed May 12
+- Support-doc recovery was expanded beyond acquisition/purchase assumptions into:
+  - current mortgage / true current debt
+  - renovation / CapEx
+  - property tax
+  - appraisal / cap-rate support
+- Existing acquisition support-doc recovery was fixed and proven live:
+  - OpenAI 400 was traced to strict JSON schema required-list mismatch.
+  - Schema was patched so nullable top-level fields are also listed as required.
+  - Support-doc recovery diagnostics now capture non-secret OpenAI error message/body.
+  - Acquisition recovery now accepts purchase price, LTV, rate, amortization, closing costs, going-in cap rate, and derived acquisition loan amount when evidence validates.
+- Current mortgage recovery was added with strict rule:
+  - current debt/refi requires true current/existing/outstanding balance language.
+  - proposed/acquisition/indicative financing must not become current debt.
+- Renovation/property tax recovery added:
+  - renovation accepts verified total budget, budget rows, unit/per-unit info where explicit, but does not invent rent lift/ROI/payback/timing.
+  - property tax accepts annual tax/tax year/roll number where verified and rejects year-like tax values.
+- Appraisal/cap-rate recovery added:
+  - purchase price is not appraised value.
+  - cap-rate-only support can be support, not appraised value.
+  - unsupported/purchase-assumption docs should not generate formal appraisal claims.
+
+### Forest City RETEST 9 summary
+- Forest City RETEST 9 became materially better and customer-deliverable.
+- Delivery gate indicated:
+  - `customer_publish_eligible: true`
+  - `customer_publish_blockers: []`
+  - `delivery_gate_status: deliverable`
+  - only DocRaptor test mode remained as public/high-value outreach blocker.
+- Report Contract QA passed with zero violations.
+- Acquisition section rendered correctly:
+  - Purchase Price `$34,500,000`
+  - LTV `85%`
+  - Derived Acquisition Loan Amount `$29,325,000`
+  - Interest Rate `3.80%`
+  - Amortization `40 years`
+  - Closing Costs `1.5%`
+  - Proposed Acquisition DSCR `1.21x`
+- Renovation recovery accepted fields, but PDF had ugly/duplicated unit-count/per-unit rows.
+- Remaining Forest City issues after RETEST 9:
+  - renovation row formatting/de-dupe issue
+  - `Current￾debt DSCR` hidden/nonstandard character still present in Data Coverage path
+  - `missing_appraised_value` advisory on purchase assumptions file, even though file was accepted as acquisition support rather than formal appraisal.
+- Page count was still 15, which triggered concern that Full Underwriting is still too thin or section-gated inconsistently.
+
+### 124 Richmond Current Build RETEST 2 summary
+- User ran 124 Richmond on current build as a comparison.
+- Result: 17 pages.
+- 124 package included 10 uploaded files:
+  - T12 XLSX
+  - Rent Roll XLSX
+  - CapEx Schedule PDF/XLSX
+  - Debt Term Sheet PDF
+  - Offering Summary PDF
+  - Property Tax Bill PDF
+  - Unsupported Appraisal Summary PDF
+  - Unsupported Market Rent Survey PDF
+  - Unsupported Phase I ESA PDF
+- Report generated 17 pages and confirmed richer rendering:
+  - Proposed Acquisition Debt Sizing rendered.
+  - Unit-Level Rent Positioning rendered.
+  - Rent Roll Distribution rendered.
+  - Renovation section rendered.
+  - Property tax recovery accepted annual tax/tax year/roll number.
+  - Report Contract QA passed.
+  - Delivery gate marked customer-publish eligible.
+- 124 proved current build can produce more depth than Forest City when data shape and support package are richer.
+- 124 also showed the `Current￾debt DSCR` hidden-character issue remained in at least one wording path.
+- 124 proved unsupported inputs can remain advisory/no-action, but uploaded unsupported files in report list can still trigger language/support advisories.
+
+### Northbank Final Test 3 summary
+- User ran Final Test 3 / Northbank with 4 uploaded files:
+  - T12 CSV
+  - Rent Roll CSV
+  - Offering Summary PDF
+  - Renovation Budget PDF
+- Source documents:
+  - Offering Summary includes 30-unit asset type, asking price `$8,750,000`, year built `1982`, utilities, and validation-only note.
+  - Renovation Budget includes total budget `$291,500`, category rows, and explicitly states no rent lift, ROI, payback, phasing, cost recovery, or implementation schedule.
+- Report generated 17 pages.
+- Good behavior:
+  - Unit-Level Rent Positioning rendered.
+  - Rent Roll Distribution rendered.
+  - Renovation section rendered from verified budget data.
+  - No debt/refi was modeled because no debt term sheet/current mortgage was uploaded.
+- Major issues surfaced:
+  1. `DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER` returned as a customer blocker even though rendered row was a safe limitation shape: `Current Debt DSCR / Not assessed / No current debt document provided / 0/10`. This appears to be the same issue class previously patched only for another phrase variant.
+  2. `Current￾debt DSCR` hidden/nonstandard character still appears in Data Coverage.
+  3. `RENT_ROLL_T12_DISCREPANCY` flagged annualized rent as `-51.4% vs T12 GPR`; needs classification as parser bug, fixture/source mismatch, or real source limitation.
+  4. Offering Summary fields are underused: asking price, year built, utilities, asset type could support a concise Property Facts / Acquisition Basis / Offering Summary section, without inventing debt or appraised value.
+  5. Delivery gate / action plan / director artifacts show authority confusion: one layer treats customer delivery as blocked by contract, other layers still describe some items as advisory/no-action or customer-ready.
+
+### Current systemic diagnosis hypothesis
+- Repeated old issues returning means the system likely has one or more architecture problems:
+  1. Duplicate renderer wording/copy paths where only one path gets patched.
+  2. Brittle regex/phrase-based QA contracts instead of normalized semantic categories for safe limitation rows.
+  3. Multiple sources of truth for customer/public/outreach readiness.
+  4. QA Director, QA Action Plan, Report Contract QA, Source Package QA, and Delivery Gate do not share a single authority hierarchy.
+  5. Support-doc and renderer data shapes vary across CSV/XLSX/PDF/text and cause section gating inconsistencies.
+  6. “Fix class once” attempts are still being implemented as phrase-specific patches.
+  7. AI QA layers are mostly advisory/reporting and may not reliably prevent old issues if deterministic contracts/renderer paths are fragmented.
+  8. Existing smoke tests may cover exact phrases/fixtures but not variant phrase classes or all renderer paths.
+- This is why another narrow patch is not enough. The next step should be a repo-wide reliability audit focused on recurrence mechanics, duplicate logic, and QA authority conflicts.
+
+### Immediate next move
+- Do not produce another narrow Codex patch prompt first.
+- Talk through the failure architecture with the user.
+- Then create one investigation-only Codex prompt that asks Codex to audit why issues recur, where duplicate paths exist, why QA layers disagree, and what class-level fixes are needed.
+- The investigation must return file-truth classification before any patch.
+
+---
+
+
 
 ## Fresh Chat Brief - May 12 Morning
 
@@ -1108,10 +1298,6 @@ After Codex returns file truth, classify the issue as renderer leak, contract fa
     - `QA_MANAGER_MODEL=gpt-4o`
     - `QA_SOURCE_PACKAGE_MODEL=gpt-4o`
     - `QA_REVIEW_MODEL=gpt-4o`
-  - supporting-doc recovery env:
-    - `ENABLE_AI_SUPPORT_DOC_RECOVERY=true`
-    - `OPENAI_SUPPORT_DOC_RECOVERY_MODEL=gpt-4.1-mini`
-    - `OPENAI_SUPPORT_DOC_RECOVERY_TIMEOUT_MS=55000`
   - reviews:
     - `rendered_report_qa_advisory`
     - `source_package_qa_advisory`
@@ -2128,11 +2314,9 @@ After Codex returns file truth, classify the issue as renderer leak, contract fa
   - production env model settings:
     - `OPENAI_T12_RECOVERY_MODEL=gpt-4o`
     - `OPENAI_RENT_ROLL_RECOVERY_MODEL=gpt-4o-mini`
-    - `OPENAI_SUPPORT_DOC_RECOVERY_MODEL=gpt-4.1-mini`
   - rationale:
     - T12 controls EGI, OpEx, NOI, DSCR, refinance, valuation, and score optics, so T12 recovery uses a stronger model than mini
     - compact rent roll recovery can remain on `gpt-4o-mini` unless failures appear
-    - supporting-doc recovery uses `gpt-4.1-mini` because it is a higher-leverage extraction layer and should follow stronger instruction fidelity than the cheapest mini path
     - model output remains candidate extraction only
     - deterministic validation and cross-document gates remain source of truth
     - public / customer copy must still not mention AI

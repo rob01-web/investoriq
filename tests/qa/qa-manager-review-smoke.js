@@ -85,4 +85,38 @@ const trueUnsupportedReliance = __test__.normalizeManagerDecisions(
 assert.equal(trueUnsupportedReliance[0].classification, "real_source_report_contradiction");
 assert.equal(trueUnsupportedReliance[0].requires_code_patch, true);
 
+const safeCurrentDebtLimitation = __test__.normalizeManagerDecisions(
+  [
+    {
+      source_code: "current debt limitation",
+      source_artifact: "rendered_report_qa_advisory",
+      classification: "real_source_report_contradiction",
+      severity: "medium",
+      rationale: "Current debt is not assessed.",
+      evidence_excerpt: "No current debt document provided. Current debt terms were not fully provided.",
+      recommended_action_type: "render_gating_fix_required",
+      requires_code_patch: true,
+      requires_regeneration: true,
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    },
+  ],
+  {
+    renderedText: [
+      renderedText,
+      "Current Debt DSCR / Not assessed / No current debt document provided / 0/10",
+      "Current debt terms were not fully provided.",
+      "Proposed Acquisition Debt Sizing",
+      "Derived Acquisition Loan Amount",
+      "not current outstanding debt",
+    ].join(" "),
+    sourceReportCoverageQa: sourceCoverage,
+  }
+);
+
+assert.equal(safeCurrentDebtLimitation[0].classification, "false_positive");
+assert.equal(safeCurrentDebtLimitation[0].requires_code_patch, false);
+assert.equal(safeCurrentDebtLimitation[0].blocks_public_sample, false);
+
 console.log("qa-manager-review smoke PASS");

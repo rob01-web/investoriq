@@ -87,7 +87,10 @@ function hasCurrentDebtLimitationDisclosure(text) {
   return (
     /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(source) ||
     /Current Debt DSCR[^.]{0,120}current outstanding debt balance not provided/i.test(source) ||
-    /Current debt service is not assessed because no current outstanding debt balance was provided/i.test(source)
+    /Current debt service is not assessed because no current outstanding debt balance was provided/i.test(source) ||
+    /No current debt document provided/i.test(source) ||
+    /Current debt terms were not fully provided/i.test(source) ||
+    /Current debt service not assessed/i.test(source)
   );
 }
 
@@ -154,9 +157,30 @@ function normalizeManagerDecisions(decisions, context = {}) {
       };
     }
 
+    const currentDebtLimitationDisclosure =
+      /Current debt|Current Debt|current debt|current dscr|refinance|debt coverage/i.test(text) &&
+      /No current debt document provided|Current debt terms were not fully provided|Current debt service not assessed|Current debt balance not provided|Current outstanding debt balance not provided/i.test(text);
+    if (
+      currentDebtLimitationDisclosure &&
+      hasCurrentDebtLimitationDisclosure(renderedText) &&
+      /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount|not current outstanding debt/i.test(renderedText)
+    ) {
+      return {
+        ...normalized,
+        classification: "false_positive",
+        severity: "info",
+        recommended_action_type: "no_action",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      };
+    }
+
     const currentDebtClarity =
       /current debt|current dscr|refinance|debt coverage/i.test(text) &&
-      /unclear|not clear|confusing|not assessed|missing|not produced/i.test(text);
+      /unclear|not clear|confusing|not assessed|missing|not produced|no current debt document provided|current debt terms were not fully provided|current debt service not assessed/i.test(text);
     if (
       currentDebtClarity &&
       hasCurrentDebtLimitationDisclosure(renderedText) &&

@@ -107,8 +107,8 @@ function findRenderedSignals(html) {
     ["lump_sum_t12", /Lump-Sum T12/i],
     ["no_structured_capex_modeling", /no structured CapEx modeling/i],
     ["renovation_not_converted", /not converted into verified structured renovation inputs/i],
-    ["dscr_current_debt_not_assessed", /Current Debt DSCR|Current debt service is not assessed/i],
-    ["debt_sizing_balance_not_provided", /current outstanding debt balance not provided/i],
+    ["dscr_current_debt_not_assessed", /Current Debt DSCR|Current debt service is not assessed|Current debt service not assessed|No current debt document provided|Current debt terms were not fully provided/i],
+    ["debt_sizing_balance_not_provided", /current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided/i],
     ["refinance_stability_not_produced", /Refinance Stability Classification not produced/i],
     ["acquisition_financing_assumptions", /Proposed Acquisition Debt Sizing|Acquisition Financing Assumptions|Derived Acquisition Loan Amount|Proposed Acquisition DSCR|Derived from uploaded purchase assumptions/i],
   ];
@@ -318,7 +318,7 @@ export function buildSourceReportCoverageQa({
     debtFiles.length > 0 &&
     !hasDebtSizing &&
     !hasAcquisitionFinancingAssumptions &&
-    /Current Debt DSCR|current debt service|current outstanding debt balance not provided|Debt terms incomplete/i.test(htmlText)
+    /Current Debt DSCR|current debt service|current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided|Debt terms incomplete/i.test(htmlText)
   ) {
     addFlag(flags, {
       code: "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",

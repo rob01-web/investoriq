@@ -222,6 +222,25 @@ assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code =
 assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
 assert.equal(acquisitionWithScorecardNotAssessed.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"), false);
 
+for (const safeLimitationRow of [
+  "<p>Current Debt DSCR / Not assessed / No current debt document provided / 0/10</p>",
+  "<p>Current Debt DSCR / Not assessed / Current debt terms were not fully provided / 0/10</p>",
+  "<p>Current Debt DSCR / Not assessed / Current debt service not assessed / 0/10</p>",
+]) {
+  const safeLimitationReport = buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: acquisitionArtifacts,
+    sourceReportCoverageQa: acquisitionCoverage,
+    html: [
+      "<h2>Deal Scorecard</h2>",
+      safeLimitationRow,
+      "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance. Proposed acquisition financing is shown separately and is not treated as current debt.</p>",
+    ].join("\n"),
+  });
+  assert.equal(safeLimitationReport.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"), false);
+}
+
 const contaminatedAcquisition = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -361,6 +380,18 @@ const paymentOnlyMortgageReport = buildReportContractQa({
 assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"), false);
 assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"), false);
 assert.equal(paymentOnlyMortgageReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
+
+const mojibakeLeakReport = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: acquisitionArtifacts,
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Deal Scorecard</h2>",
+    "<p>Current\uFFFEdebt DSCR / Not assessed / Current debt balance not provided / 0/10</p>",
+  ].join("\n"),
+});
+assert.equal(mojibakeLeakReport.violations.some((v) => v.code === "RENDERED_MOJIBAKE_LEAK"), true);
 
 const currentDebtDscrMismatch = buildReportContractQa({
   reportType: "underwriting",
