@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
+import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
 
 // DESIGN TOKENS
 const T = {
@@ -351,6 +352,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [jobEvents, setJobEvents] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [failedJobGuidance, setFailedJobGuidance] = useState(null);
+  const [failedJobCreditRestoredById, setFailedJobCreditRestoredById] = useState({});
   const [recentJobs, setRecentJobs] = useState([]);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
@@ -530,6 +532,39 @@ const DASHBOARD_DIAG_MINIMAL = false;
       recentJobsFetchRef.current = false;
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!profile?.id) return () => { cancelled = true; };
+
+    const failedJobIds = recentJobs
+      .filter((job) => job?.status === 'failed' && job?.id)
+      .map((job) => String(job.id));
+
+    if (failedJobIds.length === 0) {
+      setFailedJobCreditRestoredById({});
+      return () => { cancelled = true; };
+    }
+
+    const fetchFailedCreditRestoration = async () => {
+      const { data, error } = await supabase
+        .from('analysis_artifacts')
+        .select('job_id, payload, created_at')
+        .eq('type', 'worker_event')
+        .in('job_id', failedJobIds)
+        .eq('payload->>event', 'entitlement_restored');
+      if (cancelled) return;
+      if (error) {
+        console.error('Failed to fetch failed-job credit restoration artifacts:', error);
+        setFailedJobCreditRestoredById({});
+        return;
+      }
+      setFailedJobCreditRestoredById(buildEntitlementRestoredMap(data || []));
+    };
+
+    fetchFailedCreditRestoration();
+    return () => { cancelled = true; };
+  }, [profile?.id, recentJobs]);
 
   const fetchEntitlements = async () => {
     if (!profile?.id) return;
@@ -727,10 +762,11 @@ useEffect(() => {
   const activeJobForRuns = jobFromInProgress || jobFromFailed || jobFromNeedsDocuments || null;
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = false;
-  const activeFailedReason =
-    activeJobForRuns?.failure_reason ||
-    activeJobForRuns?.error_message ||
-    '';
+  const activeFailureCopy = activeJobForRuns?.status === 'failed'
+    ? buildCustomerFailureMessage(activeJobForRuns, {
+        creditRestored: failedJobCreditRestoredById[String(activeJobForRuns?.id)] === true,
+      })
+    : null;
   const safeName = (s) => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
   const normalizeDocType = (s) => {
     const dt = String(s || '').toLowerCase().trim();
@@ -1064,7 +1100,13 @@ useEffect(() => {
       await fetchEntitlements();
       const postRunEntitlementCount = entitlements[selectedReportType] ?? 0;
       const creditRestored = postRunEntitlementCount > preRunEntitlementCount;
-      toast({ title: 'Unable to queue report', description: `${error.message || 'An error occurred.'}${creditRestored ? ' Credit restored.' : ''}`, variant: 'destructive' });
+      toast({
+        title: 'Unable to queue report',
+        description: creditRestored
+          ? 'InvestorIQ could not start this report. No report was published, and your report credit has been returned to your account.'
+          : 'InvestorIQ could not start this report. No report was published. We are checking the credit status for this submission.',
+        variant: 'destructive',
+      });
     } finally { setLoading(false); analyzeInFlightRef.current = false; }
   };
 
@@ -1247,14 +1289,34 @@ useEffect(() => {
                     <div style={{ ...failedMessageLeadStyle, marginBottom: 4 }}>
                       {latestFailedJob.property_name || 'Unnamed Property'}
                     </div>
-                    <div style={failedMessageStatusStyle}>
-                      {String(latestFailedJob.status || 'failed').toUpperCase()}
-                      {latestFailedJob.report_type ? ` - ${String(latestFailedJob.report_type).toUpperCase()}` : ''}
-                      {latestFailedJob.error_code ? ` - ${latestFailedJob.error_code}` : ''}
-                    </div>
-                    <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
-                      {latestFailedJob.failure_reason || latestFailedJob.error_message || 'No message'}
-                    </div>
+                    {(() => {
+                      const copy = buildCustomerFailureMessage(latestFailedJob, {
+                        creditRestored: failedJobCreditRestoredById[String(latestFailedJob.id)] === true,
+                      });
+                      return (
+                        <>
+                          <div style={failedMessageStatusStyle}>
+                            {String(latestFailedJob.status || 'failed').toUpperCase()}
+                            {latestFailedJob.report_type ? ` - ${String(latestFailedJob.report_type).toUpperCase()}` : ''}
+                            {latestFailedJob.error_code ? ` - ${latestFailedJob.error_code}` : ''}
+                          </div>
+                          <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
+                            {copy.body}
+                          </div>
+                          <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
+                            {copy.nextStep}
+                          </div>
+                          <div style={{ ...labelMono, display:'block', marginTop: 8, color: T.ink4 }}>
+                            Reference code: {copy.referenceCode}
+                          </div>
+                          {copy.creditLine && (
+                            <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
+                              {copy.creditLine}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                     {visibleFailedJobGuidance && (
                       <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
                         {visibleFailedJobGuidance}
@@ -1691,11 +1753,26 @@ useEffect(() => {
                     ? needsDocumentsMessage
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
+                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailedReason || 'Previous job failed. Ready to retry.')
+                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
+                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.nextStep && (
+                  <span style={step03FailureSupportStyle}>
+                    {activeFailureCopy.nextStep}
+                  </span>
+                )}
+                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.creditLine && (
+                  <span style={step03FailureSupportStyle}>
+                    {activeFailureCopy.creditLine}
+                  </span>
+                )}
+                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.referenceCode && (
+                  <span style={{ ...labelMono, display:'block', marginTop: 6, color: T.ink4 }}>
+                    Reference code: {activeFailureCopy.referenceCode}
+                  </span>
+                )}
                 {activeJobForRuns?.status === 'failed' && activeFailedGuidance && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailedGuidance}
@@ -1774,16 +1851,34 @@ useEffect(() => {
                 <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                   <div>
                     <div style={failedMessageLeadStyle}>
-                      <strong style={{ fontWeight:500 }}>Generation failed</strong> - {job.property_name || 'Unknown property'}
+                      <strong style={{ fontWeight:500 }}>{buildCustomerFailureMessage(job, { creditRestored: failedJobCreditRestoredById[String(job.id)] === true }).title}</strong> - {job.property_name || 'Unknown property'}
                     </div>
                     <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
                       FAILED{job.report_type ? ` - ${String(job.report_type).toUpperCase()}` : ''}{job.error_code ? ` - ${job.error_code}` : ''}
                     </div>
-                    {job.failure_reason && (
-                      <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
-                        {job.failure_reason}
-                      </div>
-                    )}
+                    {(() => {
+                      const copy = buildCustomerFailureMessage(job, {
+                        creditRestored: failedJobCreditRestoredById[String(job.id)] === true,
+                      });
+                      return (
+                        <>
+                          <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
+                            {copy.body}
+                          </div>
+                          <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                            {copy.nextStep}
+                          </div>
+                          <div style={{ ...labelMono, display:'block', marginTop:8, color:T.ink4 }}>
+                            Reference code: {copy.referenceCode}
+                          </div>
+                          {copy.creditLine && (
+                            <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                              {copy.creditLine}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                     {failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
                       <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
                         {failedJobGuidance.message}

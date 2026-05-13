@@ -3440,6 +3440,16 @@ if (effectiveReportMode === "screening_v1") {
     const driver1 = pressureDrivers[0] || null;
     const driver2 = pressureDrivers[1] || null;
     const driver3 = pressureDrivers[2] || null;
+    const rrAnnualForPressurePoint = coerceNumber(
+      computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual
+    );
+    const gprForPressurePoint = coerceNumber(t12Payload?.gross_potential_rent);
+    const rrVsGprPct =
+      Number.isFinite(rrAnnualForPressurePoint) &&
+      Number.isFinite(gprForPressurePoint) &&
+      gprForPressurePoint > 0
+        ? (rrAnnualForPressurePoint - gprForPressurePoint) / gprForPressurePoint
+        : null;
     const hasSourceReconciliationVariance = Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
     let primaryPressurePoint = driver1?.label
       ? driver1.value
