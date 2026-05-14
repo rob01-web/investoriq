@@ -34,6 +34,17 @@ function matchesAny(text, regexes) {
   return regexes.some((pattern) => pattern.test(value));
 }
 
+function classifyMissingDocumentCategory(job = {}) {
+  const code = String(job?.error_code || '').trim().toUpperCase();
+  const reason = String(job?.failure_reason || job?.error_message || '').trim();
+  const text = `${code} ${reason}`.trim();
+  if (/SUPPORTING DOCUMENT/i.test(text)) return 'supporting_document';
+  if (/T12|OPERATING STATEMENT/i.test(text)) return 't12';
+  if (/RENT ROLL/i.test(text)) return 'rent_roll';
+  if (/RECONCILIATION|SAME PROPERTY|SAME REPORTING PERIOD|SOURCE PACKAGE|MISMATCH|INCONSISTENT/i.test(text)) return 'source_package';
+  return 'source_package';
+}
+
 export function classifyFailure(job = {}) {
   const code = String(job?.error_code || '').trim().toUpperCase();
   const reason = String(job?.failure_reason || job?.error_message || '').trim();
@@ -91,15 +102,6 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
   const pendingSystemFailureBody =
     'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.';
-  const restoredDocumentFailureBody =
-    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
-  const pendingDocumentFailureBody =
-    'Generation failed before publication. No report was published. If this was a document verification issue, your report credit will be restored automatically.';
-  const restoredMismatchBody =
-    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
-  const pendingMismatchBody =
-    'Generation failed before publication. No report was published. If this was a document inconsistency issue, your report credit will be restored automatically.';
-
   if (classification.kind === 'admin_review') {
     return {
       title: 'Submission under review',
@@ -111,12 +113,31 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   }
 
   if (classification.kind === 'missing_documents') {
+    const missingCategory = classifyMissingDocumentCategory(job);
+    const missingCategoryTitle = {
+      t12: 'T12 / operating statement could not be verified',
+      rent_roll: 'Rent roll could not be verified',
+      supporting_document: 'Full Underwriting supporting document could not be verified',
+      source_package: 'Source package could not be verified',
+    }[missingCategory];
+    const missingCategoryBody = {
+      t12: 'Generation could not be completed because the uploaded T12 / operating statement could not be verified as usable for this report.',
+      rent_roll: 'Generation could not be completed because the uploaded rent roll could not be verified as usable for this report.',
+      supporting_document: 'Generation could not be completed because Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.',
+      source_package: 'Generation could not be completed because the uploaded source package could not be verified as complete and usable for this report.',
+    }[missingCategory];
+    const missingCategoryNextStep = {
+      t12: 'Please start a new report and upload a readable T12 / operating statement that includes income, expenses, and NOI. If you believe your document is complete, contact reports@investoriq.tech.',
+      rent_roll: 'Please start a new report and upload a readable rent roll that includes units, occupancy or status, and in-place rents. If you believe your document is complete, contact reports@investoriq.tech.',
+      supporting_document: 'Please start a new Full Underwriting report with a usable supporting document such as debt, purchase assumptions, appraisal, renovation, property tax, insurance, or related deal support. If you believe your document is complete, contact reports@investoriq.tech.',
+      source_package: 'Please start a new report with clearer or more complete documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.',
+    }[missingCategory];
     return {
-      title: creditRestored ? 'Documents could not be verified - credit restored' : 'Documents could not be verified',
+      title: creditRestored ? `${missingCategoryTitle} - credit restored` : missingCategoryTitle,
       body: creditRestored
-        ? restoredDocumentFailureBody
-        : pendingDocumentFailureBody,
-      nextStep: 'Please upload a complete T12 operating statement and rent roll, then generate again.',
+        ? missingCategoryBody.replace(/^Generation could not be completed because /, 'Generation could not be completed because ')
+        : missingCategoryBody,
+      nextStep: missingCategoryNextStep,
       referenceCode,
       creditLine,
     };
@@ -124,11 +145,11 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
 
   if (classification.kind === 'document_mismatch') {
     return {
-      title: creditRestored ? 'Document inconsistency detected - credit restored' : 'Document inconsistency detected',
+      title: creditRestored ? 'Source package could not be reconciled - credit restored' : 'Source package could not be reconciled',
       body: creditRestored
-        ? restoredMismatchBody
-        : pendingMismatchBody,
-      nextStep: 'Please verify that the T12 and rent roll belong to the same property and reporting period before trying again.',
+        ? 'Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published, and 1 report credit has been returned to your account.'
+        : 'Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published. If this was a source package issue, your report credit will be restored automatically.',
+      nextStep: 'Please start a new report with documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.',
       referenceCode,
       creditLine,
     };

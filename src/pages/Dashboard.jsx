@@ -800,7 +800,6 @@ useEffect(() => {
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
   const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
-  const failedPrePublicationLead = 'Generation failed before publication. No report was published. InvestorIQ could not verify enough required source data from the uploaded documents to produce a defensible report.';
   const getFailedFileGuidance = (files) => {
     const rows = Array.isArray(files) ? files : [];
     const normalized = rows.map((row) => ({
@@ -814,25 +813,37 @@ useEffect(() => {
       .find(Boolean);
 
     if (failedCoreFile?.doc_type === 't12') {
-      return `${failedPrePublicationLead} The uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid operating statement for this report. Please start a new report request with a clearer annual operating statement showing Gross Rental Income, Effective Gross Income, Total Operating Expenses, and Net Operating Income.`;
+      return `Generation could not be completed because the uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report and upload a readable T12 / operating statement that includes income, expenses, and NOI. If you believe your document is complete, contact reports@investoriq.tech.`;
     }
     if (failedCoreFile?.doc_type === 'rent_roll') {
-      return `${failedPrePublicationLead} The uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as a valid structured rent roll for this report. Please start a new report request with a clearer rent roll showing unit-level rents and occupancy or status information. For larger properties, upload the rent roll as CSV or XLSX when available.`;
+      return `Generation could not be completed because the uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report and upload a readable rent roll that includes units, occupancy or status, and in-place rents. If you believe your document is complete, contact reports@investoriq.tech.`;
     }
 
     const hasT12 = normalized.some((row) => row.doc_type === 't12');
     const hasRentRoll = normalized.some((row) => row.doc_type === 'rent_roll');
-    if (!hasT12 || !hasRentRoll) {
-      return `${failedPrePublicationLead} InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.`;
+    const nonCoreFiles = normalized.filter((row) => row.doc_type !== 't12' && row.doc_type !== 'rent_roll');
+
+    if (selectedReportType === 'underwriting' && hasT12 && hasRentRoll && nonCoreFiles.length === 0) {
+      return `Generation could not be completed because Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new Full Underwriting report with a usable supporting document, such as debt, purchase assumptions, appraisal, renovation, property tax, insurance, or related deal support. If you believe your document is complete, contact reports@investoriq.tech.`;
     }
 
-    return `${failedPrePublicationLead} InvestorIQ could not verify the required T12 / operating statement and rent roll data from the uploaded documents. Please start a new report request with a complete, clearer source package.`;
+    if (hasT12 && hasRentRoll) {
+      return `Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report with documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.`;
+    }
+
+    return `Generation could not be completed because the required T12 / operating statement and rent roll documents could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report with clearer or more complete documents. If you believe the document is complete, contact reports@investoriq.tech.`;
   };
 
   useEffect(() => {
     let cancelled = false;
     const targetJob = visibleLatestFailedJob;
-    const supportsFileGuidance = ['MISSING_STRUCTURED_FINANCIAL_ARTIFACTS', 'MISSING_STRUCTURED_FINANCIALS'].includes(targetJob?.error_code);
+    const supportsFileGuidance = [
+      'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
+      'MISSING_STRUCTURED_FINANCIALS',
+      'MISSING_REQUIRED_SOURCE_DATA',
+      'MISSING_REQUIRED_DOCUMENTS',
+      'MISSING_REQUIRED_DOCUMENT',
+    ].includes(targetJob?.error_code);
     if (!profile?.id || !targetJob?.id || targetJob.status !== 'failed' || !supportsFileGuidance) {
       setFailedJobGuidance(null);
       return () => { cancelled = true; };

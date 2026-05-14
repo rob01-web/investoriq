@@ -36,19 +36,51 @@ const mismatchCopy = buildCustomerFailureMessage({
   error_code: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH',
   failure_reason: 'InvestorIQ found a material inconsistency between the uploaded financial documents.',
 });
-assert.equal(mismatchCopy.title, 'Document inconsistency detected');
-assert.match(mismatchCopy.body, /Generation failed before publication/i);
+assert.equal(mismatchCopy.title, 'Source package could not be reconciled');
+assert.match(mismatchCopy.body, /uploaded T12 and rent roll could not be reconciled as a consistent source package/i);
 assert.equal(mismatchCopy.referenceCode, 'DOCUMENT_FINANCIAL_SCALE_MISMATCH');
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(mismatchCopy)), false);
 
-const missingCopy = buildCustomerFailureMessage({
-  error_code: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
-  failure_reason: 'Required structured financial artifacts were missing.',
+const t12MissingCopy = buildCustomerFailureMessage({
+  error_code: 'MISSING_REQUIRED_DOCUMENTS',
+  failure_reason: 'The uploaded T12 / operating statement was not verified as usable for this report.',
 });
-assert.equal(missingCopy.title, 'Documents could not be verified');
-assert.match(missingCopy.body, /Generation failed before publication/i);
-assert.match(missingCopy.nextStep, /upload a complete T12 operating statement and rent roll/i);
-assert.equal(/credit status|checking credit/i.test(JSON.stringify(missingCopy)), false);
+assert.equal(t12MissingCopy.title, 'T12 / operating statement could not be verified');
+assert.match(t12MissingCopy.body, /uploaded T12 \/ operating statement could not be verified as usable for this report/i);
+assert.match(t12MissingCopy.nextStep, /start a new report and upload a readable T12 \/ operating statement/i);
+assert.match(t12MissingCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(t12MissingCopy)), false);
+
+const rentRollMissingCopy = buildCustomerFailureMessage({
+  error_code: 'MISSING_REQUIRED_DOCUMENTS',
+  failure_reason: 'The uploaded rent roll was not verified as usable for this report.',
+});
+assert.equal(rentRollMissingCopy.title, 'Rent roll could not be verified');
+assert.match(rentRollMissingCopy.body, /uploaded rent roll could not be verified as usable for this report/i);
+assert.match(rentRollMissingCopy.nextStep, /start a new report and upload a readable rent roll/i);
+assert.match(rentRollMissingCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(rentRollMissingCopy)), false);
+
+const supportingDocumentMissingCopy = buildCustomerFailureMessage({
+  report_type: 'underwriting',
+  error_code: 'MISSING_REQUIRED_DOCUMENTS',
+  failure_reason: 'Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.',
+});
+assert.equal(supportingDocumentMissingCopy.title, 'Full Underwriting supporting document could not be verified');
+assert.match(supportingDocumentMissingCopy.body, /requires at least one usable supporting document/i);
+assert.match(supportingDocumentMissingCopy.nextStep, /usable supporting document/i);
+assert.match(supportingDocumentMissingCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(supportingDocumentMissingCopy)), false);
+
+const sourcePackageMissingCopy = buildCustomerFailureMessage({
+  error_code: 'MISSING_REQUIRED_SOURCE_DATA',
+  failure_reason: 'The uploaded source package could not be verified as complete and usable for this report.',
+});
+assert.equal(sourcePackageMissingCopy.title, 'Source package could not be verified');
+assert.match(sourcePackageMissingCopy.body, /source package could not be verified as complete and usable/i);
+assert.match(sourcePackageMissingCopy.nextStep, /clearer or more complete documents/i);
+assert.match(sourcePackageMissingCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(sourcePackageMissingCopy)), false);
 
 const reviewCopy = buildCustomerFailureMessage({
   error_code: 'ADMIN_REVIEW_REQUIRED',
