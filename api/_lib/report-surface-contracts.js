@@ -55,6 +55,14 @@ function formatMultiple(value, decimals = 2) {
   return `${n.toFixed(fixed)}x`;
 }
 
+export function formatSourceReconciliationVariance(variancePct, decimals = 1) {
+  const n = coerceNumber(variancePct);
+  if (!Number.isFinite(n)) return null;
+  const fixed = Number.isFinite(decimals) ? Math.max(0, Math.min(6, Math.trunc(decimals))) : 1;
+  const magnitude = Math.abs(n * 100).toFixed(fixed);
+  return `${n >= 0 ? "+" : "-"}${magnitude}%`;
+}
+
 export function sanitizeFinalCustomerHtml(html) {
   if (typeof html !== "string") return "";
   let out = html;

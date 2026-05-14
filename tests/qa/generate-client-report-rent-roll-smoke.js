@@ -9,6 +9,8 @@ const {
   formatCurrentDebtAssessmentCopy,
 } = await import("../../api/_lib/report-surface-contracts.js");
 
+const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
+
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,
   weightedAvgRent: 1888,
@@ -235,6 +237,84 @@ const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummar
 assert.match(screeningDataCoverageHtml, /Core financial inputs/i);
 assert.equal(screeningDataCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(screeningDataCoverageHtml), false);
+
+const sourceReconciliationFixture = {
+  status: "source_reconciliation_required",
+  rr_annual_in_place: 1962456,
+  t12_gpr: 1850000,
+  variance_pct: 0.06078702702702703,
+  has_material_variance: true,
+  customer_delivery_impact: "disclose_only",
+  public_outreach_impact: "block_until_review",
+  source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+};
+const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+    gross_scheduled_rent: 1850000,
+    income_lines: [
+      { label: "Parking Income", amount: 27000 },
+      { label: "Laundry Income", amount: 18400 },
+      { label: "Other Income", amount: 12500 },
+    ],
+    expense_lines: [
+      { label: "Repairs & Maintenance", amount: 78000 },
+      { label: "Utilities", amount: 54000 },
+      { label: "Payroll", amount: 92000 },
+    ],
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+    units: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1962456,
+      market_rent_annual: 1117800,
+      summary_row_detected: true,
+    },
+  },
+  formatCurrency,
+  sourceReconciliationState: sourceReconciliationFixture,
+});
+assert.match(reconciliationIncomeHtml, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
+assert.equal(reconciliationIncomeHtml.includes("-48.0%"), false);
+
+const reconciliationNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+  },
+  formatCurrency,
+  sourceReconciliationState: sourceReconciliationFixture,
+});
+assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance/i);
+assert.equal(reconciliationNoiHtml.includes("+6.1%"), true);
+assert.match(reconciliationNoiHtml, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
+assert.equal(reconciliationNoiHtml.includes("-48.0%"), false);
 
 const acquisitionOnlyCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

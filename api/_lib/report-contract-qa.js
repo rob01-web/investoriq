@@ -96,6 +96,33 @@ function extractCurrentDebtDscrValues(text) {
   return values;
 }
 
+function extractSourceReconciliationVarianceValues(text) {
+  const source = String(text || "");
+  const values = [];
+  const pushValue = (label, rawValue) => {
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return;
+    values.push({ label, value: Math.round(value * 100) / 100 });
+  };
+
+  const patterns = [
+    {
+      label: "Rent Roll vs T12 GPR Variance",
+      pattern: /Rent Roll vs T12 GPR Variance[^0-9+\-]{0,80}([+\-]?\d+(?:\.\d+)?)%/i,
+    },
+    {
+      label: "Rent roll annualized rent is",
+      pattern: /Rent roll annualized rent is[^0-9+\-]{0,80}([+\-]?\d+(?:\.\d+)?)%\s*(?:vs|higher than|lower than)\s*T12 GPR/i,
+    },
+  ];
+
+  for (const { label, pattern } of patterns) {
+    const match = pattern.exec(source);
+    if (match) pushValue(label, match[1]);
+  }
+  return values;
+}
+
 function materiallyDifferent(expectedValue, actualValue) {
   if (!Number.isFinite(expectedValue) || !Number.isFinite(actualValue)) return false;
   const delta = Math.abs(expectedValue - actualValue);
@@ -582,6 +609,37 @@ export function buildReportContractQa({
           max_value: maxValue,
         },
         blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
+
+  const canonicalSourceReconciliationVariance = Number(sourceReportCoverageQa?.source_reconciliation_state?.variance_pct);
+  const renderedSourceReconciliationVarianceValues = extractSourceReconciliationVarianceValues(text);
+  if (Number.isFinite(canonicalSourceReconciliationVariance) && renderedSourceReconciliationVarianceValues.length > 0) {
+    const canonicalVariancePct = canonicalSourceReconciliationVariance * 100;
+    const mismatchedValues = renderedSourceReconciliationVarianceValues.filter((entry) =>
+      Math.abs(entry.value - canonicalVariancePct) > 0.2
+    );
+    if (mismatchedValues.length > 0) {
+      addViolation(violations, {
+        code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+        severity: "high",
+        category: "source_report_reconciliation",
+        message: "Rendered rent roll vs T12 GPR variance disagrees with canonical source reconciliation state.",
+        evidence: {
+          canonical_variance_pct: canonicalSourceReconciliationVariance,
+          canonical_rr_annual_in_place: sourceReportCoverageQa?.source_reconciliation_state?.rr_annual_in_place ?? null,
+          canonical_t12_gpr: sourceReportCoverageQa?.source_reconciliation_state?.t12_gpr ?? null,
+          rendered_values: renderedSourceReconciliationVarianceValues,
+          excerpt:
+            firstPatternExcerpt(text, [
+              /Rent Roll vs T12 GPR Variance/i,
+              /Rent roll annualized rent is/i,
+            ]) || leakProbeExcerpt,
+        },
+        blocks_customer_delivery: true,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });

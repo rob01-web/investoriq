@@ -129,6 +129,64 @@ assert.equal(
   false
 );
 
+const sourceReconciliationCoverage = {
+  ...baseCoverage,
+  source_reconciliation_state: {
+    status: "source_reconciliation_required",
+    rr_annual_in_place: 1962456,
+    t12_gpr: 1850000,
+    variance_pct: 0.06078702702702703,
+    has_material_variance: true,
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+};
+const sourceReconciliationMatch = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sourceReconciliationCoverage,
+  html: [
+    "<h2>Operating Profile</h2>",
+    "<table>",
+    "<tr><td>Rent Roll vs T12 GPR Variance</td><td>+6.1%</td></tr>",
+    "</table>",
+    "<p>Rent roll annualized rent is +6.1% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  sourceReconciliationMatch.violations.some((v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"),
+  false
+);
+
+const sourceReconciliationMismatch = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sourceReconciliationCoverage,
+  html: [
+    "<h2>Operating Profile</h2>",
+    "<table>",
+    "<tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr>",
+    "</table>",
+    "<p>Rent roll annualized rent is -48.0% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  sourceReconciliationMismatch.violations.some((v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"),
+  true
+);
+const sourceReconciliationMismatchViolation = sourceReconciliationMismatch.violations.find(
+  (v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"
+);
+assert.equal(sourceReconciliationMismatchViolation.blocks_customer_delivery, true);
+assert.equal(sourceReconciliationMismatchViolation.evidence.canonical_variance_pct, 0.06078702702702703);
+assert.equal(
+  sourceReconciliationMismatchViolation.evidence.rendered_values.some((entry) => entry.value === -48.0),
+  true
+);
+
 const badIncomeTable = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
