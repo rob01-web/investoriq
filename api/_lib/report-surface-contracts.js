@@ -48,6 +48,13 @@ function mortgageConstant(rateFraction, amortYears) {
   return (monthlyRate * factor) / denominator;
 }
 
+function formatMultiple(value, decimals = 2) {
+  const n = coerceNumber(value);
+  if (!Number.isFinite(n)) return null;
+  const fixed = Number.isFinite(decimals) ? Math.max(0, Math.min(6, Math.trunc(decimals))) : 2;
+  return `${n.toFixed(fixed)}x`;
+}
+
 export function sanitizeFinalCustomerHtml(html) {
   if (typeof html !== "string") return "";
   let out = html;
