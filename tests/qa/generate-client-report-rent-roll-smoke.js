@@ -294,6 +294,20 @@ assert.equal(unsafeSourceReconciliationRenderState.renderable, false);
 assert.equal(unsafeSourceReconciliationRenderState.variance_display, null);
 assert.equal(unsafeSourceReconciliationRenderState.variance_pct, null);
 
+const finalHtmlBeforeGuard = [
+  "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr></table></div>",
+  "<p>Rent roll annualized rent is -48.0% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p>",
+  "<li>Rent Roll vs T12 GPR -48.0%</li>",
+].join("\n");
+const finalHtmlGuardResult = generatorTest.applyFinalSourceReconciliationRenderGuard(
+  finalHtmlBeforeGuard,
+  sourceReconciliationFixture
+);
+assert.equal(finalHtmlGuardResult.replaced_or_suppressed, true);
+assert.match(finalHtmlGuardResult.html, /Rent Roll vs T12 GPR Variance.*\+6\.1%/s);
+assert.match(finalHtmlGuardResult.html, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
+assert.equal(finalHtmlGuardResult.html.includes("-48.0%"), false);
+
 const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {
     gross_potential_rent: 1850000,

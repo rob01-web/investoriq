@@ -2172,6 +2172,72 @@ function buildScreeningNoiStabilityHtml({
     ""
   )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}${vacancyBufferCard}`;
 }
+
+function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationState = null) {
+  const inputHtml = String(html || "");
+  const renderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
+  const canonicalDisplay = renderState?.variance_display || null;
+  const disclosure =
+    renderState?.source_reconciliation_disclosure ||
+    "InvestorIQ has not reconciled this variance and does not infer the cause.";
+  const matchedSnippets = Array.from(
+    inputHtml.matchAll(
+      /(?:Rent Roll vs T12 GPR Variance|Rent roll annualized rent is|Source reconciliation variance of)[^<\n]{0,160}/gi
+    ),
+    (match) => match[0]
+  ).slice(0, 10);
+
+  let outputHtml = inputHtml;
+  const normalizeOrRemove = (pattern, replacement) => {
+    outputHtml = outputHtml.replace(pattern, replacement);
+  };
+
+  if (renderState?.renderable && canonicalDisplay) {
+    normalizeOrRemove(
+      /<tr><td>Rent Roll vs T12 GPR Variance<\/td><td>[^<]*<\/td><\/tr>/gi,
+      `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${escapeHtml(canonicalDisplay)}</td></tr>`
+    );
+    normalizeOrRemove(
+      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
+      `Rent roll annualized rent is ${escapeHtml(canonicalDisplay)} vs T12 GPR. ${escapeHtml(disclosure)}`
+    );
+    normalizeOrRemove(
+      /<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi,
+      `<li>Rent Roll vs T12 GPR ${escapeHtml(canonicalDisplay)}</li>`
+    );
+    normalizeOrRemove(
+      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
+      `Source reconciliation variance of ${escapeHtml(canonicalDisplay)} between rent roll and T12 gross potential rent requires review.`
+    );
+  } else {
+    normalizeOrRemove(/<tr><td>Rent Roll vs T12 GPR Variance<\/td><td>[^<]*<\/td><\/tr>/gi, "");
+    normalizeOrRemove(
+      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
+      ""
+    );
+    normalizeOrRemove(/<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi, "");
+    normalizeOrRemove(
+      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
+      ""
+    );
+  }
+
+  const changed = outputHtml !== inputHtml;
+  if (changed) {
+    console.warn("[investoriq] source_reconciliation_final_guard", {
+      canonical_display: canonicalDisplay,
+      renderable: Boolean(renderState?.renderable),
+      matched_snippets: matchedSnippets,
+      replaced_or_suppressed: true,
+    });
+  }
+  return {
+    html: outputHtml,
+    render_state: renderState,
+    matched_snippets: matchedSnippets,
+    replaced_or_suppressed: changed,
+  };
+}
 function buildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
@@ -6508,6 +6574,18 @@ if (!hasSectionTwelve) {
 let pdfResponse;
 // Final customer-facing HTML surface used for both QA and DocRaptor.
 let docHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
+const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
+  docHtml,
+  sourceReconciliationState
+);
+docHtml = finalSourceReconciliationGuard.html;
+if (finalSourceReconciliationGuard.replaced_or_suppressed) {
+  console.warn("[investoriq] final reconciliation guard applied", {
+    canonical_display: finalSourceReconciliationGuard.render_state?.variance_display || null,
+    matched_snippets: finalSourceReconciliationGuard.matched_snippets,
+    renderable: Boolean(finalSourceReconciliationGuard.render_state?.renderable),
+  });
+}
 let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";
@@ -7198,6 +7276,7 @@ export const __test__ = {
   buildCurrentDebtScorecardEntry,
   buildReportStoragePath,
   buildRendererCanonicalState,
+  applyFinalSourceReconciliationRenderGuard,
   buildScreeningIncomeForensicsHtml,
   buildScreeningExpenseStructureHtml,
   buildScreeningNoiStabilityHtml,
