@@ -27,6 +27,20 @@ const FONTS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 `;
 
+const PRICING_PAGE_STYLES = `
+  .pricing-note {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: #606060;
+    display: block;
+    margin-top: 6px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+`;
+
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' } },
@@ -191,17 +205,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
         }}>
           Flat fee | One property
         </span>
-        <span style={{
-          fontFamily:   "'DM Sans', sans-serif",
-          fontSize:     11,
-          fontWeight:   400,
-          lineHeight:   1.45,
-          color:        tier.highlight ? T.goldDark : T.ink3,
-          display:      'block',
-          marginTop:    6,
-          letterSpacing:'0',
-          textTransform:'none',
-        }}>
+        <span className="pricing-note">
           {tier.pricingNote}
         </span>
       </div>
@@ -358,7 +362,7 @@ export default function PricingPage() {
 
   return (
     <>
-      <style>{FONTS}</style>
+      <style>{`${FONTS}\n${PRICING_PAGE_STYLES}`}</style>
 
       <Helmet>
         <title>Pricing | InvestorIQ</title>
