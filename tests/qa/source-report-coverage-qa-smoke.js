@@ -426,6 +426,7 @@ const sourceReconciliationResult = buildSourceReportCoverageQa({
       payload: {
         gross_potential_rent: 1000000,
         effective_gross_income: 900000,
+        total_operating_expenses: 500000,
         net_operating_income: 400000,
       },
     },
@@ -434,6 +435,7 @@ const sourceReconciliationResult = buildSourceReportCoverageQa({
       payload: {
         total_in_place_annual: 1100000,
         total_units: 20,
+        occupancy: 0.95,
       },
     },
   ],
@@ -453,6 +455,16 @@ if (sourceReconciliationResult.source_reconciliation_state?.status !== "source_r
 if (sourceReconciliationResult.source_reconciliation_state?.source_reconciliation_disclosure !== "InvestorIQ has not reconciled this variance and does not infer the cause.") {
   console.error("Expected canonical reconciliation disclosure.");
   console.error("Actual state:", sourceReconciliationResult.source_reconciliation_state);
+  process.exit(1);
+}
+if (sourceReconciliationResult.core_input_sufficiency_state?.publishability_bucket !== "disclose_only_publishable") {
+  console.error("Expected reconciliation to remain publishable with disclosure only.");
+  console.error("Actual core-input state:", sourceReconciliationResult.core_input_sufficiency_state);
+  process.exit(1);
+}
+if (sourceReconciliationResult.section_eligibility?.sections?.data_coverage?.publishability_bucket !== "disclose_only_publishable") {
+  console.error("Expected data coverage to remain disclose-only publishable for reconciliation variance.");
+  console.error("Actual data coverage section:", sourceReconciliationResult.section_eligibility?.sections?.data_coverage);
   process.exit(1);
 }
 if (!sourceReconciliationResult.deterministic_flags.some((flag) => flag.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED")) {
@@ -507,6 +519,194 @@ if (supportRolePrecedenceResult.uploaded_files?.[0]?.display_doc_type !== "purch
 if (supportRolePrecedenceResult.uploaded_files?.[1]?.display_doc_type !== "broker_email") {
   console.error("Expected broker email display role in source coverage uploaded files.");
   console.error("Actual uploaded file:", supportRolePrecedenceResult.uploaded_files?.[1]);
+  process.exit(1);
+}
+
+const coreSufficiencyResult = buildSourceReportCoverageQa({
+  jobId: "core-sufficiency-smoke",
+  userId: "user-smoke",
+  propertyName: "Core Sufficiency Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "CoreSufficiency_T12.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "CoreSufficiency_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        gross_potential_rent: 3300000,
+        effective_gross_income: 2517120,
+        total_operating_expenses: 793685,
+        net_operating_income: 1723435,
+        income_lines: [
+          { label: "Gross Potential Rent", amount: 3300000 },
+        ],
+        expense_lines: [
+          { label: "Taxes", amount: 275000 },
+        ],
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 144,
+        occupancy: 0.96,
+        totals: {
+          summary_row_detected: true,
+          total_units: 144,
+          occupied_units: 138.24,
+          occupancy: 0.96,
+          in_place_rent_annual: 1962456,
+        },
+      },
+    },
+  ],
+  html: [
+    "<html><body>",
+    "<h2>Operating Statement</h2>",
+    "<h2>Operating Profile</h2>",
+    "<h2>Deal Scorecard</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+    "</body></html>",
+  ].join("\n"),
+});
+
+if (coreSufficiencyResult.t12_sufficiency_state?.publishability_bucket !== "core_sufficient_publishable") {
+  console.error("Expected T12 to be core sufficient.");
+  console.error("Actual T12 state:", coreSufficiencyResult.t12_sufficiency_state);
+  process.exit(1);
+}
+if (coreSufficiencyResult.rent_roll_sufficiency_state?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected rent roll to be section constrained but publishable.");
+  console.error("Actual rent roll state:", coreSufficiencyResult.rent_roll_sufficiency_state);
+  process.exit(1);
+}
+if (coreSufficiencyResult.core_input_sufficiency_state?.publishability_bucket !== "disclose_only_publishable") {
+  console.error("Expected overall core-input sufficiency to remain publishable with disclosure only.");
+  console.error("Actual core-input state:", coreSufficiencyResult.core_input_sufficiency_state);
+  process.exit(1);
+}
+if (coreSufficiencyResult.section_eligibility?.sections?.renovation_strategy?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected renovation strategy to collapse as section-constrained, not block the report.");
+  console.error("Actual renovation section:", coreSufficiencyResult.section_eligibility?.sections?.renovation_strategy);
+  process.exit(1);
+}
+if (coreSufficiencyResult.section_eligibility?.sections?.debt_structure?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected debt structure to stay section-constrained without true current debt.");
+  console.error("Actual debt section:", coreSufficiencyResult.section_eligibility?.sections?.debt_structure);
+  process.exit(1);
+}
+
+const t12MissingGprResult = buildSourceReportCoverageQa({
+  jobId: "t12-missing-gpr-smoke",
+  userId: "user-smoke",
+  propertyName: "T12 Missing GPR Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "T12MissingGPR_T12.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "T12MissingGPR_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 2517120,
+        total_operating_expenses: 793685,
+        net_operating_income: 1723435,
+        income_lines: [],
+        expense_lines: [],
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 144,
+        occupancy: 0.96,
+        totals: {
+          summary_row_detected: true,
+          total_units: 144,
+          occupied_units: 138.24,
+          occupancy: 0.96,
+          in_place_rent_annual: 1962456,
+        },
+      },
+    },
+  ],
+  html: [
+    "<html><body>",
+    "<h2>Operating Statement</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+    "</body></html>",
+  ].join("\n"),
+});
+
+if (t12MissingGprResult.t12_sufficiency_state?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected T12 without GPR to remain section-constrained but publishable.");
+  console.error("Actual T12 state:", t12MissingGprResult.t12_sufficiency_state);
+  process.exit(1);
+}
+if (t12MissingGprResult.core_input_sufficiency_state?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected overall core-input sufficiency to remain publishable when T12 is core-valid but missing GPR.");
+  console.error("Actual core-input state:", t12MissingGprResult.core_input_sufficiency_state);
+  process.exit(1);
+}
+
+const t12NoDetailResult = buildSourceReportCoverageQa({
+  jobId: "t12-no-detail-smoke",
+  userId: "user-smoke",
+  propertyName: "T12 No Detail Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "T12NoDetail_T12.pdf", doc_type: "t12", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "T12NoDetail_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        gross_potential_rent: 3300000,
+        effective_gross_income: 2517120,
+        total_operating_expenses: 793685,
+        net_operating_income: 1723435,
+        income_lines: [],
+        expense_lines: [],
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 144,
+        occupancy: 0.96,
+        totals: {
+          summary_row_detected: true,
+          total_units: 144,
+          occupied_units: 138.24,
+          occupancy: 0.96,
+          in_place_rent_annual: 1962456,
+        },
+      },
+    },
+  ],
+  html: [
+    "<html><body>",
+    "<h2>Operating Statement</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+    "</body></html>",
+  ].join("\n"),
+});
+
+if (t12NoDetailResult.t12_sufficiency_state?.publishability_bucket !== "section_constrained_publishable") {
+  console.error("Expected T12 with missing detail to remain section-constrained but publishable.");
+  console.error("Actual T12 state:", t12NoDetailResult.t12_sufficiency_state);
+  process.exit(1);
+}
+if (t12NoDetailResult.core_input_sufficiency_state?.publishability_bucket !== "disclose_only_publishable") {
+  console.error("Expected overall core-input sufficiency to remain publishable with disclosure only when T12 lacks detail and reconciliation variance exists.");
+  console.error("Actual core-input state:", t12NoDetailResult.core_input_sufficiency_state);
   process.exit(1);
 }
 

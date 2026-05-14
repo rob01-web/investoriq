@@ -209,6 +209,26 @@ function routeRenderGap(flag, source, context = {}) {
       evidence: flag?.evidence || null,
     };
   }
+  const publicOnlyDepthCodes = new Set([
+    "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
+    "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
+  ]);
+  if (publicOnlyDepthCodes.has(code)) {
+    return {
+      code,
+      source,
+      severity: flag?.severity || "medium",
+      category: flag?.category || "render_gating_gap",
+      routing: "render_gating_gap",
+      action: "document_section_depth_constraints_for_public_or_outreach_use",
+      safe_auto_fix: false,
+      requires_regeneration: false,
+      admin_review_required: false,
+      public_sample_blocker: true,
+      message: flag?.message || "Rendered underwriting depth is source-constrained relative to the support package.",
+      evidence: flag?.evidence || null,
+    };
+  }
   return {
     code,
     source,

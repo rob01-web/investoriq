@@ -63,6 +63,356 @@ export function formatSourceReconciliationVariance(variancePct, decimals = 1) {
   return `${n >= 0 ? "+" : "-"}${magnitude}%`;
 }
 
+function normalizePublishabilityBucket(value) {
+  const normalized = normalizeText(value).replace(/[\s-]+/g, "_");
+  const valid = new Set([
+    "core_sufficient_publishable",
+    "section_constrained_publishable",
+    "disclose_only_publishable",
+    "public_or_outreach_only_blocker",
+    "user_needs_documents",
+    "admin_review_required",
+    "system_contract_failure",
+  ]);
+  return valid.has(normalized) ? normalized : "system_contract_failure";
+}
+
+function buildPublishabilityState({
+  publishabilityBucket = "system_contract_failure",
+  status = null,
+  reasonCode = null,
+  customerDeliveryImpact = "none",
+  publicOutreachImpact = "none",
+  requiredInputs = [],
+  presentInputs = [],
+  missingInputs = [],
+  notes = [],
+  evidence = {},
+} = {}) {
+  const bucket = normalizePublishabilityBucket(publishabilityBucket);
+  return {
+    publishability_bucket: bucket,
+    core_sufficient_publishable: bucket === "core_sufficient_publishable",
+    section_constrained_publishable: bucket === "section_constrained_publishable",
+    disclose_only_publishable: bucket === "disclose_only_publishable",
+    public_or_outreach_only_blocker: bucket === "public_or_outreach_only_blocker",
+    user_needs_documents: bucket === "user_needs_documents",
+    admin_review_required: bucket === "admin_review_required",
+    system_contract_failure: bucket === "system_contract_failure",
+    status,
+    reason_code: reasonCode || null,
+    customer_delivery_impact: customerDeliveryImpact,
+    public_outreach_impact: publicOutreachImpact,
+    required_inputs: Array.isArray(requiredInputs) ? requiredInputs : [],
+    present_inputs: Array.isArray(presentInputs) ? presentInputs : [],
+    missing_inputs: Array.isArray(missingInputs) ? missingInputs : [],
+    notes: Array.isArray(notes) ? notes : [],
+    evidence,
+  };
+}
+
+export function buildT12SufficiencyState({
+  t12Payload = null,
+} = {}) {
+  const effectiveGrossIncome = coerceNumber(t12Payload?.effective_gross_income ?? t12Payload?.gross_income);
+  const totalOperatingExpenses = coerceNumber(t12Payload?.total_operating_expenses ?? t12Payload?.operating_expenses);
+  const netOperatingIncome = coerceNumber(t12Payload?.net_operating_income ?? t12Payload?.noi);
+  const grossPotentialRent = coerceNumber(t12Payload?.gross_potential_rent ?? t12Payload?.gross_scheduled_rent);
+  const incomeLineCount = Array.isArray(t12Payload?.income_lines) ? t12Payload.income_lines.length : 0;
+  const expenseLineCount = Array.isArray(t12Payload?.expense_lines) ? t12Payload.expense_lines.length : 0;
+  const hasCoreTotals =
+    Number.isFinite(effectiveGrossIncome) &&
+    Number.isFinite(totalOperatingExpenses) &&
+    Number.isFinite(netOperatingIncome);
+  const equationDiff = hasCoreTotals ? effectiveGrossIncome - totalOperatingExpenses - netOperatingIncome : null;
+  const reconciles = Number.isFinite(equationDiff)
+    ? Math.abs(equationDiff) <= Math.max(1, Math.abs(netOperatingIncome || 0) * 0.01)
+    : false;
+  const hasUsefulDetail = incomeLineCount > 0 || expenseLineCount > 0;
+  const missingInputs = [];
+  if (!Number.isFinite(effectiveGrossIncome)) missingInputs.push("effective_gross_income");
+  if (!Number.isFinite(totalOperatingExpenses)) missingInputs.push("total_operating_expenses");
+  if (!Number.isFinite(netOperatingIncome)) missingInputs.push("net_operating_income");
+  let publishabilityBucket = "user_needs_documents";
+  let status = "insufficient_inputs";
+  let reasonCode = "t12_core_structure_missing";
+  let customerDeliveryImpact = "block";
+  let publicOutreachImpact = "block_until_review";
+  if (!hasCoreTotals) {
+    publishabilityBucket = "user_needs_documents";
+    reasonCode = "t12_core_structure_missing";
+  } else if (hasCoreTotals && !reconciles) {
+    publishabilityBucket = "admin_review_required";
+    status = "contradiction";
+    reasonCode = "t12_noi_equation_mismatch";
+    customerDeliveryImpact = "block";
+    publicOutreachImpact = "block_until_review";
+  } else if (hasCoreTotals && !Number.isFinite(grossPotentialRent)) {
+    publishabilityBucket = "section_constrained_publishable";
+    status = "validated";
+    reasonCode = "t12_gpr_missing";
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "block_until_review";
+  } else if (hasCoreTotals && !hasUsefulDetail) {
+    publishabilityBucket = "section_constrained_publishable";
+    status = "validated";
+    reasonCode = "t12_line_item_detail_missing";
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "block_until_review";
+  } else {
+    publishabilityBucket = "core_sufficient_publishable";
+    status = "validated";
+    reasonCode = null;
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "none";
+  }
+  return buildPublishabilityState({
+    publishabilityBucket,
+    status,
+    reasonCode,
+    customerDeliveryImpact,
+    publicOutreachImpact,
+    requiredInputs: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+    presentInputs: [
+      Number.isFinite(effectiveGrossIncome) ? "effective_gross_income" : null,
+      Number.isFinite(totalOperatingExpenses) ? "total_operating_expenses" : null,
+      Number.isFinite(netOperatingIncome) ? "net_operating_income" : null,
+      Number.isFinite(grossPotentialRent) ? "gross_potential_rent" : null,
+    ].filter(Boolean),
+    missingInputs,
+    notes: [
+      hasUsefulDetail ? "line_item_detail_present" : "line_item_detail_missing",
+    ],
+    evidence: {
+      effective_gross_income: effectiveGrossIncome,
+      total_operating_expenses: totalOperatingExpenses,
+      net_operating_income: netOperatingIncome,
+      gross_potential_rent: grossPotentialRent,
+      equation_diff: equationDiff,
+      reconciles,
+      income_line_count: incomeLineCount,
+      expense_line_count: expenseLineCount,
+    },
+  });
+}
+
+export function buildRentRollSufficiencyState({
+  computedRentRoll = null,
+  rentRollPayload = null,
+} = {}) {
+  const totalUnits = coerceNumber(
+    computedRentRoll?.total_units ??
+      rentRollPayload?.total_units ??
+      rentRollPayload?.totals?.total_units
+  );
+  const annualRentCandidates = [
+    computedRentRoll?.total_in_place_annual,
+    computedRentRoll?.annual_in_place_rent,
+    computedRentRoll?.total_annual_in_place,
+    rentRollPayload?.total_in_place_annual,
+    rentRollPayload?.totals?.in_place_rent_annual,
+    rentRollPayload?.totals?.current_rent_annual,
+  ];
+  let annualInPlaceRent = annualRentCandidates.map(coerceNumber).find((value) => Number.isFinite(value) && value > 0) || null;
+  if (!Number.isFinite(annualInPlaceRent)) {
+    const monthlyCandidate = [
+      rentRollPayload?.totals?.in_place_rent_monthly,
+      rentRollPayload?.totals?.current_rent_monthly,
+    ].map(coerceNumber).find((value) => Number.isFinite(value) && value > 0) || null;
+    if (Number.isFinite(monthlyCandidate)) {
+      annualInPlaceRent = monthlyCandidate * 12;
+    }
+  }
+  const summaryOccupancy = coerceNumber(
+    computedRentRoll?.occupancy ??
+      rentRollPayload?.occupancy ??
+      rentRollPayload?.totals?.occupancy ??
+      rentRollPayload?.physical_occupancy
+  );
+  const summaryRowDetected = Boolean(rentRollPayload?.totals?.summary_row_detected);
+  const unitRows = Array.isArray(rentRollPayload?.units)
+    ? rentRollPayload.units
+    : Array.isArray(computedRentRoll?.units)
+    ? computedRentRoll.units
+    : Array.isArray(rentRollPayload?.unit_mix)
+    ? rentRollPayload.unit_mix
+    : [];
+  const hasUnitMix = Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0;
+  const hasLeaseDates = unitRows.some((row) =>
+    Boolean(row?.lease_start || row?.lease_end || row?.lease_start_date || row?.lease_end_date || row?.expiration_date)
+  );
+  const hasSquareFootage = unitRows.some((row) =>
+    Number.isFinite(coerceNumber(row?.square_feet ?? row?.sqft ?? row?.area))
+  );
+  const hasMarketRent = Number.isFinite(
+    coerceNumber(computedRentRoll?.total_market_annual ?? rentRollPayload?.totals?.market_rent_annual)
+  ) || unitRows.some((row) => Number.isFinite(coerceNumber(row?.market_rent)));
+  const occupancyFromRows = unitRows.length > 0
+    ? unitRows.reduce((occupied, row) => {
+        const statusText = normalizeText(row?.status ?? row?.lease_status ?? row?.unit_status ?? "");
+        if (/\bvacan(?:t|cy)\b/.test(statusText)) return occupied;
+        const rent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
+        return Number.isFinite(rent) && rent > 0 ? occupied + 1 : occupied;
+      }, 0) / unitRows.length
+    : null;
+  const derivedOccupancy = Number.isFinite(summaryOccupancy)
+    ? summaryOccupancy
+    : Number.isFinite(occupancyFromRows)
+    ? occupancyFromRows
+    : null;
+  const hasCoreStructure =
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0 &&
+    Number.isFinite(annualInPlaceRent) &&
+    annualInPlaceRent > 0 &&
+    Number.isFinite(derivedOccupancy) &&
+    derivedOccupancy >= 0 &&
+    derivedOccupancy <= 1;
+  const missingInputs = [];
+  if (!Number.isFinite(totalUnits) || totalUnits <= 0) missingInputs.push("total_units");
+  if (!Number.isFinite(annualInPlaceRent) || annualInPlaceRent <= 0) missingInputs.push("annual_in_place_rent");
+  if (!Number.isFinite(derivedOccupancy) || derivedOccupancy < 0 || derivedOccupancy > 1) missingInputs.push("occupancy");
+  const hasOptionalDetail = hasUnitMix || hasMarketRent || hasLeaseDates || hasSquareFootage || summaryRowDetected || unitRows.length > 0;
+  let publishabilityBucket = "user_needs_documents";
+  let status = "insufficient_inputs";
+  let reasonCode = "rent_roll_core_structure_missing";
+  let customerDeliveryImpact = "block";
+  let publicOutreachImpact = "block_until_review";
+  if (!hasCoreStructure) {
+    publishabilityBucket = "user_needs_documents";
+    reasonCode = "rent_roll_core_structure_missing";
+  } else if (summaryRowDetected || !hasOptionalDetail) {
+    publishabilityBucket = "section_constrained_publishable";
+    status = "validated";
+    reasonCode = summaryRowDetected ? "summary_only_rent_roll" : "rent_roll_detail_missing";
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "block_until_review";
+  } else {
+    publishabilityBucket = "core_sufficient_publishable";
+    status = "validated";
+    reasonCode = null;
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "none";
+  }
+  return buildPublishabilityState({
+    publishabilityBucket,
+    status,
+    reasonCode,
+    customerDeliveryImpact,
+    publicOutreachImpact,
+    requiredInputs: ["total_units", "annual_in_place_rent", "occupancy"],
+    presentInputs: [
+      Number.isFinite(totalUnits) && totalUnits > 0 ? "total_units" : null,
+      Number.isFinite(annualInPlaceRent) && annualInPlaceRent > 0 ? "annual_in_place_rent" : null,
+      Number.isFinite(derivedOccupancy) && derivedOccupancy >= 0 && derivedOccupancy <= 1 ? "occupancy" : null,
+      hasUnitMix ? "unit_mix" : null,
+      hasMarketRent ? "market_rent" : null,
+      hasLeaseDates ? "lease_dates" : null,
+      hasSquareFootage ? "square_footage" : null,
+    ].filter(Boolean),
+    missingInputs,
+    notes: [
+      summaryRowDetected ? "summary_totals_trusted" : null,
+      hasOptionalDetail ? "optional_rent_roll_detail_present" : "optional_rent_roll_detail_missing",
+    ].filter(Boolean),
+    evidence: {
+      total_units: totalUnits,
+      annual_in_place_rent: annualInPlaceRent,
+      occupancy: derivedOccupancy,
+      optional_detail_present: hasOptionalDetail,
+      summary_row_detected: summaryRowDetected,
+      unit_row_count: unitRows.length,
+    },
+  });
+}
+
+export function buildCoreInputSufficiencyState({
+  t12Payload = null,
+  computedRentRoll = null,
+  rentRollPayload = null,
+  sourceReconciliationState = null,
+} = {}) {
+  const t12State = buildT12SufficiencyState({ t12Payload });
+  const rentRollState = buildRentRollSufficiencyState({ computedRentRoll, rentRollPayload });
+  const reconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
+  const reconciliationCustomerImpact = String(sourceReconciliationState?.customer_delivery_impact || "").toLowerCase();
+  const reconciliationPublicImpact = String(sourceReconciliationState?.public_outreach_impact || "").toLowerCase();
+  const reconciliationBucket =
+    reconciliationStatus === "parser_suspected"
+      ? "admin_review_required"
+      : reconciliationStatus === "source_reconciliation_required"
+      ? "disclose_only_publishable"
+      : reconciliationStatus === "aligned"
+      ? "core_sufficient_publishable"
+      : reconciliationStatus === "insufficient_inputs"
+      ? "section_constrained_publishable"
+      : "section_constrained_publishable";
+
+  let publishabilityBucket = "core_sufficient_publishable";
+  if (t12State.user_needs_documents || rentRollState.user_needs_documents) {
+    publishabilityBucket = "user_needs_documents";
+  } else if (t12State.admin_review_required || rentRollState.admin_review_required || reconciliationBucket === "admin_review_required") {
+    publishabilityBucket = "admin_review_required";
+  } else if (t12State.system_contract_failure || rentRollState.system_contract_failure) {
+    publishabilityBucket = "system_contract_failure";
+  } else if (reconciliationBucket === "disclose_only_publishable") {
+    publishabilityBucket = "disclose_only_publishable";
+  } else if (t12State.section_constrained_publishable || rentRollState.section_constrained_publishable || reconciliationBucket === "section_constrained_publishable") {
+    publishabilityBucket = "section_constrained_publishable";
+  }
+
+  return buildPublishabilityState({
+    publishabilityBucket,
+    status:
+      publishabilityBucket === "core_sufficient_publishable" ? "validated" :
+      publishabilityBucket === "section_constrained_publishable" ? "validated" :
+      publishabilityBucket === "disclose_only_publishable" ? "validated" :
+      publishabilityBucket === "public_or_outreach_only_blocker" ? "validated" :
+      publishabilityBucket === "user_needs_documents" ? "insufficient_inputs" :
+      publishabilityBucket === "admin_review_required" ? "contradiction" :
+      "system_failure",
+    reasonCode:
+      publishabilityBucket === "user_needs_documents"
+        ? t12State.user_needs_documents ? t12State.reason_code : rentRollState.reason_code
+        : publishabilityBucket === "admin_review_required"
+        ? (t12State.admin_review_required ? t12State.reason_code : rentRollState.reason_code) || "source_reconciliation_required"
+        : reconciliationBucket === "disclose_only_publishable"
+        ? sourceReconciliationState?.source_reconciliation_disclosure ? "source_reconciliation_disclosed" : null
+        : null,
+    customerDeliveryImpact:
+      publishabilityBucket === "disclose_only_publishable"
+        ? "disclose_only"
+        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure" || publishabilityBucket === "user_needs_documents"
+        ? "block"
+        : "none",
+    publicOutreachImpact:
+      publishabilityBucket === "disclose_only_publishable"
+        ? "block_until_review"
+        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure" || publishabilityBucket === "user_needs_documents"
+        ? "block_until_review"
+        : t12State.public_outreach_impact === "block_until_review" || rentRollState.public_outreach_impact === "block_until_review" || reconciliationPublicImpact === "block_until_review"
+        ? "block_until_review"
+        : "none",
+    requiredInputs: ["t12_parsed", "rent_roll_parsed"],
+    presentInputs: [t12State, rentRollState]
+      .flatMap((state) => Array.isArray(state?.present_inputs) ? state.present_inputs : [])
+      .filter(Boolean),
+    missingInputs: [t12State, rentRollState]
+      .flatMap((state) => Array.isArray(state?.missing_inputs) ? state.missing_inputs : [])
+      .filter(Boolean),
+    notes: [
+      t12State.reason_code,
+      rentRollState.reason_code,
+      sourceReconciliationState?.source_reconciliation_disclosure ? "source_reconciliation_disclosed" : null,
+    ].filter(Boolean),
+    evidence: {
+      t12_state: t12State,
+      rent_roll_state: rentRollState,
+      source_reconciliation_state: sourceReconciliationState || null,
+    },
+  });
+}
+
 export function sanitizeFinalCustomerHtml(html) {
   if (typeof html !== "string") return "";
   let out = html;
@@ -783,10 +1133,25 @@ export function buildSourceReconciliationState({
     t12Payload?.total_income
   );
   const state = normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa);
+  const publishabilityBucket =
+    state.status === "parser_suspected"
+      ? "admin_review_required"
+      : state.status === "source_reconciliation_required"
+      ? "disclose_only_publishable"
+      : state.status === "insufficient_inputs"
+      ? "section_constrained_publishable"
+      : "core_sufficient_publishable";
   return {
     ...state,
-    customer_delivery_impact: state.customer_delivery_impact,
-    public_outreach_impact: state.public_outreach_impact,
+    publishability_bucket: publishabilityBucket,
+    customer_delivery_impact:
+      publishabilityBucket === "disclose_only_publishable" ? "disclose_only" :
+      publishabilityBucket === "admin_review_required" || publishabilityBucket === "section_constrained_publishable" ? "none" :
+      state.customer_delivery_impact,
+    public_outreach_impact:
+      publishabilityBucket === "disclose_only_publishable"
+        ? "block_until_review"
+        : state.public_outreach_impact,
     evidence: {
       rr_annual_in_place: state.rr_annual_in_place,
       t12_gpr: state.t12_gpr,
@@ -977,6 +1342,7 @@ export function buildFullUnderwritingSectionEligibility({
     const optionalSourceRoles = Array.isArray(blueprint.optional_source_roles) ? blueprint.optional_source_roles : [];
     const requiredSourcesPresent = allRolesPresent(requiredSourceRoles, inventory, currentDebtState);
     const optionalSourcesPresent = anyRolePresent(optionalSourceRoles, inventory, currentDebtState);
+    const sourceReconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
     const currentDebtSourceConstrained =
       sectionKey === "debt_structure" &&
       currentDebtState?.current_debt_dscr_status !== "computed" &&
@@ -985,6 +1351,33 @@ export function buildFullUnderwritingSectionEligibility({
       !requiredSourcesPresent ||
       currentDebtSourceConstrained ||
       (sectionKey === "renovation_strategy" && !optionalSourcesPresent && !rendered);
+    let publishabilityBucket =
+      !requiredSourcesPresent
+        ? "user_needs_documents"
+        : sourceConstrained
+        ? "section_constrained_publishable"
+        : rendered
+        ? "core_sufficient_publishable"
+        : optionalSourcesPresent
+        ? "section_constrained_publishable"
+        : "section_constrained_publishable";
+    if (sectionKey === "data_coverage" && sourceReconciliationStatus === "source_reconciliation_required") {
+      publishabilityBucket = "disclose_only_publishable";
+    } else if (
+      ["operating_profile", "noi_stability"].includes(sectionKey) &&
+      sourceReconciliationStatus === "source_reconciliation_required"
+    ) {
+      publishabilityBucket = "disclose_only_publishable";
+    } else if (
+      ["data_coverage", "operating_profile", "noi_stability"].includes(sectionKey) &&
+      sourceReconciliationStatus === "parser_suspected"
+    ) {
+      publishabilityBucket = "admin_review_required";
+    }
+    const publicPublishabilityBucket =
+      publishabilityBucket === "core_sufficient_publishable"
+        ? "core_sufficient_publishable"
+        : "public_or_outreach_only_blocker";
     const underused =
       !rendered &&
       (
@@ -1001,6 +1394,20 @@ export function buildFullUnderwritingSectionEligibility({
       source_constrained: Boolean(sourceConstrained),
       rendered,
       underused: Boolean(underused && !sourceConstrained),
+      publishability_bucket: publishabilityBucket,
+      public_publishability_bucket: publicPublishabilityBucket,
+      customer_delivery_impact:
+        publishabilityBucket === "disclose_only_publishable"
+          ? "disclose_only"
+          : publishabilityBucket === "core_sufficient_publishable" || publishabilityBucket === "section_constrained_publishable"
+          ? "none"
+          : publishabilityBucket === "user_needs_documents" || publishabilityBucket === "admin_review_required"
+          ? "block"
+          : "block",
+      public_outreach_impact:
+        publicPublishabilityBucket === "core_sufficient_publishable"
+          ? "none"
+          : "block_until_review",
       required_source_roles: requiredSourceRoles,
       optional_source_roles: optionalSourceRoles,
       omission_reason_code: rendered

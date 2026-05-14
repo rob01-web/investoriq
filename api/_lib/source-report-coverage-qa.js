@@ -4,6 +4,9 @@ import {
   buildAcquisitionAssumptionState,
   buildCurrentDebtAssessmentState,
   buildFullUnderwritingSectionEligibility,
+  buildCoreInputSufficiencyState,
+  buildRentRollSufficiencyState,
+  buildT12SufficiencyState,
   buildSupportDocTaxonomyState,
   buildSourceReconciliationState,
   hasCurrentDebtSemanticState,
@@ -349,6 +352,17 @@ export function buildSourceReportCoverageQa({
     currentDebtState,
     sourceReconciliationState,
   });
+  const t12SufficiencyState = buildT12SufficiencyState({ t12Payload });
+  const rentRollSufficiencyState = buildRentRollSufficiencyState({
+    computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+    rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+  });
+  const coreInputSufficiencyState = buildCoreInputSufficiencyState({
+    t12Payload,
+    computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+    rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+    sourceReconciliationState,
+  });
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericReportTier = Number(reportTier);
@@ -543,7 +557,7 @@ export function buildSourceReportCoverageQa({
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
       },
-      routing: "admin_review_required",
+      routing: "public_sample_blocker",
     });
   }
 
@@ -591,7 +605,7 @@ export function buildSourceReportCoverageQa({
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
       },
-      routing: "admin_review_required",
+      routing: "public_sample_blocker",
     });
   }
 
@@ -623,6 +637,9 @@ export function buildSourceReportCoverageQa({
     current_debt_state: currentDebtState,
     acquisition_assumption_state: acquisitionAssumptionState,
     source_reconciliation_state: sourceReconciliationState,
+    t12_sufficiency_state: t12SufficiencyState,
+    rent_roll_sufficiency_state: rentRollSufficiencyState,
+    core_input_sufficiency_state: coreInputSufficiencyState,
     section_eligibility: sectionEligibility,
     rendered_sections: renderedSections,
     rendered_text_signals: renderedTextSignals,

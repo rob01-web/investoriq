@@ -1,5 +1,464 @@
 # InvestorIQ Master Context - May 2026
 
+# May 14, 2026 Critical Doctrine Update 2 - Core Input Sufficiency Contract / Publish, Collapse, Disclose
+
+## Why this update matters
+- This doctrine was locked immediately after the May 14 autonomous publication doctrine update.
+- The user clarified a launch-critical product rule: InvestorIQ must not fail or route 99.999% of reports to Admin Review just because a few inputs are missing.
+- The system must work backwards from the minimum verified data needed to produce a defensible paid report.
+- The correct question is not: `Is the source package perfect?`
+- The correct question is: `Do we have enough verified core data to produce a defensible report, while collapsing or disclosing unsupported sections?`
+- This is critical because InvestorIQ is a SaaS underwriting product, not a manual underwriting service disguised as software.
+
+## Locked operating rule
+
+```text
+If required core docs are usable, the report publishes.
+If a specific section lacks required inputs, that section collapses or renders clean limitation language.
+If source docs contain minor or explainable variance, the report publishes with disclosure.
+If optional or enrichment data is missing, the report does not fail.
+If core docs are missing, unreadable, non-validated, or violently contradictory beyond safe disclosure, the report fails closed / asks for new documents / routes to rare review.
+Manual review must remain the exception, not the operating model.
+```
+
+## Three-tier data model
+InvestorIQ V1 should classify input sufficiency into three tiers:
+
+### 1. Must-have core data
+Without this, the report is not defensible and should not publish.
+
+### 2. Section-required data
+Without this, only the affected section collapses or renders a clean source limitation.
+
+### 3. Optional / enrichment data
+Without this, nothing fails. The report is simply less deep.
+
+This prevents both failure modes:
+- publishing garbage from unusable documents;
+- failing or reviewing nearly every report because one optional field is missing.
+
+## T12 Core Sufficiency Contract
+For Screening and Full Underwriting, the T12 must support a defensible core income statement.
+
+### Absolute must-have T12 values
+A T12 is sufficient for core report publication when it supports:
+- Effective Gross Income, or enough income lines to derive it;
+- Total Operating Expenses, or enough expense lines to derive it;
+- Net Operating Income, or enough values to validate the equation:
+  - `Effective Gross Income - Operating Expenses = NOI`.
+
+### Preferred but not whole-report-failing T12 values
+These enrich the report but should not fail the whole report if missing:
+- Gross Potential Rent / Gross Scheduled Rent;
+- vacancy / concessions / credit loss;
+- other income;
+- expense line-item detail;
+- property taxes;
+- insurance;
+- utilities;
+- repairs and maintenance;
+- management / payroll / admin.
+
+### T12 publish / collapse rules
+- If EGI, OpEx, and NOI validate, the report can publish.
+- If detailed expense lines are missing, do not fail the report. Collapse detailed expense-driver sections or disclose lump-sum / limited-detail T12.
+- If GPR is missing but EGI/OpEx/NOI validate, do not fail the report. Collapse or disclose T12-GPR reconciliation where required.
+- If property taxes are missing as a line item, do not fail the report. Suppress property-tax-specific insight unless another validated property-tax source exists.
+
+### T12 fail-closed / intervention rules
+A T12 should fail only when:
+- no usable income / expense / NOI structure exists;
+- NOI equation does not reconcile within tolerance;
+- values are impossible or nonsensical;
+- the file is unreadable or unparseable;
+- the T12 appears to belong to a different asset or wildly different scale than the rent roll and cannot be safely disclosed.
+
+## Rent Roll Core Sufficiency Contract
+For Screening and Full Underwriting, the rent roll must support the property rent base.
+
+### Absolute must-have rent roll values
+A rent roll is sufficient for core report publication when it supports:
+- total units;
+- in-place rent, either by unit rows or trusted summary total;
+- occupancy, either by unit status, occupied/vacant counts, or trusted summary;
+- enough unit or summary structure to establish annual in-place rent.
+
+### Preferred but not whole-report-failing rent roll values
+These enrich the report but should not fail the whole report if missing:
+- unit type / bedroom mix;
+- market rent;
+- unit status detail;
+- vacant unit detail;
+- square footage;
+- lease dates;
+- tenant names, though not necessary for V1;
+- summary totals.
+
+### Rent roll publish / collapse rules
+- If total units, occupancy, and annual in-place rent can be verified, the report can publish.
+- If unit mix is missing, collapse Unit Mix.
+- If market rent is missing, collapse rent-gap / value-add analysis.
+- If lease dates are missing, collapse rollover / lease-expiry analysis.
+- If square footage is missing, collapse rent-per-square-foot analysis.
+- If only summary totals exist, publish a summary-driven report and disclose limited unit-level detail.
+- If only partial unit rows exist but trusted summary totals exist, suppress full-property metrics derived only from sample rows and use validated summary totals where safe.
+
+### Rent roll fail-closed / intervention rules
+A rent roll should fail only when:
+- no usable unit count or trusted summary unit count exists;
+- no usable in-place rent total or unit-level rent base exists;
+- occupancy cannot be inferred at all;
+- the file is unreadable or unparseable;
+- the rent roll clearly belongs to a different property or wildly different scale than the T12;
+- the data is so sparse that publishing would create fake confidence.
+
+## Underwriting Section Sufficiency Contract
+Full Underwriting should not fail just because optional underwriting support is incomplete.
+
+### Current debt / refinance
+- No true current debt balance: do not fail report. Current Debt DSCR is `Not assessed` with clean limitation language.
+- No current debt service: do not fail report. Current Debt DSCR collapses or renders `Not assessed`.
+- No current debt support: do not render refinance proceeds, refinance stability, shortfall, stress, or sufficiency as if true current debt exists.
+- True current debt exists and validates: render current debt DSCR and related sections consistently.
+
+### Acquisition financing
+- No acquisition loan term sheet / purchase assumptions: do not fail report. Proposed Acquisition Debt Sizing collapses.
+- Proposed/acquisition debt must not be treated as current outstanding debt.
+
+### Cap rate / valuation / appraisal
+- Missing cap rate or appraisal support should not fail report.
+- Use framework sensitivity where safe or disclose missing valuation/refinance inputs.
+- Do not claim appraised value unless validated appraisal evidence exists.
+
+### Renovation / CapEx
+- Missing structured renovation budget: do not fail report. Renovation Strategy collapses or renders source-constrained note.
+- Renovation budget exists but no rent lift / timing / ROI support: show budget/scope only; do not model ROI, payback, timing, or rent lift.
+
+### Property tax / insurance / other support
+- Missing property tax support should not fail report.
+- Do not render tax-specific variance insight unless validated source value exists.
+
+## Customer delivery decision tree
+
+```text
+Step 1: Are required core docs present?
+Screening: T12 + Rent Roll.
+Full Underwriting: T12 + Rent Roll + at least one supporting doc.
+If no: user_needs_documents / fail closed / credit restored.
+
+Step 2: Are required core docs usable?
+T12 must validate core income statement.
+Rent Roll must validate unit/rent/occupancy base.
+If no: fail closed / credit restored.
+
+Step 3: Do core docs violently contradict each other?
+If severe and unsafe to disclose: admin review or fail closed.
+If moderate/minor and document-supported: publish with disclosure.
+
+Step 4: For each optional section, are section-specific inputs present?
+If yes: render.
+If no: collapse or disclose.
+
+Step 5: Did the renderer create a contradiction, stale value, placeholder, internal language, or unsupported claim?
+If yes: admin review / system bug / code fix. This should be rare and fixed as a class.
+
+Step 6: Is this only a public/Ken/sample issue?
+If yes: customer delivery still publishes. Public/high-value outreach remains blocked.
+```
+
+## What must never happen
+- Missing one optional number must not fail the whole report.
+- Missing one optional document must not create Admin Review.
+- Minor source variance must not create Admin Review when it can be safely disclosed.
+- Public sample blocker must not become customer blocker.
+- DocRaptor test mode must not become customer blocker.
+- Missing optional section inputs must not become `admin_review_required`.
+- Generic source limitation wording must not become `admin_review_required` without explicit customer-delivery impact.
+
+## Correct output behavior examples
+- Missing refinance cap rate: collapse/refuse refinance classification; disclose missing refinance inputs.
+- Missing structured renovation budget: collapse Renovation Strategy or disclose no structured CapEx.
+- Missing acquisition financing terms: do not model acquisition financing.
+- Missing debt balance with usable T12/Rent Roll: Current Debt DSCR is `Not assessed`.
+- Minor rent roll vs T12 variance: publish with disclosure unless severe or renderer contradicts canonical value.
+- Missing market rent: collapse rent gap / value-add analysis.
+- Missing unit mix: collapse unit mix analysis.
+- Missing lease dates: collapse rollover analysis.
+
+## Implementation doctrine for Codex
+Codex should implement a formal Core Input Sufficiency Contract, not another report-specific patch.
+
+Required classification buckets:
+- `core_sufficient_publishable`
+- `section_constrained_publishable`
+- `disclose_only_publishable`
+- `public_or_outreach_only_blocker`
+- `user_needs_documents`
+- `admin_review_required`
+- `system_contract_failure`
+
+Critical principle:
+- Customer delivery should be blocked only by explicit customer-delivery blockers.
+- Missing optional section data should affect only that section.
+- Admin Review must remain rare.
+
+## Latest Codex receipt from renderer/admin-review audit
+Codex reported the following after the latest renderer/admin-review prompt:
+- No additional code files changed in that pass.
+- The current branch already contains the renderer/QA updates; Codex audited and re-validated them.
+- The live `-48.0%` issue was classified as a renderer wiring issue, and the current branch now centralizes the display through `formatSourceReconciliationVariance(...)`.
+- `buildScreeningIncomeForensicsHtml(...)` and `buildScreeningNoiStabilityHtml(...)` now use canonical reconciliation state.
+- The live handler passes `sourceReconciliationState` into both builders and the coverage summary path.
+- `buildDeliveryGateDecision()` is the only final gate that emits `admin_review_required`.
+- Codex reported current delivery doctrine compliance:
+  - ordinary source limitations do not become admin review;
+  - section-level missing optional inputs collapse or disclose instead of creating a customer hold;
+  - customer blockers remain limited to explicit high-risk or system-failure classes;
+  - public/high-value outreach can be stricter without blocking private customer delivery.
+- Live PDF verification remains the last end-to-end check.
+
+## Next Codex task - Core Input Sufficiency Contract implementation
+Use Codex to audit and implement the formal sufficiency tiers across source coverage, report contract, QA action plan, and delivery gate.
+
+First-priority implementation target:
+- Make T12 core sufficiency, Rent Roll core sufficiency, and optional section sufficiency explicit machine-readable contracts.
+- Ensure delivery gates read those contracts rather than scattered warnings, missing-detail flags, or section-depth heuristics.
+- Ensure clean-ish packages publish autonomously with collapsed sections/disclosures instead of Admin Review.
+
+## Fresh chat brief - May 14 Core Sufficiency Doctrine Locked
+
+```text
+We are continuing InvestorIQ from the May 14 master-context update.
+
+Critical doctrine now locked:
+InvestorIQ must not become a manual-review factory and must not fail/review 99.999% of reports just because some optional inputs are missing.
+
+Core operating rule:
+- If required core docs are usable, the report publishes.
+- If a specific section lacks required inputs, that section collapses or renders a clean limitation.
+- If source docs contain minor/explainable variance, the report publishes with disclosure.
+- If optional/enrichment data is missing, nothing fails; the report is simply less deep.
+- Customer delivery should be blocked only by missing/unusable required core docs, severe source contradiction beyond safe disclosure, or system/report-contract failure.
+
+T12 must-have:
+- Effective Gross Income or enough income lines to derive it.
+- Total Operating Expenses or enough expense lines to derive it.
+- NOI or enough values to validate EGI - OpEx = NOI.
+
+Rent Roll must-have:
+- total units;
+- in-place rent by unit rows or trusted summary;
+- occupancy by status/counts/summary;
+- enough structure to establish annual in-place rent.
+
+Missing optional detail should collapse/disclose, not fail:
+- missing expense line items;
+- missing market rent;
+- missing unit mix;
+- missing lease dates;
+- missing cap rate/appraisal support;
+- missing renovation budget;
+- missing current debt balance;
+- missing acquisition financing.
+
+Latest Codex audit says:
+- current branch already contains the source-reconciliation renderer/QA updates;
+- the live handler passes `sourceReconciliationState` into the audited builders;
+- `buildDeliveryGateDecision()` is the only final gate emitting `admin_review_required`;
+- ordinary source limitations and section-level optional missing inputs are not currently supposed to become customer holds;
+- live PDF verification remains the final check.
+
+Next task:
+Prepare and run a Codex prompt to implement a formal Core Input Sufficiency Contract across source coverage, QA action plan, and delivery gate. The goal is to make T12/Rent Roll core sufficiency and section-level sufficiency explicit so reports publish autonomously whenever core data is defensible, while optional missing details collapse/disclose.
+```
+
+---
+
+# May 14, 2026 Critical Doctrine Update - Autonomous Customer Publication / Manual Review Must Be Exception Only
+
+## Why this update matters
+- This doctrine was locked after the true-current-debt Maplewell / `01_true_current_debt_underwriting` hardcore testing lane repeatedly exposed the same business-critical risk: source limitations and renderer bugs can drift into Admin Review too easily if delivery gates are not explicitly classified.
+- The user made the operating requirement explicit: InvestorIQ cannot require Rob to manually review dozens of reports per day. That would destroy the business model.
+- Manual review must be the exception, not the operating model.
+- Codex must not keep turning every source limitation into `admin_review_required`.
+- The product standard is autonomous publication for reasonably complete, defensible customer packages, with clean disclosures and section collapse where appropriate.
+
+## Locked customer-publication doctrine
+InvestorIQ V1 must follow this rule:
+
+```text
+If core docs are usable, the report publishes.
+If a specific section lacks required inputs, that section collapses or renders a clean limitation.
+If source docs contain a minor or explainable variance, the report publishes with disclosure.
+If the system itself creates a contradiction, stale value, placeholder, broken table, wrong math, or renderer mismatch, that is a system bug and deterministic QA should catch it before production.
+Manual review should be rare.
+```
+
+## What should publish
+- Clean Screening packages with usable T12 and Rent Roll should publish.
+- Clean Full Underwriting packages with usable T12, Rent Roll, and at least one support document should publish.
+- True-current-debt underwriting packages should publish when true current balance/service/rate/amortization are verified and the rendered report is internally consistent.
+- Acquisition-financing-only underwriting packages should publish with current-debt/refi limitation language and separate Proposed Acquisition Debt Sizing.
+- Minor rent roll vs T12 variance should publish with clear disclosure, not Admin Review, unless the variance is severe enough to suggest wrong-file / wrong-property / parser-integrity risk.
+- Missing optional inputs should collapse only the affected section or render a clear limitation.
+
+## What should collapse or disclose instead of failing the report
+- Missing refinance cap rate / valuation support:
+  - Do not fail the report.
+  - Collapse or constrain refinance classification / valuation sensitivity as needed.
+  - Disclose missing refinance inputs.
+- Missing structured renovation budget:
+  - Do not fail the report.
+  - Collapse Renovation Strategy or render source-constrained note.
+  - Do not model rent lift, ROI, payback, scope, or timing without structured support.
+- Missing acquisition loan term sheet:
+  - Do not fail the report.
+  - Do not model acquisition financing.
+- Missing true current debt balance while T12/Rent Roll are usable:
+  - Do not fail the report.
+  - Current-debt DSCR is `Not assessed` with clean limitation language.
+  - No refinance proceeds/stress/classification output should render as if true current debt exists.
+- Missing line-item detail within an otherwise valid core T12:
+  - Do not fail the report.
+  - Render lump-sum / limited-detail T12 disclosure and suppress line-item detail sections as needed.
+- Missing source fields for a specific table/card:
+  - Do not fail the report.
+  - Suppress that card/table/section or disclose the limitation.
+
+## What should fail closed or require intervention
+Customer delivery should be blocked only by true customer-delivery blockers:
+
+1. Missing required core source package
+   - Example: no usable T12 for a report requiring T12.
+   - Example: no usable Rent Roll for a report requiring Rent Roll.
+
+2. Core docs are unreadable or essentially unusable
+   - Example: ripped/scanned/garbled documents where the system cannot verify required core values.
+   - Example: parser confidence/validation cannot establish defensible T12 or rent-roll artifacts.
+
+3. Severe source-package contradiction beyond safe disclosure
+   - Example: T12 and Rent Roll appear to describe materially different properties.
+   - Example: 48-unit rent roll paired with a T12 scale that implies a totally different asset class and cannot be institutionally disclosed as ordinary variance.
+
+4. System-generated report contract failure
+   - Example: canonical artifact says +6.1% but rendered PDF says -48.0%.
+   - Example: stale placeholder in Deal Scorecard when computed DSCR exists.
+   - Example: current-debt/refi analysis rendered without true current-debt support.
+   - Example: broken table, internal/debug language, public AI/vendor language, template token, mojibake, `DATA NOT AVAILABLE`, `undefined`, `NaN`, or inconsistent DSCR values across sections.
+
+5. Public/Ken/high-value sample readiness blocker
+   - These may block public sample / Ken outreach without blocking private customer delivery.
+   - Examples: DocRaptor test mode, public-sample polish issue, high-value outreach review, unresolved but disclosed source variance.
+
+## Delivery-gate hierarchy doctrine
+- Private customer delivery, public sample readiness, and high-value outreach readiness are separate decisions.
+- Public/high-value standards can be stricter than private customer delivery.
+- A public-sample blocker must not automatically become a customer-delivery blocker.
+- A source limitation must not automatically become `admin_review_required`.
+- `admin_review_required` should be reserved for real customer-delivery blockers or system/report-contract failures.
+- `user_needs_documents` should be reserved for explicitly missing/unusable required core documents or explicit customer-blocking source status.
+- Disclose-only source reconciliation should remain customer-deliverable.
+
+## Important May 14 class fixes already completed or in progress
+1. `formatMultiple is not defined` true-current-debt runtime crash
+   - Root cause: `report-surface-contracts.js` called `formatMultiple()` without local definition/import.
+   - Fixed with local helper and true-current-debt regression.
+
+2. Report publication storage-path invariant
+   - Root cause: `reports.insert()` could run with `storage_path = null` / placeholder before a real storage path existed.
+   - Fixed by computing and validating storage path before upload/insert.
+   - `reports` row cannot be created without valid non-empty PDF storage path.
+
+3. Delivery Gate keyword-guessing removal
+   - Root cause: codes containing words like `REQUIRED`, `MISSING`, or `FAILED` were being overclassified as customer blockers.
+   - Fixed with explicit delivery-impact classifier.
+   - Customer delivery now depends on explicit fields such as `blocks_customer_delivery`, `customer_delivery_blocker`, `classification: missing_required_source`, `customer_delivery_impact: block`, or `qa_status: needs_documents/failed`.
+   - Disclose-only and public-only flags remain customer-deliverable.
+
+4. Delivery-impact normalization
+   - `customer_delivery_impact` is normalized for values such as `BLOCK`, `blocked`, `customer_blocked`, `customer_delivery_blocked`, and `customer_delivery_blocker`.
+   - Non-blocking values such as `disclose_only`, `public_only`, `review_only`, `advisory_only`, `none`, empty, or null remain non-blocking.
+
+5. Rendered source-reconciliation variance contract
+   - Root issue: canonical source reconciliation could say +6.08% while rendered PDF showed -48.0%.
+   - Report Contract QA now deterministically flags `RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH` when rendered Rent Roll vs T12 variance does not match canonical `sourceReconciliationState.variance_pct`.
+   - This contract must remain customer-blocking because it is a system-generated numeric contradiction, not an ordinary source limitation.
+   - Current live retest showed the contract worked and blocked the bad render before customer delivery, but the renderer live callsite still needs to be fixed so the PDF emits +6.1%, not -48.0%.
+
+## Current immediate live issue after May 14 retest
+- `01_true_current_debt_underwriting_RETEST 2` is Under Review because Report Contract QA correctly found:
+  - `RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH`
+- Canonical truth:
+  - `rr_annual_in_place = 1,962,456`
+  - `t12_gpr = 1,850,000`
+  - `variance_pct = 0.06078702702702703` / approximately `+6.1%`
+- Rendered bad output still contains:
+  - `Rent Roll vs T12 GPR Variance -48.0%`
+  - `Rent roll annualized rent is -48.0% vs T12 GPR`
+- Interpretation:
+  - The QA contract is working.
+  - The delivery gate is working.
+  - The remaining problem is a renderer live-path wiring gap: some production callsite still calculates/prints the old `-48.0%` value instead of using canonical `sourceReconciliationState.variance_pct`.
+- Next Codex task should fix the renderer wiring, not weaken QA or Delivery Gate.
+
+## Codex / assistant operating rule going forward
+- Do not patch one report.
+- Patch failure classes.
+- Do not weaken deterministic QA to make reports publish.
+- Make the renderer/parser/gate produce the correct customer-deliverable outcome.
+- Never allow Codex to solve review floods by simply lowering severity or removing blockers.
+- If a report goes to Admin Review, first classify:
+  1. true missing/unusable core docs
+  2. severe source contradiction
+  3. system/render/contract bug
+  4. public-only blocker
+  5. gate overpromotion
+  6. valid disclose-only source limitation
+- If it is a public-only blocker or disclose-only limitation, customer delivery should remain eligible.
+- If it is a renderer/system bug, fix the code/test class so it does not hit customer jobs again.
+
+## Fresh chat brief - May 14 publication doctrine locked
+
+```text
+We are continuing InvestorIQ from the May 14 master-context update.
+
+Critical doctrine now locked:
+InvestorIQ must not become a manual-review factory. Manual review must be the exception, not the operating model. Codex must not keep turning every source limitation into `admin_review_required`, because that would destroy the business model.
+
+Customer-publication doctrine:
+- If core docs are usable, the report publishes.
+- If a specific section lacks required inputs, that section collapses or renders a clean limitation.
+- If source docs contain a minor/explainable variance, the report publishes with disclosure.
+- If optional inputs are missing, only the affected section collapses.
+- Missing true current debt does not fail the report; current-debt DSCR is Not assessed with clean limitation language.
+- Missing renovation detail does not fail the report; Renovation Strategy collapses or discloses no structured CapEx.
+- Missing refinance inputs do not fail the report; refinance classification/capacity collapses or discloses missing inputs.
+- Public/Ken/high-value sample readiness can be stricter than private customer delivery.
+
+Customer delivery should be blocked only by:
+1. missing/unusable required core docs,
+2. severe source-package contradiction beyond safe disclosure,
+3. system-generated report-contract failure,
+4. prohibited/internal/public-language/template/placeholder/math/render contradiction.
+
+Recent May 14 class fixes:
+- `formatMultiple is not defined` true-current-debt crash fixed.
+- report publication storage-path invariant fixed.
+- Delivery Gate keyword guessing removed.
+- Delivery-impact normalization added.
+- deterministic rendered source-reconciliation variance contract added.
+
+Current immediate issue:
+`01_true_current_debt_underwriting_RETEST 2` is Under Review because the new Report Contract QA correctly caught `RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH`.
+Canonical source reconciliation says approximately `+6.1%`, but the live rendered report still says `-48.0%`.
+This is not a source-doc issue and not a reason to weaken the gate. It is a renderer live-path wiring bug.
+
+Next task:
+Use Codex to fix the renderer wiring so every live rendered Rent Roll vs T12 variance surface uses canonical `sourceReconciliationState.variance_pct`, not stale local math. Keep the deterministic QA mismatch contract customer-blocking. After patch, run `qa:launch-core`, deploy, and rerun only the true-current-debt test.
+```
+
+---
+
 # May 13, 2026 Final Late Update - Forest City FINAL 6 Published / Launch Gates Added / Canonical Contracts Mostly Validated
 
 ## Summary

@@ -1127,8 +1127,14 @@ export function buildDeliveryGateDecision({
   const contractViolations = Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : [];
   const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : [];
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
+  const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
+  const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
   const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
-  const missingRequiredSource = sourceStatus === "needs_documents" || sourceStatus === "failed" || sourceLimitations.length > 0;
+  const missingRequiredSource =
+    sourceStatus === "needs_documents" ||
+    sourceStatus === "failed" ||
+    coreInputBucket === "user_needs_documents" ||
+    sourceLimitations.some((flag) => String(flag?.classification || "").toLowerCase() === "missing_required_source");
   const reconciliationViolation = contractViolations.find((violation) =>
     /RECONCILIATION_MISMATCH|CONTRADICTION/i.test(String(violation?.code || "")) ||
     String(violation?.code || "") === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION" ||
@@ -1152,10 +1158,17 @@ export function buildDeliveryGateDecision({
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
     Boolean(adminReviewAction || reconciliationViolation);
 
-  const sourceNeedsDocs = missingRequiredSource || Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
+  const sourceNeedsDocs =
+    missingRequiredSource ||
+    Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery) ||
+    sourceLimitations.length > 0;
+  const sourceNeedsReview =
+    coreInputBucket === "admin_review_required" ||
+    coreInputBucket === "system_contract_failure";
   if (sourceNeedsDocs && !customerDeliveryBlockerAction && !reconciliationViolation) {
     const gateReason =
       sourceDocumentAction?.code ||
+      coreInputSufficiencyState?.reason_code ||
       sourceLimitations[0]?.code ||
       sourceStatus ||
       "SOURCE_DOCUMENT_LIMITATION";
@@ -1182,6 +1195,42 @@ export function buildDeliveryGateDecision({
       top_action_code: sourceDocumentAction?.code || sourceLimitations[0]?.code || null,
       owner_area: sourceDocumentAction?.owner_area || "source_documents",
       recommended_next_step: sourceDocumentAction?.recommended_next_step || "Request the missing required source documents or required source value before delivering the report.",
+      customer_delivery_ready: false,
+      public_sample_ready: false,
+      high_value_outreach_ready: false,
+      ...publishEligibility,
+    };
+  }
+  if (sourceNeedsReview && !customerDeliveryBlockerAction && !reconciliationViolation) {
+    const gateReason =
+      coreInputSufficiencyState?.reason_code ||
+      sourceDocumentAction?.code ||
+      sourceLimitations[0]?.code ||
+      "SYSTEM_CONTRACT_FAILURE";
+    const publishEligibility = buildPublishEligibilitySummary({
+      deliveryGateStatus: "admin_review_required",
+      reasonCode: gateReason,
+      sourceReportCoverageQa,
+      reportContractQa,
+      qaActionPlan,
+      prioritizedActions,
+      contractViolations,
+      deterministicFlags,
+      sourceNeedsDocs: false,
+      customerDeliveryBlockerAction,
+      managerContradictionAction,
+      managerContradictionBlocksCustomer,
+      reconciliationViolation,
+      publicOrOutreachOnlyAction,
+      adminReviewAction: null,
+    });
+    return {
+      final_delivery_authority: "delivery_gate",
+      delivery_gate_status: "admin_review_required",
+      reason_code: gateReason,
+      top_action_code: sourceDocumentAction?.code || sourceLimitations[0]?.code || null,
+      owner_area: "report_renderer",
+      recommended_next_step: "Hold delivery for system contract review.",
       customer_delivery_ready: false,
       public_sample_ready: false,
       high_value_outreach_ready: false,
@@ -1386,6 +1435,9 @@ export function buildQaActionPlan({
     public_sample_ready: publicSampleReady,
     high_value_outreach_ready: highValueOutreachReady,
     launch_path_recommendation: launchPathRecommendation,
+    core_input_sufficiency_state: sourceReportCoverageQa?.core_input_sufficiency_state || null,
+    t12_sufficiency_state: sourceReportCoverageQa?.t12_sufficiency_state || null,
+    rent_roll_sufficiency_state: sourceReportCoverageQa?.rent_roll_sufficiency_state || null,
     source_reconciliation_state: sourceReportCoverageQa?.source_reconciliation_state || null,
     section_eligibility: sourceReportCoverageQa?.section_eligibility || null,
     readiness_hierarchy: {

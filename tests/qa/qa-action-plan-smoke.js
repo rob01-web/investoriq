@@ -1071,6 +1071,142 @@ const needsDocumentsStatusGate = buildDeliveryGateDecision({
 });
 assert.equal(needsDocumentsStatusGate.delivery_gate_status, "user_needs_documents");
 
+const sectionConstrainedGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    core_input_sufficiency_state: {
+      publishability_bucket: "section_constrained_publishable",
+      reason_code: "t12_line_item_detail_missing",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(sectionConstrainedGate.delivery_gate_status, "deliverable");
+assert.equal(sectionConstrainedGate.customer_delivery_ready, true);
+
+const discloseOnlySufficiencyGateBare = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    core_input_sufficiency_state: {
+      publishability_bucket: "disclose_only_publishable",
+      reason_code: "source_reconciliation_disclosed",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(discloseOnlySufficiencyGateBare.delivery_gate_status, "deliverable");
+
+const adminReviewSufficiencyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    core_input_sufficiency_state: {
+      publishability_bucket: "admin_review_required",
+      reason_code: "t12_noi_equation_mismatch",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(adminReviewSufficiencyGate.delivery_gate_status, "admin_review_required");
+
+const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: {
+        present: true,
+        has_core_totals: true,
+      },
+      rent_roll_parsed: {
+        present: true,
+      },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "section_constrained_publishable",
+      reason_code: "t12_line_item_detail_missing",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(sectionConstrainedSufficiencyGate.delivery_gate_status, "deliverable");
+assert.equal(sectionConstrainedSufficiencyGate.customer_delivery_ready, true);
+assert.equal(sectionConstrainedSufficiencyGate.publish_decision_reason, "customer_publish_eligible");
+
+const discloseOnlySufficiencyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: {
+        present: true,
+        has_core_totals: true,
+      },
+      rent_roll_parsed: {
+        present: true,
+      },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "disclose_only_publishable",
+      reason_code: "source_reconciliation_disclosed",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(discloseOnlySufficiencyGate.delivery_gate_status, "deliverable");
+assert.equal(discloseOnlySufficiencyGate.customer_delivery_ready, true);
+
+const systemContractFailureSufficiencyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    core_input_sufficiency_state: {
+      publishability_bucket: "system_contract_failure",
+      reason_code: "contract_failure",
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [],
+  },
+});
+assert.equal(systemContractFailureSufficiencyGate.delivery_gate_status, "admin_review_required");
+
 const dealScorecardViolationPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
   reportContractQa: {
