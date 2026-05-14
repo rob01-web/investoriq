@@ -196,7 +196,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           fontSize:     11,
           fontWeight:   400,
           lineHeight:   1.45,
-          color:        tier.highlight ? 'rgba(255,255,255,0.86)' : T.ink3,
+          color:        tier.highlight ? T.goldDark : T.ink3,
           display:      'block',
           marginTop:    6,
           letterSpacing:'0',
