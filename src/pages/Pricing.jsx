@@ -46,6 +46,7 @@ const tiers = [
     eyebrow:     'Acquisition Screening',
     valueLine:   'Rapid risk screening from document-backed inputs with missing inputs disclosed.',
     description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
+    pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
       'Built from T12 and rent roll documents with framework-constrained outputs',
       'Clear, document-driven acquisition summary',
@@ -62,6 +63,7 @@ const tiers = [
     eyebrow:     'Investment Committee Underwriting',
     valueLine:   'Full institutional-grade refinance and downside risk modeling.',
     description: 'Institutional-grade underwriting memorandum built for investment committee review.',
+    pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
       'Built from T12, rent roll, and supporting due diligence documents',
       'Identifies refinance shortfall risk under real-world rate and cap scenarios',
@@ -200,7 +202,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           letterSpacing:'0',
           textTransform:'none',
         }}>
-          Founder’s Pricing · Early Member Access
+          {tier.pricingNote}
         </span>
       </div>
 
