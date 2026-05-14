@@ -200,11 +200,13 @@ function resolveSafeAnnualRentTotal({
   summaryAnnualTotal,
   rowAnnualTotal,
   isPartialSample = false,
+  preferSummaryAnnual = false,
 } = {}) {
   const units = coerceNumber(totalUnits);
   const weighted = coerceNumber(weightedAvgRent);
   const summaryAnnual = coerceNumber(summaryAnnualTotal);
   const rowAnnual = coerceNumber(rowAnnualTotal);
+  if (preferSummaryAnnual && Number.isFinite(summaryAnnual) && summaryAnnual > 0) return summaryAnnual;
   if (
     !isPartialSample &&
     Number.isFinite(units) &&
@@ -2186,9 +2188,24 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
     /Rent roll annualized rent is[^<\n]{0,220}/gi,
     /Source reconciliation variance of[^<\n]{0,220}/gi,
   ];
+  const displayPatterns = [
+    /<tr[^>]*>\s*<td>\s*Rent Roll vs T12 GPR Variance\s*<\/td>\s*<td>\s*([+\-]?\d+(?:\.\d+)?)%\s*<\/td>\s*<\/tr>/gi,
+    /Rent roll annualized rent is\s*([+\-]?\d+(?:\.\d+)?)%\s*vs\s*T12 GPR/gi,
+    /Source reconciliation variance of\s*([+\-]?\d+(?:\.\d+)?)%\s*between rent roll and T12 gross potential rent requires review\./gi,
+    /<li>\s*Rent Roll vs T12 GPR\s*([+\-]?\d+(?:\.\d+)?)%\s*<\/li>/gi,
+  ];
   const extractSnippets = (text) =>
     snippetPatterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])).slice(0, 10);
+  const extractVarianceDisplays = (text) =>
+    displayPatterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => {
+      const display = match[1];
+      const numericDisplay = Number(display);
+      return Number.isFinite(numericDisplay)
+        ? `${numericDisplay >= 0 ? "+" : "-"}${Math.abs(numericDisplay).toFixed(1)}%`
+        : null;
+    }).filter(Boolean)).slice(0, 10);
   const matchedSnippetsBefore = extractSnippets(inputHtml);
+  const matchedDisplaysBefore = extractVarianceDisplays(inputHtml);
   const staleMinus48CountBefore = (inputHtml.match(staleVarianceRegex) || []).length;
 
   let outputHtml = inputHtml;
@@ -2241,12 +2258,50 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
   }
 
   const matchedSnippetsAfter = extractSnippets(outputHtml);
+  const matchedDisplaysAfter = extractVarianceDisplays(outputHtml);
   const staleMinus48CountAfter = (outputHtml.match(staleVarianceRegex) || []).length;
   const changed = outputHtml !== inputHtml;
+  const renderableDisplay = canonicalDisplay && renderState?.renderable;
+  const displayMismatchAfter =
+    renderableDisplay
+      ? matchedDisplaysAfter.some((display) => display !== canonicalDisplay) ||
+        matchedDisplaysAfter.length === 0 && (
+          /Rent Roll vs T12 GPR Variance/i.test(outputHtml) ||
+          /Rent roll annualized rent is/i.test(outputHtml) ||
+          /Source reconciliation variance of/i.test(outputHtml)
+        )
+      : matchedDisplaysAfter.length > 0;
+  if (displayMismatchAfter) {
+    console.error("[investoriq] source_reconciliation_final_guard_postcheck_failed", {
+      canonical_display: canonicalDisplay,
+      renderable: Boolean(renderState?.renderable),
+      matched_displays_before: matchedDisplaysBefore,
+      matched_displays_after: matchedDisplaysAfter,
+      matched_snippets_before: matchedSnippetsBefore,
+      matched_snippets_after: matchedSnippetsAfter,
+      stale_minus_48_count_before: staleMinus48CountBefore,
+      stale_minus_48_count_after: staleMinus48CountAfter,
+      replaced_or_suppressed: changed,
+    });
+    const guardFailure = new Error("Final HTML reconciliation guard failed to match canonical source reconciliation display");
+    guardFailure.code = "REPORT_GENERATION_FAILED";
+    guardFailure.context = {
+      canonical_variance_display: canonicalDisplay,
+      matched_displays_before: matchedDisplaysBefore,
+      matched_displays_after: matchedDisplaysAfter,
+      matched_snippets_before: matchedSnippetsBefore,
+      matched_snippets_after: matchedSnippetsAfter,
+      stale_minus_48_count_before: staleMinus48CountBefore,
+      stale_minus_48_count_after: staleMinus48CountAfter,
+    };
+    throw guardFailure;
+  }
   if (changed) {
     console.warn("[investoriq] source_reconciliation_final_guard", {
       canonical_display: canonicalDisplay,
       renderable: Boolean(renderState?.renderable),
+      matched_displays_before: matchedDisplaysBefore,
+      matched_displays_after: matchedDisplaysAfter,
       matched_snippets_before: matchedSnippetsBefore,
       matched_snippets_after: matchedSnippetsAfter,
       stale_minus_48_count_before: staleMinus48CountBefore,
@@ -2259,6 +2314,8 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
     render_state: renderState,
     matched_snippets_before: matchedSnippetsBefore,
     matched_snippets_after: matchedSnippetsAfter,
+    matched_displays_before: matchedDisplaysBefore,
+    matched_displays_after: matchedDisplaysAfter,
     stale_minus_48_count_before: staleMinus48CountBefore,
     stale_minus_48_count_after: staleMinus48CountAfter,
     replaced_or_suppressed: changed,
@@ -3267,6 +3324,7 @@ export default async function handler(req, res) {
         summaryAnnualTotal: summaryInPlaceAnnual,
         rowAnnualTotal: totalInPlaceAnnual,
         isPartialSample: isPartialRentRollSample,
+        preferSummaryAnnual: hasTrustedRentRollSummaryTotals,
       });
       const resolvedMarketAnnual = resolveSafeAnnualRentTotal({
         totalUnits,
@@ -3274,6 +3332,7 @@ export default async function handler(req, res) {
         summaryAnnualTotal: summaryMarketAnnual,
         rowAnnualTotal: totalMarketAnnual,
         isPartialSample: isPartialRentRollSample,
+        preferSummaryAnnual: hasTrustedRentRollSummaryTotals,
       });
       const resolvedInPlaceMonthly = Number.isFinite(resolvedInPlaceAnnual)
         ? resolvedInPlaceAnnual / 12
@@ -3322,6 +3381,7 @@ export default async function handler(req, res) {
           ? (resolvedMarketAnnual - resolvedInPlaceAnnual) / resolvedInPlaceAnnual
           : Number.isFinite(summaryRentToMarketGap) ? summaryRentToMarketGap : null,
         is_partial_sample: isPartialRentRollSample,
+        summary_row_detected: hasTrustedRentRollSummaryTotals,
         unit_mix: unitMix,
       };
     }
@@ -6644,10 +6704,15 @@ const finalSourceReconciliationGuardDiagnostic = {
   html_length_after: String(finalSourceReconciliationGuard.html || "").length,
   canonical_variance_display: finalSourceReconciliationGuard.render_state?.variance_display || null,
   canonical_variance_pct: finalSourceReconciliationGuard.render_state?.variance_pct ?? null,
+  canonical_rr_annual_in_place_source: finalSourceReconciliationGuard.render_state?.rr_annual_in_place_source || null,
+  canonical_t12_gpr_source: finalSourceReconciliationGuard.render_state?.t12_gpr_source || null,
+  canonical_source_selection: finalSourceReconciliationGuard.render_state?.source_selection || null,
   stale_minus_48_count_before: finalSourceReconciliationGuard.stale_minus_48_count_before || 0,
   stale_minus_48_count_after: finalSourceReconciliationGuard.stale_minus_48_count_after || 0,
   rent_roll_vs_t12_snippet_before: finalSourceReconciliationGuard.matched_snippets_before || [],
   rent_roll_vs_t12_snippet_after: finalSourceReconciliationGuard.matched_snippets_after || [],
+  rent_roll_vs_t12_display_before: finalSourceReconciliationGuard.matched_displays_before || [],
+  rent_roll_vs_t12_display_after: finalSourceReconciliationGuard.matched_displays_after || [],
   report_contract_qa_receives_guarded_html: true,
   timestamp: new Date().toISOString(),
 };
@@ -6665,7 +6730,17 @@ if (jobId) {
     console.error("Failed to write source_reconciliation_final_guard_diagnostic artifact:", err?.message || err);
   }
 }
-if (finalSourceReconciliationGuard.render_state?.renderable && finalSourceReconciliationGuard.stale_minus_48_count_after > 0) {
+const finalSourceReconciliationGuardHasMismatch =
+  finalSourceReconciliationGuard.render_state?.renderable
+    ? finalSourceReconciliationGuard.matched_displays_after.some((display) => display !== finalSourceReconciliationGuard.render_state?.variance_display) ||
+      (finalSourceReconciliationGuard.matched_displays_after.length === 0 &&
+        (
+          /Rent Roll vs T12 GPR Variance/i.test(qaHtml) ||
+          /Rent roll annualized rent is/i.test(qaHtml) ||
+          /Source reconciliation variance of/i.test(qaHtml)
+        ))
+    : finalSourceReconciliationGuard.matched_displays_after.length > 0;
+if (finalSourceReconciliationGuardHasMismatch) {
   console.error("source_reconciliation_final_guard_postcheck_failed", finalSourceReconciliationGuardDiagnostic);
   const guardFailure = new Error("Final HTML reconciliation guard failed to remove stale variance text");
   guardFailure.code = "REPORT_GENERATION_FAILED";
@@ -6734,6 +6809,7 @@ try {
     html: qaHtml,
     uploadedFiles: coverageFiles,
     artifacts: coverageArtifacts,
+    sourceReconciliationState,
   });
   sourceCoverageQaResult = sourceCoverageQa;
   const coverageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -7240,7 +7316,17 @@ try {
     sourceReconciliationState
   );
   docHtml = docFinalSourceReconciliationGuard.html;
-  if (docFinalSourceReconciliationGuard.render_state?.renderable && docFinalSourceReconciliationGuard.stale_minus_48_count_after > 0) {
+  const docFinalSourceReconciliationGuardHasMismatch =
+    docFinalSourceReconciliationGuard.render_state?.renderable
+      ? docFinalSourceReconciliationGuard.matched_displays_after.some((display) => display !== docFinalSourceReconciliationGuard.render_state?.variance_display) ||
+        (docFinalSourceReconciliationGuard.matched_displays_after.length === 0 &&
+          (
+            /Rent Roll vs T12 GPR Variance/i.test(docHtml) ||
+            /Rent roll annualized rent is/i.test(docHtml) ||
+            /Source reconciliation variance of/i.test(docHtml)
+          ))
+      : docFinalSourceReconciliationGuard.matched_displays_after.length > 0;
+  if (docFinalSourceReconciliationGuardHasMismatch) {
     console.error("source_reconciliation_final_guard_postcheck_failed_docraptor", {
       canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
       stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,

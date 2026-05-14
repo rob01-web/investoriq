@@ -309,6 +309,7 @@ export function buildSourceReportCoverageQa({
   html = "",
   uploadedFiles = [],
   artifacts = [],
+  sourceReconciliationState = null,
 } = {}) {
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
@@ -338,19 +339,22 @@ export function buildSourceReportCoverageQa({
     validated_acquisition_assumptions: acquisitionAssumptionState.has_validated_acquisition_assumptions,
     acquisition_assumption_state: acquisitionAssumptionState,
   };
-  const sourceReconciliationState = buildSourceReconciliationState({
-    computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
-    rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
-    t12Payload,
-    sourceReportCoverageQa: { artifact_inventory: artifactInventory, rendered_text_signals: renderedTextSignals, deterministic_flags: [] },
-  });
+  const sourceReconciliationStateResolved =
+    sourceReconciliationState && typeof sourceReconciliationState === "object"
+      ? sourceReconciliationState
+      : buildSourceReconciliationState({
+          computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+          rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
+          t12Payload,
+          sourceReportCoverageQa: { artifact_inventory: artifactInventory, rendered_text_signals: renderedTextSignals, deterministic_flags: [] },
+        });
   const sectionEligibility = buildFullUnderwritingSectionEligibility({
     sourceReportCoverageQa: {
       artifact_inventory: artifactInventory,
       rendered_sections: renderedSections,
     },
     currentDebtState,
-    sourceReconciliationState,
+    sourceReconciliationState: sourceReconciliationStateResolved,
   });
   const t12SufficiencyState = buildT12SufficiencyState({ t12Payload });
   const rentRollSufficiencyState = buildRentRollSufficiencyState({
@@ -361,7 +365,7 @@ export function buildSourceReportCoverageQa({
     t12Payload,
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
-    sourceReconciliationState,
+    sourceReconciliationState: sourceReconciliationStateResolved,
   });
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
@@ -486,16 +490,16 @@ export function buildSourceReportCoverageQa({
   }
 
   if (
-    sourceReconciliationState?.status === "source_reconciliation_required" ||
-    sourceReconciliationState?.status === "parser_suspected"
+    sourceReconciliationStateResolved?.status === "source_reconciliation_required" ||
+    sourceReconciliationStateResolved?.status === "parser_suspected"
   ) {
     addFlag(flags, {
       code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
-      severity: sourceReconciliationState?.status === "parser_suspected" ? "high" : "medium",
+      severity: sourceReconciliationStateResolved?.status === "parser_suspected" ? "high" : "medium",
       category: "source_reconciliation",
       message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
       evidence: {
-        source_reconciliation_state: sourceReconciliationState,
+        source_reconciliation_state: sourceReconciliationStateResolved,
         rendered_text_signals: renderedTextSignals,
       },
       routing: "public_sample_blocker",
@@ -636,7 +640,7 @@ export function buildSourceReportCoverageQa({
     artifact_inventory: artifactInventory,
     current_debt_state: currentDebtState,
     acquisition_assumption_state: acquisitionAssumptionState,
-    source_reconciliation_state: sourceReconciliationState,
+    source_reconciliation_state: sourceReconciliationStateResolved,
     t12_sufficiency_state: t12SufficiencyState,
     rent_roll_sufficiency_state: rentRollSufficiencyState,
     core_input_sufficiency_state: coreInputSufficiencyState,

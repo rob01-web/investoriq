@@ -1,4 +1,5 @@
 import { buildSourceReportCoverageQa } from "../../api/_lib/source-report-coverage-qa.js";
+import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
 
 const result = buildSourceReportCoverageQa({
   jobId: "forest-city-smoke",
@@ -446,6 +447,65 @@ const sourceReconciliationResult = buildSourceReportCoverageQa({
     "</body></html>",
   ].join("\n"),
 });
+
+const sourceReconciliationConflictState = buildSourceReconciliationState({
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    annual_in_place_rent: 961200,
+    summary_row_detected: false,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    annual_in_place_rent: 1962456,
+    totals: {
+      summary_row_detected: true,
+      in_place_rent_annual: 1962456,
+      current_rent_annual: 1962456,
+      in_place_rent_monthly: 163537,
+      current_rent_monthly: 163537,
+    },
+  },
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    gross_scheduled_rent: 1850000,
+  },
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      rent_roll_parsed: { present: true },
+      t12_parsed: { present: true, has_core_totals: true },
+    },
+    rendered_text_signals: [],
+    deterministic_flags: [],
+  },
+});
+if (sourceReconciliationConflictState.rr_annual_in_place !== 1962456) {
+  console.error("Expected trusted rent-roll summary annual to win.");
+  console.error("Actual state:", sourceReconciliationConflictState);
+  process.exit(1);
+}
+if (sourceReconciliationConflictState.variance_pct !== 0.06078702702702703) {
+  console.error("Expected canonical positive reconciliation variance.");
+  console.error("Actual state:", sourceReconciliationConflictState);
+  process.exit(1);
+}
+const sourceReconciliationPassThroughResult = buildSourceReportCoverageQa({
+  jobId: "reconciliation-pass-through-smoke",
+  userId: "user-smoke",
+  propertyName: "Reconciliation Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<html><body><p>Rent roll annualized rent is +6.1% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p></body></html>",
+  sourceReconciliationState: sourceReconciliationConflictState,
+});
+if (sourceReconciliationPassThroughResult.source_reconciliation_state?.rr_annual_in_place !== 1962456) {
+  console.error("Expected source coverage QA to preserve the supplied canonical reconciliation state.");
+  console.error("Actual state:", sourceReconciliationPassThroughResult.source_reconciliation_state);
+  process.exit(1);
+}
 
 if (sourceReconciliationResult.source_reconciliation_state?.status !== "source_reconciliation_required") {
   console.error("Expected source reconciliation state to require review.");

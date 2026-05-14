@@ -96,6 +96,9 @@ export function buildSourceReconciliationRenderState({
     canonical_variance_pct: canonicalVariancePct,
     variance_mismatch: varianceMismatch,
     has_canonical_values: hasCanonicalValues,
+    source_selection: state?.source_selection || null,
+    rr_annual_in_place_source: state?.rr_annual_in_place_source || null,
+    t12_gpr_source: state?.t12_gpr_source || null,
   };
 }
 
@@ -1121,35 +1124,55 @@ function normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa =
   };
 }
 
-export function buildSourceReconciliationState({
+function resolveCanonicalRentRollAnnualInPlace({
   computedRentRoll = null,
   rentRollPayload = null,
-  t12Payload = null,
-  sourceReportCoverageQa = null,
-  artifacts = [],
 } = {}) {
-  const resolvedInventory = latestArtifactInventory(sourceReportCoverageQa, artifacts);
-  const rrAnnualCandidates = [
-    computedRentRoll?.total_in_place_annual,
-    computedRentRoll?.annual_in_place_rent,
-    computedRentRoll?.total_annual_in_place,
-    rentRollPayload?.total_in_place_annual,
-    rentRollPayload?.totals?.in_place_rent_annual,
-    rentRollPayload?.totals?.current_rent_annual,
-    rentRollPayload?.totals?.in_place_rent_monthly,
-    rentRollPayload?.totals?.current_rent_monthly,
+  const rentRollTotals = rentRollPayload && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
+  const trustedSummaryTotals = Boolean(
+    rentRollTotals?.summary_row_detected === true ||
+    rentRollPayload?.summary_row_detected === true ||
+    computedRentRoll?.summary_row_detected === true
+  );
+  const summaryCandidates = [
+    { value: rentRollTotals?.in_place_rent_annual, source_path: "rentRollPayload.totals.in_place_rent_annual" },
+    { value: rentRollTotals?.current_rent_annual, source_path: "rentRollPayload.totals.current_rent_annual" },
+    { value: rentRollPayload?.total_in_place_annual, source_path: "rentRollPayload.total_in_place_annual" },
+    { value: rentRollPayload?.annual_in_place_rent, source_path: "rentRollPayload.annual_in_place_rent" },
+    { value: computedRentRoll?.total_in_place_annual, source_path: "computedRentRoll.total_in_place_annual" },
+    { value: computedRentRoll?.annual_in_place_rent, source_path: "computedRentRoll.annual_in_place_rent" },
+    { value: computedRentRoll?.total_annual_in_place, source_path: "computedRentRoll.total_annual_in_place" },
   ];
-  let rrAnnual = rrAnnualCandidates.map(coerceNumber).find((value) => Number.isFinite(value) && value > 0) || null;
-  if (Number.isFinite(rrAnnual) && rrAnnual > 0 && rrAnnual < 1000) {
-    const monthlyCandidates = [
-      rentRollPayload?.totals?.in_place_rent_monthly,
-      rentRollPayload?.totals?.current_rent_monthly,
-    ].map(coerceNumber).filter((value) => Number.isFinite(value) && value > 0);
-    if (monthlyCandidates.length > 0) {
-      rrAnnual = monthlyCandidates[0] * 12;
+  const fallbackCandidates = [
+    { value: computedRentRoll?.total_in_place_annual, source_path: "computedRentRoll.total_in_place_annual" },
+    { value: computedRentRoll?.annual_in_place_rent, source_path: "computedRentRoll.annual_in_place_rent" },
+    { value: computedRentRoll?.total_annual_in_place, source_path: "computedRentRoll.total_annual_in_place" },
+    { value: rentRollPayload?.total_in_place_annual, source_path: "rentRollPayload.total_in_place_annual" },
+    { value: rentRollTotals?.in_place_rent_annual, source_path: "rentRollPayload.totals.in_place_rent_annual" },
+    { value: rentRollTotals?.current_rent_annual, source_path: "rentRollPayload.totals.current_rent_annual" },
+    { value: rentRollPayload?.annual_in_place_rent, source_path: "rentRollPayload.annual_in_place_rent" },
+  ];
+  const chosenCandidates = trustedSummaryTotals ? [...summaryCandidates, ...fallbackCandidates] : fallbackCandidates;
+  let selectedValue = null;
+  let selectedSourcePath = null;
+  for (const candidate of chosenCandidates) {
+    const value = coerceNumber(candidate?.value);
+    if (Number.isFinite(value) && value > 0) {
+      selectedValue = value;
+      selectedSourcePath = candidate?.source_path || null;
+      break;
     }
   }
-  if (!Number.isFinite(rrAnnual)) {
+  if (Number.isFinite(selectedValue) && selectedValue > 0 && selectedValue < 1000) {
+    const monthlyCandidate = trustedSummaryTotals
+      ? coerceNumber(rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly)
+      : coerceNumber(rentRollPayload?.totals?.in_place_rent_monthly ?? rentRollPayload?.totals?.current_rent_monthly);
+    if (Number.isFinite(monthlyCandidate) && monthlyCandidate > 0) {
+      selectedValue = monthlyCandidate * 12;
+      selectedSourcePath = selectedSourcePath ? `${selectedSourcePath} * 12` : "monthly_x_12";
+    }
+  }
+  if (!Number.isFinite(selectedValue)) {
     const rowSources = [];
     if (Array.isArray(computedRentRoll?.units)) rowSources.push(...computedRentRoll.units);
     if (Array.isArray(rentRollPayload?.units)) rowSources.push(...rentRollPayload.units);
@@ -1159,15 +1182,53 @@ export function buildSourceReconciliationState({
         const rent = coerceNumber(row?.in_place_rent ?? row?.current_rent ?? row?.rent);
         return Number.isFinite(rent) && rent > 0 ? sum + (rent * 12) : sum;
       }, 0);
-      rrAnnual = Number.isFinite(rowAnnual) && rowAnnual > 0 ? rowAnnual : null;
+      if (Number.isFinite(rowAnnual) && rowAnnual > 0) {
+        selectedValue = rowAnnual;
+        selectedSourcePath = "row_derived_units.in_place_rent";
+      }
     }
   }
-  const gpr = coerceNumber(
-    t12Payload?.gross_potential_rent ??
-    t12Payload?.gross_scheduled_rent ??
-    t12Payload?.gross_income ??
-    t12Payload?.total_income
-  );
+  return {
+    value: Number.isFinite(selectedValue) && selectedValue > 0 ? selectedValue : null,
+    source_path: selectedSourcePath,
+    trusted_summary_totals: trustedSummaryTotals,
+  };
+}
+
+function resolveCanonicalT12GprSource(t12Payload = null) {
+  const candidates = [
+    { value: t12Payload?.gross_potential_rent, source_path: "t12Payload.gross_potential_rent" },
+    { value: t12Payload?.gross_scheduled_rent, source_path: "t12Payload.gross_scheduled_rent" },
+    { value: t12Payload?.gross_income, source_path: "t12Payload.gross_income" },
+    { value: t12Payload?.total_income, source_path: "t12Payload.total_income" },
+  ];
+  for (const candidate of candidates) {
+    const value = coerceNumber(candidate?.value);
+    if (Number.isFinite(value) && value > 0) {
+      return {
+        value,
+        source_path: candidate?.source_path || null,
+      };
+    }
+  }
+  return {
+    value: null,
+    source_path: null,
+  };
+}
+
+export function buildSourceReconciliationState({
+  computedRentRoll = null,
+  rentRollPayload = null,
+  t12Payload = null,
+  sourceReportCoverageQa = null,
+  artifacts = [],
+} = {}) {
+  const resolvedInventory = latestArtifactInventory(sourceReportCoverageQa, artifacts);
+  const rrSelection = resolveCanonicalRentRollAnnualInPlace({ computedRentRoll, rentRollPayload });
+  const gprSelection = resolveCanonicalT12GprSource(t12Payload);
+  const rrAnnual = rrSelection.value;
+  const gpr = gprSelection.value;
   const state = normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa);
   const publishabilityBucket =
     state.status === "parser_suspected"
@@ -1195,6 +1256,19 @@ export function buildSourceReconciliationState({
         ? sourceReportCoverageQa.rendered_text_signals
         : [],
     },
+    source_selection: {
+      rr_annual_in_place: {
+        source_path: rrSelection.source_path,
+        trusted_summary_totals: rrSelection.trusted_summary_totals,
+        value: state.rr_annual_in_place,
+      },
+      t12_gpr: {
+        source_path: gprSelection.source_path,
+        value: state.t12_gpr,
+      },
+    },
+    rr_annual_in_place_source: rrSelection.source_path,
+    t12_gpr_source: gprSelection.source_path,
     source_reconciliation_disclosure:
       state.status === "source_reconciliation_required" || state.status === "parser_suspected"
         ? "InvestorIQ has not reconciled this variance and does not infer the cause."
