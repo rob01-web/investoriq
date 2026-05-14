@@ -9,6 +9,7 @@ const {
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationRenderState,
 } = await import("../../api/_lib/report-surface-contracts.js");
+const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
 
@@ -304,9 +305,26 @@ const finalHtmlGuardResult = generatorTest.applyFinalSourceReconciliationRenderG
   sourceReconciliationFixture
 );
 assert.equal(finalHtmlGuardResult.replaced_or_suppressed, true);
+assert.equal(finalHtmlGuardResult.stale_minus_48_count_before > 0, true);
+assert.equal(finalHtmlGuardResult.stale_minus_48_count_after, 0);
+assert.equal(finalHtmlGuardResult.matched_snippets_before.some((entry) => /-48\.0%/.test(entry)), true);
+assert.equal(finalHtmlGuardResult.matched_snippets_after.some((entry) => /-48\.0%/.test(entry)), false);
 assert.match(finalHtmlGuardResult.html, /Rent Roll vs T12 GPR Variance.*\+6\.1%/s);
 assert.match(finalHtmlGuardResult.html, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
 assert.equal(finalHtmlGuardResult.html.includes("-48.0%"), false);
+assert.equal(
+  buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: [],
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      source_reconciliation_state: sourceReconciliationFixture,
+    },
+    html: finalHtmlGuardResult.html,
+  }).violations.some((v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"),
+  false
+);
 
 const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {

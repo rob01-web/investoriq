@@ -2180,12 +2180,16 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
   const disclosure =
     renderState?.source_reconciliation_disclosure ||
     "InvestorIQ has not reconciled this variance and does not infer the cause.";
-  const matchedSnippets = Array.from(
-    inputHtml.matchAll(
-      /(?:Rent Roll vs T12 GPR Variance|Rent roll annualized rent is|Source reconciliation variance of)[^<\n]{0,160}/gi
-    ),
-    (match) => match[0]
-  ).slice(0, 10);
+  const staleVarianceRegex = /-48\.0%/g;
+  const snippetPatterns = [
+    /Rent Roll vs T12 GPR Variance[^<\n]{0,160}/gi,
+    /Rent roll annualized rent is[^<\n]{0,220}/gi,
+    /Source reconciliation variance of[^<\n]{0,220}/gi,
+  ];
+  const extractSnippets = (text) =>
+    snippetPatterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])).slice(0, 10);
+  const matchedSnippetsBefore = extractSnippets(inputHtml);
+  const staleMinus48CountBefore = (inputHtml.match(staleVarianceRegex) || []).length;
 
   let outputHtml = inputHtml;
   const normalizeOrRemove = (pattern, replacement) => {
@@ -2198,8 +2202,16 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
       `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${escapeHtml(canonicalDisplay)}</td></tr>`
     );
     normalizeOrRemove(
+      /Rent Roll vs T12 GPR Variance\s*[+\-]?\d+(?:\.\d+)?%/gi,
+      `Rent Roll vs T12 GPR Variance ${escapeHtml(canonicalDisplay)}`
+    );
+    normalizeOrRemove(
       /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
       `Rent roll annualized rent is ${escapeHtml(canonicalDisplay)} vs T12 GPR. ${escapeHtml(disclosure)}`
+    );
+    normalizeOrRemove(
+      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR/gi,
+      `Rent roll annualized rent is ${escapeHtml(canonicalDisplay)} vs T12 GPR`
     );
     normalizeOrRemove(
       /<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi,
@@ -2211,30 +2223,44 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
     );
   } else {
     normalizeOrRemove(/<tr><td>Rent Roll vs T12 GPR Variance<\/td><td>[^<]*<\/td><\/tr>/gi, "");
+    normalizeOrRemove(/Rent Roll vs T12 GPR Variance\s*[+\-]?\d+(?:\.\d+)?%/gi, "");
     normalizeOrRemove(
       /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
       ""
     );
+    normalizeOrRemove(/Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR/gi, "");
     normalizeOrRemove(/<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi, "");
+    normalizeOrRemove(
+      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
+      ""
+    );
     normalizeOrRemove(
       /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
       ""
     );
   }
 
+  const matchedSnippetsAfter = extractSnippets(outputHtml);
+  const staleMinus48CountAfter = (outputHtml.match(staleVarianceRegex) || []).length;
   const changed = outputHtml !== inputHtml;
   if (changed) {
     console.warn("[investoriq] source_reconciliation_final_guard", {
       canonical_display: canonicalDisplay,
       renderable: Boolean(renderState?.renderable),
-      matched_snippets: matchedSnippets,
+      matched_snippets_before: matchedSnippetsBefore,
+      matched_snippets_after: matchedSnippetsAfter,
+      stale_minus_48_count_before: staleMinus48CountBefore,
+      stale_minus_48_count_after: staleMinus48CountAfter,
       replaced_or_suppressed: true,
     });
   }
   return {
     html: outputHtml,
     render_state: renderState,
-    matched_snippets: matchedSnippets,
+    matched_snippets_before: matchedSnippetsBefore,
+    matched_snippets_after: matchedSnippetsAfter,
+    stale_minus_48_count_before: staleMinus48CountBefore,
+    stale_minus_48_count_after: staleMinus48CountAfter,
     replaced_or_suppressed: changed,
   };
 }
@@ -6573,19 +6599,88 @@ if (!hasSectionTwelve) {
 }
 let pdfResponse;
 // Final customer-facing HTML surface used for both QA and DocRaptor.
-let docHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
+const buildMarkerValue =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_GIT_COMMIT_REF ||
+  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+  process.env.GIT_COMMIT ||
+  null;
+const runtimeMarkerTimestamp = new Date().toISOString().replace(/:/g, "-");
+if (jobId) {
+  try {
+    await supabase.from("analysis_artifacts").insert([{
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "worker_event",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/generate_client_report_runtime_marker/${runtimeMarkerTimestamp}.json`,
+      payload: {
+        event: "generate_client_report_runtime_marker",
+        marker_version: "source-reconciliation-final-guard-v3",
+        build_marker: buildMarkerValue || "source-reconciliation-final-guard-v3",
+        git_commit_sha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || null,
+        deployment_id: process.env.VERCEL_DEPLOYMENT_ID || null,
+        report_type: reportType,
+        job_id: jobId || null,
+        timestamp: new Date().toISOString(),
+      },
+    }]);
+  } catch (err) {
+    console.error("Failed to write generate_client_report_runtime_marker artifact:", err?.message || err);
+  }
+}
+let qaHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
+const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
-  docHtml,
+  qaHtmlBeforeFinalSourceReconciliationGuard,
   sourceReconciliationState
 );
-docHtml = finalSourceReconciliationGuard.html;
+qaHtml = finalSourceReconciliationGuard.html;
+const finalSourceReconciliationGuardDiagnostic = {
+  event: "source_reconciliation_final_guard_diagnostic",
+  guard_version: "source-reconciliation-final-guard-v3",
+  guard_ran: true,
+  html_length_before: String(qaHtmlBeforeFinalSourceReconciliationGuard || "").length,
+  html_length_after: String(finalSourceReconciliationGuard.html || "").length,
+  canonical_variance_display: finalSourceReconciliationGuard.render_state?.variance_display || null,
+  canonical_variance_pct: finalSourceReconciliationGuard.render_state?.variance_pct ?? null,
+  stale_minus_48_count_before: finalSourceReconciliationGuard.stale_minus_48_count_before || 0,
+  stale_minus_48_count_after: finalSourceReconciliationGuard.stale_minus_48_count_after || 0,
+  rent_roll_vs_t12_snippet_before: finalSourceReconciliationGuard.matched_snippets_before || [],
+  rent_roll_vs_t12_snippet_after: finalSourceReconciliationGuard.matched_snippets_after || [],
+  report_contract_qa_receives_guarded_html: true,
+  timestamp: new Date().toISOString(),
+};
+if (jobId) {
+  try {
+    await supabase.from("analysis_artifacts").insert([{
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "worker_event",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/source_reconciliation_final_guard_diagnostic/${runtimeMarkerTimestamp}.json`,
+      payload: finalSourceReconciliationGuardDiagnostic,
+    }]);
+  } catch (err) {
+    console.error("Failed to write source_reconciliation_final_guard_diagnostic artifact:", err?.message || err);
+  }
+}
+if (finalSourceReconciliationGuard.render_state?.renderable && finalSourceReconciliationGuard.stale_minus_48_count_after > 0) {
+  console.error("source_reconciliation_final_guard_postcheck_failed", finalSourceReconciliationGuardDiagnostic);
+  const guardFailure = new Error("Final HTML reconciliation guard failed to remove stale variance text");
+  guardFailure.code = "REPORT_GENERATION_FAILED";
+  guardFailure.context = finalSourceReconciliationGuardDiagnostic;
+  throw guardFailure;
+}
 if (finalSourceReconciliationGuard.replaced_or_suppressed) {
   console.warn("[investoriq] final reconciliation guard applied", {
     canonical_display: finalSourceReconciliationGuard.render_state?.variance_display || null,
-    matched_snippets: finalSourceReconciliationGuard.matched_snippets,
+    matched_snippets_before: finalSourceReconciliationGuard.matched_snippets_before,
+    matched_snippets_after: finalSourceReconciliationGuard.matched_snippets_after,
     renderable: Boolean(finalSourceReconciliationGuard.render_state?.renderable),
   });
 }
+let docHtml = qaHtml;
 let sourceCoverageQaResult = null;
 let renderedQaResult = null;
 let renderedQaStatus = "not_run";
@@ -6636,7 +6731,7 @@ try {
     propertyName: property_name || jobPropertyName || "Unknown",
     reportType,
     reportTier,
-    html: docHtml,
+    html: qaHtml,
     uploadedFiles: coverageFiles,
     artifacts: coverageArtifacts,
   });
@@ -6677,7 +6772,7 @@ if (!renderedQaEnabled) {
           reason: "QA_REVIEW_ENABLED=false",
           report_type: reportType,
           report_tier: reportTier,
-          html_length: docHtml.length,
+          html_length: qaHtml.length,
           timestamp: new Date().toISOString(),
         },
       },
@@ -6689,7 +6784,7 @@ if (!renderedQaEnabled) {
 try {
   const renderedQaStartedAt = Date.now();
   const renderedQa = await runRenderedReportQaAdvisory({
-    html: docHtml,
+    html: qaHtml,
     context: {
       property_name: property_name || jobPropertyName || "Unknown",
       report_type: reportType,
@@ -6724,7 +6819,7 @@ try {
         timeout_ms: renderedQa.timeout_ms,
         report_type: reportType,
         report_tier: reportTier,
-        html_length: docHtml.length,
+        html_length: qaHtml.length,
         elapsed_ms: Date.now() - renderedQaStartedAt,
         timestamp: new Date().toISOString(),
       },
@@ -6753,7 +6848,7 @@ try {
           error_code: err?.code || null,
           report_type: reportType,
           report_tier: reportTier,
-          html_length: docHtml.length,
+          html_length: qaHtml.length,
           timestamp: new Date().toISOString(),
         },
       },
@@ -6766,7 +6861,7 @@ try {
 try {
   const sourcePackageQaStartedAt = Date.now();
   const sourcePackageQa = await runSourcePackageQaAdvisory({
-    html: docHtml,
+    html: qaHtml,
     uploadedFiles: sourcePackageQaFiles,
     artifacts: sourcePackageQaArtifacts,
     sourceReportCoverageQa: sourceCoverageQaResult,
@@ -6856,7 +6951,7 @@ try {
 try {
   const qaManagerStartedAt = Date.now();
   const qaManagerReview = await runQaManagerReview({
-    html: docHtml,
+    html: qaHtml,
     renderedReportQa: renderedQaResult,
     sourcePackageQa: sourcePackageQaResult,
     sourceReportCoverageQa: sourceCoverageQaResult,
@@ -6922,7 +7017,7 @@ try {
     propertyName: property_name || jobPropertyName || "Unknown",
     reportType,
     reportTier,
-    html: docHtml,
+    html: qaHtml,
     artifacts: sourcePackageQaArtifacts,
     sourceReportCoverageQa: sourceCoverageQaResult,
     reportQaFlags,
@@ -7046,7 +7141,7 @@ try {
     sourcePackageQa: sourcePackageQaResult,
     qaManagerReview: qaManagerReviewResult,
     sourceReportCoverageQa: sourceCoverageQaResult,
-    html: docHtml,
+    html: qaHtml,
   });
   qaDirectorReviewResult = qaDirectorReview;
   const directorTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -7139,7 +7234,31 @@ if (docraptorMode === "production" && !allowProductionPdf) {
   throw new Error("PRODUCTION_PDF_DISABLED");
 }
 try {
-  docHtml = sanitizeTypography(docHtml);
+  docHtml = sanitizeTypography(qaHtml);
+  const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
+    docHtml,
+    sourceReconciliationState
+  );
+  docHtml = docFinalSourceReconciliationGuard.html;
+  if (docFinalSourceReconciliationGuard.render_state?.renderable && docFinalSourceReconciliationGuard.stale_minus_48_count_after > 0) {
+    console.error("source_reconciliation_final_guard_postcheck_failed_docraptor", {
+      canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
+      stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
+      stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
+      matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
+      matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
+    });
+    const guardFailure = new Error("Final DocRaptor HTML reconciliation guard failed to remove stale variance text");
+    guardFailure.code = "REPORT_GENERATION_FAILED";
+    guardFailure.context = {
+      canonical_variance_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
+      stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
+      stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
+      matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
+      matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
+    };
+    throw guardFailure;
+  }
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",
     {

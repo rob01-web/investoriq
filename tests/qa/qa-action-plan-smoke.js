@@ -1129,6 +1129,65 @@ const adminReviewSufficiencyGate = buildDeliveryGateDecision({
 });
 assert.equal(adminReviewSufficiencyGate.delivery_gate_status, "admin_review_required");
 
+const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    source_reconciliation_state: {
+      publishability_bucket: "disclose_only_publishable",
+      customer_delivery_impact: "disclose_only",
+      public_outreach_impact: "block_until_review",
+      variance_pct: 0.06078702702702703,
+    },
+  },
+  reportContractQa: {
+    contract_status: "fail",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+        severity: "high",
+        message: "Rendered Rent Roll vs T12 GPR variance disagrees with canonical source reconciliation state.",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+        evidence: {
+          canonical_variance_pct: 0.06078702702702703,
+          rendered_values: [{ label: "Rent Roll vs T12 GPR Variance", value: -48.0 }],
+        },
+      },
+    ],
+  },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "warn",
+      deterministic_flags: [],
+      source_reconciliation_state: {
+        publishability_bucket: "disclose_only_publishable",
+        customer_delivery_impact: "disclose_only",
+        public_outreach_impact: "block_until_review",
+        variance_pct: 0.06078702702702703,
+      },
+    },
+    reportContractQa: {
+      contract_status: "fail",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+          severity: "high",
+          message: "Rendered Rent Roll vs T12 GPR variance disagrees with canonical source reconciliation state.",
+          blocks_customer_delivery: true,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+  }),
+});
+assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "admin_review_required");
+assert.match(renderedReconciliationMismatchGate.publish_decision_reason, /^admin_review_required:/i);
+
 const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
     qa_status: "warn",

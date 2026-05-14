@@ -1019,13 +1019,17 @@ function buildPublishEligibilitySummary({
     !Boolean(reportContractQa?.customer_delivery_ready === false) &&
     !Boolean(qaActionPlan?.customer_delivery_ready === false)
   );
+  const adminReviewBlockingAction =
+    reconciliationViolation ||
+    customerDeliveryBlockerAction ||
+    (managerContradictionBlocksCustomer ? managerContradictionAction : null);
 
   const publishDecisionReason = customerPublishEligible
     ? "customer_publish_eligible"
+    : adminReviewBlockingAction || deliveryGateStatus === "admin_review_required"
+    ? `admin_review_required:${reasonCode || adminReviewBlockingAction?.code || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
     : sourceNeedsDocs
     ? `user_needs_documents:${reasonCode || customerPublishBlockers[0] || "SOURCE_DOCUMENT_LIMITATION"}`
-    : deliveryGateStatus === "admin_review_required"
-    ? `admin_review_required:${reasonCode || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
     : customerPublishBlockers.length > 0
     ? `customer_blocked:${customerPublishBlockers[0]}`
     : publicSampleBlockers.length > 0 || highValueOutreachBlockers.length > 0
@@ -1165,6 +1169,10 @@ export function buildDeliveryGateDecision({
   const sourceNeedsReview =
     coreInputBucket === "admin_review_required" ||
     coreInputBucket === "system_contract_failure";
+  const adminReviewBlockingAction =
+    reconciliationViolation ||
+    customerDeliveryBlockerAction ||
+    (managerContradictionBlocksCustomer ? managerContradictionAction : null);
   if (sourceNeedsDocs && !customerDeliveryBlockerAction && !reconciliationViolation) {
     const gateReason =
       sourceDocumentAction?.code ||
