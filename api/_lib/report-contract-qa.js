@@ -179,6 +179,15 @@ function firstTableAfterHeading(html, headingPattern) {
   return tableMatch[0];
 }
 
+function tableRowsFromHtml(tableHtml) {
+  const raw = String(tableHtml || "");
+  const rowMatches = raw.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+  return rowMatches.map((rowHtml) => ({
+    html: rowHtml,
+    text: stripHtml(rowHtml).replace(/\s+/g, " ").trim(),
+  }));
+}
+
 function hasMeaningfulTableBodyRows(tableHtml) {
   const raw = String(tableHtml || "");
   if (!raw) return false;
@@ -347,15 +356,18 @@ export function buildReportContractQa({
       /Current Debt DSCR[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)/i.test(text) ||
       /Current Debt DSCR[\s\S]{0,180}(?:current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[\s\S]{0,180}(?:Not assessed|NOT ASSESSED)/i.test(text)
     );
+  const dealScorecardTable = firstTableAfterHeading(rawHtml, /Deal Scorecard/i);
+  const dealScorecardRows = tableRowsFromHtml(dealScorecardTable);
+  const dealScorecardDscrRows = dealScorecardRows.filter((row) =>
+    /\b(?:Current Debt DSCR|DSCR \(Current Debt\))\b/i.test(row.text)
+  );
   const hasDealScorecardDscrPlaceholder =
     !(
       safeCurrentDebtLimitationState ||
       currentDebtNotAssessedPhrase
     ) &&
-    (
-      /Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
-      /Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text) ||
-      /DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i.test(text)
+    dealScorecardDscrRows.some((row) =>
+      /(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\]|Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|0\/10)/i.test(row.text)
     );
   const hasMetricNaPlaceholder =
     /\b(?:DSCR|NOI|IRR|Cap Rate|Occupancy|Rent|Score|Value|Return|LTV|ROI|payback)\b[\s\S]{0,60}\bN\/A\b/i.test(text);
@@ -392,7 +404,12 @@ export function buildReportContractQa({
       code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
       severity: "high",
       message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
-      evidence: { excerpt: firstPatternExcerpt(text, [/Deal Scorecard[\s\S]{0,600}?Current Debt DSCR[\s\S]{0,120}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\])/i]) || leakProbeExcerpt },
+      evidence: {
+        excerpt:
+          dealScorecardDscrRows[0]?.html ||
+          firstPatternExcerpt(dealScorecardTable, [/\b(?:Current Debt DSCR|DSCR \(Current Debt\))\b[\s\S]{0,140}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\]|Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|0\/10)/i]) ||
+          leakProbeExcerpt,
+      },
     });
   } else if (/\bDATA NOT AVAILABLE\b/i.test(text)) {
     addRenderedLeakViolation(violations, {

@@ -671,7 +671,9 @@ const managerContradictionGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: managerContradictionPlan,
 });
-assert.equal(managerContradictionGate.delivery_gate_status, "user_needs_documents");
+assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
+assert.equal(managerContradictionGate.customer_delivery_ready, true);
+assert.equal(managerContradictionGate.public_sample_ready, false);
 
 const sourceTotalsVerificationAction = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -722,6 +724,396 @@ assert.equal(reconciliationAction.action_type, "source_document_limitation");
 assert.equal(reconciliationAction.owner_area, "source_reconciliation");
 assert.equal(reconciliationAction.blocks_customer_delivery, false);
 assert.equal(reconciliationAction.blocks_public_sample, true);
+assert.equal(reconciliationAction.blocks_high_value_outreach, true);
+assert.equal(
+  buildDeliveryGateDecision({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+          severity: "medium",
+          message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
+          evidence: {
+            source_reconciliation_state: reconciliationState,
+            rendered_text_signals: [],
+          },
+          routing: "public_sample_blocker",
+        },
+      ],
+      source_reconciliation_state: reconciliationState,
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+    qaActionPlan: buildQaActionPlan({
+      sourceReportCoverageQa: {
+        qa_status: "pass",
+        deterministic_flags: [
+          {
+            code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+            severity: "medium",
+            message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
+            evidence: {
+              source_reconciliation_state: reconciliationState,
+              rendered_text_signals: [],
+            },
+            routing: "public_sample_blocker",
+          },
+        ],
+        source_reconciliation_state: reconciliationState,
+      },
+      reportContractQa: { contract_status: "pass", violations: [] },
+    }),
+  }).delivery_gate_status,
+  "deliverable"
+);
+
+const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "SOURCE_REVIEW_REQUIRED_BUT_DISCLOSE_ONLY",
+        severity: "medium",
+        message: "Disclosure only review required.",
+        evidence: {
+          customer_delivery_impact: "disclose_only",
+        },
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "SOURCE_REVIEW_REQUIRED_BUT_DISCLOSE_ONLY",
+          severity: "medium",
+          message: "Disclosure only review required.",
+          evidence: {
+            customer_delivery_impact: "disclose_only",
+          },
+          routing: "public_sample_blocker",
+          blocks_customer_delivery: false,
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(discloseOnlyKeywordFlagGate.delivery_gate_status, "deliverable");
+assert.equal(discloseOnlyKeywordFlagGate.public_sample_ready, false);
+
+const publicOnlyKeywordFlagGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "PUBLIC_SAMPLE_MISSING_CONTEXT",
+        severity: "medium",
+        message: "Public sample review only.",
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "PUBLIC_SAMPLE_MISSING_CONTEXT",
+          severity: "medium",
+          message: "Public sample review only.",
+          routing: "public_sample_blocker",
+          blocks_customer_delivery: false,
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(publicOnlyKeywordFlagGate.delivery_gate_status, "deliverable");
+assert.equal(publicOnlyKeywordFlagGate.public_sample_ready, false);
+
+const explicitCustomerBlockingGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "MISSING_REQUIRED_T12",
+        severity: "high",
+        message: "T12 source is missing.",
+        blocks_customer_delivery: true,
+        evidence: {
+          customer_delivery_impact: "block",
+        },
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "MISSING_REQUIRED_T12",
+          severity: "high",
+          message: "T12 source is missing.",
+          blocks_customer_delivery: true,
+          evidence: {
+            customer_delivery_impact: "block",
+          },
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(explicitCustomerBlockingGate.delivery_gate_status, "user_needs_documents");
+
+const uppercaseImpactGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "IMPACT_CASE_UPPER",
+        severity: "medium",
+        message: "Uppercase impact variant.",
+        evidence: {
+          customer_delivery_impact: "BLOCK",
+        },
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "IMPACT_CASE_UPPER",
+          severity: "medium",
+          message: "Uppercase impact variant.",
+          evidence: {
+            customer_delivery_impact: "BLOCK",
+          },
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(uppercaseImpactGate.delivery_gate_status, "user_needs_documents");
+
+const lowercaseImpactGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "IMPACT_CASE_LOWER",
+        severity: "medium",
+        message: "Lowercase blocked variant.",
+        evidence: {
+          customer_delivery_impact: "blocked",
+        },
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "IMPACT_CASE_LOWER",
+          severity: "medium",
+          message: "Lowercase blocked variant.",
+          evidence: {
+            customer_delivery_impact: "blocked",
+          },
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(lowercaseImpactGate.delivery_gate_status, "user_needs_documents");
+
+const nestedImpactGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "IMPACT_CASE_NESTED",
+        severity: "medium",
+        message: "Nested impact variant.",
+        evidence: {
+          source_reconciliation_state: {
+            customer_delivery_impact: "customer_delivery_blocked",
+          },
+        },
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "IMPACT_CASE_NESTED",
+          severity: "medium",
+          message: "Nested impact variant.",
+          evidence: {
+            source_reconciliation_state: {
+              customer_delivery_impact: "customer_delivery_blocked",
+            },
+          },
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(nestedImpactGate.delivery_gate_status, "user_needs_documents");
+
+const discloseOnlyImpactGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "SOURCE_REVIEW_REQUIRED_BUT_DISCLOSE_ONLY",
+        severity: "medium",
+        message: "Disclosure-only review required.",
+        evidence: {
+          customer_delivery_impact: "disclose_only",
+        },
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "SOURCE_REVIEW_REQUIRED_BUT_DISCLOSE_ONLY",
+          severity: "medium",
+          message: "Disclosure-only review required.",
+          evidence: {
+            customer_delivery_impact: "disclose_only",
+          },
+          blocks_customer_delivery: false,
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(discloseOnlyImpactGate.delivery_gate_status, "deliverable");
+
+const reviewOnlyImpactGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [
+      {
+        code: "PUBLIC_SAMPLE_MISSING_CONTEXT",
+        severity: "medium",
+        message: "Review-only variant.",
+        evidence: {
+          customer_delivery_impact: "review_only",
+        },
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: false,
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      deterministic_flags: [
+        {
+          code: "PUBLIC_SAMPLE_MISSING_CONTEXT",
+          severity: "medium",
+          message: "Review-only variant.",
+          evidence: {
+            customer_delivery_impact: "review_only",
+          },
+          routing: "public_sample_blocker",
+          blocks_customer_delivery: false,
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(reviewOnlyImpactGate.delivery_gate_status, "deliverable");
+
+const needsDocumentsStatusGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "needs_documents",
+    deterministic_flags: [],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      qa_status: "needs_documents",
+      deterministic_flags: [],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.equal(needsDocumentsStatusGate.delivery_gate_status, "user_needs_documents");
+
+const dealScorecardViolationPlan = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+        severity: "high",
+        message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+const dealScorecardViolationAction = dealScorecardViolationPlan.prioritized_actions.find(
+  (action) => action.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"
+);
+assert.equal(dealScorecardViolationAction.blocks_customer_delivery, true);
+assert.equal(dealScorecardViolationAction.action_type, "render_gating_fix_required");
+assert.equal(
+  buildDeliveryGateDecision({
+    sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+          severity: "high",
+          message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+          blocks_customer_delivery: true,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+    qaActionPlan: dealScorecardViolationPlan,
+  }).customer_delivery_ready,
+  false
+);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },

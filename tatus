@@ -1,0 +1,6 @@
+warning: in the working copy of 'api/_lib/qa-action-plan.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/_lib/report-contract-qa.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/generate-client-report.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/qa/generate-client-report-rent-roll-smoke.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/qa/qa-action-plan-smoke.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/qa/report-contract-qa-smoke.js', LF will be replaced by CRLF the next time Git touches it

@@ -507,6 +507,49 @@ assert.equal(
   false
 );
 
+const currentDebtDscrScorecardComputed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<h2>Deal Scorecard</h2>",
+    "<table>",
+    "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
+    "<tr><td>DSCR (Current Debt)</td><td>7.10x</td><td>1.25-1.35x</td><td>7/10</td></tr>",
+    "</table>",
+    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  currentDebtDscrScorecardComputed.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"),
+  false
+);
+assert.equal(
+  currentDebtDscrScorecardComputed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  false
+);
+
+const currentDebtDscrScorecardFalsePositiveGuard = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<h2>Executive Summary</h2>",
+    "<p>Current Debt DSCR / Not assessed / Current debt balance not provided / 0/10</p>",
+    "<h2>Deal Scorecard</h2>",
+    "<table>",
+    "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
+    "<tr><td>DSCR (Current Debt)</td><td>7.10x</td><td>1.25-1.35x</td><td>7/10</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+assert.equal(
+  currentDebtDscrScorecardFalsePositiveGuard.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"),
+  false
+);
+
 const screeningLeak = buildReportContractQa({
   reportType: "screening",
   reportTier: 1,

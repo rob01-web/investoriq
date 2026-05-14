@@ -279,6 +279,45 @@ function currentDebtNotAssessedCopy({
     t12Noi,
   });
 }
+function buildCurrentDebtScorecardEntry({
+  currentDebtState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  t12Payload = null,
+} = {}) {
+  const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+  if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+    return {
+      currentDebtCoverage,
+      hasDscrScore: true,
+      scoreRow: {
+        label: currentDebtCoverage.hasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
+        value: formatMultiple(currentDebtCoverage.dscr, 2),
+        pts: currentDebtCoverage.dscr > 1.35 ? 10 : currentDebtCoverage.dscr >= 1.25 ? 7 : 3,
+        max: 10,
+        band: currentDebtCoverage.dscr > 1.35 ? "Above 1.35x" : currentDebtCoverage.dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x",
+      },
+    };
+  }
+  const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
+    currentDebtState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    t12Noi: coerceNumber(t12Payload?.net_operating_income),
+  });
+  return {
+    currentDebtCoverage,
+    hasDscrScore: false,
+    scoreRow: {
+      label: "Current Debt DSCR",
+      value: dscrNotAssessedCopy.value,
+      pts: 0,
+      max: 10,
+      band: dscrNotAssessedCopy.band,
+    },
+    dscrNotAssessedCopy,
+  };
+}
 function isFiniteNumber(x) {
   const n = Number(x);
   return Number.isFinite(n);
@@ -5498,35 +5537,21 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
       let hasDscrScore = false;
       let computedDscrForVerdict = null;
-      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
-      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+      const currentDebtScorecardEntry = buildCurrentDebtScorecardEntry({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        t12Payload,
+      });
+      const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
+      if (currentDebtScorecardEntry.hasDscrScore) {
         computedDscrForVerdict = currentDebtCoverage.dscr;
-        const pts = currentDebtCoverage.dscr > 1.35 ? 10 : currentDebtCoverage.dscr >= 1.25 ? 7 : 3;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({
-          label: currentDebtCoverage.hasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
-          value: formatMultiple(currentDebtCoverage.dscr, 2),
-          pts,
-          max: 10,
-          band: currentDebtCoverage.dscr > 1.35 ? "Above 1.35x" : currentDebtCoverage.dscr >= 1.25 ? "1.25\u20131.35x" : "Below 1.25x",
-        });
+        totalPoints += currentDebtScorecardEntry.scoreRow.pts; maxPoints += currentDebtScorecardEntry.scoreRow.max;
+        scoreRows.push(currentDebtScorecardEntry.scoreRow);
         hasDscrScore = true;
-      }
-      if (!hasDscrScore) {
+      } else {
         totalPoints += 0; maxPoints += 10;
-        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
-          currentDebtState: currentDebtAssessmentState,
-          mortgagePayload,
-          loanTermSheetTermsPayload,
-          t12Noi: coerceNumber(t12Payload?.net_operating_income),
-        });
-        scoreRows.push({
-          label: "Current Debt DSCR",
-          value: dscrNotAssessedCopy.value,
-          pts: 0,
-          max: 10,
-          band: dscrNotAssessedCopy.band,
-        });
+        scoreRows.push(currentDebtScorecardEntry.scoreRow);
       }
       if (scoreRows.length >= 4 && maxPoints > 0) {
         const score = Math.round((totalPoints / maxPoints) * 100);
@@ -7173,6 +7198,7 @@ try {
 
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
+  buildCurrentDebtScorecardEntry,
   buildReportStoragePath,
   buildRendererCanonicalState,
   buildScreeningIncomeForensicsHtml,

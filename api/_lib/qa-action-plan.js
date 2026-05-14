@@ -706,7 +706,7 @@ function actionForReportContractViolation(violation) {
       : "Patch deterministic renderer gating so the unsupported table, section, label, or report-type content cannot render.",
     requires_code_patch: true,
     requires_regeneration: true,
-    blocks_customer_delivery: Boolean(violation?.blocks_customer_delivery) && (hardPublicOrDebug || materiallyMisleadingDebt),
+    blocks_customer_delivery: Boolean(violation?.blocks_customer_delivery) || (hardPublicOrDebug || materiallyMisleadingDebt),
     blocks_public_sample: Boolean(violation?.blocks_public_sample),
     blocks_high_value_outreach: Boolean(violation?.blocks_high_value_outreach),
     safe_to_auto_fix: false,
@@ -870,6 +870,32 @@ function isCustomerPublishBlockingViolation(violation) {
   if (!code) return false;
   if (Boolean(violation?.blocks_customer_delivery)) return true;
   return customerPublishBlockingViolationCodes.has(code);
+}
+
+function normalizeImpactValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function classifySourceFlagDeliveryImpact(flag) {
+  if (!flag) return false;
+  if (Boolean(flag?.blocks_customer_delivery)) return true;
+  if (Boolean(flag?.customer_delivery_blocker)) return true;
+  if (String(flag?.classification || "").toLowerCase() === "missing_required_source") return true;
+  const customerDeliveryImpact = normalizeImpactValue(flag?.evidence?.customer_delivery_impact);
+  const reconciliationImpact = normalizeImpactValue(flag?.evidence?.source_reconciliation_state?.customer_delivery_impact);
+  const blockingImpacts = new Set([
+    "block",
+    "blocked",
+    "customer_blocked",
+    "customer_delivery_blocked",
+    "customer_delivery_blocker",
+  ]);
+  if (blockingImpacts.has(customerDeliveryImpact)) return true;
+  if (blockingImpacts.has(reconciliationImpact)) return true;
+  return false;
 }
 
 function isRegenerationRequiredViolation(violation) {
@@ -1101,10 +1127,7 @@ export function buildDeliveryGateDecision({
   const contractViolations = Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : [];
   const deterministicFlags = Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : [];
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
-  const sourceLimitations = deterministicFlags.filter((flag) => {
-    const code = String(flag?.code || "");
-    return /missing|required|failed/i.test(code) || String(flag?.classification || "").toLowerCase() === "source_document_limitation";
-  });
+  const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
   const missingRequiredSource = sourceStatus === "needs_documents" || sourceStatus === "failed" || sourceLimitations.length > 0;
   const reconciliationViolation = contractViolations.find((violation) =>
     /RECONCILIATION_MISMATCH|CONTRADICTION/i.test(String(violation?.code || "")) ||
@@ -1129,7 +1152,7 @@ export function buildDeliveryGateDecision({
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
     Boolean(adminReviewAction || reconciliationViolation);
 
-  const sourceNeedsDocs = missingRequiredSource || Boolean(sourceDocumentAction);
+  const sourceNeedsDocs = missingRequiredSource || Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
   if (sourceNeedsDocs && !customerDeliveryBlockerAction && !reconciliationViolation) {
     const gateReason =
       sourceDocumentAction?.code ||

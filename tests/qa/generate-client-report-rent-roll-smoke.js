@@ -121,6 +121,66 @@ assert.notEqual(trueCurrentDebtCopy.value, "Not assessed");
 assert.match(trueCurrentDebtCopy.value, /^\d+\.\d{2}x$/);
 assert.match(trueCurrentDebtCopy.explanation, /Current debt DSCR computed from verified current debt balance and debt service/i);
 
+const computedScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      outstanding_balance: 1500000,
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    monthly_payment: 9000,
+    interest_rate: 0.065,
+    amort_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+});
+assert.equal(computedScorecardEntry.hasDscrScore, true);
+assert.match(computedScorecardEntry.scoreRow.label, /DSCR \(Current Debt\)|DSCR \(Computed\)/i);
+assert.match(computedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
+
+const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9250,
+      interest_rate: 0.0625,
+      amort_years: 25,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: {
+    monthly_payment: 9250,
+    interest_rate: 0.0625,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+});
+assert.equal(acquisitionOnlyScorecardEntry.hasDscrScore, false);
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.label, "Current Debt DSCR");
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not assessed");
+
 const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
     gross_potential_rent: 1087488,
