@@ -25,7 +25,7 @@ import {
   dedupeRenovationMetricRows,
   formatAssumptionAttributionLabel,
   formatCurrentDebtAssessmentCopy,
-  formatSourceReconciliationVariance,
+  buildSourceReconciliationRenderState,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
   buildSourceReconciliationState,
@@ -1767,8 +1767,11 @@ function buildScreeningIncomeForensicsHtml({
   const marketRentPremiumRatio = Number.isFinite(marketPremiumPct)
     ? marketPremiumPct / 100
     : NaN;
-  const rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
-  const rrVsGprDisplay = formatSourceReconciliationVariance(rrVsGprPct);
+  const sourceReconciliationRenderState = buildSourceReconciliationRenderState({
+    sourceReconciliationState,
+  });
+  const rrVsGprPct = sourceReconciliationRenderState?.variance_pct ?? null;
+  const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
   const bullets = [];
   if (Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration >= 0.85) {
     bullets.push(
@@ -1812,16 +1815,10 @@ function buildScreeningIncomeForensicsHtml({
       )} (observed rent gap).`
     );
   }
-  if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
-    if (rrVsGprPct >= 0) {
-      bullets.push(
-        `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
-      );
-    } else {
-      bullets.push(
-        `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
-      );
-    }
+  if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
+    bullets.push(
+      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. ${sourceReconciliationRenderState.source_reconciliation_disclosure || "InvestorIQ has not reconciled this variance and does not infer the cause."}`
+    );
   }
   const bulletsHtml = [...new Set(bullets)]
     .slice(0, 3)
@@ -2032,9 +2029,12 @@ function buildScreeningNoiStabilityHtml({
       );
     }
   }
-  let rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
-  const rrVsGprDisplay = formatSourceReconciliationVariance(rrVsGprPct);
-  if (Number.isFinite(rrVsGprPct)) {
+  const sourceReconciliationRenderState = buildSourceReconciliationRenderState({
+    sourceReconciliationState,
+  });
+  let rrVsGprPct = sourceReconciliationRenderState?.variance_pct ?? null;
+  const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
+  if (sourceReconciliationRenderState?.renderable) {
     rows.push(
       `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${rrVsGprDisplay}</td></tr>`
     );
@@ -2045,16 +2045,10 @@ function buildScreeningNoiStabilityHtml({
   const expenseRatio =
     Number.isFinite(opex) && Number.isFinite(egi) && egi > 0 ? opex / egi : null;
   const flags = [];
-  if (Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
-    if (rrVsGprPct >= 0) {
-      flags.push(
-        `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
-      );
-    } else {
-      flags.push(
-        `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.`
-      );
-    }
+  if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
+    flags.push(
+      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. ${sourceReconciliationRenderState.source_reconciliation_disclosure || "InvestorIQ has not reconciled this variance and does not infer the cause."}`
+    );
   }
   if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
     flags.push(`NOI margin is ${formatPercent1(noiMargin)} (thin margin flag).`);
@@ -2077,7 +2071,7 @@ function buildScreeningNoiStabilityHtml({
       severity: Math.max(0, expenseRatio - 0.65),
     });
   }
-  if (Number.isFinite(rrVsGprPct)) {
+  if (sourceReconciliationRenderState?.renderable) {
     stabilityDrivers.push({
       label: `Rent Roll vs T12 GPR ${rrVsGprDisplay}`,
       severity: Math.max(0, Math.abs(rrVsGprPct) - 0.05),
@@ -3779,9 +3773,12 @@ if (effectiveReportMode === "screening_v1") {
     const driver1 = pressureDrivers[0] || null;
     const driver2 = pressureDrivers[1] || null;
     const driver3 = pressureDrivers[2] || null;
-    const rrVsGprPct = sourceReconciliationState?.variance_pct ?? null;
-    const rrVsGprDisplay = formatSourceReconciliationVariance(rrVsGprPct);
-    const hasSourceReconciliationVariance = Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
+    const sourceReconciliationRenderState = buildSourceReconciliationRenderState({
+      sourceReconciliationState,
+    });
+    const rrVsGprPct = sourceReconciliationRenderState?.variance_pct ?? null;
+    const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
+    const hasSourceReconciliationVariance = sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
     let primaryPressurePoint = driver1?.label
       ? driver1.value
         ? `${driver1.label} (${driver1.value})`

@@ -63,6 +63,42 @@ export function formatSourceReconciliationVariance(variancePct, decimals = 1) {
   return `${n >= 0 ? "+" : "-"}${magnitude}%`;
 }
 
+export function buildSourceReconciliationRenderState({
+  sourceReconciliationState = null,
+  tolerancePct = 0.2,
+} = {}) {
+  const state = sourceReconciliationState && typeof sourceReconciliationState === "object"
+    ? sourceReconciliationState
+    : null;
+  const variancePct = coerceNumber(state?.variance_pct);
+  const rrAnnual = coerceNumber(state?.rr_annual_in_place);
+  const t12Gpr = coerceNumber(state?.t12_gpr);
+  const publishabilityBucket = normalizePublishabilityBucket(state?.publishability_bucket || state?.publishabilityBucket || null);
+  const disclosure = String(state?.source_reconciliation_disclosure || "").trim() || null;
+  const hasCanonicalValues = Number.isFinite(variancePct) && Number.isFinite(rrAnnual) && Number.isFinite(t12Gpr) && t12Gpr > 0;
+  const canonicalVariancePct = hasCanonicalValues ? (rrAnnual - t12Gpr) / t12Gpr : null;
+  const varianceMismatch =
+    Number.isFinite(variancePct) &&
+    Number.isFinite(canonicalVariancePct) &&
+    Math.abs(variancePct - canonicalVariancePct) > Math.max(0.002, Number(tolerancePct) / 100);
+  const renderable =
+    publishabilityBucket === "disclose_only_publishable" &&
+    hasCanonicalValues &&
+    !varianceMismatch;
+  return {
+    renderable,
+    publishability_bucket: publishabilityBucket,
+    variance_pct: renderable ? variancePct : null,
+    variance_display: renderable ? formatSourceReconciliationVariance(variancePct) : null,
+    rr_annual_in_place: renderable ? rrAnnual : null,
+    t12_gpr: renderable ? t12Gpr : null,
+    source_reconciliation_disclosure: renderable ? disclosure : null,
+    canonical_variance_pct: canonicalVariancePct,
+    variance_mismatch: varianceMismatch,
+    has_canonical_values: hasCanonicalValues,
+  };
+}
+
 function normalizePublishabilityBucket(value) {
   const normalized = normalizeText(value).replace(/[\s-]+/g, "_");
   const valid = new Set([

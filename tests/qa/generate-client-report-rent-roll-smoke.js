@@ -7,6 +7,7 @@ const { __test__: generatorTest } = await import("../../api/generate-client-repo
 const {
   buildCurrentDebtAssessmentState,
   formatCurrentDebtAssessmentCopy,
+  buildSourceReconciliationRenderState,
 } = await import("../../api/_lib/report-surface-contracts.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
@@ -240,6 +241,7 @@ assert.equal(/constrained|stressed|insufficient|shortfall/i.test(screeningDataCo
 
 const sourceReconciliationFixture = {
   status: "source_reconciliation_required",
+  publishability_bucket: "disclose_only_publishable",
   rr_annual_in_place: 1962456,
   t12_gpr: 1850000,
   variance_pct: 0.06078702702702703,
@@ -248,6 +250,50 @@ const sourceReconciliationFixture = {
   public_outreach_impact: "block_until_review",
   source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
 };
+const sourceReconciliationRenderState = buildSourceReconciliationRenderState({
+  sourceReconciliationState: sourceReconciliationFixture,
+});
+assert.equal(sourceReconciliationRenderState.renderable, true);
+assert.equal(sourceReconciliationRenderState.variance_display, "+6.1%");
+assert.equal(sourceReconciliationRenderState.source_reconciliation_disclosure, "InvestorIQ has not reconciled this variance and does not infer the cause.");
+assert.equal(sourceReconciliationRenderState.variance_pct, 0.06078702702702703);
+
+const rendererReconciliationState = generatorTest.buildRendererCanonicalState({
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+  },
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    gross_scheduled_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+});
+assert.equal(rendererReconciliationState.sourceReconciliationState?.variance_pct, 0.06078702702702703);
+assert.equal(
+  buildSourceReconciliationRenderState({
+    sourceReconciliationState: rendererReconciliationState.sourceReconciliationState,
+  }).variance_display,
+  "+6.1%"
+);
+
+const unsafeSourceReconciliationRenderState = buildSourceReconciliationRenderState({
+  sourceReconciliationState: {
+    ...sourceReconciliationFixture,
+    publishability_bucket: "disclose_only_publishable",
+    variance_pct: -0.48,
+  },
+});
+assert.equal(unsafeSourceReconciliationRenderState.renderable, false);
+assert.equal(unsafeSourceReconciliationRenderState.variance_display, null);
+assert.equal(unsafeSourceReconciliationRenderState.variance_pct, null);
+
 const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {
     gross_potential_rent: 1850000,
@@ -315,6 +361,33 @@ assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance/i);
 assert.equal(reconciliationNoiHtml.includes("+6.1%"), true);
 assert.match(reconciliationNoiHtml, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
 assert.equal(reconciliationNoiHtml.includes("-48.0%"), false);
+
+const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+    gross_scheduled_rent: 1850000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    occupancy: 0.95,
+  },
+  formatCurrency,
+  sourceReconciliationState: {
+    ...sourceReconciliationFixture,
+    publishability_bucket: "system_contract_failure",
+  },
+});
+assert.equal(suppressedReconciliationIncomeHtml.includes("Rent roll annualized rent is"), false);
+assert.equal(suppressedReconciliationIncomeHtml.includes("-48.0%"), false);
 
 const acquisitionOnlyCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
