@@ -1,6 +1,7 @@
 // api/generate-client-report.js
 import dotenv from "dotenv";
 dotenv.config();
+import crypto from "crypto";
 import { ensureSentenceIntegrity } from "../src/lib/sentenceIntegrity.js";
 import fs from "fs";
 import path from "path";
@@ -120,6 +121,59 @@ function formatDistanceKm(value) {
 function replaceAll(str, token, value) {
   if (!str || !token) return str;
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
+}
+function isValidReportStoragePath(storagePath) {
+  const normalized = typeof storagePath === "string" ? storagePath.trim() : "";
+  return normalized.length > 0 && normalized.includes("/") && normalized.toLowerCase().endsWith(".pdf");
+}
+function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
+  const userPart = String(effectiveUserId ?? "").trim();
+  const seedPart = String(reportSeed ?? "").trim();
+  if (!userPart || !seedPart) return "";
+  return `${userPart}/${seedPart}.pdf`;
+}
+function assertValidReportPublicationInsert({
+  storagePath,
+  reportType,
+  deliveryGateStatus = null,
+  holdDelivery = false,
+  context = {},
+} = {}) {
+  const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
+  if (holdDelivery || (typeof deliveryGateStatus === "string" && deliveryGateStatus !== "deliverable")) {
+    const err = new Error("Report publication blocked before storage insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath || null,
+      deliveryGateStatus: deliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
+  if (!isValidReportStoragePath(normalizedStoragePath)) {
+    const err = new Error("Missing valid report storage path before report insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath || null,
+      deliveryGateStatus: deliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
+  if (!String(reportType ?? "").trim()) {
+    const err = new Error("Missing report type before report insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath,
+      deliveryGateStatus: deliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
+  return normalizedStoragePath;
 }
 const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
@@ -7010,30 +7064,39 @@ try {
   console.error(err.response?.data?.toString());
   throw err;
 }
-        // 10. Create DB row first so we have a deterministic report_id for storage
-    const holdDelivery =
+        const holdDelivery =
       deliveryGateDecisionResult?.delivery_gate_status &&
       deliveryGateDecisionResult.delivery_gate_status !== "deliverable";
-    const { data: reportRow, error: reportCreateError } = await supabase
-      .from("reports")
-      .insert({
-  user_id: effectiveUserId,
-            property_name: property_name || "Property",
-  report_type: reportType,
-  storage_path: holdDelivery ? null : "pending",
-})
-      .select("id")
-      .single();
-    if (reportCreateError || !reportRow?.id) {
-      console.error("Report DB Create Error:", reportCreateError);
-      throw new Error("Failed to create report record");
+    const publicationSeed = jobId || crypto.randomUUID();
+    const storagePath = buildReportStoragePath({
+      effectiveUserId,
+      reportSeed: publicationSeed,
+    });
+    const publicationContext = {
+      jobId: jobId || null,
+      userId: effectiveUserId || null,
+      reportType: reportType || null,
+      deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
+      holdDelivery: Boolean(holdDelivery),
+      publicationSeed,
+    };
+    let validatedStoragePath;
+    try {
+      validatedStoragePath = assertValidReportPublicationInsert({
+        storagePath,
+        reportType,
+        deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
+        holdDelivery,
+        context: publicationContext,
+      });
+    } catch (err) {
+      console.error("Report publication invariant failed:", err?.context || publicationContext, err?.message || err);
+      throw err;
     }
-    const reportId = reportRow.id;
-    // 11. Persist PDF to Supabase Storage using required contract: {user_id}/{report_id}.pdf
-    const storagePath = `${effectiveUserId}/${reportId}.pdf`;
+    // 10. Persist PDF to Supabase Storage using required contract: {user_id}/{publicationSeed}.pdf
     const { error: uploadError } = await supabase.storage
       .from("generated_reports")
-      .upload(storagePath, pdfResponse.data, {
+      .upload(validatedStoragePath, pdfResponse.data, {
         contentType: "application/pdf",
         cacheControl: "3600",
         upsert: false,
@@ -7042,30 +7105,40 @@ try {
       console.error("Storage Upload Error:", uploadError);
       throw new Error("Failed to upload report to storage");
     }
-    // 12. Update DB row with final storage_path
-    if (!holdDelivery) {
-      const { error: reportUpdateError } = await supabase
-        .from("reports")
-        .update({ storage_path: storagePath })
-        .eq("id", reportId);
-      if (reportUpdateError) {
-        console.error("Report DB Update Error:", reportUpdateError);
-        // Do not throw. The PDF is stored and we can still return the signed URL.
+    // 11. Create DB row only after a valid upload path exists
+    const { data: reportRow, error: reportCreateError } = await supabase
+      .from("reports")
+      .insert({
+        user_id: effectiveUserId,
+        property_name: property_name || "Property",
+        report_type: reportType,
+        storage_path: validatedStoragePath,
+      })
+      .select("id")
+      .single();
+    if (reportCreateError || !reportRow?.id) {
+      console.error("Report DB Create Error:", reportCreateError, publicationContext);
+      try {
+        await supabase.storage.from("generated_reports").remove([validatedStoragePath]);
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup uploaded report after DB insert failure:", cleanupErr);
       }
+      throw new Error("Failed to create report record");
     }
-    // 13. Generate Signed URL for immediate viewing (valid for 1 hour)
+    const reportId = reportRow.id;
+    // 12. Generate Signed URL for immediate viewing (valid for 1 hour)
     let signedData = { signedUrl: null };
     if (!holdDelivery) {
       const { data: signedResult, error: signedError } = await supabase.storage
         .from("generated_reports")
-        .createSignedUrl(storagePath, 3600);
+        .createSignedUrl(validatedStoragePath, 3600);
       if (signedError) {
         console.error("Signed URL Error:", signedError);
         throw new Error("Failed to generate access link");
       }
       signedData = signedResult || signedData;
     }
-    // 14. Return JSON with the report URL and report_id
+    // 13. Return JSON with the report URL and report_id
     res.status(200).json({
       success: true,
       reportId,
@@ -7100,6 +7173,7 @@ try {
 
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
+  buildReportStoragePath,
   buildRendererCanonicalState,
   buildScreeningIncomeForensicsHtml,
   buildScreeningExpenseStructureHtml,
@@ -7108,6 +7182,8 @@ export const __test__ = {
   buildRenovationExecutionRows,
   buildRenovationExecutionCardHtml,
   buildScreeningDataCoverageSummary,
+  assertValidReportPublicationInsert,
+  isValidReportStoragePath,
   buildT12SummaryHtml,
   materiallyDifferent,
   resolveSafeAnnualRentTotal,

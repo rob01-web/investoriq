@@ -238,4 +238,68 @@ assert.match(acquisitionOnlyCoverageHtml, /Current-debt DSCR and refinance capac
 assert.equal(acquisitionOnlyCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(acquisitionOnlyCoverageHtml), false);
 
+const publishedReportStoragePath = generatorTest.buildReportStoragePath({
+  effectiveUserId: "user_123",
+  reportSeed: "report_456",
+});
+assert.equal(publishedReportStoragePath, "user_123/report_456.pdf");
+assert.equal(generatorTest.isValidReportStoragePath(publishedReportStoragePath), true);
+assert.equal(generatorTest.isValidReportStoragePath("pending"), false);
+assert.equal(generatorTest.isValidReportStoragePath(""), false);
+assert.equal(generatorTest.isValidReportStoragePath("user_123/report_456.txt"), false);
+assert.doesNotThrow(() =>
+  generatorTest.assertValidReportPublicationInsert({
+    storagePath: publishedReportStoragePath,
+    reportType: "underwriting",
+    deliveryGateStatus: "deliverable",
+    holdDelivery: false,
+    context: { jobId: "job-1" },
+  })
+);
+const assertPublicationGuardFailure = (fn, expectedMessage) => {
+  try {
+    fn();
+    assert.fail("Expected report publication guard to throw");
+  } catch (err) {
+    assert.equal(err.code, "REPORT_GENERATION_FAILED");
+    if (expectedMessage) {
+      assert.match(String(err.message || ""), expectedMessage);
+    }
+  }
+};
+
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: "",
+      reportType: "underwriting",
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
+      context: { jobId: "job-2" },
+    }),
+  /Missing valid report storage path/i
+);
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: null,
+      reportType: "underwriting",
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
+      context: { jobId: "job-3" },
+    }),
+  /Missing valid report storage path/i
+);
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: publishedReportStoragePath,
+      reportType: "underwriting",
+      deliveryGateStatus: "admin_review_required",
+      holdDelivery: true,
+      context: { jobId: "job-4" },
+    }),
+  /Report publication blocked before storage insert/i
+);
+
 console.log("generate-client-report rent-roll smoke PASS");
