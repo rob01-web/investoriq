@@ -1,5 +1,239 @@
 # InvestorIQ Master Context - May 2026
 
+# May 15, 2026 Evening Update - Post Source-Truth Audit / Partial Sample Class Patch / Public Wording Patch / Core Sufficiency Audit
+
+## Critical operational context remains locked
+- Codex usage remains limited until May 19 at 9:53am.
+- Continue Codex conservation mode:
+  - no broad tests;
+  - no smoke-test theatre;
+  - no broad repo rewrites;
+  - no live tests as discovery;
+  - one narrow investigation or patch at a time;
+  - minimum validation only on touched files.
+- If ChatGPT/Rob can reason through or patch manually, do that before spending Codex.
+- Patch standard remains class-level, not one-report duct tape.
+
+## Work completed in this chat
+
+### 1. Renovation budget card title leak fixed
+Problem:
+- `buildRenovationBudgetCardHtml()` still had a hardcoded visible card heading: `Renovation Budget Breakdown`.
+- This could leak into `budget_only_no_roi` reports even after the new renovation display modes were added.
+
+Patch completed manually / verified:
+- `buildRenovationBudgetCardHtml()` now accepts an optional final `title` parameter, defaulting to `Renovation Budget Breakdown` for backward compatibility.
+- The hardcoded card heading was replaced with escaped dynamic title output.
+- Live renovation render path now passes `renovationDisplayCopy.budget_card_title`.
+- Old string-replace workaround was reduced/removed so the resolved display copy is the source of truth.
+
+Expected behavior now:
+- `historical_only` -> `Historical Capital Items`
+- `budget_only_no_roi` -> `Renovation Budget Items`
+- `forward_looking_modelable` -> `Renovation Budget Breakdown`
+
+Validation:
+- `node --check api/generate-client-report.js` passed.
+
+### 2. Three Codex source-of-truth audits completed
+The repo-wide launch-readiness backlog began with three compressed Codex audits.
+
+#### Prompt 1 - Rent Roll / T12 / Occupancy
+Findings:
+- Two partial-rent-roll sample blockers were found.
+- `api/generate-client-report.js` still allowed partial rent roll samples to carry row-derived annual totals through canonical annual total handling into full-property totals.
+- `api/_lib/source-report-coverage-qa.js` derived occupancy in `deriveRentRollInventoryOccupancy()` without a partial-sample guard, creating QA/source-coverage divergence risk.
+
+#### Prompt 2 - Debt / Property Tax / Cap Rate-Valuation
+Findings:
+- No launch/Ken blockers found.
+- No patch made.
+
+#### Prompt 3 - Renovation / Delivery QA Gate Alignment
+Findings:
+- No launch/Ken blockers found.
+- Renovation display mode, document treatment, and QA/delivery gate paths were aligned.
+- `DOCRAPTOR_NOT_PRODUCTION_MODE` remains advisory/public-sample related and does not override deliverable gate by itself.
+- Section-constrained publishable states flow through delivery as publishable classifications rather than blanket review blockers.
+- No patch made.
+
+### 3. Partial rent roll sample class patch completed
+Patch target:
+- This is a class fix, not a one-report fix.
+
+Locked class rule:
+```text
+If a rent roll is only a sample, row-derived totals and occupancy must not be treated as full-property truth unless a trusted summary row exists.
+```
+
+Files/functions changed by Codex:
+- `api/generate-client-report.js`
+  - `buildRendererCanonicalState` / rent-roll annual total suppression branch
+- `api/_lib/source-report-coverage-qa.js`
+  - `deriveRentRollInventoryOccupancy`
+
+Behavior now:
+- Partial rent roll samples stop row-derived annual totals from feeding full-property reconciliation unless a trusted summary total exists.
+- Partial rent roll samples return occupancy `null` in QA/source-coverage unless a trusted summary row exists.
+- Full rent rolls and trusted summary totals preserve existing behavior.
+
+Validation:
+- `node --check api/generate-client-report.js` passed.
+- `node --check api/_lib/source-report-coverage-qa.js` passed.
+
+### 4. Final report language consistency sweep completed
+Codex ran a focused public/Ken wording sweep.
+
+Findings:
+- No launch-blocking language issues beyond appraisal-like valuation wording in the DCF / exit-cap surface.
+- `Intrinsic Value: Exit Cap Rate Sensitivity` and `Implied Intrinsic Value` remained public-facing appraisal-like phrases.
+- `Full Refinance Sufficiency (Deterministic)` remained a visible headline and the `Full` prefix was stale for public samples.
+
+Patch completed:
+- `api/generate-client-report.js`
+  - DCF / refinance section labels
+
+Expected wording direction now:
+- Framework value / framework sensitivity / present value sensitivity wording instead of appraisal-like intrinsic-value wording.
+- `Refinance Sufficiency (Deterministic)` instead of stale `Full Refinance Sufficiency (Deterministic)`.
+
+Validation:
+- `node --check api/generate-client-report.js` passed.
+- `git diff --check` passed with CRLF warning only.
+
+### 5. Core Input Sufficiency Contract read-only audit completed
+Codex ran a read-only audit.
+
+Result:
+```text
+CONTRACT STATUS: already mostly wired
+```
+
+Findings:
+- Core sufficiency is already machine-readable enough to separate:
+  - `core_sufficient_publishable`
+  - `section_constrained_publishable`
+  - `disclose_only_publishable`
+- Delivery gate already keys off the sufficiency contract and `customer_delivery_impact`.
+- No launch blocker was found where optional missing sections alone force a publishable report into hard review.
+- Public/Ken blockers are already separated from customer delivery in `buildQaActionPlan`.
+- Remaining risk is downstream consumers over-reading coarse `qa_status` / review wording rather than `publishability_bucket` and `customer_delivery_impact`.
+
+Decision:
+- Do not patch this now while Codex is limited.
+- Wait until May 19 for lower-value cleanup wiring.
+
+## Current status after this chat
+Completed / accepted:
+- Renovation card-title leak fixed.
+- Source-of-truth audit completed across the listed risk areas.
+- Partial rent roll sample suppression class fixed.
+- Final report public wording sweep patched.
+- Core Input Sufficiency Contract audited and found already mostly wired.
+
+No further Codex should be spent today on:
+- debt;
+- property tax;
+- cap-rate / valuation logic;
+- renovation display mode alignment;
+- DocRaptor / delivery gate;
+- Core Input Sufficiency implementation wiring.
+
+Recommended immediate action:
+- Commit today's accepted safe changes before any live test.
+
+Suggested commit:
+```bash
+git add api/generate-client-report.js api/_lib/source-report-coverage-qa.js
+git commit -m "Harden source truth and public report wording"
+```
+
+## Remaining backlog after this update
+
+### Keep for after May 19 / when Codex resets
+1. QA consumer cleanup:
+   - make downstream QA consumers rely more directly on `publishability_bucket` and `customer_delivery_impact`;
+   - reduce reliance on coarse `qa_status` / review wording.
+
+2. Worker automation / eliminate manual worker kick:
+   - Generate Report should queue/lock `analysis_jobs` and return quickly;
+   - worker should run independently;
+   - Dashboard should observe lightweight status without waiting/freezing;
+   - keep this backlog only while Codex is limited.
+
+3. Broader source-of-truth cleanup / repo hygiene audit before Ken:
+   - now partially completed by the targeted audits;
+   - any remaining work should be narrow and based on blockers, not broad rewrites.
+
+4. Admin Dashboard clarity / QA Manager calibration:
+   - simplify admin queue information hierarchy later;
+   - unsupported-doc disclosure + no numeric contamination should not become a public blocker.
+
+### Before Ken/public samples
+- Commit accepted patches.
+- Use clean property names and clean filenames.
+- DocRaptor production mode must be enabled and verified.
+- No test watermark.
+- No test/sample/internal names.
+- No public sample blockers.
+- `qa_action_plan.requires_code_patch = 0`.
+- Customer delivery ready.
+- Public sample ready.
+- High-value outreach ready.
+- Source reconciliation either clean/aligned or intentionally disclosed in a selected sample.
+
+## Fresh chat prompt - May 15 evening continuation
+
+```text
+We are continuing InvestorIQ from the May 15 evening master context.
+
+Critical operating rule:
+Codex usage is limited until May 19 at 9:53am. We are still in Codex conservation mode. Do not use Codex for anything we can reason through manually. No broad tests. No smoke-test theatre. No live tests as QA discovery. Use Codex only for narrow, high-leverage investigation/patches with minimum validation.
+
+Work completed in the prior chat:
+1. Fixed the renovation budget card-title leak:
+   - `buildRenovationBudgetCardHtml()` now accepts optional `title`;
+   - live render passes `renovationDisplayCopy.budget_card_title`;
+   - budget-only/no-ROI reports should show `Renovation Budget Items`, not leaked `Renovation Budget Breakdown`.
+
+2. Completed three compressed source-of-truth audits:
+   - Rent Roll / T12 / Occupancy found only partial-rent-roll sample leaks.
+   - Debt / Property Tax / Cap Rate-Valuation found no launch/Ken blockers.
+   - Renovation / Delivery QA Gate alignment found no launch/Ken blockers.
+
+3. Patched the partial rent roll sample class:
+   - partial samples no longer allow row-derived annual totals to feed full-property reconciliation unless a trusted summary total exists;
+   - partial samples no longer derive QA/source-coverage occupancy from sample rows unless trusted summary exists;
+   - validation passed: `node --check api/generate-client-report.js` and `node --check api/_lib/source-report-coverage-qa.js`.
+
+4. Ran final report language consistency sweep:
+   - patched remaining public-facing appraisal-like DCF/exit-cap labels;
+   - removed stale `Full` prefix from `Full Refinance Sufficiency (Deterministic)`;
+   - validation passed: `node --check api/generate-client-report.js`; `git diff --check` passed with CRLF warning only.
+
+5. Ran Core Input Sufficiency Contract read-only audit:
+   - status: already mostly wired;
+   - no launch blocker found;
+   - delivery gate already keys off sufficiency contract and customer delivery impact;
+   - remaining cleanup should wait until May 19.
+
+Immediate next action:
+Do not patch more first. Commit the accepted safe changes if not already committed:
+
+`git add api/generate-client-report.js api/_lib/source-report-coverage-qa.js`
+`git commit -m "Harden source truth and public report wording"`
+
+After commit, decide whether to update docs again, pause, or run the next carefully selected validation. Do not run a live test until Rob explicitly chooses it.
+
+Backlog to preserve:
+- After May 19: QA consumer cleanup so downstream consumers rely more directly on `publishability_bucket` and `customer_delivery_impact` rather than coarse `qa_status` / review labels.
+- Worker automation / manual kick elimination remains backlog only.
+- Admin Dashboard clarity and QA Manager calibration remain later items.
+- Before Ken/public samples: clean names/files, DocRaptor production verification, no public blockers, no test watermark, `qa_action_plan.requires_code_patch = 0`, public/high-value ready.
+```
+
+---
+
 # May 15, 2026 Late-Day Update - Maplewell/Silvergate/Northbank Class Fixes / Codex Conservation Mode / Next Repo-Wide Polish
 
 ## Critical operational context

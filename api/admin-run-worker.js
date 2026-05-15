@@ -817,18 +817,7 @@ export default async function handler(req, res) {
               .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
 
             if (claimErr || !claimRows || claimRows.length === 0) {
-              await supabaseAdmin.from('analysis_job_events').insert([
-                {
-                  job_id: job.id,
-                  actor: 'system',
-                  event_type: 'job_claim_failed',
-                  from_status: 'queued',
-                  to_status: 'extracting',
-                  created_at: nowIso,
-                  meta: { route: '/api/admin-run-worker', error: claimErr?.message || null },
-                },
-              ]);
-              throw new Error('CLAIM_AND_CONSUME_FAILED');
+              continue;
             }
 
             const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
