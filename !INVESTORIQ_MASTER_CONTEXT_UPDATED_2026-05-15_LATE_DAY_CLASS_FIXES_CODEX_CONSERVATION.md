@@ -1,5 +1,415 @@
 # InvestorIQ Master Context - May 2026
 
+# May 15, 2026 Late-Day Update - Maplewell/Silvergate/Northbank Class Fixes / Codex Conservation Mode / Next Repo-Wide Polish
+
+## Critical operational context
+- Rob is down to roughly 52% Codex usage and quota will not reset until May 19 at 9:53am.
+- Codex must be used surgically from here:
+  - no broad test runs unless absolutely necessary;
+  - no smoke-test theatre;
+  - no extra validation beyond touched files;
+  - no broad repo rewrites;
+  - investigation-first when uncertain;
+  - one narrow patch at a time.
+- If a patch is easy enough for ChatGPT/Rob to do manually, prefer that over burning Codex.
+- Recommended Codex validation language:
+  - `Run only the minimum validation required for touched files. Do not run broad smoke/e2e/test suites unless the touched code directly affects that suite or Rob explicitly asks.`
+
+## May 15 overall status
+May 15 converted the late-night Maplewell crisis into a set of real class fixes. The key outcome is that the system is no longer just duct-taping one report:
+- rent-roll total source selection was hardened;
+- impossible annual rent totals are suppressed;
+- delivery gate overblocking was reduced;
+- private customer delivery vs public/Ken readiness is now better separated;
+- score/verdict display is now capped consistently when source reconciliation is unresolved;
+- messy support-doc reports now include a Document Treatment Summary;
+- historical CapEx vs budget-only renovation docs are now separated;
+- DCF/value language is moving toward framework sensitivity instead of appraisal-like wording.
+
+## Maplewell RETEST 8/9/10 - rent-roll source truth and delivery gate loop closed
+### Problem
+Maplewell true-current-debt package kept looping into Admin Review / Needs Documents even after earlier source-reconciliation patches.
+Observed failures included:
+- impossible annual market rent totals such as `$21,744,000`;
+- weighted average market rent around `$1,888/month`;
+- total units `48`;
+- implied average market rent from bad annual total around `$37,750/month/unit`;
+- delivery gate overpromoting advisory/public-only issues into customer blockers;
+- Deal Scorecard and cover verdict mismatch.
+
+### Class fixes completed
+1. Canonical rent-roll annual resolver:
+   - added/used shared canonical annual total selection;
+   - prefers internally coherent row-derived or weighted-average-derived annual totals over incoherent summary totals;
+   - `trusted_summary_totals` now means "summary row exists," not "summary automatically wins";
+   - bad summary totals are recorded as suppressed values.
+
+2. Impossible market annual rent suppression:
+   - bad annual market total `$21,744,000` is suppressed;
+   - coherent annual market total around `$1.087M` renders instead;
+   - annual in-place rent `$961,200` remains selected when row-derived values are coherent.
+
+3. Delivery gate overblocking fix:
+   - `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION` no longer becomes a blanket customer blocker when contract says `blocks_customer_delivery: false`;
+   - `RENT_ROLL_T12_RECONCILIATION_REQUIRED` no longer forces `user_needs_documents` when state is explicitly disclose-only publishable;
+   - public sample / high-value outreach blockers remain separate from private customer delivery blockers.
+
+4. Verdict alignment fix:
+   - added canonical display verdict state;
+   - cover / capital-risk / Deal Scorecard now share capped display verdict logic;
+   - unresolved source reconciliation caps displayed headline to:
+     - `Review - Source Reconciliation Disclosure`
+   - underlying numerical score remains intact;
+   - clean strong reports can still show `Within Underwriting Parameters`.
+
+### RETEST 10 outcome
+- Published.
+- Delivery gate remained deliverable.
+- No Admin Review.
+- No Needs Documents.
+- Customer blockers empty.
+- Report Contract QA passed.
+- QA Director found no missed issue.
+- Cover, Capital Risk Profile, and Deal Scorecard now align on:
+  - `Review - Source Reconciliation Disclosure`.
+- Public/Ken blockers remained appropriate:
+  - DocRaptor test mode;
+  - unresolved source reconciliation;
+  - public sample readiness.
+
+## Silvergate messy support-doc class - private delivery passed, public polish improved
+### Test class
+Silvergate messy/unsupported support-doc underwriting package:
+- T12;
+- Rent Roll;
+- Historical CapEx note;
+- Broker email/background;
+- Unsupported appraisal summary;
+- Unsupported market survey;
+- Unsupported Phase I ESA;
+- no true current debt.
+
+### Findings
+Initial published Silvergate report was customer-deliverable but not Ken/public-ready:
+- uploaded files were listed but not clearly separated by use;
+- historical CapEx displayed under renovation strategy language;
+- reconciliation warning repeated too heavily;
+- scorecard needed stronger source-constrained note;
+- customer-facing tier label `Full Underwriting` overpromised;
+- DCF/scenario valuation surfaces still sounded too appraisal-like;
+- QA Manager remained noisy on unsupported-doc disclosure.
+
+### Class fixes completed
+1. Document Treatment Summary added:
+   - `Modeled Inputs`
+   - `Displayed / Limited Use`
+   - `Listed but Not Quantitatively Modeled`
+   - Preserves uploaded-file auditability while clarifying what actually drives modeled outputs.
+
+2. Metadata-first treatment classification:
+   - classification now prefers:
+     - `semantic_doc_role`
+     - `semantic_doc_display_label`
+     - `display_doc_type`
+     - `doc_type`
+     - `parse_status`
+     - `parse_error`
+     - structured/validated state
+   - filename regex is last-resort fallback only.
+   - rows now carry testable:
+     - `data-treatment-source`
+     - `data-treatment-code`.
+
+3. Current-debt treatment wiring:
+   - live render path now passes `currentDebtAssessmentState` into Document Treatment Summary helper;
+   - true current-debt docs with computed DSCR can render as modeled inputs;
+   - debt-like docs without verified current balance are not promoted to modeled current debt;
+   - proposed/acquisition debt remains separate and is not labeled as current debt.
+
+4. Historical CapEx handling:
+   - historical-only CapEx now renders as:
+     - `Historical Capital Expenditure Summary`
+     - `Historical Capital Items`
+   - no ROI/payback/rent-lift/timing/schedule is modeled.
+
+5. Tier label/display polish:
+   - customer-facing label changed from `Full Underwriting` to `Underwriting`;
+   - source badges added where applicable:
+     - `Source-Constrained`
+     - `Debt Not Provided`
+     - `Disclosure Required`.
+
+6. Scorecard note:
+   - score remains numerical;
+   - note now clarifies score is source-constrained and should not be read as refinance-ready or unconstrained when current debt is missing or reconciliation remains unresolved.
+
+7. DCF/value optics:
+   - DCF/scenario surfaces now use framework-sensitivity language;
+   - `Estimated Intrinsic Value` softened to `Framework-Indicated Present Value (Sum of PVs)`;
+   - explicit note: framework sensitivity, not appraisal, and unsupported appraisal/market survey files are not relied on.
+
+### Silvergate retest result
+- Published cleanly.
+- Delivery gate deliverable.
+- Customer blockers empty.
+- No Admin Review.
+- No Needs Documents.
+- Document Treatment Summary rendered correctly.
+- Historical CapEx rendered correctly.
+- DCF framework/not-appraisal note rendered correctly.
+- Public/Ken readiness still appropriately blocked by DocRaptor test mode, unresolved source variance, and test/sample naming.
+
+## Northbank structured renovation budget - missing middle category fixed
+### Problem
+Northbank `structured_reno_no_roi_inputs` exposed a nearby class not covered by the Silvergate historical-CapEx patch:
+- the renovation source was not historical-only;
+- it was a structured renovation budget with scope/cost rows and total budget;
+- it explicitly lacked ROI, rent lift, payback, phasing, cost recovery, and implementation schedule.
+The report safely avoided inventing ROI/payback/rent lift, but wrongly rendered the source as historical-only.
+
+### Root cause
+Renovation rendering was still effectively binary:
+- forward-looking/modelable;
+- historical-only.
+
+It lacked the middle state:
+- structured budget/scope only, no ROI inputs.
+
+### Class fix completed
+Added/implemented renovation display modes:
+- `historical_only`
+- `budget_only_no_roi`
+- `forward_looking_modelable`
+
+Required behavior now:
+1. Historical-only CapEx:
+   - title: `Historical Capital Expenditure Summary`
+   - card: `Historical Capital Items`
+   - note: historical items displayed for context only.
+
+2. Budget/scope-only renovation docs with no ROI inputs:
+   - title: `Renovation Budget Summary - No ROI Inputs Provided`
+   - card: `Renovation Budget Items`
+   - note:
+     - budget and scope items are displayed from uploaded renovation budget;
+     - no ROI, rent lift, payback, phasing, cost recovery, or implementation schedule is modeled because those assumptions were not provided.
+   - Document Treatment Summary note:
+     - `Budget/scope only; no ROI/payback/rent-lift modeling`.
+
+3. Fully supported forward-looking renovation plan:
+   - title may remain `Renovation Strategy & Capital Plan`;
+   - ROI/payback/rent-lift/timing only when document-backed.
+
+### Reconciliation repetition reduction
+The remaining repeated analytical bullets were shortened:
+- Operating Profile / Income Forensics now uses:
+  - `Rent Roll vs T12 GPR variance: X%. See Data Coverage.`
+- NOI Stability now uses the same short reference.
+- Full disclosure remains in Data Coverage.
+
+## Immediate next issue for fresh chat
+Before more testing, first deal with this known code polish issue:
+- `buildRenovationBudgetCardHtml()` still has hardcoded card heading:
+  - `Renovation Budget Breakdown`
+- That may bypass the new `budget_card_title` display copy in some render surfaces.
+- First task in new chat:
+  - inspect the actual call path;
+  - determine whether the hardcoded title can leak into budget-only/no-ROI reports;
+  - patch manually or with a tiny Codex prompt only if needed;
+  - no broad testing.
+
+Preferred patch if confirmed:
+- change `buildRenovationBudgetCardHtml(rows, formatValue, note, columnVisibility)` to accept an optional `title` argument, defaulting to `Renovation Budget Breakdown` for backward compatibility;
+- pass `renovationDisplayCopy.budget_card_title` from live render path;
+- focused `node --check api/generate-client-report.js`;
+- no broad tests unless the touched existing smoke directly covers it.
+
+## Repo-wide fixes / backlog to begin after the hardcoded renovation title
+### 1. Focused repo-wide source-of-truth audit before Ken/public samples
+This remains required before messaging Ken Dunn or publishing public samples.
+
+Goal:
+- find financial metrics calculated in more than one place;
+- find renderer paths that recompute values instead of using canonical state;
+- find QA paths that rebuild state differently than renderer paths;
+- find summary-total vs row-derived conflicts;
+- add source-selection metadata where missing;
+- add conflict fixtures only where two plausible values exist but only one is allowed to control.
+
+Risk areas:
+- Rent roll totals:
+  - summary totals vs row-derived totals vs computedRentRoll vs weighted-average-derived totals.
+- T12 totals:
+  - GPR vs EGI vs total income vs line-item sums.
+- Debt:
+  - true current debt vs acquisition/proposed financing vs loan-term fallback.
+- Property tax:
+  - T12 tax line vs property tax bill vs parsed support doc.
+- Cap rate / valuation:
+  - document-derived cap rate vs standardized framework sensitivity assumptions.
+- Renovation:
+  - actual budget/scope vs filename hints vs partial support docs.
+- Occupancy:
+  - rent roll summary occupancy vs row-derived occupied/vacant status.
+- Report delivery:
+  - QA/source coverage state vs rendered HTML vs DocRaptor HTML vs delivery gate.
+
+This audit is not a broad refactor. It is a launch-readiness control.
+
+### 2. Core Input Sufficiency Contract
+Still required / partially implemented conceptually.
+
+Objective:
+- make T12 core sufficiency, rent roll core sufficiency, and optional section sufficiency explicit machine-readable contracts;
+- ensure delivery gates read those contracts rather than scattered warnings, missing-detail flags, or section-depth heuristics;
+- ensure clean-ish packages publish autonomously with collapsed sections/disclosures instead of Admin Review.
+
+Required buckets:
+- `core_sufficient_publishable`
+- `section_constrained_publishable`
+- `disclose_only_publishable`
+- `public_or_outreach_only_blocker`
+- `user_needs_documents`
+- `admin_review_required`
+- `system_contract_failure`
+
+### 3. Final report language consistency sweep
+Before Ken/public samples:
+- remove remaining `Intrinsic Value` / `Implied Intrinsic Value` wording:
+  - replace with `Framework Value`, `Implied Framework Value`, or `Present Value Sensitivity by Exit Cap Rate`;
+- eliminate awkward trailing periods in headings/metric cards;
+- ensure no stale `Full Underwriting` public-facing labels remain;
+- ensure no `DATA NOT AVAILABLE` spam returns;
+- ensure no public `AI`, model, vendor, or internal QA language appears;
+- ensure no BUY/SELL/HOLD or investment recommendation language appears;
+- ensure valuation/refi/cap-rate sections consistently say framework / deterministic / not appraisal where applicable.
+
+### 4. QA Manager calibration
+Still needed later:
+- QA Manager can remain noisy on unsupported-doc issues even when the report clearly says files are not quantitatively modeled and no unsupported values contaminate report math.
+- Desired state:
+  - unsupported-doc disclosure present + no unsupported numeric contamination = no public blocker from unsupported-doc issue;
+  - low advisory only if wording is unclear.
+
+### 5. Worker automation / manual kick elimination
+Keep in backlog, not immediate while Codex is limited.
+Investigation already found current queue flow happens via frontend Supabase RPC, not a server-side queue wrapper.
+Under constraints:
+- no new `/api` files;
+- no frontend calling worker;
+- no Dashboard wait/poll rewrite;
+- no Vercel Hobby function-count risk;
+there is no clean patch right now.
+
+Future clean fix requires one of:
+- server-side queue wrapper route;
+- API consolidation to free Vercel Hobby function capacity;
+- Pro/server-side architecture;
+- or deliberate server-side worker trigger architecture.
+
+Correct future architecture:
+- Generate Report queues/locks `analysis_jobs` and returns quickly;
+- worker runs independently;
+- Dashboard observes lightweight status without waiting/freezing;
+- use `analysis_jobs`, not generic `report_jobs`;
+- avoid raw INSERT webhook if files/artifacts may not be ready;
+- prefer generate-click fire-and-forget after safe queueing or Supabase webhook on `analysis_jobs` transition to `queued`.
+
+### 6. Dashboard freeze caution
+Dashboard freeze remains monitored.
+Do not add:
+- aggressive polling;
+- broad `useEffect` dependencies;
+- artifact-heavy fetches;
+- full-page reloads;
+- worker wait behavior.
+Existing dashboard guard posture remains:
+- capped;
+- lazy;
+- equality-guarded;
+- manual-refresh oriented.
+
+### 7. Public/Ken sample readiness checklist
+Before Ken:
+- clean property name and clean filenames;
+- DocRaptor production mode enabled and verified;
+- no test watermark;
+- no test property names;
+- no public sample blockers;
+- `qa_action_plan.requires_code_patch = 0`;
+- customer delivery ready;
+- public sample ready;
+- high-value outreach ready;
+- source reconciliation either clean/aligned or intentionally disclosed in a sample selected for that purpose;
+- run focused repo-wide source-of-truth audit first.
+
+## Fresh chat prompt - May 15 late-day continuation
+
+```text
+We are continuing InvestorIQ from the updated May 15 master context.
+
+Critical operational context:
+Rob is at roughly 52% Codex usage and quota does not reset until May 19 at 9:53am. Use Codex very carefully. No broad tests. No smoke-test theatre. No broad repo rewrites. If ChatGPT/Rob can patch a tiny issue manually, prefer that over burning Codex. If Codex is used, use one narrow prompt and minimum validation only.
+
+Current state:
+- Maplewell RETEST 10 proved the rent-roll source-truth and delivery-gate class fixes:
+  - published;
+  - delivery gate deliverable;
+  - no Admin Review;
+  - no Needs Documents;
+  - no customer blockers;
+  - verdict aligned as `Review - Source Reconciliation Disclosure`;
+  - bad annual market rent suppressed.
+- Silvergate messy support-doc retest proved:
+  - Document Treatment Summary renders;
+  - metadata-first classification works;
+  - unsupported docs are listed but not quantitatively modeled;
+  - Historical CapEx renders as historical-only;
+  - DCF surfaces now say framework sensitivity / not appraisal;
+  - private delivery works while public/Ken blockers remain separate.
+- Northbank exposed and then patched a missing renovation display category:
+  - historical-only CapEx;
+  - budget/scope-only renovation with no ROI inputs;
+  - forward-looking/modelable renovation.
+- Latest patch added `resolveRenovationDisplayMode()` and budget-only no-ROI display copy:
+  - `Renovation Budget Summary - No ROI Inputs Provided`
+  - `Renovation Budget Items`
+  - no ROI/payback/rent-lift/phasing/cost-recovery/schedule modeling.
+- Reconciliation repetition was reduced in Operating Profile and NOI Stability to:
+  - `Rent Roll vs T12 GPR variance: X%. See Data Coverage.`
+
+First task in this fresh chat:
+Do not run a live test first.
+Do not use Codex first unless needed.
+
+Inspect the current `api/generate-client-report.js` issue:
+- `buildRenovationBudgetCardHtml()` still has hardcoded heading `Renovation Budget Breakdown`.
+- Determine whether that hardcoded card title can leak into budget-only/no-ROI Northbank reports despite the new `budget_card_title` display copy.
+- If patchable manually, patch it with minimal change:
+  - add optional title parameter with default `Renovation Budget Breakdown`;
+  - pass `renovationDisplayCopy.budget_card_title` from the live render path;
+  - run only `node --check api/generate-client-report.js`.
+- If Codex is needed, create a tiny prompt only for that.
+- Do not run broad tests.
+
+After that, begin the repo-wide fixes/backlog carefully:
+1. focused source-of-truth audit before Ken/public samples;
+2. Core Input Sufficiency Contract explicit machine-readable tiers;
+3. final report language consistency sweep:
+   - remove remaining `Intrinsic Value` wording;
+   - no stale `Full Underwriting`;
+   - no `DATA NOT AVAILABLE` spam;
+   - no public AI/model/vendor language;
+   - consistent framework/not-appraisal valuation language;
+4. QA Manager calibration for unsupported-doc false positives;
+5. worker automation remains backlog only because current flow queues via frontend RPC and no safe no-new-API patch exists under Vercel Hobby constraints.
+
+Codex conservation rule:
+If a task is not launch-blocking, batch it into backlog. If a task is one-line/manual-safe, do it without Codex. If Codex is used, demand a compressed receipt and minimum validation only.
+```
+
+---
+
 # May 14, 2026 Late Night Update - Maplewell RETEST 7 / Internal Rent Roll Total Contradiction / Source-of-Truth Audit Required
 
 ## Immediate live result - Maplewell true-current-debt RETEST 7

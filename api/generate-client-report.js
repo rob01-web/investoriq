@@ -1697,7 +1697,7 @@ function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
     .join("");
 }
 
-function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE, columnVisibility = null) {
+function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE, columnVisibility = null, title = "Renovation Budget Breakdown") {
   const summary = summarizeRenovationBudgetRows(rows, formatValue);
   const visibleColumns = columnVisibility || summary.visibleColumns;
   const columns = [
@@ -1710,7 +1710,7 @@ function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILA
   if (!columns.length || !summary.rows.length) return "";
   const rowsHtml = buildRenovationBudgetRows(rows, formatValue, visibleColumns);
   return `<div class="no-break">
-    <p class="subsection-title">Renovation Budget Breakdown</p>
+        <p class="subsection-title">${escapeHtml(title)}</p>
     <table>
       <thead>
         <tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>
@@ -5764,12 +5764,14 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         ? renovationDisplayCopy.interpretation
         : DATA_NOT_AVAILABLE;
     const renovationBudgetCardHtml = hasExplicitRenovationInput
-      ? buildRenovationBudgetCardHtml(
-          renovationBudgetSourceRows,
-          formatCurrency,
-          renovationBudgetNote
-        )
-      : "";
+  ? buildRenovationBudgetCardHtml(
+      renovationBudgetSourceRows,
+      formatCurrency,
+      renovationBudgetNote,
+      null,
+      renovationDisplayCopy.budget_card_title
+    )
+  : "";
     const renovationExecutionCardHtml = hasExplicitRenovationInput
       ? renovationDisplayMode === "forward_looking_modelable"
         ? buildRenovationExecutionCardHtml(
@@ -5779,13 +5781,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         )
         : ""
       : "";
-    let normalizedRenovationBudgetCardHtml = renovationBudgetCardHtml;
-    if (normalizedRenovationBudgetCardHtml && renovationDisplayMode !== "forward_looking_modelable") {
-      normalizedRenovationBudgetCardHtml = normalizedRenovationBudgetCardHtml.replace(
-        /Renovation Budget Breakdown/g,
-        renovationDisplayCopy.budget_card_title
-      );
-    }
+    const normalizedRenovationBudgetCardHtml = renovationBudgetCardHtml;
     finalHtml = finalHtml.replace(
       /<!-- RENOVATION BUDGET TABLE -->[\s\S]*?<!-- COST PER UNIT -->/,
       () =>
