@@ -3943,8 +3943,9 @@ export default async function handler(req, res) {
           totals: rentRollSummaryTotals,
         },
       });
-      const resolvedInPlaceAnnual = resolvedAnnualTotals?.in_place?.value ?? null;
-      const resolvedMarketAnnual = resolvedAnnualTotals?.market?.value ?? null;
+      const suppressSampledAnnualTotals = isPartialRentRollSample && !hasTrustedRentRollSummaryTotals;
+      const resolvedInPlaceAnnual = suppressSampledAnnualTotals ? null : resolvedAnnualTotals?.in_place?.value ?? null;
+      const resolvedMarketAnnual = suppressSampledAnnualTotals ? null : resolvedAnnualTotals?.market?.value ?? null;
       const resolvedInPlaceMonthly = Number.isFinite(resolvedInPlaceAnnual)
         ? resolvedInPlaceAnnual / 12
         : null;

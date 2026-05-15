@@ -30,6 +30,12 @@ function validOccupancy(value) {
 
 function deriveRentRollInventoryOccupancy(rentRoll) {
   const totals = rentRoll?.totals && typeof rentRoll.totals === "object" ? rentRoll.totals : null;
+  const isPartialSample = rentRoll?.is_partial_sample === true;
+  const hasTrustedSummaryTotals = Boolean(
+    totals?.summary_row_detected === true ||
+    rentRoll?.summary_row_detected === true
+  );
+  if (isPartialSample && !hasTrustedSummaryTotals) return null;
   const totalsOccupancy = validOccupancy(totals?.occupancy);
   if (Number.isFinite(totalsOccupancy)) return totalsOccupancy;
 
