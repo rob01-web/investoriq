@@ -223,6 +223,86 @@ assert.equal(computedScorecardEntry.hasDscrScore, true);
 assert.match(computedScorecardEntry.scoreRow.label, /DSCR \(Current Debt\)|DSCR \(Computed\)/i);
 assert.match(computedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 
+const retest9CurrentDebtState = buildCurrentDebtAssessmentState({
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    annual_debt_service: 91549.29577464789,
+    interest_rate: 0.055,
+    amort_years: 25,
+  },
+  t12Noi: 650000,
+});
+const retest9DealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: retest9CurrentDebtState,
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    annual_debt_service: 91549.29577464789,
+    interest_rate: 0.055,
+    amort_years: 25,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  sourceReconciliationState: {
+    status: "source_reconciliation_required",
+    publishability_bucket: "disclose_only_publishable",
+    rr_annual_in_place: 961200,
+    t12_gpr: 1850000,
+    variance_pct: -0.48043243243243244,
+    has_material_variance: true,
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+});
+assert.equal(retest9DealScoreState.score, 95);
+assert.equal(retest9DealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
+assert.equal(retest9DealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
+assert.equal(retest9DealScoreState.displayVerdict?.cap_reason_code, "source_reconciliation_disclosure");
+assert.match(retest9DealScoreState.displayVerdict?.cap_explanation || "", /rent-roll annualized rent differs materially from T12 GPR/i);
+assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Review - Source Reconciliation Disclosure/);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite Score: 95 \/ 100/);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Numerical score reflects operating and debt metrics/i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /rent-roll annualized rent differs materially from T12 GPR/i);
+
+const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: retest9CurrentDebtState,
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    annual_debt_service: 91549.29577464789,
+    interest_rate: 0.055,
+    amort_years: 25,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.equal(cleanStrongDealScoreState.score, 95);
+assert.equal(cleanStrongDealScoreState.displayVerdict?.label, "Within Underwriting Parameters");
+assert.equal(cleanStrongDealScoreState.dealScoreTableHtml.includes("Review - Source Reconciliation Disclosure"), false);
+
 const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   currentDebtState: buildCurrentDebtAssessmentState({
     mortgagePayload: {

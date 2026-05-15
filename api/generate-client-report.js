@@ -21,6 +21,7 @@ import {
   buildAcquisitionAssumptionState,
   buildAssumptionAttributionState,
   buildCurrentDebtAssessmentState,
+  buildCanonicalDisplayVerdictState,
   buildFullUnderwritingSectionEligibility,
   dedupeRenovationMetricRows,
   formatAssumptionAttributionLabel,
@@ -320,6 +321,165 @@ function buildCurrentDebtScorecardEntry({
       band: dscrNotAssessedCopy.band,
     },
     dscrNotAssessedCopy,
+  };
+}
+function buildDealScorecardState({
+  expenseRatioR = null,
+  noiMarginR = null,
+  execOccupancy = null,
+  breakEvenOccR = null,
+  marketRentPremiumRatio = null,
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  t12Payload = null,
+  sourceReconciliationState = null,
+}) {
+  const scoreRows = [];
+  let totalPoints = 0;
+  let maxPoints = 0;
+  if (Number.isFinite(expenseRatioR)) {
+    const pts = expenseRatioR < 0.55 ? 10 : expenseRatioR <= 0.65 ? 6 : 2;
+    totalPoints += pts;
+    maxPoints += 10;
+    scoreRows.push({
+      label: "Expense Ratio",
+      value: formatPercent1(expenseRatioR),
+      pts,
+      max: 10,
+      band: expenseRatioR < 0.55 ? "Below 55%" : expenseRatioR <= 0.65 ? "55\u201365%" : "Above 65%",
+    });
+  }
+  if (Number.isFinite(noiMarginR)) {
+    const pts = noiMarginR > 0.45 ? 10 : noiMarginR >= 0.35 ? 6 : 2;
+    totalPoints += pts;
+    maxPoints += 10;
+    scoreRows.push({
+      label: "NOI Margin",
+      value: formatPercent1(noiMarginR),
+      pts,
+      max: 10,
+      band: noiMarginR > 0.45 ? "Above 45%" : noiMarginR >= 0.35 ? "35\u201345%" : "Below 35%",
+    });
+  }
+  if (Number.isFinite(execOccupancy)) {
+    const pts = execOccupancy > 0.95 ? 10 : execOccupancy >= 0.85 ? 7 : 4;
+    totalPoints += pts;
+    maxPoints += 10;
+    scoreRows.push({
+      label: "Occupancy Rate",
+      value: formatPercent1(execOccupancy),
+      pts,
+      max: 10,
+      band: execOccupancy > 0.95 ? "Above 95%" : execOccupancy >= 0.85 ? "85\u201395%" : "Below 85%",
+    });
+  }
+  if (Number.isFinite(breakEvenOccR)) {
+    const pts = breakEvenOccR < 0.70 ? 10 : breakEvenOccR <= 0.80 ? 6 : 2;
+    totalPoints += pts;
+    maxPoints += 10;
+    scoreRows.push({
+      label: "Break-Even Occupancy",
+      value: formatPercent1(breakEvenOccR),
+      pts,
+      max: 10,
+      band: breakEvenOccR < 0.70 ? "Below 70%" : breakEvenOccR <= 0.80 ? "70\u201380%" : "Above 80%",
+    });
+  }
+  if (Number.isFinite(marketRentPremiumRatio) && !Number.isNaN(marketRentPremiumRatio)) {
+    const pct = marketRentPremiumRatio * 100;
+    const pts = pct > 15 ? 10 : pct >= 5 ? 7 : 4;
+    totalPoints += pts;
+    maxPoints += 10;
+    scoreRows.push({
+      label: "Rent-to-Market Gap",
+      value: formatPercent1(marketRentPremiumRatio),
+      pts,
+      max: 10,
+      band: pct > 15 ? ">15% upside" : pct >= 5 ? "5\u201315% upside" : "<5% upside",
+    });
+  }
+
+  let hasDscrScore = false;
+  let computedDscrForVerdict = null;
+  const currentDebtScorecardEntry = buildCurrentDebtScorecardEntry({
+    currentDebtState: currentDebtAssessmentState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    t12Payload,
+  });
+  const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
+  if (currentDebtScorecardEntry.hasDscrScore) {
+    computedDscrForVerdict = currentDebtCoverage.dscr;
+    totalPoints += currentDebtScorecardEntry.scoreRow.pts;
+    maxPoints += currentDebtScorecardEntry.scoreRow.max;
+    scoreRows.push(currentDebtScorecardEntry.scoreRow);
+    hasDscrScore = true;
+  } else {
+    totalPoints += 0;
+    maxPoints += 10;
+    scoreRows.push(currentDebtScorecardEntry.scoreRow);
+  }
+
+  if (!(scoreRows.length >= 4 && maxPoints > 0)) {
+    return {
+      scoreRows,
+      score: null,
+      hasDscrScore,
+      computedDscrForVerdict,
+      currentDebtScorecardEntry,
+      displayVerdict: null,
+      dealScoreTableHtml: "",
+    };
+  }
+
+  const score = Math.round((totalPoints / maxPoints) * 100);
+  const displayVerdict = buildCanonicalDisplayVerdictState({
+    score,
+    hasDscrScore,
+    currentDebtDscr: computedDscrForVerdict,
+    sourceReconciliationState,
+  });
+  const rows = scoreRows.map((r) =>
+    `<tr>` +
+    `<td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.label)}</td>` +
+    `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.value)}</td>` +
+    `<td style="padding:4px 8px;border:1px solid #E5E7EB;color:#3F5E84;">${escapeHtml(r.band)}</td>` +
+    `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${r.pts}/${r.max}</td>` +
+    `</tr>`
+  ).join("");
+  const note = displayVerdict.cap_explanation ||
+    "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
+  const dealScoreTableHtml =
+    `<div class="card no-break" style="margin-top:12px;">` +
+    `<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;">` +
+    `<span style="font-size:24px;font-weight:800;color:#1F3A5F;letter-spacing:2px;">${escapeHtml(displayVerdict.label)}</span>` +
+    `<span style="display:block;font-size:12px;color:#3F5E84;margin-top:4px;">Composite Score: ${score} / 100</span>` +
+    `</div>` +
+    `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
+    `<thead><tr>` +
+    `<th style="text-align:left;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Factor</th>` +
+    `<th style="text-align:right;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Value</th>` +
+    `<th style="padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Threshold</th>` +
+    `<th style="text-align:center;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Score</th>` +
+    `</tr></thead>` +
+    `<tbody>${rows}</tbody>` +
+    `<tfoot><tr style="background:#FFFFFF;font-weight:700;">` +
+    `<td colspan="3" style="padding:4px 8px;border:1px solid #E5E7EB;">Composite Score (normalized)</td>` +
+    `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
+    `</tr></tfoot>` +
+    `</table>` +
+    `<p class="small" style="margin-top:8px;color:#3F5E84;">${escapeHtml(note)}</p>` +
+    `</div>`;
+
+  return {
+    scoreRows,
+    score,
+    hasDscrScore,
+    computedDscrForVerdict,
+    currentDebtScorecardEntry,
+    displayVerdict,
+    dealScoreTableHtml,
   };
 }
 function isFiniteNumber(x) {
@@ -4209,18 +4369,6 @@ if (effectiveReportMode === "screening_v1") {
       mortgagePayload,
       coerceNumber(t12Payload?.net_operating_income)
     )?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
-    const coverClassificationLabel = (() => {
-      if (effectiveReportMode === "v1_core") {
-        if (screeningClass === "Fragile") return "High Risk";
-        if (hasVerifiedCurrentDebtBalance && Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Constrained";
-        if (hasVerifiedCurrentDebtBalance && refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Constrained";
-        if (screeningClass === "Stable") return "Stable";
-        return "Review";
-      }
-      if (screeningClass === "Stable") return "Stable";
-      if (screeningClass === "Fragile") return "High Risk";
-      return "Review";
-    })();
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -4456,15 +4604,40 @@ if (effectiveReportMode === "screening_v1") {
     ) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_METRICS_SNAPSHOT");
     }
+    const dealScoreState = buildDealScorecardState({
+      expenseRatioR,
+      noiMarginR,
+      execOccupancy,
+      breakEvenOccR,
+      marketRentPremiumRatio,
+      currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Payload,
+      sourceReconciliationState,
+    });
+    const coverClassificationLabel = dealScoreState.displayVerdict?.label || (() => {
+      if (effectiveReportMode === "v1_core") {
+        if (screeningClass === "Fragile") return "High Risk";
+        if (hasVerifiedCurrentDebtBalance && Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Review - Debt Coverage Constraint";
+        if (hasVerifiedCurrentDebtBalance && refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Review - Debt Coverage Constraint";
+        if (screeningClass === "Stable") return "Stable";
+        return "Review";
+      }
+      if (screeningClass === "Stable") return "Stable";
+      if (screeningClass === "Fragile") return "High Risk";
+      return "Review";
+    })();
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
       coverClassificationLabel
     );
     const verdictCssClass = coverClassificationLabel === "Stable" ? "verdict-stable"
+      : /^Review\b/i.test(coverClassificationLabel) ? "verdict-sensitized"
       : coverClassificationLabel === "High Risk" ? "verdict-fragile"
-      : coverClassificationLabel === "Review" ? "verdict-sensitized"
       : coverClassificationLabel === "Constrained" ? "verdict-sensitized"
+      : coverClassificationLabel === "Outside Parameters" ? "verdict-fragile"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
     // Verdict label tokens: differentiate screening triage vs underwriting capital profile
@@ -4591,7 +4764,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       if (erPctStr) rows += `<tr><td>Expense Ratio</td><td style="font-weight:600;">${erPctStr}</td></tr>`;
       if (nmPctStr) rows += `<tr><td>NOI Margin</td><td style="font-weight:600;">${nmPctStr}</td></tr>`;
       if (beoStr)   rows += `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${beoStr}</td></tr>`;
-      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Operating profile classification based on standardized underwriting thresholds from uploaded documents only.</p></div>`;
+      const profileNote = dealScoreState.displayVerdict?.cap_explanation ||
+        "Operating profile classification based on standardized underwriting thresholds from uploaded documents only.";
+      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(profileNote)}</p></div>`;
       execVerdictExpansionHtml = profileCard;
     }
     const acquisitionFinancingAssumptionsHtml = buildAcquisitionFinancingAssumptionsHtml({
@@ -5660,102 +5835,10 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     }
 
     // Deal Score: weighted composite from document-verified metrics only
-    let dealScoreTableHtml = "";
-    let dealScoreRows = [];
-    if (effectiveReportMode === "v1_core") {
-      const scoreRows = [];
-      let totalPoints = 0;
-      let maxPoints = 0;
-      if (Number.isFinite(expenseRatioR)) {
-        const pts = expenseRatioR < 0.55 ? 10 : expenseRatioR <= 0.65 ? 6 : 2;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({ label: "Expense Ratio", value: formatPercent1(expenseRatioR), pts, max: 10, band: expenseRatioR < 0.55 ? "Below 55%" : expenseRatioR <= 0.65 ? "55\u201365%" : "Above 65%" });
-      }
-      if (Number.isFinite(noiMarginR)) {
-        const pts = noiMarginR > 0.45 ? 10 : noiMarginR >= 0.35 ? 6 : 2;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({ label: "NOI Margin", value: formatPercent1(noiMarginR), pts, max: 10, band: noiMarginR > 0.45 ? "Above 45%" : noiMarginR >= 0.35 ? "35\u201345%" : "Below 35%" });
-      }
-      if (Number.isFinite(execOccupancy)) {
-        const pts = execOccupancy > 0.95 ? 10 : execOccupancy >= 0.85 ? 7 : 4;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({ label: "Occupancy Rate", value: formatPercent1(execOccupancy), pts, max: 10, band: execOccupancy > 0.95 ? "Above 95%" : execOccupancy >= 0.85 ? "85\u201395%" : "Below 85%" });
-      }
-      if (Number.isFinite(breakEvenOccR)) {
-        const pts = breakEvenOccR < 0.70 ? 10 : breakEvenOccR <= 0.80 ? 6 : 2;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({ label: "Break-Even Occupancy", value: formatPercent1(breakEvenOccR), pts, max: 10, band: breakEvenOccR < 0.70 ? "Below 70%" : breakEvenOccR <= 0.80 ? "70\u201380%" : "Above 80%" });
-      }
-      if (Number.isFinite(marketRentPremiumRatio) && !isNaN(marketRentPremiumRatio)) {
-        const pct = marketRentPremiumRatio * 100;
-        const pts = pct > 15 ? 10 : pct >= 5 ? 7 : 4;
-        totalPoints += pts; maxPoints += 10;
-        scoreRows.push({ label: "Rent-to-Market Gap", value: formatPercent1(marketRentPremiumRatio), pts, max: 10, band: pct > 15 ? ">15% upside" : pct >= 5 ? "5\u201315% upside" : "<5% upside" });
-      }
-      let hasDscrScore = false;
-      let computedDscrForVerdict = null;
-      const currentDebtScorecardEntry = buildCurrentDebtScorecardEntry({
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-        t12Payload,
-      });
-      const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
-      if (currentDebtScorecardEntry.hasDscrScore) {
-        computedDscrForVerdict = currentDebtCoverage.dscr;
-        totalPoints += currentDebtScorecardEntry.scoreRow.pts; maxPoints += currentDebtScorecardEntry.scoreRow.max;
-        scoreRows.push(currentDebtScorecardEntry.scoreRow);
-        hasDscrScore = true;
-      } else {
-        totalPoints += 0; maxPoints += 10;
-        scoreRows.push(currentDebtScorecardEntry.scoreRow);
-      }
-      if (scoreRows.length >= 4 && maxPoints > 0) {
-        const score = Math.round((totalPoints / maxPoints) * 100);
-        const normalVerdictLabel = score >= 70 ? "Within Underwriting Parameters" : score >= 50 ? "Review" : "Outside Parameters";
-        const hasDebtCoverageConstraint =
-          hasDscrScore &&
-          Number.isFinite(computedDscrForVerdict) &&
-          computedDscrForVerdict < 1.25;
-        const verdictLabel =
-          hasDebtCoverageConstraint && score >= 70
-            ? "Review - Debt Coverage Constraint"
-            : !hasDscrScore && score >= 70
-            ? "Review"
-            : normalVerdictLabel;
-        const verdictColor = "#1F3A5F";
-        const rows = scoreRows.map((r) =>
-          `<tr>` +
-          `<td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.label)}</td>` +
-          `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.value)}</td>` +
-          `<td style="padding:4px 8px;border:1px solid #E5E7EB;color:#3F5E84;">${escapeHtml(r.band)}</td>` +
-          `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${r.pts}/${r.max}</td>` +
-          `</tr>`
-        ).join("");
-        dealScoreTableHtml =
-          `<div class="card no-break" style="margin-top:12px;">` +
-          `<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;">` +
-          `<span style="font-size:24px;font-weight:800;color:${verdictColor};letter-spacing:2px;">${verdictLabel}</span>` +
-          `<span style="display:block;font-size:12px;color:#3F5E84;margin-top:4px;">Composite Score: ${score} / 100</span>` +
-          `</div>` +
-          `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
-          `<thead><tr>` +
-          `<th style="text-align:left;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Factor</th>` +
-          `<th style="text-align:right;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Value</th>` +
-          `<th style="padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Threshold</th>` +
-          `<th style="text-align:center;padding:4px 8px;background:#FFFFFF;color:#1F3A5F;border:1px solid #E9EEF5;">Score</th>` +
-          `</tr></thead>` +
-          `<tbody>${rows}</tbody>` +
-          `<tfoot><tr style="background:#FFFFFF;font-weight:700;">` +
-          `<td colspan="3" style="padding:4px 8px;border:1px solid #E5E7EB;">Composite Score (normalized)</td>` +
-          `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
-          `</tr></tfoot>` +
-          `</table>` +
-          `<p class="small" style="margin-top:8px;color:#3F5E84;">Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters &lt; 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.</p>` +
-          `</div>`;
-        dealScoreRows = scoreRows;
-      }
-    }
+    const dealScoreTableHtml = effectiveReportMode === "v1_core"
+      ? dealScoreState.dealScoreTableHtml
+      : "";
+    const dealScoreRows = effectiveReportMode === "v1_core" ? dealScoreState.scoreRows : [];
 
     const showSection7 =
       hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) ||
@@ -6188,7 +6271,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     // Build a deterministic institutional-grade rationale sentence from computed metrics
     let execRationale = "";
-    if (screeningClass && screeningClass !== "Insufficient Data" && effectiveReportMode === "screening_v1") {
+    if (dealScoreState.displayVerdict?.cap_explanation) {
+      execRationale = dealScoreState.displayVerdict.cap_explanation;
+    } else if (screeningClass && screeningClass !== "Insufficient Data" && effectiveReportMode === "screening_v1") {
       const erStr  = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
       const nmStr  = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
       const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
@@ -7487,6 +7572,7 @@ try {
 export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
   buildCurrentDebtScorecardEntry,
+  buildDealScorecardState,
   buildReportStoragePath,
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,

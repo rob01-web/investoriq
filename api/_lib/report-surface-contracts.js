@@ -687,6 +687,76 @@ export function buildCoreInputSufficiencyState({
   });
 }
 
+function normalizeVerdictLabel(score) {
+  const n = coerceNumber(score);
+  if (!Number.isFinite(n)) return "Review";
+  if (n >= 70) return "Within Underwriting Parameters";
+  if (n >= 50) return "Review";
+  return "Outside Parameters";
+}
+
+function hasSourceReconciliationDisclosureCap(sourceReconciliationState = null) {
+  const state = sourceReconciliationState && typeof sourceReconciliationState === "object"
+    ? sourceReconciliationState
+    : null;
+  const status = String(state?.status || "").toLowerCase();
+  const publishabilityBucket = normalizePublishabilityBucket(state?.publishability_bucket || state?.publishabilityBucket || null);
+  const customerDeliveryImpact = String(state?.customer_delivery_impact || "").toLowerCase();
+  return Boolean(
+    publishabilityBucket === "disclose_only_publishable" ||
+    status === "source_reconciliation_required" ||
+    customerDeliveryImpact === "disclose_only"
+  );
+}
+
+export function buildCanonicalDisplayVerdictState({
+  score = null,
+  hasDscrScore = null,
+  currentDebtDscr = null,
+  sourceReconciliationState = null,
+} = {}) {
+  const scoreLabel = normalizeVerdictLabel(score);
+  const sourceReconciliationCap = hasSourceReconciliationDisclosureCap(sourceReconciliationState);
+  const debtDscr = coerceNumber(currentDebtDscr);
+
+  if (sourceReconciliationCap) {
+    return {
+      label: "Review - Source Reconciliation Disclosure",
+      score_label: scoreLabel,
+      cap_reason_code: "source_reconciliation_disclosure",
+      cap_explanation:
+        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because rent-roll annualized rent differs materially from T12 GPR and the variance is disclosed but not reconciled.",
+    };
+  }
+
+  if (hasDscrScore === true && Number.isFinite(debtDscr) && debtDscr < 1.25) {
+    return {
+      label: "Review - Debt Coverage Constraint",
+      score_label: scoreLabel,
+      cap_reason_code: "debt_coverage_constraint",
+      cap_explanation:
+        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because current debt DSCR is below 1.25x.",
+    };
+  }
+
+  if (hasDscrScore === false) {
+    return {
+      label: "Review - Debt Coverage Constraint",
+      score_label: scoreLabel,
+      cap_reason_code: "debt_coverage_not_assessed",
+      cap_explanation:
+        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because current debt DSCR was not assessed.",
+    };
+  }
+
+  return {
+    label: scoreLabel,
+    score_label: scoreLabel,
+    cap_reason_code: null,
+    cap_explanation: null,
+  };
+}
+
 export function sanitizeFinalCustomerHtml(html) {
   if (typeof html !== "string") return "";
   let out = html;
