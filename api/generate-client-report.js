@@ -809,7 +809,7 @@ function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
   const fmtCap = (x) => (Number.isFinite(x) ? formatPercent(x, 2) : DATA_NOT_AVAILABLE);
   const fmtX = (x) => (Number.isFinite(x) ? formatMultiple(x, 2) : DATA_NOT_AVAILABLE);
   const sufficiencyTableHtml = `<div class="card no-break" style="margin-top:6px;">
-  <p class="subsection-title"><strong>Full Refinance Sufficiency (Deterministic)</strong></p>
+  <p class="subsection-title"><strong>Refinance Sufficiency (Deterministic)</strong></p>
   <table>
     <thead>
       <tr><th>Metric</th><th>Base Case</th><th>Worst Case</th></tr>
@@ -6219,9 +6219,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         const capRatesDcfRows = capRatesDcf.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
         ? capRatesDcf
         : [...capRatesDcf, exitCapPct].sort((a, b) => a - b);
-        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Intrinsic Value: Exit Cap Rate Sensitivity</p>`;
+        tableHtml += `<p class="subsection-title" style="margin-top:16px;margin-bottom:6px;">Framework Value Sensitivity: Exit Cap Rate</p>`;
         tableHtml += `<table style="width:100%;border-collapse:collapse;font-size:11px;">`;
-        tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Implied Intrinsic Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
+        tableHtml += `<thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Exit Cap Rate</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Year 5 Exit Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">Framework-Indicated Present Value</th><th style="text-align:right;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;font-weight:600;">vs. Base</th></tr></thead><tbody>`;
         for (const cap of capRatesDcfRows) {
           const isBase = Math.abs(cap - exitCapPct) < 0.01;
           const rowCap = isBase ? exitCapPct : cap;
