@@ -448,8 +448,31 @@ function buildDealScorecardState({
     `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${r.pts}/${r.max}</td>` +
     `</tr>`
   ).join("");
-  const note = displayVerdict.cap_explanation ||
+  const sourceReconciliationConstrained = Boolean(
+    sourceReconciliationState &&
+      (
+        sourceReconciliationState.status === "source_reconciliation_required" ||
+        sourceReconciliationState.publishability_bucket === "disclose_only_publishable" ||
+        sourceReconciliationState.customer_delivery_impact === "disclose_only"
+      )
+  );
+  let note = displayVerdict.cap_explanation ||
     "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
+  if (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "debt_coverage_constraint" || displayVerdict.cap_reason_code === "debt_coverage_not_assessed") {
+    const noteParts = [
+      "Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only.",
+    ];
+    if (displayVerdict.cap_reason_code === "debt_coverage_constraint") {
+      noteParts.push("Current debt DSCR is below 1.25x.");
+    } else if (displayVerdict.cap_reason_code === "debt_coverage_not_assessed" || hasDscrScore === false) {
+      noteParts.push("Current debt is not assessed.");
+    }
+    if (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "source_reconciliation_disclosure") {
+      noteParts.push("Rent-roll/T12 reconciliation remains unresolved.");
+    }
+    noteParts.push("The score should not be read as refinance-ready or unconstrained.");
+    note = noteParts.join(" ");
+  }
   const dealScoreTableHtml =
     `<div class="card no-break" style="margin-top:12px;">` +
     `<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;">` +
@@ -1242,6 +1265,276 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   return { visibleColumns, rows: normalizedRows };
 }
 
+function buildDocumentTreatmentSummaryHtml({
+  documentSources = [],
+  currentDebtAssessmentState = null,
+  hasForwardLookingRenovationInputs = false,
+} = {}) {
+  const files = Array.isArray(documentSources)
+    ? documentSources
+        .map((row) => ({
+          original_filename: String(row?.original_filename || "").trim(),
+          doc_type: String(row?.doc_type || "").trim(),
+          display_doc_type: String(row?.display_doc_type || "").trim(),
+          semantic_doc_role: String(row?.semantic_doc_role || "").trim(),
+          semantic_doc_display_label: String(row?.semantic_doc_display_label || "").trim(),
+          semantic_doc_role_reason: String(row?.semantic_doc_role_reason || "").trim(),
+          semantic_doc_role_confidence: row?.semantic_doc_role_confidence ?? null,
+          parse_status: String(row?.parse_status || "").trim(),
+          parse_error: String(row?.parse_error || "").trim(),
+        }))
+        .filter((row) => row.original_filename.length > 0)
+    : [];
+  if (!files.length) return "";
+
+  const modeled = [];
+  const limitedUse = [];
+  const notModeled = [];
+  const pushUnique = (bucket, entry) => {
+    if (!entry || bucket.some((existing) => existing.key === entry.key)) return;
+    bucket.push(entry);
+  };
+  const normalizedText = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase();
+  const hasText = (value, pattern) => pattern.test(normalizedText(value));
+  const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
+  const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
+  const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
+  const classifyRow = (row) => {
+    const sourceBasis = hasAnyText(
+      row.semantic_doc_role,
+      row.semantic_doc_display_label,
+      row.display_doc_type,
+      row.doc_type,
+      row.parse_status,
+      row.parse_error
+    )
+      ? "metadata"
+      : "filename_fallback";
+    const metadataText = [
+      row.semantic_doc_role,
+      row.semantic_doc_display_label,
+      row.display_doc_type,
+      row.doc_type,
+      row.parse_status,
+      row.parse_error,
+    ]
+      .map(normalizedText)
+      .join(" | ");
+    const fileText = normalizedText(row.original_filename);
+    const text = `${metadataText} | ${fileText}`;
+    const isParsed = /parsed/.test(text);
+    const hasWarnings = /parsed_with_warnings|warning/.test(text);
+    const isUnclassified = /unclassified|supporting_documents_unclassified|doc_type_unclassified/.test(text);
+    const filenameOnly = sourceBasis === "filename_fallback";
+
+    const supportedOperating = /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(text);
+    const supportedRentRoll = /(^|\b)(rent roll|rent_roll)(\b|$)/.test(text);
+    const supportedMortgage = /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(text);
+    const supportedPropertyTax = /(^|\b)(property tax|property_tax)(\b|$)/.test(text);
+    const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(text);
+    const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(text);
+    const appraisalLike = /(^|\b)(appraisal|market survey|market_survey)(\b|$)/.test(text);
+    const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(text);
+
+    if (supportedOperating) {
+      return {
+        category: "Modeled Inputs",
+        note: "Structured operating input",
+        reason_code: "structured_operating_input",
+        source_basis: sourceBasis,
+      };
+    }
+    if (supportedRentRoll) {
+      return {
+        category: "Modeled Inputs",
+        note: "Structured rent roll input",
+        reason_code: "structured_rent_roll_input",
+        source_basis: sourceBasis,
+      };
+    }
+    if (supportedMortgage) {
+      if (currentDebtHasTrueBalance && currentDebtIsAssessed) {
+        return {
+          category: "Modeled Inputs",
+          note: "Structured current debt input",
+          reason_code: "structured_current_debt_input",
+          source_basis: sourceBasis,
+        };
+      }
+      return {
+        category: hasWarnings || isUnclassified ? "Listed but Not Quantitatively Modeled" : "Displayed / Limited Use",
+        note: currentDebtHasTrueBalance
+          ? "Current debt input is not used quantitatively here."
+          : "Current debt support only; no verified current debt balance.",
+        reason_code: currentDebtHasTrueBalance ? "current_debt_not_used_here" : "current_debt_not_assessed",
+        source_basis: sourceBasis,
+      };
+    }
+    if (supportedPropertyTax) {
+      return {
+        category: isParsed && !hasWarnings && !isUnclassified ? "Modeled Inputs" : "Displayed / Limited Use",
+        note: isParsed && !hasWarnings && !isUnclassified
+          ? "Structured property tax input"
+          : "Property tax support is displayed only; not treated as a primary modeled input.",
+        reason_code: "property_tax_support",
+        source_basis: sourceBasis,
+      };
+    }
+    if (supportedRenovation) {
+      if (hasForwardLookingRenovationInputs) {
+        return {
+          category: "Modeled Inputs",
+          note: "Forward-looking renovation support is document-backed",
+          reason_code: "forward_looking_renovation_input",
+          source_basis: sourceBasis === "metadata" ? "metadata" : "artifact_inventory",
+        };
+      }
+      return {
+        category: "Displayed / Limited Use",
+        note: "Historical capital items only; no ROI/payback/rent-lift modeling",
+        reason_code: "historical_capex_only",
+        source_basis: sourceBasis === "metadata" ? "metadata" : "artifact_inventory",
+      };
+    }
+    if (supportedLoanTerms) {
+      return {
+        category: "Displayed / Limited Use",
+        note: "Proposed acquisition assumptions only; not current debt",
+        reason_code: "loan_term_sheet_proposed_acquisition_only",
+        source_basis: sourceBasis,
+      };
+    }
+    if (appraisalLike) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Listed for auditability only; not used quantitatively",
+        reason_code: "unsupported_appraisal_or_market_source",
+        source_basis: sourceBasis,
+      };
+    }
+    if (phaseIOrContext || isUnclassified || hasWarnings) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Listed for auditability only; not used quantitatively",
+        reason_code: isUnclassified ? "unclassified_support_file" : hasWarnings ? "parse_warning_support_file" : "support_context_file",
+        source_basis: sourceBasis,
+      };
+    }
+    if (filenameOnly) {
+      const lower = fileText;
+      const filenameFallbackClass =
+        /\bt12\b|trailing[- ]?12|12[- ]?month|ttm operating statement|operating statement/.test(lower)
+          ? {
+              category: "Modeled Inputs",
+              note: "Structured operating input",
+              reason_code: "structured_operating_input",
+            }
+          : /rent\s*roll/.test(lower)
+          ? {
+              category: "Modeled Inputs",
+              note: "Structured rent roll input",
+              reason_code: "structured_rent_roll_input",
+            }
+          : /capex|capital expenditure|renovation|construction budget|scope of work|improvement/.test(lower)
+          ? {
+              category: "Displayed / Limited Use",
+              note: "Historical capital items only; no ROI/payback/rent-lift modeling",
+              reason_code: "historical_capex_only",
+            }
+          : /appraisal|market survey|phase i|broker|email|background|supporting/.test(lower)
+          ? {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Listed for auditability only; not used quantitatively",
+              reason_code: "filename_fallback_unclassified_support_file",
+            }
+          : {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Listed for auditability only; not used quantitatively",
+              reason_code: "filename_fallback_unclassified_support_file",
+            };
+      return {
+        ...filenameFallbackClass,
+        source_basis: "filename_fallback",
+      };
+    }
+    return {
+      category: "Listed but Not Quantitatively Modeled",
+      note: "Listed for auditability only; not used quantitatively",
+      reason_code: "unclassified_support_file",
+      source_basis: sourceBasis,
+    };
+  };
+
+  for (const file of files) {
+    const classification = classifyRow(file);
+    const entry = {
+      key: file.original_filename.toLowerCase(),
+      name: escapeHtml(file.original_filename),
+      note: escapeHtml(classification.note),
+      source_basis: classification.source_basis,
+      reason_code: classification.reason_code,
+    };
+    if (classification.category === "Modeled Inputs") {
+      pushUnique(modeled, entry);
+    } else if (classification.category === "Displayed / Limited Use") {
+      pushUnique(limitedUse, entry);
+    } else {
+      pushUnique(notModeled, entry);
+    }
+  }
+
+  const section = (title, items, emptyNote) => {
+    const listHtml = items.length
+      ? `<ul style="margin:6px 0 0 18px;padding:0;">${items
+          .map((item) => `<li data-treatment-source="${escapeHtml(item.source_basis || "")}" data-treatment-code="${escapeHtml(item.reason_code || "")}" style="margin:0 0 4px 0;">${item.name}${item.note ? ` <span style="color:#64748b;">- ${item.note}</span>` : ""}</li>`)
+          .join("")}</ul>`
+      : `<p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(emptyNote)}</p>`;
+    return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
+  };
+
+  return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${section("Modeled Inputs", modeled, "No modeled inputs were classified from the uploaded file names.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from the uploaded file names.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
+}
+
+function buildHistoricalCapexDisplayCopy({
+  hasForwardLookingRenovationInputs = false,
+} = {}) {
+  const historicalCapitalItemsDisclaimer =
+    "Historical capital items are displayed for context only. InvestorIQ does not model renovation ROI, rent lift, payback, or implementation schedule without document-supported forward-looking assumptions.";
+  return {
+    section_title: hasForwardLookingRenovationInputs
+      ? "Renovation Strategy & Capital Plan"
+      : "Historical Capital Expenditure Summary",
+    budget_card_title: hasForwardLookingRenovationInputs
+      ? "Renovation Budget Breakdown"
+      : "Historical Capital Items",
+    show_execution_card: hasForwardLookingRenovationInputs,
+    budget_note: hasForwardLookingRenovationInputs
+      ? DATA_NOT_AVAILABLE
+      : "Historical capital items are displayed for context only.",
+    execution_note: hasForwardLookingRenovationInputs
+      ? DATA_NOT_AVAILABLE
+      : historicalCapitalItemsDisclaimer,
+    interpretation: hasForwardLookingRenovationInputs
+      ? DATA_NOT_AVAILABLE
+      : historicalCapitalItemsDisclaimer,
+    historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
+  };
+}
+
+function buildFrameworkSensitivityDisplayCopy() {
+  return {
+    scenario_section_title: "Scenario Analysis & Five-Year Outlook - Framework Sensitivity",
+    dcf_section_title: "DCF Framework Sensitivity",
+    dcf_summary_title: "DCF Framework Sensitivity Summary (Base Case)",
+    dcf_value_label: "Framework-Indicated Present Value (Sum of PVs)",
+    dcf_framework_note:
+      "This is a framework sensitivity, not an appraisal, and does not rely on unsupported appraisal or market survey files.",
+  };
+}
+
 function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
   const summary = summarizeRenovationBudgetRows(rows, formatValue);
   const visibleColumns = columnVisibility || summary.visibleColumns;
@@ -1606,9 +1899,11 @@ function buildScreeningDataCoverageSummary({
   effectiveReportMode,
   supportingUnderwritingDocsUsed = false,
   hasUploadedFiles = false,
+  documentSources = [],
   currentDebtAssessmentState = null,
   sourceReconciliationState = null,
   sectionEligibility = null,
+  hasForwardLookingRenovationInputs = false,
 }) {
   const t12Checks = [
     {
@@ -1743,11 +2038,16 @@ function buildScreeningDataCoverageSummary({
           ? currentDebtCoverageState.explanation
           : "Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.";
       const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
-      const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
-        ? "Some Full Underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
-        : "";
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}</div>`;
-    }
+  const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
+      ? "Some underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+      : "";
+    const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
+      documentSources,
+      currentDebtAssessmentState,
+      hasForwardLookingRenovationInputs,
+    });
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>`;
+  }
     const currentDebtCoverageState = formatCurrentDebtAssessmentCopy({
       currentDebtState: currentDebtAssessmentState,
       mortgagePayload,
@@ -1761,9 +2061,14 @@ function buildScreeningDataCoverageSummary({
         : `Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. ${currentDebtCoverageState.explanation}`;
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
     const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
-      ? "Some Full Underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+      ? "Some underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
       : "";
-    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
+    const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
+      documentSources,
+      currentDebtAssessmentState,
+      hasForwardLookingRenovationInputs,
+    });
+    return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
   return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
 }
@@ -1981,7 +2286,7 @@ function buildScreeningIncomeForensicsHtml({
   }
   if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     bullets.push(
-      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. ${sourceReconciliationRenderState.source_reconciliation_disclosure || "InvestorIQ has not reconciled this variance and does not infer the cause."}`
+      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.`
     );
   }
   const bulletsHtml = [...new Set(bullets)]
@@ -2211,7 +2516,7 @@ function buildScreeningNoiStabilityHtml({
   const flags = [];
   if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     flags.push(
-      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. ${sourceReconciliationRenderState.source_reconciliation_disclosure || "InvestorIQ has not reconciled this variance and does not infer the cause."}`
+      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.`
     );
   }
   if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
@@ -3341,7 +3646,7 @@ export default async function handler(req, res) {
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
-        .select("original_filename, uploaded_at")
+        .select("original_filename, doc_type, parse_status, parse_error, uploaded_at")
         .eq("job_id", jobId)
         .order("uploaded_at", { ascending: true });
       if (!sourceErr && sourceRows && sourceRows.length > 0) {
@@ -4673,8 +4978,28 @@ if (effectiveReportMode === "screening_v1") {
       if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
       const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
       if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
-      const modeLabel = effectiveReportMode === "v1_core" ? "Full Underwriting" : "Preliminary Screening";
-snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><span style="${coverSnapshotValueStyle}">${modeLabel}</span></div>`);
+      const modeLabel = effectiveReportMode === "v1_core" ? "Underwriting" : "Preliminary Screening";
+      const reportTierBadges = [];
+      if (effectiveReportMode === "v1_core" && Number(sectionEligibility?.source_constrained_section_count || 0) > 0) {
+        reportTierBadges.push("Source-Constrained");
+      }
+      if (
+        effectiveReportMode === "v1_core" &&
+        currentDebtAssessmentState?.current_debt_dscr_status !== "computed" &&
+        currentDebtAssessmentState?.current_debt_limitation_reason_code
+      ) {
+        reportTierBadges.push("Debt Not Provided");
+      }
+      if (
+        sourceReconciliationState?.publishability_bucket === "disclose_only_publishable" ||
+        sourceReconciliationState?.customer_delivery_impact === "disclose_only"
+      ) {
+        reportTierBadges.push("Disclosure Required");
+      }
+      const reportTierBadgeHtml = reportTierBadges.length
+        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${reportTierBadges.map((badge) => `<span style="display:inline-block;padding:2px 6px;border:1px solid rgba(201,168,76,0.26);border-radius:999px;color:rgba(255,255,255,0.72);font-size:7pt;letter-spacing:.08em;text-transform:uppercase;">${escapeHtml(badge)}</span>`).join("")}</div>`
+        : "";
+snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}${reportTierBadgeHtml}</div></div>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
@@ -5255,12 +5580,17 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         renovationPayload?.roi,
         renovationPayload?.payback_period,
       ].some((value) => hasMeaningfulRenovationText(value));
+    const renovationDisplayCopy = buildHistoricalCapexDisplayCopy({
+      hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+    });
     const renovationBudgetNote = hasExplicitRenovationInput
-      ? String(
-          financials?.renovation_budget_note ??
-            renovationPayload?.budget_note ??
-            DATA_NOT_AVAILABLE
-        ).trim() || DATA_NOT_AVAILABLE
+      ? renovationReturnAssumptionsPresent
+        ? String(
+            financials?.renovation_budget_note ??
+              renovationPayload?.budget_note ??
+              DATA_NOT_AVAILABLE
+          ).trim() || DATA_NOT_AVAILABLE
+        : renovationDisplayCopy.budget_note
       : DATA_NOT_AVAILABLE;
     const renovationExecutionNote = hasExplicitRenovationInput
       ? renovationReturnAssumptionsPresent
@@ -5269,15 +5599,17 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
               renovationPayload?.execution_note ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
-        : "Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions."
+        : renovationDisplayCopy.execution_note
       : DATA_NOT_AVAILABLE;
     const renovationInterpretation = hasExplicitRenovationInput
-      ? String(
-          sections?.renovationInterpretation ??
-            financials?.renovation_interpretation ??
-            renovationPayload?.interpretation ??
-            DATA_NOT_AVAILABLE
-        ).trim() || DATA_NOT_AVAILABLE
+      ? renovationReturnAssumptionsPresent
+        ? String(
+            sections?.renovationInterpretation ??
+              financials?.renovation_interpretation ??
+              renovationPayload?.interpretation ??
+              DATA_NOT_AVAILABLE
+          ).trim() || DATA_NOT_AVAILABLE
+        : renovationDisplayCopy.interpretation
       : DATA_NOT_AVAILABLE;
     const renovationBudgetCardHtml = hasExplicitRenovationInput
       ? buildRenovationBudgetCardHtml(
@@ -5287,17 +5619,26 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         )
       : "";
     const renovationExecutionCardHtml = hasExplicitRenovationInput
-      ? buildRenovationExecutionCardHtml(
+      ? renovationReturnAssumptionsPresent
+        ? buildRenovationExecutionCardHtml(
           renovationExecutionSourceRows,
           formatCurrency,
           renovationExecutionNote
         )
+        : ""
       : "";
+    let normalizedRenovationBudgetCardHtml = renovationBudgetCardHtml;
+    if (normalizedRenovationBudgetCardHtml && !renovationReturnAssumptionsPresent) {
+      normalizedRenovationBudgetCardHtml = normalizedRenovationBudgetCardHtml.replace(
+        /Renovation Budget Breakdown/g,
+        renovationDisplayCopy.budget_card_title
+      );
+    }
     finalHtml = finalHtml.replace(
       /<!-- RENOVATION BUDGET TABLE -->[\s\S]*?<!-- COST PER UNIT -->/,
       () =>
-        renovationBudgetCardHtml
-          ? `${renovationBudgetCardHtml}\n\n  <!-- COST PER UNIT -->`
+        normalizedRenovationBudgetCardHtml
+          ? `${normalizedRenovationBudgetCardHtml}\n\n  <!-- COST PER UNIT -->`
           : "  <!-- COST PER UNIT -->"
     );
     finalHtml = finalHtml.replace(
@@ -5678,6 +6019,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     // Deterministic 5-Year DCF from T12 NOI
     let dcfTableHtml = "";
     if (t12Payload && effectiveReportMode === "v1_core") {
+      const dcfDisplayCopy = buildFrameworkSensitivityDisplayCopy();
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
@@ -5717,11 +6059,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           tableHtml += `</tr>`;
         }
         tableHtml += `<tr style="background:#F3F4F6;font-weight:700;">`;
-        tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;" colspan="5">Estimated Intrinsic Value (Sum of PVs)</td>`;
+        tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;" colspan="5">${dcfDisplayCopy.dcf_value_label}</td>`;
         tableHtml += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(totalPv)}</td>`;
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
-        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Discount rate: 8.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel})</p>`;
+        tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Discount rate: 8.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel}) | ${dcfDisplayCopy.dcf_framework_note}</p>`;
         // Cap rate sensitivity on intrinsic value
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
@@ -5952,6 +6294,27 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
     }
     finalHtml = replaceAll(finalHtml, "{{REPORT_MODE}}", effectiveReportMode);
+    if (effectiveReportMode === "v1_core") {
+      const dcfDisplayCopy = buildFrameworkSensitivityDisplayCopy();
+      finalHtml = finalHtml.replace(
+        /Scenario Analysis &amp; Five-Year Outlook/g,
+        dcfDisplayCopy.scenario_section_title.replace(/&/g, "&amp;")
+      );
+      finalHtml = finalHtml.replace(
+        /Discounted Cash Flow \(DCF\)/g,
+        dcfDisplayCopy.dcf_section_title
+      );
+      finalHtml = finalHtml.replace(
+        /Discounted Cash Flow Summary \(Base Case\)/g,
+        dcfDisplayCopy.dcf_summary_title
+      );
+      if (!renovationReturnAssumptionsPresent) {
+        finalHtml = finalHtml.replace(
+          /Renovation Strategy &amp; Capital Plan/g,
+          renovationDisplayCopy.section_title
+        );
+      }
+    }
     finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
     finalHtml = finalHtml.replace(/(\d+)-Unit Multifamily\./g, "$1-Unit Multifamily");
     finalHtml = finalHtml.replace(/Key Metrics Snapshot\./g, "Key Metrics Snapshot");
@@ -6004,9 +6367,11 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       effectiveReportMode,
       supportingUnderwritingDocsUsed,
       hasUploadedFiles: Array.isArray(documentSources) && documentSources.length > 0 && Boolean(documentSourcesHtml),
+      documentSources,
       currentDebtAssessmentState,
       sourceReconciliationState,
       sectionEligibility,
+      hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -6905,6 +7270,17 @@ try {
     sourceReconciliationState,
   });
   sourceCoverageQaResult = sourceCoverageQa;
+  if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+    const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+      documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
+      currentDebtAssessmentState,
+      hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
+    });
+    finalHtml = finalHtml.replace(
+      /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+      `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${richerDocumentTreatmentHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+    );
+  }
   const coverageQaTimestamp = new Date().toISOString().replace(/:/g, "-");
   const { error: coverageQaErr } = await supabase.from("analysis_artifacts").insert([
     {
@@ -7573,6 +7949,9 @@ export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
+  buildDocumentTreatmentSummaryHtml,
+  buildHistoricalCapexDisplayCopy,
+  buildFrameworkSensitivityDisplayCopy,
   buildReportStoragePath,
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,

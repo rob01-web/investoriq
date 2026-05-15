@@ -725,7 +725,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "source_reconciliation_disclosure",
       cap_explanation:
-        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because rent-roll annualized rent differs materially from T12 GPR and the variance is disclosed but not reconciled.",
+        "Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.",
     };
   }
 
@@ -735,7 +735,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "debt_coverage_constraint",
       cap_explanation:
-        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because current debt DSCR is below 1.25x.",
+        "Overall verdict is capped at Review because current debt DSCR is below 1.25x.",
     };
   }
 
@@ -745,7 +745,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "debt_coverage_not_assessed",
       cap_explanation:
-        "Numerical score reflects operating and debt metrics. Overall verdict is capped at Review because current debt DSCR was not assessed.",
+        "Overall verdict is capped at Review because current debt DSCR was not assessed.",
     };
   }
 

@@ -264,12 +264,13 @@ assert.equal(retest9DealScoreState.score, 95);
 assert.equal(retest9DealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
 assert.equal(retest9DealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
 assert.equal(retest9DealScoreState.displayVerdict?.cap_reason_code, "source_reconciliation_disclosure");
-assert.match(retest9DealScoreState.displayVerdict?.cap_explanation || "", /rent-roll annualized rent differs materially from T12 GPR/i);
+assert.match(retest9DealScoreState.displayVerdict?.cap_explanation || "", /rent-roll\/T12 reconciliation variance described in Data Coverage/i);
 assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
 assert.match(retest9DealScoreState.dealScoreTableHtml, /Review - Source Reconciliation Disclosure/);
 assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite Score: 95 \/ 100/);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Numerical score reflects operating and debt metrics/i);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /rent-roll annualized rent differs materially from T12 GPR/i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only/i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /The score should not be read as refinance-ready or unconstrained/i);
 
 const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -302,6 +303,61 @@ const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
 assert.equal(cleanStrongDealScoreState.score, 95);
 assert.equal(cleanStrongDealScoreState.displayVerdict?.label, "Within Underwriting Parameters");
 assert.equal(cleanStrongDealScoreState.dealScoreTableHtml.includes("Review - Source Reconciliation Disclosure"), false);
+
+const constrainedDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9250,
+      interest_rate: 0.0625,
+      amort_years: 25,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: {
+    monthly_payment: 9250,
+    interest_rate: 0.0625,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  sourceReconciliationState: {
+    status: "source_reconciliation_required",
+    publishability_bucket: "disclose_only_publishable",
+    rr_annual_in_place: 961200,
+    t12_gpr: 1850000,
+    variance_pct: -0.48043243243243244,
+    has_material_variance: true,
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+});
+assert.equal(constrainedDealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
+assert.equal(constrainedDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
+assert.equal(constrainedDealScoreState.score, 78);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /Current debt is not assessed/i);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /The score should not be read as refinance-ready or unconstrained/i);
 
 const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   currentDebtState: buildCurrentDebtAssessmentState({
@@ -369,6 +425,15 @@ const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummar
   effectiveReportMode: "v1_core",
   supportingUnderwritingDocsUsed: true,
   hasUploadedFiles: true,
+  documentSources: [
+    { original_filename: "Final.pdf", doc_type: "t12", parse_status: "parsed" },
+    { original_filename: "Market Survey.pdf", doc_type: "rent_roll", parse_status: "parsed" },
+    { original_filename: "Historical CapEx Note.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+    { original_filename: "Broker email background context.msg", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "unclassified_support_document" },
+    { original_filename: "Unsupported Appraisal Summary.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+    { original_filename: "Unsupported Market Survey.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+    { original_filename: "Unsupported Phase I ESA.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+  ],
   currentDebtAssessmentState: buildCurrentDebtAssessmentState({
     mortgagePayload: {
       outstanding_balance: 1500000,
@@ -388,11 +453,195 @@ const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummar
   sectionEligibility: {
     source_constrained_section_count: 0,
   },
+  hasForwardLookingRenovationInputs: false,
 });
 
 assert.match(screeningDataCoverageHtml, /Core financial inputs/i);
 assert.equal(screeningDataCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(screeningDataCoverageHtml), false);
+assert.match(screeningDataCoverageHtml, /Document Treatment Summary/i);
+assert.match(screeningDataCoverageHtml, /Modeled Inputs/i);
+assert.match(screeningDataCoverageHtml, /Displayed \/ Limited Use/i);
+assert.match(screeningDataCoverageHtml, /Listed but Not Quantitatively Modeled/i);
+assert.match(screeningDataCoverageHtml, /Historical capital items only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(screeningDataCoverageHtml, /Final\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Market Survey\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Historical CapEx Note\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Unsupported Appraisal Summary\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Unsupported Market Survey\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Unsupported Phase I ESA\.pdf/i);
+assert.match(screeningDataCoverageHtml, /Broker email background context\.msg/i);
+
+const historicalCapexDisplayCopy = generatorTest.buildHistoricalCapexDisplayCopy({
+  hasForwardLookingRenovationInputs: false,
+});
+assert.equal(historicalCapexDisplayCopy.section_title, "Historical Capital Expenditure Summary");
+assert.equal(historicalCapexDisplayCopy.budget_card_title, "Historical Capital Items");
+assert.match(historicalCapexDisplayCopy.interpretation, /Historical capital items are displayed for context only/i);
+assert.match(historicalCapexDisplayCopy.interpretation, /does not model renovation ROI, rent lift, payback, or implementation schedule/i);
+
+const frameworkSensitivityDisplayCopy = generatorTest.buildFrameworkSensitivityDisplayCopy();
+assert.equal(frameworkSensitivityDisplayCopy.dcf_section_title, "DCF Framework Sensitivity");
+assert.equal(frameworkSensitivityDisplayCopy.scenario_section_title, "Scenario Analysis & Five-Year Outlook - Framework Sensitivity");
+assert.equal(frameworkSensitivityDisplayCopy.dcf_value_label, "Framework-Indicated Present Value (Sum of PVs)");
+assert.match(frameworkSensitivityDisplayCopy.dcf_framework_note, /framework sensitivity, not an appraisal/i);
+assert.match(frameworkSensitivityDisplayCopy.dcf_framework_note, /unsupported appraisal or market survey files/i);
+
+const documentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Final.pdf", doc_type: "t12", parse_status: "parsed" },
+    { original_filename: "Market Survey.pdf", doc_type: "rent_roll", parse_status: "parsed" },
+    { original_filename: "Historical CapEx Note.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+    { original_filename: "Broker email background context.msg", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "unclassified_support_document" },
+    { original_filename: "Unsupported Appraisal Summary.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+    { original_filename: "Unsupported Market Survey.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+    { original_filename: "Unsupported Phase I ESA.pdf", doc_type: "supporting_documents_unclassified", parse_status: "parsed_with_warnings", parse_error: "doc_type_unclassified" },
+  ],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      outstanding_balance: 1500000,
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    t12Noi: 650000,
+  }),
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(documentTreatmentHtml, /Modeled Inputs/i);
+assert.match(documentTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
+assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
+assert.match(documentTreatmentHtml, /Historical capital items only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
+
+const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Rent Roll.xlsx" },
+  ],
+});
+assert.match(filenameFallbackHtml, /Modeled Inputs/i);
+assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
+
+const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    units: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1087488,
+      market_rent_annual: 1117800,
+      summary_row_detected: true,
+    },
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [
+    { original_filename: "Debt Package.pdf", doc_type: "mortgage_statement", display_doc_type: "Current Mortgage Statement", parse_status: "parsed" },
+  ],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      outstanding_balance: 1500000,
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "aligned",
+    variance_pct: null,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(liveCurrentDebtModeledCoverageHtml, /Structured current debt input/i);
+assert.match(liveCurrentDebtModeledCoverageHtml, /Modeled Inputs/i);
+
+const liveCurrentDebtLimitedCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    units: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1087488,
+      market_rent_annual: 1117800,
+      summary_row_detected: true,
+    },
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [
+    { original_filename: "Debt Package.pdf", doc_type: "mortgage_statement", display_doc_type: "Current Mortgage Statement", parse_status: "parsed_with_warnings", parse_error: "no_current_balance" },
+  ],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "aligned",
+    variance_pct: null,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(liveCurrentDebtLimitedCoverageHtml, /Current debt support only; no verified current debt balance/i);
+assert.equal(/Structured current debt input/i.test(liveCurrentDebtLimitedCoverageHtml), false);
 
 const sourceReconciliationFixture = {
   status: "source_reconciliation_required",
