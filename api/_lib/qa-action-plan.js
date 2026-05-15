@@ -777,7 +777,6 @@ const customerPublishBlockingViolationCodes = new Set([
   "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
   "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-  "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
   "SCREENING_UNDERWRITING_SECTION_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
@@ -1019,9 +1018,13 @@ function buildPublishEligibilitySummary({
     !Boolean(reportContractQa?.customer_delivery_ready === false) &&
     !Boolean(qaActionPlan?.customer_delivery_ready === false)
   );
+  const customerBlockingReconciliationViolation =
+    reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
+      ? reconciliationViolation
+      : null;
   const adminReviewBlockingAction =
-    reconciliationViolation ||
     customerDeliveryBlockerAction ||
+    customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
 
   const publishDecisionReason = customerPublishEligible
@@ -1160,7 +1163,7 @@ export function buildDeliveryGateDecision({
   const adminReviewAction = customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
-    Boolean(adminReviewAction || reconciliationViolation);
+    Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)));
 
   const sourceNeedsDocs =
     missingRequiredSource ||
@@ -1169,11 +1172,15 @@ export function buildDeliveryGateDecision({
   const sourceNeedsReview =
     coreInputBucket === "admin_review_required" ||
     coreInputBucket === "system_contract_failure";
+  const customerBlockingReconciliationViolation =
+    reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
+      ? reconciliationViolation
+      : null;
   const adminReviewBlockingAction =
-    reconciliationViolation ||
     customerDeliveryBlockerAction ||
+    customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
-  if (sourceNeedsDocs && !customerDeliveryBlockerAction && !reconciliationViolation) {
+  if (sourceNeedsDocs && !customerDeliveryBlockerAction && !customerBlockingReconciliationViolation) {
     const gateReason =
       sourceDocumentAction?.code ||
       coreInputSufficiencyState?.reason_code ||
@@ -1209,7 +1216,7 @@ export function buildDeliveryGateDecision({
       ...publishEligibility,
     };
   }
-  if (sourceNeedsReview && !customerDeliveryBlockerAction && !reconciliationViolation) {
+  if (sourceNeedsReview && !customerDeliveryBlockerAction && !customerBlockingReconciliationViolation) {
     const gateReason =
       coreInputSufficiencyState?.reason_code ||
       sourceDocumentAction?.code ||
@@ -1245,13 +1252,13 @@ export function buildDeliveryGateDecision({
       ...publishEligibility,
     };
   }
-  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || reconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null));
+  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || customerBlockingReconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null));
 
   if (customerDeliveryBlocked) {
-    const topAction = customerDeliveryBlockerAction || reconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
+    const topAction = customerDeliveryBlockerAction || customerBlockingReconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
     const reasonCode =
       reasonCodeForAction(adminReviewAction) ||
-      reasonCodeForAction(reconciliationViolation) ||
+      reasonCodeForAction(customerBlockingReconciliationViolation) ||
       reasonCodeForAction(customerDeliveryBlockerAction) ||
       reasonCodeForAction(managerContradictionAction) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");

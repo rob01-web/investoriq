@@ -1,5 +1,205 @@
 # InvestorIQ Master Context - May 2026
 
+# May 14, 2026 Late Night Update - Maplewell RETEST 7 / Internal Rent Roll Total Contradiction / Source-of-Truth Audit Required
+
+## Immediate live result - Maplewell true-current-debt RETEST 7
+- Latest live test name shown in Dashboard: `01_true_current_debt_underwriting_RETEST 7`.
+- The report returned to `UNDER REVIEW`.
+- This is no longer the exact same old `RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH` gate loop from earlier Test 4/Test 5.
+- Runtime marker confirms the deployed runtime was the intended commit:
+  - `git_commit_sha: ee7b636c37adb46461949b5e86377b7fc6a8a894`
+  - `marker_version: source-reconciliation-final-guard-v3`
+- The final guard is running live and the deployed code path is being executed.
+
+## Skinny on why RETEST 7 went back to review
+The current hold reason is:
+
+```text
+INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION
+```
+
+The artifact evidence shows a rent-roll internal total contradiction:
+- total units: `48`
+- weighted average market rent: about `$1,888/month`
+- rendered / artifact annual market rent total: `$21,744,000`
+- implied average market rent from that annual total:
+  - `$21,744,000 / 12 / 48 = $37,750/month/unit`
+- weighted average in-place rent: about `$1,669/month`
+- annual in-place rent total: `$961,200`
+- implied average in-place rent from that annual total:
+  - `$961,200 / 12 / 48 = $1,668.75/month/unit`
+
+Interpretation:
+- The in-place rent basis is internally coherent with the weighted average.
+- The market rent annual total is obviously impossible against the weighted average market rent.
+- The system correctly detected an internal rent-roll total contradiction.
+- However, the delivery behavior still needs investigation because the report-contract artifact says this contradiction was not customer-delivery blocking, but the final `delivery_gate_decision` promoted it into a customer publish blocker / Admin Review.
+- That may be a valid conservative hold for a system-generated report-contract failure, or it may be a delivery-gate overpromotion depending on whether the bad annual market total actually reached customer-facing output.
+
+## Important source-selection truth from RETEST 7
+- The source reconciliation state still selected:
+  - `rr_annual_in_place = 961200`
+  - `rr_annual_in_place_source = computedRentRoll.total_in_place_annual`
+  - `t12_gpr = 1850000`
+  - `variance_pct = -0.48043243243243244`
+- The metadata oddly says `trusted_summary_totals: true` while still selecting `computedRentRoll.total_in_place_annual`.
+- This means Codex's previous intent to make `rentRollPayload.totals.in_place_rent_annual = 1,962,456` win did not fully land in the live path, or the parsed artifact / computed rent-roll normalization is more nuanced than expected.
+- The next fix must be file-truth-based. Do not assume the summary total is always correct. The key is to determine which totals are internally coherent and which are summary-row / annualized / row-derived / market-rent artifacts.
+
+## Next morning investigation target
+Do not run more live tests first.
+
+Use Codex to investigate the current RETEST 7 hold as a class-level issue:
+
+1. Determine whether `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION` is a true customer-delivery blocker or a public/sample-only blocker.
+2. Determine whether the bad `$21,744,000` annual market rent total still renders anywhere in customer-facing HTML/PDF.
+3. Trace how `annual_market_rent_total = 21,744,000` is selected despite weighted avg market rent around `$1,888`.
+4. Trace why source reconciliation still selected `computedRentRoll.total_in_place_annual = 961,200` while metadata says trusted summary totals existed.
+5. Decide the correct hierarchy for rent roll totals:
+   - internally coherent unit rows;
+   - trusted summary totals;
+   - weighted average × units × 12;
+   - parser/summary-row annual totals.
+6. Fix the class so impossible annual totals are suppressed/normalized and delivery-gate impact is consistent with the contract.
+7. Add tests for:
+   - annual market rent summary contradiction;
+   - in-place rent source-selection conflict;
+   - delivery-gate handling when contract marks public/high-value blocker but not customer blocker.
+
+## New source-of-truth doctrine from tonight
+The recurring failure class is now explicit:
+
+```text
+Two different parts of the pipeline must not be allowed to choose their own source of truth.
+```
+
+Locked rule:
+- Build one canonical state per major financial concept.
+- Attach source-selection metadata.
+- Pass that state everywhere.
+- Downstream renderer, QA, report contract, final guard, and delivery gate must not casually rebuild from different inputs.
+- If multiple plausible source values exist, deterministic source-selection must explain which one won and why.
+- Rendered PDF must match canonical state.
+
+Risk areas for a focused repo-wide source-of-truth audit before Ken/public samples:
+- Rent roll totals:
+  - summary totals vs row-derived totals vs computedRentRoll vs weighted-average-derived totals.
+- T12 totals:
+  - GPR vs EGI vs total income vs line-item sums.
+- Debt:
+  - true current debt vs acquisition/proposed financing vs loan-term fallback.
+- Property tax:
+  - T12 tax line vs property tax bill vs parsed support doc.
+- Cap rate / valuation:
+  - document-derived cap rate vs standardized framework sensitivity assumptions.
+- Renovation:
+  - actual budget/scope vs filename hints vs partial support docs.
+- Occupancy:
+  - rent roll summary occupancy vs row-derived occupied/vacant status.
+- Report delivery:
+  - QA/source coverage state vs rendered HTML vs DocRaptor HTML vs delivery gate.
+
+## Required repo-wide audit before Ken/public samples
+Before messaging Ken Dunn or using public samples, run a focused repo-wide source-of-truth audit.
+
+Goal:
+- find financial metrics calculated in more than one place;
+- find renderer paths that recompute values instead of using canonical state;
+- find QA paths that rebuild state differently than renderer paths;
+- find summary-total vs row-derived conflicts;
+- add source-selection metadata where missing;
+- add conflict fixtures where two plausible values exist but only one is allowed to control.
+
+This audit is not a broad refactor. It is a launch-readiness control to stop hidden duplicate-source bugs from leaking into public/high-value reports.
+
+## Future automation to-do - eliminate manual worker kick
+Add this to the post-launch / launch-hardening backlog, but do not work on it before the current report-blocker is resolved.
+
+Correct InvestorIQ architecture:
+- Generate Report queues/locks the `analysis_jobs` row and returns quickly.
+- Worker runs independently.
+- Dashboard observes/polls job status without waiting for report generation.
+- Frontend never waits synchronously for the worker and never freezes because of worker runtime.
+
+Important InvestorIQ-specific constraints:
+- Use `analysis_jobs`, not generic `report_jobs`.
+- Use actual InvestorIQ statuses:
+  - `queued`
+  - `extracting`
+  - `underwriting`
+  - `scoring`
+  - `rendering`
+  - `pdf_generating`
+  - `publishing`
+  - `published`
+  - `failed`
+  - `under review` / `ADMIN_REVIEW_REQUIRED` where applicable.
+- Avoid raw INSERT webhook if files/artifacts may not be ready.
+- Safer options:
+  1. Generate-click fire-and-forget trigger after the job is safely queued.
+  2. Supabase webhook on `analysis_jobs` transition to `queued`, not raw row insert.
+- Status endpoint should be auth/ownership-aware; do not rely on UUID-only access for sensitive report status.
+- Dashboard should poll a lightweight status endpoint every 5-6 seconds, update React state, and never reload the page.
+
+## Fresh chat brief - May 15 morning resume
+
+```text
+We are continuing InvestorIQ from the May 14 late-night master context.
+
+Critical emotional/operational context:
+Rob had to stop for the night because fatigue was high after repeated Maplewell retests kept surfacing report-review/failure loops. Start calmly. Do not jump into another blind patch. First classify the latest RETEST 7 artifact.
+
+Latest live result:
+- Maplewell true-current-debt package / `01_true_current_debt_underwriting_RETEST 7`
+- Deployed runtime marker confirmed commit `ee7b636c37adb46461949b5e86377b7fc6a8a894`
+- Final guard v3 is running live.
+- Report still went to `UNDER REVIEW`.
+
+Current hold reason:
+- `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION`
+- Delivery gate reason:
+  - `admin_review_required:INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION`
+
+Evidence:
+- total_units: 48
+- annual_market_rent_total: 21,744,000
+- weighted_avg_market_rent: 1,888
+- implied_avg_market_rent: 37,750/month/unit
+- annual_in_place_rent_total: 961,200
+- weighted_avg_in_place_rent: 1,669
+- implied_avg_in_place_rent: 1,668.75/month/unit
+- source reconciliation still selected `computedRentRoll.total_in_place_annual = 961,200`
+- metadata says trusted summary totals existed but the selected source path is still computedRentRoll.
+
+Interpretation:
+- This is not the old deployment problem.
+- This is not browser cache.
+- This is not primarily AI QA.
+- The system is detecting an internal rent-roll total contradiction.
+- The immediate question is whether the contradiction is truly customer-blocking, whether the impossible annual market total reaches customer-facing output, and why delivery gate promoted it even though the report-contract violation itself listed `blocks_customer_delivery: false`.
+
+First task:
+Prepare a Codex investigation-first prompt, not a broad patch, to trace `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION` and rent-roll source selection:
+1. where `$21,744,000` comes from;
+2. whether it renders in customer HTML/PDF;
+3. why source reconciliation still chooses `computedRentRoll.total_in_place_annual = 961,200`;
+4. whether trusted summary total `1,962,456` should actually win or whether row-derived in-place is the coherent source;
+5. why delivery gate makes `INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION` a customer blocker;
+6. what class-level fix/tests are needed.
+
+Do not run another live test first.
+Do not weaken deterministic QA.
+Do not remove the rent-roll contradiction contract.
+Do not turn public-sample blockers into customer blockers.
+Do not let Codex make a fixture-only Maplewell patch.
+
+Also remember two backlog items to preserve:
+- Run a focused repo-wide source-of-truth audit before Ken/public samples.
+- Later eliminate manual worker kick using `analysis_jobs` and non-blocking dashboard polling; avoid generic `report_jobs` and avoid raw INSERT webhook if files/artifacts may not be ready.
+```
+
+---
+
 # May 14, 2026 Critical Doctrine Update 2 - Core Input Sufficiency Contract / Publish, Collapse, Disclose
 
 ## Why this update matters

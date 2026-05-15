@@ -55,6 +55,15 @@ function formatMultiple(value, decimals = 2) {
   return `${n.toFixed(fixed)}x`;
 }
 
+function materiallyDifferent(a, b, absoluteTolerance = 10, relativeTolerance = 0.02) {
+  const left = Number(a);
+  const right = Number(b);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
+  const delta = Math.abs(left - right);
+  const scale = Math.max(Math.abs(left), Math.abs(right), 1);
+  return delta > absoluteTolerance && delta / scale > relativeTolerance;
+}
+
 export function formatSourceReconciliationVariance(variancePct, decimals = 1) {
   const n = coerceNumber(variancePct);
   if (!Number.isFinite(n)) return null;
@@ -99,6 +108,232 @@ export function buildSourceReconciliationRenderState({
     source_selection: state?.source_selection || null,
     rr_annual_in_place_source: state?.rr_annual_in_place_source || null,
     t12_gpr_source: state?.t12_gpr_source || null,
+  };
+}
+
+function rowRentValueForMetric(row, metricKey) {
+  if (!row || typeof row !== "object") return null;
+  if (metricKey === "market") {
+    return coerceNumber(row?.market_rent ?? row?.market_rate ?? row?.asking_rent ?? row?.rent ?? row?.monthly_rent);
+  }
+  return coerceNumber(row?.in_place_rent ?? row?.current_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
+}
+
+function collectRentRollRows(computedRentRoll = null, rentRollPayload = null) {
+  if (Array.isArray(computedRentRoll?.units) && computedRentRoll.units.length > 0) return computedRentRoll.units;
+  if (Array.isArray(rentRollPayload?.units) && rentRollPayload.units.length > 0) return rentRollPayload.units;
+  if (Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0) return rentRollPayload.unit_mix;
+  if (Array.isArray(computedRentRoll?.unit_mix) && computedRentRoll.unit_mix.length > 0) return computedRentRoll.unit_mix;
+  return [];
+}
+
+function resolveCanonicalRentRollAnnualMetric({
+  metricKey = "in_place",
+  computedRentRoll = null,
+  rentRollPayload = null,
+} = {}) {
+  const rentRollTotals = rentRollPayload && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
+  const trustedSummaryTotals = Boolean(
+    rentRollTotals?.summary_row_detected === true ||
+    rentRollPayload?.summary_row_detected === true ||
+    computedRentRoll?.summary_row_detected === true
+  );
+  const totalUnits = coerceNumber(
+    computedRentRoll?.total_units ??
+      rentRollPayload?.total_units ??
+      rentRollTotals?.total_units
+  );
+  const rows = collectRentRollRows(computedRentRoll, rentRollPayload);
+  const rowAnnual = rows.reduce((sum, row) => {
+    const rent = rowRentValueForMetric(row, metricKey);
+    const count = coerceNumber(row?.count);
+    const multiplier = Number.isFinite(count) && count > 0 ? count : 1;
+    return Number.isFinite(rent) && rent > 0 ? sum + (rent * multiplier * 12) : sum;
+  }, 0);
+  const unitMix = Array.isArray(computedRentRoll?.unit_mix) && computedRentRoll.unit_mix.length > 0
+    ? computedRentRoll.unit_mix
+    : Array.isArray(rentRollPayload?.unit_mix)
+    ? rentRollPayload.unit_mix
+    : rows;
+  let weightedAvgRent = null;
+  if (Array.isArray(unitMix) && unitMix.length > 0) {
+    let weightedSum = 0;
+    let countSum = 0;
+    for (const row of unitMix) {
+      const count = coerceNumber(row?.count);
+      const rent = metricKey === "market"
+        ? coerceNumber(row?.market_rent ?? row?.avg_market_rent ?? row?.rent)
+        : coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.avg_in_place_rent ?? row?.rent);
+      if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(rent) || rent <= 0) continue;
+      weightedSum += count * rent;
+      countSum += count;
+    }
+    if (countSum > 0) weightedAvgRent = weightedSum / countSum;
+  }
+  if (!Number.isFinite(weightedAvgRent) && Number.isFinite(rowAnnual) && rowAnnual > 0 && Number.isFinite(totalUnits) && totalUnits > 0) {
+    weightedAvgRent = rowAnnual / totalUnits / 12;
+  }
+  const weightedAnnual = Number.isFinite(weightedAvgRent) && Number.isFinite(totalUnits) && totalUnits > 0
+    ? weightedAvgRent * totalUnits * 12
+    : null;
+  const candidates = [
+    {
+      value: metricKey === "market"
+        ? rentRollTotals?.market_rent_annual
+        : rentRollTotals?.in_place_rent_annual ?? rentRollTotals?.current_rent_annual,
+      source_path: metricKey === "market"
+        ? "rentRollPayload.totals.market_rent_annual"
+        : "rentRollPayload.totals.in_place_rent_annual",
+      kind: "summary_annual",
+    },
+    {
+      value: metricKey === "market"
+        ? rentRollTotals?.market_rent_monthly
+        : rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly,
+      source_path: metricKey === "market"
+        ? "rentRollPayload.totals.market_rent_monthly"
+        : "rentRollPayload.totals.in_place_rent_monthly",
+      kind: "summary_monthly",
+    },
+    {
+      value: metricKey === "market"
+        ? rentRollPayload?.total_market_annual
+        : rentRollPayload?.total_in_place_annual,
+      source_path: metricKey === "market"
+        ? "rentRollPayload.total_market_annual"
+        : "rentRollPayload.total_in_place_annual",
+      kind: "payload_total_annual",
+    },
+    {
+      value: metricKey === "market"
+        ? computedRentRoll?.total_market_annual
+        : computedRentRoll?.total_in_place_annual,
+      source_path: metricKey === "market"
+        ? "computedRentRoll.total_market_annual"
+        : "computedRentRoll.total_in_place_annual",
+      kind: "computed_total_annual",
+    },
+    {
+      value: rowAnnual,
+      source_path: "row_derived_units.monthly_rent_x_12",
+      kind: "row_derived_annual",
+    },
+    {
+      value: weightedAnnual,
+      source_path: "weighted_avg_rent * total_units * 12",
+      kind: "weighted_avg_implied_annual",
+    },
+  ];
+  const coherentCandidates = [];
+  const contradictions = [];
+  const suppressedValues = [];
+  const references = [
+    Number.isFinite(rowAnnual) && rowAnnual > 0 ? { label: "row_derived", value: rowAnnual } : null,
+    Number.isFinite(weightedAnnual) && weightedAnnual > 0 ? { label: "weighted_avg_implied", value: weightedAnnual } : null,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const value = coerceNumber(candidate?.value);
+    if (!Number.isFinite(value) || value <= 0) continue;
+    const impliedMonthly = Number.isFinite(totalUnits) && totalUnits > 0 ? value / totalUnits / 12 : null;
+    const matchesReferences = references.filter((reference) => !materiallyDifferent(value, reference.value));
+    const coherent = matchesReferences.length > 0 || ((!(Number.isFinite(rowAnnual) && rowAnnual > 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual > 0)));
+    const candidateRecord = {
+      value,
+      source_path: candidate.source_path,
+      kind: candidate.kind,
+      implied_avg_monthly: impliedMonthly,
+      matches: matchesReferences.map((reference) => reference.label),
+      coherent,
+    };
+    if (coherent) {
+      coherentCandidates.push(candidateRecord);
+    } else {
+      contradictions.push({
+        source_path: candidate.source_path,
+        kind: candidate.kind,
+        value,
+        implied_avg_monthly: impliedMonthly,
+        compared_against: references.map((reference) => ({
+          label: reference.label,
+          value: reference.value,
+        })),
+      });
+      suppressedValues.push({
+        source_path: candidate.source_path,
+        value,
+        reason: "incoherent_with_canonical_references",
+      });
+    }
+  }
+
+  const preferenceOrder = new Map([
+    ["row_derived_annual", 0],
+    ["weighted_avg_implied_annual", 1],
+    ["summary_annual", 2],
+    ["summary_monthly", 3],
+    ["payload_total_annual", 4],
+    ["computed_total_annual", 5],
+  ]);
+  coherentCandidates.sort((a, b) => preferenceOrder.get(a.kind) - preferenceOrder.get(b.kind));
+  const selected = coherentCandidates[0] || null;
+  const selectedValue = Number.isFinite(selected?.value) && selected.value > 0 ? selected.value : null;
+  const selectedSourcePath = selected?.source_path || null;
+  const selectedReason = selected
+    ? selected.kind === "row_derived_annual"
+      ? "row_derived_units_selected"
+      : selected.kind === "weighted_avg_implied_annual"
+      ? "weighted_average_implied_selected"
+      : selected.kind === "summary_annual"
+      ? "trusted_summary_annual_selected"
+      : selected.kind === "summary_monthly"
+      ? "summary_monthly_annualized_selected"
+      : selected.kind === "payload_total_annual"
+      ? "payload_total_annual_selected"
+      : "computed_total_annual_selected"
+    : "insufficient_coherent_rent_roll_total";
+  const confidence = selected
+    ? selected.kind === "row_derived_annual" || selected.kind === "weighted_avg_implied_annual"
+      ? "high"
+      : "medium"
+    : "none";
+
+  return {
+    value: selectedValue,
+    source_path: selectedSourcePath,
+    confidence,
+    selected_reason: selectedReason,
+    candidates,
+    contradictions,
+    suppressed_values: suppressedValues,
+    trusted_summary_totals: trustedSummaryTotals,
+    row_derived_annual: Number.isFinite(rowAnnual) && rowAnnual > 0 ? rowAnnual : null,
+    weighted_avg_implied_annual: Number.isFinite(weightedAnnual) && weightedAnnual > 0 ? weightedAnnual : null,
+    weighted_avg_rent: Number.isFinite(weightedAvgRent) && weightedAvgRent > 0 ? weightedAvgRent : null,
+    total_units: Number.isFinite(totalUnits) && totalUnits > 0 ? totalUnits : null,
+    has_summary_annual_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && candidate.kind === "summary_annual"),
+    has_summary_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && String(candidate.kind || "").startsWith("summary_")),
+  };
+}
+
+export function resolveCanonicalRentRollAnnualTotals({
+  computedRentRoll = null,
+  rentRollPayload = null,
+} = {}) {
+  const inPlace = resolveCanonicalRentRollAnnualMetric({
+    metricKey: "in_place",
+    computedRentRoll,
+    rentRollPayload,
+  });
+  const market = resolveCanonicalRentRollAnnualMetric({
+    metricKey: "market",
+    computedRentRoll,
+    rentRollPayload,
+  });
+  return {
+    total_units: inPlace.total_units ?? market.total_units ?? null,
+    in_place: inPlace,
+    market,
   };
 }
 
@@ -1128,70 +1363,24 @@ function resolveCanonicalRentRollAnnualInPlace({
   computedRentRoll = null,
   rentRollPayload = null,
 } = {}) {
-  const rentRollTotals = rentRollPayload && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
-  const trustedSummaryTotals = Boolean(
-    rentRollTotals?.summary_row_detected === true ||
-    rentRollPayload?.summary_row_detected === true ||
-    computedRentRoll?.summary_row_detected === true
-  );
-  const summaryCandidates = [
-    { value: rentRollTotals?.in_place_rent_annual, source_path: "rentRollPayload.totals.in_place_rent_annual" },
-    { value: rentRollTotals?.current_rent_annual, source_path: "rentRollPayload.totals.current_rent_annual" },
-    { value: rentRollPayload?.total_in_place_annual, source_path: "rentRollPayload.total_in_place_annual" },
-    { value: rentRollPayload?.annual_in_place_rent, source_path: "rentRollPayload.annual_in_place_rent" },
-    { value: computedRentRoll?.total_in_place_annual, source_path: "computedRentRoll.total_in_place_annual" },
-    { value: computedRentRoll?.annual_in_place_rent, source_path: "computedRentRoll.annual_in_place_rent" },
-    { value: computedRentRoll?.total_annual_in_place, source_path: "computedRentRoll.total_annual_in_place" },
-  ];
-  const fallbackCandidates = [
-    { value: computedRentRoll?.total_in_place_annual, source_path: "computedRentRoll.total_in_place_annual" },
-    { value: computedRentRoll?.annual_in_place_rent, source_path: "computedRentRoll.annual_in_place_rent" },
-    { value: computedRentRoll?.total_annual_in_place, source_path: "computedRentRoll.total_annual_in_place" },
-    { value: rentRollPayload?.total_in_place_annual, source_path: "rentRollPayload.total_in_place_annual" },
-    { value: rentRollTotals?.in_place_rent_annual, source_path: "rentRollPayload.totals.in_place_rent_annual" },
-    { value: rentRollTotals?.current_rent_annual, source_path: "rentRollPayload.totals.current_rent_annual" },
-    { value: rentRollPayload?.annual_in_place_rent, source_path: "rentRollPayload.annual_in_place_rent" },
-  ];
-  const chosenCandidates = trustedSummaryTotals ? [...summaryCandidates, ...fallbackCandidates] : fallbackCandidates;
-  let selectedValue = null;
-  let selectedSourcePath = null;
-  for (const candidate of chosenCandidates) {
-    const value = coerceNumber(candidate?.value);
-    if (Number.isFinite(value) && value > 0) {
-      selectedValue = value;
-      selectedSourcePath = candidate?.source_path || null;
-      break;
-    }
-  }
-  if (Number.isFinite(selectedValue) && selectedValue > 0 && selectedValue < 1000) {
-    const monthlyCandidate = trustedSummaryTotals
-      ? coerceNumber(rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly)
-      : coerceNumber(rentRollPayload?.totals?.in_place_rent_monthly ?? rentRollPayload?.totals?.current_rent_monthly);
-    if (Number.isFinite(monthlyCandidate) && monthlyCandidate > 0) {
-      selectedValue = monthlyCandidate * 12;
-      selectedSourcePath = selectedSourcePath ? `${selectedSourcePath} * 12` : "monthly_x_12";
-    }
-  }
-  if (!Number.isFinite(selectedValue)) {
-    const rowSources = [];
-    if (Array.isArray(computedRentRoll?.units)) rowSources.push(...computedRentRoll.units);
-    if (Array.isArray(rentRollPayload?.units)) rowSources.push(...rentRollPayload.units);
-    if (Array.isArray(rentRollPayload?.unit_mix)) rowSources.push(...rentRollPayload.unit_mix);
-    if (rowSources.length > 0) {
-      const rowAnnual = rowSources.reduce((sum, row) => {
-        const rent = coerceNumber(row?.in_place_rent ?? row?.current_rent ?? row?.rent);
-        return Number.isFinite(rent) && rent > 0 ? sum + (rent * 12) : sum;
-      }, 0);
-      if (Number.isFinite(rowAnnual) && rowAnnual > 0) {
-        selectedValue = rowAnnual;
-        selectedSourcePath = "row_derived_units.in_place_rent";
-      }
-    }
-  }
+  const state = resolveCanonicalRentRollAnnualMetric({
+    metricKey: "in_place",
+    computedRentRoll,
+    rentRollPayload,
+  });
   return {
-    value: Number.isFinite(selectedValue) && selectedValue > 0 ? selectedValue : null,
-    source_path: selectedSourcePath,
-    trusted_summary_totals: trustedSummaryTotals,
+    value: state.value,
+    source_path: state.source_path,
+    trusted_summary_totals: Boolean(
+      rentRollPayload?.totals?.summary_row_detected === true ||
+      rentRollPayload?.summary_row_detected === true ||
+      computedRentRoll?.summary_row_detected === true
+    ),
+    confidence: state.confidence,
+    selected_reason: state.selected_reason,
+    candidates: state.candidates,
+    contradictions: state.contradictions,
+    suppressed_values: state.suppressed_values,
   };
 }
 
@@ -1225,7 +1414,8 @@ export function buildSourceReconciliationState({
   artifacts = [],
 } = {}) {
   const resolvedInventory = latestArtifactInventory(sourceReportCoverageQa, artifacts);
-  const rrSelection = resolveCanonicalRentRollAnnualInPlace({ computedRentRoll, rentRollPayload });
+  const rentRollAnnualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
+  const rrSelection = rentRollAnnualTotals.in_place;
   const gprSelection = resolveCanonicalT12GprSource(t12Payload);
   const rrAnnual = rrSelection.value;
   const gpr = gprSelection.value;
@@ -1261,6 +1451,11 @@ export function buildSourceReconciliationState({
         source_path: rrSelection.source_path,
         trusted_summary_totals: rrSelection.trusted_summary_totals,
         value: state.rr_annual_in_place,
+        confidence: rrSelection.confidence,
+        selected_reason: rrSelection.selected_reason,
+        contradictions: rrSelection.contradictions,
+        suppressed_values: rrSelection.suppressed_values,
+        candidates: rrSelection.candidates,
       },
       t12_gpr: {
         source_path: gprSelection.source_path,
@@ -1269,6 +1464,7 @@ export function buildSourceReconciliationState({
     },
     rr_annual_in_place_source: rrSelection.source_path,
     t12_gpr_source: gprSelection.source_path,
+    rent_roll_annual_totals: rentRollAnnualTotals,
     source_reconciliation_disclosure:
       state.status === "source_reconciliation_required" || state.status === "parser_suspected"
         ? "InvestorIQ has not reconciled this variance and does not infer the cause."

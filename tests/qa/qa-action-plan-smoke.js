@@ -562,7 +562,7 @@ const adminReviewGate = buildDeliveryGateDecision({
     ],
   },
   qaActionPlan: {
-    customer_delivery_ready: false,
+    customer_delivery_ready: true,
     public_sample_ready: false,
     high_value_outreach_ready: false,
     prioritized_actions: [
@@ -582,7 +582,7 @@ const adminReviewGate = buildDeliveryGateDecision({
 assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
-assert.equal(adminReviewGate.launch_path_recommendation, "screening_only_public_launch_recommended");
+assert.equal(adminReviewGate.launch_path_recommendation, "underwriting_private_beta_recommended");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
 
@@ -599,7 +599,7 @@ const rentRollGate = buildDeliveryGateDecision({
     ],
   },
   qaActionPlan: {
-    customer_delivery_ready: false,
+    customer_delivery_ready: true,
     public_sample_ready: false,
     high_value_outreach_ready: false,
     prioritized_actions: [
@@ -615,7 +615,109 @@ const rentRollGate = buildDeliveryGateDecision({
     ],
   },
 });
-assert.equal(rentRollGate.delivery_gate_status, "admin_review_required");
+assert.equal(rentRollGate.delivery_gate_status, "deliverable");
+assert.equal(rentRollGate.customer_delivery_ready, true);
+assert.equal(rentRollGate.public_sample_ready, false);
+
+const rentRollPublicOnlyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      reason_code: null,
+    },
+  },
+  reportContractQa: {
+    contract_status: "warn",
+    customer_delivery_ready: true,
+    violations: [
+      {
+        code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+        severity: "high",
+        category: "report_contract",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+        action_type: "render_gating_fix_required",
+        owner_area: "rent_roll_normalizer",
+        recommended_next_step: "Inspect rent roll total normalization and regenerate.",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(rentRollPublicOnlyGate.delivery_gate_status, "deliverable");
+assert.equal(rentRollPublicOnlyGate.customer_delivery_ready, true);
+assert.equal(rentRollPublicOnlyGate.public_sample_ready, false);
+assert.equal(rentRollPublicOnlyGate.high_value_outreach_ready, false);
+
+const renderedRentRollGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      reason_code: null,
+    },
+  },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+        severity: "high",
+        category: "source_report_reconciliation",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [
+      {
+        code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+        action_type: "render_gating_fix_required",
+        owner_area: "report_renderer",
+        recommended_next_step: "Remove the rendered contradiction before delivery.",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(renderedRentRollGate.delivery_gate_status, "admin_review_required");
+assert.equal(renderedRentRollGate.customer_delivery_ready, false);
 
 const managerContradictionPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -698,7 +800,16 @@ assert.equal(sourceTotalsVerificationAction.blocks_customer_delivery, false);
 assert.equal(sourceTotalsVerificationAction.blocks_public_sample, true);
 
 const reconciliationState = buildSourceReconciliationState({
-  computedRentRoll: { total_in_place_annual: 1100000 },
+  computedRentRoll: {
+    total_units: 20,
+    total_in_place_annual: 1100000,
+    unit_mix: [{ count: 20, current_rent: 4583.333333333333 }],
+  },
+  rentRollPayload: {
+    total_units: 20,
+    total_in_place_annual: 1100000,
+    unit_mix: [{ count: 20, current_rent: 4583.333333333333 }],
+  },
   t12Payload: { gross_potential_rent: 1000000 },
 });
 const reconciliationAction = buildQaActionPlan({

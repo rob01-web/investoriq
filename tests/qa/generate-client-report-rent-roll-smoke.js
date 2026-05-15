@@ -9,6 +9,7 @@ const {
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationState,
   buildSourceReconciliationRenderState,
+  resolveCanonicalRentRollAnnualTotals,
 } = await import("../../api/_lib/report-surface-contracts.js");
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
@@ -35,6 +36,78 @@ const cleanAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
 });
 
 assert.equal(cleanAnnualMarketRent, 1087488);
+
+const canonicalMarketTotals = resolveCanonicalRentRollAnnualTotals({
+  computedRentRoll: {
+    total_units: 48,
+    total_market_annual: 21744000,
+    unit_mix: [{ count: 48, market_rent: 1888 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_market_annual: 21744000,
+    totals: {
+      total_units: 48,
+      summary_row_detected: true,
+      market_rent_annual: 21744000,
+      market_rent_monthly: 1812000,
+    },
+    unit_mix: [{ count: 48, market_rent: 1888 }],
+  },
+});
+assert.equal(canonicalMarketTotals.market.value, 1087488);
+assert.equal(canonicalMarketTotals.market.source_path, "row_derived_units.monthly_rent_x_12");
+assert.equal(canonicalMarketTotals.market.confidence, "high");
+assert.equal(
+  canonicalMarketTotals.market.suppressed_values.some((entry) => entry.value === 21744000),
+  true
+);
+
+const rentRollLeakFreeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+    gross_scheduled_rent: 1850000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    total_market_annual: 21744000,
+    occupancy: 0.95,
+    unit_mix: [{ count: 48, current_rent: 1668.75, market_rent: 1888 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    total_market_annual: 21744000,
+    occupancy: 0.95,
+    unit_mix: [{ count: 48, current_rent: 1668.75, market_rent: 1888 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1962456,
+      market_rent_annual: 21744000,
+      market_rent_monthly: 1812000,
+      summary_row_detected: true,
+    },
+  },
+  formatCurrency,
+  sourceReconciliationState: {
+    status: "source_reconciliation_required",
+    publishability_bucket: "disclose_only_publishable",
+    rr_annual_in_place: 961200,
+    t12_gpr: 1850000,
+    variance_pct: -0.48043243243243244,
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+});
+assert.equal(rentRollLeakFreeHtml.includes("$21,744,000"), false);
+assert.match(rentRollLeakFreeHtml, /\$1,087,488/);
+assert.match(rentRollLeakFreeHtml, /\$961,200/);
 
 const rendererCanonicalState = generatorTest.buildRendererCanonicalState({
   computedRentRoll: { total_units: 48, total_in_place_annual: 1087488 },
@@ -303,11 +376,13 @@ const conflictSourceReconciliationState = buildSourceReconciliationState({
     annual_in_place_rent: 961200,
     total_annual_in_place: 961200,
     summary_row_detected: false,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
   },
   rentRollPayload: {
     total_units: 48,
     total_in_place_annual: 1962456,
     annual_in_place_rent: 1962456,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
     totals: {
       summary_row_detected: true,
       in_place_rent_annual: 1962456,
@@ -329,28 +404,33 @@ const conflictSourceReconciliationState = buildSourceReconciliationState({
     deterministic_flags: [],
   },
 });
-assert.equal(conflictSourceReconciliationState.rr_annual_in_place, 1962456);
+assert.equal(conflictSourceReconciliationState.rr_annual_in_place, 961200);
 assert.equal(conflictSourceReconciliationState.t12_gpr, 1850000);
-assert.equal(conflictSourceReconciliationState.variance_pct, 0.06078702702702703);
-assert.equal(conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.source_path, "rentRollPayload.totals.in_place_rent_annual");
+assert.equal(conflictSourceReconciliationState.variance_pct, -0.48043243243243244);
+assert.equal(conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.source_path, "row_derived_units.monthly_rent_x_12");
 assert.equal(conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.trusted_summary_totals, true);
+assert.equal(conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.selected_reason, "row_derived_units_selected");
+assert.equal(
+  conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.suppressed_values?.some((entry) => entry.value === 1962456),
+  true
+);
 
 const conflictSourceReconciliationRenderState = buildSourceReconciliationRenderState({
   sourceReconciliationState: conflictSourceReconciliationState,
 });
 assert.equal(conflictSourceReconciliationRenderState.renderable, true);
-assert.equal(conflictSourceReconciliationRenderState.variance_display, "+6.1%");
+assert.equal(conflictSourceReconciliationRenderState.variance_display, "-48.0%");
 
 const conflictFinalHtml = generatorTest.applyFinalSourceReconciliationRenderGuard(
-  "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr></table><p>Rent roll annualized rent is -48.0% vs T12 GPR.</p></div>",
+  "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>+6.1%</td></tr></table><p>Rent roll annualized rent is +6.1% vs T12 GPR.</p></div>",
   conflictSourceReconciliationState
 );
 assert.equal(conflictFinalHtml.replaced_or_suppressed, true);
-assert.equal(conflictFinalHtml.stale_minus_48_count_after, 0);
-assert.equal(conflictFinalHtml.html.includes("-48.0%"), false);
-assert.equal(conflictFinalHtml.matched_displays_before.includes("-48.0%"), true);
-assert.equal(conflictFinalHtml.matched_displays_after.includes("+6.1%"), true);
-assert.match(conflictFinalHtml.html, /\+6\.1%/);
+assert.equal(conflictFinalHtml.stale_minus_48_count_after > 0, true);
+assert.equal(conflictFinalHtml.html.includes("+6.1%"), false);
+assert.equal(conflictFinalHtml.matched_displays_before.includes("+6.1%"), true);
+assert.equal(conflictFinalHtml.matched_displays_after.includes("-48.0%"), true);
+assert.match(conflictFinalHtml.html, /-48\.0%/);
 
 const finalHtmlBeforeGuard = [
   "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr></table></div>",

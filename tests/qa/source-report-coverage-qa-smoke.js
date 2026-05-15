@@ -454,11 +454,13 @@ const sourceReconciliationConflictState = buildSourceReconciliationState({
     total_in_place_annual: 961200,
     annual_in_place_rent: 961200,
     summary_row_detected: false,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
   },
   rentRollPayload: {
     total_units: 48,
     total_in_place_annual: 1962456,
     annual_in_place_rent: 1962456,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
     totals: {
       summary_row_detected: true,
       in_place_rent_annual: 1962456,
@@ -480,13 +482,23 @@ const sourceReconciliationConflictState = buildSourceReconciliationState({
     deterministic_flags: [],
   },
 });
-if (sourceReconciliationConflictState.rr_annual_in_place !== 1962456) {
-  console.error("Expected trusted rent-roll summary annual to win.");
+if (sourceReconciliationConflictState.rr_annual_in_place !== 961200) {
+  console.error("Expected coherent row-derived rent-roll annual to win.");
   console.error("Actual state:", sourceReconciliationConflictState);
   process.exit(1);
 }
-if (sourceReconciliationConflictState.variance_pct !== 0.06078702702702703) {
-  console.error("Expected canonical positive reconciliation variance.");
+if (sourceReconciliationConflictState.variance_pct !== -0.48043243243243244) {
+  console.error("Expected canonical negative reconciliation variance.");
+  console.error("Actual state:", sourceReconciliationConflictState);
+  process.exit(1);
+}
+if (sourceReconciliationConflictState.source_selection?.rr_annual_in_place?.source_path !== "row_derived_units.monthly_rent_x_12") {
+  console.error("Expected row-derived source path to win.");
+  console.error("Actual state:", sourceReconciliationConflictState);
+  process.exit(1);
+}
+if (!sourceReconciliationConflictState.source_selection?.rr_annual_in_place?.suppressed_values?.some((entry) => entry.value === 1962456)) {
+  console.error("Expected incoherent summary total to be suppressed.");
   console.error("Actual state:", sourceReconciliationConflictState);
   process.exit(1);
 }
@@ -501,7 +513,7 @@ const sourceReconciliationPassThroughResult = buildSourceReportCoverageQa({
   html: "<html><body><p>Rent roll annualized rent is +6.1% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p></body></html>",
   sourceReconciliationState: sourceReconciliationConflictState,
 });
-if (sourceReconciliationPassThroughResult.source_reconciliation_state?.rr_annual_in_place !== 1962456) {
+if (sourceReconciliationPassThroughResult.source_reconciliation_state?.rr_annual_in_place !== 961200) {
   console.error("Expected source coverage QA to preserve the supplied canonical reconciliation state.");
   console.error("Actual state:", sourceReconciliationPassThroughResult.source_reconciliation_state);
   process.exit(1);

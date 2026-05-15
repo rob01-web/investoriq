@@ -26,6 +26,7 @@ import {
   formatAssumptionAttributionLabel,
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationRenderState,
+  resolveCanonicalRentRollAnnualTotals,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
   buildSourceReconciliationState,
@@ -1696,8 +1697,9 @@ function buildScreeningIncomeForensicsHtml({
     .filter(isEligiblePositiveExpenseDriver)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
-  const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
-  const annualMarket = coerceNumber(computedRentRoll?.total_market_annual);
+  const canonicalAnnualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
+  const annualInPlace = coerceNumber(canonicalAnnualTotals?.in_place?.value);
+  const annualMarket = coerceNumber(canonicalAnnualTotals?.market?.value);
   const upsideCard =
     Number.isFinite(annualInPlace) &&
     Number.isFinite(annualMarket) &&
@@ -2334,6 +2336,7 @@ function buildScreeningRentRollDistributionHtml({
       : null;
   if (!source) return "";
   if (source.is_partial_sample === true) return "";
+  const canonicalAnnualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
   const totalUnits = coerceNumber(source.total_units);
   const occupiedUnits = coerceNumber(source.occupied_units);
   let occupancy = coerceNumber(source.occupancy);
@@ -2345,12 +2348,12 @@ function buildScreeningRentRollDistributionHtml({
   ) {
     occupancy = occupiedUnits / totalUnits;
   }
-  let totalInPlaceAnnual = coerceNumber(source.total_in_place_annual);
+  let totalInPlaceAnnual = coerceNumber(canonicalAnnualTotals?.in_place?.value ?? source.total_in_place_annual);
   if (!Number.isFinite(totalInPlaceAnnual)) {
     const inPlaceMonthly = coerceNumber(source.total_in_place_monthly);
     if (Number.isFinite(inPlaceMonthly)) totalInPlaceAnnual = inPlaceMonthly * 12;
   }
-  let totalMarketAnnual = coerceNumber(source.total_market_annual);
+  let totalMarketAnnual = coerceNumber(canonicalAnnualTotals?.market?.value ?? source.total_market_annual);
   if (!Number.isFinite(totalMarketAnnual)) {
     const marketMonthly = coerceNumber(source.total_market_monthly);
     if (Number.isFinite(marketMonthly)) totalMarketAnnual = marketMonthly * 12;
@@ -3318,22 +3321,24 @@ export default async function handler(req, res) {
         totalInPlaceMonthly !== null ? totalInPlaceMonthly * 12 : null;
       const totalMarketAnnual =
         totalMarketMonthly !== null ? totalMarketMonthly * 12 : null;
-      const resolvedInPlaceAnnual = resolveSafeAnnualRentTotal({
-        totalUnits,
-        weightedAvgRent: Number.isFinite(summaryAvgInPlaceRent) ? summaryAvgInPlaceRent : avgInPlaceRent,
-        summaryAnnualTotal: summaryInPlaceAnnual,
-        rowAnnualTotal: totalInPlaceAnnual,
-        isPartialSample: isPartialRentRollSample,
-        preferSummaryAnnual: hasTrustedRentRollSummaryTotals,
+      const resolvedAnnualTotals = resolveCanonicalRentRollAnnualTotals({
+        computedRentRoll: {
+          total_units: totalUnits,
+          units: rentRollUnits,
+          unit_mix: [],
+          summary_row_detected: hasTrustedRentRollSummaryTotals,
+          total_in_place_annual: totalInPlaceAnnual,
+          total_market_annual: totalMarketAnnual,
+        },
+        rentRollPayload: {
+          total_units: totalUnits,
+          units: rentRollUnits,
+          unit_mix: [],
+          totals: rentRollSummaryTotals,
+        },
       });
-      const resolvedMarketAnnual = resolveSafeAnnualRentTotal({
-        totalUnits,
-        weightedAvgRent: Number.isFinite(summaryAvgMarketRent) ? summaryAvgMarketRent : avgMarketRent,
-        summaryAnnualTotal: summaryMarketAnnual,
-        rowAnnualTotal: totalMarketAnnual,
-        isPartialSample: isPartialRentRollSample,
-        preferSummaryAnnual: hasTrustedRentRollSummaryTotals,
-      });
+      const resolvedInPlaceAnnual = resolvedAnnualTotals?.in_place?.value ?? null;
+      const resolvedMarketAnnual = resolvedAnnualTotals?.market?.value ?? null;
       const resolvedInPlaceMonthly = Number.isFinite(resolvedInPlaceAnnual)
         ? resolvedInPlaceAnnual / 12
         : null;
@@ -3373,10 +3378,10 @@ export default async function handler(req, res) {
         occupancy: Number.isFinite(summaryOccupancy) ? summaryOccupancy : isPartialRentRollSample ? null : occupancy,
         avg_in_place_rent: Number.isFinite(summaryAvgInPlaceRent) ? summaryAvgInPlaceRent : avgInPlaceRent ?? DATA_NOT_AVAILABLE,
         avg_market_rent: Number.isFinite(summaryAvgMarketRent) ? summaryAvgMarketRent : avgMarketRent ?? DATA_NOT_AVAILABLE,
-        total_in_place_monthly: Number.isFinite(resolvedInPlaceMonthly) ? resolvedInPlaceMonthly : Number.isFinite(summaryInPlaceMonthly) ? summaryInPlaceMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceMonthly ?? DATA_NOT_AVAILABLE,
-        total_market_monthly: Number.isFinite(resolvedMarketMonthly) ? resolvedMarketMonthly : Number.isFinite(summaryMarketMonthly) ? summaryMarketMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketMonthly ?? DATA_NOT_AVAILABLE,
-        total_in_place_annual: Number.isFinite(resolvedInPlaceAnnual) ? resolvedInPlaceAnnual : Number.isFinite(summaryInPlaceAnnual) ? summaryInPlaceAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalInPlaceAnnual ?? DATA_NOT_AVAILABLE,
-        total_market_annual: Number.isFinite(resolvedMarketAnnual) ? resolvedMarketAnnual : Number.isFinite(summaryMarketAnnual) ? summaryMarketAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : totalMarketAnnual ?? DATA_NOT_AVAILABLE,
+        total_in_place_monthly: Number.isFinite(resolvedInPlaceMonthly) ? resolvedInPlaceMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : DATA_NOT_AVAILABLE,
+        total_market_monthly: Number.isFinite(resolvedMarketMonthly) ? resolvedMarketMonthly : isPartialRentRollSample ? DATA_NOT_AVAILABLE : DATA_NOT_AVAILABLE,
+        total_in_place_annual: Number.isFinite(resolvedInPlaceAnnual) ? resolvedInPlaceAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : DATA_NOT_AVAILABLE,
+        total_market_annual: Number.isFinite(resolvedMarketAnnual) ? resolvedMarketAnnual : isPartialRentRollSample ? DATA_NOT_AVAILABLE : DATA_NOT_AVAILABLE,
         rent_to_market_gap: Number.isFinite(resolvedInPlaceAnnual) && Number.isFinite(resolvedMarketAnnual) && resolvedInPlaceAnnual > 0 && resolvedMarketAnnual > resolvedInPlaceAnnual
           ? (resolvedMarketAnnual - resolvedInPlaceAnnual) / resolvedInPlaceAnnual
           : Number.isFinite(summaryRentToMarketGap) ? summaryRentToMarketGap : null,
@@ -3590,6 +3595,9 @@ if (effectiveReportMode === "screening_v1") {
       appraisalPayload,
       propertyTaxPayload,
     });
+    const rentRollAnnualTotals =
+      sourceReconciliationState?.rent_roll_annual_totals ||
+      resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
     const execMetricsParts = [];
     const execUnits = coerceNumber(
@@ -3676,7 +3684,7 @@ if (effectiveReportMode === "screening_v1") {
         computedRentRoll?.annual_current_rent ??
         computedRentRoll?.in_place_rent_annual ??
         (rentRollIsPartialSample ? null : rrAnnualInPlaceFromRows) ??
-        computedRentRoll?.total_in_place_annual ??
+        rentRollAnnualTotals?.in_place?.value ??
         rentRollPayload?.total_in_place_annual
     );
     const execMonthlyInPlace = coerceNumber(
@@ -4373,8 +4381,8 @@ if (effectiveReportMode === "screening_v1") {
       });
       if (sumCountInPlace > 0) weightedAvgInPlaceRent = sumRentInPlace / sumCountInPlace;
     }
-    let execAnnualInPlaceTokenValue = Number.isFinite(coerceNumber(computedRentRoll?.total_in_place_annual))
-      ? coerceNumber(computedRentRoll.total_in_place_annual)
+    let execAnnualInPlaceTokenValue = Number.isFinite(coerceNumber(rentRollAnnualTotals?.in_place?.value))
+      ? coerceNumber(rentRollAnnualTotals.in_place.value)
       : null;
     if (
       !Number.isFinite(execAnnualInPlaceTokenValue) &&
@@ -4552,8 +4560,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
       // Investment thesis: fully deterministic
       const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
-      const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual);
-      const rrMarket  = coerceNumber(computedRentRoll?.total_market_annual);
+      const rrInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value);
+      const rrMarket  = coerceNumber(rentRollAnnualTotals?.market?.value);
       const rrUpsidePct = coerceNumber(computedRentRoll?.rent_to_market_gap) ??
         ((Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrInPlace > 0)
           ? (rrMarket - rrInPlace) / rrInPlace : null);
@@ -4724,8 +4732,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         ? ""
         : effectiveReportMode === "screening_v1"
         ? (() => {
-            const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
-            const annualMarket = coerceNumber(computedRentRoll?.total_market_annual ?? computedRentRoll?.total_annual_market);
+            const annualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
+            const annualMarket = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
             if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
               return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates in-place rents are below market across the current unit mix.</p></div>`;
             }
@@ -4740,8 +4748,8 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     // Rent Upside Pathway card: full-width below the grid
     {
       let upsideHtml = "";
-      const annualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place);
-      const annualMarket  = coerceNumber(computedRentRoll?.total_market_annual   ?? computedRentRoll?.total_annual_market);
+      const annualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
+      const annualMarket  = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
       if (!suppressUnitLevelRentLift && effectiveReportMode !== "screening_v1" && Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
         const annualGap = annualMarket - annualInPlace;
         const capRates = [5.0, 6.0, 7.0];
@@ -4844,7 +4852,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       ? (() => {
           const operatingSummaryLines = [];
           const screeningOccupancy = coerceNumber(computedRentRoll?.occupancy ?? (computedRentRoll?.is_partial_sample === true ? null : rentRollPayload?.occupancy));
-          const screeningAnnualInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? rentRollPayload?.total_in_place_annual);
+          const screeningAnnualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? rentRollPayload?.total_in_place_annual);
           const screeningExpenseRatio = Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue) && t12EgiValue > 0
             ? t12TotalExpensesValue / t12EgiValue
             : null;
