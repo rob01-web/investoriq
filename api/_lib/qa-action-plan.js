@@ -1136,7 +1136,28 @@ export function buildDeliveryGateDecision({
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
+  const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
+  const sourceReconciliationPublishabilityBucket = normalizeImpactValue(sourceReconciliationState?.publishability_bucket);
+  const sourceReconciliationCustomerImpact = normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact);
+  const sourceReconciliationIsDiscloseOnly =
+    sourceReconciliationPublishabilityBucket === "disclose_only_publishable" ||
+    sourceReconciliationCustomerImpact === "disclose_only";
   const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
+  const sourceBlockingFlags = deterministicFlags.filter((flag) => {
+    if (!flag) return false;
+    if (Boolean(flag?.blocks_customer_delivery) || Boolean(flag?.customer_delivery_blocker)) return true;
+    if (String(flag?.classification || "").toLowerCase() === "missing_required_source") return true;
+    const customerDeliveryImpact = normalizeImpactValue(flag?.evidence?.customer_delivery_impact);
+    const reconciliationImpact = normalizeImpactValue(flag?.evidence?.source_reconciliation_state?.customer_delivery_impact);
+    const blockingImpacts = new Set([
+      "block",
+      "blocked",
+      "customer_blocked",
+      "customer_delivery_blocked",
+      "customer_delivery_blocker",
+    ]);
+    return blockingImpacts.has(customerDeliveryImpact) || blockingImpacts.has(reconciliationImpact);
+  });
   const missingRequiredSource =
     sourceStatus === "needs_documents" ||
     sourceStatus === "failed" ||
@@ -1166,9 +1187,8 @@ export function buildDeliveryGateDecision({
     Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)));
 
   const sourceNeedsDocs =
-    missingRequiredSource ||
-    Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery) ||
-    sourceLimitations.length > 0;
+    (!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
+    Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
   const sourceNeedsReview =
     coreInputBucket === "admin_review_required" ||
     coreInputBucket === "system_contract_failure";

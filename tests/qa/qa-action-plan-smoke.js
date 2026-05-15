@@ -799,84 +799,79 @@ assert.equal(sourceTotalsVerificationAction.owner_area, "source_reconciliation")
 assert.equal(sourceTotalsVerificationAction.blocks_customer_delivery, false);
 assert.equal(sourceTotalsVerificationAction.blocks_public_sample, true);
 
-const reconciliationState = buildSourceReconciliationState({
+const retest8SourceReconciliationState = buildSourceReconciliationState({
   computedRentRoll: {
-    total_units: 20,
-    total_in_place_annual: 1100000,
-    unit_mix: [{ count: 20, current_rent: 4583.333333333333 }],
+    total_units: 48,
+    total_in_place_annual: 961200,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
   },
   rentRollPayload: {
-    total_units: 20,
-    total_in_place_annual: 1100000,
-    unit_mix: [{ count: 20, current_rent: 4583.333333333333 }],
+    total_units: 48,
+    total_in_place_annual: 1962456,
+    unit_mix: [{ count: 48, current_rent: 1668.75 }],
   },
-  t12Payload: { gross_potential_rent: 1000000 },
+  t12Payload: { gross_potential_rent: 1850000 },
 });
-const reconciliationAction = buildQaActionPlan({
-  sourceReportCoverageQa: {
-    qa_status: "pass",
-    deterministic_flags: [
-      {
-        code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
-        severity: "medium",
-        message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
-        evidence: {
-          source_reconciliation_state: reconciliationState,
-          rendered_text_signals: [],
+const retest8SourceReportCoverageQa = {
+  qa_status: "warn",
+  deterministic_flags: [
+    {
+      code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+      severity: "medium",
+      message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
+      evidence: {
+        source_reconciliation_state: {
+          ...retest8SourceReconciliationState,
+          publishability_bucket: "disclose_only_publishable",
+          customer_delivery_impact: "disclose_only",
+          public_outreach_impact: "block_until_review",
         },
-        routing: "public_sample_blocker",
+        rendered_text_signals: [],
       },
-    ],
-    source_reconciliation_state: reconciliationState,
+      routing: "public_sample_blocker",
+      blocks_customer_delivery: false,
+    },
+  ],
+  artifact_inventory: {
+    t12_parsed: {
+      present: true,
+      has_core_totals: true,
+    },
+    rent_roll_parsed: {
+      present: true,
+    },
   },
+  core_input_sufficiency_state: {
+    publishability_bucket: "disclose_only_publishable",
+    reason_code: "source_reconciliation_disclosed",
+  },
+  source_reconciliation_state: {
+    ...retest8SourceReconciliationState,
+    publishability_bucket: "disclose_only_publishable",
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+  },
+};
+const reconciliationActionPlan = buildQaActionPlan({
+  sourceReportCoverageQa: retest8SourceReportCoverageQa,
   reportContractQa: { contract_status: "pass", violations: [] },
-}).prioritized_actions.find((action) => action.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED");
+});
+const reconciliationAction = reconciliationActionPlan.prioritized_actions.find((action) => action.code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED");
 assert.equal(reconciliationAction.action_type, "source_document_limitation");
 assert.equal(reconciliationAction.owner_area, "source_reconciliation");
 assert.equal(reconciliationAction.blocks_customer_delivery, false);
 assert.equal(reconciliationAction.blocks_public_sample, true);
 assert.equal(reconciliationAction.blocks_high_value_outreach, true);
-assert.equal(
-  buildDeliveryGateDecision({
-    sourceReportCoverageQa: {
-      qa_status: "pass",
-      deterministic_flags: [
-        {
-          code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
-          severity: "medium",
-          message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
-          evidence: {
-            source_reconciliation_state: reconciliationState,
-            rendered_text_signals: [],
-          },
-          routing: "public_sample_blocker",
-        },
-      ],
-      source_reconciliation_state: reconciliationState,
-    },
-    reportContractQa: { contract_status: "pass", violations: [] },
-    qaActionPlan: buildQaActionPlan({
-      sourceReportCoverageQa: {
-        qa_status: "pass",
-        deterministic_flags: [
-          {
-            code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
-            severity: "medium",
-            message: "Material variance between rent roll annualized in-place rent and T12 gross potential rent requires review.",
-            evidence: {
-              source_reconciliation_state: reconciliationState,
-              rendered_text_signals: [],
-            },
-            routing: "public_sample_blocker",
-          },
-        ],
-        source_reconciliation_state: reconciliationState,
-      },
-      reportContractQa: { contract_status: "pass", violations: [] },
-    }),
-  }).delivery_gate_status,
-  "deliverable"
-);
+const reconciliationGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: retest8SourceReportCoverageQa,
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: reconciliationActionPlan,
+});
+assert.equal(reconciliationGate.delivery_gate_status, "deliverable");
+assert.equal(reconciliationGate.customer_delivery_ready, true);
+assert.deepEqual(reconciliationGate.customer_publish_blockers, []);
+assert.equal(reconciliationGate.public_sample_ready, false);
+assert.equal(reconciliationGate.high_value_outreach_ready, false);
 
 const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -952,7 +947,7 @@ assert.equal(publicOnlyKeywordFlagGate.public_sample_ready, false);
 
 const explicitCustomerBlockingGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
-    qa_status: "pass",
+    qa_status: "needs_documents",
     deterministic_flags: [
       {
         code: "MISSING_REQUIRED_T12",
@@ -964,11 +959,24 @@ const explicitCustomerBlockingGate = buildDeliveryGateDecision({
         },
       },
     ],
+    artifact_inventory: {
+      t12_parsed: {
+        present: false,
+        has_core_totals: false,
+      },
+      rent_roll_parsed: {
+        present: true,
+      },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "user_needs_documents",
+      reason_code: "missing_required_t12",
+    },
   },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: buildQaActionPlan({
     sourceReportCoverageQa: {
-      qa_status: "pass",
+      qa_status: "needs_documents",
       deterministic_flags: [
         {
           code: "MISSING_REQUIRED_T12",
@@ -980,6 +988,19 @@ const explicitCustomerBlockingGate = buildDeliveryGateDecision({
           },
         },
       ],
+      artifact_inventory: {
+        t12_parsed: {
+          present: false,
+          has_core_totals: false,
+        },
+        rent_roll_parsed: {
+          present: true,
+        },
+      },
+      core_input_sufficiency_state: {
+        publishability_bucket: "user_needs_documents",
+        reason_code: "missing_required_t12",
+      },
     },
     reportContractQa: { contract_status: "pass", violations: [] },
   }),
@@ -1181,6 +1202,32 @@ const needsDocumentsStatusGate = buildDeliveryGateDecision({
   }),
 });
 assert.equal(needsDocumentsStatusGate.delivery_gate_status, "user_needs_documents");
+
+const missingRentRollGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "needs_documents",
+    deterministic_flags: [
+      {
+        code: "MISSING_REQUIRED_RENT_ROLL",
+        severity: "high",
+        message: "Rent roll is missing or unusable.",
+        blocks_customer_delivery: true,
+      },
+    ],
+    artifact_inventory: {
+      t12_parsed: {
+        present: true,
+        has_core_totals: true,
+      },
+      rent_roll_parsed: {
+        present: false,
+      },
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: { customer_delivery_ready: false, prioritized_actions: [] },
+});
+assert.equal(missingRentRollGate.delivery_gate_status, "user_needs_documents");
 
 const sectionConstrainedGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
