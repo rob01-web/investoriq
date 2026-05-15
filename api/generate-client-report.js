@@ -1269,6 +1269,7 @@ function buildDocumentTreatmentSummaryHtml({
   documentSources = [],
   currentDebtAssessmentState = null,
   hasForwardLookingRenovationInputs = false,
+  renovationDisplayMode = null,
 } = {}) {
   const files = Array.isArray(documentSources)
     ? documentSources
@@ -1384,19 +1385,41 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedRenovation) {
-      if (hasForwardLookingRenovationInputs) {
+      const renovationSourceBasis =
+        sourceBasis === "metadata"
+          ? "metadata"
+          : sourceBasis === "filename_fallback"
+          ? "filename_fallback"
+          : "artifact_inventory";
+      const normalizedRenovationDisplayMode =
+        renovationDisplayMode === "forward_looking_modelable" ||
+        renovationDisplayMode === "budget_only_no_roi" ||
+        renovationDisplayMode === "historical_only"
+          ? renovationDisplayMode
+          : hasForwardLookingRenovationInputs
+          ? "forward_looking_modelable"
+          : "historical_only";
+      if (normalizedRenovationDisplayMode === "forward_looking_modelable") {
         return {
           category: "Modeled Inputs",
           note: "Forward-looking renovation support is document-backed",
           reason_code: "forward_looking_renovation_input",
-          source_basis: sourceBasis === "metadata" ? "metadata" : "artifact_inventory",
+          source_basis: renovationSourceBasis,
+        };
+      }
+      if (normalizedRenovationDisplayMode === "budget_only_no_roi") {
+        return {
+          category: "Displayed / Limited Use",
+          note: "Budget/scope only; no ROI/payback/rent-lift modeling",
+          reason_code: "renovation_budget_no_roi_inputs",
+          source_basis: renovationSourceBasis,
         };
       }
       return {
         category: "Displayed / Limited Use",
-        note: "Historical capital items only; no ROI/payback/rent-lift modeling",
+        note: "Historical capital items are displayed for context only.",
         reason_code: "historical_capex_only",
-        source_basis: sourceBasis === "metadata" ? "metadata" : "artifact_inventory",
+        source_basis: renovationSourceBasis,
       };
     }
     if (supportedLoanTerms) {
@@ -1441,7 +1464,7 @@ function buildDocumentTreatmentSummaryHtml({
           : /capex|capital expenditure|renovation|construction budget|scope of work|improvement/.test(lower)
           ? {
               category: "Displayed / Limited Use",
-              note: "Historical capital items only; no ROI/payback/rent-lift modeling",
+              note: "Historical capital items are displayed for context only.",
               reason_code: "historical_capex_only",
             }
           : /appraisal|market survey|phase i|broker|email|background|supporting/.test(lower)
@@ -1500,28 +1523,143 @@ function buildDocumentTreatmentSummaryHtml({
 
 function buildHistoricalCapexDisplayCopy({
   hasForwardLookingRenovationInputs = false,
+  renovationDisplayMode = null,
 } = {}) {
+  const normalizedRenovationDisplayMode =
+    renovationDisplayMode === "forward_looking_modelable" ||
+    renovationDisplayMode === "budget_only_no_roi" ||
+    renovationDisplayMode === "historical_only"
+      ? renovationDisplayMode
+      : hasForwardLookingRenovationInputs
+      ? "forward_looking_modelable"
+      : "historical_only";
   const historicalCapitalItemsDisclaimer =
     "Historical capital items are displayed for context only. InvestorIQ does not model renovation ROI, rent lift, payback, or implementation schedule without document-supported forward-looking assumptions.";
+  const budgetOnlyDisclaimer =
+    "Budget and scope items are displayed from the uploaded renovation budget. InvestorIQ does not model renovation ROI, rent lift, payback, phasing, cost recovery, or implementation schedule because those assumptions were not provided.";
+  if (normalizedRenovationDisplayMode === "budget_only_no_roi") {
+    return {
+      display_mode: normalizedRenovationDisplayMode,
+      section_title: "Renovation Budget Summary - No ROI Inputs Provided",
+      budget_card_title: "Renovation Budget Items",
+      show_execution_card: false,
+      budget_note: budgetOnlyDisclaimer,
+      execution_note: budgetOnlyDisclaimer,
+      interpretation: budgetOnlyDisclaimer,
+      historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
+    };
+  }
+  if (normalizedRenovationDisplayMode === "forward_looking_modelable") {
+    return {
+      display_mode: normalizedRenovationDisplayMode,
+      section_title: "Renovation Strategy & Capital Plan",
+      budget_card_title: "Renovation Budget Breakdown",
+      show_execution_card: true,
+      budget_note: DATA_NOT_AVAILABLE,
+      execution_note: DATA_NOT_AVAILABLE,
+      interpretation: DATA_NOT_AVAILABLE,
+      historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
+    };
+  }
   return {
-    section_title: hasForwardLookingRenovationInputs
-      ? "Renovation Strategy & Capital Plan"
-      : "Historical Capital Expenditure Summary",
-    budget_card_title: hasForwardLookingRenovationInputs
-      ? "Renovation Budget Breakdown"
-      : "Historical Capital Items",
-    show_execution_card: hasForwardLookingRenovationInputs,
-    budget_note: hasForwardLookingRenovationInputs
-      ? DATA_NOT_AVAILABLE
-      : "Historical capital items are displayed for context only.",
-    execution_note: hasForwardLookingRenovationInputs
-      ? DATA_NOT_AVAILABLE
-      : historicalCapitalItemsDisclaimer,
-    interpretation: hasForwardLookingRenovationInputs
-      ? DATA_NOT_AVAILABLE
-      : historicalCapitalItemsDisclaimer,
+    display_mode: normalizedRenovationDisplayMode,
+    section_title: "Historical Capital Expenditure Summary",
+    budget_card_title: "Historical Capital Items",
+    show_execution_card: false,
+    budget_note: "Historical capital items are displayed for context only.",
+    execution_note: historicalCapitalItemsDisclaimer,
+    interpretation: historicalCapitalItemsDisclaimer,
     historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
   };
+}
+
+const buildRenovationDisplayCopy = buildHistoricalCapexDisplayCopy;
+
+function resolveRenovationDisplayMode({
+  financials = null,
+  renovationPayload = null,
+  documentSources = [],
+  hasForwardLookingRenovationInputs = false,
+} = {}) {
+  const hasMeaningfulText = (value) =>
+    typeof value === "string" && value.trim().length > 0 && value.trim() !== DATA_NOT_AVAILABLE;
+  const hasPositive = (value) => {
+    const parsed = coerceNumber(value);
+    return Number.isFinite(parsed) && parsed > 0;
+  };
+  const hasStructuredRows = (rows) =>
+    Array.isArray(rows) &&
+    rows.some((row) => {
+      if (!row || typeof row !== "object") return false;
+      const amount = coerceNumber(
+        row.estimated_cost ?? row.amount ?? row.cost ?? row.value ?? row.total ?? row.budget
+      );
+      return Number.isFinite(amount) && amount > 0;
+    });
+  const hasBudgetEvidence = Boolean(
+    hasPositive(renovationPayload?.total_budget) ||
+      hasPositive(renovationPayload?.total_capex) ||
+      hasPositive(renovationPayload?.renovation_budget) ||
+      hasPositive(financials?.renovation_total_budget) ||
+      hasPositive(financials?.renovation_total_capex) ||
+      hasStructuredRows(renovationPayload?.budget_rows) ||
+      hasStructuredRows(renovationPayload?.execution_rows) ||
+      hasStructuredRows(financials?.renovation_budget_rows) ||
+      hasStructuredRows(financials?.renovation_execution_rows)
+  );
+  const hasForwardLookingSignals = Boolean(
+    hasForwardLookingRenovationInputs ||
+      [
+        financials?.renovation_timing_or_phasing,
+        financials?.renovation_rent_lift,
+        financials?.renovation_roi,
+        financials?.renovation_payback_period,
+        renovationPayload?.timing_or_phasing,
+        renovationPayload?.rent_lift,
+        renovationPayload?.roi,
+        renovationPayload?.payback_period,
+      ].some((value) => hasMeaningfulText(value))
+  );
+  const historicalSignalsText = [
+    financials?.renovation_interpretation,
+    financials?.renovation_budget_note,
+    financials?.renovation_execution_note,
+    renovationPayload?.interpretation,
+    renovationPayload?.budget_note,
+    renovationPayload?.execution_note,
+    Array.isArray(documentSources)
+      ? documentSources
+          .map((row) =>
+            [
+              row?.semantic_doc_role,
+              row?.semantic_doc_display_label,
+              row?.display_doc_type,
+              row?.doc_type,
+              row?.parse_status,
+              row?.parse_error,
+              row?.original_filename,
+            ]
+              .map((value) => String(value || "").trim())
+              .join(" ")
+          )
+          .join(" ")
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hasHistoricalOnlySignals = /historical|past repairs?|prior work|completed items?|completed work|historical capex/i.test(
+    historicalSignalsText
+  );
+  if (hasBudgetEvidence) {
+    if (hasHistoricalOnlySignals && !hasForwardLookingSignals) {
+      return "historical_only";
+    }
+    return hasForwardLookingSignals ? "forward_looking_modelable" : "budget_only_no_roi";
+  }
+  if (hasHistoricalOnlySignals) {
+    return "historical_only";
+  }
+  return null;
 }
 
 function buildFrameworkSensitivityDisplayCopy() {
@@ -1904,6 +2042,7 @@ function buildScreeningDataCoverageSummary({
   sourceReconciliationState = null,
   sectionEligibility = null,
   hasForwardLookingRenovationInputs = false,
+  renovationDisplayMode = null,
 }) {
   const t12Checks = [
     {
@@ -2045,6 +2184,7 @@ function buildScreeningDataCoverageSummary({
       documentSources,
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
+      renovationDisplayMode,
     });
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>`;
   }
@@ -2067,6 +2207,7 @@ function buildScreeningDataCoverageSummary({
       documentSources,
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
+      renovationDisplayMode,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
@@ -2286,7 +2427,7 @@ function buildScreeningIncomeForensicsHtml({
   }
   if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     bullets.push(
-      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.`
+      `Rent Roll vs T12 GPR variance: ${rrVsGprDisplay}. See Data Coverage.`
     );
   }
   const bulletsHtml = [...new Set(bullets)]
@@ -2516,7 +2657,7 @@ function buildScreeningNoiStabilityHtml({
   const flags = [];
   if (sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05) {
     flags.push(
-      `Rent roll annualized rent is ${rrVsGprDisplay} vs T12 GPR. Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.`
+      `Rent Roll vs T12 GPR variance: ${rrVsGprDisplay}. See Data Coverage.`
     );
   }
   if (Number.isFinite(noiMargin) && noiMargin < 0.35) {
@@ -5580,37 +5721,48 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         renovationPayload?.roi,
         renovationPayload?.payback_period,
       ].some((value) => hasMeaningfulRenovationText(value));
-    const renovationDisplayCopy = buildHistoricalCapexDisplayCopy({
+    const renovationDisplayMode = resolveRenovationDisplayMode({
+      financials,
+      renovationPayload,
+      documentSources,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
     });
-    const renovationBudgetNote = hasExplicitRenovationInput
-      ? renovationReturnAssumptionsPresent
+    const renovationDisplayCopy = buildHistoricalCapexDisplayCopy({
+      renovationDisplayMode,
+      hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+    });
+    const hasRenovationDisplayMode = Boolean(renovationDisplayMode);
+    const renovationBudgetNote =
+      hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
             financials?.renovation_budget_note ??
               renovationPayload?.budget_note ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
-        : renovationDisplayCopy.budget_note
-      : DATA_NOT_AVAILABLE;
-    const renovationExecutionNote = hasExplicitRenovationInput
-      ? renovationReturnAssumptionsPresent
+        : hasRenovationDisplayMode
+        ? renovationDisplayCopy.budget_note
+        : DATA_NOT_AVAILABLE;
+    const renovationExecutionNote =
+      hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
             financials?.renovation_execution_note ??
               renovationPayload?.execution_note ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
-        : renovationDisplayCopy.execution_note
-      : DATA_NOT_AVAILABLE;
-    const renovationInterpretation = hasExplicitRenovationInput
-      ? renovationReturnAssumptionsPresent
+        : hasRenovationDisplayMode
+        ? renovationDisplayCopy.execution_note
+        : DATA_NOT_AVAILABLE;
+    const renovationInterpretation =
+      hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
             sections?.renovationInterpretation ??
               financials?.renovation_interpretation ??
               renovationPayload?.interpretation ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
-        : renovationDisplayCopy.interpretation
-      : DATA_NOT_AVAILABLE;
+        : hasRenovationDisplayMode
+        ? renovationDisplayCopy.interpretation
+        : DATA_NOT_AVAILABLE;
     const renovationBudgetCardHtml = hasExplicitRenovationInput
       ? buildRenovationBudgetCardHtml(
           renovationBudgetSourceRows,
@@ -5619,7 +5771,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         )
       : "";
     const renovationExecutionCardHtml = hasExplicitRenovationInput
-      ? renovationReturnAssumptionsPresent
+      ? renovationDisplayMode === "forward_looking_modelable"
         ? buildRenovationExecutionCardHtml(
           renovationExecutionSourceRows,
           formatCurrency,
@@ -5628,7 +5780,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         : ""
       : "";
     let normalizedRenovationBudgetCardHtml = renovationBudgetCardHtml;
-    if (normalizedRenovationBudgetCardHtml && !renovationReturnAssumptionsPresent) {
+    if (normalizedRenovationBudgetCardHtml && renovationDisplayMode !== "forward_looking_modelable") {
       normalizedRenovationBudgetCardHtml = normalizedRenovationBudgetCardHtml.replace(
         /Renovation Budget Breakdown/g,
         renovationDisplayCopy.budget_card_title
@@ -5720,7 +5872,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
     }
     const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
-    const showRenovationSection = hasExplicitRenovationInput && Boolean(
+    const showRenovationSection = hasRenovationDisplayMode && Boolean(
       (renovationBudgetCardHtml || "").trim() ||
         (renovationExecutionCardHtml || "").trim() ||
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
@@ -6308,7 +6460,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         /Discounted Cash Flow Summary \(Base Case\)/g,
         dcfDisplayCopy.dcf_summary_title
       );
-      if (!renovationReturnAssumptionsPresent) {
+      if (renovationDisplayMode !== "forward_looking_modelable") {
         finalHtml = finalHtml.replace(
           /Renovation Strategy &amp; Capital Plan/g,
           renovationDisplayCopy.section_title
@@ -6372,6 +6524,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       sourceReconciliationState,
       sectionEligibility,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+      renovationDisplayMode,
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -7275,6 +7428,7 @@ try {
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
+      renovationDisplayMode,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -7951,6 +8105,7 @@ export const __test__ = {
   buildDealScorecardState,
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
+  buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
   buildReportStoragePath,
   buildRendererCanonicalState,

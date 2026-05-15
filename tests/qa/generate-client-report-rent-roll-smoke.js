@@ -463,7 +463,7 @@ assert.match(screeningDataCoverageHtml, /Document Treatment Summary/i);
 assert.match(screeningDataCoverageHtml, /Modeled Inputs/i);
 assert.match(screeningDataCoverageHtml, /Displayed \/ Limited Use/i);
 assert.match(screeningDataCoverageHtml, /Listed but Not Quantitatively Modeled/i);
-assert.match(screeningDataCoverageHtml, /Historical capital items only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(screeningDataCoverageHtml, /Historical capital items are displayed for context only/i);
 assert.match(screeningDataCoverageHtml, /Final\.pdf/i);
 assert.match(screeningDataCoverageHtml, /Market Survey\.pdf/i);
 assert.match(screeningDataCoverageHtml, /Historical CapEx Note\.pdf/i);
@@ -472,13 +472,29 @@ assert.match(screeningDataCoverageHtml, /Unsupported Market Survey\.pdf/i);
 assert.match(screeningDataCoverageHtml, /Unsupported Phase I ESA\.pdf/i);
 assert.match(screeningDataCoverageHtml, /Broker email background context\.msg/i);
 
-const historicalCapexDisplayCopy = generatorTest.buildHistoricalCapexDisplayCopy({
-  hasForwardLookingRenovationInputs: false,
+const historicalCapexDisplayCopy = generatorTest.buildRenovationDisplayCopy({
+  renovationDisplayMode: "historical_only",
 });
 assert.equal(historicalCapexDisplayCopy.section_title, "Historical Capital Expenditure Summary");
 assert.equal(historicalCapexDisplayCopy.budget_card_title, "Historical Capital Items");
 assert.match(historicalCapexDisplayCopy.interpretation, /Historical capital items are displayed for context only/i);
 assert.match(historicalCapexDisplayCopy.interpretation, /does not model renovation ROI, rent lift, payback, or implementation schedule/i);
+
+const budgetOnlyRenovationDisplayCopy = generatorTest.buildRenovationDisplayCopy({
+  renovationDisplayMode: "budget_only_no_roi",
+});
+assert.equal(budgetOnlyRenovationDisplayCopy.section_title, "Renovation Budget Summary - No ROI Inputs Provided");
+assert.equal(budgetOnlyRenovationDisplayCopy.budget_card_title, "Renovation Budget Items");
+assert.equal(budgetOnlyRenovationDisplayCopy.show_execution_card, false);
+assert.match(budgetOnlyRenovationDisplayCopy.budget_note, /Budget and scope items are displayed from the uploaded renovation budget/i);
+assert.match(budgetOnlyRenovationDisplayCopy.interpretation, /does not model renovation ROI, rent lift, payback, phasing, cost recovery, or implementation schedule/i);
+
+const forwardLookingRenovationDisplayCopy = generatorTest.buildRenovationDisplayCopy({
+  renovationDisplayMode: "forward_looking_modelable",
+});
+assert.equal(forwardLookingRenovationDisplayCopy.section_title, "Renovation Strategy & Capital Plan");
+assert.equal(forwardLookingRenovationDisplayCopy.budget_card_title, "Renovation Budget Breakdown");
+assert.equal(forwardLookingRenovationDisplayCopy.show_execution_card, true);
 
 const frameworkSensitivityDisplayCopy = generatorTest.buildFrameworkSensitivityDisplayCopy();
 assert.equal(frameworkSensitivityDisplayCopy.dcf_section_title, "DCF Framework Sensitivity");
@@ -512,8 +528,96 @@ assert.match(documentTreatmentHtml, /Modeled Inputs/i);
 assert.match(documentTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
-assert.match(documentTreatmentHtml, /Historical capital items only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
+
+const budgetOnlyDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Northbank Reno Budget.pdf",
+      doc_type: "renovation",
+      display_doc_type: "Renovation Budget",
+      semantic_doc_role: "renovation_budget",
+      semantic_doc_display_label: "renovation_budget",
+      parse_status: "parsed",
+    },
+  ],
+  renovationDisplayMode: "budget_only_no_roi",
+});
+assert.match(budgetOnlyDocumentTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(budgetOnlyDocumentTreatmentHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+
+const budgetOnlyRenovationCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    occupancy: 0.95,
+    units: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1087488,
+      market_rent_annual: 1117800,
+      summary_row_detected: true,
+    },
+  },
+  financials: {
+    renovation_total_budget: 291500,
+    renovation_budget_rows: [
+      { category: "Exterior", scope_of_work: "Roof repairs", estimated_cost: 120000 },
+      { category: "Interior", scope_of_work: "Unit turns", estimated_cost: 171500 },
+    ],
+    renovation_budget_note: "Structured renovation budget categories and costs only.",
+  },
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [
+    {
+      original_filename: "Northbank Reno Budget.pdf",
+      doc_type: "renovation",
+      display_doc_type: "Renovation Budget",
+      semantic_doc_role: "renovation_budget",
+      semantic_doc_display_label: "renovation_budget",
+      parse_status: "parsed",
+    },
+  ],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      outstanding_balance: 1500000,
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "aligned",
+    variance_pct: null,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+  hasForwardLookingRenovationInputs: false,
+  renovationDisplayMode: "budget_only_no_roi",
+});
+assert.match(budgetOnlyRenovationCoverageHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+assert.equal(budgetOnlyRenovationCoverageHtml.includes("Historical Capital Expenditure Summary"), false);
 
 const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -832,7 +936,7 @@ const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml
   formatCurrency,
   sourceReconciliationState: sourceReconciliationFixture,
 });
-assert.match(reconciliationIncomeHtml, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
+assert.match(reconciliationIncomeHtml, /Rent Roll vs T12 GPR variance: \+6\.1%\. See Data Coverage\./i);
 assert.equal(reconciliationIncomeHtml.includes("-48.0%"), false);
 
 const reconciliationNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
@@ -857,7 +961,7 @@ const reconciliationNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
 });
 assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance/i);
 assert.equal(reconciliationNoiHtml.includes("+6.1%"), true);
-assert.match(reconciliationNoiHtml, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
+assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR variance: \+6\.1%\. See Data Coverage\./i);
 assert.equal(reconciliationNoiHtml.includes("-48.0%"), false);
 
 const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
