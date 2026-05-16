@@ -2303,6 +2303,7 @@ export default async function handler(req, res) {
 
       if (isPdfOrImage(fileRow.mime_type)) {
         try {
+          let parserDiagnosticsForError = null;
           const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
             .from(fileRow.bucket)
             .download(fileRow.object_path);
@@ -2380,6 +2381,7 @@ export default async function handler(req, res) {
           isCsvMime(file.mime_type) ||
           isCsvName(file.original_filename);
         if (!eligible) {
+          let parserDiagnosticsForError = null;
           try {
             const { data: tablesArtifact } = await supabaseAdmin
               .from('analysis_artifacts')
@@ -2511,7 +2513,13 @@ export default async function handler(req, res) {
 
             const tablesBuffer = Buffer.from(await tablesFile.arrayBuffer());
             const tablesPayload = JSON.parse(tablesBuffer.toString('utf-8'));
-            const parsedRentRoll = parseRentRollFromRowMatrices(tablesPayload?.tables);
+            const parsedRentRollResult = parseRentRollFromRowMatrices(tablesPayload?.tables, {
+              includeDiagnostics: true,
+            });
+            const parsedRentRoll = parsedRentRollResult?.payload || null;
+            const parserDiagnostics =
+              parsedRentRollResult?.diagnostics || parsedRentRoll?.parser_diagnostics || null;
+            parserDiagnosticsForError = parserDiagnostics;
             let parseWarnings = [];
             const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
             const columnMap = parsedRentRoll?.column_map || null;
@@ -2688,6 +2696,7 @@ export default async function handler(req, res) {
                   units,
                   column_map: columnMap,
                   parse_warnings: parseWarnings,
+                  parser_diagnostics: parserDiagnostics || null,
                 },
               },
             ]);
@@ -2740,6 +2749,19 @@ export default async function handler(req, res) {
                   file_id: file.id,
                   original_filename: file.original_filename,
                   error_message: errorMessage,
+                  parser_diagnostics: parserDiagnosticsForError
+                    ? {
+                        validation_reasons: Array.isArray(parserDiagnosticsForError.validation_reasons)
+                          ? parserDiagnosticsForError.validation_reasons
+                          : [],
+                        accepted_fields: Array.isArray(parserDiagnosticsForError.accepted_fields)
+                          ? parserDiagnosticsForError.accepted_fields
+                          : [],
+                        derived_fields: Array.isArray(parserDiagnosticsForError.derived_fields)
+                          ? parserDiagnosticsForError.derived_fields
+                          : [],
+                      }
+                    : null,
                 },
               },
             ]);
@@ -2777,6 +2799,7 @@ export default async function handler(req, res) {
           }
         }
 
+        let parserDiagnosticsForError = null;
         try {
           const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
             .from(file.bucket)
@@ -2796,7 +2819,13 @@ export default async function handler(req, res) {
           if (!rowMatrices.length) {
             throw new Error('No worksheet found');
           }
-          const parsedRentRoll = parseRentRollFromRowMatrices(rowMatrices);
+          const parsedRentRollResult = parseRentRollFromRowMatrices(rowMatrices, {
+            includeDiagnostics: true,
+          });
+          const parsedRentRoll = parsedRentRollResult?.payload || null;
+          const parserDiagnostics =
+            parsedRentRollResult?.diagnostics || parsedRentRoll?.parser_diagnostics || null;
+          parserDiagnosticsForError = parserDiagnostics;
           let parseWarnings = [];
           const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
           const columnMap = parsedRentRoll?.column_map || null;
@@ -2964,6 +2993,7 @@ export default async function handler(req, res) {
                 units,
                 column_map: columnMap,
                 parse_warnings: parseWarnings,
+                parser_diagnostics: parserDiagnostics || null,
               },
             },
           ]);
@@ -3015,6 +3045,19 @@ export default async function handler(req, res) {
                 file_id: file.id,
                 original_filename: file.original_filename,
                 error_message: errorMessage,
+                parser_diagnostics: parserDiagnosticsForError
+                  ? {
+                      validation_reasons: Array.isArray(parserDiagnosticsForError.validation_reasons)
+                        ? parserDiagnosticsForError.validation_reasons
+                        : [],
+                      accepted_fields: Array.isArray(parserDiagnosticsForError.accepted_fields)
+                        ? parserDiagnosticsForError.accepted_fields
+                        : [],
+                      derived_fields: Array.isArray(parserDiagnosticsForError.derived_fields)
+                        ? parserDiagnosticsForError.derived_fields
+                        : [],
+                    }
+                  : null,
               },
             },
           ]);
@@ -3497,6 +3540,7 @@ export default async function handler(req, res) {
           }
         }
 
+        let parserDiagnosticsForError = null;
         try {
           const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
             .from(file.bucket)
@@ -3516,7 +3560,11 @@ export default async function handler(req, res) {
           if (!rowMatrices.length) {
             throw new Error('No worksheet found');
           }
-          const parsedT12 = parseT12FromRowMatrices(rowMatrices);
+          const parsedT12Result = parseT12FromRowMatrices(rowMatrices, { includeDiagnostics: true });
+          const parsedT12 = parsedT12Result?.payload || null;
+          const parserDiagnostics =
+            parsedT12Result?.diagnostics || parsedT12?.parser_diagnostics || null;
+          parserDiagnosticsForError = parserDiagnostics;
           const rows = rowMatrices[0].rows;
 
           let payload = null;
@@ -3852,6 +3900,7 @@ export default async function handler(req, res) {
             ...payload,
             parse_branch: coreT12Validation.parse_branch,
             core_t12_validation: coreT12Validation,
+            parser_diagnostics: parserDiagnostics || null,
           };
 
           await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
@@ -3918,6 +3967,19 @@ export default async function handler(req, res) {
                 file_id: file.id,
                 original_filename: file.original_filename,
                 error_message: errorMessage,
+                parser_diagnostics: parserDiagnosticsForError
+                  ? {
+                      validation_reasons: Array.isArray(parserDiagnosticsForError.validation_reasons)
+                        ? parserDiagnosticsForError.validation_reasons
+                        : [],
+                      accepted_fields: Array.isArray(parserDiagnosticsForError.accepted_fields)
+                        ? parserDiagnosticsForError.accepted_fields
+                        : [],
+                      derived_fields: Array.isArray(parserDiagnosticsForError.derived_fields)
+                        ? parserDiagnosticsForError.derived_fields
+                        : [],
+                    }
+                  : null,
               },
             },
           ]);
