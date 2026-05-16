@@ -1114,6 +1114,15 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
   }
   let sawHeaderCandidate = false;
   let sawInsufficientUnitRows = false;
+  let sawSummaryTotalsDetected = false;
+  let sawMissingUnitRows = false;
+  let sawMissingTotalUnits = false;
+  let sawMissingInPlaceRent = false;
+  const materiallyDifferent = (a, b, tolerance = 0.02, floor = 1) => {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    const scale = Math.max(floor, Math.abs(a), Math.abs(b));
+    return Math.abs(a - b) > scale * tolerance;
+  };
   for (const matrix of matrices) {
     const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
     if (!rows.length) continue;
@@ -1171,6 +1180,13 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
     let blankRowStreak = 0;
     let explicitTotalUnits = null;
     const summaryTotals = {};
+    const rowTotals = {
+      in_place_rent_monthly: 0,
+      market_rent_monthly: 0,
+    };
+    let summaryTotalsCoherent = true;
+    const summaryIncoherenceReasons = [];
+    const containsVagueQualifier = (value) => /\b(?:about|approx|approximately|maybe|several|various|around)\b/i.test(String(value || ''));
     const assignFiniteSummaryTotal = (key, value) => {
       if (Number.isFinite(value)) summaryTotals[key] = value;
     };
@@ -1195,7 +1211,7 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
     const parseSummaryMoneyAt = (row, index) => {
       if (index === -1) return null;
       const raw = String(row[index] || '');
-      if (!raw.trim() || raw.includes('%')) return null;
+      if (!raw.trim() || raw.includes('%') || containsVagueQualifier(raw)) return null;
       const parsed = parseMoneyLike(raw);
       return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     };
@@ -1302,6 +1318,9 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
 
       const unit = unitIdx !== -1 ? String(row[unitIdx] || '').trim() : '';
       const inPlaceRent = rentIdx !== -1 ? parseMoneyLike(row[rentIdx]) : null;
+      const unitLooksVague = containsVagueQualifier(unit) || /\bunits?\b/i.test(unit);
+      const rentLooksVague = containsVagueQualifier(row[rentIdx]);
+      if (unitLooksVague || rentLooksVague) continue;
       if (!unit || !Number.isFinite(inPlaceRent)) continue;
 
       const marketRent = marketRentIdx !== -1 ? parseMoneyLike(row[marketRentIdx]) : null;
@@ -1337,13 +1356,97 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
       });
 
       unitMixMap[unitType] = (unitMixMap[unitType] || 0) + 1;
+      rowTotals.in_place_rent_monthly += inPlaceRent;
       if (!rentValuesByType[unitType]) rentValuesByType[unitType] = [];
       rentValuesByType[unitType].push(inPlaceRent);
       if (Number.isFinite(marketRent)) {
+        rowTotals.market_rent_monthly += marketRent;
         if (!marketValuesByType[unitType]) marketValuesByType[unitType] = [];
         marketValuesByType[unitType].push(marketRent);
       }
     }
+
+    if (summaryTotals.summary_row_detected === true) {
+      sawSummaryTotalsDetected = true;
+      diagnostics.validation_reasons.push('summary_totals_detected');
+      const hasFiniteSummaryTotalUnits = Number.isFinite(summaryTotals.total_units) && summaryTotals.total_units > 0;
+      const hasFiniteSummaryInPlaceRent =
+        Number.isFinite(summaryTotals.in_place_rent_monthly) && summaryTotals.in_place_rent_monthly > 0;
+      if (!hasFiniteSummaryTotalUnits) sawMissingTotalUnits = true;
+      if (!hasFiniteSummaryInPlaceRent) sawMissingInPlaceRent = true;
+
+      if (Number.isFinite(summaryTotals.total_units)) {
+        const occupied = summaryTotals.occupied_units;
+        const vacant = summaryTotals.vacant_units;
+        if (Number.isFinite(occupied) && Number.isFinite(vacant)) {
+          const occupancyUnits = occupied + vacant;
+          if (materiallyDifferent(occupancyUnits, summaryTotals.total_units, 0.02, 1)) {
+            summaryTotalsCoherent = false;
+            summaryIncoherenceReasons.push('occupied_plus_vacant_mismatch_total_units');
+          }
+        }
+      }
+      if (
+        Number.isFinite(summaryTotals.occupancy) &&
+        Number.isFinite(summaryTotals.occupied_units) &&
+        Number.isFinite(summaryTotals.total_units) &&
+        summaryTotals.total_units > 0
+      ) {
+        const impliedOcc = summaryTotals.occupied_units / summaryTotals.total_units;
+        if (materiallyDifferent(impliedOcc, summaryTotals.occupancy, 0.03, 0.01)) {
+          summaryTotalsCoherent = false;
+          summaryIncoherenceReasons.push('occupancy_conflicts_with_occupied_units');
+        }
+      }
+      const monthly = summaryTotals.in_place_rent_monthly;
+      const annual = summaryTotals.in_place_rent_annual;
+      if ((Number.isFinite(monthly) && monthly <= 0) || (Number.isFinite(annual) && annual <= 0)) {
+        summaryTotalsCoherent = false;
+        summaryIncoherenceReasons.push('in_place_rent_total_non_positive');
+      }
+      if (
+        Number.isFinite(monthly) &&
+        Number.isFinite(annual) &&
+        materiallyDifferent(annual, monthly * 12, 0.05, 10)
+      ) {
+        summaryTotalsCoherent = false;
+        summaryIncoherenceReasons.push('in_place_rent_monthly_annual_mismatch');
+      }
+      const marketMonthly = summaryTotals.market_rent_monthly;
+      const marketAnnual = summaryTotals.market_rent_annual;
+      if ((Number.isFinite(marketMonthly) && marketMonthly <= 0) || (Number.isFinite(marketAnnual) && marketAnnual <= 0)) {
+        summaryTotalsCoherent = false;
+        summaryIncoherenceReasons.push('market_rent_total_non_positive');
+      }
+      if (
+        Number.isFinite(marketMonthly) &&
+        Number.isFinite(marketAnnual) &&
+        materiallyDifferent(marketAnnual, marketMonthly * 12, 0.05, 10)
+      ) {
+        summaryTotalsCoherent = false;
+        summaryIncoherenceReasons.push('market_rent_monthly_annual_mismatch');
+      }
+      if (summaryTotalsCoherent) {
+        if (
+          Number.isFinite(summaryTotals.total_units) &&
+          summaryTotals.total_units > units.length &&
+          units.length > 0
+        ) {
+          diagnostics.validation_reasons.push('partial_sample_detected');
+          diagnostics.validation_reasons.push('partial_sample_summary_totals_trusted');
+          diagnostics.validation_reasons.push('partial_sample_row_totals_suppressed');
+        }
+      } else {
+        diagnostics.validation_reasons.push('summary_totals_incoherent');
+        diagnostics.validation_reasons.push('summary_totals_suppressed');
+        diagnostics.field_diagnostics.push({
+          field: 'totals',
+          reason_codes: ['summary_totals_incoherent', ...summaryIncoherenceReasons],
+        });
+      }
+    }
+
+    if (!units.length) sawMissingUnitRows = true;
 
     if (units.length < 4) {
       sawInsufficientUnitRows = true;
@@ -1368,7 +1471,10 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
 
     const payload = {
       total_units: explicitTotalUnits || units.length,
-      totals: Object.keys(summaryTotals).length > 0 ? summaryTotals : null,
+      totals:
+        Object.keys(summaryTotals).length > 0 && summaryTotalsCoherent
+          ? summaryTotals
+          : null,
       unit_mix: unitMix,
       occupancy: statusCount > 0 ? occupiedCount / statusCount : null,
       units,
@@ -1399,9 +1505,18 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
     diagnostics.validation_reasons.push('rent_roll_header_not_found');
   } else if (sawInsufficientUnitRows) {
     diagnostics.validation_reasons.push('insufficient_rent_roll_unit_rows');
+    if (sawMissingUnitRows) diagnostics.validation_reasons.push('missing_unit_rows');
+    if (sawSummaryTotalsDetected) {
+      if (sawMissingTotalUnits) diagnostics.validation_reasons.push('missing_total_units');
+      if (sawMissingInPlaceRent) diagnostics.validation_reasons.push('missing_in_place_rent');
+      if (sawMissingUnitRows && (sawMissingTotalUnits || sawMissingInPlaceRent)) {
+        diagnostics.validation_reasons.push('vague_rent_roll_no_reliable_totals');
+      }
+    }
   } else if (!diagnostics.validation_reasons.length) {
     diagnostics.validation_reasons.push('insufficient_rent_roll_structure');
   }
+  diagnostics.validation_reasons = [...new Set(diagnostics.validation_reasons)];
   return includeDiagnostics ? { payload: null, diagnostics } : null;
 };
 
