@@ -1,5 +1,354 @@
 # InvestorIQ Master Context - May 2026
 
+# May 15, 2026 Night Update - Supabase Worker Automation Phase 1 / No Manual Worker Babysitting
+
+## Critical operational context remains locked
+- Codex usage remains limited until May 19 at 9:53am.
+- Continue Codex conservation mode:
+  - no broad tests;
+  - no smoke-test theatre;
+  - no broad repo rewrites;
+  - no live tests as discovery;
+  - one narrow investigation or patch at a time;
+  - minimum validation only on touched files.
+- Patch standard remains class-level, not one-report duct tape.
+- Do not expose secrets in chat, screenshots, prompts, docs, or logs.
+
+## Worker automation objective
+Rob wanted to get away from manually checking the computer every hour and manually kicking the worker when reports were queued.
+
+Correct operational goal:
+```text
+Customer clicks Generate Report
+-> job is queued
+-> system wakes worker automatically
+-> worker scans queued jobs
+-> worker atomically claims any eligible job
+-> dashboard observes status
+-> Rob only intervenes for real exceptions
+```
+
+Manual babysitting should no longer be required for normal queued jobs.
+
+## Architecture decision
+We discussed several options:
+- Supabase-native full processing
+- Supabase Cron / pg_cron wake-up
+- Supabase Queues / pgmq
+- Supabase DB webhook on `analysis_jobs.status = queued`
+- QStash
+- Inngest
+- dedicated worker server
+- Vercel/GitHub-style worker kicking
+
+Decision for now:
+```text
+Use Supabase as the wake-up/dispatcher layer only.
+Keep existing `api/admin-run-worker.js` as the heavy processor.
+Do not move report generation into Supabase Edge Functions.
+Do not use a queued-status DB webhook yet.
+```
+
+Reason:
+- The current worker performs heavy multi-stage work:
+  - extraction;
+  - parsing;
+  - report generation;
+  - DocRaptor call;
+  - email;
+  - many artifact writes;
+  - delivery gate handling;
+  - entitlement restore.
+- Supabase Edge Functions are not the right place to move the entire processor right now.
+- Supabase Cron can safely wake the existing worker without changing Dashboard, credits, parser, report generation, DocRaptor, or QA.
+
+## Worker claim-contention safety patch completed
+Before enabling automation, Codex investigated the current worker flow and found an important safety risk:
+- duplicate worker invocations were not necessarily harmless;
+- one worker could win the `claim_and_consume_job` claim while another loser invocation might fall into failure handling;
+- this could potentially mark a live job failed or restore entitlement incorrectly.
+
+Patch completed by Codex:
+- file: `api/admin-run-worker.js`
+- area: queued-job claim branch in the worker loop.
+
+New behavior:
+```text
+If claim_and_consume_job returns no claim row because another worker already claimed the job:
+-> skip quietly
+-> do not mark failed
+-> do not restore entitlement
+-> do not clear purchase_id
+-> do not write REPORT_GENERATION_FAILED
+```
+
+Validation:
+- `node --check api/admin-run-worker.js` passed.
+
+Important note:
+- Real failures after a successful claim still use existing failure handling.
+- Credits, schema, dashboard, parser, report generation, DocRaptor, QA, and worker lifecycle were not changed.
+
+This was the required safety prerequisite before any automated scheduled wake-up.
+
+## Supabase Cron automation enabled
+Supabase setup completed manually with baby-step guidance.
+
+Enabled extensions:
+- `pg_net`
+  - enabled under the default `extensions` schema.
+- `pg_cron`
+  - enabled under required `pg_catalog` schema.
+
+Created Supabase Cron job:
+```text
+Name: investoriq-admin-run-worker
+Schedule: */5 * * * *
+Active: on
+```
+
+The job uses a SQL snippet calling `net.http_post`, not the Supabase HTTP Request UI.
+
+Reason:
+- Supabase HTTP Request UI only allowed a short timeout/max 5000ms in the visible form.
+- SQL snippet with `net.http_post(...)` is the safer async HTTP-dispatch pattern for this job.
+
+Scheduled command shape:
+```sql
+select
+  net.http_post(
+    url := 'https://investoriq.tech/api/admin-run-worker',
+    headers := '{"Content-Type":"application/json","x-cron-secret":"<CRON_SECRET>"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 50000
+  );
+```
+
+Important:
+- The real `CRON_SECRET` was not pasted into chat.
+- The secret stays server-side in Vercel and Supabase Cron configuration only.
+- `admin-run-worker.js` requires `POST`; it does not accept `GET`.
+- Header used:
+  - `x-cron-secret: <CRON_SECRET>`
+  - `Content-Type: application/json`
+- Body:
+  - `{}`
+
+First run result:
+```text
+Last run: 15 May 2026 19:50:00 (-0400) - Succeeded
+Next run: 15 May 2026 19:55:00 (-0400)
+Active: on
+```
+
+Meaning:
+```text
+Every 5 minutes
+-> Supabase calls https://investoriq.tech/api/admin-run-worker
+-> worker scans queued jobs
+-> worker claims anything eligible
+-> if no queued jobs, it exits
+```
+
+This is Phase 1 automation and should eliminate routine manual worker babysitting.
+
+## GitHub worker / old worker-kick decision
+Do not immediately turn off the GitHub/manual worker until the Supabase Cron automation is observed over at least a few cycles and ideally one real queued-job processing event.
+
+Near-term rule:
+```text
+Do not disable GitHub Actions/manual fallback yet.
+Let Supabase Cron run and prove stability first.
+```
+
+Recommended next decision:
+1. Confirm Supabase Cron continues to succeed for several cycles.
+2. Confirm no queued jobs are getting stuck.
+3. Confirm one queued job is picked up automatically without manual kick.
+4. Then decide whether to disable GitHub scheduled worker while preserving manual dispatch as emergency fallback.
+
+Reason:
+- Supabase Cron is now the preferred automatic wake-up layer.
+- But until observed on a real queued job, GitHub/manual kick should remain as a temporary fallback.
+- Duplicate wake-ups are safer after the claim-loser patch, but redundant triggers still add noise and DB scans.
+- Eventually there should be one primary automated scheduler, plus an emergency manual/admin kick path.
+
+## Immediate automation status
+Completed:
+- Worker duplicate-wake safety patched.
+- Supabase `pg_net` enabled.
+- Supabase `pg_cron` enabled.
+- Supabase scheduled worker wake-up created.
+- First scheduled run succeeded.
+
+Current expected behavior:
+- No more routine manual checking/kicking every hour.
+- Queued reports should be picked up within 0-5 minutes.
+- Customer-facing 24-business-hour delivery promise remains intact.
+- Immediate generate-click wake-up is still a future enhancement, not implemented today.
+
+## Why immediate wake-up was not implemented today
+Codex investigated immediate wake-up after `queue_job_for_processing`.
+
+Finding:
+```text
+No-go under current constraints.
+```
+
+Reason:
+- Dashboard-side worker call would require exposing a secret in browser code, which is not acceptable.
+- Current `queue_job_for_processing` RPC only transitions `needs_documents -> queued` and writes an event.
+- No safe server-side post-queue wake hook exists today.
+- No `pg_net`/HTTP trigger wiring exists inside the RPC.
+- A generic DB webhook on `analysis_jobs.status = queued` is still considered too risky for now because `queued` is a handoff state and timing/readiness must be handled carefully.
+- A safe immediate wake-up would require a controlled backend hook or SQL/RPC-side async HTTP trigger with secret handled server-side.
+
+Decision:
+```text
+Do not implement immediate wake-up yet.
+Use 5-minute Supabase Cron as safe Phase 1.
+Revisit immediate backend wake hook after May 19 / after launch blockers are cleared.
+```
+
+Future immediate-wake options:
+- server-side queue wrapper route;
+- RPC-side `pg_net` wake-up after safe queueing;
+- Supabase Queue/pgmq with job_id pointer only;
+- QStash/Inngest if richer orchestration/retries become worth it.
+
+## Vercel environment secrets follow-up
+Vercel showed several environment variables marked `Needs Attention`, including:
+- `CRON_SECRET`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_ACCESS_KEY_ID`
+- `STRIPE_WEBHOOK_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- other sensitive variables.
+
+Follow-up added:
+```text
+Rotate important Vercel environment secrets/variables after launch blockers are handled, especially ones marked "Needs Attention". Do this carefully with service-specific rotation steps and redeploy verification. Do not expose secrets in chat.
+```
+
+Do not rotate these during the automation setup unless there is a confirmed security incident. Rotation is a controlled follow-up task.
+
+## Updated current status
+Completed / accepted today:
+- Renovation budget card-title leak fixed.
+- Source-of-truth audits completed.
+- Partial rent roll sample class patch completed.
+- Final report public wording patch completed.
+- Core Input Sufficiency Contract audited and found already mostly wired.
+- Worker claim-loser/no-op safety patch completed.
+- Supabase Cron worker wake-up enabled and first run succeeded.
+
+Current automation state:
+```text
+Phase 1 automatic worker wake-up is live.
+InvestorIQ should now check for queued report jobs every 5 minutes.
+Manual worker babysitting should no longer be routine.
+```
+
+Still not done:
+- immediate wake-up on Generate Report click;
+- full Supabase Queue/pgmq migration;
+- Inngest/QStash orchestration;
+- GitHub worker disable decision;
+- Vercel secret rotation;
+- DocRaptor production flip;
+- final public/Ken validation.
+
+## Immediate next steps
+1. Do not create duplicate Supabase Cron jobs.
+2. Let the current cron job run.
+3. Monitor:
+   - Supabase Cron `Last run` and `Succeeded`;
+   - Vercel logs for `/api/admin-run-worker`;
+   - queued jobs in Supabase/Admin Dashboard;
+   - `advancedCount` / `failedCount` response where visible;
+   - `analysis_job_events`;
+   - `worker_event` artifacts.
+4. Keep GitHub/manual worker fallback temporarily.
+5. After a real queued job is automatically picked up by Supabase Cron, decide whether to disable GitHub scheduled worker.
+
+## Fresh chat prompt - May 15 night continuation
+
+```text
+We are continuing InvestorIQ from the May 15 night master context.
+
+Critical operating rule:
+Codex usage remains limited until May 19 at 9:53am. Continue Codex conservation mode. No broad tests. No smoke-test theatre. No broad repo rewrites. Use Codex only for narrow, high-leverage investigation/patches with minimum validation. If ChatGPT/Rob can reason through a task manually, do that first.
+
+Work completed in the prior chat:
+1. Fixed the renovation budget card-title leak:
+   - `buildRenovationBudgetCardHtml()` now accepts optional `title`;
+   - live render passes `renovationDisplayCopy.budget_card_title`;
+   - budget-only/no-ROI reports should show `Renovation Budget Items`, not leaked `Renovation Budget Breakdown`.
+
+2. Completed three compressed source-of-truth audits:
+   - Rent Roll / T12 / Occupancy found only partial-rent-roll sample leaks.
+   - Debt / Property Tax / Cap Rate-Valuation found no launch/Ken blockers.
+   - Renovation / Delivery QA Gate alignment found no launch/Ken blockers.
+
+3. Patched the partial rent roll sample class:
+   - partial samples no longer allow row-derived annual totals to feed full-property reconciliation unless a trusted summary total exists;
+   - partial samples no longer derive QA/source-coverage occupancy from sample rows unless trusted summary exists;
+   - validation passed: `node --check api/generate-client-report.js` and `node --check api/_lib/source-report-coverage-qa.js`.
+
+4. Ran final report language consistency sweep:
+   - patched remaining public-facing appraisal-like DCF/exit-cap labels;
+   - removed stale `Full` prefix from `Full Refinance Sufficiency (Deterministic)`;
+   - validation passed: `node --check api/generate-client-report.js`; `git diff --check` passed with CRLF warning only.
+
+5. Ran Core Input Sufficiency Contract read-only audit:
+   - status: already mostly wired;
+   - no launch blocker found;
+   - delivery gate already keys off sufficiency contract and customer delivery impact;
+   - remaining cleanup should wait until May 19.
+
+6. Worker automation Phase 1 was completed:
+   - Codex patched `api/admin-run-worker.js` so claim losers/no longer claimable queued jobs skip quietly instead of falling into failure/restore paths;
+   - validation passed: `node --check api/admin-run-worker.js`;
+   - Supabase `pg_net` was enabled;
+   - Supabase `pg_cron` was enabled;
+   - Supabase Cron job `investoriq-admin-run-worker` was created;
+   - schedule: `*/5 * * * *`;
+   - it calls `https://investoriq.tech/api/admin-run-worker` with `POST`, `Content-Type: application/json`, `x-cron-secret`, and `{}` body through `net.http_post`;
+   - first run succeeded at 15 May 2026 19:50 (-0400);
+   - next run scheduled correctly;
+   - Active is on.
+
+Automation doctrine:
+- Supabase is only the wake-up/dispatcher layer right now.
+- Existing `api/admin-run-worker.js` remains the heavy processor.
+- Do not move full report generation into Supabase Edge Functions.
+- Do not use a generic DB webhook on `analysis_jobs.status = queued` yet.
+- Immediate wake-up after Generate Report was investigated and is no-go under current constraints because browser-side calls would expose secrets and no safe server-side hook exists today.
+- Phase 1 outcome: no more routine manual worker babysitting; queued jobs should be picked up within 0-5 minutes.
+
+Important next decision:
+Do not immediately disable the GitHub worker/manual fallback until Supabase Cron has been observed over a few cycles and ideally one real queued-job pickup. After that, decide whether to disable GitHub scheduled worker while preserving manual dispatch/emergency admin kick.
+
+Immediate next actions:
+1. Commit today's accepted repo changes if not already committed:
+   - `git add api/generate-client-report.js api/_lib/source-report-coverage-qa.js api/admin-run-worker.js`
+   - `git commit -m "Harden source truth and automate worker wakeup"`
+2. Monitor Supabase Cron and Vercel logs.
+3. Confirm one real queued job is picked up automatically by Supabase Cron.
+4. Then decide whether to disable GitHub scheduled worker.
+5. Do not run a live report test unless Rob explicitly chooses it.
+6. Preserve follow-up to rotate important Vercel secrets later, especially variables marked `Needs Attention`.
+
+Backlog to preserve:
+- After May 19: QA consumer cleanup so downstream consumers rely more directly on `publishability_bucket` and `customer_delivery_impact` rather than coarse `qa_status` / review labels.
+- Immediate Generate Report wake hook after safe queueing.
+- Worker automation Phase 2 / possible Supabase Queue, QStash, or Inngest after volume or launch-readiness demands it.
+- Admin Dashboard clarity and QA Manager calibration.
+- Before Ken/public samples: clean names/files, DocRaptor production verification, no public blockers, no test watermark, `qa_action_plan.requires_code_patch = 0`, public/high-value ready.
+```
+
+---
+
 # May 15, 2026 Evening Update - Post Source-Truth Audit / Partial Sample Class Patch / Public Wording Patch / Core Sufficiency Audit
 
 ## Critical operational context remains locked
