@@ -907,14 +907,20 @@ const getT12TotalColumnIndexes = (headerRows) => {
   return Array.from(indexes).sort((a, b) => a - b);
 };
 
-const parseT12TotalColumnValue = (row, totalColumnIndexes, key = null) => {
+const parseT12TotalColumnValue = (row, totalColumnIndexes, key = null, diagnostics = null) => {
   if (!Array.isArray(row) || !Array.isArray(totalColumnIndexes) || totalColumnIndexes.length === 0) return null;
   for (const idx of [...totalColumnIndexes].sort((a, b) => b - a)) {
     const cell = String(row[idx] || '').toLowerCase();
-    if (cell.includes('%')) continue;
+    if (cell.includes('%')) {
+      if (diagnostics) diagnostics.validation_reasons.push('percent_column_rejected');
+      continue;
+    }
     const value = numericFromCell(row[idx]);
     if (!Number.isFinite(value)) continue;
-    if (value > 1_000_000_000) continue;
+    if (value > 1_000_000_000) {
+      if (diagnostics) diagnostics.validation_reasons.push('implausible_numeric_value');
+      continue;
+    }
     if (key && !isPlausibleT12Field(key, value)) continue;
     return value;
   }
@@ -939,15 +945,20 @@ const isPlausibleT12Field = (key, value) => {
   return true;
 };
 
-export const validateCoreT12Payload = (payload, parseBranch) => {
+export const validateCoreT12Payload = (payload, parseBranch, options = {}) => {
+  const includeDiagnostics = options?.includeDiagnostics === true;
   const effectiveGrossIncome = Number(payload?.effective_gross_income);
   const totalOperatingExpenses = Number(payload?.total_operating_expenses);
   const netOperatingIncome = Number(payload?.net_operating_income);
   const failures = [];
+  const acceptedFields = [];
 
   if (!isPlausibleT12Field('effective_gross_income', effectiveGrossIncome)) failures.push('invalid_effective_gross_income');
+  else acceptedFields.push('effective_gross_income');
   if (!isPlausibleT12Field('total_operating_expenses', totalOperatingExpenses)) failures.push('invalid_total_operating_expenses');
+  else acceptedFields.push('total_operating_expenses');
   if (!isPlausibleT12Field('net_operating_income', netOperatingIncome)) failures.push('invalid_net_operating_income');
+  else acceptedFields.push('net_operating_income');
 
 if (failures.length === 0) {
   const expectedNoi = effectiveGrossIncome - totalOperatingExpenses;
@@ -958,7 +969,7 @@ if (failures.length === 0) {
   }
 }
 
-  return {
+  const result = {
     ok: failures.length === 0,
     failures,
     parse_branch: parseBranch,
@@ -967,6 +978,13 @@ if (failures.length === 0) {
       total_operating_expenses: Number.isFinite(totalOperatingExpenses) ? totalOperatingExpenses : null,
       net_operating_income: Number.isFinite(netOperatingIncome) ? netOperatingIncome : null,
     },
+  };
+  if (!includeDiagnostics) return result;
+  return {
+    ...result,
+    validation_reasons: failures,
+    accepted_fields: acceptedFields,
+    derived_fields: [],
   };
 };
 
@@ -1081,8 +1099,21 @@ const rentRollStatusIsOccupied = (value) => {
   return null;
 };
 
-export const parseRentRollFromRowMatrices = (rowMatrices) => {
+export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
+  const includeDiagnostics = options?.includeDiagnostics === true;
   const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
+  const diagnostics = {
+    validation_reasons: [],
+    accepted_fields: [],
+    derived_fields: [],
+    field_diagnostics: [],
+  };
+  if (!matrices.length) {
+    diagnostics.validation_reasons.push('missing_row_matrices');
+    return includeDiagnostics ? { payload: null, diagnostics } : null;
+  }
+  let sawHeaderCandidate = false;
+  let sawInsufficientUnitRows = false;
   for (const matrix of matrices) {
     const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
     if (!rows.length) continue;
@@ -1097,6 +1128,7 @@ export const parseRentRollFromRowMatrices = (rowMatrices) => {
         RENT_ROLL_ALIASES.in_place_rent.some((alias) => rentRollHeaderMatches(cell, alias)) && !isMarketRentHeaderLabel(cell)
       );
       if (hasUnitHeader && hasRentHeader) {
+        sawHeaderCandidate = true;
         headerIdx = i;
         break;
       }
@@ -1112,6 +1144,16 @@ export const parseRentRollFromRowMatrices = (rowMatrices) => {
         const label = normalizeClassifierText(cell);
         return label.includes('rent') && !isMarketRentHeaderLabel(cell);
       });
+    }
+    if (unitIdx === -1) {
+      diagnostics.validation_reasons.push('missing_unit_column');
+      diagnostics.field_diagnostics.push({ field: 'unit', reason_codes: ['missing_unit_column'] });
+      continue;
+    }
+    if (rentIdx === -1) {
+      diagnostics.validation_reasons.push('missing_in_place_rent_column');
+      diagnostics.field_diagnostics.push({ field: 'in_place_rent', reason_codes: ['missing_in_place_rent_column'] });
+      continue;
     }
     const marketRentIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.market_rent);
     const statusIdx = findHeaderIndex(header, RENT_ROLL_ALIASES.status);
@@ -1303,7 +1345,10 @@ export const parseRentRollFromRowMatrices = (rowMatrices) => {
       }
     }
 
-    if (units.length < 4) continue;
+    if (units.length < 4) {
+      sawInsufficientUnitRows = true;
+      continue;
+    }
 
     const unitMix = Object.entries(unitMixMap).map(([unit_type, count]) => {
       const inPlace = rentValuesByType[unit_type] || [];
@@ -1321,7 +1366,7 @@ export const parseRentRollFromRowMatrices = (rowMatrices) => {
       return row;
     });
 
-    return {
+    const payload = {
       total_units: explicitTotalUnits || units.length,
       totals: Object.keys(summaryTotals).length > 0 ? summaryTotals : null,
       unit_mix: unitMix,
@@ -1338,12 +1383,41 @@ export const parseRentRollFromRowMatrices = (rowMatrices) => {
         status: statusIdx !== -1 ? header[statusIdx] : null,
       },
     };
+    if (!includeDiagnostics) return payload;
+    diagnostics.accepted_fields.push('total_units', 'unit_mix', 'units', 'column_map');
+    if (payload.totals) diagnostics.accepted_fields.push('totals');
+    if (Number.isFinite(payload.occupancy)) diagnostics.accepted_fields.push('occupancy');
+    return {
+      payload: {
+        ...payload,
+        parser_diagnostics: diagnostics,
+      },
+      diagnostics,
+    };
   }
-  return null;
+  if (!sawHeaderCandidate) {
+    diagnostics.validation_reasons.push('rent_roll_header_not_found');
+  } else if (sawInsufficientUnitRows) {
+    diagnostics.validation_reasons.push('insufficient_rent_roll_unit_rows');
+  } else if (!diagnostics.validation_reasons.length) {
+    diagnostics.validation_reasons.push('insufficient_rent_roll_structure');
+  }
+  return includeDiagnostics ? { payload: null, diagnostics } : null;
 };
 
-export const parseT12FromRowMatrices = (rowMatrices) => {
+export const parseT12FromRowMatrices = (rowMatrices, options = {}) => {
+  const includeDiagnostics = options?.includeDiagnostics === true;
   const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
+  const diagnostics = {
+    validation_reasons: [],
+    accepted_fields: [],
+    derived_fields: [],
+    field_diagnostics: [],
+  };
+  if (!matrices.length) {
+    diagnostics.validation_reasons.push('missing_row_matrices');
+    return includeDiagnostics ? { payload: null, diagnostics } : null;
+  }
   const entries = [];
   for (const matrix of matrices) {
     const rows = Array.isArray(matrix?.rows) ? matrix.rows : [];
@@ -1354,15 +1428,21 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
       if (labelIdx === -1) continue;
       const label = normalizeClassifierText(row[labelIdx]);
       if (!label) continue;
-      let value = parseT12TotalColumnValue(row, totalColumnIndexes);
+      let value = parseT12TotalColumnValue(row, totalColumnIndexes, null, includeDiagnostics ? diagnostics : null);
       for (let i = 0; i < row.length; i += 1) {
         if (Number.isFinite(value)) break;
         if (i === labelIdx) continue;
         const cell = String(row[i] || '').toLowerCase();
-        if (cell.includes('%')) continue;
+        if (cell.includes('%')) {
+          diagnostics.validation_reasons.push('percent_column_rejected');
+          continue;
+        }
         const candidate = parseMoneyLike(row[i]);
         if (Number.isFinite(candidate)) {
-          if (candidate > 1_000_000_000) continue;
+          if (candidate > 1_000_000_000) {
+            diagnostics.validation_reasons.push('implausible_numeric_value');
+            continue;
+          }
           value = candidate;
           break;
         }
@@ -1370,6 +1450,10 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
       if (!Number.isFinite(value)) continue;
       entries.push({ label, value });
     }
+  }
+  if (!entries.length) {
+    diagnostics.validation_reasons.push('no_t12_numeric_entries');
+    return includeDiagnostics ? { payload: null, diagnostics } : null;
   }
 
   const column_map = {
@@ -1477,6 +1561,7 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
     Number.isFinite(total_operating_expenses)
   ) {
     net_operating_income = effective_gross_income - total_operating_expenses;
+    diagnostics.derived_fields.push('net_operating_income_derived_from_egi_minus_opex');
   }
 
   if (!isPlausibleT12Field('effective_gross_income', effective_gross_income)) effective_gross_income = null;
@@ -1485,11 +1570,14 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
 
   const coreSummaryValidation = validateCoreT12Payload(
     { effective_gross_income, total_operating_expenses, net_operating_income },
-    't12_core_summary_rows'
+    't12_core_summary_rows',
+    { includeDiagnostics }
   );
   const acceptedCoreSummaryRows = !hasMinimumT12Coverage && coreSummaryValidation.ok;
 
   if (!hasMinimumT12Coverage && !acceptedCoreSummaryRows) {
+    diagnostics.validation_reasons.push('insufficient_t12_coverage');
+    diagnostics.validation_reasons.push(...(coreSummaryValidation.validation_reasons || coreSummaryValidation.failures || []));
     gross_potential_rent = null;
     effective_gross_income = null;
     total_operating_expenses = null;
@@ -1527,7 +1615,7 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
     amount: value,
   }));
 
-  return {
+  const payload = {
     gross_potential_rent: Number.isFinite(gross_potential_rent) ? gross_potential_rent : null,
     effective_gross_income: Number.isFinite(effective_gross_income) ? effective_gross_income : null,
     total_operating_expenses: Number.isFinite(total_operating_expenses) ? total_operating_expenses : null,
@@ -1539,6 +1627,33 @@ export const parseT12FromRowMatrices = (rowMatrices) => {
     income_lines,
     expense_lines,
     column_map,
+  };
+  if (!includeDiagnostics) return payload;
+  if (payload.gross_potential_rent !== null) diagnostics.accepted_fields.push('gross_potential_rent');
+  diagnostics.accepted_fields.push(...(coreSummaryValidation.accepted_fields || []));
+  if (payload.income_lines.length > 0) diagnostics.accepted_fields.push('income_lines');
+  if (payload.expense_lines.length > 0) diagnostics.accepted_fields.push('expense_lines');
+  if (payload.expense_lines_found > 0) diagnostics.accepted_fields.push('expense_lines_found');
+  if (payload.has_gross_rental_income === true) diagnostics.accepted_fields.push('has_gross_rental_income');
+  if (payload.has_minimum_t12_coverage === true) diagnostics.accepted_fields.push('has_minimum_t12_coverage');
+  if (payload.core_summary_rows_accepted === true) diagnostics.accepted_fields.push('core_summary_rows_accepted');
+  if (Object.values(payload.column_map || {}).some(Boolean)) diagnostics.accepted_fields.push('column_map');
+  return {
+    payload: {
+      ...payload,
+      parser_diagnostics: {
+        validation_reasons: [...new Set(diagnostics.validation_reasons)],
+        accepted_fields: [...new Set(diagnostics.accepted_fields)],
+        derived_fields: [...new Set(diagnostics.derived_fields)],
+        field_diagnostics: diagnostics.field_diagnostics,
+      },
+    },
+    diagnostics: {
+      validation_reasons: [...new Set(diagnostics.validation_reasons)],
+      accepted_fields: [...new Set(diagnostics.accepted_fields)],
+      derived_fields: [...new Set(diagnostics.derived_fields)],
+      field_diagnostics: diagnostics.field_diagnostics,
+    },
   };
 };
 
