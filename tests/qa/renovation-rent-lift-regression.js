@@ -26,7 +26,6 @@ const candidate = {
       unit_type: "1BR",
       unit_count: 10,
       cost_per_unit: 12000,
-      estimated_cost: 120000,
       expected_monthly_rent_lift: 175,
       phase_timing: "Phase 1 Q3 2026",
       evidence: ["1BR interior scope: 10 units at $12,000 per unit with expected monthly rent lift of $175. Phase 1 Q3 2026."],
@@ -37,7 +36,6 @@ const candidate = {
       unit_type: "2BR",
       unit_count: 8,
       cost_per_unit: 14000,
-      estimated_cost: 112000,
       expected_monthly_rent_lift: 225,
       phase_timing: "Phase 2 Q4 2026",
       evidence: ["2BR interior scope: 8 units at $14,000 per unit with expected monthly rent lift of $225. Phase 2 Q4 2026."],
@@ -48,7 +46,6 @@ const candidate = {
       unit_type: "Common Area",
       unit_count: 1,
       cost_per_unit: 20000,
-      estimated_cost: 20000,
       expected_monthly_rent_lift: 0,
       phase_timing: "Phase 1 Q3 2026",
       evidence: ["Common area lighting scope: 1 project at $20,000 with expected monthly rent lift of $0. Phase 1 Q3 2026."],
@@ -79,6 +76,17 @@ assert.equal(validated.budget_rows.length, 3);
 assert.equal(validated.budget_rows[0].expected_monthly_rent_lift, 175);
 assert.equal(validated.budget_rows[1].expected_monthly_rent_lift, 225);
 assert.equal(validated.budget_rows[2].expected_monthly_rent_lift, 0);
+assert.equal(validated.budget_rows[0].estimated_cost, 120000);
+assert.equal(validated.budget_rows[1].estimated_cost, 112000);
+assert.equal(validated.budget_rows[2].estimated_cost, 20000);
+assert.equal(
+  validated.validation_diagnostics.derived_fields.includes("row_cost_derived_from_unit_count_x_cost_per_unit"),
+  true
+);
+assert.equal(
+  validated.validation_diagnostics.accepted_fields.includes("budget_rows.expected_monthly_rent_lift"),
+  true
+);
 
 const displayMode = reportTestHelpers.resolveRenovationDisplayMode({
   renovationPayload: validated,
