@@ -1,5 +1,781 @@
 # InvestorIQ Master Context - May 2026
 
+# May 16, 2026 Night Update - Validator Diagnostics System / Parser Diagnostics / Rollup Artifact
+
+## Critical operating context
+- Codex quota rolled over on May 16, so the project is no longer in emergency Codex conservation mode.
+- Even with quota restored, the workflow that worked best today remains locked:
+  - small micro-phases;
+  - one class at a time;
+  - focused validation only;
+  - inspect Codex work before commit;
+  - immediately clean small technical-debt crumbs instead of leaving them for later.
+- Do not add new Vercel API routes while InvestorIQ remains on the Vercel Hobby plan and near the 12-function limit.
+- `_lib` helper files under `api/_lib/` are acceptable and do not count as new API routes.
+- Do not expose secrets in chat, prompts, docs, or screenshots.
+
+## Major May 16 outcome
+May 16 turned the recurring “why did validation reject this?” problem into a machine-readable diagnostics system.
+
+Core doctrine locked:
+```text
+Deterministic validation must explain why it accepted, rejected, derived, suppressed, or constrained a value.
+Opaque failures like validation_rejected, parse failed, or missing structured artifact are not enough.
+The system must emit precise reason codes at validation boundaries so recurring real-world failure classes become obvious and patchable after a few dozen reports.
+```
+
+This is not broad AI review. This is deterministic black-box recording at the parser/validator boundary.
+
+## Supabase Cron automation proved itself
+Rob generated Test 4 and Supabase Cron successfully picked up the queued job without manual worker babysitting.
+
+Result:
+```text
+Supabase Cron worker wake-up: PASS
+Manual worker babysitting no longer required for normal queued jobs.
+```
+
+Current scheduler posture:
+- Keep Supabase Cron as the preferred automatic worker wake-up layer.
+- Do not immediately disable GitHub/manual fallback until more cycles / real jobs prove reliability.
+- Manual GitHub dispatch can remain as emergency fallback for now.
+- Do not create duplicate Supabase Cron jobs.
+
+## Product standard clarification
+Rob clarified that InvestorIQ should no longer think in separate “Ken/public blocker vs real user view” quality tiers.
+
+Locked standard:
+```text
+ALL reports should be ELITE.
+It does not matter whether the report is for Ken Dunn, a sophisticated investor, or a first-time/janitor investor exploring a deal.
+High-value outreach may receive extra human attention, but the product-quality standard is universal.
+```
+
+The system may still classify public-sample readiness and customer delivery separately for operational reasons, but the report quality bar is the same.
+
+## Renovation rent-lift class fixed
+### Problem
+Willowmere renovation support document had explicit row-level rent-lift assumptions, but recovery collapsed it into budget-only / no-ROI behavior.
+
+### Class fix
+Files changed:
+- `lib/ai-support-doc-recovery.js`
+- `api/generate-client-report.js`
+- `tests/qa/renovation-rent-lift-regression.js`
+
+Changes:
+- Renovation support now preserves explicit row-level forward-looking rent-lift fields:
+  - `unit_type`
+  - `unit_count`
+  - `cost_per_unit`
+  - `expected_monthly_rent_lift`
+  - `phase_timing`
+- Added display class:
+  - `forward_looking_with_rent_lift`
+- This class no longer collapses into `budget_only_no_roi`.
+- Reports no longer render “rent lift unsupported” messaging when row-level rent lift is explicitly document-backed.
+- Renderer supports row display for document-stated rent lift and formula-only gross annual rent-lift potential:
+  - `unit_count × expected_monthly_rent_lift × 12`
+
+Safety preserved:
+- No inferred/fabricated rent lift.
+- No rent lift derived from market gap or filenames.
+- No ROI/payback/cost-recovery/NOI/value-creation modeling without explicit support.
+
+## Renovation schema and prompt cleanup
+Follow-up fixes:
+- Renovation schema `budget_rows.items.required` now includes every key in `budget_rows.items.properties`.
+- AI support-doc recovery prompt was updated so budget rows may include explicit:
+  - category
+  - scope
+  - estimated cost
+  - unit type
+  - unit count
+  - cost per unit
+  - expected monthly rent lift
+  - phase timing
+- Use `null` when unavailable.
+- Diagnostics accepted path now includes `budget_rows.expected_monthly_rent_lift` when validated rows include finite positive expected rent lift.
+
+## Deterministic row-cost derivation added for renovation
+### Problem
+Some renovation docs explicitly state `unit_count` and `cost_per_unit`, but omit row-level `estimated_cost`.
+The deterministic validator previously rejected instead of deriving the obvious row cost.
+
+### Fix
+Renovation row validation now allows deterministic `estimated_cost` derivation only when:
+- `estimated_cost` is missing/invalid;
+- `unit_count >= 0` and `cost_per_unit >= 0` are finite;
+- row evidence exists;
+- row evidence matches source text.
+
+Derived value is used for row totals and total-budget reconciliation.
+
+Safety preserved:
+- no filename-hint inference;
+- no market-gap inference;
+- no narrative guessing;
+- no ROI/payback/NOI/value-impact modeling.
+
+## Phase 1 validator diagnostics - renovation path
+Added renovation-specific deterministic diagnostics:
+- `validation_reasons`
+- `row_diagnostics`
+- `derived_fields`
+- `accepted_fields`
+
+Diagnostics are attached on accepted renovation payloads at:
+```text
+payload.validation_diagnostics
+```
+
+Rejected renovation recovery now returns diagnostics instead of an opaque-only rejection.
+
+Initial reason codes included:
+- `missing_budget_row_estimated_cost`
+- `row_cost_derived_from_unit_count_x_cost_per_unit`
+- `missing_budget_line_items`
+- `row_evidence_missing`
+- `row_evidence_unmatched`
+- `total_budget_row_sum_mismatch`
+- `missing_total_budget`
+- `unverified_total_budget`
+- `candidate_below_confidence`
+- `source_text_missing`
+
+## Phase 1 cleanup - renovation reason-code precision
+Rob correctly pushed back on leaving broad/misleading reason codes for later.
+
+Cleanup completed:
+- `missing_budget_row`
+  - only for missing/invalid row object.
+- `missing_budget_row_category_or_scope`
+  - when category/scope/scope_of_work is missing.
+- `row_cost_derivation_inputs_missing`
+  - when `estimated_cost` is absent and `unit_count × cost_per_unit` cannot be derived.
+- `missing_budget_row_estimated_cost`
+  - retained only for final invalid estimated-cost state after validation.
+- `row_cost_derived_from_unit_count_x_cost_per_unit`
+  - used only when derivation actually occurs.
+
+This reason-code precision is now the pattern for future diagnostics work.
+
+## Willowmere Retest 4 result
+Result:
+```text
+PASS
+```
+
+The artifact showed:
+- `final_outcome: accepted`
+- `validation_accepted: true`
+- accepted fields included:
+  - `total_budget`
+  - `budget_rows`
+  - `execution_rows`
+  - `budget_rows.expected_monthly_rent_lift`
+
+The report rendered:
+- forward-looking renovation support with document-stated rent-lift assumptions;
+- row-level rent-lift table;
+- formula-only gross annual rent-lift potential;
+- guardrail language that ROI, payback, cost recovery, NOI, and valuation effects are not modeled without explicit support.
+
+No `RENO_PLAN_PARSE_FAILURE` remained.
+
+## Phase 2 validator diagnostics - support-doc validators
+Files changed:
+- `lib/ai-support-doc-recovery.js`
+- `tests/qa/support-doc-diagnostics-regression.js`
+
+Added wrapper validators that return:
+```text
+{ payload, diagnostics }
+```
+
+Wrappers:
+- `validateAcquisitionPurchaseAssumptionsCandidateWithDiagnostics`
+- `validateCurrentMortgageCandidateWithDiagnostics`
+- `validatePropertyTaxCandidateWithDiagnostics`
+- `validateAppraisalCandidateWithDiagnostics`
+
+Compatibility preserved:
+- existing validator functions still return the same payload/null shape by calling `.payload`.
+
+Recovery wrapper now uses diagnostics-aware validators for:
+- `renovation`
+- `acquisition_purchase_assumptions`
+- `current_mortgage`
+- `property_tax`
+- `appraisal`
+
+Rejected paths now include:
+- `rejection_reasons`
+- `accepted_fields`
+- `field_diagnostics` / `row_diagnostics`
+- `derived_fields`
+
+Bespoke acquisition/current mortgage recovery paths were also patched to emit the same diagnostics shape.
+
+## Phase 2 reason-code groups
+### Acquisition / purchase assumptions
+Codes include:
+- `candidate_not_acquisition_purchase_assumptions`
+- `candidate_below_confidence`
+- `missing_purchase_price`
+- `missing_ltv`
+- `missing_interest_rate`
+- `missing_amortization_years`
+- `missing_going_in_cap_rate`
+- `missing_closing_costs_percent`
+- `unverified_purchase_price`
+- `unverified_ltv`
+- `unverified_interest_rate`
+- `unverified_amortization_years`
+- `unverified_going_in_cap_rate`
+- `unverified_closing_costs_percent`
+- `no_accepted_acquisition_fields`
+- `derived_acquisition_loan_amount_allowed`
+- `acquisition_debt_sizing_not_modeled`
+- `acquisition_debt_sizing_not_modeled_due_to_missing_ltv`
+- `estimated_acquisition_debt_service_not_modeled`
+
+### Current mortgage / current debt
+Codes include:
+- `candidate_not_current_mortgage`
+- `candidate_below_confidence`
+- `missing_outstanding_balance`
+- `missing_monthly_payment`
+- `missing_annual_debt_service`
+- `missing_interest_rate`
+- `missing_amortization_years`
+- `missing_maturity_date`
+- `missing_lender_name`
+- `unverified_outstanding_balance`
+- `unverified_monthly_payment`
+- `unverified_annual_debt_service`
+- `unverified_interest_rate`
+- `unverified_amortization_years`
+- `unverified_maturity_date`
+- `unverified_lender_name`
+- `no_accepted_current_debt_fields`
+- `annual_debt_service_derived_from_monthly_payment`
+
+### Property tax
+Codes include:
+- `candidate_not_property_tax`
+- `candidate_below_confidence`
+- `missing_annual_tax`
+- `annual_tax_evidence_missing`
+- `annual_tax_evidence_unmatched`
+- `annual_tax_out_of_range`
+- `annual_tax_looks_like_year`
+- `unverified_tax_year`
+- `unverified_assessed_value`
+- `unverified_roll_number`
+
+### Appraisal / cap-rate support
+Codes include:
+- `candidate_not_appraisal_support`
+- `candidate_below_confidence`
+- `unverified_appraised_value`
+- `appraised_value_missing_formal_value_language`
+- `unverified_valuation_date`
+- `unverified_cap_rate`
+- `unverified_effective_gross_income`
+- `unverified_noi`
+- `unverified_value_basis`
+- `unverified_appraisal_type`
+- `no_accepted_appraisal_fields`
+
+Safety preserved:
+- current debt remains distinct from acquisition assumptions;
+- derived acquisition loan amount requires validated purchase price and LTV;
+- annual debt service derivation limited to validated monthly payment × 12;
+- property tax requires explicit annual tax evidence;
+- appraisal value requires formal value-language gating.
+
+## Phase 3 parser diagnostics - T12 / Rent Roll
+Phase 3 was split into micro-phases after the first Codex pass missed too much.
+
+Locked workflow lesson:
+```text
+Do not use giant Codex prompts for complex parser work.
+Split into micro-phases:
+one class, one file area, one focused validation, inspect result, then continue.
+```
+
+### Phase 3A - parser diagnostics foundation
+Files changed:
+- `api/parse/parse-doc.js`
+- `tests/qa/t12-rent-roll-diagnostics-regression.js`
+
+Added optional `{ includeDiagnostics: true }` mode to:
+- `validateCoreT12Payload`
+- `parseT12FromRowMatrices`
+- `parseRentRollFromRowMatrices`
+
+Legacy behavior preserved by default.
+
+T12 diagnostics foundation included:
+- `validation_reasons`
+- `accepted_fields`
+- `derived_fields`
+- `missing_row_matrices`
+- `no_t12_numeric_entries`
+- `insufficient_t12_coverage`
+- `core_t12_equation_mismatch`
+- `net_operating_income_derived_from_egi_minus_opex`
+
+Rent roll diagnostics foundation included:
+- `missing_row_matrices`
+- `rent_roll_header_not_found`
+- `missing_unit_column`
+- `missing_in_place_rent_column`
+- `insufficient_rent_roll_unit_rows`
+
+### Phase 3B - T12 diagnostic precision
+Added/refined:
+- `percent_column_rejected`
+  - when a candidate numeric cell is skipped because it contains `%`.
+- `implausible_numeric_value`
+  - when a candidate numeric value exceeds `1_000_000_000`.
+- Existing T12 diagnostics preserved:
+  - `core_t12_equation_mismatch`
+  - `no_t12_numeric_entries`
+  - `insufficient_t12_coverage`
+  - `accepted_fields`
+  - `derived_fields`
+  - `net_operating_income_derived_from_egi_minus_opex`
+
+Safety preserved:
+- percent columns still rejected;
+- values over 1B still rejected;
+- no T12 validation relaxed;
+- no report math changed.
+
+### Phase 3C - Rent Roll diagnostic precision
+Added/refined:
+- `rent_roll_header_not_found`
+- `missing_unit_column`
+- `missing_in_place_rent_column`
+- `insufficient_rent_roll_unit_rows`
+- `insufficient_rent_roll_structure`
+- `summary_totals_detected`
+- `partial_sample_detected`
+- `partial_sample_summary_totals_trusted`
+- `partial_sample_row_totals_suppressed`
+- `summary_totals_incoherent`
+- `summary_totals_suppressed`
+- `missing_unit_rows`
+- `missing_total_units`
+- `missing_in_place_rent`
+- `vague_rent_roll_no_reliable_totals`
+
+Added safe handling so vague qualifiers such as:
+- `about`
+- `maybe`
+- `several`
+- `various`
+- `around`
+
+are not treated as reliable unit/rent totals.
+
+Safety preserved:
+- vague rent rolls do not pass;
+- no inference from “several”;
+- no inference from “about/maybe”;
+- partial-sample row totals remain suppressed unless trusted summary totals exist;
+- no report-surface changes.
+
+### Phase 3D - live parser artifact diagnostics wiring
+Files changed:
+- `api/parse/parse-doc.js`
+
+Live parsed artifact paths now call diagnostics mode where safe:
+- rent roll table/Textract path:
+  - `parseRentRollFromRowMatrices(..., { includeDiagnostics: true })`
+- rent roll spreadsheet/CSV/XLSX path:
+  - `parseRentRollFromRowMatrices(..., { includeDiagnostics: true })`
+- T12 spreadsheet/CSV/XLSX path:
+  - `parseT12FromRowMatrices(..., { includeDiagnostics: true })`
+
+Parsed artifacts now attach:
+```text
+parser_diagnostics
+```
+
+Parse-error artifacts now include compact reason-code diagnostics when available:
+- `rent_roll_parse_error`
+- `t12_parse_error`
+
+Scope bug found and fixed:
+- `parserDiagnosticsForError` had been declared inside `try` blocks and referenced in `catch` blocks.
+- It was hoisted to outer scope for:
+  - rent roll non-spreadsheet path;
+  - rent roll spreadsheet path;
+  - T12 spreadsheet path.
+
+### Phase 3E - AI T12 / Rent Roll recovery diagnostics bridge
+Files changed:
+- `api/parse/parse-doc.js`
+- `lib/ai-t12-recovery.js`
+- `lib/ai-rent-roll-recovery.js`
+
+Tiny cleanup:
+- removed unused `parserDiagnosticsForError` from `effectiveDocType === 'other'` branch.
+
+T12 AI recovery:
+- `recoverT12WithAI` now supports `includeDiagnostics: true`.
+- With diagnostics, returns:
+  - `{ payload, diagnostics }`
+- Default compatibility preserved.
+
+T12 AI diagnostics fields:
+- `validation_reasons`
+- `rejection_reasons`
+- `accepted_fields`
+- `derived_fields`
+- `candidate_present`
+- `validation_accepted`
+- `final_outcome`
+- `rejection_reason`
+
+T12 AI reason codes include:
+- `ai_t12_candidate_validation_rejected`
+- `candidate_not_t12`
+- `candidate_below_confidence`
+- `missing_effective_gross_income`
+- `missing_operating_expenses`
+- `missing_noi`
+- `invalid_effective_gross_income`
+- `invalid_operating_expenses`
+- `invalid_noi`
+- `core_t12_equation_mismatch`
+- `t12_recovered_from_ai_validated`
+
+Rent roll AI recovery:
+- `recoverRentRollWithAI` diagnostics shape expanded to include:
+  - `validation_reasons`
+  - `rejection_reasons`
+  - `accepted_fields`
+  - `derived_fields`
+  - `field_diagnostics`
+  - `row_diagnostics`
+  - `candidate_present`
+  - `validation_accepted`
+  - `final_outcome`
+  - `rejection_reason`
+
+Rent roll AI reason codes include:
+- `ai_rent_roll_candidate_validation_rejected`
+- `candidate_not_rent_roll`
+- `candidate_below_confidence`
+- `missing_unit_rows`
+- `missing_total_units`
+- `missing_occupied_units`
+- `missing_occupancy`
+- `missing_in_place_rent`
+- `invalid_unit_count`
+- `invalid_occupied_unit_count`
+- `invalid_occupancy`
+- `invalid_in_place_rent`
+- `vague_rent_roll_no_reliable_totals`
+- `rent_roll_recovered_from_ai_validated`
+
+Diagnostic artifacts/pass-through:
+- `writeAiRentRollRecoveryDiagnostic` now writes compact arrays:
+  - `validation_reasons`
+  - `rejection_reasons`
+  - `accepted_fields`
+  - `derived_fields`
+  - `field_diagnostics`
+  - `row_diagnostics`
+- Added `writeAiT12RecoveryDiagnostic`.
+- T12 AI fallback writes:
+  - `ai_t12_recovery_diagnostic`
+- AI-recovered artifacts carry:
+  - `ai_recovery_diagnostics`
+
+Scope bug found and fixed:
+- rent roll AI recovery result had been declared inside `try` and referenced outside.
+- Fixed with outer `aiRecoveryDiagnostics` variable per affected path.
+
+## Phase 4 diagnostics rollup / consumer layer
+Phase 4 was split because:
+- Vercel Hobby function limit remains relevant;
+- do not create new API routes;
+- long Codex prompts caused missed details earlier.
+
+### Phase 4A - rollup helper only
+Files changed:
+- `api/_lib/validator-diagnostics-rollup.js`
+- `tests/qa/validator-diagnostics-rollup-regression.js`
+
+Helper exports:
+- `buildValidatorDiagnosticsRollup({ jobId, reportType, artifacts, timestamp })`
+- `classifyDiagnosticOwnerArea(code)`
+
+Rollup object includes:
+- `event`
+- `job_id`
+- `report_type`
+- `timestamp`
+- `artifact_types_seen`
+- `validator_families_seen`
+- `accepted_validators`
+- `rejected_validators`
+- `warning_validators`
+- `reason_code_counts`
+- `accepted_field_counts`
+- `derived_field_counts`
+- `field_reason_code_counts`
+- `row_reason_code_counts`
+- `source_document_issue_codes`
+- `parser_validator_issue_codes`
+- `source_reconciliation_issue_codes`
+- `production_config_issue_codes`
+- `platform_infrastructure_issue_codes`
+- `qa_review_issue_codes`
+- `publishability_relevant_codes`
+- `derived_allowed_codes`
+- `top_reason_codes`
+- `suggested_owner_areas`
+
+Extractor handles:
+- `payload.parser_diagnostics.validation_reasons`
+- `payload.ai_recovery_diagnostics.validation_reasons`
+- `payload.ai_recovery_diagnostics.rejection_reasons`
+- `payload.validation_diagnostics.validation_reasons`
+- `payload.validation_diagnostics.rejection_reasons`
+- `payload.rejection_reasons`
+- `payload.validation_reasons`
+- `payload.flags[].code`
+- `payload.parse_warnings`
+- `payload.core_t12_validation.failures`
+- accepted fields
+- derived fields
+- field diagnostics reason codes
+- row diagnostics reason codes
+
+Owner-area classifications include:
+- `user_document_quality`
+- `parser_validator`
+- `source_reconciliation`
+- `production_config`
+- `platform_infrastructure`
+- `qa_review`
+- `derived_allowed`
+
+Important:
+- no raw source text included;
+- no Supabase writes in 4A;
+- no worker integration in 4A;
+- no new Vercel API route.
+
+### Phase 4A cleanup - accepted/rejected classification
+Cleanup completed:
+- `validation_accepted === true` => accepted.
+- `accepted_fields` present and no non-derived rejection codes => accepted.
+- `derived_fields` present and no non-derived rejection codes => accepted.
+- reason codes with any non-derived-allowed code => rejected.
+- only derived-allowed reason codes => not rejected.
+- warning behavior for parse warnings preserved.
+
+Regression now asserts:
+- `t12_parsed` appears in `accepted_validators`;
+- derived-allowed-only artifact does not appear in `rejected_validators`.
+
+### Phase 4B - worker integration
+Files changed:
+- `api/admin-run-worker.js`
+
+Integration:
+- imported `buildValidatorDiagnosticsRollup` from:
+  - `./_lib/validator-diagnostics-rollup.js`
+- added local helper:
+  - `writeValidatorDiagnosticsRollup({ jobId, reportTypeHint })`
+
+Rollup reads compact artifacts:
+- select only:
+  - `type`
+  - `payload`
+- types:
+  - `t12_parsed`
+  - `rent_roll_parsed`
+  - `t12_parse_error`
+  - `rent_roll_parse_error`
+  - `ai_t12_recovery_diagnostic`
+  - `ai_rent_roll_recovery_diagnostic`
+  - `ai_support_doc_recovery_diagnostic`
+  - `report_qa_flags`
+  - `source_report_coverage_qa`
+  - `worker_event`
+
+Rollup artifact written:
+```text
+type: validator_diagnostics_rollup
+bucket: internal
+object_path: analysis_jobs/{jobId}/validator_diagnostics_rollup/{timestamp}.json
+payload: rollup
+```
+
+Duplicate/noise control:
+- deletes prior `validator_diagnostics_rollup` for the job before inserting latest.
+- writes only for terminal jobs in the worker pass.
+
+Terminal job coverage:
+- `failedJobIds`
+- `blockedJobIds`
+- published jobs from transitions where `to_status === 'published'`
+
+Cleanup completed:
+- blocked terminal outcomes were added to terminal rollup job set so fail-closed jobs also get rollups.
+
+Behavior intentionally not changed:
+- no job status logic changes;
+- no publish/fail decisions changed;
+- no credit restoration changes;
+- no report output changes;
+- no dashboard changes;
+- no parser math/threshold changes;
+- no scheduling cadence change;
+- no Supabase schema migration;
+- no new API route.
+
+Rollup creation is best-effort:
+- errors are caught/logged;
+- worker continues.
+
+## Validation style used today
+Validation was focused only:
+- `node --check` on touched files;
+- focused diagnostics regression tests;
+- `git diff --check`.
+
+No broad QA suite.
+No frontend build.
+No e2e.
+No live report tests as discovery unless explicitly chosen.
+
+## Commit guidance after May 16 diagnostics stack
+Recommended commit after Phase 4B cleanup:
+```bash
+git status
+git add api/parse/parse-doc.js lib/ai-t12-recovery.js lib/ai-rent-roll-recovery.js lib/ai-support-doc-recovery.js api/generate-client-report.js api/admin-run-worker.js api/_lib/validator-diagnostics-rollup.js tests/qa/t12-rent-roll-diagnostics-regression.js tests/qa/support-doc-diagnostics-regression.js tests/qa/renovation-rent-lift-regression.js tests/qa/validator-diagnostics-rollup-regression.js
+git commit -m "Add validator diagnostics and rollup artifacts"
+git push
+git status
+```
+
+Adjust `git add` if some files were already committed earlier.
+
+## Immediate next steps for next chat
+1. Confirm working tree is clean after commit/push.
+2. Confirm Vercel deployment succeeds.
+3. Do not start with more diagnostics patches unless deploy reveals a real problem.
+4. Optionally inspect the next terminal job’s `validator_diagnostics_rollup` artifact after a real run.
+5. Do not run broad live testing as discovery.
+6. If a live test is chosen, treat it as validation of a known class only.
+
+## Phase 5 follow-up
+Phase 5 should not change delivery behavior yet.
+
+Goal:
+```text
+Admin/Command Centre interpretation layer for validator_diagnostics_rollup.
+```
+
+Purpose:
+- make rollup human-readable for Rob/admin:
+  - “Uploaded rent roll was vague and had no reliable unit/rent totals.”
+  - “T12 and rent roll materially disagree.”
+  - “Renovation ROI omitted because no payback/NOI support was provided.”
+  - “DocRaptor is still in test mode.”
+  - “This is a parser-validator issue vs user-document-quality issue.”
+
+Rules:
+- no new API route unless function-count issue is addressed;
+- prefer reusing existing admin `queue-metrics` endpoint if possible;
+- do not change publish/fail logic in Phase 5;
+- do not expose internal diagnostics to customers;
+- keep admin UI compact and not overwhelming.
+
+## Fresh chat prompt - May 16 night continuation
+
+```text
+We are continuing InvestorIQ from the May 16 night diagnostics context.
+
+Today’s major outcome:
+InvestorIQ now has machine-readable deterministic validator diagnostics across:
+- renovation support-doc recovery;
+- acquisition / purchase assumptions;
+- current mortgage/current debt;
+- property tax;
+- appraisal/cap-rate support;
+- T12 parser;
+- rent roll parser;
+- T12 AI recovery;
+- rent roll AI recovery.
+
+The system also has a new internal diagnostics rollup helper and worker integration:
+- `api/_lib/validator-diagnostics-rollup.js`
+- `buildValidatorDiagnosticsRollup(...)`
+- `validator_diagnostics_rollup` artifacts written by `api/admin-run-worker.js` for terminal jobs:
+  - failed jobs;
+  - blocked/fail-closed jobs;
+  - published jobs.
+No new Vercel API route was added.
+
+Important files changed today:
+- `lib/ai-support-doc-recovery.js`
+- `api/generate-client-report.js`
+- `tests/qa/renovation-rent-lift-regression.js`
+- `tests/qa/support-doc-diagnostics-regression.js`
+- `api/parse/parse-doc.js`
+- `lib/ai-t12-recovery.js`
+- `lib/ai-rent-roll-recovery.js`
+- `tests/qa/t12-rent-roll-diagnostics-regression.js`
+- `api/_lib/validator-diagnostics-rollup.js`
+- `tests/qa/validator-diagnostics-rollup-regression.js`
+- `api/admin-run-worker.js`
+
+Key doctrine:
+- Patch classes, not one-report symptoms.
+- Deterministic validation boundaries must emit machine-readable reason codes.
+- No opaque parser/validator failures when useful diagnostics can be emitted.
+- Do not expose raw source text or secrets.
+- Do not add new Vercel API routes while on Hobby function limits.
+- `_lib` helper files are acceptable.
+- Admin rollup is internal only and must not change publish/fail/credit/report decisions.
+
+Known successful validations:
+- Willowmere Retest 4 passed after renovation rent-lift recovery/diagnostics.
+- T12/rent-roll diagnostics regression passed.
+- support-doc diagnostics regression passed.
+- validator diagnostics rollup regression passed.
+- admin-run-worker node check passed after Phase 4B.
+
+First action:
+Confirm commit/push status:
+`git status`
+
+If not committed, commit the accepted diagnostics stack:
+`git add api/parse/parse-doc.js lib/ai-t12-recovery.js lib/ai-rent-roll-recovery.js lib/ai-support-doc-recovery.js api/generate-client-report.js api/admin-run-worker.js api/_lib/validator-diagnostics-rollup.js tests/qa/t12-rent-roll-diagnostics-regression.js tests/qa/support-doc-diagnostics-regression.js tests/qa/renovation-rent-lift-regression.js tests/qa/validator-diagnostics-rollup-regression.js`
+`git commit -m "Add validator diagnostics and rollup artifacts"`
+`git push`
+`git status`
+
+After deploy:
+- confirm Vercel deployment succeeds;
+- do not begin another broad patch;
+- optionally inspect the next terminal job’s `validator_diagnostics_rollup` artifact after a real run;
+- Phase 5 is Admin/Command Centre interpretation of the rollup, not delivery-decision changes.
+```
+
+---
+
+
 # May 15, 2026 Night Update - Supabase Worker Automation Phase 1 / No Manual Worker Babysitting
 
 ## Critical operational context remains locked

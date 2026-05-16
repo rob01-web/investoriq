@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailResend } from '../lib/email-resend.js';
+import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -417,6 +418,80 @@ export default async function handler(req, res) {
     const coerceFiniteNumber = (value) => {
       const numeric = Number(value);
       return Number.isFinite(numeric) ? numeric : null;
+    };
+
+    const writeValidatorDiagnosticsRollup = async ({ jobId, reportTypeHint = null }) => {
+      try {
+        const diagnosticTypes = [
+          't12_parsed',
+          'rent_roll_parsed',
+          't12_parse_error',
+          'rent_roll_parse_error',
+          'ai_t12_recovery_diagnostic',
+          'ai_rent_roll_recovery_diagnostic',
+          'ai_support_doc_recovery_diagnostic',
+          'report_qa_flags',
+          'source_report_coverage_qa',
+          'worker_event',
+        ];
+
+        const { data: artifacts, error: artifactsErr } = await supabaseAdmin
+          .from('analysis_artifacts')
+          .select('type, payload')
+          .eq('job_id', jobId)
+          .in('type', diagnosticTypes);
+
+        if (artifactsErr) {
+          throw new Error(`Failed to fetch diagnostic artifacts: ${artifactsErr.message}`);
+        }
+
+        let resolvedReportType = reportTypeHint || null;
+        if (!resolvedReportType) {
+          const jobSelect = supportsReportType ? 'id, report_type' : 'id';
+          const { data: jobRow, error: jobRowErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .select(jobSelect)
+            .eq('id', jobId)
+            .maybeSingle();
+          if (jobRowErr) {
+            throw new Error(`Failed to fetch job for diagnostics rollup: ${jobRowErr.message}`);
+          }
+          resolvedReportType = supportsReportType ? jobRow?.report_type || null : null;
+        }
+
+        const rollupTimestamp = new Date().toISOString();
+        const rollup = buildValidatorDiagnosticsRollup({
+          jobId,
+          reportType: resolvedReportType,
+          artifacts: Array.isArray(artifacts) ? artifacts : [],
+          timestamp: rollupTimestamp,
+        });
+
+        await supabaseAdmin
+          .from('analysis_artifacts')
+          .delete()
+          .eq('job_id', jobId)
+          .eq('type', 'validator_diagnostics_rollup');
+
+        const { error: insertErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+          {
+            job_id: jobId,
+            user_id: null,
+            type: 'validator_diagnostics_rollup',
+            bucket: 'internal',
+            object_path: `analysis_jobs/${jobId}/validator_diagnostics_rollup/${safeTimestamp(
+              rollupTimestamp
+            )}.json`,
+            payload: rollup,
+          },
+        ]);
+
+        if (insertErr) {
+          throw new Error(`Failed to write validator diagnostics rollup: ${insertErr.message}`);
+        }
+      } catch (err) {
+        console.error(`[worker] validator diagnostics rollup skipped for job ${jobId}:`, err?.message || err);
+      }
     };
 
     const deriveTrustedAnnualInPlaceRent = (rentRollPayload) => {
@@ -2478,6 +2553,15 @@ export default async function handler(req, res) {
       if (!failedJobIds.includes(job.id)) {
         failedJobIds.push(job.id);
       }
+    }
+
+    const publishedJobIds = transitions
+      .filter((t) => String(t?.to_status || '') === 'published')
+      .map((t) => t.job_id)
+      .filter(Boolean);
+    const terminalRollupJobIds = Array.from(new Set([...failedJobIds, ...blockedJobIds, ...publishedJobIds]));
+    for (const rollupJobId of terminalRollupJobIds) {
+      await writeValidatorDiagnosticsRollup({ jobId: rollupJobId });
     }
 
     const advancedJobIds = Array.from(new Set(transitions.map((t) => t.job_id)));
