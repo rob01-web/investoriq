@@ -1231,6 +1231,12 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
     category: false,
     scope: false,
     cost: false,
+    unitType: false,
+    unitCount: false,
+    costPerUnit: false,
+    expectedMonthlyRentLift: false,
+    phaseTiming: false,
+    grossAnnualRentLiftPotential: false,
     percent: false,
     objective: false,
   };
@@ -1239,9 +1245,26 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
     if (!row || typeof row !== "object") continue;
     const category = String(row.category ?? row.line_item ?? row.item ?? "").trim();
     const scope = String(row.scope_of_work ?? row.scope ?? "").trim();
+    const unitType = String(row.unit_type ?? "").trim();
+    const unitCountRaw = row.unit_count ?? "";
+    const unitCountNum = coerceNumber(unitCountRaw);
+    const unitCount = Number.isFinite(unitCountNum) ? String(Math.round(unitCountNum)) : String(unitCountRaw).trim();
     const costNum = coerceNumber(row.estimated_cost ?? row.cost ?? row.amount);
     const costRaw = String(row.estimated_cost ?? row.cost ?? row.amount ?? "").trim();
     const cost = Number.isFinite(costNum) ? formatValue(costNum) : escapeHtml(costRaw);
+    const costPerUnitNum = coerceNumber(row.cost_per_unit);
+    const costPerUnitRaw = String(row.cost_per_unit ?? "").trim();
+    const costPerUnit = Number.isFinite(costPerUnitNum) ? formatValue(costPerUnitNum) : escapeHtml(costPerUnitRaw);
+    const expectedMonthlyRentLiftNum = coerceNumber(row.expected_monthly_rent_lift);
+    const expectedMonthlyRentLiftRaw = String(row.expected_monthly_rent_lift ?? "").trim();
+    const expectedMonthlyRentLift = Number.isFinite(expectedMonthlyRentLiftNum)
+      ? formatValue(expectedMonthlyRentLiftNum)
+      : escapeHtml(expectedMonthlyRentLiftRaw);
+    const phaseTiming = String(row.phase_timing ?? row.timing_or_phasing ?? "").trim();
+    const grossAnnualRentLiftPotential =
+      Number.isFinite(unitCountNum) && Number.isFinite(expectedMonthlyRentLiftNum)
+        ? formatValue(unitCountNum * expectedMonthlyRentLiftNum * 12)
+        : "";
     const pctKind = normalizeRenovationMetricKind({
       metric_kind: "percent_of_budget",
       label: "percent of budget",
@@ -1254,13 +1277,43 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
     });
     const percent = Number.isFinite(pctValue) ? pct : String(pctRawValue ?? "").trim();
     const objective = String(row.primary_objective ?? row.objective ?? row.note ?? "").trim();
-    if (!category && !scope && !cost && !percent && !objective) continue;
+    if (
+      !category &&
+      !scope &&
+      !cost &&
+      !unitType &&
+      !unitCount &&
+      !costPerUnit &&
+      !expectedMonthlyRentLift &&
+      !phaseTiming &&
+      !grossAnnualRentLiftPotential &&
+      !percent &&
+      !objective
+    ) continue;
     visibleColumns.category ||= Boolean(category);
     visibleColumns.scope ||= Boolean(scope);
     visibleColumns.cost ||= Boolean(cost);
+    visibleColumns.unitType ||= Boolean(unitType);
+    visibleColumns.unitCount ||= Boolean(unitCount);
+    visibleColumns.costPerUnit ||= Boolean(costPerUnit);
+    visibleColumns.expectedMonthlyRentLift ||= Boolean(expectedMonthlyRentLift);
+    visibleColumns.phaseTiming ||= Boolean(phaseTiming);
+    visibleColumns.grossAnnualRentLiftPotential ||= Boolean(grossAnnualRentLiftPotential);
     visibleColumns.percent ||= Boolean(percent);
     visibleColumns.objective ||= Boolean(objective);
-    normalizedRows.push({ category, scope, cost, percent, objective });
+    normalizedRows.push({
+      category,
+      scope,
+      cost,
+      unitType,
+      unitCount,
+      costPerUnit,
+      expectedMonthlyRentLift,
+      phaseTiming,
+      grossAnnualRentLiftPotential,
+      percent,
+      objective,
+    });
   }
   return { visibleColumns, rows: normalizedRows };
 }
@@ -1393,6 +1446,7 @@ function buildDocumentTreatmentSummaryHtml({
           : "artifact_inventory";
       const normalizedRenovationDisplayMode =
         renovationDisplayMode === "forward_looking_modelable" ||
+        renovationDisplayMode === "forward_looking_with_rent_lift" ||
         renovationDisplayMode === "budget_only_no_roi" ||
         renovationDisplayMode === "historical_only"
           ? renovationDisplayMode
@@ -1404,6 +1458,14 @@ function buildDocumentTreatmentSummaryHtml({
           category: "Modeled Inputs",
           note: "Forward-looking renovation support is document-backed",
           reason_code: "forward_looking_renovation_input",
+          source_basis: renovationSourceBasis,
+        };
+      }
+      if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift") {
+        return {
+          category: "Modeled Inputs",
+          note: "Forward-looking renovation support includes document-stated rent-lift assumptions",
+          reason_code: "forward_looking_renovation_rent_lift_input",
           source_basis: renovationSourceBasis,
         };
       }
@@ -1527,6 +1589,7 @@ function buildHistoricalCapexDisplayCopy({
 } = {}) {
   const normalizedRenovationDisplayMode =
     renovationDisplayMode === "forward_looking_modelable" ||
+    renovationDisplayMode === "forward_looking_with_rent_lift" ||
     renovationDisplayMode === "budget_only_no_roi" ||
     renovationDisplayMode === "historical_only"
       ? renovationDisplayMode
@@ -1558,6 +1621,21 @@ function buildHistoricalCapexDisplayCopy({
       budget_note: DATA_NOT_AVAILABLE,
       execution_note: DATA_NOT_AVAILABLE,
       interpretation: DATA_NOT_AVAILABLE,
+      historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
+    };
+  }
+  if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift") {
+    return {
+      display_mode: normalizedRenovationDisplayMode,
+      section_title: "Renovation Strategy & Capital Plan",
+      budget_card_title: "Renovation Budget Breakdown",
+      show_execution_card: true,
+      budget_note:
+        "Document-stated renovation rent-lift assumptions are displayed by row. Gross annual rent-lift potential is shown only where unit count and expected monthly rent lift are explicitly provided.",
+      execution_note:
+        "ROI, payback, and cost recovery are not modeled unless those assumptions are explicitly document-supported.",
+      interpretation:
+        "Document-stated rent-lift assumptions are shown for transparency. This is not an NOI, ROI, payback, or valuation model.",
       historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
     };
   }
@@ -1596,6 +1674,13 @@ function resolveRenovationDisplayMode({
       );
       return Number.isFinite(amount) && amount > 0;
     });
+  const hasRowLevelRentLift = (rows) =>
+    Array.isArray(rows) &&
+    rows.some((row) => {
+      if (!row || typeof row !== "object") return false;
+      const rowRentLift = coerceNumber(row.expected_monthly_rent_lift ?? row.rent_lift);
+      return Number.isFinite(rowRentLift) && rowRentLift > 0;
+    });
   const hasBudgetEvidence = Boolean(
     hasPositive(renovationPayload?.total_budget) ||
       hasPositive(renovationPayload?.total_capex) ||
@@ -1619,6 +1704,12 @@ function resolveRenovationDisplayMode({
         renovationPayload?.roi,
         renovationPayload?.payback_period,
       ].some((value) => hasMeaningfulText(value))
+  );
+  const hasDocumentedRentLift = Boolean(
+    hasMeaningfulText(financials?.renovation_rent_lift) ||
+      hasMeaningfulText(renovationPayload?.rent_lift) ||
+      hasRowLevelRentLift(renovationPayload?.budget_rows) ||
+      hasRowLevelRentLift(financials?.renovation_budget_rows)
   );
   const historicalSignalsText = [
     financials?.renovation_interpretation,
@@ -1654,6 +1745,9 @@ function resolveRenovationDisplayMode({
     if (hasHistoricalOnlySignals && !hasForwardLookingSignals) {
       return "historical_only";
     }
+    if (hasDocumentedRentLift && !hasMeaningfulText(financials?.renovation_roi) && !hasMeaningfulText(renovationPayload?.roi)) {
+      return "forward_looking_with_rent_lift";
+    }
     return hasForwardLookingSignals ? "forward_looking_modelable" : "budget_only_no_roi";
   }
   if (hasHistoricalOnlySignals) {
@@ -1679,6 +1773,12 @@ function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
   const columns = [
     { key: "category", label: "Category" },
     { key: "scope", label: "Scope of Work" },
+    { key: "unitType", label: "Unit Type" },
+    { key: "unitCount", label: "Unit Count" },
+    { key: "costPerUnit", label: "Cost per Unit" },
+    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated)" },
+    { key: "phaseTiming", label: "Phase Timing / Phasing" },
+    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated)" },
     { key: "cost", label: "Estimated Cost" },
     { key: "percent", label: "Percent of Budget" },
     { key: "objective", label: "Primary Objective" },
@@ -1703,6 +1803,12 @@ function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILA
   const columns = [
     { key: "category", label: "Category" },
     { key: "scope", label: "Scope of Work" },
+    { key: "unitType", label: "Unit Type" },
+    { key: "unitCount", label: "Unit Count" },
+    { key: "costPerUnit", label: "Cost per Unit" },
+    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated)" },
+    { key: "phaseTiming", label: "Phase Timing / Phasing" },
+    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated)" },
     { key: "cost", label: "Estimated Cost" },
     { key: "percent", label: "Percent of Budget" },
     { key: "objective", label: "Primary Objective" },
@@ -5774,7 +5880,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     )
   : "";
     const renovationExecutionCardHtml = hasExplicitRenovationInput
-      ? renovationDisplayMode === "forward_looking_modelable"
+      ? renovationDisplayMode === "forward_looking_modelable" || renovationDisplayMode === "forward_looking_with_rent_lift"
         ? buildRenovationExecutionCardHtml(
           renovationExecutionSourceRows,
           formatCurrency,
@@ -8102,6 +8208,7 @@ export const __test__ = {
   buildDealScorecardState,
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
+  resolveRenovationDisplayMode,
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
   buildReportStoragePath,
