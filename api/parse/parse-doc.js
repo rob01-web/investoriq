@@ -70,6 +70,12 @@ const writeAiRentRollRecoveryDiagnostic = async ({
       typeof diagnostics.json_parse_success === 'boolean' ? diagnostics.json_parse_success : null,
     candidate_present: diagnostics.candidate_present === true,
     validation_accepted: diagnostics.validation_accepted === true,
+    validation_reasons: Array.isArray(diagnostics.validation_reasons) ? diagnostics.validation_reasons : [],
+    rejection_reasons: Array.isArray(diagnostics.rejection_reasons) ? diagnostics.rejection_reasons : [],
+    accepted_fields: Array.isArray(diagnostics.accepted_fields) ? diagnostics.accepted_fields : [],
+    derived_fields: Array.isArray(diagnostics.derived_fields) ? diagnostics.derived_fields : [],
+    field_diagnostics: Array.isArray(diagnostics.field_diagnostics) ? diagnostics.field_diagnostics : [],
+    row_diagnostics: Array.isArray(diagnostics.row_diagnostics) ? diagnostics.row_diagnostics : [],
     rejection_reason: diagnostics.rejection_reason || null,
     final_outcome: diagnostics.final_outcome || 'unknown_null',
     timestamp: nowIso,
@@ -90,6 +96,61 @@ const writeAiRentRollRecoveryDiagnostic = async ({
 
   if (error) {
     console.error('Failed to write AI rent roll recovery diagnostic:', error.message);
+  }
+};
+
+const writeAiT12RecoveryDiagnostic = async ({
+  supabaseAdmin,
+  jobId,
+  userId,
+  fileId,
+  filename,
+  diagnostics,
+}) => {
+  if (!diagnostics || typeof diagnostics !== 'object') return;
+  const nowIso = new Date().toISOString();
+  const safePayload = {
+    event: 'ai_t12_recovery_diagnostic',
+    file_id: fileId || null,
+    original_filename: filename || null,
+    attempted: diagnostics.attempted === true,
+    feature_enabled: diagnostics.feature_enabled === true,
+    openai_api_key_present: diagnostics.openai_api_key_present === true,
+    source_text_length: Number.isFinite(diagnostics.source_text_length)
+      ? diagnostics.source_text_length
+      : Number(diagnostics.source_text_length) || 0,
+    openai_request_attempted: diagnostics.openai_request_attempted === true,
+    openai_response_status: Number.isFinite(diagnostics.openai_response_status)
+      ? diagnostics.openai_response_status
+      : null,
+    json_parse_success:
+      typeof diagnostics.json_parse_success === 'boolean' ? diagnostics.json_parse_success : null,
+    candidate_present: diagnostics.candidate_present === true,
+    validation_accepted: diagnostics.validation_accepted === true,
+    validation_reasons: Array.isArray(diagnostics.validation_reasons) ? diagnostics.validation_reasons : [],
+    rejection_reasons: Array.isArray(diagnostics.rejection_reasons) ? diagnostics.rejection_reasons : [],
+    accepted_fields: Array.isArray(diagnostics.accepted_fields) ? diagnostics.accepted_fields : [],
+    derived_fields: Array.isArray(diagnostics.derived_fields) ? diagnostics.derived_fields : [],
+    rejection_reason: diagnostics.rejection_reason || null,
+    final_outcome: diagnostics.final_outcome || 'unknown_null',
+    timestamp: nowIso,
+  };
+
+  const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
+    {
+      job_id: jobId,
+      user_id: userId || null,
+      type: 'ai_t12_recovery_diagnostic',
+      bucket: 'internal',
+      object_path: `analysis_jobs/${jobId}/ai_t12_recovery_diagnostic/${fileId || 'unknown'}/${safeTimestamp(
+        nowIso
+      )}.json`,
+      payload: safePayload,
+    },
+  ]);
+
+  if (error) {
+    console.error('Failed to write AI t12 recovery diagnostic:', error.message);
   }
 };
 
@@ -2303,7 +2364,6 @@ export default async function handler(req, res) {
 
       if (isPdfOrImage(fileRow.mime_type)) {
         try {
-          let parserDiagnosticsForError = null;
           const { data: fileData, error: downloadErr } = await supabaseAdmin.storage
             .from(fileRow.bucket)
             .download(fileRow.object_path);
@@ -2395,6 +2455,7 @@ export default async function handler(req, res) {
 
             if (!tablesArtifact?.bucket || !tablesArtifact?.object_path) {
               let aiRecoveredRentRoll = null;
+              let aiRecoveryDiagnostics = null;
               try {
                 const { data: textArtifact } = await supabaseAdmin
                   .from('analysis_artifacts')
@@ -2413,6 +2474,7 @@ export default async function handler(req, res) {
                   includeDiagnostics: true,
                 });
                 aiRecoveredRentRoll = aiRecoveryResult?.payload || null;
+                aiRecoveryDiagnostics = aiRecoveryResult?.diagnostics || null;
                 await writeAiRentRollRecoveryDiagnostic({
                   supabaseAdmin,
                   jobId,
@@ -2453,6 +2515,7 @@ export default async function handler(req, res) {
                       parse_warnings: Array.isArray(aiRecoveredRentRoll.parse_warnings)
                         ? aiRecoveredRentRoll.parse_warnings
                         : [],
+                      ai_recovery_diagnostics: aiRecoveryDiagnostics,
                     },
                   },
                 ]);
@@ -2559,6 +2622,7 @@ export default async function handler(req, res) {
 
             if (!(hasMinimumRentRoll && hasSecondarySignal)) {
               let aiRecoveredRentRoll = null;
+              let aiRecoveryDiagnostics = null;
               try {
                 const { data: textArtifact } = await supabaseAdmin
                   .from('analysis_artifacts')
@@ -2577,6 +2641,7 @@ export default async function handler(req, res) {
                   includeDiagnostics: true,
                 });
                 aiRecoveredRentRoll = aiRecoveryResult?.payload || null;
+                aiRecoveryDiagnostics = aiRecoveryResult?.diagnostics || null;
                 await writeAiRentRollRecoveryDiagnostic({
                   supabaseAdmin,
                   jobId,
@@ -2623,6 +2688,7 @@ export default async function handler(req, res) {
                       units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
                       column_map: aiRecoveredRentRoll.column_map || null,
                       parse_warnings: aiParseWarnings,
+                      ai_recovery_diagnostics: aiRecoveryDiagnostics,
                     },
                   },
                 ]);
@@ -2855,6 +2921,7 @@ export default async function handler(req, res) {
 
           if (!(hasMinimumRentRoll && hasSecondarySignal)) {
             let aiRecoveredRentRoll = null;
+            let aiRecoveryDiagnostics = null;
             try {
               const aiRecoveryResult = await recoverRentRollWithAI({
                 text: '',
@@ -2864,6 +2931,7 @@ export default async function handler(req, res) {
                 includeDiagnostics: true,
               });
               aiRecoveredRentRoll = aiRecoveryResult?.payload || null;
+              aiRecoveryDiagnostics = aiRecoveryResult?.diagnostics || null;
               await writeAiRentRollRecoveryDiagnostic({
                 supabaseAdmin,
                 jobId,
@@ -2910,6 +2978,7 @@ export default async function handler(req, res) {
                     units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
                     column_map: aiRecoveredRentRoll.column_map || null,
                     parse_warnings: aiParseWarnings,
+                    ai_recovery_diagnostics: aiRecoveryDiagnostics,
                   },
                 },
               ]);
@@ -3167,10 +3236,20 @@ export default async function handler(req, res) {
             if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
 
             const tryAiT12Recovery = async () => {
-              const aiCandidate = await recoverT12WithAI({
+              const aiRecoveryResult = await recoverT12WithAI({
                 text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
                 filename: file.original_filename,
                 jobId,
+                includeDiagnostics: true,
+              });
+              const aiCandidate = aiRecoveryResult?.payload || null;
+              await writeAiT12RecoveryDiagnostic({
+                supabaseAdmin,
+                jobId,
+                userId: file.user_id,
+                fileId: file.id,
+                filename: file.original_filename,
+                diagnostics: aiRecoveryResult?.diagnostics,
               });
               if (!aiCandidate) return false;
 
@@ -3194,6 +3273,7 @@ export default async function handler(req, res) {
                     classifier_score: classifierScore,
                     classifier_signals: classifierSignals,
                     ...aiCandidate,
+                    ai_recovery_diagnostics: aiRecoveryResult?.diagnostics || null,
                     parse_branch: aiCoreValidation.parse_branch,
                     core_t12_validation: aiCoreValidation,
                   },
