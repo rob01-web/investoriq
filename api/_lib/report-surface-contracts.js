@@ -696,17 +696,75 @@ function normalizeVerdictLabel(score) {
 }
 
 function hasSourceReconciliationDisclosureCap(sourceReconciliationState = null) {
+  const policy = buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState);
+  return policy.verdict_cap_allowed;
+}
+
+export function buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState = null) {
   const state = sourceReconciliationState && typeof sourceReconciliationState === "object"
     ? sourceReconciliationState
     : null;
   const status = String(state?.status || "").toLowerCase();
   const publishabilityBucket = normalizePublishabilityBucket(state?.publishability_bucket || state?.publishabilityBucket || null);
   const customerDeliveryImpact = String(state?.customer_delivery_impact || "").toLowerCase();
-  return Boolean(
+  const parserSuspected = state?.parser_suspected === true || status === "parser_suspected";
+
+  const isBlock = customerDeliveryImpact === "block" || parserSuspected;
+  const isDiscloseOnly =
+    customerDeliveryImpact === "disclose_only" ||
     publishabilityBucket === "disclose_only_publishable" ||
-    status === "source_reconciliation_required" ||
-    customerDeliveryImpact === "disclose_only"
-  );
+    status === "source_reconciliation_required";
+  const isAllow = !isBlock && !isDiscloseOnly;
+
+  if (isBlock) {
+    return {
+      executive_summary_allowed: true,
+      primary_pressure_point_allowed: true,
+      data_coverage_required: true,
+      metrics_tables_allowed: true,
+      verdict_cap_allowed: false,
+      risk_register_allowed: true,
+      disclosure_label: "Source reconciliation review required; see Data Coverage.",
+      prohibited_prominence_reason: null,
+    };
+  }
+
+  if (isDiscloseOnly) {
+    return {
+      executive_summary_allowed: true,
+      primary_pressure_point_allowed: false,
+      data_coverage_required: true,
+      metrics_tables_allowed: true,
+      verdict_cap_allowed: true,
+      risk_register_allowed: true,
+      disclosure_label: "Source reconciliation disclosure applies; see Data Coverage.",
+      prohibited_prominence_reason: "disclose_only_no_primary_pressure_point",
+    };
+  }
+
+  if (isAllow) {
+    return {
+      executive_summary_allowed: false,
+      primary_pressure_point_allowed: false,
+      data_coverage_required: false,
+      metrics_tables_allowed: false,
+      verdict_cap_allowed: false,
+      risk_register_allowed: false,
+      disclosure_label: null,
+      prohibited_prominence_reason: "allow_no_reconciliation_prominence",
+    };
+  }
+
+  return {
+    executive_summary_allowed: false,
+    primary_pressure_point_allowed: false,
+    data_coverage_required: false,
+    metrics_tables_allowed: false,
+    verdict_cap_allowed: false,
+    risk_register_allowed: false,
+    disclosure_label: null,
+    prohibited_prominence_reason: "unclassified_reconciliation_prominence_state",
+  };
 }
 
 export function buildCanonicalDisplayVerdictState({

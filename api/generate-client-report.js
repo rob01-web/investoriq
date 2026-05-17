@@ -31,6 +31,7 @@ import {
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
   buildSourceReconciliationState,
+  buildSourceReconciliationNarrativeProminencePolicy,
   sanitizeFinalCustomerHtml,
 } from "./_lib/report-surface-contracts.js";
 // Convert __dirname for ESM
@@ -449,12 +450,7 @@ function buildDealScorecardState({
     `</tr>`
   ).join("");
   const sourceReconciliationConstrained = Boolean(
-    sourceReconciliationState &&
-      (
-        sourceReconciliationState.status === "source_reconciliation_required" ||
-        sourceReconciliationState.publishability_bucket === "disclose_only_publishable" ||
-        sourceReconciliationState.customer_delivery_impact === "disclose_only"
-      )
+    buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
   );
   let note = displayVerdict.cap_explanation ||
     "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
@@ -2266,12 +2262,7 @@ function buildScreeningDataCoverageSummary({
   const unlocksCard = "";
   const allPresent = missingInputs.length === 0;
   const sourceReconciliationRequired = Boolean(
-    sourceReconciliationState &&
-      (
-        sourceReconciliationState.status === "source_reconciliation_required" ||
-        sourceReconciliationState.publishability_bucket === "disclose_only_publishable" ||
-        sourceReconciliationState.customer_delivery_impact === "disclose_only"
-      )
+    buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
   );
   const sourceLimitedDisclosureRequired = Number(sectionEligibility?.source_constrained_section_count || 0) > 0;
   const suppressVerifiedCoverageCopy = sourceReconciliationRequired || sourceLimitedDisclosureRequired;
@@ -4670,6 +4661,8 @@ if (effectiveReportMode === "screening_v1") {
     const sourceReconciliationRenderState = buildSourceReconciliationRenderState({
       sourceReconciliationState,
     });
+    const sourceReconciliationNarrativePolicy =
+      buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState);
     const rrVsGprPct = sourceReconciliationRenderState?.variance_pct ?? null;
     const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
     const hasSourceReconciliationVariance = sourceReconciliationRenderState?.renderable && Number.isFinite(rrVsGprPct) && Math.abs(rrVsGprPct) >= 0.05;
@@ -4678,7 +4671,7 @@ if (effectiveReportMode === "screening_v1") {
         ? `${driver1.label} (${driver1.value})`
         : driver1.label
       : "No material operating pressure point identified from available core metrics.";
-    if (!driver1 && hasSourceReconciliationVariance) {
+    if (!driver1 && hasSourceReconciliationVariance && sourceReconciliationNarrativePolicy.primary_pressure_point_allowed) {
       primaryPressurePoint = `Source reconciliation variance of ${rrVsGprDisplay} between rent roll and T12 gross potential rent requires review.`;
     }
     // For underwriting, override pressure point with DSCR-based language if mortgage available
@@ -5288,11 +5281,17 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       "{{PRIMARY_PRESSURE_POINT}}",
       primaryPressurePoint
     );
-    if (whyLine || decisionContextHtml || miniSensitivityHtml) {
+    if (whyLine || decisionContextHtml || miniSensitivityHtml || sourceReconciliationNarrativePolicy.disclosure_label) {
+      const reconciliationDisclosureLine =
+        sourceReconciliationNarrativePolicy.executive_summary_allowed &&
+        !sourceReconciliationNarrativePolicy.primary_pressure_point_allowed &&
+        sourceReconciliationNarrativePolicy.disclosure_label
+          ? `<p class="exec-signal-line">${escapeHtml(sourceReconciliationNarrativePolicy.disclosure_label)}</p>`
+          : "";
       const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`;
       const pressureReplacement = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>${
         whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
-      }${decisionContextHtml}${miniSensitivityHtml}`;
+      }${reconciliationDisclosureLine}${decisionContextHtml}${miniSensitivityHtml}`;
       if (finalHtml.includes(pressureAnchor)) {
         finalHtml = finalHtml.replace(pressureAnchor, pressureReplacement);
       }
