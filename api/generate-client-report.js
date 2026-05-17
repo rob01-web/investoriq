@@ -4688,6 +4688,20 @@ if (effectiveReportMode === "screening_v1") {
         }
       }
     }
+    const hasCurrentDebtAssessmentGap =
+      effectiveReportMode === "v1_core" &&
+      !driver1 &&
+      !hasVerifiedCurrentDebtBalance &&
+      currentDebtAssessmentState?.current_debt_dscr_status !== "computed" &&
+      [
+        "no_current_debt_document",
+        "no_current_outstanding_balance",
+        "incomplete_current_debt_terms",
+      ].includes(String(currentDebtAssessmentState?.current_debt_limitation_reason_code || "").trim());
+    if (hasCurrentDebtAssessmentGap) {
+      primaryPressurePoint =
+        "No current debt document provided; current-debt DSCR and refinance capacity were not assessed.";
+    }
     const hasCoreUnderwritingOperatingMetrics =
       Number.isFinite(execEgi) &&
       Number.isFinite(execOpex) &&
