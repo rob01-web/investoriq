@@ -1097,13 +1097,25 @@ function buildPublishEligibilitySummary({
     ? (sourceReconciliationIsDiscloseOnly ? "source_reconciliation" : "source_limited")
     : "none";
 
+  const legacyCustomerReadyFalse =
+    Boolean(reportContractQa?.customer_delivery_ready === false) ||
+    Boolean(qaActionPlan?.customer_delivery_ready === false);
+  const canonicalCustomerBlockingPresent = Boolean(
+    customerDeliveryImpact === "block" ||
+    customerPublishBlockers.length > 0 ||
+    contractCustomerBlockingViolations.length > 0 ||
+    sourceNeedsDocs
+  );
+  // Legacy readiness booleans are compatibility signals only.
+  // They can reinforce customer blocking only when canonical customer-blocking evidence exists.
+  const legacyCustomerReadyCorroboratedBlock = legacyCustomerReadyFalse && canonicalCustomerBlockingPresent;
+
   const customerPublishEligible = Boolean(
     deliveryGateStatus === "deliverable" &&
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
     customerPublishBlockers.length === 0 &&
-    !Boolean(reportContractQa?.customer_delivery_ready === false) &&
-    !Boolean(qaActionPlan?.customer_delivery_ready === false)
+    !legacyCustomerReadyCorroboratedBlock
   );
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
