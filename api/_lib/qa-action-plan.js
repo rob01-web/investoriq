@@ -577,6 +577,9 @@ function actionForManagerDecision(decision) {
     isHardPublicLanguageExcerpt(decision?.evidence_excerpt);
   const speculativePublicLanguage = classification === "real_public_language_risk" && !hardPublicLanguage;
   const sourceTotalsVerification = sourceCode === "rent_roll_vs_t12_gpr_discrepancy";
+  const coreInputVerificationInconsistency = sourceCode === "CORE_INPUT_VERIFICATION_INCONSISTENCY";
+  const contradictionBlocksCustomer = Boolean(decision?.blocks_customer_delivery) ||
+    ["high", "critical"].includes(normalizeSeverity(decision?.severity));
   const requiresCodePatch = hardPublicLanguage ||
     (!speculativePublicLanguage &&
       classification !== "admin_review_optional" &&
@@ -599,7 +602,9 @@ function actionForManagerDecision(decision) {
     action_type: sourceTotalsVerification
       ? "source_document_limitation"
       : contradictionReview
-      ? "admin_review_required"
+      ? coreInputVerificationInconsistency && !contradictionBlocksCustomer
+        ? "source_reconciliation_review_recommended"
+        : "admin_review_required"
       : hardPublicLanguage
       ? "code_patch_required"
       : speculativePublicLanguage
@@ -624,7 +629,7 @@ function actionForManagerDecision(decision) {
     blocks_customer_delivery: sourceTotalsVerification
       ? false
       : contradictionReview
-      ? (Boolean(decision?.blocks_customer_delivery) || ["high", "critical"].includes(normalizeSeverity(decision?.severity)))
+      ? contradictionBlocksCustomer
       : hardPublicLanguage,
     blocks_public_sample: sourceTotalsVerification
       ? true

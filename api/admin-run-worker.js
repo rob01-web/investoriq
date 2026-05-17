@@ -863,6 +863,7 @@ export default async function handler(req, res) {
     const transitions = [];
     const blockedJobIds = [];
     const failedJobIds = [];
+    const rollupWrittenJobIds = new Set();
     let passesRun = 0;
     const maxPasses = 10;
     const maxSeconds = 55;
@@ -2532,6 +2533,8 @@ export default async function handler(req, res) {
               console.error('Failed to send report_published email:', err?.message || err);
             }
           }
+          await writeValidatorDiagnosticsRollup({ jobId: job.id });
+          rollupWrittenJobIds.add(job.id);
           } catch (err) {
             await recordJobFailure(job, 'rendering', err);
             if (!failedJobIds.includes(job.id)) {
@@ -2559,9 +2562,11 @@ export default async function handler(req, res) {
       .filter((t) => String(t?.to_status || '') === 'published')
       .map((t) => t.job_id)
       .filter(Boolean);
-    const terminalRollupJobIds = Array.from(new Set([...failedJobIds, ...blockedJobIds, ...publishedJobIds]));
+    const terminalRollupJobIds = Array.from(new Set([...failedJobIds, ...blockedJobIds, ...publishedJobIds]))
+      .filter((jobId) => !rollupWrittenJobIds.has(jobId));
     for (const rollupJobId of terminalRollupJobIds) {
       await writeValidatorDiagnosticsRollup({ jobId: rollupJobId });
+      rollupWrittenJobIds.add(rollupJobId);
     }
 
     const advancedJobIds = Array.from(new Set(transitions.map((t) => t.job_id)));
