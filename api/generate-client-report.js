@@ -2329,7 +2329,7 @@ function buildScreeningDataCoverageSummary({
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
-  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections were omitted where minimum source coverage was not met.</p>${unlocksCard}`;
+  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections not supported by minimum verified source coverage were intentionally withheld from analysis.</p>${unlocksCard}`;
 }
 function isEligiblePositiveIncomeDriver(row) {
   const label = String(row?.label || "").trim();
@@ -4670,7 +4670,7 @@ if (effectiveReportMode === "screening_v1") {
       ? driver1.value
         ? `${driver1.label} (${driver1.value})`
         : driver1.label
-      : "No material operating pressure point identified from available core metrics.";
+      : "Primary Constraint: No material operating pressure signal was triggered from assessed core metrics; refer to Data Coverage for source-limited areas.";
     if (!driver1 && hasSourceReconciliationVariance && sourceReconciliationNarrativePolicy.primary_pressure_point_allowed) {
       primaryPressurePoint = `Source reconciliation variance of ${rrVsGprDisplay} between rent roll and T12 gross potential rent requires review.`;
     }
@@ -4684,7 +4684,7 @@ if (effectiveReportMode === "screening_v1") {
         } else if (currentDebtCoverage.dscr < 1.35) {
           primaryPressurePoint = `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`;
         } else if (!driver1) {
-          primaryPressurePoint = "No material debt-coverage pressure point identified from available current debt metrics.";
+          primaryPressurePoint = "Primary Constraint: Current debt coverage appears within assessed thresholds; refinance risk remains subject to source completeness.";
         }
       }
     }
@@ -4700,7 +4700,7 @@ if (effectiveReportMode === "screening_v1") {
       ].includes(String(currentDebtAssessmentState?.current_debt_limitation_reason_code || "").trim());
     if (hasCurrentDebtAssessmentGap) {
       primaryPressurePoint =
-        "No current debt document provided; current-debt DSCR and refinance capacity were not assessed.";
+        "Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.";
     }
     const hasCoreUnderwritingOperatingMetrics =
       Number.isFinite(execEgi) &&
@@ -5832,7 +5832,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
     const renovationAcknowledgmentHtml =
       !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Uploaded renovation/CapEx source file acknowledged: ${renovationSourceFilenameText}. Historical capital expenditure or renovation support was identified, but no verified forward-looking renovation budget, rent-lift plan, ROI, payback analysis, or implementation schedule was extracted. Historical CapEx is acknowledged but not modeled as a prospective renovation strategy.`
+        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.`
         : "";
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
@@ -5986,12 +5986,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         const missingRefiCapRate = !isFinitePositive(refiFinancials?.refi_cap_rate_base);
         const refiNotProducedCopy =
           hasCompleteCurrentDebtTerms && missingRefiCapRate
-            ? "Debt terms were identified, but deterministic refinance proceeds classification was not produced because refinance cap-rate or valuation support was incomplete."
-            : "Debt was identified from uploaded documents, but deterministic refinance classification was not produced because one or more required refinance inputs were incomplete.";
+            ? "Debt terms were identified, but refinance stability was not assessed because required verified refinance cap-rate or valuation support was incomplete."
+            : "Debt was identified from uploaded documents, but refinance stability was not assessed because required verified refinance inputs were incomplete.";
         finalHtml = replaceAll(
           finalHtml,
           "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Produced</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
         );
       } else {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
@@ -6624,7 +6624,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     finalHtml = finalHtml.replace(
       /DATA COVERAGE\s*&\s*UNDERWRITING GAPS\s*-\s*MISSING INPUTS AND OMITTED SECTIONS/g,
       effectiveReportMode === "v1_core"
-        ? "Data Coverage & Underwriting Gaps - Missing Inputs and Omitted Sections"
+        ? "Data Coverage & Underwriting Scope - Source-Supported Inputs and Withheld Sections"
         : "Data Coverage & Screening Notes - Missing Inputs and Omitted Sections"
     );
     if (effectiveReportMode !== "v1_core") {

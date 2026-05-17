@@ -783,7 +783,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "source_reconciliation_disclosure",
       cap_explanation:
-        "Overall verdict is capped at Review due to the rent-roll/T12 reconciliation variance described in Data Coverage.",
+        "Overall classification is capped at Review (risk classification) due to the rent-roll/T12 reconciliation variance described in Data Coverage.",
     };
   }
 
@@ -793,7 +793,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "debt_coverage_constraint",
       cap_explanation:
-        "Overall verdict is capped at Review because current debt DSCR is below 1.25x.",
+        "Overall classification is capped at Review (risk classification) because current debt DSCR is below 1.25x.",
     };
   }
 
@@ -803,7 +803,7 @@ export function buildCanonicalDisplayVerdictState({
       score_label: scoreLabel,
       cap_reason_code: "debt_coverage_not_assessed",
       cap_explanation:
-        "Overall verdict is capped at Review because current debt DSCR was not assessed.",
+        "Overall classification is capped at Review (risk classification) because current debt DSCR was not assessed.",
     };
   }
 
@@ -1076,21 +1076,21 @@ export function formatCurrentDebtAssessmentCopy({
   switch (state?.current_debt_limitation_reason_code) {
     case "acquisition_only_not_current_debt":
       return {
-        value: "Not assessed",
+        value: "Not assessed - no current debt document",
         explanation: `Proposed acquisition financing is shown separately and is not treated as current outstanding debt. ${baseText}`,
         band: "Proposed acquisition financing is not current outstanding debt",
         detail: "Proposed acquisition financing is shown separately and is not treated as current outstanding debt.",
       };
     case "no_current_outstanding_balance":
       return {
-        value: "Not assessed",
+        value: "Not assessed - no verified current debt balance",
         explanation: baseText,
         band: "Current debt balance not provided",
         detail: baseText,
       };
     case "incomplete_current_debt_terms":
       return {
-        value: "Not assessed",
+        value: "Not assessed - incomplete current debt terms",
         explanation: "Current debt terms were not fully provided. " + baseText,
         band: "Current debt balance, rate, and amortization not fully provided",
         detail: "Current debt terms were not fully provided.",
@@ -1098,7 +1098,7 @@ export function formatCurrentDebtAssessmentCopy({
     case "no_current_debt_document":
     default:
       return {
-        value: "Not assessed",
+        value: "Not assessed - no current debt document",
         explanation: "No current debt document provided. " + baseText,
         band: "No current debt document provided",
         detail: "No current debt document provided.",
