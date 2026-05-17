@@ -924,6 +924,15 @@ function buildPublishEligibilitySummary({
   reconciliationViolation = null,
   publicOrOutreachOnlyAction = null,
 }) {
+  const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
+  const sourceReconciliationIsDiscloseOnly = Boolean(
+    sourceReconciliationState &&
+      (
+        normalizeImpactValue(sourceReconciliationState?.publishability_bucket) === "disclose_only_publishable" ||
+        normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact) === "disclose_only" ||
+        String(sourceReconciliationState?.status || "") === "source_reconciliation_required"
+      )
+  );
   const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
   const t12Ready = Boolean(sourceInventory?.t12_parsed?.present && sourceInventory?.t12_parsed?.has_core_totals);
   const rentRollReady = Boolean(sourceInventory?.rent_roll_parsed?.present);
@@ -969,7 +978,7 @@ function buildPublishEligibilitySummary({
       .map((violation) => violation?.code)
   );
 
-  const customerPublishBlockers = uniqueCodes([
+  const customerPublishBlockerCandidates = uniqueCodes([
     ...(sourceNeedsDocs ? [
       reasonCode,
       customerDeliveryBlockerAction?.code,
@@ -1001,6 +1010,37 @@ function buildPublishEligibilitySummary({
       : []),
   ]);
 
+  const publicSampleBlockerSet = new Set(publicSampleBlockers.map((entry) => String(entry || "").toUpperCase()));
+  const highValueOutreachBlockerSet = new Set(highValueOutreachBlockers.map((entry) => String(entry || "").toUpperCase()));
+  const sourceLimitationsByCode = new Set(
+    actionRows
+      .filter((action) => String(action?.action_type || "") === "source_document_limitation")
+      .map((action) => String(action?.code || "").toUpperCase())
+      .filter(Boolean)
+  );
+  for (const flag of Array.isArray(deterministicFlags) ? deterministicFlags : []) {
+    if (String(flag?.classification || "").toLowerCase() === "missing_required_source" && flag?.code) {
+      sourceLimitationsByCode.add(String(flag.code).toUpperCase());
+    }
+  }
+  const optionalLimitationCodes = new Set(
+    actionRows
+      .filter((action) =>
+        String(action?.action_type || "") === "source_document_limitation" &&
+        !Boolean(action?.blocks_customer_delivery)
+      )
+      .map((action) => String(action?.code || "").toUpperCase())
+      .filter(Boolean)
+  );
+  const customerPublishBlockers = customerPublishBlockerCandidates.filter((code) => {
+    const normalized = String(code || "").toUpperCase();
+    if (!normalized) return false;
+    if (publicSampleBlockerSet.has(normalized)) return false;
+    if (highValueOutreachBlockerSet.has(normalized)) return false;
+    if (optionalLimitationCodes.has(normalized)) return false;
+    if (sourceReconciliationIsDiscloseOnly && normalized === "RENT_ROLL_T12_RECONCILIATION_REQUIRED") return false;
+    return true;
+  });
   const regenerationRecommended = Boolean(
     qaActionPlan?.regenerate_recommended ||
     actionRows.some((action) => action?.requires_regeneration) ||
@@ -1014,6 +1054,48 @@ function buildPublishEligibilitySummary({
     highValueOutreachBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase()))
   );
   const regenerationRequired = regenerationRequiredForCustomerDelivery || regenerationRequiredForPublicSample;
+
+  const systemBugReasonCodes = uniqueCodes([
+    ...(Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => {
+        const category = String(violation?.category || "").toLowerCase();
+        const code = String(violation?.code || "").toUpperCase();
+        return (
+          category.includes("report_contradiction") ||
+          category.includes("internal_consistency") ||
+          category.includes("public_language") ||
+          code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH" ||
+          code === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION" ||
+          code === "HARD_PUBLIC_LANGUAGE_CONTRACT"
+        );
+      })
+      .map((violation) => violation?.code),
+    ...actionRows
+      .filter((action) =>
+        Boolean(action?.blocks_customer_delivery) &&
+        ["report_renderer", "parser", "production_config"].includes(String(action?.owner_area || ""))
+      )
+      .map((action) => action?.code),
+  ]);
+  const sourceLimitationReasonCodes = uniqueCodes([
+    ...Array.from(sourceLimitationsByCode),
+    ...(sourceReconciliationIsDiscloseOnly ? ["RENT_ROLL_T12_RECONCILIATION_REQUIRED"] : []),
+  ]);
+  const failClosedReasonCodes = uniqueCodes(
+    customerPublishBlockers.filter((code) => !systemBugReasonCodes.includes(code))
+  );
+  const ownerAreas = Array.from(new Set(actionRows.map((action) => String(action?.owner_area || "")).filter(Boolean)));
+  const customerDeliveryImpact = customerPublishBlockers.length > 0
+    ? "block"
+    : (sourceReconciliationIsDiscloseOnly || sourceLimitationReasonCodes.length > 0 ? "disclose_only" : "allow");
+  const adminReviewImpact = deliveryGateStatus === "admin_review_required"
+    ? (customerPublishBlockers.length > 0 || systemBugReasonCodes.length > 0 ? "required" : "recommended")
+    : (publicSampleBlockers.length > 0 || highValueOutreachBlockers.length > 0 ? "recommended" : "none");
+  const publicSampleImpact = publicSampleBlockers.length > 0 ? "block_until_review" : "allow";
+  const highValueOutreachImpact = highValueOutreachBlockers.length > 0 ? "block_until_review" : "allow";
+  const displayDisclosureLevel = customerDeliveryImpact === "disclose_only"
+    ? (sourceReconciliationIsDiscloseOnly ? "source_reconciliation" : "source_limited")
+    : "none";
 
   const customerPublishEligible = Boolean(
     deliveryGateStatus === "deliverable" &&
@@ -1068,6 +1150,15 @@ function buildPublishEligibilitySummary({
     regeneration_required_for_customer_delivery: regenerationRequiredForCustomerDelivery,
     regeneration_required_for_public_sample: regenerationRequiredForPublicSample,
     regeneration_required: regenerationRequired,
+    customer_delivery_impact: customerDeliveryImpact,
+    public_sample_impact: publicSampleImpact,
+    high_value_outreach_impact: highValueOutreachImpact,
+    admin_review_impact: adminReviewImpact,
+    fail_closed_reason_codes: failClosedReasonCodes,
+    source_limitation_reason_codes: sourceLimitationReasonCodes,
+    system_bug_reason_codes: systemBugReasonCodes,
+    display_disclosure_level: displayDisclosureLevel,
+    owner_areas: ownerAreas,
     admin_review_required: deliveryGateStatus === "admin_review_required",
     user_needs_documents: deliveryGateStatus === "user_needs_documents",
     publish_decision_reason: publishDecisionReason,
