@@ -5302,8 +5302,14 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         sourceReconciliationNarrativePolicy.disclosure_label
           ? `<p class="exec-signal-line">${escapeHtml(sourceReconciliationNarrativePolicy.disclosure_label)}</p>`
           : "";
+      const pressureLabel = String(primaryPressurePoint || "").startsWith("Primary Constraint:")
+        ? "Primary Constraint"
+        : "Primary Pressure Point";
+      const pressureText = pressureLabel === "Primary Constraint"
+        ? String(primaryPressurePoint || "").replace(/^Primary Constraint:\s*/i, "")
+        : primaryPressurePoint;
       const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`;
-      const pressureReplacement = `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>${
+      const pressureReplacement = `<div class="verdict-pressure">${pressureLabel}: ${escapeHtml(pressureText)}</div>${
         whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
       }${reconciliationDisclosureLine}${decisionContextHtml}${miniSensitivityHtml}`;
       if (finalHtml.includes(pressureAnchor)) {
@@ -6626,6 +6632,18 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       effectiveReportMode === "v1_core"
         ? "Data Coverage & Underwriting Scope - Source-Supported Inputs and Withheld Sections"
         : "Data Coverage & Screening Notes - Missing Inputs and Omitted Sections"
+    );
+    finalHtml = finalHtml.replace(
+      /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,
+      effectiveReportMode === "v1_core"
+        ? '<span class="section-header-title">Data Coverage &amp; Underwriting Scope</span>'
+        : '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
+    );
+    finalHtml = finalHtml.replace(
+      /<span class="section-header-sub">Missing Inputs and Omitted Sections<\/span>/g,
+      effectiveReportMode === "v1_core"
+        ? '<span class="section-header-sub">Source-Supported Inputs and Withheld Sections</span>'
+        : '<span class="section-header-sub">Missing Inputs and Omitted Sections</span>'
     );
     if (effectiveReportMode !== "v1_core") {
       finalHtml = finalHtml.replace(
