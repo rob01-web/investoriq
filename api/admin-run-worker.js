@@ -420,8 +420,57 @@ export default async function handler(req, res) {
       return Number.isFinite(numeric) ? numeric : null;
     };
 
-    const writeValidatorDiagnosticsRollup = async ({ jobId, reportTypeHint = null }) => {
+    const writeValidatorDiagnosticsRollup = async ({ jobId, reportTypeHint = null, userIdHint = null }) => {
       try {
+        const resolveRollupUserId = async () => {
+          const normalizeId = (value) => {
+            const id = String(value || '').trim();
+            return id || null;
+          };
+
+          const jobUserId = normalizeId(userIdHint);
+          if (jobUserId) {
+            return jobUserId;
+          }
+
+          const { data: jobRowForUser, error: jobUserErr } = await supabaseAdmin
+            .from('analysis_jobs')
+            .select('user_id')
+            .eq('id', jobId)
+            .maybeSingle();
+
+          if (jobUserErr) {
+            throw new Error(`Failed to fetch job user_id for diagnostics rollup: ${jobUserErr.message}`);
+          }
+
+          const rowUserId = normalizeId(jobRowForUser?.user_id);
+          if (rowUserId) {
+            return rowUserId;
+          }
+
+          const { data: artifactUsers, error: artifactUsersErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('user_id')
+            .eq('job_id', jobId)
+            .not('user_id', 'is', null)
+            .limit(25);
+
+          if (artifactUsersErr) {
+            throw new Error(
+              `Failed to infer rollup user_id from artifacts for job ${jobId}: ${artifactUsersErr.message}`
+            );
+          }
+
+          const distinctArtifactUserIds = [
+            ...new Set((artifactUsers || []).map((row) => normalizeId(row?.user_id)).filter(Boolean)),
+          ];
+          if (distinctArtifactUserIds.length === 1) {
+            return distinctArtifactUserIds[0];
+          }
+
+          return null;
+        };
+
         const diagnosticTypes = [
           't12_parsed',
           'rent_roll_parsed',
@@ -459,6 +508,12 @@ export default async function handler(req, res) {
           resolvedReportType = supportsReportType ? jobRow?.report_type || null : null;
         }
 
+        const rollupUserId = await resolveRollupUserId();
+        if (!rollupUserId) {
+          console.warn(`[worker] skip validator_diagnostics_rollup job=${jobId} reason=missing_user_id`);
+          return;
+        }
+
         const rollupTimestamp = new Date().toISOString();
         const rollup = buildValidatorDiagnosticsRollup({
           jobId,
@@ -476,7 +531,7 @@ export default async function handler(req, res) {
         const { error: insertErr } = await supabaseAdmin.from('analysis_artifacts').insert([
           {
             job_id: jobId,
-            user_id: null,
+            user_id: rollupUserId,
             type: 'validator_diagnostics_rollup',
             bucket: 'internal',
             object_path: `analysis_jobs/${jobId}/validator_diagnostics_rollup/${safeTimestamp(
@@ -2533,7 +2588,7 @@ export default async function handler(req, res) {
               console.error('Failed to send report_published email:', err?.message || err);
             }
           }
-          await writeValidatorDiagnosticsRollup({ jobId: job.id });
+          await writeValidatorDiagnosticsRollup({ jobId: job.id, userIdHint: job.user_id });
           rollupWrittenJobIds.add(job.id);
           } catch (err) {
             await recordJobFailure(job, 'rendering', err);
