@@ -785,6 +785,25 @@ const customerPublishBlockingViolationCodes = new Set([
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
+const nonNegotiableCustomerBlockingViolationCodes = new Set([
+  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+  "RENDERED_PLACEHOLDER_METRIC_VALUE",
+  "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  "RENDERED_TEMPLATE_TOKEN_LEAK",
+  "RENDERED_MOJIBAKE_LEAK",
+  "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
+  "HARD_PUBLIC_LANGUAGE_CONTRACT",
+  "INTERNAL_DEBUG_LANGUAGE_LEAK",
+  "REPORT_TYPE_SECTION_LEAK",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+]);
+
 const regenerationRequiredBlockerCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
   "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
@@ -831,12 +850,13 @@ function isManagerContradictionCustomerBlocking(action, {
 } = {}) {
   if (!isManagerContradictionAction(action)) return false;
 
-  const code = String(action?.code || "").toUpperCase();
   const hardPublicLanguage = containsProhibitedPublicLanguage(String(action?.evidence?.evidence_excerpt || ""));
 
   const contractBlocksCustomer = (Array.isArray(contractViolations) ? contractViolations : []).some((violation) => {
     if (!violation) return false;
     const violationCode = String(violation?.code || "").toUpperCase();
+    if (violation?.blocks_customer_delivery === true) return true;
+    if (violation?.blocks_customer_delivery === false) return false;
     if (
       violationCode === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
       String(violation?.category || "") === "public_language"
@@ -855,8 +875,18 @@ function isManagerContradictionCustomerBlocking(action, {
   const deterministicBlocksCustomer = (Array.isArray(deterministicFlags) ? deterministicFlags : []).some((flag) => {
     const flagCode = String(flag?.code || "").toUpperCase();
     const routing = String(flag?.routing || "");
+    const explicitCustomerBlock =
+      Boolean(flag?.blocks_customer_delivery) ||
+      Boolean(flag?.customer_delivery_blocker) ||
+      ["block", "blocked", "customer_blocked", "customer_delivery_blocked", "customer_delivery_blocker"].includes(
+        normalizeImpactValue(flag?.evidence?.customer_delivery_impact)
+      ) ||
+      ["block", "blocked", "customer_blocked", "customer_delivery_blocked", "customer_delivery_blocker"].includes(
+        normalizeImpactValue(flag?.evidence?.source_reconciliation_state?.customer_delivery_impact)
+      );
     return (
       flagCode &&
+      explicitCustomerBlock &&
       !managerContradictionLimitationCodes.has(flagCode) &&
       managerContradictionCorroboratingCoverageCodes.has(flagCode) &&
       ["parser_gap", "artifact_gap", "render_gating_gap", "admin_review_required"].includes(routing)
@@ -870,7 +900,10 @@ function isCustomerPublishBlockingViolation(violation) {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
   if (!code) return false;
-  if (Boolean(violation?.blocks_customer_delivery)) return true;
+  if (violation?.blocks_customer_delivery === true) return true;
+  if (violation?.blocks_customer_delivery === false) {
+    return nonNegotiableCustomerBlockingViolationCodes.has(code);
+  }
   return customerPublishBlockingViolationCodes.has(code);
 }
 
@@ -1178,7 +1211,7 @@ function classifyActionDeliveryImpact(action) {
   const code = String(action?.code || "").toUpperCase();
   const actionType = String(action?.action_type || "");
   const ownerArea = String(action?.owner_area || "");
-  const blocksCustomer = Boolean(action?.blocks_customer_delivery);
+  const blocksCustomer = action?.blocks_customer_delivery;
   const blocksPublic = Boolean(action?.blocks_public_sample);
   const blocksOutreach = Boolean(action?.blocks_high_value_outreach);
   const requiresPatch = Boolean(action?.requires_code_patch);
@@ -1199,7 +1232,10 @@ function classifyActionDeliveryImpact(action) {
     "DOCRAPTOR_NOT_PRODUCTION_MODE",
   ]);
 
-  if (blocksCustomer || customerDeliveryBlockerCodes.has(code)) {
+  if (blocksCustomer === true) {
+    return "customer_delivery_blocker";
+  }
+  if (blocksCustomer !== false && customerDeliveryBlockerCodes.has(code)) {
     return "customer_delivery_blocker";
   }
 
