@@ -577,9 +577,7 @@ function actionForManagerDecision(decision) {
     isHardPublicLanguageExcerpt(decision?.evidence_excerpt);
   const speculativePublicLanguage = classification === "real_public_language_risk" && !hardPublicLanguage;
   const sourceTotalsVerification = sourceCode === "rent_roll_vs_t12_gpr_discrepancy";
-  const coreInputVerificationInconsistency = sourceCode === "CORE_INPUT_VERIFICATION_INCONSISTENCY";
-  const contradictionBlocksCustomer = Boolean(decision?.blocks_customer_delivery) ||
-    ["high", "critical"].includes(normalizeSeverity(decision?.severity));
+  const contradictionBlocksCustomer = Boolean(decision?.blocks_customer_delivery);
   const requiresCodePatch = hardPublicLanguage ||
     (!speculativePublicLanguage &&
       classification !== "admin_review_optional" &&
@@ -602,9 +600,9 @@ function actionForManagerDecision(decision) {
     action_type: sourceTotalsVerification
       ? "source_document_limitation"
       : contradictionReview
-      ? coreInputVerificationInconsistency && !contradictionBlocksCustomer
-        ? "source_reconciliation_review_recommended"
-        : "admin_review_required"
+      ? contradictionBlocksCustomer
+        ? "admin_review_required"
+        : "source_reconciliation_review_recommended"
       : hardPublicLanguage
       ? "code_patch_required"
       : speculativePublicLanguage
@@ -1276,6 +1274,20 @@ export function buildDeliveryGateDecision({
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
+  const coreInputReasonCode = String(coreInputSufficiencyState?.reason_code || "").toLowerCase();
+  const coreInputCustomerDeliveryImpact = normalizeImpactValue(coreInputSufficiencyState?.customer_delivery_impact);
+  const coreInputExplicitCustomerBlock = [
+    "block",
+    "blocked",
+    "customer_blocked",
+    "customer_delivery_blocked",
+    "customer_delivery_blocker",
+  ].includes(coreInputCustomerDeliveryImpact);
+  const coreInputFailClosedReason =
+    coreInputReasonCode.includes("equation_mismatch") ||
+    coreInputReasonCode.includes("core_input_verification_inconsistency") ||
+    coreInputReasonCode.includes("system_contract_failure") ||
+    coreInputReasonCode.includes("deterministic_failure");
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
   const sourceReconciliationPublishabilityBucket = normalizeImpactValue(sourceReconciliationState?.publishability_bucket);
   const sourceReconciliationCustomerImpact = normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact);
@@ -1330,8 +1342,8 @@ export function buildDeliveryGateDecision({
     (!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
     Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
   const sourceNeedsReview =
-    coreInputBucket === "admin_review_required" ||
-    coreInputBucket === "system_contract_failure";
+    coreInputBucket === "system_contract_failure" ||
+    (coreInputBucket === "admin_review_required" && (coreInputExplicitCustomerBlock || coreInputFailClosedReason));
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
       ? reconciliationViolation
