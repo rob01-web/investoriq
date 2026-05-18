@@ -6611,6 +6611,10 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }
     }
     finalHtml = finalHtml.replace(/Primary Pressure Point\s*-\s*/g, "Primary Pressure Point: ");
+    finalHtml = finalHtml.replace(
+      /Primary Pressure Point:\s*Primary Constraint:\s*/g,
+      "Primary Constraint: "
+    );
     finalHtml = finalHtml.replace(/(\d+)-Unit Multifamily\./g, "$1-Unit Multifamily");
     finalHtml = finalHtml.replace(/Key Metrics Snapshot\./g, "Key Metrics Snapshot");
     finalHtml = finalHtml.replace(/Key Upside Drivers\./g, "Key Upside Drivers");
@@ -6640,11 +6644,17 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         : '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
     );
     finalHtml = finalHtml.replace(
-      /<span class="section-header-sub">Missing Inputs and Omitted Sections<\/span>/g,
+      /<span class="section-header-sub">Missing Inputs and Omitted Sections<\/span>/gi,
       effectiveReportMode === "v1_core"
         ? '<span class="section-header-sub">Source-Supported Inputs and Withheld Sections</span>'
         : '<span class="section-header-sub">Missing Inputs and Omitted Sections</span>'
     );
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = finalHtml.replace(
+        /Missing inputs and omitted sections/gi,
+        "Source-Supported Inputs and Withheld Sections"
+      );
+    }
     if (effectiveReportMode !== "v1_core") {
       finalHtml = finalHtml.replace(
         /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,

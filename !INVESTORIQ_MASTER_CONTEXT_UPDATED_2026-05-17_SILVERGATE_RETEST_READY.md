@@ -1,3 +1,722 @@
+# May 17, 2026 Update - Publication Doctrine Reducer / Silvergate Validation / Source-Reconciliation Prominence / Report Surface Polish
+
+## Critical operating context
+- Supabase Cron remains on the existing **5-minute cadence**.
+- Do **not** switch to 1-minute cron yet.
+- Codex audit concluded 1-minute is **yes-with-conditions / borderline unsafe without hardening** because queued-job claim is protected, but there is no global worker mutex and late-stage rendering/publishing/email paths are not fully idempotent.
+- Current scheduler decision:
+```text
+Keep Supabase Cron at */5 * * * *
+Keep GitHub/manual fallback enabled.
+Revisit 2-minute or 1-minute cadence only after overlap/idempotency hardening.
+```
+- Vercel Hobby 12-function/API limit remains important. Do not add new API routes.
+- Continue the working process:
+  - inspect file truth before patching;
+  - one class-level fix at a time;
+  - no smoke-test theatre;
+  - no broad repo rewrites;
+  - no live tests as discovery;
+  - focused validation only;
+  - do not expose secrets.
+
+## May 17 overall outcome
+May 17 converted the “every report goes to review / same issues keep returning” problem into a clearer publication-doctrine architecture.
+
+Key result:
+```text
+Customer delivery, public sample readiness, and high-value outreach readiness are now normalized separately.
+Legacy booleans can no longer override the canonical customer-delivery doctrine by themselves.
+Source reconciliation can disclose/cap the classification without hijacking the Executive Summary as the primary risk.
+```
+
+Silvergate messy/support-doc validation became the proof lane:
+- messy/unsupported support docs do not block customer delivery;
+- source reconciliation publishes with disclosure;
+- Data Coverage no longer says Fully Verified when reconciliation disclosure applies;
+- validator diagnostics rollup writes successfully;
+- public/Ken blockers remain separate from customer delivery.
+
+## Universal report-quality doctrine reinforced
+Rob clarified the standard again:
+
+```text
+Every InvestorIQ report must meet the same institutional-quality bar.
+Ken Dunn does not get a better report.
+A first-time buyer does not get a weaker report.
+The difference is only whether a specific report is suitable for public marketing/outreach use.
+```
+
+Important distinction:
+- Customer report quality must be elite.
+- Public/Ken readiness is about external-use suitability:
+  - clean property name;
+  - clean filenames;
+  - no DocRaptor watermark/test mode;
+  - no test/sample naming;
+  - clean marketing optics;
+  - no unresolved public-sample suitability blockers.
+- A report can be institutionally honest and deliverable for the paying customer while still not being a public sample.
+
+## Publication Doctrine Reducer added
+Files changed:
+- `api/_lib/qa-action-plan.js`
+- `api/generate-client-report.js`
+
+In `buildPublishEligibilitySummary(...)`, Codex added a single normalization pass before final eligibility fields are returned.
+
+Canonical impacts now include:
+- `customer_delivery_impact`
+- `public_sample_impact`
+- `high_value_outreach_impact`
+- `admin_review_impact`
+- `regeneration_required`
+- `fail_closed_reason_codes`
+- `source_limitation_reason_codes`
+- `system_bug_reason_codes`
+- `display_disclosure_level`
+- `owner_areas`
+
+Hard doctrine rules now enforced:
+1. Public/high-value blockers cannot become customer blockers.
+2. Optional source limitations cannot create customer blockers.
+3. Source reconciliation disclose-only does not become customer-blocking.
+4. Customer block is allowed only for core-unsupportable or system-contract style issues.
+
+Compatibility fields preserved:
+- `customer_publish_eligible`
+- `customer_publish_blockers`
+- `public_sample_ready`
+- `public_sample_blockers`
+- `high_value_outreach_ready`
+- `high_value_outreach_blockers`
+- `advisory_only_findings`
+- `recommended_next_step`
+
+Renderer wording consumption guard:
+- `buildScreeningDataCoverageSummary(...)` suppresses “CORE INPUT COVERAGE CONFIRMED / Fully Verified” when:
+  - source reconciliation disclose-only state applies; or
+  - source-limited sections exist.
+- This was wording-only; no delivery/math behavior changed.
+
+Validation:
+- `node --check api/_lib/qa-action-plan.js` passed
+- `node --check api/generate-client-report.js` passed
+- `node --check api/admin-run-worker.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `git diff --check` passed
+
+## Legacy customer_delivery_ready compatibility leak hardened
+File changed:
+- `api/_lib/qa-action-plan.js`
+
+Problem:
+- Older compatibility booleans could theoretically override the new doctrine:
+  - `reportContractQa.customer_delivery_ready === false`
+  - `qaActionPlan.customer_delivery_ready === false`
+
+Patch:
+- Direct blocking from those legacy booleans was replaced with:
+```text
+legacyCustomerReadyCorroboratedBlock =
+  legacyCustomerReadyFalse && canonicalCustomerBlockingPresent
+```
+
+`canonicalCustomerBlockingPresent` is true only if:
+- `customerDeliveryImpact === "block"`
+- `customerPublishBlockers.length > 0`
+- `contractCustomerBlockingViolations.length > 0`
+- `sourceNeedsDocs`
+
+What can still block customer delivery:
+- normalized customer blockers;
+- customer-blocking report-contract violations;
+- source/core unusable path;
+- delivery-gate non-deliverable state derived from those conditions.
+
+Public/high-value-only flags cannot block customer delivery:
+- `customer_publish_eligible` does not reference `public_sample_ready` or `high_value_outreach_ready`.
+- customer blockers are normalized separately from public/outreach blockers.
+- legacy customer readiness booleans now require canonical customer-block evidence.
+
+Validation:
+- `node --check api/_lib/qa-action-plan.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+## Wrong first doctrine fixture lesson - 06_cross_document_financial_mismatch
+A focused doctrine validation initially used:
+```text
+06_cross_document_financial_mismatch
+```
+
+Result:
+- It failed closed correctly with:
+```text
+DOCUMENT_FINANCIAL_SCALE_MISMATCH
+```
+
+Evidence:
+- T12 EGI: `$1,200,000`
+- Rent roll annual in-place rent: `$120,000`
+- ratio: `10x`
+
+Conclusion:
+- This was not a doctrine failure.
+- This fixture is a hard fail-closed scale-mismatch test, not a disclose-only reconciliation test.
+- It correctly proved the severe source-contradiction gate still works.
+
+Lesson:
+```text
+Do not use 06_cross_document_financial_mismatch to test disclose-only publication.
+Use it only to verify violent cross-document mismatch fail-closed behavior.
+```
+
+## Validator diagnostics rollup user_id bug fixed
+File changed:
+- `api/admin-run-worker.js`
+
+Problem:
+- Vercel logged:
+```text
+validator diagnostics rollup skipped:
+null value in column "user_id" of relation "analysis_artifacts" violates not-null constraint
+```
+
+Root cause:
+- `writeValidatorDiagnosticsRollup` inserted `validator_diagnostics_rollup` with:
+```text
+user_id: null
+```
+- `analysis_artifacts.user_id` is `NOT NULL`.
+
+Patch:
+- `writeValidatorDiagnosticsRollup` now accepts `userIdHint`.
+- Added `resolveRollupUserId()` fallback order:
+  1. `userIdHint` / `job.user_id`
+  2. query `analysis_jobs` by `jobId`
+  3. safe inference from existing artifacts for the job only when exactly one distinct non-null `user_id` exists
+  4. compact warn + skip without throw if still unresolved
+
+Insert now uses resolved `rollupUserId`.
+
+Behavior preserved:
+- no job status behavior change;
+- no credit restore change;
+- no delivery gate change;
+- no financial scale mismatch change;
+- no report generation/dashboard/API route change.
+
+Validation:
+- `node --check api/_lib/validator-diagnostics-rollup.js` passed
+- `node --check api/admin-run-worker.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+## Silvergate messy/unsupported support-doc doctrine validation
+Test:
+```text
+02_messy_unsupported_support_docs / Silvergate
+```
+
+Result:
+```text
+PASS for doctrine reducer and customer delivery.
+```
+
+Key artifact behavior:
+- `customer_publish_eligible: true`
+- `customer_delivery_ready: true`
+- `delivery_gate_status: deliverable`
+- `customer_delivery_impact: disclose_only`
+- `customer_publish_blockers: []`
+- `source_limitation_reason_codes: ["RENT_ROLL_T12_RECONCILIATION_REQUIRED"]`
+
+Rollup:
+- `validator_diagnostics_rollup` wrote successfully.
+- `user_id` was populated correctly.
+
+PDF/report-surface behavior:
+- Data Coverage said:
+```text
+CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE
+```
+- It did **not** say Fully Verified.
+- Document Treatment Summary handled:
+  - modeled T12 / rent roll inputs;
+  - historical CapEx or limited-use support;
+  - broker/appraisal/market survey/Phase I as listed but not quantitatively modeled.
+
+Important remaining issue from first Silvergate validation:
+- Executive Summary over-promoted reconciliation as:
+```text
+Primary Pressure Point: Source reconciliation variance of -53.2% between rent roll and T12 gross potential rent requires review.
+```
+- This did not block customer delivery, but it was visually too prominent.
+
+## Source Reconciliation Narrative Prominence class fixed
+Files changed:
+- `api/_lib/report-surface-contracts.js`
+- `api/generate-client-report.js`
+
+Central helper added:
+```text
+buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState)
+```
+
+Helper classifies:
+- `executive_summary_allowed`
+- `primary_pressure_point_allowed`
+- `data_coverage_required`
+- `metrics_tables_allowed`
+- `verdict_cap_allowed`
+- `risk_register_allowed`
+- `disclosure_label`
+- `prohibited_prominence_reason`
+
+Class rule:
+```text
+When source reconciliation is disclose-only / disclose_only_publishable,
+it may be disclosed, may cap the classification, and may appear in Data Coverage/tables/risk flags,
+but it must not become the Executive Summary Primary Pressure Point or dominant operating risk narrative.
+```
+
+Allowed for disclose-only:
+- Data Coverage disclosure;
+- deterministic variance rows/tables;
+- verdict/classification cap explanation;
+- risk register eligibility;
+- low-prominence Executive Summary note:
+```text
+Source reconciliation disclosure applies; see Data Coverage.
+```
+
+Prevented for disclose-only:
+```text
+Source reconciliation variance of X between rent roll and T12 gross potential rent requires review.
+```
+as a Primary Pressure Point.
+
+Higher prominence remains allowed only when:
+- `customer_delivery_impact === "block"`; or
+- `parser_suspected === true`.
+
+Validation:
+- `node --check api/generate-client-report.js` passed
+- `node --check api/_lib/report-surface-contracts.js` passed
+- `node --check api/_lib/qa-action-plan.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+## Silvergate TEST 2 / TEST 3 results after prominence fix
+Result:
+```text
+CLASS FIX PASSED.
+```
+
+Before:
+```text
+Primary Pressure Point: Source reconciliation variance of -53.2%...
+```
+
+After:
+- Source reconciliation no longer hijacked the Executive Summary.
+- Verdict/classification still correctly remained:
+```text
+Review - Source Reconciliation Disclosure
+```
+- Data Coverage still correctly disclosed the reconciliation issue.
+- Delivery doctrine still passed:
+  - customer deliverable;
+  - disclose-only;
+  - no customer blockers;
+  - rollup wrote.
+
+Remaining surface issue:
+```text
+Primary Pressure Point: No material operating pressure point identified from available core metrics.
+```
+
+Classification:
+```text
+CLASS FIX PASSED.
+MINOR EXECUTIVE SUMMARY FALLBACK COPY POLISH REMAINS.
+```
+
+## Executive Summary debt-constraint fallback polish
+File changed:
+- `api/generate-client-report.js`
+
+Problem:
+- After source reconciliation stopped hijacking the Executive Summary, the generic fallback was too weak:
+```text
+No material operating pressure point identified from available core metrics.
+```
+
+Patch condition:
+Fallback switches when all are true:
+1. `effectiveReportMode === "v1_core"`
+2. no operating pressure driver
+3. no verified current debt balance
+4. current debt DSCR not computed
+5. limitation reason code is one of:
+   - `no_current_debt_document`
+   - `no_current_outstanding_balance`
+   - `incomplete_current_debt_terms`
+
+New fallback:
+```text
+No current debt document provided; current-debt DSCR and refinance capacity were not assessed.
+```
+
+Later polish updated this to:
+```text
+Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.
+```
+
+Validation:
+- `node --check api/generate-client-report.js` passed
+- `node --check api/_lib/report-surface-contracts.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+## Report-surface polish audit and Ken-polish batch
+Codex performed an audit-only report-surface polish pass and found 14 wording/surface issues.
+
+Patched the main polish-before-Ken batch.
+
+Files changed:
+- `api/generate-client-report.js`
+- `api/_lib/report-surface-contracts.js`
+
+Patched items:
+1. Executive fallback generic pressure point:
+   - replaced with stronger “Primary Constraint...” institutional wording.
+2. DSCR fallback generic pressure point:
+   - replaced with “Primary Constraint: Current debt coverage appears within assessed thresholds...” wording.
+3. No-current-debt fallback:
+   - changed to:
+```text
+Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.
+```
+5. Data Coverage footer:
+   - changed from “Sections were omitted...” to:
+```text
+Sections not supported by minimum verified source coverage were intentionally withheld from analysis.
+```
+7. Renovation/CapEx acknowledgment:
+   - replaced long run-on with concise institutional limitation language:
+```text
+Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.
+```
+8. Refinance copy:
+   - “Not Produced” / “was not produced” -> “Not Assessed” / “was not assessed because required verified refinance inputs were incomplete.”
+9. Current-debt table values:
+   - generic “Not assessed” values changed to contextual table-safe strings such as:
+     - `Not assessed - no verified current debt balance`
+     - `Not assessed - no current debt document`
+     - `Not assessed - incomplete current debt terms`
+10. Verdict cap explanations:
+   - “Overall verdict is capped at Review...” changed to:
+```text
+Overall classification is capped at Review (risk classification)...
+```
+14. Data Coverage heading normalization:
+   - target wording:
+```text
+Data Coverage & Underwriting Scope - Source-Supported Inputs and Withheld Sections
+```
+
+Validation:
+- `node --check api/generate-client-report.js` passed
+- `node --check api/_lib/report-surface-contracts.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+## Low-risk/post-launch polish items intentionally left for later
+Do not forget these, but do not derail launch for them:
+1. Duplicate source-reconciliation sentence constant.
+2. Label:
+```text
+Current Debt / Refinance Limitation
+```
+   should eventually become:
+```text
+Current Debt and Refinance Limitation
+```
+3. Methodology wording:
+```text
+InvestorIQ does not invent missing data or fabricate market inputs.
+```
+   should eventually become:
+```text
+Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.
+```
+4. Internal QA artifact wording around public/high-value outreach should remain internal or be rephrased if ever surfaced.
+5. Source reconciliation note de-duplication:
+```text
+Source reconciliation disclosure applies; see Data Coverage.
+```
+   should be kept as the single concise low-prominence note where possible.
+
+## Silvergate TEST 3 polish misses and final patch before fresh chat
+After the Ken-polish batch, Silvergate TEST 3 showed two small surface misses:
+
+### 1. Double-label Executive Summary issue
+Rendered:
+```text
+Primary Pressure Point: Primary Constraint: No verified current debt document was provided...
+```
+
+Cause:
+- The fallback text itself began with `Primary Constraint: ...`.
+- The renderer still wrapped it inside fixed label:
+```text
+Primary Pressure Point: ${primaryPressurePoint}
+```
+
+Patch:
+- Renderer now detects this fallback.
+- Switches outer label to:
+```text
+Primary Constraint
+```
+- Strips embedded prefix from body text before rendering.
+
+### 2. Stale split Data Coverage heading
+Rendered:
+```text
+Data Coverage & Underwriting Gaps
+Missing inputs and omitted sections
+```
+
+Cause:
+- Previous normalization replaced only a combined all-caps heading and a screening-only title span.
+- Silvergate used a split template path:
+  - title: `Data Coverage & Underwriting Gaps`
+  - subtitle: `Missing Inputs and Omitted Sections`
+
+Patch:
+- Added explicit replacements for split spans:
+  - title -> `Data Coverage & Underwriting Scope`
+  - subtitle -> `Source-Supported Inputs and Withheld Sections`
+
+File changed:
+- `api/generate-client-report.js`
+
+Validation:
+- `node --check api/generate-client-report.js` passed
+- `node --check api/_lib/report-surface-contracts.js` passed
+- `node tests/qa/qa-action-plan-smoke.js` passed
+- `node tests/qa/validator-diagnostics-rollup-regression.js` passed
+- `git diff --check` passed
+
+Commit/deploy status:
+- Rob committed this patch to Vercel before opening the next chat.
+- Next chat should begin with the Silvergate RETEST upload/result.
+
+Expected Silvergate RETEST win condition:
+```text
+Primary Constraint: No verified current debt document was provided...
+```
+and:
+```text
+Data Coverage & Underwriting Scope
+Source-Supported Inputs and Withheld Sections
+```
+
+## Supabase Cron cadence audit
+Codex audited whether to move Supabase Cron from every 5 minutes to every 1 minute.
+
+Audit result:
+```text
+1-minute cron is yes-with-conditions / borderline unsafe without hardening.
+```
+
+Safe existing paths:
+- queued claim gate via `claim_and_consume_job`;
+- some CAS-style transitions:
+  - `extracting -> underwriting`
+  - `underwriting -> scoring`
+  - `scoring -> rendering`;
+- some duplicate-event checks:
+  - extracting events;
+  - email sent;
+  - credit consumed;
+  - entitlement restored;
+- rollup delete-then-insert avoids accumulating duplicate rollups.
+
+Not fully idempotent:
+- no global worker mutex;
+- no per-job claim for `extracting` and `rendering`;
+- late rendering/publishing transitions update by `id` only;
+- email dedupe is check-then-send, not atomic;
+- concurrent workers could both call `/api/generate-client-report`;
+- credit consume/restore collision could create noisy failure transitions.
+
+Most likely 1-minute failure mode:
+```text
+Concurrent invocations both pick the same rendering job,
+both attempt report generation,
+then one publishes/emails while the other collides later.
+```
+
+Recommendation:
+- Do **not** move to 1 minute now.
+- 2 minutes could be a future compromise.
+- Keep 5 minutes for launch because the 24-business-hour customer disclaimer makes it acceptable.
+- Keep GitHub/manual fallback enabled.
+
+Minimal hardening before 1 minute:
+- global worker mutex / lock row with TTL;
+- CAS guards for late-stage updates;
+- per-job claim/lease for extracting and rendering;
+- atomic report/email side-effect dedupe;
+- credit/restore transaction safety.
+
+## Dashboard Generate button issue noticed
+A UI glitch was observed:
+- Generate Report button stayed disabled even with:
+  - property name;
+  - T12 uploaded;
+  - Rent Roll uploaded;
+  - disclosure checked;
+  - credits available.
+- Same issue was seen for Screening and Underwriting.
+
+Likely classification:
+```text
+Dashboard enablement/UI state bug, not report-generation doctrine bug.
+```
+
+Likely causes to investigate later:
+- upload local state not updating after file upload;
+- doc_type/status mismatch;
+- disclosure checkbox state mismatch;
+- currentJob/in-progress lock;
+- report type / credit state logic.
+
+Do not let this derail the Silvergate doctrine/report-surface validation unless it persists as a launch blocker.
+
+Suggested future investigation:
+- inspect `src/pages/Dashboard.jsx`;
+- find `canGenerate` / `generateDisabled` logic;
+- return exact false prerequisite;
+- patch narrowly;
+- no report-engine changes.
+
+## Current next action for fresh chat
+The very first action in the next chat:
+```text
+Rob will upload the Silvergate RETEST after the double-label / Data Coverage split-heading patch deploy.
+Inspect that RETEST result.
+```
+
+Check only:
+1. Did the report publish?
+2. Does Executive Summary show clean:
+```text
+Primary Constraint: No verified current debt document was provided...
+```
+   without double label?
+3. Does Data Coverage heading show:
+```text
+Data Coverage & Underwriting Scope
+Source-Supported Inputs and Withheld Sections
+```
+4. Does Data Coverage still disclose source reconciliation without saying Fully Verified?
+5. Does customer delivery remain:
+   - `customer_publish_eligible: true`
+   - `customer_delivery_impact: disclose_only`
+   - `customer_publish_blockers: []`
+6. Does `validator_diagnostics_rollup` write?
+7. Do not run broad tests.
+8. Do not patch unless the retest shows a specific failed class.
+
+## Fresh chat prompt - May 17 Silvergate RETEST continuation
+
+```text
+We are continuing InvestorIQ from the May 17 master context.
+
+Immediate context:
+The latest committed/deployed patch fixed two Silvergate TEST 3 report-surface misses:
+1. Executive Summary double label:
+   - old bad output: “Primary Pressure Point: Primary Constraint: No verified current debt document was provided...”
+   - patch: renderer detects Primary Constraint fallback, uses outer label “Primary Constraint,” and strips embedded prefix.
+2. Data Coverage split heading:
+   - old bad output:
+     “Data Coverage & Underwriting Gaps”
+     “Missing Inputs and Omitted Sections”
+   - patch: split title/subtitle paths now render:
+     “Data Coverage & Underwriting Scope”
+     “Source-Supported Inputs and Withheld Sections”
+
+Files changed in the last patch:
+- `api/generate-client-report.js`
+
+Validation passed:
+- `node --check api/generate-client-report.js`
+- `node --check api/_lib/report-surface-contracts.js`
+- `node tests/qa/qa-action-plan-smoke.js`
+- `node tests/qa/validator-diagnostics-rollup-regression.js`
+- `git diff --check`
+
+Current doctrine state:
+- Publication Doctrine Reducer is in place.
+- Legacy `customer_delivery_ready === false` booleans cannot block customer delivery unless canonical customer-blocking evidence exists.
+- Source reconciliation narrative prominence policy is in place.
+- Disclose-only source reconciliation may appear in Data Coverage/tables/verdict-cap explanation, but cannot become Executive Summary Primary Pressure Point.
+- All reports must meet the same elite institutional quality bar; public/Ken readiness is external-use suitability, not a higher report-quality tier.
+
+Silvergate validation history:
+- Silvergate messy/unsupported support-doc test published successfully.
+- Customer delivery doctrine passed:
+  - `customer_publish_eligible: true`
+  - `customer_delivery_ready: true`
+  - `customer_delivery_impact: disclose_only`
+  - `customer_publish_blockers: []`
+- `validator_diagnostics_rollup` wrote successfully after the user_id patch.
+- Unsupported docs were listed but not quantitatively modeled.
+- Data Coverage correctly used source reconciliation disclosure rather than Fully Verified.
+- The source-reconciliation prominence class fix passed.
+
+Current scheduler decision:
+- Keep Supabase Cron at 5 minutes.
+- Do not switch to 1 minute.
+- Codex audit said 1-minute cron is yes-with-conditions / borderline unsafe without global mutex and late-stage idempotency hardening.
+- Keep GitHub/manual worker fallback enabled for now.
+
+First task in this chat:
+Rob will upload the Silvergate RETEST result/PDF/artifacts.
+
+Inspect only the focused retest targets:
+1. Did the report publish?
+2. Does Executive Summary now render cleanly as:
+   “Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.”
+   without “Primary Pressure Point: Primary Constraint...”?
+3. Does Data Coverage heading now render:
+   “Data Coverage & Underwriting Scope”
+   “Source-Supported Inputs and Withheld Sections”?
+4. Does Data Coverage still disclose source reconciliation and avoid Fully Verified wording?
+5. Does the report remain customer-deliverable with disclose-only source reconciliation?
+6. Does validator_diagnostics_rollup write successfully?
+
+Do not start with a new Codex prompt.
+Do not run broad tests.
+Do not reopen scheduler cadence.
+Do not add API routes.
+If the retest passes, classify it as a report-surface polish win and decide the next smallest launch-readiness step.
+If it fails, classify the exact failed class before patching.
+```
+
+---
+
+
 # InvestorIQ Master Context - May 2026
 
 # May 16, 2026 Night Update - Validator Diagnostics System / Parser Diagnostics / Rollup Artifact
