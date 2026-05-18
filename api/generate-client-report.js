@@ -1045,6 +1045,12 @@ function injectOccupancyNote(html, occupancy) {
   if (!regex.test(html)) return html;
   return html.replace(regex, `$1${note}`);
 }
+function resolveOccupancyNoteValue(computedRentRoll = null, rentRollPayload = null) {
+  if (computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)) {
+    return DATA_NOT_AVAILABLE;
+  }
+  return computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
+}
 function deriveOccFromRentRollUnits(rentRollPayload) {
   const rrRowsRaw =
     rentRollPayload?.units ||
@@ -1076,10 +1082,17 @@ function deriveOccFromRentRollUnits(rentRollPayload) {
   }, 0);
   return total > 0 ? occupied / total : null;
 }
+function resolveCanonicalT12GprValue(t12Payload = null) {
+  return coerceNumber(
+    t12Payload?.gross_potential_rent ??
+      t12Payload?.gross_scheduled_rent
+  );
+}
 function buildT12SummaryHtml(t12Payload, formatValue) {
   if (!t12Payload) return "";
+  const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const rows = [
-    ["Gross Potential Rent", t12Payload.gross_potential_rent],
+    ["Gross Potential Rent", canonicalGpr],
     ["Effective Gross Income", t12Payload.effective_gross_income],
     ["Total Operating Expenses", t12Payload.total_operating_expenses],
     ["Net Operating Income", t12Payload.net_operating_income],
@@ -1102,8 +1115,9 @@ function buildT12SummaryHtml(t12Payload, formatValue) {
 }
 function buildT12KeyMetricRows(t12Payload, formatValue) {
   if (!t12Payload) return "";
+  const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const rows = [
-    ["In-Place Gross Potential Rent", t12Payload.gross_potential_rent],
+    ["In-Place Gross Potential Rent", canonicalGpr],
     ["Effective Gross Income (TTM)", t12Payload.effective_gross_income],
     ["Operating Expenses (TTM)", t12Payload.total_operating_expenses],
     ["Net Operating Income (TTM)", t12Payload.net_operating_income],
@@ -2146,10 +2160,11 @@ function buildScreeningDataCoverageSummary({
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
 }) {
+  const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const t12Checks = [
     {
       label: "gross_potential_rent",
-      present: Number.isFinite(coerceNumber(t12Payload?.gross_potential_rent)),
+      present: Number.isFinite(canonicalGpr),
     },
     {
       label: "effective_gross_income",
@@ -2506,8 +2521,9 @@ function buildScreeningIncomeForensicsHtml({
       `Top income line concentration is ${formatPercent1(
         topIncomeLineConcentration
       )} of EGI (concentration flag).`
-    );
-  }
+  );
+}
+
   const otherIncome = incomeLines.find((row) => /other/i.test(row.label));
   if (
     otherIncome &&
@@ -5577,10 +5593,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         }
       );
     }
-    const occupancyValue =
-      computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)
-        ? DATA_NOT_AVAILABLE
-        : computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
+    const occupancyValue = resolveOccupancyNoteValue(computedRentRoll, rentRollPayload);
     finalHtml = injectOccupancyNote(finalHtml, occupancyValue);
     const t12EgiValue = coerceNumber(t12Payload?.effective_gross_income);
     const t12TotalExpensesValue = coerceNumber(t12Payload?.total_operating_expenses);
@@ -6117,11 +6130,10 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         ));
     const hasRentRollData = hasRentRollUnitMix && hasRentRollRents;
     const hasT12Data = [
-      "gross_potential_rent",
       "effective_gross_income",
       "total_operating_expenses",
       "net_operating_income",
-    ].some((key) => Number.isFinite(Number(t12Payload?.[key])));
+    ].some((key) => Number.isFinite(Number(t12Payload?.[key]))) || Number.isFinite(canonicalGpr);
     const marketRentPremiumAvg =
       Number.isFinite(coerceNumber(computedRentRoll?.rent_to_market_gap))
         ? coerceNumber(computedRentRoll?.rent_to_market_gap)
@@ -8287,6 +8299,8 @@ export const __test__ = {
   assertValidReportPublicationInsert,
   isValidReportStoragePath,
   buildT12SummaryHtml,
+  resolveCanonicalT12GprValue,
   materiallyDifferent,
   resolveSafeAnnualRentTotal,
+  resolveOccupancyNoteValue,
 };

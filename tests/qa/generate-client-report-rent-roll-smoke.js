@@ -37,6 +37,55 @@ const cleanAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
 
 assert.equal(cleanAnnualMarketRent, 1087488);
 
+const partialSampleOccupancyNoteValue = generatorTest.resolveOccupancyNoteValue(
+  {
+    is_partial_sample: true,
+    summary_row_detected: false,
+    occupancy: null,
+  },
+  {
+    occupancy: 0.97,
+    totals: {
+      summary_row_detected: false,
+    },
+  }
+);
+assert.equal(partialSampleOccupancyNoteValue, "Not assessed");
+
+const trustedSummaryOccupancyNoteValue = generatorTest.resolveOccupancyNoteValue(
+  {
+    is_partial_sample: true,
+    summary_row_detected: true,
+    occupancy: 0.96,
+  },
+  {
+    occupancy: 0.75,
+    totals: {
+      summary_row_detected: true,
+      occupancy: 0.96,
+    },
+  }
+);
+assert.equal(trustedSummaryOccupancyNoteValue, 0.96);
+
+const canonicalGprFromScheduled = generatorTest.resolveCanonicalT12GprValue({
+  gross_potential_rent: null,
+  gross_scheduled_rent: 1850000,
+});
+assert.equal(canonicalGprFromScheduled, 1850000);
+
+const t12SummaryFromScheduledGpr = generatorTest.buildT12SummaryHtml(
+  {
+    gross_potential_rent: null,
+    gross_scheduled_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  formatCurrency
+);
+assert.match(t12SummaryFromScheduledGpr, /\$1,850,000/);
+
 const canonicalMarketTotals = resolveCanonicalRentRollAnnualTotals({
   computedRentRoll: {
     total_units: 48,
