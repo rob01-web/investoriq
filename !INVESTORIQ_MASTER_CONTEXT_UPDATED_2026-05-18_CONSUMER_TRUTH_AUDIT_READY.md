@@ -1,3 +1,502 @@
+# May 18, 2026 Late Update - Consumer Truth Audit Doctrine / Patch-Class Standard / Source-of-Truth AI Guardrail
+
+## Why this update matters
+FINAL TEST 1 RETEST 2 proved that the prior authority-layer fixes worked in important ways, but also exposed the next recurring failure class: a downstream rendered consumer can still use stale local fallback logic even when the canonical state is correct.
+
+The immediate example was:
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER
+```
+
+Observed truth from the artifacts:
+- current-debt support was recognized;
+- true current debt balance was recognized;
+- current debt service was computed;
+- current debt DSCR was computed at approximately `1.055x`;
+- source coverage/current debt state recognized `has_current_debt_document = true` and `has_true_current_debt_balance = true`;
+- but the rendered Deal Scorecard still displayed stale no-debt fallback copy:
+```text
+Current Debt DSCR
+Not assessed - no current debt document
+No current debt document provided
+0/10
+```
+
+Classification:
+```text
+CURRENT_DEBT_RENDERED_CONSUMER_DRIFT
+```
+
+This is not a parser bug, not an artifact-selection bug, and not a customer-document issue. It is a renderer/consumer-truth drift bug.
+
+## Critical doctrine re-locked
+Rob clarified again that InvestorIQ must not become a manual-review factory.
+
+Locked doctrine:
+```text
+If T12 + Rent Roll are usable, the report publishes.
+If a specific section lacks required support, that section collapses or renders clean limitation language.
+If optional support is missing or unusable, the report does not fail.
+If the system detects a rendered contradiction and canonical truth is available, the system must deterministically repair, replace, or collapse the affected row/section and then publish.
+Only route to review when the system genuinely cannot safely resolve the contradiction.
+Manual review must remain rare.
+```
+
+Important clarification:
+- There is no lower-quality private/customer report and no higher-quality Ken/public report.
+- Every InvestorIQ report must meet the same elite institutional standard.
+- DocRaptor test mode, test filenames, sample naming, and public-demo polish may continue to raise red flags during testing; that is acceptable while still in test mode.
+- Those testing/public-sample flags must not be confused with actual report-quality defects.
+
+## Correct behavior for rendered contradictions
+The current system pattern is still too often:
+```text
+Detect contradiction -> flag/report/review
+```
+
+The required pattern is:
+```text
+Detect contradiction -> classify -> deterministically repair, replace, or collapse -> rerun contract QA -> publish if clean -> internally log the class
+```
+
+For example:
+```text
+If canonical currentDebtAssessmentState says DSCR is computed:
+  render the computed DSCR everywhere.
+
+If current debt is truly missing:
+  render clean Not Assessed limitation language.
+
+If a scorecard/table/card would contradict canonical state:
+  replace it from canonical state or suppress/collapse that row before report_contract_qa runs.
+
+Do not publish contradictory text.
+Do not route to manual review unless deterministic correction/collapse is impossible.
+```
+
+## Credit / customer handling doctrine for platform-side section suppression
+Not every collapsed section deserves a credit restore.
+
+No credit restore:
+```text
+- Optional support was not uploaded.
+- Optional support was uploaded but did not contain validated section-required inputs.
+- A section collapsed because the user/source package genuinely did not support it.
+- The core report is complete under the provided T12 + Rent Roll.
+```
+
+Credit restore or credit compensation should be considered:
+```text
+- A platform bug caused a material supported section to be withheld.
+- A renderer mismatch forced InvestorIQ to suppress a section that should have rendered.
+- Deterministic repair failed, but the remaining core report could still publish.
+- Report quality was materially reduced because of InvestorIQ, not because of user documents.
+```
+
+Customer-facing wording should not say “internal bug” inside the report. If needed outside the report/account flow, use elite operational language such as:
+```text
+InvestorIQ detected a platform-side rendering issue affecting one report section. The report has been completed using verified source-supported sections, and one report credit has been returned to your account.
+```
+
+Inside the report, use institutional limitation wording only if a section/row is withheld:
+```text
+This scorecard item was withheld because it did not meet InvestorIQ’s internal consistency threshold. Core operating analysis remains based on verified source-supported inputs.
+```
+
+Prefer rendering the correct canonical value over withholding whenever canonical truth is available.
+
+## New required audit: InvestorIQ Consumer Truth Audit
+The next launch-readiness control is not another generic repo-wide audit. It is a disciplined consumer-contract audit.
+
+Purpose:
+```text
+For every canonical financial truth, find every renderer/card/table/scorecard/QA/action-plan/delivery consumer and prove each one consumes the canonical state only.
+```
+
+This is how hidden stale paths are found before real customers expose them.
+
+### Canonical Truth Classes to audit
+Run this as a controlled matrix, not one giant chaotic prompt.
+
+1. Current Debt / DSCR
+2. Refinance / debt service / proceeds
+3. Rent Roll totals / occupancy / market rent
+4. T12 EGI / OpEx / NOI / GPR
+5. Source reconciliation
+6. Deal Score / verdict / scorecard
+7. Renovation / CapEx
+8. Appraisal / cap rate / valuation framework
+9. Property tax
+10. Data Coverage / Document Treatment
+
+For each class, Codex must answer:
+```text
+1. What is the canonical source of truth?
+2. Where is it built?
+3. Which renderer sections consume it?
+4. Which QA artifacts consume it?
+5. Which fallback strings indicate stale local logic?
+6. Which sections recompute or infer their own truth?
+7. What patch is required so all consumers read canonical state only?
+8. What regression proves the stale path cannot return?
+```
+
+## Patch-class standard locked
+Every patch from this point forward must include the following receipt format.
+
+```text
+CLASS NAME:
+What recurring system class is being fixed?
+
+CANONICAL SOURCE:
+Which object/function owns the truth?
+
+CONSUMERS:
+Which renderers/cards/tables/QA artifacts consume it?
+
+STALE PATHS:
+Which old fallback strings or local inference paths were removed?
+
+SELF-HEAL/COLLAPSE:
+If contradiction appears, does the system repair, replace, or collapse?
+
+REGRESSION:
+What focused test proves this class cannot return?
+```
+
+No patch should merely replace one string or satisfy one fixture.
+
+Every patch must either:
+- eliminate a stale consumer path;
+- centralize a canonical source of truth;
+- add deterministic repair/replacement/collapse behavior;
+- add a focused regression proving the class cannot return.
+
+## Source-of-truth AI / QA guardrail reminder
+InvestorIQ already has multiple guardrails, QA artifacts, report contracts, advisory AI layers, source coverage QA, diagnostics rollups, and canonical state helpers. The problem is that not every downstream consumer consistently relies on the final canonical truth.
+
+Locked concern:
+```text
+There must be a final source-of-truth authority layer that keeps AI, QA, renderer, report contract, delivery gate, and action-plan consumers in check.
+```
+
+Known recurring risk:
+```text
+Some QA or renderer paths still rely on hardcoded old/obsolete truth, phrase fallbacks, local object checks, or legacy source inference instead of canonical state.
+```
+
+Codex must therefore audit not only whether canonical state exists, but whether every consumer actually uses it.
+
+## Immediate Codex audit plan after this MD update
+Do not start with a broad patch.
+Do not retest first.
+Start with a focused Current Debt / DSCR Consumer Truth Audit because FINAL TEST 1 RETEST 2 exposed that class.
+
+Then proceed class-by-class through the matrix.
+
+Preferred sequence:
+1. Current Debt / DSCR Consumer Truth Audit + patch plan
+2. Refinance / debt service / proceeds Consumer Truth Audit
+3. Deal Score / verdict / scorecard Consumer Truth Audit
+4. Rent Roll totals / occupancy / market rent Consumer Truth Audit
+5. T12 EGI / OpEx / NOI / GPR Consumer Truth Audit
+6. Source reconciliation Consumer Truth Audit
+7. Renovation / CapEx Consumer Truth Audit
+8. Appraisal / cap rate / valuation framework Consumer Truth Audit
+9. Property tax Consumer Truth Audit
+10. Data Coverage / Document Treatment Consumer Truth Audit
+
+## Codex guardrails for the Consumer Truth Audit series
+Every Codex prompt in this series must include:
+```text
+Do not weaken deterministic QA.
+Do not remove customer-safety gates.
+Do not hide contradictions by lowering severity.
+Do not make fixture-only patches.
+Do not refactor broadly.
+Do not add API routes.
+Do not change scheduler cadence.
+Do not change DocRaptor production mode.
+Do not expose secrets.
+Do not run broad smoke/e2e suites unless explicitly requested.
+Use minimum validation only for touched files and focused regressions.
+Return file/function evidence before patching.
+Separate audit findings from patches.
+If patching, patch the class and add/update a focused regression.
+```
+
+## Codex Prompt 1 - Current Debt / DSCR Consumer Truth Audit and Patch Plan
+```text
+We are continuing InvestorIQ from the May 18 Consumer Truth Audit doctrine.
+
+Immediate issue:
+FINAL TEST 1 RETEST 2 no longer fails on ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT. Current debt truth is now recognized and computed:
+- true current debt balance exists;
+- current debt document exists;
+- current debt service is computed;
+- current debt DSCR is computed around 1.055x.
+
+But the rendered Deal Scorecard still outputs stale fallback copy:
+- Current Debt DSCR
+- Not assessed - no current debt document
+- No current debt document provided
+- 0/10
+
+This produced DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER.
+
+Task type:
+Audit first. Patch only after file-truth mapping is clear.
+
+Audit scope:
+Find every rendered current-debt / DSCR / debt-service / debt-score consumer and every QA/report-contract/action-plan consumer that evaluates those rendered values.
+
+Files likely involved:
+- api/generate-client-report.js
+- api/_lib/report-surface-contracts.js
+- api/_lib/report-contract-qa.js
+- api/_lib/source-report-coverage-qa.js
+- api/_lib/qa-action-plan.js
+- api/_lib/qa-manager-review.js
+- api/_lib/source-package-qa.js
+- tests/qa/report-contract-qa-smoke.js
+- tests/qa/generate-client-report-rent-roll-smoke.js or any scorecard/report renderer smoke if present
+
+Required audit output:
+1. CLASS NAME
+   Use CURRENT_DEBT_RENDERED_CONSUMER_DRIFT unless file truth suggests a better name.
+2. CANONICAL SOURCE
+   Identify the exact object/function that must own current debt truth, especially currentDebtAssessmentState / buildCurrentDebtAssessmentState.
+3. CONSUMERS
+   List every renderer/card/table/scorecard/risk/debt/refi/QA consumer that reads or infers current debt / DSCR.
+4. STALE PATHS
+   List every fallback string/local inference path found, including but not limited to:
+   - No current debt document
+   - Not assessed - no current debt document
+   - Current debt balance not provided
+   - no verified current debt balance
+   - 0/10
+   - no debt service
+   - mortgage_statement_parsed absence used as no-current-debt proof
+5. SELF-HEAL/COLLAPSE RULE
+   Define how the renderer should repair/replace/collapse stale output before report_contract_qa runs.
+6. PATCH PLAN
+   Show exact functions to change.
+7. REGRESSION
+   Add or update one focused regression proving that a loan_term_sheet/current_mortgage_statement artifact with outstanding_balance/rate/amortization produces computed DSCR in the Deal Scorecard and does not trigger DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER.
+
+Patch rules:
+- Do not touch parser logic unless the audit proves it is still involved.
+- Do not touch artifact selection unless the audit proves it is still involved.
+- Do not weaken report_contract_qa.
+- Do not merely silence DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER.
+- Eliminate stale renderer consumer logic.
+- If canonical current debt DSCR exists, render it.
+- If canonical current debt DSCR does not exist, render clean Not Assessed limitation.
+- If stale fallback would contradict canonical state, replace it from canonical state or suppress/collapse the row before QA.
+- Manual review is not acceptable for this class when canonical state is unambiguous.
+
+Minimum validation only:
+- node --check api/generate-client-report.js
+- node --check api/_lib/report-surface-contracts.js if touched
+- node --check api/_lib/report-contract-qa.js if touched
+- run only the focused regression/smoke touched or added for this class
+- git diff --check
+
+Receipt format required:
+A. Files inspected
+B. Files changed
+C. Class fixed
+D. Canonical source of truth
+E. Consumers mapped
+F. Stale paths removed
+G. Self-heal/collapse behavior
+H. Regression added/updated
+I. Validation run
+J. Remaining adjacent risks, if any
+```
+
+## Codex Prompt 2 - Refinance / Debt Service / Proceeds Consumer Truth Audit
+```text
+Run the second Consumer Truth Audit class: Refinance / debt service / proceeds.
+
+Purpose:
+Find every place refinance capacity, refinance proceeds, debt service, shortfall, sufficiency, stress, refinance stability, and debt limitation language is rendered or evaluated.
+
+The canonical rule:
+- True current debt exists and validates -> render current-debt DSCR/refi/debt-service outputs consistently.
+- No true current debt -> do not render refinance proceeds/stress/shortfall/sufficiency as if current debt exists.
+- Acquisition/proposed debt must not become current outstanding debt.
+- Missing refi/cap-rate inputs should collapse/disclose, not fail the whole report.
+
+Required output follows the patch-class standard:
+CLASS NAME, CANONICAL SOURCE, CONSUMERS, STALE PATHS, SELF-HEAL/COLLAPSE, REGRESSION.
+
+Do not patch until consumer map is shown.
+If patching, patch only class-level stale consumer paths and add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 3 - Deal Score / Verdict / Scorecard Consumer Truth Audit
+```text
+Run the third Consumer Truth Audit class: Deal Score / verdict / scorecard.
+
+Purpose:
+Find every place overall classification, capital risk profile, Deal Scorecard rows, score factors, verdict caps, DSCR constraints, source reconciliation caps, and review labels are computed or rendered.
+
+Canonical rule:
+- One display verdict state must control cover, executive summary, capital risk profile, Deal Scorecard, and risk classification.
+- Scorecard rows must not locally infer contradictory statuses from stale fields.
+- Source reconciliation cap, DSCR cap, and source-constrained classification must be deterministic and consistent across all visible surfaces.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 4 - Rent Roll Totals / Occupancy / Market Rent Consumer Truth Audit
+```text
+Run the fourth Consumer Truth Audit class: Rent Roll totals / occupancy / market rent.
+
+Purpose:
+Find every place total units, occupied units, occupancy, annual in-place rent, market rent, weighted-average rent, row-derived totals, summary totals, partial-sample totals, and rent-gap metrics are computed/rendered/evaluated.
+
+Canonical rule:
+- Use the canonical rent roll annual/occupancy resolver.
+- Trusted summary totals win only when structurally justified and sanity checks pass.
+- Partial/sample row totals must not become full-property truth unless trusted summary totals exist.
+- Impossible annual totals must be suppressed or normalized.
+- Renderers and QA must not recompute their own rent roll truth independently.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 5 - T12 EGI / OpEx / NOI / GPR Consumer Truth Audit
+```text
+Run the fifth Consumer Truth Audit class: T12 EGI / OpEx / NOI / GPR.
+
+Purpose:
+Find every place Effective Gross Income, Gross Potential Rent, Operating Expenses, NOI, expense ratio, NOI margin, income lines, expense lines, and T12-derived metrics are computed/rendered/evaluated.
+
+Canonical rule:
+- T12 core sufficiency is EGI / OpEx / NOI or enough values to validate EGI - OpEx = NOI.
+- Missing line-item detail should collapse/disclose detailed sections, not fail the whole report.
+- GPR absence should not fail if EGI/OpEx/NOI validate.
+- T12 values must not be recomputed differently across renderer, QA, scorecard, and source reconciliation.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 6 - Source Reconciliation Consumer Truth Audit
+```text
+Run the sixth Consumer Truth Audit class: Source reconciliation.
+
+Purpose:
+Find every place Rent Roll vs T12 variance, reconciliation status, disclosure copy, executive prominence, verdict cap, risk register rows, data coverage rows, and report contract QA read or render source reconciliation.
+
+Canonical rule:
+- buildSourceReconciliationState is the source of truth.
+- Disclose-only reconciliation may appear in Data Coverage/tables/verdict cap explanation, but must not hijack the Executive Summary as primary pressure unless customer-blocking/parser-suspected.
+- Renderer must not print stale local variance math.
+- Report Contract QA must compare rendered values to canonical state.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 7 - Renovation / CapEx Consumer Truth Audit
+```text
+Run the seventh Consumer Truth Audit class: Renovation / CapEx.
+
+Purpose:
+Find every place renovation budget, historical CapEx, budget-only/no-ROI, rent lift, ROI/payback, execution rows, unit counts, cost per unit, and renovation treatment are parsed/rendered/evaluated.
+
+Canonical rule:
+- No fabricated rent lift, ROI, payback, timing, NOI impact, or value impact.
+- Historical-only CapEx renders as historical context.
+- Budget/scope-only renovation renders budget/scope only with no ROI modeling.
+- Forward-looking rent lift renders only when document-backed and deterministically validated.
+- Renderer/display mode and QA must consume the same renovation display state.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 8 - Appraisal / Cap Rate / Valuation Framework Consumer Truth Audit
+```text
+Run the eighth Consumer Truth Audit class: Appraisal / cap rate / valuation framework.
+
+Purpose:
+Find every place appraisal value, purchase price, going-in cap rate, market cap rate, exit cap, DCF/framework value, present value sensitivity, and valuation language are rendered/evaluated.
+
+Canonical rule:
+- Purchase price is not appraised value.
+- Unsupported appraisal/market survey files are not quantitatively modeled.
+- Framework sensitivity language must not sound like formal appraisal or investment recommendation.
+- Document-derived cap rates must remain separate from standardized framework assumptions.
+- No BUY/SELL/HOLD language.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 9 - Property Tax Consumer Truth Audit
+```text
+Run the ninth Consumer Truth Audit class: Property tax.
+
+Purpose:
+Find every place property tax is sourced from T12 line items, property tax support docs, parsed bills, expense sections, risk sections, and QA artifacts.
+
+Canonical rule:
+- Missing property tax support should not fail the report.
+- Property-tax-specific insights render only when validated source value exists.
+- T12 tax line and property tax bill must not conflict silently.
+- Year-like values must not become annual tax.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Codex Prompt 10 - Data Coverage / Document Treatment Consumer Truth Audit
+```text
+Run the tenth Consumer Truth Audit class: Data Coverage / Document Treatment.
+
+Purpose:
+Find every place uploaded files, modeled inputs, displayed/limited-use inputs, listed-but-not-modeled inputs, parse status, semantic doc role, source coverage, withheld sections, and public/internal diagnostic wording are rendered/evaluated.
+
+Canonical rule:
+- Uploaded files may be listed for auditability, but only validated structured inputs drive modeled outputs.
+- Document Treatment Summary must distinguish Modeled Inputs, Displayed/Limited Use, and Listed but Not Quantitatively Modeled.
+- Failed unsupported support files should not become failed core docs when a real T12/Rent Roll parsed.
+- Data Coverage must not say Fully Verified when source reconciliation disclosure or source-limited sections apply.
+- No public AI/model/vendor/internal QA language.
+
+Required output follows the patch-class standard.
+Audit first. Patch only class-level consumer drift. Add/update focused regression.
+Minimum validation only.
+```
+
+## Updated immediate next steps
+1. Save this `.MD` update.
+2. Commit the current accepted authority batch if not already committed.
+3. Before another live retest, run Codex Prompt 1: Current Debt / DSCR Consumer Truth Audit and Patch Plan.
+4. Apply only class-level patch if Codex finds stale rendered consumers.
+5. Validate with focused checks only.
+6. Then decide whether to rerun FINAL TEST 1 or continue the Consumer Truth Audit series.
+7. Do not switch DocRaptor production mode yet.
+8. Do not disable GitHub worker yet.
+9. Do not change Supabase Cron cadence.
+10. Do not add API routes.
+
+---
+
 # May 18, 2026 Update - Silvergate Surface Win / FINAL TEST 1 Authority-Rule Validation / System-Class Hierarchy Audit
 
 ## Critical operating context
