@@ -30,6 +30,80 @@ function latestPayload(artifacts, type) {
   return (Array.isArray(artifacts) ? artifacts : []).find((row) => row?.type === type)?.payload || null;
 }
 
+function latestPayloads(artifacts, type) {
+  return (Array.isArray(artifacts) ? artifacts : [])
+    .filter((row) => row?.type === type)
+    .map((row) => (row?.payload && typeof row.payload === "object" ? row.payload : null))
+    .filter(Boolean);
+}
+
+function resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa = null) {
+  const allLoanPayloads = latestPayloads(artifacts, "loan_term_sheet_parsed");
+  if (allLoanPayloads.length === 0) {
+    return { currentDebtLoan: null, acquisitionLoan: null };
+  }
+
+  const scored = allLoanPayloads.map((loan, index) => {
+    const role = String(loan?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(loan?.debt_basis || "").trim().toLowerCase();
+    const hasCurrentBalance =
+      positive(loan?.outstanding_balance) ||
+      positive(loan?.current_outstanding_balance) ||
+      positive(loan?.current_loan_balance);
+    const hasCurrentDebtTerms =
+      positive(loan?.interest_rate) ||
+      positive(loan?.amortization_years) ||
+      positive(loan?.amort_years) ||
+      positive(loan?.monthly_payment) ||
+      positive(loan?.annual_debt_service) ||
+      positive(loan?.ltv);
+    const currentDebtRole = ["current_mortgage_statement", "current_debt_terms", "mortgage_statement", "loan_term_sheet", ""].includes(role);
+    const acquisitionSignal =
+      positive(loan?.purchase_price) ||
+      positive(loan?.going_in_cap_rate) ||
+      positive(loan?.derived_acquisition_loan_amount) ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      role.includes("appraisal") ||
+      debtBasis.includes("acquisition");
+
+    const currentDebtScore =
+      (hasCurrentBalance ? 400 : 0) +
+      (currentDebtRole ? 150 : 0) +
+      (hasCurrentDebtTerms ? 40 : 0) -
+      (acquisitionSignal && !hasCurrentBalance ? 80 : 0) -
+      (debtBasis.includes("acquisition") ? 80 : 0);
+    const acquisitionScore =
+      (acquisitionSignal ? 260 : 0) +
+      (positive(loan?.derived_acquisition_loan_amount) ? 100 : 0) +
+      (role === "purchase_assumptions" ? 100 : 0) +
+      (debtBasis.includes("acquisition") ? 100 : 0);
+    return { loan, index, currentDebtScore, acquisitionScore };
+  });
+
+  const currentDebtLoan = [...scored]
+    .sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0]?.loan || null;
+  const acquisitionLoan = [...scored]
+    .sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)[0]?.loan || currentDebtLoan;
+
+  // Prefer inventory-level acquisition support when coverage already resolved it.
+  const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
+  const invAcq = invLoan?.acquisition_support;
+  const acquisitionLoanFromInventory = invAcq
+    ? {
+        purchase_price: invAcq.purchase_price,
+        derived_acquisition_loan_amount: invAcq.derived_acquisition_loan_amount,
+        debt_basis: invAcq.debt_basis,
+        semantic_doc_role: invAcq.semantic_doc_role,
+      }
+    : null;
+
+  return {
+    currentDebtLoan,
+    acquisitionLoan: acquisitionLoanFromInventory || acquisitionLoan,
+  };
+}
+
 function positive(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0;
@@ -263,9 +337,9 @@ function hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) {
   if (currentDebtState && currentDebtState.has_true_current_debt_balance === true) {
     return true;
   }
+  const { currentDebtLoan: loan } = resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa);
   const mortgage = latestPayload(artifacts, "mortgage_statement_parsed");
   const invMortgage = sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed;
-  const loan = latestPayload(artifacts, "loan_term_sheet_parsed");
   const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
   const loanSemanticRole = String(
     invLoan?.semantic_doc_role || loan?.semantic_doc_role || ""
@@ -298,12 +372,15 @@ function hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) {
 }
 
 function hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa) {
-  const loan = latestPayload(artifacts, "loan_term_sheet_parsed");
+  const { acquisitionLoan: loan } = resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa);
   const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
+  const invAcq = invLoan?.acquisition_support || null;
   return Boolean(
     positive(loan?.derived_acquisition_loan_amount) ||
     positive(loan?.purchase_price) ||
     loan?.debt_basis === "acquisition_financing_assumption" ||
+    invAcq?.has_derived_acquisition_debt ||
+    invAcq?.has_purchase_price ||
     invLoan?.has_derived_acquisition_debt ||
     invLoan?.has_purchase_price
   );

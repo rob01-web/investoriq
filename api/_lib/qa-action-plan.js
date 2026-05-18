@@ -695,7 +695,6 @@ function actionForReportContractViolation(violation) {
     };
   }
   const materiallyMisleadingDebt =
-    code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT" ||
     code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
   const actionType = hardPublicOrDebug ? "code_patch_required" : "render_gating_fix_required";
@@ -800,7 +799,6 @@ const regenerationRequiredBlockerCodes = new Set([
   "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
   "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-  "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
   "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
   "SCREENING_UNDERWRITING_SECTION_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
@@ -1111,7 +1109,6 @@ function buildPublishEligibilitySummary({
   const legacyCustomerReadyCorroboratedBlock = legacyCustomerReadyFalse && canonicalCustomerBlockingPresent;
 
   const customerPublishEligible = Boolean(
-    deliveryGateStatus === "deliverable" &&
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
     customerPublishBlockers.length === 0 &&
@@ -1128,7 +1125,7 @@ function buildPublishEligibilitySummary({
 
   const publishDecisionReason = customerPublishEligible
     ? "customer_publish_eligible"
-    : adminReviewBlockingAction || deliveryGateStatus === "admin_review_required"
+    : adminReviewBlockingAction
     ? `admin_review_required:${reasonCode || adminReviewBlockingAction?.code || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
     : sourceNeedsDocs
     ? `user_needs_documents:${reasonCode || customerPublishBlockers[0] || "SOURCE_DOCUMENT_LIMITATION"}`
@@ -1189,7 +1186,6 @@ function classifyActionDeliveryImpact(action) {
 
   const customerDeliveryBlockerCodes = new Set([
     "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-    "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
     "UNSUPPORTED_CURRENT_DEBT_RENDERED",
     "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
   ]);

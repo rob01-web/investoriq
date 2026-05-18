@@ -1,3 +1,655 @@
+# May 18, 2026 Update - Silvergate Surface Win / FINAL TEST 1 Authority-Rule Validation / System-Class Hierarchy Audit
+
+## Critical operating context
+- We are in **launch-readiness / Ken outreach pressure mode**. Wednesday outreach remains the forcing function.
+- Do **not** drift into endless cosmetic patching.
+- Do **not** treat any test as a one-off report fix. Test reports are evidence; the target is the underlying system class.
+- Do **not** reopen scheduler cadence. Supabase Cron stays at **5 minutes**.
+- Do **not** switch to 1-minute cron without global mutex / overlap / idempotency hardening.
+- Do **not** disable the GitHub worker yet. Disable only after Supabase Cron proves stable on real queued jobs and preserve manual/emergency dispatch if possible.
+- Do **not** flip DocRaptor production mode until the current system-class authority audit and focused test series are clean.
+- Do **not** add API routes while Vercel Hobby function count remains a concern.
+- Do **not** expose secrets.
+- Pre-launch security hardening remains required: rotate important Vercel environment secrets/variables before launch.
+
+## Universal quality doctrine re-locked
+Rob pushed back hard on any framing that implies Ken Dunn / UHNW users receive a higher-quality report than ordinary customers.
+
+Locked doctrine:
+```text
+There is no Ken-quality report vs regular-customer report.
+Every InvestorIQ report must meet the same elite institutional-quality standard.
+Public sample / high-value outreach readiness are external-use exposure gates, not higher quality tiers.
+```
+
+Operational distinction:
+- **Customer delivery** = whether a paid/customer report can be privately delivered safely.
+- **Public sample / outreach readiness** = whether that same-quality report is clean enough for marketing or external demonstration.
+- The product-quality bar is universal. The exposure gate is separate.
+
+## Silvergate TEST 5 - report-surface polish win
+Silvergate TEST 5 was rerun after the focused report-surface patch.
+
+Result:
+```text
+PASS.
+```
+
+Validated surface targets:
+1. Executive Summary / Capital Risk hero now renders cleanly:
+```text
+Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.
+```
+No more:
+```text
+Primary Pressure Point: Primary Constraint...
+```
+
+2. Data Coverage now renders:
+```text
+Data Coverage & Underwriting Scope
+Source-Supported Inputs and Withheld Sections
+```
+
+3. Data Coverage still preserves source reconciliation disclosure:
+```text
+CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE
+```
+
+4. It does not revert to Fully Verified wording where reconciliation disclosure applies.
+
+5. Customer delivery doctrine remained intact:
+```text
+customer_publish_eligible: true
+customer_delivery_ready: true
+customer_delivery_impact: disclose_only
+customer_publish_blockers: []
+```
+
+6. `validator_diagnostics_rollup` wrote successfully for the fresh TEST 5 job.
+
+Classification:
+```text
+Silvergate TEST 5 report-surface class patch: PASS.
+Double-label class: fixed.
+Data Coverage split-subtitle class: fixed.
+Source reconciliation disclosure behavior: preserved.
+No further Silvergate patching.
+```
+
+Important nuance:
+- The Silvergate patch was **not Silvergate-only**.
+- It was a rendered-output class-level normalization for patterns such as:
+```text
+Primary Pressure Point: Primary Constraint:
+Missing inputs and omitted sections
+```
+- Rob correctly emphasized that this must not become a return to small whack-a-mole fixes.
+
+## Pre-launch security and worker-hardening to-dos added
+Two persistent launch-hardening items were added.
+
+### 1. Rotate Vercel secrets before launch
+Locked to-do:
+```text
+Before launch: rotate all important Vercel environment keys/secrets, especially anything sensitive or marked “Needs Attention,” then redeploy and verify.
+```
+
+Examples include:
+- `CRON_SECRET`
+- AWS keys
+- `STRIPE_WEBHOOK_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- OpenAI / provider keys
+- email provider keys
+- anything Vercel marks `Needs Attention`
+
+Rules:
+- Do carefully with service-specific rotation steps.
+- Verify redeploy and function behavior after rotation.
+- Never expose secrets in chat or docs.
+- Do not derail current report validation unless there is a confirmed exposure incident.
+
+### 2. Disable scheduled GitHub worker only after Supabase Cron proves stable
+Locked to-do:
+```text
+Once Supabase Cron has proven stable and one real queued-job pickup is confirmed, disable the scheduled GitHub worker to avoid overlapping automated worker invocations.
+```
+
+Nuance:
+- Keep manual/emergency GitHub dispatch available if possible.
+- Do not disable the fallback prematurely.
+- Supabase Cron is preferred, but overlap/idempotency must be respected.
+
+## Full test series decision before DocRaptor production mode
+After Silvergate passed, the next obvious public/Ken blocker was DocRaptor production mode.
+
+Rob paused and decided to run a broader focused test series **before** switching production PDFs on.
+
+Reason:
+```text
+We need confidence that system-class authority and delivery hierarchy are stable before production-mode sample generation.
+```
+
+This is acceptable, but the test series must not become blind discovery or endless patching.
+
+Correct test-series posture:
+- classify failures by system class;
+- patch only upstream authority / hierarchy defects;
+- do not make one-fixture hacks;
+- do not add downstream alarms as a substitute for fixing the authority rule.
+
+## FINAL TEST 1 / SYNTH-QA-MOTHERLOAD-UNDERWRITING-01 - first run
+Rob uploaded the first major post-Silvergate test package.
+
+Fixture intent from uploaded docs:
+- This was designed to publish if the live system was working correctly.
+- T12 and rent roll are controlling operating sources.
+- Purchase assumptions support purchase price / going-in cap only.
+- Loan terms support debt analysis.
+- Unsupported appraisal, market survey, ESA, broker email, and unstructured CapEx must not override quantitative truth.
+
+Expected key values:
+```text
+Units: 48
+Occupancy: 95.83%
+Annual in-place rent: 1,036,800
+Annual market rent: 1,137,600
+EGI: 1,036,800
+OpEx: 425,000
+NOI: 611,800
+Debt balance: 8,750,000
+Interest rate: 5.25%
+Amortization: 30 years
+LTV: 70%
+Purchase price: 10,640,000
+Going-in cap rate: 5.75%
+```
+
+Initial result:
+```text
+ADMIN REVIEW.
+```
+
+Primary hold reason:
+```text
+ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+```
+
+Two root issues were identified from the artifacts and source docs:
+
+### Class 1 - Canonical rent-roll summary total precedence
+The rent roll clearly stated summary totals were controlling:
+```text
+In-place monthly rent total: 86,400
+In-place annual rent total: 1,036,800
+Market monthly rent total: 94,800
+Market annual rent total: 1,137,600
+Total units: 48
+Occupancy: 95.83%
+These summary totals are the controlling property totals for this rent roll.
+```
+
+The T12 also matched EGI/GPR of `1,036,800`.
+
+But the artifact selected row-derived representative-unit math:
+```text
+rr_annual_in_place = 229,800
+variance = -77.8%
+```
+
+Root class:
+```text
+CANONICAL_PRECEDENCE_BUG
+```
+
+Meaning:
+```text
+A canonical resolver exists, but ranked lower-confidence row-derived/sample values above explicit validated summary totals.
+```
+
+### Class 2 - Current debt vs acquisition support truth-model drift
+The loan terms source clearly stated:
+```text
+Outstanding loan balance: $8,750,000
+Interest rate: 5.25%
+Amortization: 30 years
+Loan-to-value: 70%
+```
+
+The purchase assumptions file separately stated:
+```text
+Purchase price: $10,640,000
+Going-in cap rate: 5.75%
+NOI basis: $611,800
+```
+
+But the system still treated debt/acquisition separation as unsafe.
+
+Root class:
+```text
+CANONICAL_TRUTH_MODEL_DRIFT
+```
+
+Meaning:
+```text
+Current debt state and report-contract QA did not share the same definition of true current debt.
+```
+
+## Important correction to prior framing
+Rob correctly pushed back when the issue was initially described as “we need canonical source authority.”
+
+Correct framing:
+```text
+We already built canonical-source authority.
+FINAL TEST 1 exposed bad precedence and inconsistent truth-model wiring inside that authority layer.
+```
+
+The Fort Knox layers exist, but some guards were checking the wrong ID or consuming the wrong artifact.
+
+## Authority-rule patch 1 - rent roll precedence and current-debt truth model
+Codex was given a focused class-level patch prompt, not another repo-wide audit.
+
+Files changed:
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- `tests/qa/source-report-coverage-qa-smoke.js`
+
+### Rent-roll authority rule changed
+In `resolveCanonicalRentRollAnnualMetric`:
+- added structural authority signals:
+  - `representedUnitCount`
+  - partial/sample/excerpt signals
+  - explicit controlling-summary signal
+- added deterministic sanity guard so summary precedence is not forced when summary is materially inconsistent with fully represented unit-derived annuals;
+- changed summary precedence trigger:
+  - trusted summary totals are preferred when structurally justified and sanity passes;
+- summary candidates are no longer auto-suppressed under trusted-authority mode.
+
+Class-level behavior:
+```text
+When a rent roll contains explicit validated property-level summary totals and the row set is partial, representative, sampled, excerpted, or materially inconsistent with those totals, canonical rent roll totals must prefer explicit summary totals over row-derived sample math unless summary totals fail deterministic sanity checks.
+```
+
+### Current-debt truth-model rule changed
+In `buildCurrentDebtAssessmentState`:
+- true current debt can now come from `loan_term_sheet_parsed` explicit outstanding/current balance fields, not only mortgage statements;
+- acquisition-only signals explicitly block treating acquisition/proposed debt as current debt;
+- debt-service/rate/amortization computation can use loan-term-sheet terms when the loan supports current debt;
+- `has_current_debt_document` now reflects mortgage or qualifying loan-current-debt support.
+
+In `report-contract-qa`:
+- `hasTrueCurrentDebt` was aligned with the same loan-vs-acquisition separation logic.
+
+In `source-report-coverage-qa`:
+- `loan_term_sheet_parsed.has_balance` was narrowed to explicit outstanding/current balance fields, not generic `loan_amount`.
+
+Validation passed:
+```text
+node --check api/_lib/report-surface-contracts.js
+node --check api/_lib/report-contract-qa.js
+node --check api/_lib/source-report-coverage-qa.js
+node tests/qa/source-report-coverage-qa-smoke.js
+node tests/qa/report-contract-qa-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## Authority-rule connector patch 2 - loan-term parser outstanding balance mapping
+Before retesting, a red-flag connector risk was caught:
+- the failed artifact showed `Outstanding loan balance` had landed in generic `loan_amount` instead of explicit current/outstanding balance fields.
+
+Codex confirmed the parser mapping bug.
+
+File changed:
+- `api/parse/parse-doc.js`
+
+Parser rule changed:
+- dedicated extraction added for current/outstanding balance labels in the `loan_term_sheet` parse path:
+  - `outstanding loan balance`
+  - `outstanding balance`
+  - `current outstanding balance`
+  - `current loan balance`
+  - `current mortgage balance`
+  - `unpaid principal balance`
+  - `mortgage balance`
+- mapped result to:
+  - `outstanding_balance`
+  - `current_outstanding_balance`
+  - `current_loan_balance`
+- removed outstanding/current labels from generic `loan_amount` fallback list.
+
+Important safety preserved:
+```text
+Generic loan_amount does not automatically become current debt.
+Only current/outstanding-labeled source text feeds current debt balance fields.
+```
+
+Validation passed:
+```text
+node --check api/parse/parse-doc.js
+node tests/qa/source-report-coverage-qa-smoke.js
+node tests/qa/report-contract-qa-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## FINAL TEST 1 RETEST - what passed
+After the authority-rule and parser connector patches, Rob reran FINAL TEST 1.
+
+Important wins:
+
+### Supabase Cron pickup worked
+The logs showed Supabase `pg_net` called `/api/admin-run-worker` at the scheduled 5-minute mark and the job moved:
+```text
+queued -> extracting
+```
+within about one second.
+
+Classification:
+```text
+Supabase Cron real queued-job pickup: PASS for this retest.
+```
+
+Still do not disable GitHub fallback yet; observe more than one successful real pickup before disabling scheduled GitHub automation.
+
+### Rent-roll authority fix worked
+Source reconciliation final guard selected:
+```text
+rr_annual_in_place = 1,036,800
+source_path = rentRollPayload.totals.in_place_rent_annual
+selected_reason = trusted_summary_annual_selected
+```
+
+False `-77.8%` variance disappeared.
+
+Classification:
+```text
+Canonical rent-roll summary precedence: PASS.
+```
+
+### Parser mapping fix worked
+The real loan file parsed correctly:
+```text
+outstanding_balance: 8750000
+current_outstanding_balance: 8750000
+current_loan_balance: 8750000
+interest_rate: 5.25
+amortization_years: 30
+ltv: 70
+semantic_doc_role: current_mortgage_statement
+```
+
+Classification:
+```text
+Loan-term current/outstanding balance parser mapping: PASS.
+```
+
+## FINAL TEST 1 RETEST - what still failed
+Despite the wins, the job still went to:
+```text
+UNDER REVIEW / admin_review_required
+```
+
+Reason remained:
+```text
+ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+```
+
+The artifact set revealed the next deeper connector issue.
+
+### Multiple loan-term artifacts were present
+The system had at least two `loan_term_sheet_parsed` artifacts:
+
+1. Real current-debt loan support:
+```text
+loan_terms_simple_source.txt
+outstanding_balance = 8,750,000
+interest_rate = 5.25
+amortization_years = 30
+ltv = 70
+semantic_doc_role = current_mortgage_statement
+```
+
+2. Purchase/acquisition support recovered into a loan-term-like acquisition artifact:
+```text
+purchase_assumptions_source.txt_acquisition
+purchase_price = 10,640,000
+going_in_cap_rate = 5.75
+semantic_doc_role = appraisal / acquisition support
+```
+
+Problem:
+```text
+source_report_coverage_qa / artifact inventory appeared to summarize the purchase-assumptions artifact as the canonical loan_term_sheet_parsed inventory record instead of the real current-debt artifact.
+```
+
+Resulting bad state:
+```text
+current_debt_state.has_current_debt_document = false
+current_debt_state.has_true_current_debt_balance = false
+current_debt_limitation_reason_code = acquisition_only_not_current_debt
+```
+
+Root class:
+```text
+MULTIPLE_ARTIFACT_SELECTION_AUTHORITY_DRIFT
+```
+
+More precise rule:
+```text
+When multiple artifacts of the same type exist, downstream inventory/current-debt resolvers must prefer the strongest canonical artifact by semantic role and validated fields. A current/outstanding-balance debt artifact must not be hidden by a purchase/acquisition-support artifact.
+```
+
+## Bigger hierarchy contradiction discovered
+The retest also exposed a delivery hierarchy contradiction.
+
+`report_contract_qa` showed:
+```text
+ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+blocks_customer_delivery: false
+customer_delivery_ready: true
+contract_status: warn
+```
+
+But the final delivery gate escalated the same code into:
+```text
+delivery_gate_status: admin_review_required
+customer_delivery_ready: false
+customer_publish_eligible: false
+publish_decision_reason: admin_review_required:ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+```
+
+This is not acceptable.
+
+Root class:
+```text
+DELIVERY_AUTHORITY_HIERARCHY_DRIFT
+```
+
+Meaning:
+```text
+A public/external-use blocker or non-customer-blocking contract warning is being promoted into a private customer-delivery hold despite customer_publish_blockers=[] and blocks_customer_delivery=false.
+```
+
+This is the smoking gun for why report-review floods can recur even after source-truth fixes.
+
+## Why this matters for real users
+Rob correctly emphasized:
+```text
+This cannot happen in front of real-world users or sophisticated investors.
+```
+
+Expected behavior when debt/acquisition separation is source-limited but core report is otherwise safe:
+- collapse unsupported current debt/refi sections;
+- render clean limitation/disclosure;
+- publish privately if no true customer blocker exists;
+- keep public/external-use readiness blocked if necessary.
+
+The system should not hold a privately deliverable report just because a public/outreach gate is not clean.
+
+## System-Class Authority and Delivery Hierarchy Audit launched
+Because the retest showed class-governance drift, Rob asked for a true system-class authority audit.
+
+This is different from a general repo-wide fishing expedition.
+
+Audit title:
+```text
+InvestorIQ System-Class Authority and Delivery Hierarchy Audit
+```
+
+Purpose:
+```text
+Map every system-wide class/contract that can affect source truth, artifact selection, current debt truth, delivery gate, public/external-use readiness, admin review, and regeneration.
+```
+
+Key doctrine included in prompt:
+```text
+There is no Ken Dunn quality vs regular customer quality.
+All InvestorIQ reports must meet the same elite institutional-quality standard.
+Public sample / high-value outreach readiness are external-use exposure gates, not separate quality tiers.
+```
+
+Known suspected root classes provided to Codex:
+1. `DELIVERY_AUTHORITY_HIERARCHY_DRIFT`
+2. `MULTIPLE_ARTIFACT_SELECTION_AUTHORITY_DRIFT`
+3. `CURRENT_DEBT_ARTIFACT_AGGREGATION_DRIFT`
+4. `ADMIN_REVIEW_ESCALATION_DRIFT`
+
+The audit must answer:
+- what classes/contracts exist;
+- what owns each class;
+- what authority level each class has;
+- whether it blocks customer delivery, public sample, high-value outreach, admin review, regeneration;
+- where public/external-use blockers can become customer blockers;
+- where `admin_review_required` can override `customer_publish_blockers=[]`;
+- where `blocks_customer_delivery=false` can still become `customer_delivery_ready=false`;
+- where multiple artifacts of the same type get collapsed incorrectly;
+- where current debt support is lost because acquisition support wins the inventory slot.
+
+Critical smoking-gun question:
+```text
+Where exactly did FINAL TEST 1 RETEST get converted from “customer_delivery_ready=true / blocks_customer_delivery=false” to “admin_review_required / customer_publish_eligible=false”?
+```
+
+Codex is currently performing this audit.
+
+## Do not patch again until the audit returns
+Current rule while Codex audits:
+```text
+Do not produce another patch prompt yet.
+Do not patch only MULTIPLE_LOAN_TERM_ARTIFACT_SELECTION_BUG in isolation until the hierarchy audit explains whether delivery escalation also needs correction.
+```
+
+Likely patch classes after audit:
+1. artifact inventory/current-debt aggregation must select strongest current-debt artifact when multiple loan-term artifacts exist;
+2. delivery gate must obey canonical customer-delivery blockers and not promote non-customer blockers into customer holds;
+3. admin-review escalation must be aligned with the Publication Doctrine Reducer and customer/public/external-use hierarchy.
+
+## Current immediate status
+- Silvergate lane: closed / passed.
+- FINAL TEST 1 lane: not passed yet.
+- Rent roll authority: fixed and verified.
+- Loan parser current-balance mapping: fixed and verified.
+- Supabase Cron pickup: verified on one real queued retest.
+- Remaining failure: current-debt artifact aggregation and delivery hierarchy contradiction.
+- Codex is auditing system-class authority and delivery hierarchy now.
+- Do not switch DocRaptor production mode until this audit/patch cycle is resolved.
+
+## Current launch-readiness decision tree
+Before Ken/outreach:
+1. Finish the System-Class Authority and Delivery Hierarchy Audit.
+2. Patch only audit-proven hierarchy/aggregation defects.
+3. Rerun FINAL TEST 1 once.
+4. Confirm:
+```text
+customer delivery publishes or cleanly becomes deliverable
+customer_publish_blockers reflect true customer blockers only
+public/external-use blockers remain separate
+current debt artifact is consumed correctly
+current debt/refi sections render or collapse correctly
+qa_action_plan.requires_code_patch = 0 for public/outreach candidate
+```
+5. Then proceed to DocRaptor production-mode verification.
+6. Then generate clean public/customer candidate sample with clean names and filenames.
+7. Rotate Vercel secrets before launch.
+8. Disable scheduled GitHub worker only after more Supabase Cron stability proof.
+
+## Fresh chat prompt - May 18 System-Class Authority Audit continuation
+
+```text
+We are continuing InvestorIQ from the May 18 master context.
+
+Immediate context:
+Silvergate TEST 5 passed. The report-surface double-label and Data Coverage subtitle classes are fixed. Source reconciliation disclosure remained correct and customer delivery doctrine passed.
+
+Rob then started a broader focused validation series before switching DocRaptor production mode on.
+
+FINAL TEST 1 / SYNTH-QA-MOTHERLOAD-UNDERWRITING-01 exposed deeper system-class issues:
+1. Initial run selected row-derived rent-roll annual rent of 229,800 instead of explicit controlling summary annual rent of 1,036,800.
+2. Initial run held on ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT despite source docs containing a real current/outstanding debt summary.
+
+Authority-rule patches completed:
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/parse/parse-doc.js`
+- focused QA smoke tests
+
+Verified in FINAL TEST 1 RETEST:
+- Supabase Cron picked up the queued job.
+- Rent roll canonical resolver selected 1,036,800 from `rentRollPayload.totals.in_place_rent_annual`.
+- False -77.8% variance disappeared.
+- Loan parser now maps `Outstanding loan balance` to `outstanding_balance`, `current_outstanding_balance`, and `current_loan_balance`.
+- Real loan artifact contains balance 8,750,000, rate 5.25, amortization 30, LTV 70.
+
+Remaining failure:
+FINAL TEST 1 RETEST still went to admin review with:
+`ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT`.
+
+Observed deeper issue:
+- Multiple `loan_term_sheet_parsed` artifacts exist.
+- The real current-debt loan artifact parsed correctly.
+- A separate purchase-assumptions artifact also produced/acquired loan-term-like support fields.
+- Source coverage / current debt inventory appeared to summarize the purchase-assumptions artifact instead of the true current-debt artifact.
+- Current debt state still became `has_current_debt_document=false` and `acquisition_only_not_current_debt`.
+
+Bigger hierarchy contradiction:
+- `report_contract_qa` said the issue had `blocks_customer_delivery:false` and `customer_delivery_ready:true`.
+- Final delivery gate escalated it into `admin_review_required`, `customer_delivery_ready:false`, and `customer_publish_eligible:false`.
+
+Current Codex task already launched:
+InvestorIQ System-Class Authority and Delivery Hierarchy Audit.
+
+Audit doctrine:
+- There is no Ken-quality vs regular-customer quality tier.
+- All reports must meet the same elite institutional quality standard.
+- Public sample / high-value outreach readiness are external-use exposure gates only.
+
+Known suspected root classes:
+1. DELIVERY_AUTHORITY_HIERARCHY_DRIFT
+2. MULTIPLE_ARTIFACT_SELECTION_AUTHORITY_DRIFT
+3. CURRENT_DEBT_ARTIFACT_AGGREGATION_DRIFT
+4. ADMIN_REVIEW_ESCALATION_DRIFT
+
+First action in this chat:
+Review Codex's audit receipt when Rob provides it.
+Do not write another patch prompt before reading the audit.
+Classify the smoking-gun contradiction:
+Where exactly did FINAL TEST 1 RETEST convert from `customer_delivery_ready=true / blocks_customer_delivery=false` to `admin_review_required / customer_publish_eligible=false`?
+
+Then decide the smallest class-level patch plan.
+No broad tests.
+No scheduler changes.
+No DocRaptor production flip yet.
+No API routes.
+No one-fixture hacks.
+```
+
+---
+
 # May 17, 2026 Update - Publication Doctrine Reducer / Silvergate Validation / Source-Reconciliation Prominence / Report Surface Polish
 
 ## Critical operating context

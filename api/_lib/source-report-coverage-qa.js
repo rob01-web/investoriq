@@ -76,6 +76,90 @@ function latestArtifact(artifacts, type) {
   return (artifacts || []).find((row) => row?.type === type) || null;
 }
 
+function latestArtifactsByType(artifacts, type) {
+  return (Array.isArray(artifacts) ? artifacts : []).filter((row) => row?.type === type);
+}
+
+function debtRoleWeight(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+  if (!normalized) return 30;
+  if (["current_mortgage_statement", "current_debt_terms", "mortgage_statement", "loan_term_sheet"].includes(normalized)) return 100;
+  if (normalized === "purchase_assumptions") return 10;
+  if (normalized.includes("acquisition") || normalized.includes("appraisal")) return 10;
+  return 30;
+}
+
+function resolveCanonicalLoanTermSheetArtifacts(artifacts) {
+  const loanRows = latestArtifactsByType(artifacts, "loan_term_sheet_parsed");
+  if (loanRows.length === 0) {
+    return {
+      currentDebtArtifact: null,
+      acquisitionArtifact: null,
+      currentDebtPayload: null,
+      acquisitionPayload: null,
+    };
+  }
+
+  const scored = loanRows.map((row, index) => {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasBalance =
+      hasPositive(payload?.outstanding_balance) ||
+      hasPositive(payload?.current_outstanding_balance) ||
+      hasPositive(payload?.current_loan_balance);
+    const hasTerms =
+      hasPositive(payload?.interest_rate) ||
+      hasPositive(payload?.amortization_years) ||
+      hasPositive(payload?.amort_years) ||
+      hasPositive(payload?.ltv) ||
+      hasPositive(payload?.monthly_payment) ||
+      hasPositive(payload?.annual_debt_service);
+    const hasAcquisitionSignals =
+      hasPositive(payload?.purchase_price) ||
+      hasPositive(payload?.going_in_cap_rate) ||
+      hasPositive(payload?.derived_acquisition_loan_amount) ||
+      debtBasis.includes("acquisition") ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      role.includes("appraisal");
+    const supportsCurrentDebtRole = ["current_mortgage_statement", "current_debt_terms", "mortgage_statement", "loan_term_sheet", ""].includes(role);
+    const currentDebtScore =
+      (hasBalance ? 400 : 0) +
+      (supportsCurrentDebtRole ? 150 : 0) +
+      (hasTerms ? 40 : 0) +
+      debtRoleWeight(role) -
+      (hasAcquisitionSignals && !hasBalance ? 80 : 0) -
+      (debtBasis.includes("acquisition") ? 80 : 0);
+    const acquisitionScore =
+      (hasAcquisitionSignals ? 240 : 0) +
+      (role === "purchase_assumptions" || role.includes("acquisition") ? 120 : 0) +
+      (hasPositive(payload?.derived_acquisition_loan_amount) ? 100 : 0) +
+      (debtBasis.includes("acquisition") ? 100 : 0);
+    return {
+      row,
+      index,
+      payload,
+      currentDebtScore,
+      acquisitionScore,
+    };
+  });
+
+  const currentDebtArtifact = [...scored]
+    .sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)
+    .map((entry) => entry.row)[0] || null;
+  const acquisitionArtifact = [...scored]
+    .sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)
+    .map((entry) => entry.row)[0] || currentDebtArtifact;
+
+  return {
+    currentDebtArtifact,
+    acquisitionArtifact,
+    currentDebtPayload: currentDebtArtifact?.payload || null,
+    acquisitionPayload: acquisitionArtifact?.payload || null,
+  };
+}
+
 function artifactPresent(artifacts, type) {
   return Boolean(latestArtifact(artifacts, type));
 }
@@ -159,6 +243,7 @@ function findRenderedSignals(html) {
 }
 
 function buildArtifactInventory(artifacts) {
+  const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const supportTaxonomyFor = (row, fallbackDocType = null) => {
     const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
     const semanticDocRoleHint = payload?.semantic_doc_role || null;
@@ -180,7 +265,8 @@ function buildArtifactInventory(artifacts) {
   };
   const t12 = latestArtifact(artifacts, "t12_parsed")?.payload || null;
   const rentRoll = latestArtifact(artifacts, "rent_roll_parsed")?.payload || null;
-  const loan = latestArtifact(artifacts, "loan_term_sheet_parsed")?.payload || null;
+  const loan = loanResolution.currentDebtPayload || null;
+  const acquisitionLoan = loanResolution.acquisitionPayload || null;
   const mortgage = latestArtifact(artifacts, "mortgage_statement_parsed")?.payload || null;
   const renovation = latestArtifact(artifacts, "renovation_parsed")?.payload || null;
   const appraisal = latestArtifact(artifacts, "appraisal_parsed")?.payload || null;
@@ -222,7 +308,16 @@ function buildArtifactInventory(artifacts) {
       closing_costs_percent: loan?.closing_costs_percent ?? null,
       derived_acquisition_loan_amount: loan?.derived_acquisition_loan_amount ?? null,
       debt_basis: loan?.debt_basis || null,
-      ...supportTaxonomyFor(latestArtifact(artifacts, "loan_term_sheet_parsed"), "loan_term_sheet"),
+      ...supportTaxonomyFor(loanResolution.currentDebtArtifact, "loan_term_sheet"),
+      acquisition_support: {
+        present: Boolean(loanResolution.acquisitionArtifact),
+        has_purchase_price: hasPositive(acquisitionLoan?.purchase_price),
+        has_derived_acquisition_debt: hasPositive(acquisitionLoan?.derived_acquisition_loan_amount),
+        purchase_price: acquisitionLoan?.purchase_price ?? null,
+        derived_acquisition_loan_amount: acquisitionLoan?.derived_acquisition_loan_amount ?? null,
+        debt_basis: acquisitionLoan?.debt_basis || null,
+        semantic_doc_role: acquisitionLoan?.semantic_doc_role || null,
+      },
     },
     mortgage_statement_parsed: {
       present: Boolean(mortgage),
@@ -320,6 +415,7 @@ export function buildSourceReportCoverageQa({
   artifacts = [],
   sourceReconciliationState = null,
 } = {}) {
+  const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
   const artifactInventory = buildArtifactInventory(artifacts);
@@ -327,7 +423,7 @@ export function buildSourceReportCoverageQa({
   const renderedTextSignals = findRenderedSignals(html);
   const t12Payload = latestArtifact(artifacts, "t12_parsed")?.payload || null;
   const mortgagePayload = latestArtifact(artifacts, "mortgage_statement_parsed")?.payload || null;
-  const loanTermSheetTermsPayload = latestArtifact(artifacts, "loan_term_sheet_parsed")?.payload || null;
+  const loanTermSheetTermsPayload = loanResolution.currentDebtPayload || null;
   const currentDebtState = buildCurrentDebtAssessmentState({
     mortgagePayload,
     loanTermSheetTermsPayload,
@@ -335,7 +431,7 @@ export function buildSourceReportCoverageQa({
     sourceReportCoverageQa: { artifact_inventory: artifactInventory },
   });
   const acquisitionAssumptionState = buildAcquisitionAssumptionState({
-    loanTermSheetTermsPayload,
+    loanTermSheetTermsPayload: loanResolution.acquisitionPayload || loanTermSheetTermsPayload,
     currentDebtState,
     sourceReportCoverageQa: {
       artifact_inventory: artifactInventory,
