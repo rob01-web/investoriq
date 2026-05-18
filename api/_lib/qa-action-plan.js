@@ -937,6 +937,37 @@ function isRegenerationRequiredViolation(violation) {
   return regenerationRequiredBlockerCodes.has(code);
 }
 
+function isCustomerRegenerationRequiredCode(code, {
+  actionRows = [],
+  contractViolations = [],
+  deterministicFlags = [],
+} = {}) {
+  const normalized = String(code || "").toUpperCase();
+  if (!normalized || !regenerationRequiredBlockerCodes.has(normalized)) return false;
+
+  const contractMatch = (Array.isArray(contractViolations) ? contractViolations : [])
+    .find((violation) => String(violation?.code || "").toUpperCase() === normalized);
+  if (contractMatch) {
+    if (contractMatch?.blocks_customer_delivery === true) return true;
+    if (contractMatch?.blocks_customer_delivery === false) {
+      return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+    }
+  }
+
+  const actionMatches = (Array.isArray(actionRows) ? actionRows : [])
+    .filter((action) => String(action?.code || "").toUpperCase() === normalized);
+  if (actionMatches.some((action) => action?.blocks_customer_delivery === true)) return true;
+  if (actionMatches.some((action) => action?.blocks_customer_delivery === false)) {
+    return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+  }
+
+  const deterministicMatch = (Array.isArray(deterministicFlags) ? deterministicFlags : [])
+    .find((flag) => String(flag?.code || "").toUpperCase() === normalized);
+  if (deterministicMatch && classifySourceFlagDeliveryImpact(deterministicMatch)) return true;
+
+  return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+}
+
 function buildPublishEligibilitySummary({
   deliveryGateStatus = "deliverable",
   reasonCode = null,
@@ -1076,7 +1107,13 @@ function buildPublishEligibilitySummary({
     contractViolations.some((violation) => isRegenerationRequiredViolation(violation))
   );
   const regenerationRequiredForCustomerDelivery = Boolean(
-    customerPublishBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase()))
+    customerPublishBlockers.some((code) =>
+      isCustomerRegenerationRequiredCode(code, {
+        actionRows,
+        contractViolations,
+        deterministicFlags,
+      })
+    )
   );
   const regenerationRequiredForPublicSample = Boolean(
     publicSampleBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase())) ||
@@ -1276,14 +1313,21 @@ export function buildDeliveryGateDecision({
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
   const coreInputReasonCode = String(coreInputSufficiencyState?.reason_code || "").toLowerCase();
   const coreInputCustomerDeliveryImpact = normalizeImpactValue(coreInputSufficiencyState?.customer_delivery_impact);
+  const coreInputBlocksCustomer = coreInputSufficiencyState?.blocks_customer_delivery === true;
+  const coreInputRequiredCoreDocsMissing = coreInputSufficiencyState?.required_core_docs_missing === true;
+  const coreInputFailClosedTyped = coreInputSufficiencyState?.fail_closed === true;
+  const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
   const coreInputExplicitCustomerBlock = [
     "block",
     "blocked",
     "customer_blocked",
     "customer_delivery_blocked",
     "customer_delivery_blocker",
-  ].includes(coreInputCustomerDeliveryImpact);
+  ].includes(coreInputCustomerDeliveryImpact) || coreInputBlocksCustomer;
   const coreInputFailClosedReason =
+    coreInputFailClosedTyped ||
+    coreInputSystemContractFailureTyped ||
+    coreInputRequiredCoreDocsMissing ||
     coreInputReasonCode.includes("equation_mismatch") ||
     coreInputReasonCode.includes("core_input_verification_inconsistency") ||
     coreInputReasonCode.includes("system_contract_failure") ||
@@ -1314,6 +1358,7 @@ export function buildDeliveryGateDecision({
     sourceStatus === "needs_documents" ||
     sourceStatus === "failed" ||
     coreInputBucket === "user_needs_documents" ||
+    coreInputRequiredCoreDocsMissing ||
     sourceLimitations.some((flag) => String(flag?.classification || "").toLowerCase() === "missing_required_source");
   const reconciliationViolation = contractViolations.find((violation) =>
     /RECONCILIATION_MISMATCH|CONTRADICTION/i.test(String(violation?.code || "")) ||
@@ -1343,6 +1388,7 @@ export function buildDeliveryGateDecision({
     Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
   const sourceNeedsReview =
     coreInputBucket === "system_contract_failure" ||
+    coreInputSystemContractFailureTyped ||
     (coreInputBucket === "admin_review_required" && (coreInputExplicitCustomerBlock || coreInputFailClosedReason));
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
