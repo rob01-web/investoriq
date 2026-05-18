@@ -765,7 +765,7 @@ function uniqueCodes(values) {
   return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))];
 }
 
-const customerPublishBlockingViolationCodes = new Set([
+const legacyCustomerBlockerFallbackCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
   "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
@@ -783,7 +783,7 @@ const customerPublishBlockingViolationCodes = new Set([
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
-const nonNegotiableCustomerBlockingViolationCodes = new Set([
+const deterministicCustomerHardDefectCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
   "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
@@ -802,7 +802,7 @@ const nonNegotiableCustomerBlockingViolationCodes = new Set([
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
-const regenerationRequiredBlockerCodes = new Set([
+const deterministicRegenerationRequiredCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
   "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
@@ -898,11 +898,23 @@ function isCustomerPublishBlockingViolation(violation) {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
   if (!code) return false;
+  const customerImpact = normalizeImpactValue(
+    violation?.customer_delivery_impact ??
+    violation?.evidence?.customer_delivery_impact
+  );
+  const explicitlyNonBlockingImpact = [
+    "allow",
+    "disclose_only",
+    "advisory_only",
+    "public_only",
+    "public_outreach_only",
+  ].includes(customerImpact);
   if (violation?.blocks_customer_delivery === true) return true;
   if (violation?.blocks_customer_delivery === false) {
-    return nonNegotiableCustomerBlockingViolationCodes.has(code);
+    return isNonNegotiableCustomerHardDefect(code);
   }
-  return customerPublishBlockingViolationCodes.has(code);
+  if (explicitlyNonBlockingImpact) return false;
+  return isNonNegotiableCustomerHardDefect(code) || legacyCustomerBlockerFallbackCodes.has(code);
 }
 
 function normalizeImpactValue(value) {
@@ -910,6 +922,48 @@ function normalizeImpactValue(value) {
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+}
+
+function isNonNegotiableCustomerHardDefect(code) {
+  const normalized = String(code || "").toUpperCase();
+  if (!normalized) return false;
+  return deterministicCustomerHardDefectCodes.has(normalized);
+}
+
+function isCoreInputCustomerFailClosed(coreInputSufficiencyState = null) {
+  const state = coreInputSufficiencyState && typeof coreInputSufficiencyState === "object"
+    ? coreInputSufficiencyState
+    : {};
+  const bucket = normalizeImpactValue(state?.publishability_bucket);
+  const customerImpact = normalizeImpactValue(state?.customer_delivery_impact);
+  const hasTypedBlockingSignal =
+    state?.blocks_customer_delivery === true ||
+    state?.fail_closed === true ||
+    state?.system_contract_failure === true ||
+    state?.required_core_docs_missing === true ||
+    [
+      "block",
+      "blocked",
+      "customer_blocked",
+      "customer_delivery_blocked",
+      "customer_delivery_blocker",
+    ].includes(customerImpact) ||
+    bucket === "user_needs_documents" ||
+    bucket === "system_contract_failure";
+  if (hasTypedBlockingSignal) return true;
+
+  const hasTypedNonBlockingSignal =
+    state?.blocks_customer_delivery === false ||
+    ["allow", "disclose_only", "advisory_only", "public_only", "public_outreach_only"].includes(customerImpact);
+  if (hasTypedNonBlockingSignal) return false;
+
+  const reasonCode = String(state?.reason_code || "").toLowerCase();
+  return (
+    reasonCode.includes("equation_mismatch") ||
+    reasonCode.includes("core_input_verification_inconsistency") ||
+    reasonCode.includes("system_contract_failure") ||
+    reasonCode.includes("deterministic_failure")
+  );
 }
 
 function classifySourceFlagDeliveryImpact(flag) {
@@ -934,7 +988,7 @@ function classifySourceFlagDeliveryImpact(flag) {
 function isRegenerationRequiredViolation(violation) {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
-  return regenerationRequiredBlockerCodes.has(code);
+  return deterministicRegenerationRequiredCodes.has(code);
 }
 
 function isCustomerRegenerationRequiredCode(code, {
@@ -943,14 +997,14 @@ function isCustomerRegenerationRequiredCode(code, {
   deterministicFlags = [],
 } = {}) {
   const normalized = String(code || "").toUpperCase();
-  if (!normalized || !regenerationRequiredBlockerCodes.has(normalized)) return false;
+  if (!normalized || !deterministicRegenerationRequiredCodes.has(normalized)) return false;
 
   const contractMatch = (Array.isArray(contractViolations) ? contractViolations : [])
     .find((violation) => String(violation?.code || "").toUpperCase() === normalized);
   if (contractMatch) {
     if (contractMatch?.blocks_customer_delivery === true) return true;
     if (contractMatch?.blocks_customer_delivery === false) {
-      return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+      return isNonNegotiableCustomerHardDefect(normalized);
     }
   }
 
@@ -958,14 +1012,14 @@ function isCustomerRegenerationRequiredCode(code, {
     .filter((action) => String(action?.code || "").toUpperCase() === normalized);
   if (actionMatches.some((action) => action?.blocks_customer_delivery === true)) return true;
   if (actionMatches.some((action) => action?.blocks_customer_delivery === false)) {
-    return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+    return isNonNegotiableCustomerHardDefect(normalized);
   }
 
   const deterministicMatch = (Array.isArray(deterministicFlags) ? deterministicFlags : [])
     .find((flag) => String(flag?.code || "").toUpperCase() === normalized);
   if (deterministicMatch && classifySourceFlagDeliveryImpact(deterministicMatch)) return true;
 
-  return nonNegotiableCustomerBlockingViolationCodes.has(normalized);
+  return isNonNegotiableCustomerHardDefect(normalized);
 }
 
 function buildPublishEligibilitySummary({
@@ -1116,8 +1170,8 @@ function buildPublishEligibilitySummary({
     )
   );
   const regenerationRequiredForPublicSample = Boolean(
-    publicSampleBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase())) ||
-    highValueOutreachBlockers.some((code) => regenerationRequiredBlockerCodes.has(String(code || "").toUpperCase()))
+    publicSampleBlockers.some((code) => deterministicRegenerationRequiredCodes.has(String(code || "").toUpperCase())) ||
+    highValueOutreachBlockers.some((code) => deterministicRegenerationRequiredCodes.has(String(code || "").toUpperCase()))
   );
   const regenerationRequired = regenerationRequiredForCustomerDelivery || regenerationRequiredForPublicSample;
 
@@ -1311,27 +1365,9 @@ export function buildDeliveryGateDecision({
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
-  const coreInputReasonCode = String(coreInputSufficiencyState?.reason_code || "").toLowerCase();
-  const coreInputCustomerDeliveryImpact = normalizeImpactValue(coreInputSufficiencyState?.customer_delivery_impact);
-  const coreInputBlocksCustomer = coreInputSufficiencyState?.blocks_customer_delivery === true;
   const coreInputRequiredCoreDocsMissing = coreInputSufficiencyState?.required_core_docs_missing === true;
-  const coreInputFailClosedTyped = coreInputSufficiencyState?.fail_closed === true;
+  const coreInputCustomerFailClosed = isCoreInputCustomerFailClosed(coreInputSufficiencyState);
   const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
-  const coreInputExplicitCustomerBlock = [
-    "block",
-    "blocked",
-    "customer_blocked",
-    "customer_delivery_blocked",
-    "customer_delivery_blocker",
-  ].includes(coreInputCustomerDeliveryImpact) || coreInputBlocksCustomer;
-  const coreInputFailClosedReason =
-    coreInputFailClosedTyped ||
-    coreInputSystemContractFailureTyped ||
-    coreInputRequiredCoreDocsMissing ||
-    coreInputReasonCode.includes("equation_mismatch") ||
-    coreInputReasonCode.includes("core_input_verification_inconsistency") ||
-    coreInputReasonCode.includes("system_contract_failure") ||
-    coreInputReasonCode.includes("deterministic_failure");
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
   const sourceReconciliationPublishabilityBucket = normalizeImpactValue(sourceReconciliationState?.publishability_bucket);
   const sourceReconciliationCustomerImpact = normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact);
@@ -1389,7 +1425,7 @@ export function buildDeliveryGateDecision({
   const sourceNeedsReview =
     coreInputBucket === "system_contract_failure" ||
     coreInputSystemContractFailureTyped ||
-    (coreInputBucket === "admin_review_required" && (coreInputExplicitCustomerBlock || coreInputFailClosedReason));
+    (coreInputBucket === "admin_review_required" && coreInputCustomerFailClosed);
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
       ? reconciliationViolation
