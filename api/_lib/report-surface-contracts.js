@@ -144,6 +144,34 @@ function resolveCanonicalRentRollAnnualMetric({
       rentRollTotals?.total_units
   );
   const rows = collectRentRollRows(computedRentRoll, rentRollPayload);
+  const representedUnitCount = rows.reduce((sum, row) => {
+    const count = coerceNumber(row?.count);
+    return sum + (Number.isFinite(count) && count > 0 ? count : 1);
+  }, 0);
+  const summarySignalsText = normalizeText([
+    rentRollPayload?.source_note,
+    rentRollPayload?.notes,
+    rentRollPayload?.method,
+    rentRollPayload?.source_selection,
+    computedRentRoll?.source_note,
+    computedRentRoll?.notes,
+    computedRentRoll?.method,
+    computedRentRoll?.source_selection,
+  ].filter(Boolean).join(" "));
+  const sampleOrExcerptSignal =
+    /sample|partial|representative|excerpt|observation|observations|selected rows|manager summary|summary totals/i
+      .test(summarySignalsText);
+  const explicitControllingSummarySignal =
+    /controlling property totals|controlling totals|totals are controlling|summary totals are controlling/i
+      .test(summarySignalsText);
+  const payloadPartialSignal =
+    rentRollPayload?.is_partial_sample === true ||
+    computedRentRoll?.is_partial_sample === true;
+  const rowCoveragePartial =
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0 &&
+    representedUnitCount > 0 &&
+    representedUnitCount < totalUnits;
   const rowAnnual = rows.reduce((sum, row) => {
     const rent = rowRentValueForMetric(row, metricKey);
     const count = coerceNumber(row?.count);
@@ -176,6 +204,56 @@ function resolveCanonicalRentRollAnnualMetric({
   const weightedAnnual = Number.isFinite(weightedAvgRent) && Number.isFinite(totalUnits) && totalUnits > 0
     ? weightedAvgRent * totalUnits * 12
     : null;
+  const summaryAnnualCandidate = coerceNumber(
+    metricKey === "market"
+      ? rentRollTotals?.market_rent_annual
+      : rentRollTotals?.in_place_rent_annual ?? rentRollTotals?.current_rent_annual
+  );
+  const summaryMonthlyCandidate = coerceNumber(
+    metricKey === "market"
+      ? rentRollTotals?.market_rent_monthly
+      : rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly
+  );
+  const summaryAnnualFromMonthly =
+    Number.isFinite(summaryMonthlyCandidate) && summaryMonthlyCandidate > 0
+      ? summaryMonthlyCandidate * 12
+      : null;
+  const rowConflictWithSummary =
+    Number.isFinite(summaryAnnualCandidate) &&
+    summaryAnnualCandidate > 0 &&
+    (
+      (Number.isFinite(rowAnnual) && rowAnnual > 0 && materiallyDifferent(summaryAnnualCandidate, rowAnnual)) ||
+      (Number.isFinite(weightedAnnual) && weightedAnnual > 0 && materiallyDifferent(summaryAnnualCandidate, weightedAnnual))
+    );
+  const summaryDeterministicallySane =
+    !(
+      Number.isFinite(summaryAnnualCandidate) &&
+      summaryAnnualCandidate > 0 &&
+      Number.isFinite(weightedAnnual) &&
+      weightedAnnual > 0 &&
+      Number.isFinite(totalUnits) &&
+      totalUnits > 0 &&
+      representedUnitCount >= totalUnits &&
+      materiallyDifferent(summaryAnnualCandidate, weightedAnnual, 1000, 0.2)
+    );
+  const preferTrustedSummaryAuthority =
+    (
+      trustedSummaryTotals ||
+      rentRollTotals?.status_summary_present === true ||
+      rentRollPayload?.status_summary_present === true ||
+      computedRentRoll?.status_summary_present === true
+    ) &&
+    (
+      (Number.isFinite(summaryAnnualCandidate) && summaryAnnualCandidate > 0) ||
+      Number.isFinite(summaryAnnualFromMonthly)
+    ) &&
+    summaryDeterministicallySane &&
+    (
+      payloadPartialSignal ||
+      rowCoveragePartial ||
+      sampleOrExcerptSignal ||
+      explicitControllingSummarySignal
+    );
   const candidates = [
     {
       value: metricKey === "market"
@@ -237,7 +315,10 @@ function resolveCanonicalRentRollAnnualMetric({
     if (!Number.isFinite(value) || value <= 0) continue;
     const impliedMonthly = Number.isFinite(totalUnits) && totalUnits > 0 ? value / totalUnits / 12 : null;
     const matchesReferences = references.filter((reference) => !materiallyDifferent(value, reference.value));
-    const coherent = matchesReferences.length > 0 || ((!(Number.isFinite(rowAnnual) && rowAnnual > 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual > 0)));
+    const coherent =
+      (preferTrustedSummaryAuthority && (candidate.kind === "summary_annual" || candidate.kind === "summary_monthly")) ||
+      matchesReferences.length > 0 ||
+      ((!(Number.isFinite(rowAnnual) && rowAnnual > 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual > 0)));
     const candidateRecord = {
       value,
       source_path: candidate.source_path,
@@ -267,14 +348,23 @@ function resolveCanonicalRentRollAnnualMetric({
     }
   }
 
-  const preferenceOrder = new Map([
-    ["row_derived_annual", 0],
-    ["weighted_avg_implied_annual", 1],
-    ["summary_annual", 2],
-    ["summary_monthly", 3],
-    ["payload_total_annual", 4],
-    ["computed_total_annual", 5],
-  ]);
+  const preferenceOrder = preferTrustedSummaryAuthority
+    ? new Map([
+        ["summary_annual", 0],
+        ["summary_monthly", 1],
+        ["row_derived_annual", 2],
+        ["weighted_avg_implied_annual", 3],
+        ["payload_total_annual", 4],
+        ["computed_total_annual", 5],
+      ])
+    : new Map([
+        ["row_derived_annual", 0],
+        ["weighted_avg_implied_annual", 1],
+        ["summary_annual", 2],
+        ["summary_monthly", 3],
+        ["payload_total_annual", 4],
+        ["computed_total_annual", 5],
+      ]);
   coherentCandidates.sort((a, b) => preferenceOrder.get(a.kind) - preferenceOrder.get(b.kind));
   const selected = coherentCandidates[0] || null;
   const selectedValue = Number.isFinite(selected?.value) && selected.value > 0 ? selected.value : null;
@@ -313,6 +403,7 @@ function resolveCanonicalRentRollAnnualMetric({
     total_units: Number.isFinite(totalUnits) && totalUnits > 0 ? totalUnits : null,
     has_summary_annual_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && candidate.kind === "summary_annual"),
     has_summary_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && String(candidate.kind || "").startsWith("summary_")),
+    prefer_trusted_summary_authority: preferTrustedSummaryAuthority,
   };
 }
 
@@ -849,6 +940,12 @@ export function buildCurrentDebtAssessmentState({
   const mortgageInventory = inventory?.mortgage_statement_parsed || {};
   const loanInventory = inventory?.loan_term_sheet_parsed || {};
   const normalizedNoi = coerceNumber(t12Noi);
+  const loanSemanticRole = String(
+    loanInventory?.semantic_doc_role || resolvedLoan?.semantic_doc_role || ""
+  ).trim().toLowerCase();
+  const loanDebtBasis = String(
+    resolvedLoan?.debt_basis || loanInventory?.debt_basis || ""
+  ).trim().toLowerCase();
 
   const hasMortgageDocument =
     Boolean(resolvedMortgage) ||
@@ -865,21 +962,60 @@ export function buildCurrentDebtAssessmentState({
     Boolean(loanInventory.has_rate) ||
     Boolean(loanInventory.has_amortization);
 
+  const loanOutstandingBalance = coerceNumber(
+    resolvedLoan?.outstanding_balance ??
+    resolvedLoan?.current_outstanding_balance ??
+    resolvedLoan?.current_loan_balance
+  );
+  const loanCurrentDebtSignal = Boolean(
+    positiveNumber(loanOutstandingBalance) ||
+    (
+      Boolean(loanInventory.has_balance) &&
+      ["loan_term_sheet", "mortgage_statement", "current_mortgage_statement", "current_debt_terms", ""].includes(loanSemanticRole)
+    )
+  );
+  const loanAcquisitionOnlySignal = Boolean(
+    loanDebtBasis.includes("acquisition") ||
+    loanSemanticRole === "purchase_assumptions" ||
+    (
+      Boolean(loanInventory.has_derived_acquisition_debt) &&
+      Boolean(loanInventory.has_purchase_price) &&
+      !positiveNumber(loanOutstandingBalance)
+    )
+  );
+  const loanSupportsCurrentDebt = loanCurrentDebtSignal && !loanAcquisitionOnlySignal;
+
   const hasTrueCurrentDebtBalance =
     positiveNumber(resolvedMortgage?.outstanding_balance) ||
-    Boolean(mortgageInventory.has_balance);
+    Boolean(mortgageInventory.has_balance) ||
+    (loanSupportsCurrentDebt && positiveNumber(loanOutstandingBalance));
+
+  const debtBalanceForComputation =
+    coerceNumber(resolvedMortgage?.outstanding_balance) ??
+    (loanSupportsCurrentDebt ? loanOutstandingBalance : null);
 
   const sourceMonthlyPayment = coerceNumber(
-    resolvedMortgage?.monthly_payment ?? resolvedMortgage?.monthly_debt_service
+    resolvedMortgage?.monthly_payment ??
+    resolvedMortgage?.monthly_debt_service ??
+    (loanSupportsCurrentDebt ? resolvedLoan?.monthly_payment : null) ??
+    (loanSupportsCurrentDebt ? resolvedLoan?.monthly_debt_service : null)
   );
-  const sourceAnnualDebtService = coerceNumber(resolvedMortgage?.annual_debt_service);
+  const sourceAnnualDebtService = coerceNumber(
+    resolvedMortgage?.annual_debt_service ??
+    (loanSupportsCurrentDebt ? resolvedLoan?.annual_debt_service : null)
+  );
   const rateFraction = normalizeRateFraction(
-    resolvedMortgage?.interest_rate ?? resolvedMortgage?.interestRate ?? resolvedMortgage?.rate
+    resolvedMortgage?.interest_rate ??
+    resolvedMortgage?.interestRate ??
+    resolvedMortgage?.rate ??
+    (loanSupportsCurrentDebt ? resolvedLoan?.interest_rate : null)
   );
   const amortYears = coerceNumber(
     resolvedMortgage?.amort_years ??
       resolvedMortgage?.amortization_years ??
-      resolvedMortgage?.amortYears
+      resolvedMortgage?.amortYears ??
+      (loanSupportsCurrentDebt ? resolvedLoan?.amort_years : null) ??
+      (loanSupportsCurrentDebt ? resolvedLoan?.amortization_years : null)
   );
   const computedMonthlyPayment =
     hasTrueCurrentDebtBalance &&
@@ -887,7 +1023,7 @@ export function buildCurrentDebtAssessmentState({
     rateFraction > 0 &&
     Number.isFinite(amortYears) &&
     amortYears > 0
-      ? coerceNumber(resolvedMortgage?.outstanding_balance) * (mortgageConstant(rateFraction, amortYears) || 0)
+      ? coerceNumber(debtBalanceForComputation) * (mortgageConstant(rateFraction, amortYears) || 0)
       : null;
   const annualDebtService = Number.isFinite(sourceAnnualDebtService) && sourceAnnualDebtService > 0
     ? sourceAnnualDebtService
@@ -901,7 +1037,8 @@ export function buildCurrentDebtAssessmentState({
     Number.isFinite(sourceAnnualDebtService) && sourceAnnualDebtService > 0 ||
     Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0 ||
     Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0 ||
-    Boolean(mortgageInventory.has_payment);
+    Boolean(mortgageInventory.has_payment) ||
+    (loanSupportsCurrentDebt && Boolean(loanInventory.has_payment));
 
   const hasProposedAcquisitionFinancing =
     (
@@ -938,7 +1075,9 @@ export function buildCurrentDebtAssessmentState({
     } else if (hasMortgageDocument && hasTrueCurrentDebtBalance && !hasCurrentDebtService) {
       currentDebtLimitationReasonCode = "incomplete_current_debt_terms";
     } else if (hasLoanDocument && !hasMortgageDocument && !hasTrueCurrentDebtBalance) {
-      currentDebtLimitationReasonCode = "acquisition_only_not_current_debt";
+      currentDebtLimitationReasonCode = loanSupportsCurrentDebt
+        ? "no_current_outstanding_balance"
+        : "acquisition_only_not_current_debt";
     } else {
       currentDebtLimitationReasonCode = "no_current_debt_document";
     }
@@ -948,7 +1087,7 @@ export function buildCurrentDebtAssessmentState({
     has_true_current_debt_balance: Boolean(hasTrueCurrentDebtBalance),
     has_current_debt_service: Boolean(hasCurrentDebtService),
     has_proposed_acquisition_financing: Boolean(hasProposedAcquisitionFinancing),
-    has_current_debt_document: Boolean(hasMortgageDocument),
+    has_current_debt_document: Boolean(hasMortgageDocument || loanSupportsCurrentDebt),
     current_debt_dscr_status: Number.isFinite(currentDebtDscr) && currentDebtDscr > 0 ? "computed" : "not_assessed",
     current_debt_dscr: Number.isFinite(currentDebtDscr) && currentDebtDscr > 0 ? currentDebtDscr : null,
     current_debt_limitation_reason_code: currentDebtLimitationReasonCode,

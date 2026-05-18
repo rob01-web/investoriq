@@ -178,7 +178,7 @@ const acquisitionOnlyDebtCopy = formatCurrentDebtAssessmentCopy({
     t12Noi: 650000,
   }),
 });
-assert.equal(acquisitionOnlyDebtCopy.value, "Not assessed");
+assert.equal(acquisitionOnlyDebtCopy.value, "Not assessed - no current debt document");
 assert.match(acquisitionOnlyDebtCopy.explanation, /Proposed acquisition financing is shown separately/i);
 assert.match(acquisitionOnlyDebtCopy.explanation, /Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified/i);
 assert.equal(acquisitionOnlyDebtCopy.explanation.includes(".."), false);
@@ -393,7 +393,7 @@ const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEnt
 });
 assert.equal(acquisitionOnlyScorecardEntry.hasDscrScore, false);
 assert.equal(acquisitionOnlyScorecardEntry.scoreRow.label, "Current Debt DSCR");
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not assessed");
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not assessed - no current debt document");
 
 const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

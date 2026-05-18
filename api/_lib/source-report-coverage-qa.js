@@ -205,7 +205,10 @@ function buildArtifactInventory(artifacts) {
     },
     loan_term_sheet_parsed: {
       present: Boolean(loan),
-      has_balance: hasPositive(loan?.loan_amount) || hasPositive(loan?.outstanding_balance),
+      has_balance:
+        hasPositive(loan?.outstanding_balance) ||
+        hasPositive(loan?.current_outstanding_balance) ||
+        hasPositive(loan?.current_loan_balance),
       has_derived_acquisition_debt: hasPositive(loan?.derived_acquisition_loan_amount),
       has_purchase_price: hasPositive(loan?.purchase_price),
       has_payment: hasPositive(loan?.monthly_payment) || hasPositive(loan?.annual_debt_service),

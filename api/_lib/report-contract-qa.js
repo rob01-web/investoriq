@@ -259,11 +259,41 @@ function reportTypeIsScreening(reportType, reportTier) {
 }
 
 function hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) {
+  const currentDebtState = sourceReportCoverageQa?.current_debt_state;
+  if (currentDebtState && currentDebtState.has_true_current_debt_balance === true) {
+    return true;
+  }
   const mortgage = latestPayload(artifacts, "mortgage_statement_parsed");
   const invMortgage = sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed;
+  const loan = latestPayload(artifacts, "loan_term_sheet_parsed");
+  const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed;
+  const loanSemanticRole = String(
+    invLoan?.semantic_doc_role || loan?.semantic_doc_role || ""
+  ).trim().toLowerCase();
+  const loanDebtBasis = String(
+    loan?.debt_basis || invLoan?.debt_basis || ""
+  ).trim().toLowerCase();
+  const loanOutstandingBalance = Number(
+    loan?.outstanding_balance ?? loan?.current_outstanding_balance ?? loan?.current_loan_balance ?? NaN
+  );
+  const loanHasCurrentDebtSignal =
+    Number.isFinite(loanOutstandingBalance) && loanOutstandingBalance > 0 ||
+    (
+      Boolean(invLoan?.has_balance) &&
+      ["loan_term_sheet", "mortgage_statement", "current_mortgage_statement", "current_debt_terms", ""].includes(loanSemanticRole)
+    );
+  const loanAcquisitionOnlySignal =
+    loanDebtBasis.includes("acquisition") ||
+    loanSemanticRole === "purchase_assumptions" ||
+    (
+      Boolean(invLoan?.has_derived_acquisition_debt) &&
+      Boolean(invLoan?.has_purchase_price) &&
+      !(Number.isFinite(loanOutstandingBalance) && loanOutstandingBalance > 0)
+    );
   return Boolean(
     positive(mortgage?.outstanding_balance) ||
-    invMortgage?.has_balance
+    invMortgage?.has_balance ||
+    (loanHasCurrentDebtSignal && !loanAcquisitionOnlySignal)
   );
 }
 

@@ -4202,6 +4202,35 @@ export default async function handler(req, res) {
         const parse_warnings = [];
 
         if (effectiveDocType === 'loan_term_sheet') {
+          const outstanding_balance = (() => {
+            const candidates = [];
+            const addCandidate = (value) => {
+              const parsed = Number(String(value || '').replace(/,/g, ''));
+              if (Number.isFinite(parsed) && parsed >= 10000) candidates.push(parsed);
+            };
+            const explicitOutstandingMatches = rawText.matchAll(
+              /(?:outstanding\s+loan\s+balance|outstanding\s+balance|current\s+outstanding\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|unpaid\s+principal\s+balance|mortgage\s+balance)(?:\s*\([^)]*\))?\s*(?:[:\-]|is|=)?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
+            );
+            for (const match of explicitOutstandingMatches) addCandidate(match[1]);
+            const beforeLabelMatches = rawText.matchAll(
+              /\$?\s*([\d,]+(?:\.\d{2})?)\s*(?:is\s+)?(?:the\s+)?(?:outstanding\s+loan\s+balance|outstanding\s+balance|current\s+outstanding\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|unpaid\s+principal\s+balance|mortgage\s+balance)\b/gi
+            );
+            for (const match of beforeLabelMatches) addCandidate(match[1]);
+            if (candidates.length === 0) {
+              const fallbackAmount = extractDollarNear(rawText, [
+                'outstanding loan balance',
+                'outstanding balance',
+                'current outstanding balance',
+                'current loan balance',
+                'current mortgage balance',
+                'unpaid principal balance',
+                'mortgage balance',
+              ]);
+              addCandidate(fallbackAmount);
+            }
+            return candidates.length > 0 ? Math.max(...candidates) : null;
+          })();
+
           let loan_amount = (() => {
             const candidates = [];
             const addCandidate = (value) => {
@@ -4219,7 +4248,6 @@ export default async function handler(req, res) {
             if (candidates.length === 0) {
               const fallbackAmount = extractDollarNear(rawText, [
                 'loan amount', 'mortgage amount', 'principal amount', 'total loan', 'facility amount',
-                'outstanding loan balance', 'outstanding balance', 'current loan balance', 'current mortgage balance',
               ]);
               addCandidate(fallbackAmount);
             }
@@ -4416,6 +4444,9 @@ export default async function handler(req, res) {
             method: maybeAiAcquisitionRecovery ? maybeAiAcquisitionRecovery.method : 'text_excerpt',
             ai_assisted: Boolean(maybeAiAcquisitionRecovery),
             validated: Boolean(maybeAiAcquisitionRecovery),
+            outstanding_balance,
+            current_outstanding_balance: outstanding_balance,
+            current_loan_balance: outstanding_balance,
             loan_amount,
             purchase_price: validatedPurchasePrice,
             derived_acquisition_loan_amount: validatedDerivedAcquisitionLoanAmount,
