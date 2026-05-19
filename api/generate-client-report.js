@@ -2103,8 +2103,8 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
     })
     .join("");
   const footnote = addDocumentDerivedCapRate
-    ? `Derived from reported NOI of ${formatCurrency(noi)}. Standardized framework benchmarks are shown with any valid document-derived cap rate.`
-    : `Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced.`;
+    ? `Derived from reported NOI of ${formatCurrency(noi)}. Standardized framework benchmarks are shown with any valid document-derived cap rate. Purchase price and unsupported appraisal/market survey files are not treated as appraised value.`
+    : `Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced, and do not represent appraised value.`;
   return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
@@ -2204,7 +2204,7 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
     ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(limitations.join(" "))}</p>`
     : "";
 
-  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
+  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt, is not used as a current refinance debt balance, and does not represent appraised value.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
 }
 function buildScreeningRefiSufficiencyTable({
   financials,
@@ -6646,7 +6646,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           sTbl += `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(noi5 / exitCapDec)}</td>`;
         }
         sTbl += `</tr></tbody></table>`;
-        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel}). Scenario outputs are deterministic from document-backed inputs.</p>`;
+        sTbl += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiBasis)} | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel}). Scenario outputs are deterministic from reported NOI and standardized framework assumptions; this is not an appraisal.</p>`;
         // Cap rate exit value sensitivity sub-table
         const capRateRows = [4.5, 5.0, 5.5, 6.0, 6.5];
         const capRateSensitivityRows = capRateRows.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
