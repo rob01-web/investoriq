@@ -731,6 +731,18 @@ const forwardLookingRenovationDisplayCopy = generatorTest.buildRenovationDisplay
 assert.equal(forwardLookingRenovationDisplayCopy.section_title, "Renovation Strategy & Capital Plan");
 assert.equal(forwardLookingRenovationDisplayCopy.budget_card_title, "Renovation Budget Breakdown");
 assert.equal(forwardLookingRenovationDisplayCopy.show_execution_card, true);
+const financialsOnlyRenovationMode = generatorTest.resolveRenovationDisplayMode({
+  financials: {
+    renovation_total_budget: 325000,
+    renovation_rent_lift: "150",
+    renovation_timing_or_phasing: "12 months",
+    renovation_roi: "12%",
+  },
+  renovationPayload: null,
+  documentSources: [{ original_filename: "Northbank Renovation Budget.pdf" }],
+  hasForwardLookingRenovationInputs: true,
+});
+assert.equal(financialsOnlyRenovationMode, null);
 
 const frameworkSensitivityDisplayCopy = generatorTest.buildFrameworkSensitivityDisplayCopy();
 assert.equal(frameworkSensitivityDisplayCopy.dcf_section_title, "DCF Framework Sensitivity");

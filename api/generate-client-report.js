@@ -1623,8 +1623,6 @@ function buildDocumentTreatmentSummaryHtml({
         renovationDisplayMode === "budget_only_no_roi" ||
         renovationDisplayMode === "historical_only"
           ? renovationDisplayMode
-          : hasForwardLookingRenovationInputs
-          ? "forward_looking_modelable"
           : "historical_only";
       if (normalizedRenovationDisplayMode === "forward_looking_modelable") {
         return {
@@ -1778,8 +1776,6 @@ function buildHistoricalCapexDisplayCopy({
     renovationDisplayMode === "budget_only_no_roi" ||
     renovationDisplayMode === "historical_only"
       ? renovationDisplayMode
-      : hasForwardLookingRenovationInputs
-      ? "forward_looking_modelable"
       : "historical_only";
   const historicalCapitalItemsDisclaimer =
     "Historical capital items are displayed for context only. InvestorIQ does not model renovation ROI, rent lift, payback, or implementation schedule without document-supported forward-looking assumptions.";
@@ -1870,20 +1866,12 @@ function resolveRenovationDisplayMode({
     hasPositive(renovationPayload?.total_budget) ||
       hasPositive(renovationPayload?.total_capex) ||
       hasPositive(renovationPayload?.renovation_budget) ||
-      hasPositive(financials?.renovation_total_budget) ||
-      hasPositive(financials?.renovation_total_capex) ||
       hasStructuredRows(renovationPayload?.budget_rows) ||
-      hasStructuredRows(renovationPayload?.execution_rows) ||
-      hasStructuredRows(financials?.renovation_budget_rows) ||
-      hasStructuredRows(financials?.renovation_execution_rows)
+      hasStructuredRows(renovationPayload?.execution_rows)
   );
   const hasForwardLookingSignals = Boolean(
     hasForwardLookingRenovationInputs ||
       [
-        financials?.renovation_timing_or_phasing,
-        financials?.renovation_rent_lift,
-        financials?.renovation_roi,
-        financials?.renovation_payback_period,
         renovationPayload?.timing_or_phasing,
         renovationPayload?.rent_lift,
         renovationPayload?.roi,
@@ -1891,15 +1879,10 @@ function resolveRenovationDisplayMode({
       ].some((value) => hasMeaningfulText(value))
   );
   const hasDocumentedRentLift = Boolean(
-    hasMeaningfulText(financials?.renovation_rent_lift) ||
-      hasMeaningfulText(renovationPayload?.rent_lift) ||
-      hasRowLevelRentLift(renovationPayload?.budget_rows) ||
-      hasRowLevelRentLift(financials?.renovation_budget_rows)
+    hasMeaningfulText(renovationPayload?.rent_lift) ||
+      hasRowLevelRentLift(renovationPayload?.budget_rows)
   );
   const historicalSignalsText = [
-    financials?.renovation_interpretation,
-    financials?.renovation_budget_note,
-    financials?.renovation_execution_note,
     renovationPayload?.interpretation,
     renovationPayload?.budget_note,
     renovationPayload?.execution_note,
@@ -1930,7 +1913,7 @@ function resolveRenovationDisplayMode({
     if (hasHistoricalOnlySignals && !hasForwardLookingSignals) {
       return "historical_only";
     }
-    if (hasDocumentedRentLift && !hasMeaningfulText(financials?.renovation_roi) && !hasMeaningfulText(renovationPayload?.roi)) {
+    if (hasDocumentedRentLift && !hasMeaningfulText(renovationPayload?.roi)) {
       return "forward_looking_with_rent_lift";
     }
     return hasForwardLookingSignals ? "forward_looking_modelable" : "budget_only_no_roi";
@@ -6034,16 +6017,12 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const hasVerifiedRenovationAmount = Boolean(
       hasPositiveRenovationAmount(renovationPayload?.total_budget) ||
         hasPositiveRenovationAmount(renovationPayload?.total_capex) ||
-        hasPositiveRenovationAmount(renovationPayload?.renovation_budget) ||
-        hasPositiveRenovationAmount(financials?.renovation_total_budget) ||
-        hasPositiveRenovationAmount(financials?.renovation_total_capex)
+        hasPositiveRenovationAmount(renovationPayload?.renovation_budget)
     );
     const hasVerifiedStructuredRenovationInput = Boolean(
       hasVerifiedRenovationAmount ||
-        hasStructuredRenovationRows(renovationPayload?.budget_rows) ||
-        hasStructuredRenovationRows(renovationPayload?.execution_rows) ||
-        hasStructuredRenovationRows(financials?.renovation_budget_rows) ||
-        hasStructuredRenovationRows(financials?.renovation_execution_rows)
+      hasStructuredRenovationRows(renovationPayload?.budget_rows) ||
+        hasStructuredRenovationRows(renovationPayload?.execution_rows)
     );
     const hasExplicitRenovationInput = Boolean(hasVerifiedStructuredRenovationInput);
     const renovationFilenameTerms = [
@@ -6079,12 +6058,10 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
     }
     const renovationBudgetSourceRows = hasExplicitRenovationInput
-      ? financials?.renovation_budget_rows || renovationPayload?.budget_rows || []
+      ? renovationPayload?.budget_rows || []
       : [];
     const renovationExecutionSourceRows = hasExplicitRenovationInput
-      ? financials?.renovation_execution_rows ||
-        renovationPayload?.execution_rows ||
-        []
+      ? renovationPayload?.execution_rows || []
       : [];
     const renovationBudgetRows = hasExplicitRenovationInput
       ? buildRenovationBudgetRows(renovationBudgetSourceRows, formatCurrency)
@@ -6094,10 +6071,6 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       : "";
     const renovationReturnAssumptionsPresent = hasExplicitRenovationInput &&
       [
-        financials?.renovation_timing_or_phasing,
-        financials?.renovation_rent_lift,
-        financials?.renovation_roi,
-        financials?.renovation_payback_period,
         renovationPayload?.timing_or_phasing,
         renovationPayload?.rent_lift,
         renovationPayload?.roi,
@@ -6117,8 +6090,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const renovationBudgetNote =
       hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
-            financials?.renovation_budget_note ??
-              renovationPayload?.budget_note ??
+            renovationPayload?.budget_note ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
         : hasRenovationDisplayMode
@@ -6127,8 +6099,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const renovationExecutionNote =
       hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
-            financials?.renovation_execution_note ??
-              renovationPayload?.execution_note ??
+            renovationPayload?.execution_note ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
         : hasRenovationDisplayMode
@@ -6138,7 +6109,6 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       hasRenovationDisplayMode && renovationDisplayMode === "forward_looking_modelable"
         ? String(
             sections?.renovationInterpretation ??
-              financials?.renovation_interpretation ??
               renovationPayload?.interpretation ??
               DATA_NOT_AVAILABLE
           ).trim() || DATA_NOT_AVAILABLE
