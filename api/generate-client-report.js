@@ -330,6 +330,96 @@ function resolveCanonicalCurrentDebtScoreInputs({
     usedCanonicalState: false,
   };
 }
+function resolveCanonicalRefiDebtBasis({
+  currentDebtState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  financials = null,
+  t12Payload = null,
+} = {}) {
+  const fallbackCoverage = resolveCurrentDebtCoverage(
+    mortgagePayload,
+    coerceNumber(t12Payload?.net_operating_income)
+  );
+  const f = financials && typeof financials === "object" ? financials : {};
+  const canonicalHasTrueBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
+  const canonicalReasonCode = String(
+    currentDebtState?.current_debt_limitation_reason_code || ""
+  ).trim();
+  const canonicalDscrStatus = String(
+    currentDebtState?.current_debt_dscr_status || ""
+  ).trim().toLowerCase();
+  const canonicalBalance = coerceNumber(currentDebtState?.current_debt_balance);
+  const canonicalAnnualDebtService = coerceNumber(
+    currentDebtState?.current_debt_annual_debt_service
+  );
+  const canonicalDscr = coerceNumber(currentDebtState?.current_debt_dscr);
+  const loanTermDebtBalance =
+    coerceNumber(loanTermSheetTermsPayload?.current_outstanding_balance) ??
+    coerceNumber(loanTermSheetTermsPayload?.current_loan_balance) ??
+    coerceNumber(loanTermSheetTermsPayload?.outstanding_balance) ??
+    null;
+  const loanTermInterestRate =
+    coerceNumber(loanTermSheetTermsPayload?.interest_rate) ?? null;
+  const loanTermAmortYears =
+    coerceNumber(loanTermSheetTermsPayload?.amortization_years) ??
+    coerceNumber(loanTermSheetTermsPayload?.amort_years) ??
+    null;
+  const canonicalComputedDebtBasis =
+    canonicalDscrStatus === "computed" &&
+    Number.isFinite(canonicalBalance ?? loanTermDebtBalance) &&
+    (canonicalBalance ?? loanTermDebtBalance) > 0 &&
+    canonicalReasonCode !== "acquisition_only_not_current_debt";
+  const hasTrueCurrentDebtBalanceDerived = Boolean(
+    (canonicalHasTrueBalance && Number.isFinite(canonicalBalance) && canonicalBalance > 0) ||
+      canonicalComputedDebtBasis
+  );
+  const debtBalance = hasTrueCurrentDebtBalanceDerived
+    ? canonicalBalance ?? loanTermDebtBalance
+    : coerceNumber(f.refi_debt_balance) ??
+      coerceNumber(mortgagePayload?.outstanding_balance) ??
+      loanTermDebtBalance ??
+      null;
+  const interestRatePct =
+    coerceNumber(f.refi_interest_rate) ??
+    coerceNumber(mortgagePayload?.interest_rate) ??
+    loanTermInterestRate ??
+    null;
+  const amortYears =
+    coerceNumber(f.refi_amort_years) ??
+    coerceNumber(mortgagePayload?.amort_years) ??
+    loanTermAmortYears ??
+    null;
+  const annualDebtService =
+    canonicalDscrStatus === "computed" &&
+    Number.isFinite(canonicalAnnualDebtService) &&
+    canonicalAnnualDebtService > 0
+      ? canonicalAnnualDebtService
+      : Number.isFinite(fallbackCoverage.annualDebtService) && fallbackCoverage.annualDebtService > 0
+      ? fallbackCoverage.annualDebtService
+      : null;
+  return {
+    hasTrueCurrentDebtBalance:
+      hasTrueCurrentDebtBalanceDerived,
+    isAcquisitionOnly:
+      canonicalReasonCode === "acquisition_only_not_current_debt" &&
+      !canonicalHasTrueBalance,
+    debtBalance,
+    interestRatePct,
+    amortYears,
+    annualDebtService,
+    dscr:
+      canonicalDscrStatus === "computed" &&
+      Number.isFinite(canonicalDscr) &&
+      canonicalDscr > 0
+        ? canonicalDscr
+        : Number.isFinite(fallbackCoverage.dscr) && fallbackCoverage.dscr > 0
+        ? fallbackCoverage.dscr
+        : null,
+    debtServiceSource: String(currentDebtState?.current_debt_service_source || "").trim(),
+    limitationReasonCode: canonicalReasonCode || null,
+  };
+}
 function buildCurrentDebtScorecardEntry({
   currentDebtState = null,
   mortgagePayload = null,
@@ -661,14 +751,28 @@ function toCapRatio(value) {
   if (!Number.isFinite(n) || n <= 0) return null;
   return n > 1.5 ? n / 100 : n; // treat 6.0 as 6.0% => 0.06
 }
-function buildRefiStabilityModel({ financials, t12Payload, formatValue }) {
+function buildRefiStabilityModel({
+  financials,
+  t12Payload,
+  formatValue,
+  currentDebtState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+}) {
   const f = financials && typeof financials === "object" ? financials : {};
-  const debtBalance = coerceNumber(f.refi_debt_balance);
+  const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
+    currentDebtState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    financials: f,
+    t12Payload,
+  });
+  const debtBalance = coerceNumber(canonicalRefiDebtBasis.debtBalance);
   const ltvMaxRaw = coerceNumber(f.refi_ltv_max);
   const ltvMax = Number.isFinite(ltvMaxRaw) && ltvMaxRaw > 1.5 ? ltvMaxRaw / 100 : ltvMaxRaw;
   const dscrMin = coerceNumber(f.refi_dscr_min);
-  const interestRateRaw = coerceNumber(f.refi_interest_rate);
-  const amortYears = coerceNumber(f.refi_amort_years);
+  const interestRateRaw = coerceNumber(canonicalRefiDebtBasis.interestRatePct ?? f.refi_interest_rate);
+  const amortYears = coerceNumber(canonicalRefiDebtBasis.amortYears ?? f.refi_amort_years);
   const capRateBaseRaw = coerceNumber(f.refi_cap_rate_base);
   const interestRate = toRateRatio(interestRateRaw);
   const capRateBase = toCapRatio(capRateBaseRaw);
@@ -2097,8 +2201,21 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
 
   return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
 }
-function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
+function buildScreeningRefiSufficiencyTable({
+  financials,
+  t12Payload,
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+} = {}) {
   const f = financials && typeof financials === "object" ? financials : {};
+  const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
+    currentDebtState: currentDebtAssessmentState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    financials: f,
+    t12Payload,
+  });
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
   const noiFromFinancials = coerceNumber(f.noi_base);
   const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
@@ -2120,9 +2237,9 @@ function buildScreeningRefiSufficiencyTable({ financials, t12Payload }) {
     },
     {
       label: "Current loan balance",
-      present: isPresentScalar(coerceNumber(f.refi_debt_balance)),
-      value: Number.isFinite(coerceNumber(f.refi_debt_balance))
-        ? formatCurrency(coerceNumber(f.refi_debt_balance))
+      present: isPresentScalar(coerceNumber(canonicalRefiDebtBasis.debtBalance)),
+      value: Number.isFinite(coerceNumber(canonicalRefiDebtBasis.debtBalance))
+        ? formatCurrency(coerceNumber(canonicalRefiDebtBasis.debtBalance))
         : " - ",
     },
     {
@@ -4587,19 +4704,26 @@ if (effectiveReportMode === "screening_v1") {
       ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     const rawFinancials = body?.financials || {};
+    const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
+      currentDebtState: currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      financials: rawFinancials,
+      t12Payload,
+    });
     const refiFinancials = {
       ...rawFinancials,
       refi_debt_balance:
+        canonicalRefiDebtBasis?.debtBalance ??
         rawFinancials?.refi_debt_balance ??
-        mortgagePayload?.outstanding_balance ??
         null,
       refi_interest_rate:
+        canonicalRefiDebtBasis?.interestRatePct ??
         rawFinancials?.refi_interest_rate ??
-        mortgagePayload?.interest_rate ??
         null,
       refi_amort_years:
+        canonicalRefiDebtBasis?.amortYears ??
         rawFinancials?.refi_amort_years ??
-        mortgagePayload?.amort_years ??
         null,
       refi_cap_rate_base:
         rawFinancials?.refi_cap_rate_base ??
@@ -4632,6 +4756,9 @@ if (effectiveReportMode === "screening_v1") {
         financials: refiFinancials,
         t12Payload,
         formatValue: formatCurrency,
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
       });
       const refiTier = refiStabilityResult?.tier;
       const validRefiTiers = new Set([
@@ -5795,7 +5922,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       effectiveReportMode === "screening_v1"
         ? ""
         : (
-            buildScreeningRefiSufficiencyTable({ financials, t12Payload }) +
+            buildScreeningRefiSufficiencyTable({
+              financials,
+              t12Payload,
+              currentDebtAssessmentState,
+              mortgagePayload,
+              loanTermSheetTermsPayload,
+            }) +
             buildFinancingEnvelopeGrid(
               coerceNumber(t12Payload?.net_operating_income),
               Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
@@ -6032,6 +6165,9 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         financials: refiFinancials,
         t12Payload,
         formatValue: formatCurrency,
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
       });
       const validRefiTiers = new Set([
         "Stable",
@@ -6043,7 +6179,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       canRenderRefi =
         validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
       const hasDebtButIncompleteRefiInputs =
-        Boolean(mortgagePayload) && !canRenderRefi;
+        hasVerifiedCurrentDebtBalance && !canRenderRefi;
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else if (hasDebtButIncompleteRefiInputs) {
@@ -6267,22 +6403,31 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     }
     // Build deterministic underwriting blocks from parsed supporting docs
     // Debt Capital Structure rows (from mortgage_statement_parsed)
+    const canonicalRefiDebtBasisForUnderwriting = resolveCanonicalRefiDebtBasis({
+      currentDebtState: currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      financials: refiFinancials,
+      t12Payload,
+    });
     let debtCapitalRowsHtml = "";
-    if (mortgagePayload && effectiveReportMode === "v1_core") {
+    if (effectiveReportMode === "v1_core" && canonicalRefiDebtBasisForUnderwriting.hasTrueCurrentDebtBalance) {
       const dcRows = [];
-      if (mortgagePayload.lender_name) {
+      if (mortgagePayload?.lender_name) {
         dcRows.push(`<tr><td>Lender</td><td>${escapeHtml(String(mortgagePayload.lender_name))}</td></tr>`);
       }
-      const bal = coerceNumber(mortgagePayload.outstanding_balance);
+      const bal = coerceNumber(canonicalRefiDebtBasisForUnderwriting.debtBalance);
       if (Number.isFinite(bal) && bal > 0) {
         dcRows.push(`<tr><td>Outstanding Balance</td><td>${formatCurrency(bal)}</td></tr>`);
       }
-      const ratePct = coerceNumber(mortgagePayload.interest_rate);
+      const ratePct = coerceNumber(canonicalRefiDebtBasisForUnderwriting.interestRatePct);
       if (Number.isFinite(ratePct) && ratePct > 0) {
         dcRows.push(`<tr><td>Interest Rate</td><td>${ratePct.toFixed(2)}%</td></tr>`);
       }
-      const amort = coerceNumber(mortgagePayload.amort_years);
-      const pni = coerceNumber(mortgagePayload.monthly_payment);
+      const amort = coerceNumber(canonicalRefiDebtBasisForUnderwriting.amortYears);
+      const pni = Number.isFinite(coerceNumber(canonicalRefiDebtBasisForUnderwriting.annualDebtService))
+        ? coerceNumber(canonicalRefiDebtBasisForUnderwriting.annualDebtService) / 12
+        : coerceNumber(mortgagePayload?.monthly_payment);
       if (Number.isFinite(pni) && pni > 0) {
         dcRows.push(`<tr><td>Monthly P&I</td><td>${formatCurrency(pni)}</td></tr>`);
       }
@@ -6311,12 +6456,14 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
 
     // Refi Collapse Risk Grid (3x3 DSCR sensitivity matrix)
     let refiCollapseGridHtml = "";
-    if (mortgagePayload && t12Payload && effectiveReportMode === "v1_core") {
+    if (t12Payload && effectiveReportMode === "v1_core" && canonicalRefiDebtBasisForUnderwriting.hasTrueCurrentDebtBalance) {
       const noiBase = coerceNumber(t12Payload.net_operating_income);
-      const baseRatePct = coerceNumber(mortgagePayload.interest_rate); // e.g. 4.5
-      const debtBal = coerceNumber(mortgagePayload.outstanding_balance);
-      const amortYrs = coerceNumber(mortgagePayload.amort_years) || 25;
-      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, noiBase);
+      const baseRatePct = coerceNumber(canonicalRefiDebtBasisForUnderwriting.interestRatePct); // e.g. 4.5
+      const debtBal = coerceNumber(canonicalRefiDebtBasisForUnderwriting.debtBalance);
+      const amortYrs = coerceNumber(canonicalRefiDebtBasisForUnderwriting.amortYears) || 25;
+      const currentDebtCoverage = {
+        annualDebtService: coerceNumber(canonicalRefiDebtBasisForUnderwriting.annualDebtService),
+      };
       const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const baseCapPct = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? resolvedCapPct : 5.5;
       const capSource = buildAssumptionAttributionState({
@@ -8329,6 +8476,9 @@ export const __test__ = {
   buildAcquisitionFinancingAssumptionsHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
+  resolveCanonicalRefiDebtBasis,
+  buildRefiStabilityModel,
+  buildScreeningRefiSufficiencyTable,
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
   resolveRenovationDisplayMode,

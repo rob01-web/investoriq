@@ -276,6 +276,8 @@ const loanTermOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
   mortgagePayload: null,
   loanTermSheetTermsPayload: {
     outstanding_balance: 1500000,
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
     interest_rate: 0.065,
     amortization_years: 30,
   },
@@ -288,6 +290,8 @@ const loanTermOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry(
   mortgagePayload: null,
   loanTermSheetTermsPayload: {
     outstanding_balance: 1500000,
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
     interest_rate: 0.065,
     amortization_years: 30,
   },
@@ -310,6 +314,8 @@ const loanTermOnlyDealScoreState = generatorTest.buildDealScorecardState({
   mortgagePayload: null,
   loanTermSheetTermsPayload: {
     outstanding_balance: 1500000,
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
     interest_rate: 0.065,
     amortization_years: 30,
   },
@@ -336,6 +342,110 @@ const loanTermOnlyDscrRow = loanTermOnlyDealScoreState.scoreRows.find((row) =>
 );
 assert.ok(loanTermOnlyDscrRow);
 assert.notEqual(loanTermOnlyDscrRow.pts, 0);
+
+const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
+  currentDebtState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05, -0.1],
+    stress_cap_rate_bps: [0, 50],
+    stress_rate_bps: [0, 100],
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(loanTermOnlyRefiBasis.isAcquisitionOnly, false);
+assert.ok(Number.isFinite(loanTermOnlyRefiBasis.dscr));
+const loanTermOnlyRefiModel = generatorTest.buildRefiStabilityModel({
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05, -0.1],
+    stress_cap_rate_bps: [0, 50],
+    stress_rate_bps: [0, 100],
+  },
+  currentDebtState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: { net_operating_income: 650000 },
+  formatValue: formatCurrency,
+});
+assert.ok(loanTermOnlyRefiModel?.tier);
+assert.equal(/Not Assessed|no current debt document provided/i.test(String(loanTermOnlyRefiModel?.html || "")), false);
+
+const acquisitionOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(acquisitionOnlyRefiBasis.hasTrueCurrentDebtBalance, false);
+assert.equal(acquisitionOnlyRefiBasis.isAcquisitionOnly, true);
+
+const missingRefiAssumptionSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    stress_noi_shocks: [-0.05, -0.1],
+    stress_cap_rate_bps: [0, 50],
+    stress_rate_bps: [0, 100],
+  },
+  currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.match(missingRefiAssumptionSufficiencyHtml, /Refinance cap rate/i);
+assert.match(missingRefiAssumptionSufficiencyHtml, /Missing/i);
+assert.match(missingRefiAssumptionSufficiencyHtml, /Refinance Stability Classification not produced due to insufficient refinance inputs/i);
 
 const retest9CurrentDebtState = buildCurrentDebtAssessmentState({
   mortgagePayload: {
