@@ -533,7 +533,14 @@ assert.equal(partialAcquisitionAssumptionsAction.blocks_public_sample, true);
 assert.equal(partialAcquisitionAssumptionsAction.blocks_high_value_outreach, true);
 
 const cleanGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: {
     customer_delivery_ready: true,
@@ -548,6 +555,10 @@ assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable")
 assert.equal(cleanGate.launch_path_recommendation, "customer_deliverable");
 assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
 assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
+assert.equal(cleanGate.report_publishable, true);
+assert.equal(cleanGate.report_blocked, false);
+assert.equal(Array.isArray(cleanGate.report_quality_blockers), true);
+assert.equal(cleanGate.report_quality_blockers.length, 0);
 
 const adminReviewGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -587,7 +598,14 @@ assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
 
 const rentRollGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: {
     contract_status: "warn",
     violations: [
@@ -617,7 +635,11 @@ const rentRollGate = buildDeliveryGateDecision({
 });
 assert.equal(rentRollGate.delivery_gate_status, "deliverable");
 assert.equal(rentRollGate.customer_delivery_ready, true);
-assert.equal(rentRollGate.public_sample_ready, false);
+assert.equal(rentRollGate.public_sample_ready, true);
+assert.equal(rentRollGate.high_value_outreach_ready, true);
+assert.equal(rentRollGate.report_publishable, true);
+assert.equal(rentRollGate.report_blocked, false);
+assert.equal(Array.isArray(rentRollGate.report_quality_advisories), true);
 
 const rentRollPublicOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -667,8 +689,10 @@ const rentRollPublicOnlyGate = buildDeliveryGateDecision({
 });
 assert.equal(rentRollPublicOnlyGate.delivery_gate_status, "deliverable");
 assert.equal(rentRollPublicOnlyGate.customer_delivery_ready, true);
-assert.equal(rentRollPublicOnlyGate.public_sample_ready, false);
-assert.equal(rentRollPublicOnlyGate.high_value_outreach_ready, false);
+assert.equal(rentRollPublicOnlyGate.public_sample_ready, true);
+assert.equal(rentRollPublicOnlyGate.high_value_outreach_ready, true);
+assert.equal(rentRollPublicOnlyGate.report_publishable, true);
+assert.equal(rentRollPublicOnlyGate.report_blocked, false);
 
 const renderedRentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -718,6 +742,9 @@ const renderedRentRollGate = buildDeliveryGateDecision({
 });
 assert.equal(renderedRentRollGate.delivery_gate_status, "admin_review_required");
 assert.equal(renderedRentRollGate.customer_delivery_ready, false);
+assert.equal(renderedRentRollGate.report_publishable, false);
+assert.equal(renderedRentRollGate.report_blocked, true);
+assert.equal(Array.isArray(renderedRentRollGate.report_quality_blockers), true);
 
 const managerContradictionPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -769,13 +796,45 @@ const genericContradictionAction = buildQaActionPlan({
 assert.equal(genericContradictionAction.recommended_next_step, "Review the uploaded source documents and parsed values. Confirm the correct source-backed value before regenerating.");
 
 const managerContradictionGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: managerContradictionPlan,
 });
 assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
 assert.equal(managerContradictionGate.customer_delivery_ready, true);
-assert.equal(managerContradictionGate.public_sample_ready, false);
+assert.equal(managerContradictionGate.public_sample_ready, true);
+assert.equal(managerContradictionGate.high_value_outreach_ready, true);
+assert.equal(managerContradictionGate.report_publishable, true);
+
+const advisoryOnlyGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [],
+    advisory_only_findings: ["ADVISORY_ONLY_FLAG"],
+  },
+});
+assert.equal(advisoryOnlyGate.report_publishable, true);
+assert.equal(advisoryOnlyGate.customer_delivery_ready, true);
+assert.equal(advisoryOnlyGate.public_sample_ready, true);
+assert.equal(advisoryOnlyGate.high_value_outreach_ready, true);
 
 const sourceTotalsVerificationAction = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -870,8 +929,8 @@ const reconciliationGate = buildDeliveryGateDecision({
 assert.equal(reconciliationGate.delivery_gate_status, "deliverable");
 assert.equal(reconciliationGate.customer_delivery_ready, true);
 assert.deepEqual(reconciliationGate.customer_publish_blockers, []);
-assert.equal(reconciliationGate.public_sample_ready, false);
-assert.equal(reconciliationGate.high_value_outreach_ready, false);
+assert.equal(reconciliationGate.public_sample_ready, true);
+assert.equal(reconciliationGate.high_value_outreach_ready, true);
 
 const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1247,7 +1306,7 @@ const sectionConstrainedGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(sectionConstrainedGate.delivery_gate_status, "deliverable");
-assert.equal(sectionConstrainedGate.customer_delivery_ready, true);
+assert.equal(sectionConstrainedGate.customer_delivery_ready, false);
 
 const discloseOnlySufficiencyGateBare = buildDeliveryGateDecision({
   sourceReportCoverageQa: {

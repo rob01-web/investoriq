@@ -473,10 +473,10 @@ function buildCurrentDebtScorecardEntry({
     hasDscrScore: false,
     scoreRow: {
       label: "Current Debt DSCR",
-      value: dscrNotAssessedCopy.value,
+      value: "Not modeled",
       pts: 0,
       max: 0,
-      band: dscrNotAssessedCopy.band,
+      band: "Current debt DSCR not modeled",
     },
     dscrNotAssessedCopy,
   };

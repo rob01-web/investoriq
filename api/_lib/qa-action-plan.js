@@ -1253,14 +1253,31 @@ function buildPublishEligibilitySummary({
     ? `user_needs_documents:${reasonCode || customerPublishBlockers[0] || "SOURCE_DOCUMENT_LIMITATION"}`
     : customerPublishBlockers.length > 0
     ? `customer_blocked:${customerPublishBlockers[0]}`
-    : publicSampleBlockers.length > 0 || highValueOutreachBlockers.length > 0
-    ? "customer_publish_ready_public_sample_or_outreach_blocked"
     : requiredCoreCoverageReady
-    ? "customer_publish_ready"
+    ? "customer_publish_eligible"
     : "customer_publish_not_ready";
+  const reportQualityBlockers = customerPublishBlockers;
+  const reportQualityAdvisories = uniqueCodes([
+    ...advisoryOnlyFindings,
+    ...publicSampleBlockers,
+    ...highValueOutreachBlockers,
+  ]);
+  const reportPublishable = Boolean(
+    requiredCoreCoverageReady &&
+      reportQualityBlockers.length === 0 &&
+      deliveryGateStatus === "deliverable"
+  );
 
   return {
     delivery_authority: "delivery_gate",
+    report_quality_blockers: reportQualityBlockers,
+    report_quality_advisories: reportQualityAdvisories,
+    report_publishable: reportPublishable,
+    report_blocked: !reportPublishable,
+    report_quality_decision_reason: publishDecisionReason,
+    customer_delivery_ready: reportPublishable,
+    public_sample_ready: reportPublishable,
+    high_value_outreach_ready: reportPublishable,
     customer_publish_eligible: customerPublishEligible,
     customer_publish_blockers: customerPublishBlockers,
     public_sample_blockers: publicSampleBlockers,
@@ -1268,11 +1285,15 @@ function buildPublishEligibilitySummary({
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: deliveryGateStatus,
+      report_publishable: reportPublishable,
+      report_blocked: !reportPublishable,
+      report_quality_blockers: reportQualityBlockers,
+      report_quality_advisories: reportQualityAdvisories,
       customer_publish_eligible: customerPublishEligible,
       customer_publish_blockers: customerPublishBlockers,
-      public_sample_ready: !publicSampleBlockers.length,
+      public_sample_ready: reportPublishable,
       public_sample_blockers: publicSampleBlockers,
-      high_value_outreach_ready: !highValueOutreachBlockers.length,
+      high_value_outreach_ready: reportPublishable,
       high_value_outreach_blockers: highValueOutreachBlockers,
       advisory_only_findings: advisoryOnlyFindings,
     },

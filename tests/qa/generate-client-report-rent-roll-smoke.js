@@ -383,6 +383,39 @@ const loanTermOnlyDscrRow = loanTermOnlyDealScoreState.scoreRows.find((row) =>
 );
 assert.ok(loanTermOnlyDscrRow);
 assert.notEqual(loanTermOnlyDscrRow.pts, 0);
+const harbourstoneDebtState = {
+  current_debt_dscr_status: "computed",
+  current_debt_dscr: 1.0551661722053094,
+  has_current_debt_document: true,
+  has_true_current_debt_balance: true,
+  current_debt_service_source: "source_payment",
+};
+const harbourstoneDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: harbourstoneDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: null,
+  t12Payload: { net_operating_income: 650000 },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.ok(Number.isFinite(harbourstoneDealScoreState.computedDscrForVerdict));
+assert.ok(Math.abs(harbourstoneDealScoreState.computedDscrForVerdict - 1.0551661722053094) < 0.01);
+assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(harbourstoneDealScoreState.dealScoreTableHtml), false);
+assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(harbourstoneDealScoreState.dealScoreTableHtml), false);
 
 const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   currentDebtState: loanTermOnlyCurrentDebtState,
@@ -680,8 +713,58 @@ const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEnt
 });
 assert.equal(acquisitionOnlyScorecardEntry.hasDscrScore, false);
 assert.equal(acquisitionOnlyScorecardEntry.scoreRow.label, "Current Debt DSCR");
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not assessed - no current debt document");
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not modeled");
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.band, "Current debt DSCR not modeled");
 assert.equal(acquisitionOnlyScorecardEntry.scoreRow.max, 0);
+
+const acquisitionOnlyDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      monthly_payment: 9250,
+      interest_rate: 0.0625,
+      amort_years: 25,
+    },
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: {
+    monthly_payment: 9250,
+    interest_rate: 0.0625,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: { net_operating_income: 650000 },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(acquisitionOnlyDealScoreState.dealScoreTableHtml), false);
+assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(acquisitionOnlyDealScoreState.dealScoreTableHtml), false);
 
 const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
