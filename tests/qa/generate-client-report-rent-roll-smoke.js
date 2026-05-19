@@ -28,6 +28,7 @@ assert.equal(
 );
 assert.equal(/function buildCurrentDebtScorecardEntry[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
 assert.equal(/function buildDealScorecardState[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
+assert.equal(/function render[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/i.test(reportSource), false);
 assert.equal(/if \(effectiveReportMode !== "v1_core"\)[\s\S]{0,400}buildDealScoreTable\(tables\.dealScore/.test(reportSource), false);
 assert.match(
   reportSource,
@@ -37,6 +38,10 @@ assert.match(
   reportSource,
   /const dealScoreTableHtml = effectiveReportMode === "v1_core"\s*\?\s*dealScoreState\.dealScoreTableHtml\s*:\s*""/
 );
+assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
+assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
+assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
+assert.match(reportSource, /unsupported appraisal\/market survey files are not treated as appraised value/i);
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,
