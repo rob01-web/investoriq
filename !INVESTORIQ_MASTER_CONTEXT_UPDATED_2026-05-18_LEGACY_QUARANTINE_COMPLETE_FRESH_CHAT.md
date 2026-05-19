@@ -1,3 +1,557 @@
+# May 18, 2026 Final Late-Late Update - Legacy Current-Debt Helper Quarantined / Fresh Chat Ready
+
+## Legacy helper hardening pass - Codex receipt accepted
+
+Codex completed the hardening pass for the two current-debt/refi patches already applied.
+
+Class names covered:
+```text
+CURRENT_DEBT_RENDERED_CONSUMER_DRIFT
+DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+REFINANCE_RENDERED_CONSUMER_DRIFT
+```
+
+Accepted result:
+```text
+resolveCurrentDebtCoverage(...)
+-> resolveLegacyMortgageDebtCoverageFallback(...)
+```
+
+The old helper is now explicitly named as a legacy mortgage-only fallback and includes a warning comment that it must not be used as current-debt source of truth. Canonical owner remains `currentDebtAssessmentState` from `buildCurrentDebtAssessmentState(...)`.
+
+Approved direct callers only:
+```text
+resolveCanonicalCurrentDebtScoreInputs(...)
+resolveCanonicalRefiDebtBasis(...)
+```
+
+Unauthorized direct callers found and remediated in `api/generate-client-report.js`:
+```text
+- primary pressure point DSCR path
+- executive/display DSCR path
+- underwriting risk bullets DSCR path
+- risk register DSCR path
+- exec DSCR card path
+```
+
+Those paths were routed to canonical resolver state through `resolveCanonicalRefiDebtBasis(...)` instead of direct legacy calls.
+
+Static guard added in `tests/qa/generate-client-report-rent-roll-smoke.js`:
+```text
+- source-level guard reads api/generate-client-report.js
+- asserts exactly 3 occurrences of resolveLegacyMortgageDebtCoverageFallback(
+  - 1 definition
+  - 2 approved wrapper calls
+- asserts both approved wrapper functions contain the legacy fallback call
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Decision:
+```text
+PASS.
+This is a class-level hardening patch, not just a test patch.
+The zombie mortgage-only helper is now quarantined behind approved canonical wrappers.
+```
+
+## Consumer Truth Audit recommended order - locked explicitly
+
+Keep this exact order visible for future chats. Start with the four most likely to create embarrassing report contradictions:
+
+```text
+1. Current Debt / DSCR
+2. Deal Score / Verdict / Scorecard
+3. Refinance / Debt Service / Proceeds
+4. Source Reconciliation
+```
+
+Then continue:
+
+```text
+5. Rent Roll totals / occupancy / market rent
+6. T12 EGI / OpEx / NOI / GPR
+7. Data Coverage / Document Treatment
+8. Renovation / CapEx
+9. Appraisal / cap-rate / valuation framework
+10. Property Tax
+```
+
+Current cycle status against that order:
+```text
+1. Current Debt / DSCR - patched and legacy helper quarantined.
+2. Deal Score / Verdict / Scorecard - DSCR scorecard/verdict feed patched; continue to monitor classification surfaces.
+3. Refinance / Debt Service / Proceeds - canonical refi debt basis patched and legacy helper quarantined.
+4. Source Reconciliation - audited; no patch required right now.
+5. Rent Roll totals / occupancy / market rent - patched earlier in this cycle.
+6. T12 EGI / OpEx / NOI / GPR - patched earlier in this cycle.
+7. Data Coverage / Document Treatment - still needs class patch from audit receipt.
+8. Renovation / CapEx - still needs class patch from audit receipt.
+9. Appraisal / cap-rate / valuation framework - still needs class patch from audit receipt.
+10. Property Tax - still needs class patch from audit receipt.
+```
+
+## Next patch decision for fresh chat
+
+Do not start with multiple prompts. Review status first.
+
+Recommended next class after this accepted pass:
+```text
+DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT
+```
+
+Reason:
+```text
+It is a visible trust/coverage surface and the audit found concrete stale classification paths:
+- filename contamination against metadata-first doctrine;
+- fallback copy saying classified from uploaded file names;
+- optional-support modeled-input eligibility not strict enough, especially property tax.
+```
+
+Alternative next class if Rob prefers report-financial surface before coverage wording:
+```text
+RENOVATION_CAPEX_CONSUMER_DRIFT
+```
+
+Rule:
+```text
+One Codex prompt at a time.
+Wait for Codex receipt before generating the next prompt.
+No broad tests.
+No live retest until this class-patch batch is intentionally paused or complete.
+```
+
+## Fresh chat prompt - May 18 current debt/refi legacy quarantine complete
+
+```text
+We are continuing InvestorIQ from the May 18 master context.
+
+Immediate checkpoint:
+The Consumer Truth Audit exposed rendered consumer drift after FINAL TEST 1 RETEST 2. We patched the active current-debt/refi classes and then quarantined the old legacy mortgage-only helper.
+
+Completed this cycle:
+1. CURRENT_DEBT_RENDERED_CONSUMER_DRIFT / DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+   - Added resolveCanonicalCurrentDebtScoreInputs(...).
+   - Deal Scorecard current-debt DSCR row now consumes currentDebtAssessmentState first.
+   - Loan-term-sheet-only true current debt now renders computed DSCR and does not show stale no-current-debt fallback copy.
+
+2. REFINANCE_RENDERED_CONSUMER_DRIFT
+   - Added resolveCanonicalRefiDebtBasis(...).
+   - Refi/debt-service/proceeds consumers now use canonical current-debt basis first.
+   - Mortgage-only absence no longer causes valid loan-term-sheet current debt to be omitted.
+   - Acquisition-only/proposed financing remains separate and does not feed current refi math.
+
+3. Legacy helper quarantine
+   - Renamed resolveCurrentDebtCoverage(...) to resolveLegacyMortgageDebtCoverageFallback(...).
+   - Added warning comment: LEGACY MORTGAGE-ONLY FALLBACK ONLY; canonical owner is currentDebtAssessmentState.
+   - Approved direct callers only:
+     - resolveCanonicalCurrentDebtScoreInputs(...)
+     - resolveCanonicalRefiDebtBasis(...)
+   - Unauthorized direct callers remediated:
+     - primary pressure point DSCR path
+     - executive/display DSCR path
+     - underwriting risk bullets DSCR path
+     - risk register DSCR path
+     - exec DSCR card path
+   - Static guard added to ensure only 1 definition + 2 approved wrapper calls remain.
+
+Validation passed per Codex:
+- node --check api/generate-client-report.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+Important doctrine:
+- We are not patching tests only. Production renderer paths changed. Tests lock the class.
+- Do not trust AI/Codex to choose the right path when an old helper has an authoritative name. Legacy helpers must be renamed/quarantined or deleted once no longer needed.
+- T12 + Rent Roll are mandatory core docs for both report types. If usable, report should publish; unsupported sections collapse/disclose. Manual review must remain rare.
+- Detect contradiction -> deterministically repair/replace/collapse -> rerun QA -> publish if clean.
+
+Locked Consumer Truth Audit order:
+1. Current Debt / DSCR
+2. Deal Score / Verdict / Scorecard
+3. Refinance / Debt Service / Proceeds
+4. Source Reconciliation
+5. Rent Roll totals / occupancy / market rent
+6. T12 EGI / OpEx / NOI / GPR
+7. Data Coverage / Document Treatment
+8. Renovation / CapEx
+9. Appraisal / cap-rate / valuation framework
+10. Property Tax
+
+Current status:
+- 1, 2, 3 are patched/hardened.
+- 4 was audited with no patch required right now.
+- 5 and 6 were already patched earlier in this cycle.
+- 7, 8, 9, 10 remain pending from audit receipts.
+
+First action in this chat:
+Do not produce multiple prompts. Review the next class decision. Recommended next class is DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT, unless Rob chooses RENOVATION_CAPEX_CONSUMER_DRIFT first.
+
+No broad tests. No live retest yet. No scheduler changes. No DocRaptor production flip. No API routes. One Codex prompt at a time only.
+```
+
+---
+
+# May 18, 2026 Late-Late Update - Current Debt / Refi Consumer Patches, Legacy Path Retirement, Next Audit Paths
+
+## Why this update matters
+During the Consumer Truth Audit sequence, Rob correctly identified a deeper architectural risk:
+
+```text
+It is not enough to add a new canonical path while leaving an old authoritative-sounding legacy path available for future Codex/system patches to reuse.
+```
+
+The immediate example is the old helper:
+
+```text
+resolveCurrentDebtCoverage(...)
+```
+
+That helper is mortgage-only / local fallback logic. It must not continue to look like the source of truth for current debt. Canonical current-debt truth is:
+
+```text
+currentDebtAssessmentState from buildCurrentDebtAssessmentState(...)
+```
+
+The next hardening task is therefore not another report patch. It is legacy-path quarantine so stale consumer paths cannot quietly return.
+
+## Work completed today before this update
+
+### Patch 1 - CURRENT_DEBT_RENDERED_CONSUMER_DRIFT / DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+Codex patched the visible Retest 2 failure class.
+
+Class names:
+```text
+CURRENT_DEBT_RENDERED_CONSUMER_DRIFT
+DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+```
+
+Canonical source:
+```text
+currentDebtAssessmentState from buildCurrentDebtAssessmentState(...)
+```
+
+Key fields:
+```text
+current_debt_dscr_status
+current_debt_dscr
+current_debt_annual_debt_service
+current_debt_service_source
+```
+
+Runtime code changed:
+- added `resolveCanonicalCurrentDebtScoreInputs(...)` in `api/generate-client-report.js`;
+- patched `buildCurrentDebtScorecardEntry(...)`;
+- patched Deal Scorecard DSCR / verdict feed path in `buildDealScorecardState(...)`;
+- canonical DSCR now wins over the old mortgage-only fallback when canonical state is computed.
+
+Expected behavior now:
+```text
+If currentDebtAssessmentState.current_debt_dscr_status === "computed" and DSCR is finite:
+  Deal Scorecard renders computed DSCR.
+  Score row does not say no current debt document.
+  Row is not 0/10 merely because mortgagePayload is absent.
+  computedDscrForVerdict receives canonical DSCR.
+```
+
+Regression added:
+- loan-term-sheet-only true current debt;
+- no mortgage payload;
+- outstanding/current balance + rate + amortization;
+- finite T12 NOI;
+- asserts canonical DSCR computes;
+- asserts Deal Scorecard renders computed DSCR;
+- asserts stale fallback copy does not appear.
+
+Validation reported:
+```text
+node --check api/generate-client-report.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Important interpretation:
+```text
+This was not only a test patch.
+Production renderer behavior changed.
+The regression is proof that the class cannot silently return in that exact lane.
+```
+
+### Patch 2 - REFINANCE_RENDERED_CONSUMER_DRIFT
+Codex then patched the adjacent refinance/debt-service/proceeds consumer drift class.
+
+Class name:
+```text
+REFINANCE_RENDERED_CONSUMER_DRIFT
+```
+
+Canonical source:
+```text
+currentDebtAssessmentState from buildCurrentDebtAssessmentState(...)
+```
+
+Key fields:
+```text
+has_true_current_debt_balance
+current_debt_dscr_status
+current_debt_dscr
+current_debt_balance
+current_debt_annual_debt_service
+current_debt_service_source
+current_debt_limitation_reason_code
+```
+
+Runtime code changed:
+- added `resolveCanonicalRefiDebtBasis(...)` in `api/generate-client-report.js`;
+- patched `buildRefiStabilityModel(...)` to consume canonical debt basis first;
+- patched `buildScreeningRefiSufficiencyTable(...)` to consume canonical current loan balance first;
+- patched `refiFinancials` assembly to seed debt/rate/amortization from canonical basis first;
+- patched underwriting debt/refi render paths including debt capital structure row source and refi collapse grid source;
+- patched refi “has debt but incomplete assumptions” gating to use canonical current-debt presence, not mortgage presence.
+
+Expected behavior now:
+```text
+If canonical current debt is valid/computed:
+  refi/debt-service/proceeds consumers use canonical current debt basis first.
+
+If current debt is acquisition-only/proposed-financing-only:
+  refi remains Not Assessed.
+  proposed acquisition debt is not treated as current debt.
+
+If refinance assumptions are missing:
+  sufficiency table lists missing inputs.
+  no new customer-delivery blocker is introduced solely for missing optional refinance assumptions.
+```
+
+Regression added:
+- loan-term-sheet-only true current debt + valid refinance assumptions;
+- acquisition-only loan terms stay separate;
+- missing refinance assumptions show clean insufficiency messaging.
+
+Validation reported:
+```text
+node --check api/generate-client-report.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## Legacy path still to retire / quarantine
+Rob correctly challenged the remaining architecture risk:
+
+```text
+What stops the system, Codex, or a future patch from accidentally using resolveCurrentDebtCoverage(...) again as current-debt truth?
+```
+
+Answer:
+```text
+Nothing permanent yet.
+```
+
+Therefore the old helper must be renamed/quarantined.
+
+Legacy path to retire:
+```text
+resolveCurrentDebtCoverage(...)
+```
+
+Required replacement name:
+```text
+resolveLegacyMortgageDebtCoverageFallback(...)
+```
+
+Required comment above helper:
+```text
+LEGACY MORTGAGE-ONLY FALLBACK ONLY.
+Do not use as source of truth for current debt.
+Canonical owner is currentDebtAssessmentState from buildCurrentDebtAssessmentState(...).
+```
+
+Approved direct callers only:
+```text
+resolveCanonicalCurrentDebtScoreInputs(...)
+resolveCanonicalRefiDebtBasis(...)
+```
+
+Rule:
+```text
+No renderer section, QA section, scorecard section, refi section, data-coverage section, or future consumer may call the legacy mortgage fallback directly.
+```
+
+Static guard desired:
+```text
+A focused regression/static check should fail if resolveLegacyMortgageDebtCoverageFallback(...) appears outside approved canonical wrapper/resolver functions.
+```
+
+Behavior requirement:
+```text
+Behavior changed: no.
+Architecture clarity changed: yes.
+```
+
+## Current active Codex task
+Rob has already sent Codex the legacy quarantine prompt.
+
+Current task:
+```text
+Rename resolveCurrentDebtCoverage(...) to resolveLegacyMortgageDebtCoverageFallback(...), update only approved wrapper call sites, audit for unauthorized direct callers, add focused static guard if practical, and report behavior changed yes/no.
+```
+
+Do not produce another Codex prompt until Codex returns this receipt.
+
+Receipt expected:
+```text
+CLASS NAME:
+LEGACY PATH RENAMED:
+APPROVED CALLERS:
+UNAUTHORIZED CALLERS FOUND:
+STATIC GUARD ADDED:
+BEHAVIOR CHANGED: yes/no
+VALIDATION:
+```
+
+## Updated Consumer Truth Audit status board
+
+### Completed / patched in this cycle
+```text
+1. CURRENT_DEBT_RENDERED_CONSUMER_DRIFT / DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+   Status: patched; awaiting legacy helper quarantine hardening.
+
+2. REFINANCE_RENDERED_CONSUMER_DRIFT
+   Status: patched; awaiting legacy helper quarantine hardening.
+
+3. RENT_ROLL_RENDERED_CONSUMER_DRIFT
+   Status: patched earlier in this cycle.
+   Key fix: occupancy note no longer falls back to raw rentRollPayload occupancy when canonical computed occupancy is intentionally suppressed.
+
+4. T12_RENDERED_CONSUMER_DRIFT
+   Status: patched earlier in this cycle.
+   Key fix: GPR consumers now use canonical gross_potential_rent ?? gross_scheduled_rent resolver.
+
+5. SOURCE_RECONCILIATION_CONSUMER_DRIFT
+   Status: audited; no patch required right now.
+   Reason: current renderer and QA consumers appear to respect buildSourceReconciliationState / render-state guard.
+```
+
+### Still requires patch/audit follow-through before launch confidence
+```text
+6. RENOVATION_CAPEX_CONSUMER_DRIFT
+   Risk: high.
+   Known stale path: renderer can still treat financials.renovation_* as equivalent to validated renovation_parsed truth in some branches.
+   Required direction: structured renovation truth must depend on validated renovation_parsed only; financials/filename support may acknowledge but not model ROI/rent lift/payback/timing.
+
+7. DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT
+   Risk: high.
+   Known stale paths:
+   - classification still can blend metadata + filename text;
+   - empty fallback copy still says classified from uploaded file names;
+   - property-tax modeled-input classification may not require validated quantitative readiness.
+   Required direction: semantic metadata first, filename last only when metadata absent; remove filename-biased customer copy; modeled optional support requires validated quantitative readiness.
+
+8. VALUATION_FRAMEWORK_CONSUMER_DRIFT
+   Risk: high narrative/compliance, medium analytical.
+   Known stale paths:
+   - appraisalPayload selection may use newest appraisal artifact without usable filtering;
+   - legacy Intrinsic Value vocabulary still exists in active/comment/QA/sample surfaces;
+   - purchase price / purchase assumptions must never become appraised value.
+   Required direction: usable appraisal artifact selection, framework labels only unless validated appraisal support exists, no appraisal-like claims from purchase assumptions.
+
+9. PROPERTY_TAX_CONSUMER_DRIFT
+   Risk: medium.
+   Known stale paths:
+   - has_annual_tax can be finite-number only and may treat year-like values as usable;
+   - Document Treatment can mark property tax as Modeled Inputs without verified annual tax.
+   Required direction: validated-positive non-year-like annual tax only; missing/invalid property tax remains non-blocking and limited-use.
+
+10. DEAL_SCORE_VERDICT_CONSUMER_DRIFT remaining adjacent risks
+   Status: immediate current-debt scorecard row patched.
+   Still monitor cover/capital-risk/executive fallback branches so all classification surfaces share canonical display verdict state.
+```
+
+## Next path order after current legacy quarantine receipt
+Do not run broad tests. Do not give multiple Codex prompts unless Rob asks.
+
+Recommended next order:
+```text
+0. Review Codex legacy-path quarantine receipt.
+1. If clean, commit current debt + refi + legacy quarantine batch.
+2. Then patch RENOVATION_CAPEX_CONSUMER_DRIFT.
+3. Then patch DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT.
+4. Then address VALUATION_FRAMEWORK_CONSUMER_DRIFT.
+5. Then address PROPERTY_TAX_CONSUMER_DRIFT.
+6. Only after these class patches, decide whether to rerun FINAL TEST 1 again.
+```
+
+Reason:
+```text
+Current debt/refi was the active Retest 2 blocker.
+Renovation and Data Coverage are the next highest risk because they can create visible trust failures.
+Valuation and Property Tax follow because they are important but more contained.
+```
+
+## Process rule re-locked
+Rob clarified the operating discipline again:
+
+```text
+One Codex prompt at a time.
+Wait for Codex's receipt.
+Review file-truth and receipt together.
+Then decide the next move.
+Only provide multiple prompts if Rob explicitly asks for them.
+```
+
+Assistant must not flood Rob with prompt chains while Codex is already working.
+
+## Fresh chat prompt - May 18 current-debt/refi quarantine continuation
+
+```text
+We are continuing InvestorIQ from the May 18 Consumer Truth Audit and current-debt/refi patch context.
+
+Immediate context:
+Today we patched two major consumer drift classes:
+
+1. CURRENT_DEBT_RENDERED_CONSUMER_DRIFT / DEAL_SCORE_VERDICT_CONSUMER_DRIFT
+   - added resolveCanonicalCurrentDebtScoreInputs(...)
+   - patched buildCurrentDebtScorecardEntry(...)
+   - patched buildDealScorecardState(...) DSCR/verdict feed
+   - regression added for loan-term-sheet-only true current debt with no mortgage payload
+
+2. REFINANCE_RENDERED_CONSUMER_DRIFT
+   - added resolveCanonicalRefiDebtBasis(...)
+   - patched buildRefiStabilityModel(...)
+   - patched buildScreeningRefiSufficiencyTable(...)
+   - patched refiFinancials assembly and debt/refi render paths
+   - regressions added for loan-term-sheet-only refi, acquisition-only separation, and missing refi assumptions
+
+Critical architecture concern:
+Both patches still depended on old helper resolveCurrentDebtCoverage(...), whose name sounds authoritative even though it is mortgage-only fallback logic.
+
+Rob correctly insisted that leaving this zombie path available is unsafe because future Codex/system work could accidentally use it as current-debt truth again.
+
+Current active Codex task:
+Rename/quarantine resolveCurrentDebtCoverage(...) to resolveLegacyMortgageDebtCoverageFallback(...), add a loud legacy-only comment, update only approved canonical wrapper call sites, audit for unauthorized callers, and add a focused static guard if practical.
+
+Expected approved callers:
+- resolveCanonicalCurrentDebtScoreInputs(...)
+- resolveCanonicalRefiDebtBasis(...)
+
+First action in this chat:
+Review Codex's legacy quarantine receipt when Rob provides it.
+Do not write another Codex prompt before reading that receipt.
+Do not run broad tests.
+Do not start a new patch class until this legacy path is safely quarantined and either committed or explicitly rejected.
+
+After the quarantine receipt is accepted:
+- commit the current-debt/refi/quarantine batch;
+- next highest-risk paths are Renovation/CapEx consumer drift and Data Coverage/Document Treatment drift;
+- continue one Codex prompt at a time.
+```
+
+---
+
 # May 18, 2026 Late Update - Consumer Truth Audit Doctrine / Patch-Class Standard / Source-of-Truth AI Guardrail
 
 ## Why this update matters

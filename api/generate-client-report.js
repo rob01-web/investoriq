@@ -1489,6 +1489,7 @@ function buildDocumentTreatmentSummaryHtml({
   currentDebtAssessmentState = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
+  propertyTaxPayload = null,
 } = {}) {
   const files = Array.isArray(documentSources)
     ? documentSources
@@ -1522,17 +1523,23 @@ function buildDocumentTreatmentSummaryHtml({
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
   const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
+  const hasValidatedModeledPropertyTax = (() => {
+    const annualTax = coerceNumber(propertyTaxPayload?.annual_tax);
+    if (!Number.isFinite(annualTax) || annualTax <= 0) return false;
+    if (annualTax >= 1900 && annualTax <= 2100) return false;
+    if (annualTax < 1000) return false;
+    return true;
+  })();
   const classifyRow = (row) => {
-    const sourceBasis = hasAnyText(
+    const hasSemanticMetadata = hasAnyText(
       row.semantic_doc_role,
       row.semantic_doc_display_label,
       row.display_doc_type,
       row.doc_type,
       row.parse_status,
       row.parse_error
-    )
-      ? "metadata"
-      : "filename_fallback";
+    );
+    const sourceBasis = hasSemanticMetadata ? "metadata" : "filename_fallback";
     const metadataText = [
       row.semantic_doc_role,
       row.semantic_doc_display_label,
@@ -1544,20 +1551,20 @@ function buildDocumentTreatmentSummaryHtml({
       .map(normalizedText)
       .join(" | ");
     const fileText = normalizedText(row.original_filename);
-    const text = `${metadataText} | ${fileText}`;
-    const isParsed = /parsed/.test(text);
-    const hasWarnings = /parsed_with_warnings|warning/.test(text);
-    const isUnclassified = /unclassified|supporting_documents_unclassified|doc_type_unclassified/.test(text);
+    const isParsed = /parsed/.test(metadataText);
+    const hasWarnings = /parsed_with_warnings|warning/.test(metadataText);
+    const isUnclassified = /unclassified|supporting_documents_unclassified|doc_type_unclassified/.test(metadataText);
     const filenameOnly = sourceBasis === "filename_fallback";
+    const semanticText = hasSemanticMetadata ? metadataText : "";
 
-    const supportedOperating = /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(text);
-    const supportedRentRoll = /(^|\b)(rent roll|rent_roll)(\b|$)/.test(text);
-    const supportedMortgage = /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(text);
-    const supportedPropertyTax = /(^|\b)(property tax|property_tax)(\b|$)/.test(text);
-    const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(text);
-    const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(text);
-    const appraisalLike = /(^|\b)(appraisal|market survey|market_survey)(\b|$)/.test(text);
-    const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(text);
+    const supportedOperating = /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(semanticText);
+    const supportedRentRoll = /(^|\b)(rent roll|rent_roll)(\b|$)/.test(semanticText);
+    const supportedMortgage = /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(semanticText);
+    const supportedPropertyTax = /(^|\b)(property tax|property_tax)(\b|$)/.test(semanticText);
+    const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
+    const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
+    const appraisalLike = /(^|\b)(appraisal|market survey|market_survey)(\b|$)/.test(semanticText);
+    const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(semanticText);
 
     if (supportedOperating) {
       return {
@@ -1595,8 +1602,8 @@ function buildDocumentTreatmentSummaryHtml({
     }
     if (supportedPropertyTax) {
       return {
-        category: isParsed && !hasWarnings && !isUnclassified ? "Modeled Inputs" : "Displayed / Limited Use",
-        note: isParsed && !hasWarnings && !isUnclassified
+        category: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax ? "Modeled Inputs" : "Displayed / Limited Use",
+        note: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax
           ? "Structured property tax input"
           : "Property tax support is displayed only; not treated as a primary modeled input.",
         reason_code: "property_tax_support",
@@ -1746,7 +1753,7 @@ function buildDocumentTreatmentSummaryHtml({
     return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
   };
 
-  return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${section("Modeled Inputs", modeled, "No modeled inputs were classified from the uploaded file names.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from the uploaded file names.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
+  return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
 }
 
 function buildHistoricalCapexDisplayCopy({
@@ -2328,6 +2335,7 @@ function buildScreeningDataCoverageSummary({
   sectionEligibility = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
+  propertyTaxPayload = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const t12Checks = [
@@ -2487,6 +2495,7 @@ function buildScreeningDataCoverageSummary({
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
       renovationDisplayMode,
+      propertyTaxPayload,
     });
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>`;
   }
@@ -2510,6 +2519,7 @@ function buildScreeningDataCoverageSummary({
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
       renovationDisplayMode,
+      propertyTaxPayload,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
@@ -6916,6 +6926,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       sectionEligibility,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
       renovationDisplayMode,
+      propertyTaxPayload,
     });
     finalHtml = replaceAll(
       finalHtml,

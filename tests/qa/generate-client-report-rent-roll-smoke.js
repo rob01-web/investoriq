@@ -766,6 +766,23 @@ assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
 assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
+assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
+
+const metadataFirstOverFilenameHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Rent Roll.xlsx",
+      doc_type: "supporting_documents_unclassified",
+      display_doc_type: "Supporting Document",
+      semantic_doc_role: "supporting_documents_unclassified",
+      semantic_doc_display_label: "supporting_documents_unclassified",
+      parse_status: "parsed_with_warnings",
+      parse_error: "doc_type_unclassified",
+    },
+  ],
+});
+assert.match(metadataFirstOverFilenameHtml, /Listed but Not Quantitatively Modeled/i);
+assert.equal(/Structured rent roll input/i.test(metadataFirstOverFilenameHtml), false);
 
 const budgetOnlyDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -862,6 +879,43 @@ const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 });
 assert.match(filenameFallbackHtml, /Modeled Inputs/i);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
+assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
+
+const propertyTaxUnvalidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "PropertyTaxNotice.pdf",
+      doc_type: "property_tax",
+      display_doc_type: "Property Tax",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 2024,
+  },
+});
+assert.match(propertyTaxUnvalidatedTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.equal(/Structured property tax input/i.test(propertyTaxUnvalidatedTreatmentHtml), false);
+
+const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "PropertyTaxNotice.pdf",
+      doc_type: "property_tax",
+      display_doc_type: "Property Tax",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 18950,
+  },
+});
+assert.match(propertyTaxValidatedTreatmentHtml, /Modeled Inputs/i);
+assert.match(propertyTaxValidatedTreatmentHtml, /Structured property tax input/i);
 
 const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
@@ -919,6 +973,41 @@ const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCover
 });
 assert.match(liveCurrentDebtModeledCoverageHtml, /Structured current debt input/i);
 assert.match(liveCurrentDebtModeledCoverageHtml, /Modeled Inputs/i);
+const reconciliationDisclosureCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "screening_v1",
+  sourceReconciliationState: {
+    status: "source_reconciliation_required",
+    publishability_bucket: "disclose_only_publishable",
+    variance_pct: 0.06,
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+});
+assert.match(reconciliationDisclosureCoverageHtml, /SOURCE RECONCILIATION DISCLOSURE/i);
+assert.equal(/Fully Verified/i.test(reconciliationDisclosureCoverageHtml), false);
 
 const liveCurrentDebtLimitedCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

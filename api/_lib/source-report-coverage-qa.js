@@ -347,7 +347,10 @@ function buildArtifactInventory(artifacts) {
     },
     property_tax_parsed: {
       present: Boolean(propertyTax),
-      has_annual_tax: hasPositive(propertyTax?.annual_tax),
+      has_annual_tax: (() => {
+        const annualTax = Number(propertyTax?.annual_tax);
+        return Number.isFinite(annualTax) && annualTax > 0 && annualTax >= 1000 && !(annualTax >= 1900 && annualTax <= 2100);
+      })(),
       ...supportTaxonomyFor(latestArtifact(artifacts, "property_tax_parsed"), "property_tax"),
     },
   };
