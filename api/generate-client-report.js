@@ -429,6 +429,29 @@ function buildCurrentDebtScorecardEntry({
   loanTermSheetTermsPayload = null,
   t12Payload = null,
 } = {}) {
+  const canonicalStatus = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase();
+  const canonicalDscr = coerceNumber(currentDebtState?.current_debt_dscr);
+  const canonicalAnnualDebtService = coerceNumber(currentDebtState?.current_debt_annual_debt_service);
+  const canonicalHasSourcePayment = String(currentDebtState?.current_debt_service_source || "").trim().toLowerCase() === "source_payment";
+  if (canonicalStatus === "computed" && Number.isFinite(canonicalDscr) && canonicalDscr > 0) {
+    return {
+      currentDebtCoverage: {
+        dscr: canonicalDscr,
+        annualDebtService: Number.isFinite(canonicalAnnualDebtService) && canonicalAnnualDebtService > 0
+          ? canonicalAnnualDebtService
+          : null,
+        hasSourcePayment: canonicalHasSourcePayment,
+      },
+      hasDscrScore: true,
+      scoreRow: {
+        label: canonicalHasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
+        value: formatMultiple(canonicalDscr, 2),
+        pts: canonicalDscr > 1.35 ? 10 : canonicalDscr >= 1.25 ? 7 : 3,
+        max: 10,
+        band: canonicalDscr > 1.35 ? "Above 1.35x" : canonicalDscr >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
+      },
+    };
+  }
   const { currentDebtCoverage } = resolveCanonicalCurrentDebtScoreInputs({
     currentDebtState,
     mortgagePayload,
@@ -460,7 +483,7 @@ function buildCurrentDebtScorecardEntry({
       label: "Current Debt DSCR",
       value: dscrNotAssessedCopy.value,
       pts: 0,
-      max: 10,
+      max: 0,
       band: dscrNotAssessedCopy.band,
     },
     dscrNotAssessedCopy,
@@ -559,8 +582,6 @@ function buildDealScorecardState({
     scoreRows.push(currentDebtScorecardEntry.scoreRow);
     hasDscrScore = true;
   } else {
-    totalPoints += 0;
-    maxPoints += 10;
     scoreRows.push(currentDebtScorecardEntry.scoreRow);
   }
 
@@ -584,12 +605,19 @@ function buildDealScorecardState({
     sourceReconciliationState,
   });
   const rows = scoreRows.map((r) =>
+    {
+      const scoreDisplay = Number.isFinite(Number(r.max)) && Number(r.max) > 0
+        ? `${r.pts}/${r.max}`
+        : "N/A";
+      return (
     `<tr>` +
     `<td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.label)}</td>` +
     `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(r.value)}</td>` +
     `<td style="padding:4px 8px;border:1px solid #E5E7EB;color:#3F5E84;">${escapeHtml(r.band)}</td>` +
-    `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${r.pts}/${r.max}</td>` +
+    `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:700;">${scoreDisplay}</td>` +
     `</tr>`
+      );
+    }
   ).join("");
   const sourceReconciliationConstrained = Boolean(
     buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required

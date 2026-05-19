@@ -326,6 +326,8 @@ assert.equal(loanTermOnlyScorecardEntry.hasDscrScore, true);
 assert.match(loanTermOnlyScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.value, "Not assessed - no current debt document");
 assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.value, "No current debt document provided");
+assert.ok(Number.isFinite(loanTermOnlyScorecardEntry.scoreRow.pts));
+assert.equal(loanTermOnlyScorecardEntry.scoreRow.max, 10);
 assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.pts, 0);
 const loanTermOnlyDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -601,10 +603,11 @@ const constrainedDealScoreState = generatorTest.buildDealScorecardState({
 });
 assert.equal(constrainedDealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
 assert.equal(constrainedDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
-assert.equal(constrainedDealScoreState.score, 78);
+assert.equal(constrainedDealScoreState.score, 94);
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /Current debt is not assessed/i);
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /The score should not be read as refinance-ready or unconstrained/i);
+assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(constrainedDealScoreState.dealScoreTableHtml), false);
 
 const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   currentDebtState: buildCurrentDebtAssessmentState({
@@ -641,6 +644,7 @@ const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEnt
 assert.equal(acquisitionOnlyScorecardEntry.hasDscrScore, false);
 assert.equal(acquisitionOnlyScorecardEntry.scoreRow.label, "Current Debt DSCR");
 assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not assessed - no current debt document");
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow.max, 0);
 
 const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

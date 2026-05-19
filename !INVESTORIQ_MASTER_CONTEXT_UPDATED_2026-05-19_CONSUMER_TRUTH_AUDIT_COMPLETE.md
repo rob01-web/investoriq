@@ -1,3 +1,388 @@
+# May 19, 2026 Final Update - Consumer Truth Audit 10/10 Complete / Ready for Clean Underwriting Retest
+
+## Executive checkpoint
+
+The InvestorIQ Consumer Truth Audit 10-path batch is now complete and committed.
+
+Locked order completed:
+```text
+1. Current Debt / DSCR
+2. Deal Score / Verdict / Scorecard
+3. Refinance / Debt Service / Proceeds
+4. Source Reconciliation
+5. Rent Roll totals / occupancy / market rent
+6. T12 EGI / OpEx / NOI / GPR
+7. Data Coverage / Document Treatment
+8. Renovation / CapEx
+9. Appraisal / cap-rate / valuation framework
+10. Property Tax
+```
+
+Decision:
+```text
+PASS.
+The 10-path Consumer Truth Audit batch is complete.
+Do not start another Codex patch class unless the next real report retest exposes a specific failed class.
+```
+
+## Final status board
+
+```text
+1. Current Debt / DSCR - PATCHED; legacy helper quarantined.
+2. Deal Score / Verdict / Scorecard - PATCHED for DSCR/verdict feed; adjacent surfaces monitored.
+3. Refinance / Debt Service / Proceeds - PATCHED; canonical refi debt basis now used.
+4. Source Reconciliation - AUDITED; no patch required at this point.
+5. Rent Roll totals / occupancy / market rent - PATCHED earlier in this cycle.
+6. T12 EGI / OpEx / NOI / GPR - PATCHED earlier in this cycle.
+7. Data Coverage / Document Treatment - PATCHED and committed; filename-only Modeled Inputs loophole closed.
+8. Renovation / CapEx - PATCHED and committed; modeled renovation outputs now require validated renovation payload state.
+9. Appraisal / cap-rate / valuation framework - PATCHED and committed; valuation language now separates framework assumptions, purchase assumptions, unsupported appraisal/market survey files, and appraised value.
+10. Property Tax - PATCHED and committed; validated annual tax is required before property tax can become modeled input.
+```
+
+## Codex conservation rule remains active
+
+Rob is preserving Codex usage until reset.
+
+Operating rule remains:
+```text
+Use micro-prompts only.
+One Codex prompt at a time.
+Wait for Codex receipt before suggesting the next prompt.
+No broad audit essays unless absolutely necessary.
+No broad tests.
+No smoke-test theatre.
+No broad repo rewrites.
+No Codex patch unless the next test exposes a specific failed class.
+```
+
+Required receipt style remains:
+```text
+Return SHORT FORM RECEIPT ONLY.
+Max 3-5 patch bullets.
+No rationale essays.
+No code restatement unless anchor mismatch occurred.
+Optimize for token conservation.
+```
+
+## Path 7 - DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT complete
+
+Files changed:
+```text
+api/generate-client-report.js
+api/_lib/source-report-coverage-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Accepted behavior:
+```text
+Document Treatment Summary uses structured semantic metadata first.
+Filename fallback is last resort only.
+Filename-only evidence cannot produce Modeled Inputs.
+Unsupported/unclassified support docs remain listed for auditability but are not quantitatively modeled.
+Data Coverage avoids Fully Verified wording when source reconciliation disclosure or source-limited sections apply.
+```
+
+Filename-only fallback behavior now:
+```text
+Filename-only T12 -> Displayed / Limited Use, not Modeled Inputs.
+Filename-only Rent Roll -> Displayed / Limited Use, not Modeled Inputs.
+Filename-only Property Tax -> Displayed / Limited Use, not Modeled Inputs.
+Filename-only Debt -> Displayed / Limited Use, not Modeled Inputs.
+Filename-only recognized support docs -> Displayed / Limited Use or Listed but Not Quantitatively Modeled.
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/source-report-coverage-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Commit status:
+```text
+Committed and pushed.
+Commit message: Fix data coverage document treatment drift
+```
+
+## Path 8 - RENOVATION_CAPEX_CONSUMER_DRIFT complete
+
+Files changed:
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Accepted behavior:
+```text
+Renovation mode resolution now derives budget/forward-looking signals from validated renovationPayload only.
+Loose financials.renovation_* fields no longer promote a report into modeled renovation truth.
+Forward-looking rent lift / ROI classification requires document-backed renovation payload state.
+Historical-only CapEx remains context only.
+Budget/scope-only renovation remains budget/scope only with no ROI, payback, rent lift, timing, NOI impact, or value impact.
+```
+
+Regression added:
+```text
+financials-only renovation hints cannot produce forward-looking/modelable renovation mode.
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Commit status:
+```text
+Committed and pushed.
+Commit message: Fix renovation capex consumer drift
+```
+
+Remaining acceptable risks:
+```text
+sections.renovationInterpretation may still be used for display copy in forward-looking mode, but mode gating is now payload-validated.
+Historical-signal detection may still read descriptive text/metadata for context classification only, not modeled output.
+```
+
+## Path 9 - APPRAISAL_CAP_RATE_VALUATION_DRIFT complete
+
+Files changed:
+```text
+api/generate-client-report.js
+```
+
+Accepted behavior:
+```text
+Purchase price is explicitly not appraised value.
+Unsupported appraisal / market survey files are not treated as appraised value or quantitative valuation truth.
+Standardized cap-rate benchmarks are framed as non-appraisal valuation context.
+Proposed acquisition debt sizing disclosure states purchase assumptions do not represent appraised value.
+Scenario valuation sensitivity separates reported-NOI basis from standardized framework assumptions and states it is not an appraisal.
+Document-derived cap-rate labeling remains separate from standardized framework assumptions.
+No BUY / SELL / HOLD language introduced.
+```
+
+Tiny cleanup deferred into next prompt and then completed:
+```text
+Internal comment “Cap rate sensitivity on intrinsic value” renamed to “Cap rate framework sensitivity.”
+No behavior change.
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+git diff --check
+```
+
+Commit status:
+```text
+Committed and pushed.
+Commit message: Fix appraisal cap rate valuation drift
+```
+
+Remaining acceptable risks:
+```text
+Other narrative blocks may still use broad document-backed phrasing that should be watched in the next PDF retest.
+Upstream appraisal-artifact metadata quality remains important.
+No extra regression was added because this was wording-only and Codex conservation is active.
+```
+
+## Path 10 - PROPERTY_TAX_CONSUMER_DRIFT complete
+
+Files changed:
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Accepted behavior:
+```text
+Property-tax validation is centralized.
+Property-tax modeled input classification requires validated annual tax.
+Invalid/missing/year-like property tax stays limited-use/listed context and non-blocking.
+Material mismatch between validated property-tax annual value and T12 property-tax expense line now creates a non-blocking QA-only flag.
+Missing property tax support does not fail the report.
+```
+
+Validated annual tax rule:
+```text
+annual_tax must be finite
+annual_tax must be positive
+annual_tax must be >= 1000
+annual_tax must not be year-like between 1900 and 2100
+```
+
+Focused smoke assertions added:
+```text
+canonical property-tax coverage is true for valid annual tax.
+canonical property-tax coverage is false for year-like tax such as 2024.
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Commit status:
+```text
+Committed and pushed.
+Commit message: Fix property tax consumer drift
+```
+
+Remaining acceptable risks:
+```text
+T12 property-tax mismatch check depends on expense-line label matching conventions and may miss uncommon labels.
+Mismatch detection is QA-flag only; no new end-user disclosure text was added.
+Other future modules must reuse the centralized validator if they add tax-related surfaces.
+```
+
+## Legacy current-debt fallback quarantine remains locked
+
+The old helper is still quarantined:
+```text
+resolveCurrentDebtCoverage(...)
+-> resolveLegacyMortgageDebtCoverageFallback(...)
+```
+
+Approved direct callers only:
+```text
+resolveCanonicalCurrentDebtScoreInputs(...)
+resolveCanonicalRefiDebtBasis(...)
+```
+
+Static guard remains required:
+```text
+tests/qa/generate-client-report-rent-roll-smoke.js asserts exactly 3 occurrences:
+- 1 definition
+- 2 approved wrapper calls
+```
+
+Rule:
+```text
+No renderer, QA, scorecard, refi, data coverage, action-plan, or future consumer may call the legacy mortgage fallback directly.
+```
+
+## What not to do next
+
+Do not immediately start another patch series.
+Do not ask Codex for another broad repo-wide audit.
+Do not run broad tests as theatre.
+Do not flip DocRaptor production mode yet.
+Do not disable GitHub worker yet.
+Do not change Supabase Cron cadence.
+Do not add API routes.
+Do not rotate secrets in the middle of report validation unless there is an active security incident.
+
+## Recommended next action
+
+Next action should be a real validation, not another patch:
+```text
+Run one clean Full Underwriting regeneration/retest.
+```
+
+Purpose:
+```text
+Prove the 10-path Consumer Truth Audit did not break the live report surface and actually removed the known consumer-drift classes.
+```
+
+Recommended inspection checklist for the generated PDF/report artifacts:
+```text
+1. Did it publish?
+2. Data Coverage / Document Treatment Summary:
+   - no filename-only Modeled Inputs;
+   - unsupported files listed but not quantitatively modeled;
+   - no “classified from uploaded file names” copy;
+   - no Fully Verified wording if reconciliation/source limitation applies.
+3. Current Debt / DSCR:
+   - canonical DSCR renders when true current debt exists;
+   - clean Not Assessed limitation when no true current debt exists;
+   - no stale “no current debt document” contradiction when canonical DSCR exists.
+4. Refinance / debt service / proceeds:
+   - canonical current-debt basis used;
+   - acquisition-only debt remains separate;
+   - missing refi inputs collapse/disclose.
+5. Deal Score / Verdict / Scorecard:
+   - visible verdict surfaces agree;
+   - DSCR/source-reconciliation caps are consistent;
+   - score is not read as refinance-ready when constrained.
+6. Renovation / CapEx:
+   - no ROI/payback/rent lift/timing/NOI/value impact unless validated renovation payload supports it;
+   - budget-only renders budget/scope only;
+   - historical-only renders context only.
+7. Appraisal / cap-rate / valuation:
+   - purchase price not treated as appraised value;
+   - unsupported appraisal/market survey files not quantitatively modeled;
+   - framework sensitivity does not sound like formal appraisal.
+8. Property Tax:
+   - year-like/invalid tax not modeled;
+   - valid annual tax modeled only when source-supported;
+   - missing tax remains non-blocking.
+9. Public-language sweep:
+   - no AI/vendor/internal QA wording;
+   - no BUY/SELL/HOLD;
+   - no DATA NOT AVAILABLE spam;
+   - no mojibake/template tokens/undefined/NaN.
+10. Delivery hierarchy:
+   - customer delivery blockers reflect true customer blockers only;
+   - public/high-value blockers remain separate.
+```
+
+## Fresh chat prompt - Consumer Truth Audit complete / next retest
+
+```text
+We are continuing InvestorIQ from the May 19 master context.
+
+Immediate checkpoint:
+The Consumer Truth Audit 10-path batch is complete and committed.
+
+Completed order:
+1. Current Debt / DSCR - patched; legacy helper quarantined.
+2. Deal Score / Verdict / Scorecard - patched for DSCR/verdict feed.
+3. Refinance / Debt Service / Proceeds - patched; canonical refi basis used.
+4. Source Reconciliation - audited; no patch required right now.
+5. Rent Roll totals / occupancy / market rent - patched earlier this cycle.
+6. T12 EGI / OpEx / NOI / GPR - patched earlier this cycle.
+7. Data Coverage / Document Treatment - patched; filename-only Modeled Inputs loophole closed.
+8. Renovation / CapEx - patched; modeled renovation outputs require validated renovation payload state.
+9. Appraisal / cap-rate / valuation framework - patched; purchase price/framework assumptions cannot read as appraised value.
+10. Property Tax - patched; validated annual tax required before modeled tax classification.
+
+Codex conservation remains active:
+- micro-prompts only;
+- short receipts only;
+- no broad tests;
+- no broad repo audits;
+- no new Codex patch unless the next retest exposes a specific failed class.
+
+Current doctrine:
+- T12 + Rent Roll are core.
+- Optional support should collapse/disclose, not fail customer delivery.
+- Public/high-value outreach blockers remain separate from private customer delivery.
+- Every report must meet the same elite institutional bar; Ken/public readiness is exposure suitability, not a higher quality tier.
+
+Next action:
+Do not patch first.
+Run one clean Full Underwriting regeneration/retest and inspect the PDF/report artifacts against the 10-path checklist.
+
+Do not switch DocRaptor production mode yet.
+Do not disable GitHub worker yet.
+Do not change Supabase Cron cadence.
+Do not add API routes.
+Do not rotate secrets during this report validation step.
+
+If the retest passes, next likely launch-readiness step is DocRaptor production-mode verification and clean public/Ken sample generation.
+If the retest fails, classify the exact failed class before producing a tiny Codex prompt.
+```
+
+---
+
 # May 19, 2026 Update - Data Coverage / Document Treatment Drift Fixed + Filename-Only Modeled Input Loophole Closed
 
 ## Codex conservation rule re-locked
