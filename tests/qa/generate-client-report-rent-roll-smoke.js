@@ -28,6 +28,15 @@ assert.match(
 );
 assert.equal(/function buildCurrentDebtScorecardEntry[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
 assert.equal(/function buildDealScorecardState[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
+assert.equal(/if \(effectiveReportMode !== "v1_core"\)[\s\S]{0,400}buildDealScoreTable\(tables\.dealScore/.test(reportSource), false);
+assert.match(
+  reportSource,
+  /if \(effectiveReportMode !== "v1_core"\)[\s\S]{0,500}\{\{DEAL_SCORE_TABLE\}\}", ""/
+);
+assert.match(
+  reportSource,
+  /const dealScoreTableHtml = effectiveReportMode === "v1_core"\s*\?\s*dealScoreState\.dealScoreTableHtml\s*:\s*""/
+);
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,

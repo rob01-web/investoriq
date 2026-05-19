@@ -4498,11 +4498,9 @@ if (effectiveReportMode === "screening_v1") {
       buildCapitalPlanTable(tables.capitalPlan || [])
     );
     if (effectiveReportMode !== "v1_core") {
-      finalHtml = replaceAll(
-        finalHtml,
-        "{{DEAL_SCORE_TABLE}}",
-        buildDealScoreTable(tables.dealScore || [], tables.totalDealScore)
-      );
+      // LEGACY BYPASS REMOVED: do not source DEAL_SCORE_TABLE from tables.dealScore.
+      // Canonical owner is buildDealScorecardState in v1_core path.
+      finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_TABLE}}", "");
       // These tokens are only populated in v1_core; clear for screening
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INLINE_CHART}}", "");
       finalHtml = replaceAll(finalHtml, "{{DEAL_SCORE_INTERPRETATION_HTML}}", "");
