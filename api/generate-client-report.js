@@ -228,7 +228,7 @@ function resolveSafeAnnualRentTotal({
   return null;
 }
 // LEGACY_DO_NOT_USE fallback.
-// Allowed callers: resolveCanonicalCurrentDebtScoreInputs and resolveCanonicalRefiDebtBasis only.
+// Allowed caller: resolveCanonicalCurrentDebtScoreInputs only.
 // Never call directly from renderer/scorecard/table/report section paths.
 function resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(mortgagePayload, t12Noi) {
   const balance = coerceNumber(mortgagePayload?.outstanding_balance);
@@ -340,10 +340,6 @@ function resolveCanonicalRefiDebtBasis({
   financials = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
-    mortgagePayload,
-    coerceNumber(t12Payload?.net_operating_income)
-  );
   const f = financials && typeof financials === "object" ? financials : {};
   const canonicalHasTrueBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
   const canonicalReasonCode = String(
@@ -398,8 +394,6 @@ function resolveCanonicalRefiDebtBasis({
     Number.isFinite(canonicalAnnualDebtService) &&
     canonicalAnnualDebtService > 0
       ? canonicalAnnualDebtService
-      : Number.isFinite(fallbackCoverage.annualDebtService) && fallbackCoverage.annualDebtService > 0
-      ? fallbackCoverage.annualDebtService
       : null;
   return {
     hasTrueCurrentDebtBalance:
@@ -416,8 +410,6 @@ function resolveCanonicalRefiDebtBasis({
       Number.isFinite(canonicalDscr) &&
       canonicalDscr > 0
         ? canonicalDscr
-        : Number.isFinite(fallbackCoverage.dscr) && fallbackCoverage.dscr > 0
-        ? fallbackCoverage.dscr
         : null,
     debtServiceSource: String(currentDebtState?.current_debt_service_source || "").trim(),
     limitationReasonCode: canonicalReasonCode || null,

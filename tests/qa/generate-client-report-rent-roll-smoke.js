@@ -17,14 +17,14 @@ const { buildReportContractQa } = await import("../../api/_lib/report-contract-q
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
-assert.equal(legacyFallbackCallCount, 3);
+assert.equal(legacyFallbackCallCount, 2);
 assert.match(
   reportSource,
   /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
 );
-assert.match(
-  reportSource,
-  /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
+assert.equal(
+  /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource),
+  false
 );
 assert.equal(/function buildCurrentDebtScorecardEntry[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
 assert.equal(/function buildDealScorecardState[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
@@ -456,6 +456,27 @@ const acquisitionOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   t12Payload: { net_operating_income: 650000 },
 });
 assert.equal(acquisitionOnlyRefiBasis.hasTrueCurrentDebtBalance, false);
+assert.equal(acquisitionOnlyRefiBasis.annualDebtService, null);
+assert.equal(acquisitionOnlyRefiBasis.dscr, null);
+
+const mortgageOnlyNonCanonicalRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "missing_current_debt_support",
+  },
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amort_years: 30,
+    monthly_payment: 9500,
+  },
+  loanTermSheetTermsPayload: null,
+  financials: {},
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(mortgageOnlyNonCanonicalRefiBasis.annualDebtService, null);
+assert.equal(mortgageOnlyNonCanonicalRefiBasis.dscr, null);
 assert.equal(acquisitionOnlyRefiBasis.isAcquisitionOnly, true);
 
 const missingRefiAssumptionSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
