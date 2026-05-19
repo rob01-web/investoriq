@@ -198,6 +198,17 @@ const rendererCanonicalState = generatorTest.buildRendererCanonicalState({
 assert.equal(rendererCanonicalState.currentDebtAssessmentState?.current_debt_dscr_status, "computed");
 assert.equal(rendererCanonicalState.sourceReconciliationState?.status, "aligned");
 assert.ok(rendererCanonicalState.sectionEligibility);
+assert.equal(rendererCanonicalState.sourceReportCoverageQa?.artifact_inventory?.property_tax_parsed?.has_annual_tax, true);
+
+const invalidPropertyTaxCanonicalState = generatorTest.buildRendererCanonicalState({
+  t12Payload: {
+    net_operating_income: 650000,
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+  },
+  propertyTaxPayload: { annual_tax: 2024 },
+});
+assert.equal(invalidPropertyTaxCanonicalState.sourceReportCoverageQa?.artifact_inventory?.property_tax_parsed?.has_annual_tax, false);
 
 const acquisitionOnlyCanonicalState = generatorTest.buildRendererCanonicalState({
   mortgagePayload: {

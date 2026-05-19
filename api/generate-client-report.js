@@ -1523,13 +1523,7 @@ function buildDocumentTreatmentSummaryHtml({
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
   const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
-  const hasValidatedModeledPropertyTax = (() => {
-    const annualTax = coerceNumber(propertyTaxPayload?.annual_tax);
-    if (!Number.isFinite(annualTax) || annualTax <= 0) return false;
-    if (annualTax >= 1900 && annualTax <= 2100) return false;
-    if (annualTax < 1000) return false;
-    return true;
-  })();
+  const hasValidatedModeledPropertyTax = isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
   const classifyRow = (row) => {
     const hasSemanticMetadata = hasAnyText(
       row.semantic_doc_role,
@@ -1933,6 +1927,14 @@ function buildFrameworkSensitivityDisplayCopy() {
     dcf_framework_note:
       "This is a framework sensitivity, not an appraisal, and does not rely on unsupported appraisal or market survey files.",
   };
+}
+
+function isValidAnnualPropertyTaxValue(value) {
+  const annualTax = coerceNumber(value);
+  if (!Number.isFinite(annualTax) || annualTax <= 0) return false;
+  if (annualTax >= 1900 && annualTax <= 2100) return false;
+  if (annualTax < 1000) return false;
+  return true;
 }
 
 function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
@@ -3844,7 +3846,7 @@ function buildRendererCanonicalState({
       },
       property_tax_parsed: {
         present: Boolean(propertyTaxPayload),
-        has_annual_tax: Number.isFinite(coerceNumber(propertyTaxPayload?.annual_tax)),
+        has_annual_tax: isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax),
       },
     },
     rendered_sections: {},
@@ -6577,7 +6579,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         tableHtml += `</tr>`;
         tableHtml += `</tbody></table>`;
         tableHtml += `<p class="small" style="margin-top:6px;">Basis: T12 NOI = ${formatCurrency(noiYear0)} | Annual NOI growth: 3.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Discount rate: 8.0% (${formatAssumptionAttributionLabel("standardized_framework")}) | Exit cap: ${formatCapPercentExact(exitCapPct)} (${exitCapSourceLabel}) | ${dcfDisplayCopy.dcf_framework_note}</p>`;
-        // Cap rate sensitivity on intrinsic value
+        // Cap rate framework sensitivity
         const noi5dcf = noiYear0 * Math.pow(1 + GROWTH, 5);
         const capRatesDcf = [4.5, 5.0, 5.5, 6.0, 6.5];
         const capRatesDcfRows = capRatesDcf.some((cap) => Math.abs(cap - exitCapPct) < 0.01)
@@ -7429,10 +7431,8 @@ try {
   }
 
   const annualTax = coerceNumber(propertyTaxPayload?.annual_tax);
-  if (
-    Number.isFinite(annualTax) &&
-    ((annualTax >= 1900 && annualTax <= 2100) || annualTax < 1000)
-  ) {
+  const hasValidatedAnnualPropertyTax = isValidAnnualPropertyTaxValue(annualTax);
+  if (Number.isFinite(annualTax) && !hasValidatedAnnualPropertyTax) {
     qaFlags.push({
       code: "PROPERTY_TAX_AMOUNT_IMPLAUSIBLE",
       severity: "medium",
@@ -7443,6 +7443,36 @@ try {
       },
       admin_check: "Confirm the property tax parser did not capture a tax year instead of the annual tax amount.",
     });
+  }
+  if (hasValidatedAnnualPropertyTax) {
+    const t12ExpenseLines = Array.isArray(t12Payload?.expense_lines) ? t12Payload.expense_lines : [];
+    const t12PropertyTaxLine = t12ExpenseLines.find((line) => {
+      const label = String(line?.label || line?.name || "").trim().toLowerCase();
+      if (!label) return false;
+      if (!/(property tax|real estate tax|municipal tax|\bre taxes\b)/i.test(label)) return false;
+      if (/total|subtotal/i.test(label)) return false;
+      const amount = coerceNumber(line?.amount ?? line?.value ?? line?.annual_amount);
+      return Number.isFinite(amount) && amount > 0;
+    });
+    const t12PropertyTaxAmount = coerceNumber(
+      t12PropertyTaxLine?.amount ?? t12PropertyTaxLine?.value ?? t12PropertyTaxLine?.annual_amount
+    );
+    if (Number.isFinite(t12PropertyTaxAmount) && t12PropertyTaxAmount > 0) {
+      const variancePct = Math.abs(annualTax - t12PropertyTaxAmount) / Math.max(annualTax, t12PropertyTaxAmount);
+      if (variancePct >= 0.1 && Math.abs(annualTax - t12PropertyTaxAmount) >= 1000) {
+        qaFlags.push({
+          code: "PROPERTY_TAX_T12_MISMATCH",
+          severity: "medium",
+          message: "Property tax parsed annual value and T12 property-tax line appear materially inconsistent.",
+          evidence: {
+            parsed_annual_tax: annualTax,
+            t12_property_tax_line_amount: t12PropertyTaxAmount,
+            original_filename: propertyTaxPayload?.original_filename || null,
+          },
+          admin_check: "Review property-tax bill and T12 tax line mapping; disclose the mismatch before relying on tax-sensitive outputs.",
+        });
+      }
+    }
   }
 
   const dscrAssessedFromDebtRows = /<td>DSCR \(T12 NOI\)<\/td><td>[0-9.]+x<\/td>/i.test(htmlString);
