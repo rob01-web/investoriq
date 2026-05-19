@@ -1,3 +1,129 @@
+# May 19, 2026 Late-May Addendum - Repo-Wide Publication Blocker Authority Investigation and Patch Order
+
+## Why this addendum exists
+
+Rob correctly paused report-specific patching (including 124 Richmond-only thinking) and required a repo-wide authority investigation of publication, blocking, review routing, failure mapping, and entitlement restore paths.
+
+## Locked publication doctrine (must remain canonical)
+
+- InvestorIQ must publish 99.999% of reports where required core docs are usable.
+- Whole-report blockers only:
+  1. Required core doc missing.
+  2. Required core doc unreadable/unparseable.
+  3. Required core doc has no usable financial/rent structure.
+  4. Required core doc effectively empty/sparse (for example one random number only).
+  5. Required core docs violently contradict beyond safe disclosure.
+  6. True runtime/system failure prevents generation/storage.
+- Everything else publishes with affected sections fail-closed/collapsed/disclosed.
+- Screening publishes if usable T12 + usable Rent Roll exist.
+- Full Underwriting publishes if usable T12 + usable Rent Roll + at least one usable supporting doc exist.
+- Missing optional debt/refi/renovation/appraisal/tax/occupancy/status/totals/market-rent fields must not block whole-report publication.
+- Optional gaps fail-close affected sections only, with transparent disclosure.
+- No quality tiers:
+  - no Ken Dunn quality
+  - no public-sample quality
+  - no private-customer quality
+  - no regular-customer quality
+- Property names/addresses/filenames/display names containing test/sample/final/screening/underwriting/clean/messy/QA must not block, downgrade, sanitize, or affect delivery authority.
+
+## Investigation scope and files inspected
+
+- `api/admin-run-worker.js`
+- `api/generate-client-report.js`
+- `api/_lib/qa-action-plan.js`
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/qa-fix-routing.js`
+- `api/_lib/qa-manager-review.js`
+- `api/_lib/qa-director-review.js`
+- `api/_lib/source-package-qa.js`
+- `api/_lib/validator-diagnostics-rollup.js`
+- `api/parse/parse-doc.js` status-mapping touchpoints
+- focused QA tests
+
+## Publication lifecycle map (repo-wide)
+
+- upload/parse
+- worker extracting gate
+- rendering stage
+- `POST /api/generate-client-report`
+- QA artifacts generation
+- delivery gate decision
+- PDF/report storage if deliverable
+- worker status publish/failure/entitlement handling
+
+## Root findings (repo-wide)
+
+1. Worker typed-gate handling bug
+- 200 typed gate responses with `delivery_gate_status=user_needs_documents` or `admin_review_required` and no `reportId` can be treated as generator failure.
+- This causes `report_generation_failed` / `REPORT_GENERATION_FAILED` / `entitlement_restored` despite structured gate output.
+- This is lifecycle-contract breakage, not a single-report bug.
+
+2. Rent-roll core sufficiency overblocking
+- `buildRentRollSufficiencyState` / `rent_roll_core_structure_missing` currently treats occupancy + annual_in_place + total_units as hard core.
+- This can block publication even when unit rows, total_units, unit_mix, and current-rent structure exist.
+- Missing occupancy/status/totals should fail-close occupancy-dependent sections, not whole report.
+
+3. Parallel publication authority
+- Worker pre-gates, generator reducer, QA artifacts, source coverage, and delivery gate can still behave as separate kill switches.
+- Advisory/public metadata still coexists alongside customer-publish fields.
+- Blocker logic duplication across files increases drift and whack-a-mole.
+
+4. Status taxonomy inconsistency
+- `failed` is still used in paths where typed `needs_documents`/gate semantics should apply.
+- Missing structured core artifacts can become `failed + entitlement_restored` instead of typed document-needs handling.
+
+5. Canonical blocker cleanup still required
+- `t12_core_structure_missing`: keep whole-report blocker.
+- `rent_roll_core_structure_missing`: refine (currently overbroad).
+- `t12_noi_equation_mismatch`: keep when severe.
+- Hard customer-facing contradiction/system-contract codes: keep.
+- Required-source missing flags: keep for true core missing/unusable only.
+- Public/outreach-only codes (`DOCRAPTOR_NOT_PRODUCTION_MODE`, etc.): metadata/advisory only.
+
+## Agreed patch order (narrow and staged)
+
+### Patch 1 - Worker typed-gate handling
+
+- File: `api/admin-run-worker.js`
+- Treat `200 + delivery_gate_status=user_needs_documents/admin_review_required` as typed outcome, never `REPORT_GENERATION_FAILED`.
+- Typed gate response with no `reportId` must not auto-fail generation.
+- Regression: typed 200/no reportId must not emit `report_generation_failed`, `REPORT_GENERATION_FAILED`, or `entitlement_restored`.
+
+### Patch 2 - Rent-roll core sufficiency refinement
+
+- File: `api/_lib/report-surface-contracts.js` (+ focused tests)
+- Rent roll core-usable when credible unit rows, total_units (or derivable count), current/in-place rent structure, and unit mix (or derivable mix) are present.
+- Missing explicit occupancy/status/totals must not auto-trigger whole-report `rent_roll_core_structure_missing`.
+- Occupancy-dependent metrics collapse/neutralize/disclose if occupancy cannot be safely computed.
+- Do not fabricate occupancy/status/totals.
+- Preserve fail-closed behavior for truly empty/unreadable/nonsensical rent rolls.
+
+### Patch 3 - later (not bundled with Patch 1/2)
+
+- Canonical blocker registry cleanup.
+- Authority leakage reduction.
+- Broader worker pre-gate/status taxonomy cleanup.
+
+## Current decision lock
+
+- Before new live retest, patch only Patch 1 + Patch 2 with tight guardrails.
+- Do not patch 124 Richmond by name.
+- Do not change Supabase Cron cadence.
+- Do not disable GitHub worker.
+- Do not flip DocRaptor production mode.
+- Do not add new API routes.
+- Do not broad-refactor.
+- Do not run broad tests.
+
+## Fresh next-step handoff
+
+After this master-context update is committed, next Codex task should be:
+
+`PATCH_WORKER_TYPED_GATE_AND_RENT_ROLL_CORE_SUFFICIENCY_ONLY`
+
+---
 # May 19, 2026 Late Update - DSCR Canonical Wiring Patch Receipt / Screening Overblock Found / Fresh Chat Ready
 
 ## Immediate checkpoint

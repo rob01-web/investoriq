@@ -782,4 +782,92 @@ if (t12NoDetailResult.core_input_sufficiency_state?.publishability_bucket !== "d
   process.exit(1);
 }
 
+const rentRollNoOccupancyStillUsable = buildSourceReportCoverageQa({
+  jobId: "rent-roll-no-occupancy-still-usable-smoke",
+  userId: "user-smoke",
+  propertyName: "Core Usable Rent Roll",
+  reportType: "screening",
+  reportTier: 1,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "CoreUsable_T12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "CoreUsable_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        gross_potential_rent: 210000,
+        effective_gross_income: 198000,
+        total_operating_expenses: 92000,
+        net_operating_income: 106000,
+        income_lines: [{ label: "Rent", amount: 198000 }],
+        expense_lines: [{ label: "Taxes", amount: 30000 }],
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 12,
+        occupancy: null,
+        totals: null,
+        units: Array.from({ length: 12 }, (_, index) => ({
+          unit: String(index + 1),
+          current_rent: 1200 + index,
+          status: null,
+        })),
+      },
+    },
+  ],
+  html: "<html><body><h2>Screening</h2></body></html>",
+});
+
+if (rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state?.reason_code === "rent_roll_core_structure_missing") {
+  console.error("Rent roll with credible unit rows and in-place rent should not be marked core-structure-missing solely due to occupancy/status/totals gaps.");
+  console.error("Actual rent roll state:", rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state);
+  process.exit(1);
+}
+if (rentRollNoOccupancyStillUsable.core_input_sufficiency_state?.publishability_bucket === "user_needs_documents") {
+  console.error("Core-input sufficiency should remain publishable when T12 and rent roll core structure are usable.");
+  console.error("Actual core-input state:", rentRollNoOccupancyStillUsable.core_input_sufficiency_state);
+  process.exit(1);
+}
+
+const rentRollTrulyUnusable = buildSourceReportCoverageQa({
+  jobId: "rent-roll-truly-unusable-smoke",
+  userId: "user-smoke",
+  propertyName: "Unusable Rent Roll",
+  reportType: "screening",
+  reportTier: 1,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "Unusable_T12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "Unusable_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 198000,
+        total_operating_expenses: 92000,
+        net_operating_income: 106000,
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: null,
+        occupancy: null,
+        totals: null,
+        units: [],
+      },
+    },
+  ],
+  html: "<html><body><h2>Screening</h2></body></html>",
+});
+
+if (rentRollTrulyUnusable.rent_roll_sufficiency_state?.reason_code !== "rent_roll_core_structure_missing") {
+  console.error("Truly unusable rent roll should still fail closed as core-structure-missing.");
+  console.error("Actual rent roll state:", rentRollTrulyUnusable.rent_roll_sufficiency_state);
+  process.exit(1);
+}
+
 console.log("source-report-coverage-qa smoke PASS");

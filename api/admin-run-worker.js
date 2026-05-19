@@ -2326,7 +2326,7 @@ export default async function handler(req, res) {
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
                 const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
-                if (deliveryGateStatus === 'admin_review_required') {
+                if (deliveryGateStatus === 'admin_review_required' || deliveryGateStatus === 'user_needs_documents') {
                   reportId = reportData?.reportId || null;
                   storagePath = reportData?.storagePath || null;
                 } else if (!reportData?.reportId) {

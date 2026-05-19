@@ -565,7 +565,7 @@ export function buildRentRollSufficiencyState({
   computedRentRoll = null,
   rentRollPayload = null,
 } = {}) {
-  const totalUnits = coerceNumber(
+  const totalUnitsRaw = coerceNumber(
     computedRentRoll?.total_units ??
       rentRollPayload?.total_units ??
       rentRollPayload?.totals?.total_units
@@ -602,6 +602,15 @@ export function buildRentRollSufficiencyState({
     : Array.isArray(rentRollPayload?.unit_mix)
     ? rentRollPayload.unit_mix
     : [];
+  const derivableUnitCount = unitRows.reduce((sum, row) => {
+    const rowCount = coerceNumber(row?.count);
+    return sum + (Number.isFinite(rowCount) && rowCount > 0 ? rowCount : 1);
+  }, 0);
+  const totalUnits = Number.isFinite(totalUnitsRaw) && totalUnitsRaw > 0
+    ? totalUnitsRaw
+    : derivableUnitCount > 0
+    ? derivableUnitCount
+    : null;
   const hasUnitMix = Array.isArray(rentRollPayload?.unit_mix) && rentRollPayload.unit_mix.length > 0;
   const hasLeaseDates = unitRows.some((row) =>
     Boolean(row?.lease_start || row?.lease_end || row?.lease_start_date || row?.lease_end_date || row?.expiration_date)
@@ -625,7 +634,21 @@ export function buildRentRollSufficiencyState({
     : Number.isFinite(occupancyFromRows)
     ? occupancyFromRows
     : null;
-  const hasCoreStructure =
+  const annualInPlaceFromRows = unitRows.reduce((sum, row) => {
+    const rent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
+    const rowCount = coerceNumber(row?.count);
+    const multiplier = Number.isFinite(rowCount) && rowCount > 0 ? rowCount : 1;
+    return Number.isFinite(rent) && rent > 0 ? sum + (rent * multiplier * 12) : sum;
+  }, 0);
+  if (!Number.isFinite(annualInPlaceRent) || annualInPlaceRent <= 0) {
+    annualInPlaceRent = Number.isFinite(annualInPlaceFromRows) && annualInPlaceFromRows > 0
+      ? annualInPlaceFromRows
+      : null;
+  }
+  const hasCredibleUnitRows = unitRows.length > 0 && unitRows.some((row) =>
+    Number.isFinite(coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent))
+  );
+  const hasSummaryCoreSignals =
     Number.isFinite(totalUnits) &&
     totalUnits > 0 &&
     Number.isFinite(annualInPlaceRent) &&
@@ -633,10 +656,17 @@ export function buildRentRollSufficiencyState({
     Number.isFinite(derivedOccupancy) &&
     derivedOccupancy >= 0 &&
     derivedOccupancy <= 1;
+  const hasUnitMixOrDerivable = hasUnitMix || hasCredibleUnitRows || summaryRowDetected || hasSummaryCoreSignals;
+  const hasCoreStructure =
+    Number.isFinite(totalUnits) &&
+    totalUnits > 0 &&
+    Number.isFinite(annualInPlaceRent) &&
+    annualInPlaceRent > 0 &&
+    hasUnitMixOrDerivable;
   const missingInputs = [];
   if (!Number.isFinite(totalUnits) || totalUnits <= 0) missingInputs.push("total_units");
   if (!Number.isFinite(annualInPlaceRent) || annualInPlaceRent <= 0) missingInputs.push("annual_in_place_rent");
-  if (!Number.isFinite(derivedOccupancy) || derivedOccupancy < 0 || derivedOccupancy > 1) missingInputs.push("occupancy");
+  if (!hasUnitMixOrDerivable) missingInputs.push("unit_mix_or_derivable_rows");
   const hasOptionalDetail = hasUnitMix || hasMarketRent || hasLeaseDates || hasSquareFootage || summaryRowDetected || unitRows.length > 0;
   let publishabilityBucket = "user_needs_documents";
   let status = "insufficient_inputs";
@@ -646,6 +676,12 @@ export function buildRentRollSufficiencyState({
   if (!hasCoreStructure) {
     publishabilityBucket = "user_needs_documents";
     reasonCode = "rent_roll_core_structure_missing";
+  } else if (!Number.isFinite(derivedOccupancy) || derivedOccupancy < 0 || derivedOccupancy > 1) {
+    publishabilityBucket = "section_constrained_publishable";
+    status = "validated";
+    reasonCode = "rent_roll_occupancy_not_modeled";
+    customerDeliveryImpact = "none";
+    publicOutreachImpact = "block_until_review";
   } else if (summaryRowDetected || !hasOptionalDetail) {
     publishabilityBucket = "section_constrained_publishable";
     status = "validated";
@@ -665,10 +701,11 @@ export function buildRentRollSufficiencyState({
     reasonCode,
     customerDeliveryImpact,
     publicOutreachImpact,
-    requiredInputs: ["total_units", "annual_in_place_rent", "occupancy"],
+    requiredInputs: ["total_units", "annual_in_place_rent", "unit_mix_or_derivable_rows"],
     presentInputs: [
       Number.isFinite(totalUnits) && totalUnits > 0 ? "total_units" : null,
       Number.isFinite(annualInPlaceRent) && annualInPlaceRent > 0 ? "annual_in_place_rent" : null,
+      hasUnitMixOrDerivable ? "unit_mix_or_derivable_rows" : null,
       Number.isFinite(derivedOccupancy) && derivedOccupancy >= 0 && derivedOccupancy <= 1 ? "occupancy" : null,
       hasUnitMix ? "unit_mix" : null,
       hasMarketRent ? "market_rent" : null,
@@ -684,6 +721,7 @@ export function buildRentRollSufficiencyState({
       total_units: totalUnits,
       annual_in_place_rent: annualInPlaceRent,
       occupancy: derivedOccupancy,
+      has_unit_mix_or_derivable_rows: hasUnitMixOrDerivable,
       optional_detail_present: hasOptionalDetail,
       summary_row_detected: summaryRowDetected,
       unit_row_count: unitRows.length,
