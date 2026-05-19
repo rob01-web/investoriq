@@ -18,4 +18,17 @@ assert.equal(
   false
 );
 
+const typedGateAnchor = workerSource.indexOf("const typedGateWithoutReportId");
+assert.notEqual(typedGateAnchor, -1);
+const reportEventAnchor = workerSource.indexOf("const reportEventErr", typedGateAnchor);
+assert.notEqual(reportEventAnchor, -1);
+const typedGateWindow = workerSource.slice(typedGateAnchor, reportEventAnchor);
+assert.match(typedGateWindow, /deliveryGateStatus === 'user_needs_documents'/);
+assert.match(typedGateWindow, /from_status:\s*'rendering'/);
+assert.match(typedGateWindow, /to_status:\s*'needs_documents'/);
+assert.match(typedGateWindow, /deliveryGateStatus === 'admin_review_required'/);
+assert.match(typedGateWindow, /to_status:\s*'publishing'/);
+assert.match(typedGateWindow, /'delivery_gate_decision'/);
+assert.equal(/to_status:\s*'pdf_generating'/.test(typedGateWindow), false);
+
 console.log("admin-run-worker-gate smoke PASS");

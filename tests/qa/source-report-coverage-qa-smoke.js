@@ -831,6 +831,52 @@ if (rentRollNoOccupancyStillUsable.core_input_sufficiency_state?.publishability_
   console.error("Actual core-input state:", rentRollNoOccupancyStillUsable.core_input_sufficiency_state);
   process.exit(1);
 }
+if (rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state?.evidence?.occupancy_basis !== "row_positive_rent") {
+  console.error("Expected row-derived positive-rent occupancy basis for no-explicit-occupancy case.");
+  console.error("Actual rent roll evidence:", rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state?.evidence);
+  process.exit(1);
+}
+if (rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state?.reason_code !== "rent_roll_occupancy_not_modeled") {
+  console.error("Expected occupancy to remain not-modeled (section constrained) for row-positive-rent-only basis.");
+  console.error("Actual rent roll state:", rentRollNoOccupancyStillUsable.rent_roll_sufficiency_state);
+  process.exit(1);
+}
+
+const rentRollExplicitOccupancy = buildSourceReportCoverageQa({
+  jobId: "rent-roll-explicit-occupancy-smoke",
+  userId: "user-smoke",
+  propertyName: "Explicit Occupancy Rent Roll",
+  reportType: "screening",
+  reportTier: 1,
+  uploadedFiles: [
+    { id: "t12-1", original_filename: "ExplicitOcc_T12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "rr-1", original_filename: "ExplicitOcc_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 198000,
+        total_operating_expenses: 92000,
+        net_operating_income: 106000,
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 12,
+        totals: { total_units: 12, occupancy: 0.92, in_place_rent_annual: 174000, summary_row_detected: true },
+      },
+    },
+  ],
+  html: "<html><body><h2>Screening</h2></body></html>",
+});
+
+if (rentRollExplicitOccupancy.rent_roll_sufficiency_state?.evidence?.occupancy_basis !== "explicit_summary") {
+  console.error("Expected explicit-summary occupancy basis when summary occupancy is provided.");
+  console.error("Actual rent roll evidence:", rentRollExplicitOccupancy.rent_roll_sufficiency_state?.evidence);
+  process.exit(1);
+}
 
 const rentRollTrulyUnusable = buildSourceReportCoverageQa({
   jobId: "rent-roll-truly-unusable-smoke",

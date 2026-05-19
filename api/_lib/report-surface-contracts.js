@@ -621,18 +621,36 @@ export function buildRentRollSufficiencyState({
   const hasMarketRent = Number.isFinite(
     coerceNumber(computedRentRoll?.total_market_annual ?? rentRollPayload?.totals?.market_rent_annual)
   ) || unitRows.some((row) => Number.isFinite(coerceNumber(row?.market_rent)));
-  const occupancyFromRows = unitRows.length > 0
+  const statusRowsCount = unitRows.reduce((count, row) => {
+    const statusText = normalizeText(row?.status ?? row?.lease_status ?? row?.unit_status ?? "");
+    return statusText ? count + 1 : count;
+  }, 0);
+  const occupancyFromRowStatus = unitRows.length > 0 && statusRowsCount > 0
     ? unitRows.reduce((occupied, row) => {
         const statusText = normalizeText(row?.status ?? row?.lease_status ?? row?.unit_status ?? "");
-        if (/\bvacan(?:t|cy)\b/.test(statusText)) return occupied;
+        if (!statusText || /\bvacan(?:t|cy)\b/.test(statusText)) return occupied;
+        return occupied + 1;
+      }, 0) / unitRows.length
+    : null;
+  const occupancyFromPositiveRent = unitRows.length > 0
+    ? unitRows.reduce((occupied, row) => {
         const rent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
         return Number.isFinite(rent) && rent > 0 ? occupied + 1 : occupied;
       }, 0) / unitRows.length
     : null;
-  const derivedOccupancy = Number.isFinite(summaryOccupancy)
+  const occupancyBasis = Number.isFinite(summaryOccupancy)
+    ? "explicit_summary"
+    : Number.isFinite(occupancyFromRowStatus)
+    ? "row_status"
+    : Number.isFinite(occupancyFromPositiveRent)
+    ? "row_positive_rent"
+    : "not_modeled";
+  const derivedOccupancy = occupancyBasis === "explicit_summary"
     ? summaryOccupancy
-    : Number.isFinite(occupancyFromRows)
-    ? occupancyFromRows
+    : occupancyBasis === "row_status"
+    ? occupancyFromRowStatus
+    : occupancyBasis === "row_positive_rent"
+    ? occupancyFromPositiveRent
     : null;
   const annualInPlaceFromRows = unitRows.reduce((sum, row) => {
     const rent = coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
@@ -653,9 +671,7 @@ export function buildRentRollSufficiencyState({
     totalUnits > 0 &&
     Number.isFinite(annualInPlaceRent) &&
     annualInPlaceRent > 0 &&
-    Number.isFinite(derivedOccupancy) &&
-    derivedOccupancy >= 0 &&
-    derivedOccupancy <= 1;
+    occupancyBasis === "explicit_summary";
   const hasUnitMixOrDerivable = hasUnitMix || hasCredibleUnitRows || summaryRowDetected || hasSummaryCoreSignals;
   const hasCoreStructure =
     Number.isFinite(totalUnits) &&
@@ -676,7 +692,12 @@ export function buildRentRollSufficiencyState({
   if (!hasCoreStructure) {
     publishabilityBucket = "user_needs_documents";
     reasonCode = "rent_roll_core_structure_missing";
-  } else if (!Number.isFinite(derivedOccupancy) || derivedOccupancy < 0 || derivedOccupancy > 1) {
+  } else if (
+    !Number.isFinite(derivedOccupancy) ||
+    derivedOccupancy < 0 ||
+    derivedOccupancy > 1 ||
+    occupancyBasis === "row_positive_rent"
+  ) {
     publishabilityBucket = "section_constrained_publishable";
     status = "validated";
     reasonCode = "rent_roll_occupancy_not_modeled";
@@ -706,7 +727,9 @@ export function buildRentRollSufficiencyState({
       Number.isFinite(totalUnits) && totalUnits > 0 ? "total_units" : null,
       Number.isFinite(annualInPlaceRent) && annualInPlaceRent > 0 ? "annual_in_place_rent" : null,
       hasUnitMixOrDerivable ? "unit_mix_or_derivable_rows" : null,
-      Number.isFinite(derivedOccupancy) && derivedOccupancy >= 0 && derivedOccupancy <= 1 ? "occupancy" : null,
+      Number.isFinite(derivedOccupancy) && derivedOccupancy >= 0 && derivedOccupancy <= 1 && occupancyBasis !== "row_positive_rent"
+        ? "occupancy"
+        : null,
       hasUnitMix ? "unit_mix" : null,
       hasMarketRent ? "market_rent" : null,
       hasLeaseDates ? "lease_dates" : null,
@@ -721,6 +744,7 @@ export function buildRentRollSufficiencyState({
       total_units: totalUnits,
       annual_in_place_rent: annualInPlaceRent,
       occupancy: derivedOccupancy,
+      occupancy_basis: occupancyBasis,
       has_unit_mix_or_derivable_rows: hasUnitMixOrDerivable,
       optional_detail_present: hasOptionalDetail,
       summary_row_detected: summaryRowDetected,

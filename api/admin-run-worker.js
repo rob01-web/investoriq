@@ -2406,6 +2406,80 @@ export default async function handler(req, res) {
             continue;
           }
 
+          const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
+          const typedGateWithoutReportId =
+            (deliveryGateStatus === 'user_needs_documents' || deliveryGateStatus === 'admin_review_required') &&
+            !reportId;
+          if (typedGateWithoutReportId) {
+            if (deliveryGateStatus === 'user_needs_documents') {
+              const needsDocsUpdate = { status: 'needs_documents' };
+              if (supportsErrorCode) {
+                needsDocsUpdate.error_code = 'MISSING_REQUIRED_SOURCE_DATA';
+              }
+              if (supportsErrorMessage) {
+                needsDocsUpdate.error_message =
+                  'Required source documents or values were missing for report delivery.';
+              }
+              const { error: needsDocsErr } = await supabaseAdmin
+                .from('analysis_jobs')
+                .update(needsDocsUpdate)
+                .eq('id', job.id);
+              if (needsDocsErr) {
+                throw new Error(`Failed to mark job needs_documents: ${needsDocsErr.message}`);
+              }
+              transitions.push({
+                job_id: job.id,
+                from_status: 'rendering',
+                to_status: 'needs_documents',
+              });
+              passTransitions += 1;
+              const needsDocsTransitionErr = await writeStatusTransitionArtifact(
+                job.id,
+                'rendering',
+                'needs_documents',
+                { user_id: job.user_id, report_id: reportId, reason: reportData?.delivery_gate_reason_code || 'source_documents_missing' }
+              );
+              if (needsDocsTransitionErr) {
+                throw new Error(`Failed to write needs_documents status transition artifact: ${needsDocsTransitionErr.message}`);
+              }
+            } else {
+              const heldUpdate = { status: 'publishing' };
+              if (supportsErrorCode) {
+                heldUpdate.error_code = 'ADMIN_REVIEW_REQUIRED';
+              }
+              if (supportsErrorMessage) {
+                heldUpdate.error_message = 'Report held for admin review before delivery.';
+              }
+              const { error: heldErr } = await supabaseAdmin
+                .from('analysis_jobs')
+                .update(heldUpdate)
+                .eq('id', job.id);
+              if (heldErr) {
+                throw new Error(`Failed to mark job held for admin review: ${heldErr.message}`);
+              }
+              transitions.push({
+                job_id: job.id,
+                from_status: 'rendering',
+                to_status: 'publishing',
+              });
+              passTransitions += 1;
+              const heldTransitionErr = await writeStatusTransitionArtifact(
+                job.id,
+                'rendering',
+                'publishing',
+                { user_id: job.user_id, report_id: reportId, reason: reportData?.delivery_gate_reason_code || 'admin_review_required' }
+              );
+              if (heldTransitionErr) {
+                throw new Error(`Failed to write held publishing status transition artifact: ${heldTransitionErr.message}`);
+              }
+            }
+            await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
+              ...reportData,
+              timestamp: nowIso,
+            });
+            continue;
+          }
+
           const reportEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation', {
             source: generatorSource,
             report_id: reportId,
@@ -2443,7 +2517,6 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${pdfTransitionErr.message}`);
           }
 
-          const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
           if (deliveryGateStatus === 'user_needs_documents') {
             const needsDocsUpdate = { status: 'needs_documents' };
             if (supportsErrorCode) {
