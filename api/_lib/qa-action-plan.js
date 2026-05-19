@@ -1217,24 +1217,10 @@ function buildPublishEligibilitySummary({
     ? (sourceReconciliationIsDiscloseOnly ? "source_reconciliation" : "source_limited")
     : "none";
 
-  const legacyCustomerReadyFalse =
-    Boolean(reportContractQa?.customer_delivery_ready === false) ||
-    Boolean(qaActionPlan?.customer_delivery_ready === false);
-  const canonicalCustomerBlockingPresent = Boolean(
-    customerDeliveryImpact === "block" ||
-    customerPublishBlockers.length > 0 ||
-    contractCustomerBlockingViolations.length > 0 ||
-    sourceNeedsDocs
-  );
-  // Legacy readiness booleans are compatibility signals only.
-  // They can reinforce customer blocking only when canonical customer-blocking evidence exists.
-  const legacyCustomerReadyCorroboratedBlock = legacyCustomerReadyFalse && canonicalCustomerBlockingPresent;
-
   const customerPublishEligible = Boolean(
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
-    customerPublishBlockers.length === 0 &&
-    !legacyCustomerReadyCorroboratedBlock
+    customerPublishBlockers.length === 0
   );
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
@@ -1564,14 +1550,7 @@ export function buildDeliveryGateDecision({
       customer_delivery_ready: false,
       public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
       high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
-      launch_path_recommendation:
-        Boolean(qaActionPlan?.customer_delivery_ready) &&
-        Boolean(qaActionPlan?.public_sample_ready) &&
-        Boolean(qaActionPlan?.high_value_outreach_ready)
-          ? "customer_deliverable"
-          : Boolean(qaActionPlan?.customer_delivery_ready)
-          ? "underwriting_private_beta_recommended"
-          : "screening_only_public_launch_recommended",
+      launch_path_recommendation: "admin_review_required",
       readiness_hierarchy: {
         final_delivery_authority: "delivery_gate",
         final_delivery_status: "admin_review_required",
@@ -1609,7 +1588,7 @@ export function buildDeliveryGateDecision({
     top_action_code: prioritizedActions[0]?.code || null,
     owner_area: prioritizedActions[0]?.owner_area || null,
     recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
-    customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready),
+    customer_delivery_ready: publishEligibility.report_publishable,
     public_sample_ready:
       Boolean(qaActionPlan?.public_sample_ready) &&
       !customerDeliveryBlockerAction &&
@@ -1618,20 +1597,11 @@ export function buildDeliveryGateDecision({
       Boolean(qaActionPlan?.high_value_outreach_ready) &&
       !customerDeliveryBlockerAction &&
       !publicOrOutreachOnlyAction,
-    launch_path_recommendation:
-      Boolean(qaActionPlan?.customer_delivery_ready) &&
-      Boolean(qaActionPlan?.public_sample_ready) &&
-      Boolean(qaActionPlan?.high_value_outreach_ready) &&
-      !customerDeliveryBlockerAction &&
-      !publicOrOutreachOnlyAction
-        ? "customer_deliverable"
-        : Boolean(qaActionPlan?.customer_delivery_ready)
-        ? "underwriting_private_beta_recommended"
-        : "screening_only_public_launch_recommended",
+    launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "admin_review_required",
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: "deliverable",
-      customer_delivery_ready: Boolean(qaActionPlan?.customer_delivery_ready),
+      customer_delivery_ready: publishEligibility.report_publishable,
       public_sample_ready:
         Boolean(qaActionPlan?.public_sample_ready) &&
         !customerDeliveryBlockerAction &&

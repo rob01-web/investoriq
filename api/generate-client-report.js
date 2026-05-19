@@ -8322,7 +8322,10 @@ try {
 } catch (err) {
   console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
 }
-  if (deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required") {
+  if (
+    deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required" ||
+    deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents"
+  ) {
     return res.status(200).json({
       ok: true,
       success: true,
@@ -8346,8 +8349,12 @@ try {
       regeneration_required_for_customer_delivery: deliveryGateDecisionResult?.regeneration_required_for_customer_delivery ?? false,
       regeneration_required_for_public_sample: deliveryGateDecisionResult?.regeneration_required_for_public_sample ?? false,
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
-      admin_review_required: deliveryGateDecisionResult?.admin_review_required ?? true,
-      user_needs_documents: deliveryGateDecisionResult?.user_needs_documents ?? false,
+      admin_review_required:
+        deliveryGateDecisionResult?.admin_review_required ??
+        deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required",
+      user_needs_documents:
+        deliveryGateDecisionResult?.user_needs_documents ??
+        deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents",
       publish_decision_reason: deliveryGateDecisionResult?.publish_decision_reason || null,
     });
   }

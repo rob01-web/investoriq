@@ -593,7 +593,7 @@ const adminReviewGate = buildDeliveryGateDecision({
 assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
-assert.equal(adminReviewGate.launch_path_recommendation, "underwriting_private_beta_recommended");
+assert.equal(adminReviewGate.launch_path_recommendation, "admin_review_required");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
 
@@ -1595,6 +1595,54 @@ const needsDocumentsGate = buildDeliveryGateDecision({
   qaActionPlan: { customer_delivery_ready: false, prioritized_actions: [] },
 });
 assert.equal(needsDocumentsGate.delivery_gate_status, "user_needs_documents");
+
+const tokenNamedPlan = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaFixRouting: null,
+  propertyName: "123 Test Avenue - Final QA Sample",
+});
+assert.equal(tokenNamedPlan.property_name, "123 Test Avenue - Final QA Sample");
+
+const canonicalPublishGateWithLegacyFalseFlags = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "section_constrained_publishable",
+      required_core_docs_missing: false,
+      blocks_customer_delivery: false,
+    },
+  },
+  reportContractQa: {
+    contract_status: "warn",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "SOFT_WARN_ONLY",
+        severity: "medium",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+    prioritized_actions: [],
+  },
+});
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.delivery_gate_status, "deliverable");
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.report_publishable, true);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.customer_delivery_ready, true);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.admin_review_required, false);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.user_needs_documents, false);
 
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));
