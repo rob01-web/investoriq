@@ -1,3 +1,226 @@
+# May 19, 2026 Update - Data Coverage / Document Treatment Drift Fixed + Filename-Only Modeled Input Loophole Closed
+
+## Codex conservation rule re-locked
+
+Rob flagged that Codex usage must be preserved.
+
+Current operating rule:
+```text
+Codex usage is limited and must be conserved until reset.
+Use micro-prompts only.
+No giant audit essays unless absolutely necessary.
+Ask for compressed receipts only.
+No broad tests.
+No smoke-test theatre.
+No broad repo rewrites.
+One Codex prompt at a time.
+Wait for Codex receipt before suggesting the next prompt.
+```
+
+Required Codex receipt style going forward:
+```text
+Return SHORT FORM RECEIPT ONLY.
+Max 3-5 patch bullets.
+No rationale essays.
+No code restatement unless anchor mismatch occurred.
+Optimize for token conservation.
+```
+
+## DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT - accepted patch
+
+Codex completed and validated the `DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT` patch.
+
+Files inspected:
+```text
+api/generate-client-report.js
+api/_lib/report-surface-contracts.js
+api/_lib/source-report-coverage-qa.js
+api/_lib/source-package-qa.js
+api/_lib/report-contract-qa.js
+api/_lib/qa-action-plan.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/source-report-coverage-qa-smoke.js
+```
+
+Files changed:
+```text
+api/generate-client-report.js
+api/_lib/source-report-coverage-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Class fixed:
+```text
+DATA_COVERAGE_DOCUMENT_TREATMENT_DRIFT
+```
+
+Accepted behavior:
+```text
+Document Treatment Summary now classifies uploaded files using structured semantic metadata first.
+Filename fallback is last resort only.
+Customer copy no longer says files were classified from uploaded file names.
+Unsupported/unclassified support docs remain listed for auditability but are not quantitatively modeled.
+Data Coverage avoids Fully Verified wording when reconciliation disclosure or source-limited sections apply.
+```
+
+Canonical source of truth:
+```text
+Coverage truth:
+- buildScreeningDataCoverageSummary(...)
+- sourceReconciliationState
+- sectionEligibility
+- core T12/Rent Roll sufficiency
+
+Treatment truth:
+- buildDocumentTreatmentSummaryHtml(...)
+- structured semantic metadata first
+
+Property-tax readiness:
+- validated annual-tax quality only
+```
+
+Property tax modeled-input eligibility now requires:
+```text
+annual_tax is finite
+annual_tax is positive
+annual_tax >= 1000
+annual_tax is not year-like between 1900 and 2100
+```
+
+If property tax does not satisfy that rule:
+```text
+Displayed / Limited Use
+or
+Listed but Not Quantitatively Modeled
+non-blocking
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/source-report-coverage-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## Tiny follow-up - filename-only fallback can no longer produce Modeled Inputs
+
+Rob correctly decided not to leave the remaining loophole:
+
+```text
+Filename fallback can still classify a file as modeled when metadata is entirely absent.
+```
+
+Tiny follow-up patch accepted.
+
+Files changed:
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Behavior now:
+```text
+Filename-only T12 and Rent Roll no longer map to Modeled Inputs.
+Filename-only Property Tax and Debt terms no longer map to Modeled Inputs.
+Filename-only recognized core/support docs may map only to Displayed / Limited Use or Listed but Not Quantitatively Modeled.
+Modeled Inputs require structured metadata and/or validated parsed state, not filename-only inference.
+Uploaded-file auditability is preserved.
+```
+
+Regression updated:
+```text
+Filename-only Rent Roll.xlsx asserts non-modeled behavior.
+The row still preserves filename_fallback audit trace.
+```
+
+Validation passed:
+```text
+node --check api/generate-client-report.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Remaining acceptable risk:
+```text
+Filename-only fallback still uses pattern matching for limited/listed buckets.
+Future new filename patterns may need explicit limited/listed mapping if ambiguous.
+Metadata-driven modeled paths remain intended, but depend on upstream parser/metadata quality.
+```
+
+Decision:
+```text
+PASS.
+Commit the Data Coverage / Document Treatment patch batch together before moving to the next class.
+```
+
+Suggested commit:
+```bash
+git status
+git add api/generate-client-report.js api/_lib/source-report-coverage-qa.js tests/qa/generate-client-report-rent-roll-smoke.js
+git commit -m "Fix data coverage document treatment drift"
+git push
+git status
+```
+
+## Updated Consumer Truth Audit status board
+
+```text
+1. Current Debt / DSCR - patched and legacy helper quarantined.
+2. Deal Score / Verdict / Scorecard - DSCR scorecard/verdict feed patched; monitor adjacent classification surfaces.
+3. Refinance / Debt Service / Proceeds - patched and legacy helper quarantined.
+4. Source Reconciliation - audited; no patch required right now.
+5. Rent Roll totals / occupancy / market rent - patched earlier in this cycle.
+6. T12 EGI / OpEx / NOI / GPR - patched earlier in this cycle.
+7. Data Coverage / Document Treatment - PATCHED; filename-only modeled-input loophole closed.
+8. Renovation / CapEx - still pending.
+9. Appraisal / cap-rate / valuation framework - still pending.
+10. Property Tax - partly hardened through Data Coverage modeled-input eligibility; full class still pending if needed.
+```
+
+## Next class recommendation
+
+Next class after committing Data Coverage batch:
+```text
+RENOVATION_CAPEX_CONSUMER_DRIFT
+```
+
+But keep prompt tiny because Codex usage must be preserved.
+
+Micro-prompt shape:
+```text
+Compressed Receipt Mode.
+
+Task:
+Patch RENOVATION_CAPEX_CONSUMER_DRIFT only.
+
+Goal:
+Ensure renovation/CapEx modeled outputs depend on validated renovation state only, not filename hints or loose financials.renovation_* fields.
+
+Rules:
+- Historical-only CapEx = context only.
+- Budget/scope-only = budget/scope only; no ROI, payback, rent lift, timing, NOI impact, or value impact.
+- Forward-looking rent lift only if document-backed and validated.
+- Minimal diff. No broad refactor. No broad tests.
+
+Validation:
+- node --check touched JS files
+- one focused regression only if touched
+- git diff --check
+
+Return SHORT FORM RECEIPT ONLY:
+A. Files changed
+B. Patch summary, max 5 bullets
+C. Safety note, one sentence
+D. Validation
+E. Remaining risks, max 3 bullets
+
+Do not restate code unless anchor mismatch occurred.
+Optimize for token conservation.
+```
+
+---
+
 # May 18, 2026 Final Late-Late Update - Legacy Current-Debt Helper Quarantined / Fresh Chat Ready
 
 ## Legacy helper hardening pass - Codex receipt accepted

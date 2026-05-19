@@ -877,7 +877,8 @@ const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
     { original_filename: "Rent Roll.xlsx" },
   ],
 });
-assert.match(filenameFallbackHtml, /Modeled Inputs/i);
+assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
+assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
 

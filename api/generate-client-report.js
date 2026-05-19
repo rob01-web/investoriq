@@ -1686,15 +1686,27 @@ function buildDocumentTreatmentSummaryHtml({
       const filenameFallbackClass =
         /\bt12\b|trailing[- ]?12|12[- ]?month|ttm operating statement|operating statement/.test(lower)
           ? {
-              category: "Modeled Inputs",
-              note: "Structured operating input",
-              reason_code: "structured_operating_input",
+              category: "Displayed / Limited Use",
+              note: "Operating support is displayed only; filename-only evidence is not modeled.",
+              reason_code: "filename_fallback_operating_support_only",
             }
           : /rent\s*roll/.test(lower)
           ? {
-              category: "Modeled Inputs",
-              note: "Structured rent roll input",
-              reason_code: "structured_rent_roll_input",
+              category: "Displayed / Limited Use",
+              note: "Rent-roll support is displayed only; filename-only evidence is not modeled.",
+              reason_code: "filename_fallback_rent_roll_support_only",
+            }
+          : /property\s*tax|tax\s*notice/.test(lower)
+          ? {
+              category: "Displayed / Limited Use",
+              note: "Property-tax support is displayed only; filename-only evidence is not modeled.",
+              reason_code: "filename_fallback_property_tax_support_only",
+            }
+          : /debt|mortgage|loan|lender|amort|interest\s*rate|term\s*sheet/.test(lower)
+          ? {
+              category: "Displayed / Limited Use",
+              note: "Debt support is displayed only; filename-only evidence is not modeled.",
+              reason_code: "filename_fallback_debt_support_only",
             }
           : /capex|capital expenditure|renovation|construction budget|scope of work|improvement/.test(lower)
           ? {
