@@ -227,10 +227,10 @@ function resolveSafeAnnualRentTotal({
   if (Number.isFinite(rowAnnual)) return rowAnnual;
   return null;
 }
-// LEGACY MORTGAGE-ONLY FALLBACK ONLY.
-// Do not use as source of truth for current debt.
-// Canonical owner is currentDebtAssessmentState from buildCurrentDebtAssessmentState(...).
-function resolveLegacyMortgageDebtCoverageFallback(mortgagePayload, t12Noi) {
+// LEGACY_DO_NOT_USE fallback.
+// Allowed callers: resolveCanonicalCurrentDebtScoreInputs and resolveCanonicalRefiDebtBasis only.
+// Never call directly from renderer/scorecard/table/report section paths.
+function resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(mortgagePayload, t12Noi) {
   const balance = coerceNumber(mortgagePayload?.outstanding_balance);
   const interestRatePct = coerceNumber(mortgagePayload?.interest_rate);
   const amortYears = coerceNumber(mortgagePayload?.amort_years);
@@ -293,7 +293,7 @@ function resolveCanonicalCurrentDebtScoreInputs({
   mortgagePayload = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveLegacyMortgageDebtCoverageFallback(
+  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
     mortgagePayload,
     coerceNumber(t12Payload?.net_operating_income)
   );
@@ -340,7 +340,7 @@ function resolveCanonicalRefiDebtBasis({
   financials = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveLegacyMortgageDebtCoverageFallback(
+  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
     mortgagePayload,
     coerceNumber(t12Payload?.net_operating_income)
   );

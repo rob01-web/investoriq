@@ -16,16 +16,18 @@ const { buildReportContractQa } = await import("../../api/_lib/report-contract-q
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
-const legacyFallbackCallCount = (reportSource.match(/resolveLegacyMortgageDebtCoverageFallback\(/g) || []).length;
+const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
 assert.equal(legacyFallbackCallCount, 3);
 assert.match(
   reportSource,
-  /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLegacyMortgageDebtCoverageFallback\(/
+  /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
 );
 assert.match(
   reportSource,
-  /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLegacyMortgageDebtCoverageFallback\(/
+  /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
 );
+assert.equal(/function buildCurrentDebtScorecardEntry[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
+assert.equal(/function buildDealScorecardState[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource), false);
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,
