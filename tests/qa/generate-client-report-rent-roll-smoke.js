@@ -712,10 +712,7 @@ const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEnt
   },
 });
 assert.equal(acquisitionOnlyScorecardEntry.hasDscrScore, false);
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.label, "Current Debt DSCR");
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.value, "Not modeled");
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.band, "Current debt DSCR not modeled");
-assert.equal(acquisitionOnlyScorecardEntry.scoreRow.max, 0);
+assert.equal(acquisitionOnlyScorecardEntry.scoreRow, null);
 
 const acquisitionOnlyDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -765,6 +762,7 @@ const acquisitionOnlyDealScoreState = generatorTest.buildDealScorecardState({
 });
 assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(acquisitionOnlyDealScoreState.dealScoreTableHtml), false);
 assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(acquisitionOnlyDealScoreState.dealScoreTableHtml), false);
+assert.equal(/Current Debt DSCR[\s\S]{0,120}(?:Not modeled|N\/A)/i.test(acquisitionOnlyDealScoreState.dealScoreTableHtml), false);
 
 const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

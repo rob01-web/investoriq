@@ -424,11 +424,22 @@ function buildCurrentDebtScorecardEntry({
   const canonicalStatus = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase();
   const canonicalDscr = coerceNumber(currentDebtState?.current_debt_dscr);
   const canonicalAnnualDebtService = coerceNumber(currentDebtState?.current_debt_annual_debt_service);
+  const canonicalDscrDerivedFromService =
+    canonicalStatus === "computed" &&
+    Number.isFinite(canonicalAnnualDebtService) &&
+    canonicalAnnualDebtService > 0 &&
+    Number.isFinite(coerceNumber(t12Payload?.net_operating_income)) &&
+    coerceNumber(t12Payload?.net_operating_income) > 0
+      ? coerceNumber(t12Payload?.net_operating_income) / canonicalAnnualDebtService
+      : null;
+  const canonicalDscrForScore = Number.isFinite(canonicalDscr) && canonicalDscr > 0
+    ? canonicalDscr
+    : canonicalDscrDerivedFromService;
   const canonicalHasSourcePayment = String(currentDebtState?.current_debt_service_source || "").trim().toLowerCase() === "source_payment";
-  if (canonicalStatus === "computed" && Number.isFinite(canonicalDscr) && canonicalDscr > 0) {
+  if (canonicalStatus === "computed" && Number.isFinite(canonicalDscrForScore) && canonicalDscrForScore > 0) {
     return {
       currentDebtCoverage: {
-        dscr: canonicalDscr,
+        dscr: canonicalDscrForScore,
         annualDebtService: Number.isFinite(canonicalAnnualDebtService) && canonicalAnnualDebtService > 0
           ? canonicalAnnualDebtService
           : null,
@@ -437,10 +448,10 @@ function buildCurrentDebtScorecardEntry({
       hasDscrScore: true,
       scoreRow: {
         label: canonicalHasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
-        value: formatMultiple(canonicalDscr, 2),
-        pts: canonicalDscr > 1.35 ? 10 : canonicalDscr >= 1.25 ? 7 : 3,
+        value: formatMultiple(canonicalDscrForScore, 2),
+        pts: canonicalDscrForScore > 1.35 ? 10 : canonicalDscrForScore >= 1.25 ? 7 : 3,
         max: 10,
-        band: canonicalDscr > 1.35 ? "Above 1.35x" : canonicalDscr >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
+        band: canonicalDscrForScore > 1.35 ? "Above 1.35x" : canonicalDscrForScore >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
       },
     };
   }
@@ -471,13 +482,7 @@ function buildCurrentDebtScorecardEntry({
   return {
     currentDebtCoverage,
     hasDscrScore: false,
-    scoreRow: {
-      label: "Current Debt DSCR",
-      value: "Not modeled",
-      pts: 0,
-      max: 0,
-      band: "Current debt DSCR not modeled",
-    },
+    scoreRow: null,
     dscrNotAssessedCopy,
   };
 }
@@ -573,7 +578,7 @@ function buildDealScorecardState({
     maxPoints += currentDebtScorecardEntry.scoreRow.max;
     scoreRows.push(currentDebtScorecardEntry.scoreRow);
     hasDscrScore = true;
-  } else {
+  } else if (currentDebtScorecardEntry.scoreRow) {
     scoreRows.push(currentDebtScorecardEntry.scoreRow);
   }
 

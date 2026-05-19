@@ -1,3 +1,505 @@
+# May 19, 2026 Late Update - DSCR Canonical Wiring Patch Receipt / Screening Overblock Found / Fresh Chat Ready
+
+## Immediate checkpoint
+
+We are pausing here to start a fresh chat.
+
+Current live state from the latest sequence:
+```text
+- Consumer Truth Audit 10/10 was completed earlier.
+- Additional zombie-path hardening was required after live retests.
+- DSCR Deal Scorecard path kept causing Under Review because rendered scorecard output did not match canonical current-debt truth.
+- Unified report-quality gate doctrine has been patched.
+- Legacy public/private/Ken/customer quality-tiering has been replaced with one canonical report-quality decision contract.
+- Supabase Cron worker lifecycle remains open because Supabase Cron still did not reliably move the job out of extracting without GitHub/manual worker help.
+- A quick 124 Richmond Screening retest failed with structured rent-roll sufficiency overblocking and an opaque generator 500.
+```
+
+## Codex conservation rule remains active
+
+```text
+Codex usage must be conserved.
+Use micro-prompts only.
+One Codex prompt at a time.
+Wait for Codex receipt before suggesting the next prompt.
+Require SHORT FORM RECEIPT ONLY.
+No broad audit essays unless absolutely necessary.
+No broad tests.
+No smoke-test theatre.
+No broad repo rewrites.
+```
+
+## Most recent Codex receipt - DSCR canonical wiring patch
+
+Codex returned the following accepted patch receipt:
+
+```text
+A. Files changed
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+B. Exact DSCR canonical wiring bug found/fixed
+- buildCurrentDebtScorecardEntry could fall through to non-modeled when computed status existed but DSCR field was absent/late, despite canonical debt-service being present.
+- Added canonical computed fallback derivation: when status is computed, derive DSCR from canonical current_debt_annual_debt_service + T12 NOI if direct DSCR is missing.
+- This keeps scorecard DSCR on canonical truth path and prevents false downgrade to placeholder row when computed canonical debt state exists.
+
+C. Optional missing DSCR fail-closed behavior
+- For genuinely unavailable DSCR, scorecard row now collapses entirely.
+- No scorecard rendering of Not modeled / N/A / 0/10 / no-document stale phrases for the DSCR row path.
+- Composite score normalizes over available rows only.
+
+D. Final delivery gate contradiction fixed
+- Previously applied unified gate remains in place:
+  - canonical report_quality_blockers / report_publishable contract
+  - legacy public/high-value readiness fields are compatibility mirrors, not independent blockers.
+- No additional gate code change required in this turn.
+
+E. Tests/guards added
+- Updated acquisition-only scorecard expectation: scoreRow === null.
+- Added acquisition-only HTML guard: no Current Debt DSCR ... (Not modeled|N/A) and no 0/10.
+- Harbourstone computed DSCR regression retained and still asserts computed DSCR around 1.06 and no stale placeholder language.
+
+F. Validation
+- node --check api/generate-client-report.js passed.
+- node --check api/_lib/qa-action-plan.js passed.
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js passed.
+- node --check tests/qa/qa-action-plan-smoke.js passed.
+- node tests/qa/generate-client-report-rent-roll-smoke.js passed.
+- node tests/qa/qa-action-plan-smoke.js passed.
+- git diff --check passed with LF/CRLF warnings only.
+
+G. Remaining risks
+- Canonical computed fallback derivation depends on canonical annual debt service + T12 NOI presence; if both are absent, DSCR row correctly collapses but no DSCR signal is shown.
+- Other external consumers of debt limitation copy outside scorecard row path may still reference no-document phrasing by design.
+```
+
+Decision for this receipt:
+```text
+PASS pending commit.
+This is the class-level DSCR scorecard fix we wanted:
+- computed canonical DSCR must render;
+- missing optional DSCR collapses;
+- no scorecard row with Not modeled / N/A / 0/10;
+- no false no-current-debt wording in Deal Scorecard.
+```
+
+Suggested commit if not already committed:
+```bash
+git status
+git add api/generate-client-report.js tests/qa/generate-client-report-rent-roll-smoke.js
+git commit -m "Fix DSCR scorecard canonical wiring"
+git push
+git status
+```
+
+## Uploaded current files for this checkpoint
+
+Files uploaded into the chat at this checkpoint:
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+!INVESTORIQ_MASTER_CONTEXT_UPDATED_2026-05-19_CONSUMER_TRUTH_AUDIT_COMPLETE.md
+```
+
+The uploaded `generate-client-report.js` confirms:
+```text
+buildCurrentDebtScorecardEntry now:
+- checks canonical currentDebtState.current_debt_dscr_status === computed;
+- uses current_debt_dscr when present;
+- can derive DSCR from canonical annual debt service + T12 NOI when direct DSCR is missing;
+- returns scoreRow: null for genuinely unavailable DSCR;
+- buildDealScorecardState only pushes DSCR row when hasDscrScore is true.
+```
+
+The uploaded `generate-client-report-rent-roll-smoke.js` confirms:
+```text
+- legacy fallback occurrence count expected at 2;
+- resolveCanonicalRefiDebtBasis cannot call the legacy fallback;
+- buildCurrentDebtScorecardEntry and buildDealScorecardState cannot call the legacy fallback;
+- non-v1_core cannot render DEAL_SCORE_TABLE from tables.dealScore;
+- acquisition-only DSCR scoreRow === null;
+- acquisition-only Deal Scorecard HTML does not contain:
+  - no-current-debt stale phrases;
+  - Current Debt DSCR ... 0/10;
+  - Current Debt DSCR ... Not modeled / N/A;
+- Harbourstone-shaped computed DSCR regression remains.
+```
+
+## Important stale-context correction
+
+Earlier master context sections still mention:
+```text
+resolveLegacyMortgageDebtCoverageFallback occurrences = 3
+approved callers:
+- resolveCanonicalCurrentDebtScoreInputs
+- resolveCanonicalRefiDebtBasis
+```
+
+That is now stale after the later refi hardening.
+
+Current correct state:
+```text
+Legacy helper name:
+resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(...)
+
+Expected occurrences:
+2 total
+- 1 definition
+- 1 approved caller
+
+Only approved caller:
+resolveCanonicalCurrentDebtScoreInputs(...)
+
+resolveCanonicalRefiDebtBasis(...) must NOT call the legacy fallback.
+```
+
+## Quick Screening retest - 124 Richmond failed instead of review
+
+Rob ran a quick Screening report using:
+```text
+!T12_124_Richmond_St_London_ON.xlsx
+!Rent_Roll_124_Richmond_St_London_ON.xlsx
+```
+
+Artifact result:
+```text
+REPORT_GENERATION_FAILED
+Report generation failed (500)
+response_text_preview: {"error":"Report publication blocked before storage insert"}
+```
+
+Delivery gate result:
+```text
+delivery_gate_status: user_needs_documents
+reason_code: rent_roll_core_structure_missing
+report_quality_blockers: ["rent_roll_core_structure_missing"]
+```
+
+But the same artifacts proved the package was usable for Screening:
+```text
+report_type: screening
+source_report_coverage_qa: pass
+report_contract_qa: pass
+T12 parsed with core totals
+Rent roll parsed with:
+- method: xlsx
+- total_units: 12
+- 12 unit rows
+- unit_mix present
+- in_place/current rent on every row
+- market rent on every row
+```
+
+Weak/missing rent-roll fields:
+```text
+occupancy: null
+totals: null
+unit status: null
+```
+
+Correct doctrine for Screening:
+```text
+A rent roll with unit rows + total_units + current rent + market rent + unit mix is core-usable for Screening.
+Missing explicit occupancy/status/totals should not hard-block publication.
+Occupancy-dependent metrics should collapse/neutralize if occupancy cannot be safely computed.
+Do not fabricate occupancy or vacancy/status.
+```
+
+Root class for this new failure:
+```text
+SCREENING_RENT_ROLL_CORE_STRUCTURE_OVERBLOCK
+```
+
+Second root class:
+```text
+GATE_BLOCK_RETURNED_AS_OPAQUE_500
+```
+
+Meaning:
+```text
+A structured delivery-gate decision was returned as a generator 500, so the worker marked it as REPORT_GENERATION_FAILED and restored entitlement as if the system crashed.
+Generator/worker contract should distinguish structured gate blocks from true system failures.
+```
+
+## Pending next Codex prompt after fresh chat
+
+Do not send multiple prompts at once.
+
+First, commit the DSCR canonical wiring patch if it has not already been committed.
+
+Then the next focused Codex prompt should be:
+
+```text
+Compressed Receipt Mode.
+
+Task:
+FIX_SCREENING_RENT_ROLL_CORE_STRUCTURE_OVERBLOCK_AND_GATE_500.
+
+Problem:
+Quick Screening report for 124 Richmond failed with REPORT_GENERATION_FAILED because generate-client-report returned 500:
+{"error":"Report publication blocked before storage insert"}
+
+Artifact proof:
+- report_type: screening
+- delivery_gate_status: user_needs_documents
+- reason_code: rent_roll_core_structure_missing
+- report_quality_blockers: ["rent_roll_core_structure_missing"]
+- report_contract_qa: pass, zero violations
+- source_report_coverage_qa: pass
+
+Uploaded docs prove source package is usable for Screening:
+T12:
+- Gross Rental Income 184,920
+- Laundry Income 3,240
+- Parking Income 4,800
+- Expenses sum 120,790
+- NOI derived 72,170
+
+Rent Roll:
+- 12 unit rows
+- total_units: 12
+- unit_mix present
+- current/in-place rent present on every row
+- market rent present on every row
+- lease type/start/end present
+- no explicit status column
+- no explicit totals block
+- occupancy parsed as null
+
+Required behavior:
+For Screening reports, this rent roll is core-usable. Missing explicit occupancy/status/totals must not hard-block the report when unit rows and rent fields are present.
+
+Required fix Part 1 — Screening rent-roll sufficiency:
+- Find where rent_roll_core_structure_missing is generated.
+- Do not require explicit occupancy, status, or totals for Screening when:
+  - unit rows exist;
+  - total_units is present or derivable from row count;
+  - in_place/current rent exists;
+  - market rent exists;
+  - unit mix exists or can be derived.
+- Add/recognize sufficiency state:
+  rent_roll_core_usable_without_explicit_occupancy
+- If occupancy cannot be safely computed, collapse/omit occupancy-dependent metrics/phrases.
+- If positive current rent exists for every unit row, it is acceptable to infer occupancy from row-level rent/lease evidence only if existing doctrine allows; otherwise leave occupancy not modeled but publish.
+- Do not fabricate vacancy/status.
+
+Required fix Part 2 — generator gate response:
+- If delivery gate blocks with user_needs_documents or report_quality_blocked, generate-client-report must return structured JSON with delivery_gate_status/reason_code, not an opaque 500 that causes REPORT_GENERATION_FAILED.
+- Worker/generator contract must be consistent.
+- A gate decision should not masquerade as a system crash.
+- Entitlement restore behavior can remain for true failures or user_needs_documents as currently intended, but error_code should be accurate.
+
+Required fix Part 3 — regression:
+Add/extend focused regression using 124 Richmond-shaped Screening data:
+- T12 parsed with EGI/OpEx/NOI as above.
+- Rent roll parsed with 12 unit rows, current rent, market rent, unit type, lease fields.
+- occupancy null, totals null, status null.
+
+Expected:
+- no rent_roll_core_structure_missing
+- report_quality_blockers empty
+- delivery gate deliverable/publishable
+- report_contract_qa remains pass
+- occupancy-dependent display collapses/neutralizes without blocking.
+- no REPORT_GENERATION_FAILED for structured delivery gate decisions.
+
+Rules:
+- Do not weaken truly missing rent roll validation.
+- Do not fabricate occupancy or unit status.
+- Do not change parsers unless absolutely necessary.
+- Minimal diff.
+- Preserve one elite report-quality standard.
+- Screening should publish from T12 + core-usable rent roll.
+
+Likely files:
+- api/generate-client-report.js
+- api/_lib/report-surface-contracts.js
+- api/_lib/source-report-coverage-qa.js
+- api/_lib/qa-action-plan.js
+- api/admin-run-worker.js only if worker contract must be aligned
+- existing focused QA tests
+
+Validation:
+- node --check touched JS files
+- focused smoke/regression touched
+- git diff --check
+
+Return SHORT FORM RECEIPT ONLY:
+A. Files changed
+B. Exact overblocking cause found
+C. Screening rent-roll sufficiency rule fixed
+D. Gate 500/worker contract fixed
+E. Collapse/fail-closed behavior
+F. Tests/guards added
+G. Validation
+H. Remaining risks, max 3 bullets
+
+Do not paste long code.
+Optimize for token conservation.
+```
+
+## Supabase Cron remains open
+
+The Supabase Cron issue is still not solved.
+
+Observed behavior:
+```text
+Supabase Cron can invoke the worker.
+But Rob still had to run the GitHub/manual worker to move the job out of extracting.
+```
+
+Latest artifacts show the new continuation path can work after another valid worker invocation:
+```text
+worker_job_selected
+extracting_reentry_skip_parse
+extracting_completed
+extracting -> underwriting -> scoring -> rendering
+```
+
+But the Vercel logs showed:
+```text
+401 /api/admin-run-worker
+403 /api/admin/run-eligible-jobs-once
+```
+
+Current likely root:
+```text
+Cron authorization / endpoint invocation mismatch, not just worker lifecycle.
+```
+
+Do not disable GitHub worker yet.
+
+Do not change cron cadence yet.
+
+After the report-blocking issues are under control, run a separate focused Codex prompt for:
+```text
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+```
+
+Likely investigation:
+```text
+- confirm Supabase Cron target URL;
+- confirm x-cron-secret header exactly matches CRON_SECRET;
+- confirm /api/admin-run-worker accepts Supabase pg_net header shape;
+- confirm /api/admin/run-eligible-jobs-once is expected or deprecated;
+- confirm no old scheduled call still hits wrong/legacy endpoint;
+- confirm worker logs distinguish unauthorized, forbidden, wrong endpoint, and successful job continuation.
+```
+
+## What not to do next
+
+```text
+Do not rerun a broad full test yet.
+Do not flip DocRaptor production mode.
+Do not disable GitHub worker.
+Do not change Supabase Cron cadence.
+Do not rotate Vercel secrets mid-debug unless required.
+Do not start another broad audit.
+Do not ask Codex for long essays.
+Do not patch multiple classes at once.
+```
+
+## Fresh chat prompt - May 19 DSCR wiring fixed / 124 Screening overblock next
+
+```text
+We are continuing InvestorIQ from the May 19 master context.
+
+Immediate checkpoint:
+We just received a Codex receipt for the final DSCR Deal Scorecard canonical wiring patch.
+
+Current DSCR patch receipt:
+- Files changed:
+  - api/generate-client-report.js
+  - tests/qa/generate-client-report-rent-roll-smoke.js
+- buildCurrentDebtScorecardEntry could fall through to non-modeled when current_debt_dscr_status was computed but direct DSCR field was absent/late.
+- Patch added canonical computed fallback derivation from canonical current_debt_annual_debt_service + T12 NOI when direct current_debt_dscr is missing.
+- If DSCR is genuinely unavailable, Deal Scorecard collapses the DSCR row entirely.
+- No scorecard row should render Not modeled / N/A / 0/10 / no-current-debt stale phrases.
+- Acquisition-only scorecard expectation is now scoreRow === null.
+- Harbourstone computed DSCR regression remains and asserts ~1.06x with no stale placeholder language.
+- Validation passed:
+  - node --check api/generate-client-report.js
+  - node --check api/_lib/qa-action-plan.js
+  - node --check tests/qa/generate-client-report-rent-roll-smoke.js
+  - node --check tests/qa/qa-action-plan-smoke.js
+  - node tests/qa/generate-client-report-rent-roll-smoke.js
+  - node tests/qa/qa-action-plan-smoke.js
+  - git diff --check
+
+First action:
+If this patch has not been committed yet, commit it first:
+git status
+git add api/generate-client-report.js tests/qa/generate-client-report-rent-roll-smoke.js
+git commit -m "Fix DSCR scorecard canonical wiring"
+git push
+git status
+
+Important current correction:
+The legacy mortgage helper is now:
+resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(...)
+Expected occurrences: 2 total.
+Only approved caller: resolveCanonicalCurrentDebtScoreInputs(...).
+resolveCanonicalRefiDebtBasis(...) must not call it.
+
+New failure found:
+A quick 124 Richmond Screening report failed, not reviewed.
+
+Failure:
+- REPORT_GENERATION_FAILED
+- generator returned 500:
+  {"error":"Report publication blocked before storage insert"}
+- delivery_gate_status: user_needs_documents
+- reason_code: rent_roll_core_structure_missing
+- report_quality_blockers: ["rent_roll_core_structure_missing"]
+
+But this is an overblock:
+The uploaded Screening docs were:
+- !T12_124_Richmond_St_London_ON.xlsx
+- !Rent_Roll_124_Richmond_St_London_ON.xlsx
+
+T12 has:
+- Gross Rental Income 184,920
+- Laundry Income 3,240
+- Parking Income 4,800
+- Expenses sum 120,790
+- NOI derived 72,170
+
+Rent roll has:
+- 12 unit rows
+- total_units 12
+- unit_mix present
+- current/in-place rent on every row
+- market rent on every row
+- lease type/start/end present
+- no explicit status column
+- no explicit totals block
+- occupancy parsed as null
+
+Doctrine:
+For Screening, this rent roll is core-usable. Missing explicit occupancy/status/totals should collapse/neutralize occupancy-dependent metrics but should not hard-block the report.
+
+Next Codex task:
+Use the pending prompt titled FIX_SCREENING_RENT_ROLL_CORE_STRUCTURE_OVERBLOCK_AND_GATE_500.
+
+Do not send multiple prompts.
+Do not start broad audits.
+Do not change parsers unless absolutely necessary.
+Do not weaken truly missing rent roll validation.
+Do not fabricate occupancy or status.
+Do not disable GitHub worker.
+Do not change Supabase Cron cadence.
+Do not flip DocRaptor production mode.
+
+Supabase Cron remains open:
+Supabase Cron can invoke worker, but Rob still had to run GitHub/manual worker to move out of extracting. Later artifacts show extracting_reentry_skip_parse worked after another valid invocation, while Vercel logs showed 401/403 on worker endpoints. Treat this later as separate SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT work.
+```
+
+---
+
+
+
+---
+
 # May 19, 2026 Final Update - Consumer Truth Audit 10/10 Complete / Ready for Clean Underwriting Retest
 
 ## Executive checkpoint
