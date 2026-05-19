@@ -1,4 +1,5 @@
 import assert from "assert";
+import fs from "fs";
 
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
@@ -14,6 +15,17 @@ const {
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
+const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const legacyFallbackCallCount = (reportSource.match(/resolveLegacyMortgageDebtCoverageFallback\(/g) || []).length;
+assert.equal(legacyFallbackCallCount, 3);
+assert.match(
+  reportSource,
+  /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLegacyMortgageDebtCoverageFallback\(/
+);
+assert.match(
+  reportSource,
+  /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLegacyMortgageDebtCoverageFallback\(/
+);
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,

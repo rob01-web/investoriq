@@ -227,7 +227,10 @@ function resolveSafeAnnualRentTotal({
   if (Number.isFinite(rowAnnual)) return rowAnnual;
   return null;
 }
-function resolveCurrentDebtCoverage(mortgagePayload, t12Noi) {
+// LEGACY MORTGAGE-ONLY FALLBACK ONLY.
+// Do not use as source of truth for current debt.
+// Canonical owner is currentDebtAssessmentState from buildCurrentDebtAssessmentState(...).
+function resolveLegacyMortgageDebtCoverageFallback(mortgagePayload, t12Noi) {
   const balance = coerceNumber(mortgagePayload?.outstanding_balance);
   const interestRatePct = coerceNumber(mortgagePayload?.interest_rate);
   const amortYears = coerceNumber(mortgagePayload?.amort_years);
@@ -290,7 +293,7 @@ function resolveCanonicalCurrentDebtScoreInputs({
   mortgagePayload = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveCurrentDebtCoverage(
+  const fallbackCoverage = resolveLegacyMortgageDebtCoverageFallback(
     mortgagePayload,
     coerceNumber(t12Payload?.net_operating_income)
   );
@@ -337,7 +340,7 @@ function resolveCanonicalRefiDebtBasis({
   financials = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveCurrentDebtCoverage(
+  const fallbackCoverage = resolveLegacyMortgageDebtCoverageFallback(
     mortgagePayload,
     coerceNumber(t12Payload?.net_operating_income)
   );
@@ -4867,8 +4870,14 @@ if (effectiveReportMode === "screening_v1") {
       primaryPressurePoint = `Source reconciliation variance of ${rrVsGprDisplay} between rent roll and T12 gross potential rent requires review.`;
     }
     // For underwriting, override pressure point with DSCR-based language if mortgage available
-    if (effectiveReportMode === "v1_core" && mortgagePayload && hasVerifiedCurrentDebtBalance) {
-      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+    if (effectiveReportMode === "v1_core" && hasVerifiedCurrentDebtBalance) {
+      const currentDebtCoverage = resolveCanonicalRefiDebtBasis({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        financials: refiFinancials,
+        t12Payload,
+      });
       if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
         if (currentDebtCoverage.dscr < 1.25) {
@@ -5138,10 +5147,13 @@ if (effectiveReportMode === "screening_v1") {
         screeningClass = "Sensitized";
       }
     }
-    const currentDebtDscrForDisplay = resolveCurrentDebtCoverage(
+    const currentDebtDscrForDisplay = resolveCanonicalRefiDebtBasis({
+      currentDebtState: currentDebtAssessmentState,
       mortgagePayload,
-      coerceNumber(t12Payload?.net_operating_income)
-    )?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
+      loanTermSheetTermsPayload,
+      financials: refiFinancials,
+      t12Payload,
+    })?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -5234,12 +5246,18 @@ if (effectiveReportMode === "screening_v1") {
     }
     // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
     if (effectiveReportMode === "v1_core") {
-      const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
-      if (hasVerifiedCurrentDebtBalance && currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
-        const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
-        if (currentDebtCoverage.dscr >= 1.35) {
+      const canonicalRefiDebtBasisForBullets = resolveCanonicalRefiDebtBasis({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        financials: refiFinancials,
+        t12Payload,
+      });
+      if (hasVerifiedCurrentDebtBalance && currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
+        const _ds = formatMultiple(canonicalRefiDebtBasisForBullets.dscr, 2);
+        if (canonicalRefiDebtBasisForBullets.dscr >= 1.35) {
           upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
-        } else if (currentDebtCoverage.dscr >= 1.25) {
+        } else if (canonicalRefiDebtBasisForBullets.dscr >= 1.25) {
           riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
         } else {
           riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
@@ -6990,29 +7008,20 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           const color = marketRentPremiumRatio > 0.15 ? "#16a34a" : marketRentPremiumRatio > 0.05 ? "#1e40af" : "#6B7280";
           addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside | 5-15% = moderate | < 5% = minimal", flag, color);
         }
-      if (mortgagePayload) {
-          const la = coerceNumber(mortgagePayload.outstanding_balance);
-          const rp = coerceNumber(mortgagePayload.interest_rate);
-          const ay = coerceNumber(mortgagePayload.amort_years) || 25;
-          const an = coerceNumber(t12Payload?.net_operating_income);
-          const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, an);
-        if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
-          const dscr = currentDebtCoverage.dscr;
-          if (Number.isFinite(dscr) && dscr > 0) {
-            const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
-            const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
-            addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
-          }
+      {
+        const canonicalRefiDebtBasisForRiskRegister = resolveCanonicalRefiDebtBasis({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          financials: refiFinancials,
+          t12Payload,
+        });
+        if (Number.isFinite(canonicalRefiDebtBasisForRiskRegister.dscr) && canonicalRefiDebtBasisForRiskRegister.dscr > 0) {
+          const dscr = canonicalRefiDebtBasisForRiskRegister.dscr;
+          const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
+          const color = dscr < 1.25 ? "#dc2626" : dscr < 1.35 ? "#d97706" : "#16a34a";
+          addRisk("DSCR (Current Debt)", formatMultiple(dscr, 2), "STRONG > 1.35x | ADEQUATE 1.25-1.35x | STRESSED < 1.25x", flag, color);
         } else {
-          const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
-            currentDebtState: currentDebtAssessmentState,
-            mortgagePayload,
-            loanTermSheetTermsPayload,
-            t12Noi: coerceNumber(t12Payload?.net_operating_income),
-          });
-          addRisk("Current Debt DSCR", dscrNotAssessedCopy.value, dscrNotAssessedCopy.explanation, "NOT ASSESSED", "#9CA3AF");
-        }
-      } else {
         const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
           currentDebtState: currentDebtAssessmentState,
           mortgagePayload,
@@ -7026,6 +7035,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
           "NOT ASSESSED",
           "#9CA3AF"
         );
+        }
       }
         const riskRegisterHtml = riskRows.length > 0
           ? `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
@@ -7047,7 +7057,13 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       // DSCR KPI card in exec summary
       {
         let execDscrText = null;
-        const execCurrentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+        const execCurrentDebtCoverage = resolveCanonicalRefiDebtBasis({
+          currentDebtState: currentDebtAssessmentState,
+          mortgagePayload,
+          loanTermSheetTermsPayload,
+          financials: refiFinancials,
+          t12Payload,
+        });
         if (Number.isFinite(execCurrentDebtCoverage.dscr) && execCurrentDebtCoverage.dscr > 0) {
           execDscrText = formatMultiple(execCurrentDebtCoverage.dscr, 2);
         }
