@@ -919,6 +919,7 @@ export default async function handler(req, res) {
     const blockedJobIds = [];
     const failedJobIds = [];
     const rollupWrittenJobIds = new Set();
+    const workerInvocationId = safeTimestamp(nowIso);
     let passesRun = 0;
     const maxPasses = 10;
     const maxSeconds = 55;
@@ -948,8 +949,24 @@ export default async function handler(req, res) {
               .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
 
             if (claimErr || !claimRows || claimRows.length === 0) {
+              await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_skipped', {
+                invocation_id: workerInvocationId,
+                stage: 'queued_claim',
+                prior_status: 'queued',
+                reason: claimErr ? 'claim_error' : 'already_claimed_or_unavailable',
+                error_message: claimErr?.message || null,
+                timestamp: nowIso,
+              });
               continue;
             }
+            await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_selected', {
+              invocation_id: workerInvocationId,
+              stage: 'queued_claim',
+              prior_status: 'queued',
+              next_status: 'extracting',
+              reason: 'claimed_for_processing',
+              timestamp: nowIso,
+            });
 
             const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
               .from('report_purchases')
@@ -1032,6 +1049,26 @@ export default async function handler(req, res) {
       if (extractingJobs && extractingJobs.length > 0) {
         for (const job of extractingJobs) {
           try {
+          const elapsedSeconds = (Date.now() - startTime) / 1000;
+          if (elapsedSeconds >= maxSeconds - 8) {
+            await writeWorkerEventArtifact(job.id, job.user_id, 'worker_timebox_defer', {
+              invocation_id: workerInvocationId,
+              stage: 'extracting',
+              prior_status: 'extracting',
+              reason: 'cron_timebox_near_limit',
+              elapsed_seconds: elapsedSeconds,
+              timestamp: nowIso,
+            });
+            break;
+          }
+          await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_selected', {
+            invocation_id: workerInvocationId,
+            stage: 'extracting',
+            prior_status: 'extracting',
+            reason: 'continue_existing_job',
+            timestamp: nowIso,
+          });
+
           const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
             .from('report_purchases')
             .select('id')
@@ -1085,6 +1122,21 @@ export default async function handler(req, res) {
           const supportingDocs = (jobFiles || []).filter(
             (f) => !['rent_roll', 't12'].includes(f.doc_type)
           );
+          const hasRentRollParsedPrecheck = (jobFiles || []).some((file) =>
+            String(file.doc_type || '').toLowerCase() === 'rent_roll' &&
+            String(file.parse_status || '').toLowerCase() === 'parsed'
+          );
+          const hasT12ParsedPrecheck = (jobFiles || []).some((file) =>
+            String(file.doc_type || '').toLowerCase() === 't12' &&
+            String(file.parse_status || '').toLowerCase() === 'parsed'
+          );
+          const hasPendingStructuredPrecheck = (jobFiles || []).some((file) => {
+            const dt = String(file.doc_type || '').toLowerCase();
+            const ps = String(file.parse_status || '').toLowerCase();
+            return (dt === 'rent_roll' || dt === 't12') && (ps === 'pending' || ps === 'extracted');
+          });
+          const extractionAlreadySatisfied =
+            hasRentRollParsedPrecheck && hasT12ParsedPrecheck && !hasPendingStructuredPrecheck;
 
           const startedCheck = await hasWorkerEvent(job.id, 'extracting_started');
           if (startedCheck?.error) {
@@ -1105,27 +1157,39 @@ export default async function handler(req, res) {
             ? forwardedKey[0]
             : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
-          const extractTextRes = await fetch(`${baseUrl}/api/parse/extract-job-text`, {
-            method: 'POST',
-            headers: parserHeaders,
-            body: JSON.stringify({ jobId: job.id }),
-          });
-          if (!extractTextRes.ok) {
-            const workerEventErr = await writeWorkerEventArtifact(
-              job.id,
-              job.user_id,
-              'document_text_extract_failed',
-              {
-                status: extractTextRes.status,
-                timestamp: nowIso,
-              }
-            );
-            if (workerEventErr) {
-              console.error(
-                'Failed to write document_text_extract_failed event:',
-                workerEventErr.message
+          if (!extractionAlreadySatisfied) {
+            const extractTextRes = await fetch(`${baseUrl}/api/parse/extract-job-text`, {
+              method: 'POST',
+              headers: parserHeaders,
+              body: JSON.stringify({ jobId: job.id }),
+            });
+            if (!extractTextRes.ok) {
+              const workerEventErr = await writeWorkerEventArtifact(
+                job.id,
+                job.user_id,
+                'document_text_extract_failed',
+                {
+                  status: extractTextRes.status,
+                  timestamp: nowIso,
+                }
               );
+              if (workerEventErr) {
+                console.error(
+                  'Failed to write document_text_extract_failed event:',
+                  workerEventErr.message
+                );
+              }
             }
+          } else {
+            await writeWorkerEventArtifact(job.id, job.user_id, 'extracting_reentry_skip_parse', {
+              invocation_id: workerInvocationId,
+              stage: 'extracting',
+              prior_status: 'extracting',
+              reason: 'required_structured_docs_already_parsed',
+              has_rent_roll_parsed: true,
+              has_t12_parsed: true,
+              timestamp: nowIso,
+            });
           }
 
           const otherPendingFiles = (jobFiles || []).filter((file) => {
@@ -1140,7 +1204,7 @@ export default async function handler(req, res) {
             ) && isPending;
           });
 
-          if (otherPendingFiles.length > 0) {
+          if (!extractionAlreadySatisfied && otherPendingFiles.length > 0) {
             for (const file of otherPendingFiles) {
               try {
                 // Normalize supporting/supporting_documents_ui → supporting_documents so parse-doc
