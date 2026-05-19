@@ -285,13 +285,62 @@ function currentDebtNotAssessedCopy({
     t12Noi,
   });
 }
+function resolveCanonicalCurrentDebtScoreInputs({
+  currentDebtState = null,
+  mortgagePayload = null,
+  t12Payload = null,
+} = {}) {
+  const fallbackCoverage = resolveCurrentDebtCoverage(
+    mortgagePayload,
+    coerceNumber(t12Payload?.net_operating_income)
+  );
+  const canonicalStatus = String(
+    currentDebtState?.current_debt_dscr_status || ""
+  ).trim().toLowerCase();
+  const canonicalDscr = coerceNumber(currentDebtState?.current_debt_dscr);
+  const canonicalAnnualDebtService = coerceNumber(
+    currentDebtState?.current_debt_annual_debt_service
+  );
+  const canonicalHasSourcePayment = String(
+    currentDebtState?.current_debt_service_source || ""
+  )
+    .trim()
+    .toLowerCase() === "source_payment";
+  if (
+    canonicalStatus === "computed" &&
+    Number.isFinite(canonicalDscr) &&
+    canonicalDscr > 0
+  ) {
+    return {
+      currentDebtCoverage: {
+        ...fallbackCoverage,
+        dscr: canonicalDscr,
+        annualDebtService:
+          Number.isFinite(canonicalAnnualDebtService) &&
+          canonicalAnnualDebtService > 0
+            ? canonicalAnnualDebtService
+            : fallbackCoverage.annualDebtService,
+        hasSourcePayment: canonicalHasSourcePayment,
+      },
+      usedCanonicalState: true,
+    };
+  }
+  return {
+    currentDebtCoverage: fallbackCoverage,
+    usedCanonicalState: false,
+  };
+}
 function buildCurrentDebtScorecardEntry({
   currentDebtState = null,
   mortgagePayload = null,
   loanTermSheetTermsPayload = null,
   t12Payload = null,
 } = {}) {
-  const currentDebtCoverage = resolveCurrentDebtCoverage(mortgagePayload, coerceNumber(t12Payload?.net_operating_income));
+  const { currentDebtCoverage } = resolveCanonicalCurrentDebtScoreInputs({
+    currentDebtState,
+    mortgagePayload,
+    t12Payload,
+  });
   if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
     return {
       currentDebtCoverage,
@@ -411,7 +460,7 @@ function buildDealScorecardState({
   });
   const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
   if (currentDebtScorecardEntry.hasDscrScore) {
-    computedDscrForVerdict = currentDebtCoverage.dscr;
+    computedDscrForVerdict = coerceNumber(currentDebtCoverage.dscr);
     totalPoints += currentDebtScorecardEntry.scoreRow.pts;
     maxPoints += currentDebtScorecardEntry.scoreRow.max;
     scoreRows.push(currentDebtScorecardEntry.scoreRow);

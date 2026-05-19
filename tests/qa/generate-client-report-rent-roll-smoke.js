@@ -272,6 +272,71 @@ assert.equal(computedScorecardEntry.hasDscrScore, true);
 assert.match(computedScorecardEntry.scoreRow.label, /DSCR \(Current Debt\)|DSCR \(Computed\)/i);
 assert.match(computedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 
+const loanTermOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Noi: 650000,
+});
+assert.equal(loanTermOnlyCurrentDebtState.current_debt_dscr_status, "computed");
+assert.ok(Number.isFinite(loanTermOnlyCurrentDebtState.current_debt_dscr));
+const loanTermOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
+  currentDebtState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+});
+assert.equal(loanTermOnlyScorecardEntry.hasDscrScore, true);
+assert.match(loanTermOnlyScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
+assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.value, "Not assessed - no current debt document");
+assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.value, "No current debt document provided");
+assert.notEqual(loanTermOnlyScorecardEntry.scoreRow.pts, 0);
+const loanTermOnlyDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.ok(Number.isFinite(loanTermOnlyDealScoreState.computedDscrForVerdict));
+assert.match(loanTermOnlyDealScoreState.dealScoreTableHtml, /Current Debt|DSCR/i);
+assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(loanTermOnlyDealScoreState.dealScoreTableHtml), false);
+const loanTermOnlyDscrRow = loanTermOnlyDealScoreState.scoreRows.find((row) =>
+  /Current Debt DSCR|DSCR \(Current Debt\)|DSCR \(Computed\)/i.test(String(row?.label || ""))
+);
+assert.ok(loanTermOnlyDscrRow);
+assert.notEqual(loanTermOnlyDscrRow.pts, 0);
+
 const retest9CurrentDebtState = buildCurrentDebtAssessmentState({
   mortgagePayload: {
     outstanding_balance: 1500000,
