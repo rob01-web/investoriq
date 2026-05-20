@@ -1208,6 +1208,18 @@ assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
+const filenameOnlyRenovationTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "CapEx Plan - Historical.pdf" },
+  ],
+  renovationDisplayMode: null,
+});
+assert.equal(
+  /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*CapEx Plan - Historical\.pdf/i.test(filenameOnlyRenovationTreatmentHtml),
+  false
+);
+assert.match(filenameOnlyRenovationTreatmentHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
+assert.equal(/Renovation Strategy & Capital Plan/i.test(filenameOnlyRenovationTreatmentHtml), false);
 const unvalidatedStructuredDocTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
