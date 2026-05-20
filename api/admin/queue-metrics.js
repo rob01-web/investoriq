@@ -214,12 +214,12 @@ function buildAutomationRecommendations({ job = null, artifacts = [] } = {}) {
   }
 
   if (status === 'failed') {
-    const canRequeue = !hardDocumentBlockers.has(errorCode) && !includesProductionConfigBlocker(job?.failure_reason || '') && !includesProductionConfigBlocker(job?.error_message || '');
+    const canRequeue = !hardDocumentBlockers.has(errorCode);
     recommendations.push({
       recommendation: canRequeue ? 'Requeue candidate' : 'Review blocker before requeue',
       reason: canRequeue
         ? `Failed job with ${job?.error_code || 'no error code'} appears eligible for a manual requeue review.`
-        : 'Failure appears tied to a document or configuration blocker.',
+        : 'Failure appears tied to a document, source, or integrity blocker.',
       confidence: canRequeue ? 'medium' : 'low',
       eligibility: canRequeue ? 'review before requeue' : 'not eligible',
       suggested_manual_action: canRequeue
@@ -242,12 +242,12 @@ function buildAutomationRecommendations({ job = null, artifacts = [] } = {}) {
 
   if (productionConfigHits >= 2) {
     recommendations.push({
-      recommendation: 'Production config blocker pattern',
-      reason: `Repeated production_config blocker evidence found in ${productionConfigHits} recent artifacts.`,
-      confidence: 'medium',
-      eligibility: 'manual review',
-      suggested_manual_action: 'Review the production configuration issue before any further processing.',
-      blocked_reason: 'Repeated blocker pattern detected.',
+      recommendation: 'Production/config metadata signal',
+      reason: `Repeated production_config metadata appeared in ${productionConfigHits} recent artifacts.`,
+      confidence: 'low',
+      eligibility: 'metadata only',
+      suggested_manual_action: 'Record for distribution/config awareness only.',
+      blocked_reason: null,
     });
   }
 
@@ -363,7 +363,7 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
     requiredConditions = ['Published job'];
     escalationTarget = 'None';
     rationale = 'Published jobs are not automation candidates.';
-  } else if (hasSourceMismatch || hasAdminHold || hasProductionConfigBlocker) {
+  } else if (hasSourceMismatch || hasAdminHold) {
     automationClass = 'HUMAN_REVIEW_REQUIRED';
     proposedAction = 'Human review';
     confidenceScore = hasSourceMismatch ? 97 : 94;
@@ -371,21 +371,15 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
     humanReviewRequired = true;
     requiredConditions = hasSourceMismatch
       ? ['Confirm source-backed values before any further action']
-      : hasAdminHold
-        ? ['Admin review hold remains active']
-        : ['Review production config blocker evidence'];
+      : ['Admin review hold remains active'];
     blockedReason = hasSourceMismatch
       ? 'Source reconciliation mismatch detected.'
-      : hasAdminHold
-        ? 'Admin review hold is active.'
-        : 'Repeated production_config blocker detected.';
-    suggestedDelayMinutes = hasSourceMismatch ? 60 : hasAdminHold ? 30 : 45;
+      : 'Admin review hold is active.';
+    suggestedDelayMinutes = hasSourceMismatch ? 60 : 30;
     escalationTarget = 'Admin review';
     rationale = hasSourceMismatch
       ? 'Rendered or contracted values disagree across source-to-report checks.'
-      : hasAdminHold
-        ? 'Delivery gate is intentionally held for human review.'
-        : 'Repeated production_config blocker should be reviewed before automation.';
+      : 'Delivery gate is intentionally held for human review.';
   } else if (forcePublishSignal) {
     automationClass = 'EXECUTIVE_OVERRIDE_ONLY';
     proposedAction = 'Escalate for executive approval';
@@ -413,7 +407,6 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
   } else if (
     status === 'failed' &&
     !hardDocumentBlocker &&
-    !hasProductionConfigBlocker &&
     !hasAdminHold &&
     !hasSourceMismatch &&
     textIncludesAny([jobText, JSON.stringify(qaActionPlan || {}), JSON.stringify(reportContract || {}), JSON.stringify(deliveryGateArtifact?.payload || {})].join(' '), [
@@ -472,6 +465,9 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
 
   if ((publicBlock || outreachBlock) && automationClass === 'NO_ACTION') {
     rationale = 'Customer delivery authority is unchanged; public/outreach readiness is non-authoritative distribution metadata.';
+  }
+  if (hasProductionConfigBlocker && automationClass === 'NO_ACTION') {
+    rationale = 'Customer delivery authority is unchanged; production/config exposure metadata is non-authoritative for automation class decisions.';
   }
 
   return {
