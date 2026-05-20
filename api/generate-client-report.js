@@ -2248,6 +2248,8 @@ function buildScreeningRefiSufficiencyTable({
     financials: f,
     t12Payload,
   });
+  const canonicalRefiInterestRate = coerceNumber(canonicalRefiDebtBasis?.interestRatePct);
+  const canonicalRefiAmortYears = coerceNumber(canonicalRefiDebtBasis?.amortYears);
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
   const noiFromFinancials = coerceNumber(f.noi_base);
   const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
@@ -2290,16 +2292,16 @@ function buildScreeningRefiSufficiencyTable({
     },
     {
       label: "Interest rate",
-      present: isPresentScalar(coerceNumber(f.refi_interest_rate)),
-      value: Number.isFinite(coerceNumber(f.refi_interest_rate))
-        ? formatInterestRatePercent(coerceNumber(f.refi_interest_rate))
+      present: isPresentScalar(canonicalRefiInterestRate),
+      value: Number.isFinite(canonicalRefiInterestRate)
+        ? formatInterestRatePercent(canonicalRefiInterestRate)
         : " - ",
     },
     {
       label: "Amortization (years)",
-      present: isPresentScalar(coerceNumber(f.refi_amort_years)),
-      value: Number.isFinite(coerceNumber(f.refi_amort_years))
-        ? formatYears(coerceNumber(f.refi_amort_years))
+      present: isPresentScalar(canonicalRefiAmortYears),
+      value: Number.isFinite(canonicalRefiAmortYears)
+        ? formatYears(canonicalRefiAmortYears)
         : " - ",
     },
     {
@@ -6202,7 +6204,19 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
     } else {
-      if (!hasVerifiedCurrentDebtBalance && !hasComputedCurrentDebtDscr && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
+      const canonicalRefiDebtBasisForRender = resolveCanonicalRefiDebtBasis({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        financials: refiFinancials,
+        t12Payload,
+      });
+      const hasCanonicalCurrentRefiDebtBasis =
+        Boolean(canonicalRefiDebtBasisForRender?.hasTrueCurrentDebtBalance) &&
+        !Boolean(canonicalRefiDebtBasisForRender?.isAcquisitionOnly) &&
+        Number.isFinite(coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance)) &&
+        coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance) > 0;
+      if (!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
         const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
           currentDebtState: currentDebtAssessmentState,
           mortgagePayload,
@@ -6233,7 +6247,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       canRenderRefi =
         validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
       const hasDebtButIncompleteRefiInputs =
-        hasVerifiedCurrentDebtBalance && !canRenderRefi;
+        hasCanonicalCurrentRefiDebtBasis && !canRenderRefi;
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else if (hasDebtButIncompleteRefiInputs) {

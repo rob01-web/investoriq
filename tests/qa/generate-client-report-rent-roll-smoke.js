@@ -44,7 +44,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /if \(!hasVerifiedCurrentDebtBalance && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)/
+  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)/
 );
 assert.match(
   reportSource,
@@ -57,6 +57,10 @@ assert.equal(
 assert.match(
   reportSource,
   /Refinance Stability Classification: Source-Limited/
+);
+assert.match(
+  reportSource,
+  /const hasCanonicalCurrentRefiDebtBasis[\s\S]*hasCanonicalCurrentRefiDebtBasis && !canRenderRefi/
 );
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
@@ -477,6 +481,71 @@ const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
 });
 assert.equal(loanTermOnlyRefiBasis.isAcquisitionOnly, false);
 assert.ok(Number.isFinite(loanTermOnlyRefiBasis.dscr));
+const mixedDebtBasis = generatorTest.resolveCanonicalRefiDebtBasis({
+  currentDebtState: {
+    current_debt_dscr_status: "computed",
+    has_true_current_debt_balance: true,
+    current_debt_balance: 1500000,
+    current_debt_annual_debt_service: 579813.8872489922,
+    current_debt_dscr: 1.0551661722053094,
+    current_debt_limitation_reason_code: null,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 3000000,
+    ltv: 0.75,
+    derived_acquisition_loan_amount: 2250000,
+    interest_rate: 0.071,
+    amortization_years: 30,
+  },
+  financials: {
+    refi_debt_balance: 2250000,
+    refi_interest_rate: 0.071,
+    refi_amort_years: 30,
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
+  t12Payload: { net_operating_income: 611789.1838458668 },
+});
+assert.equal(mixedDebtBasis.isAcquisitionOnly, false);
+assert.equal(mixedDebtBasis.debtBalance, 1500000);
+const mixedRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {
+    refi_debt_balance: 2250000,
+    refi_interest_rate: 0.071,
+    refi_amort_years: 30,
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
+  t12Payload: { net_operating_income: 611789.1838458668 },
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "computed",
+    has_true_current_debt_balance: true,
+    current_debt_balance: 1500000,
+    current_debt_annual_debt_service: 579813.8872489922,
+    current_debt_dscr: 1.0551661722053094,
+    current_debt_limitation_reason_code: null,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 3000000,
+    ltv: 0.75,
+    derived_acquisition_loan_amount: 2250000,
+    interest_rate: 0.071,
+    amortization_years: 30,
+  },
+});
+assert.match(mixedRefiSufficiencyHtml, /\$1,500,000/);
+assert.equal(/\$2,250,000/.test(mixedRefiSufficiencyHtml), false);
+assert.equal(/no current debt|not assessed|no verified current debt document/i.test(mixedRefiSufficiencyHtml), false);
 const loanTermOnlyRefiModel = generatorTest.buildRefiStabilityModel({
   financials: {
     refi_ltv_max: 0.75,
