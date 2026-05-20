@@ -5544,13 +5544,15 @@ if (effectiveReportMode === "screening_v1") {
       t12Payload,
       sourceReconciliationState,
     });
-    const coverClassificationLabel = dealScoreState.displayVerdict?.label || (() => {
-      if (effectiveReportMode === "screening_v1") {
+    const coverClassificationLabel = effectiveReportMode === "screening_v1"
+      ? (() => {
         if (screeningClass === "Stable") return "Stable";
         if (screeningClass === "Fragile") return "High Risk";
-      }
-      return "Review";
-    })();
+        if (screeningClass === "Sensitized") return "Sensitized";
+        if (screeningClass === "Insufficient Data") return "Insufficient Data";
+        return "Review";
+      })()
+      : (dealScoreState.displayVerdict?.label || "Review");
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
@@ -5598,6 +5600,9 @@ if (effectiveReportMode === "screening_v1") {
       if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Underwriting" : "Preliminary Screening";
       const reportTierBadges = [];
+      if (effectiveReportMode === "screening_v1") {
+        reportTierBadges.push("Screening Scope");
+      }
       if (effectiveReportMode === "v1_core" && Number(sectionEligibility?.source_constrained_section_count || 0) > 0) {
         reportTierBadges.push("Source-Constrained");
       }

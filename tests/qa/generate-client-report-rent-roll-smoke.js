@@ -60,7 +60,15 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const coverClassificationLabel = dealScoreState\.displayVerdict\?\.label \|\|/
+  /const coverClassificationLabel = effectiveReportMode === "screening_v1"[\s\S]{0,420}screeningClass === "Sensitized"[\s\S]{0,240}: \(dealScoreState\.displayVerdict\?\.label \|\| "Review"\)/
+);
+assert.equal(
+  /effectiveReportMode === "screening_v1"[\s\S]{0,180}Review - Debt Coverage Constraint/.test(reportSource),
+  false
+);
+assert.match(
+  reportSource,
+  /if \(effectiveReportMode === "screening_v1"\)\s*\{\s*reportTierBadges\.push\("Screening Scope"\);/
 );
 assert.match(
   reportSource,
