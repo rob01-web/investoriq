@@ -4588,14 +4588,16 @@ if (effectiveReportMode === "screening_v1") {
       coerceNumber(t12Payload?.physical_occupancy) ??
       coerceNumber(t12Payload?.economic_occupancy) ??
       coerceNumber(t12Payload?.occupancy);
-    const rentRollIsPartialSample = computedRentRoll?.is_partial_sample === true;
+    const rentRollIsPartialSample =
+      computedRentRoll?.is_partial_sample === true ||
+      rentRollPayload?.is_partial_sample === true;
     const rrTotalUnits =
       coerceNumber(computedRentRoll?.total_units) ??
       coerceNumber(rentRollPayload?.totals?.total_units);
     const rrOccupiedUnits =
       coerceNumber(computedRentRoll?.occupied_units) ??
       coerceNumber(rentRollPayload?.totals?.occupied_units);
-    const rrExplicitOccupancy = coerceNumber(computedRentRoll?.occupancy);
+    const canonicalExecOccupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
     const execOccFromRR =
       !rentRollIsPartialSample && Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
         ? rrOccupiedUnits / rrTotalUnits
@@ -4626,8 +4628,8 @@ if (effectiveReportMode === "screening_v1") {
     let execOccupancy =
       Number.isFinite(execOccFromT12)
         ? execOccFromT12
-      : Number.isFinite(rrExplicitOccupancy)
-        ? rrExplicitOccupancy
+      : Number.isFinite(canonicalExecOccupancy)
+        ? canonicalExecOccupancy
       : Number.isFinite(execOccFromRR)
         ? execOccFromRR
         : rentRollIsPartialSample ? null : rrOccFromRows;
@@ -5612,7 +5614,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       }).join("");
       const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
       // Investment thesis: fully deterministic
-      const rrOccNow = coerceNumber(computedRentRoll?.occupancy);
+      const rrOccNow = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
       const rrInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value);
       const rrMarket  = coerceNumber(rentRollAnnualTotals?.market?.value);
       const rrUpsidePct = coerceNumber(computedRentRoll?.rent_to_market_gap) ??

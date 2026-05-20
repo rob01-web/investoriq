@@ -48,6 +48,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const canonicalExecOccupancy = coerceNumber\(resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)\)/
+);
+assert.match(
+  reportSource,
+  /const rrOccNow = coerceNumber\(resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)\)/
+);
+assert.match(
+  reportSource,
   /const coverClassificationLabel = dealScoreState\.displayVerdict\?\.label \|\|/
 );
 assert.match(
