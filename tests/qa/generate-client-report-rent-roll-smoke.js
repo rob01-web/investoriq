@@ -1259,6 +1259,29 @@ const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSu
 });
 assert.match(propertyTaxValidatedTreatmentHtml, /Modeled Inputs/i);
 assert.match(propertyTaxValidatedTreatmentHtml, /Structured property tax input/i);
+const acquisitionSizingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    derived_acquisition_loan_amount: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.match(acquisitionSizingHtml, /Proposed Acquisition DSCR/i);
+assert.equal(/Current Debt DSCR/i.test(acquisitionSizingHtml), false);
+assert.match(acquisitionSizingHtml, /not current outstanding debt/i);
+assert.match(acquisitionSizingHtml, /does not represent appraised value/i);
+assert.equal(/BUY|SELL|HOLD/i.test(acquisitionSizingHtml), false);
+assert.equal(
+  /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Unsupported (?:Appraisal Summary|Market Survey)\.pdf/i.test(documentTreatmentHtml),
+  false
+);
 
 const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
