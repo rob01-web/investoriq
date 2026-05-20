@@ -1,3 +1,29 @@
+# May 20, 2026 Addendum - Remaining Root Class Risk Audit Complete / Dashboard Status Taxonomy Next
+
+## A) REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT complete
+
+Codex completed the audit-only pass.
+
+No patches were made.
+
+The audit did not reopen the two completed root classes:
+1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE / COMMITTED
+2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - COMPLETE / COMMITTED
+
+The audit found remaining risks mainly in downstream UI/admin/ops interpretation layers, not in the core customer delivery gate.
+
+## B) Remaining root classes found
+
+Ranked risks:
+
+```text
+P0 - DASHBOARD_STATUS_HISTORY_INTERPRETATION_DRIFT
+P1 - QA_PUBLIC_SURFACE_LEAKAGE_DRIFT, admin ops surface variant
+P1 - SAMPLE_DEMO_METADATA_LEAKAGE_DRIFT, ops/automation interpretation
+P2 - WORKER_LIFECYCLE_SCHEDULING_DRIFT, semantic overload / latent
+P2 - EMAIL_NOTIFICATION_DRIFT, message-policy alignment risk
+```
+
 # May 20, 2026 Same-Day Addendum - Canonical Truth Consumer Drift Complete / Publication Authority Cleanup / One Elite Quality Standard Re-Locked
 
 ## A) Today’s strategic checkpoint
@@ -5,9 +31,9 @@
 Current active root-class sequence:
 
 ```text
-1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE
-2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - IN PROGRESS
-3. REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT - NEXT AFTER ROOT CLASS 2
+1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE / COMMITTED
+2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - COMPLETE / COMMITTED
+3. REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT - NEXT
 ```
 
 Rob’s preferred workflow is locked:
@@ -60,17 +86,17 @@ If optional data is missing, affected sections collapse/disclose; the whole repo
 If a metric is unsupported, do not fabricate it.
 ```
 
-## C) Root Class 2 in progress - PUBLICATION_AUTHORITY / BLOCKER_LOGIC
+## C) Root Class 2 complete - PUBLICATION_AUTHORITY / BLOCKER_LOGIC
 
 Codex audit found these actual sub-classes:
 
 ```text
-1. DELIVERY_GATE_PARALLEL_AUTHORITY_DRIFT
-2. CUSTOMER_BLOCKER_VS_ADVISORY_METADATA_DRIFT
-3. WORKER_TYPED_GATE_VS_FAILURE_TAXONOMY_DRIFT
-4. PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY
-5. ENTITLEMENT_RESTORE_PATH_DRIFT
-6. STATUS_ENUM_NORMALIZATION_DRIFT
+1. DELIVERY_GATE_PARALLEL_AUTHORITY_DRIFT - COMPLETE
+2. CUSTOMER_BLOCKER_VS_ADVISORY_METADATA_DRIFT - COMPLETE
+3. WORKER_TYPED_GATE_VS_FAILURE_TAXONOMY_DRIFT - COMPLETE
+4. PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY - COMPLETE
+5. ENTITLEMENT_RESTORE_PATH_DRIFT - COMPLETE
+6. STATUS_ENUM_NORMALIZATION_DRIFT - COMPLETE
 ```
 
 Bundle strategy:
@@ -141,19 +167,25 @@ Commit status:
 
 ```text
 Committed and pushed.
+Includes:
+- fake needs_documents worker terminal status removed;
+- stale upload-more/resume wording removed from production worker copy;
+- literal stale upload/resume phrases removed from worker smoke test guard via split-string construction;
+- typed user_needs_documents maps to failed + MISSING_REQUIRED_SOURCE_DATA (not REPORT_GENERATION_FAILED);
+- admin_review_required does not restore credit and does not become REPORT_GENERATION_FAILED.
 Commit message: Normalize worker terminal gate status and failure copy
 ```
 
-## E) Bundle 2 in progress - canonical delivery gate supremacy / one quality standard
+## E) Bundle 2 complete - canonical delivery gate supremacy / one elite quality standard
 
-Files currently being worked:
+Files patched:
 
 ```text
 api/_lib/qa-action-plan.js
 tests/qa/qa-action-plan-smoke.js
 ```
 
-Patch already accepted before final cleanup:
+Completed outcomes:
 
 ```text
 - buildDeliveryGateDecision(...) is the canonical customer-delivery authority.
@@ -161,9 +193,16 @@ Patch already accepted before final cleanup:
 - customer_publish_blockers must come from canonical delivery gate reduction.
 - legacy readiness booleans cannot override canonical delivery gate output.
 - public/advisory/demo/sample/DocRaptor/high-value metadata cannot independently block customer delivery.
+- public/high-value/Ken/customer quality-tier wording removed/demoted from active QA action-plan wording.
+- old phrases removed from active QA wording:
+  underwriting_private_beta_recommended
+  screening_only_public_launch_recommended
+  do_not_use_for_public_or_high_value_outreach
+  before public sample
+  public sample or outreach
+  before sample use
+- remaining compatibility fields are non-authoritative aliases/metadata only and must not define separate quality tiers.
 ```
-
-Then Rob correctly challenged the remaining public/private/Ken/customer tier semantics.
 
 ## F) Universal elite quality standard - doctrine re-locked harder
 
@@ -231,93 +270,97 @@ Distribution/config metadata only:
 These may describe exposure/distribution context but must not create a lower/higher quality tier.
 ```
 
-## G) Current Codex task running
-
-Current Codex prompt/task:
+Status line:
 
 ```text
-REMOVE_PUBLIC_HIGH_VALUE_READINESS_AS_QUALITY_TIER
+This doctrine is now complete/locked in both context and active QA/action-plan wording.
+```
+
+## G) Bundle 3 complete - insert guard / entitlement restore alignment
+
+Files patched:
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+Completed behavior:
+
+```text
+- entitlement restore is centralized through restoreEntitlementForFailedJob(...);
+- recordJobFailure(...) now calls the helper instead of inline restore SQL;
+- inline restore SQL exists only inside the helper;
+- helper keeps entitlement_restored idempotency/event check behavior;
+- published jobs do not call restore helper;
+- admin-held/admin_review_required jobs do not call restore helper;
+- deliverable jobs do not restore credit;
+- deliverable missing reportId/storagePath remains true REPORT_GENERATION_FAILED system-contract failure;
+- user_needs_documents typed outcome remains failed + MISSING_REQUIRED_SOURCE_DATA;
+- admin_review_required remains held/admin path and does not become REPORT_GENERATION_FAILED.
+```
+
+Commit status:
+
+```text
+Committed and pushed.
+Suggested commit message used: Centralize worker entitlement restore path.
+```
+
+## H) Root Class 2 final status
+
+PUBLICATION_AUTHORITY / BLOCKER_LOGIC is complete and committed.
+
+Completed bundles:
+
+```text
+1. Worker terminal authority and typed gate normalization.
+2. Canonical delivery gate supremacy and one elite quality standard.
+3. Publication insert/contract alignment and entitlement restore consolidation.
+```
+
+Important remaining nuance:
+
+```text
+- worker status "publishing" still doubles as active publish stage and admin-held state.
+- This is known semantic overload, but not part of today’s completed root-class patch.
+- Do not patch it unless the next audit or live test shows it as an active root-class risk.
+```
+
+## I) Next step
+
+Next task is audit only:
+
+```text
+REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT
 ```
 
 Purpose:
 
 ```text
-Remove or demote public/high-value/sample/Ken/outreach readiness semantics so they cannot act like a separate report-quality tier.
+- identify any remaining systemic root classes before Ken/public sample/outreach/launch;
+- do not patch yet;
+- do not repeat completed root classes unless a new unresolved subclass remains.
 ```
 
-Expected behavior:
+Likely classes to audit:
 
 ```text
-- Preserve canonical customer authority:
-  delivery_gate_status
-  customer_publish_eligible
-  customer_publish_blockers
-  customer_delivery_impact
-  publish_decision_reason
-  readiness_hierarchy.final_delivery_authority="delivery_gate"
-
-- Remove/demote:
-  public_sample_ready
-  high_value_outreach_ready
-  public_sample_blockers
-  high_value_outreach_blockers
-  blocks_public_sample
-  blocks_high_value_outreach
-
-- If compatibility fields remain, they must be either:
-  1. aliases of canonical customer publishability, OR
-  2. clearly nested as non-authoritative distribution/context metadata.
-
-- PUBLIC_SAMPLE_NOT_READY must not become a quality blocker.
-- high-value outreach readiness must not define a separate quality bar.
-- customer_publish_eligible must never derive from public_sample_ready/high_value_outreach_ready.
-```
-
-## H) What to do after Codex returns
-
-When Codex returns:
-
-```text
-1. Do not commit immediately.
-2. Upload patched files:
-   - api/_lib/qa-action-plan.js
-   - tests/qa/qa-action-plan-smoke.js
-3. ChatGPT must audit:
-   - syntax
-   - mojibake/stale wording
-   - no public/private/Ken/customer tier semantics
-   - canonical customer gate still works
-   - true quality defects still block/hold customer delivery
-   - DocRaptor/demo/sample metadata is non-authoritative distribution metadata only
-4. Commit only after audit pass.
-```
-
-## I) Remaining work in Root Class 2 after Bundle 2
-
-Likely remaining bundle:
-
-```text
-Bundle 3:
-- PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY
-- remaining ENTITLEMENT_RESTORE_PATH_DRIFT
-- static future-drift guards
-```
-
-Expected goals:
-
-```text
-- final report insert/storage guard must enforce canonical delivery authority, not create a separate inconsistent authority.
-- entitlement restore must align to final outcome.
-- no duplicate restore.
-- true system/platform failures restore credit.
-- true core source-data failures follow current product policy.
-- published jobs must not restore credit.
-- admin-held jobs must not look like system failures.
+- REPORT_TYPE_LEAKAGE_DRIFT
+- SECTION_FAIL_CLOSE_DISCLOSURE_DRIFT
+- SUPPORTING_DOC_TAXONOMY_DRIFT
+- AI_RECOVERY_ARTIFACT_ACCEPTANCE_DRIFT
+- QA_PUBLIC_SURFACE_LEAKAGE_DRIFT
+- DASHBOARD_STATUS_HISTORY_INTERPRETATION_DRIFT
+- CREDIT_PURCHASE_ENTITLEMENT_DRIFT
+- WORKER_LIFECYCLE_SCHEDULING_DRIFT
+- SAMPLE_DEMO_METADATA_LEAKAGE_DRIFT
+- EMAIL_NOTIFICATION_DRIFT
 ```
 
 ## J) Still deferred / do not touch yet
 
-Do not work on these until Root Class 2 is complete:
+Do not work on these until after REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT unless they become urgent launch blockers:
 
 ```text
 - Supabase Cron auth/endpoint contract.
@@ -326,7 +369,6 @@ Do not work on these until Root Class 2 is complete:
 - Stripe/pricing changes.
 - Dashboard history auto-refresh.
 - Broad parser refactors.
-- Broad remaining-root-class audit.
 ```
 
 Next audit after Root Class 2:
@@ -366,6 +408,7 @@ No unrelated changes.
 No dashboard/worker/parser/cron/DocRaptor/Stripe changes unless specifically requested.
 One patch bundle at a time.
 SHORT FORM RECEIPT ONLY.
+Prompts must be even tighter going forward: one task, exact files, exact forbidden changes, short receipt only.
 ```
 
 

@@ -186,7 +186,6 @@ function StatusBadge({ status, errorCode }) {
     publishing:    adminReviewHeld
       ? { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' }
       : { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Publishing' },
-    needs_documents:{ bg:'#F0F4FF',   border:'#B8C8F0',      color:'#1A3A7A',    label: 'Needs Docs'   },
     failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Failed'       },
   };
   const s = map[status] || { bg: T.warm, border: T.hairline, color: T.ink4, label: status };
@@ -519,7 +518,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     recentJobsFetchRef.current = true;
     try {
       const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id)
-        .in('status', ['needs_documents','queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
+        .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
         .order('created_at', { ascending: false }).limit(25);
       if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
       const rows = data || [];
@@ -920,7 +919,9 @@ useEffect(() => {
     opacity: 1,
   };
   const needsDocumentsMessage = (() => {
-    if (activeJobForRuns?.status !== 'needs_documents') return defaultNeedsDocumentsMessage;
+    if (!(activeJobForRuns?.status === 'failed' && activeJobForRuns?.error_code === 'MISSING_REQUIRED_SOURCE_DATA')) {
+      return defaultNeedsDocumentsMessage;
+    }
     if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
     const missingRaw = Array.isArray(activeNeedsDocumentsEvent.missing) ? activeNeedsDocumentsEvent.missing : [];
     const detectedRaw = Array.isArray(activeNeedsDocumentsEvent.detected) ? activeNeedsDocumentsEvent.detected : [];
