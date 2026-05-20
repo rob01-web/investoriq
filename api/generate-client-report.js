@@ -2415,7 +2415,9 @@ function buildScreeningDataCoverageSummary({
   const totalUnitsPresent = Number.isFinite(
     coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units)
   );
-  const isPartialRentRollSample = computedRentRoll?.is_partial_sample === true;
+  const isPartialRentRollSample =
+    computedRentRoll?.is_partial_sample === true ||
+    rentRollPayload?.is_partial_sample === true;
   const hasTrustedRentRollSummaryTotals =
     rentRollPayload?.totals?.summary_row_detected === true;
   const occFromT12 =
@@ -3067,7 +3069,9 @@ function buildScreeningNoiStabilityHtml({
   const rrTotalUnits = coerceNumber(
     computedRentRoll?.total_units ?? rentRollPayload?.total_units
   );
-  const isPartialRentRollSample = computedRentRoll?.is_partial_sample === true;
+  const isPartialRentRollSample =
+    computedRentRoll?.is_partial_sample === true ||
+    rentRollPayload?.is_partial_sample === true;
   const rrOccupiedUnits = coerceNumber(
     computedRentRoll?.occupied_units ?? (isPartialRentRollSample ? null : rentRollPayload?.occupied_units)
   );
@@ -3286,6 +3290,9 @@ function buildScreeningRentRollDistributionHtml({
   rentRollPayload,
   formatCurrency,
 }) {
+  const isPartialRentRollSample =
+    computedRentRoll?.is_partial_sample === true ||
+    rentRollPayload?.is_partial_sample === true;
   const source =
     computedRentRoll && typeof computedRentRoll === "object"
       ? computedRentRoll
@@ -3293,7 +3300,7 @@ function buildScreeningRentRollDistributionHtml({
       ? rentRollPayload
       : null;
   if (!source) return "";
-  if (source.is_partial_sample === true) return "";
+  if (isPartialRentRollSample) return "";
   const canonicalAnnualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
   const totalUnits = coerceNumber(source.total_units);
   const occupiedUnits = coerceNumber(source.occupied_units);
@@ -8600,6 +8607,7 @@ export const __test__ = {
   buildScreeningIncomeForensicsHtml,
   buildScreeningExpenseStructureHtml,
   buildScreeningNoiStabilityHtml,
+  buildScreeningRentRollDistributionHtml,
   buildRenovationBudgetRows,
   buildRenovationBudgetCardHtml,
   buildRenovationExecutionRows,

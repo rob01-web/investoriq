@@ -56,6 +56,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const isPartialRentRollSample =\s*computedRentRoll\?\.is_partial_sample === true \|\|\s*rentRollPayload\?\.is_partial_sample === true/
+);
+assert.match(
+  reportSource,
   /const coverClassificationLabel = dealScoreState\.displayVerdict\?\.label \|\|/
 );
 assert.match(
@@ -1628,6 +1632,52 @@ assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance/i);
 assert.equal(reconciliationNoiHtml.includes("+6.1%"), true);
 assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR variance: \+6\.1%\. See Data Coverage\./i);
 assert.equal(reconciliationNoiHtml.includes("-48.0%"), false);
+const partialPayloadNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
+  t12Payload: {
+    gross_potential_rent: 1850000,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+  },
+  rentRollPayload: {
+    is_partial_sample: true,
+    total_units: 48,
+    occupied_units: 46,
+    units: [{ unit: "1A", in_place_rent: 1888 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      summary_row_detected: false,
+    },
+  },
+  formatCurrency,
+  sourceReconciliationState: sourceReconciliationFixture,
+});
+assert.equal(partialPayloadNoiHtml.includes("Vacancy Buffer"), false);
+assert.equal(partialPayloadNoiHtml.includes("Current Occupancy"), false);
+const partialPayloadRentRollDistributionHtml = generatorTest.buildScreeningRentRollDistributionHtml({
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1962456,
+  },
+  rentRollPayload: {
+    is_partial_sample: true,
+    total_units: 48,
+    occupied_units: 46,
+    units: [{ unit: "1A", in_place_rent: 1888 }],
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      summary_row_detected: false,
+    },
+  },
+  formatCurrency,
+});
+assert.equal(partialPayloadRentRollDistributionHtml, "");
 
 const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {
