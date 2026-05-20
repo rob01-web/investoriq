@@ -108,6 +108,11 @@ assert.equal(plan.public_sample_ready, false);
 assert.equal(plan.high_value_outreach_ready, false);
 assert.equal(plan.customer_delivery_ready, true);
 assert.notEqual(plan.delivery_recommendation, "customer_deliverable");
+assert.equal(plan.launch_path_recommendation, "customer_deliverable_with_internal_advisory");
+assert.equal(
+  /before public sample|high-value outreach use|public sample or outreach|public sample or high-value|public sample or outreach report|underwriting_private_beta_recommended|screening_only_public_launch_recommended|do_not_use_for_public_or_high_value_outreach|Ken|high-value quality tier/i.test(serialized),
+  false
+);
 assert.equal(actionsByCode.T12_LINE_ITEM_DETAIL_MISSING.action_type, "parser_fix_required");
 assert.equal(
   ["render_gating_fix_required", "artifact_mapping_fix_required"].includes(
@@ -134,6 +139,10 @@ const sparsePlan = buildQaActionPlan({
 assert.equal(sparsePlan.event, "qa_action_plan");
 assert.equal(sparsePlan.source_reconciliation_state, null);
 assert.equal(sparsePlan.section_eligibility, null);
+assert.equal(
+  /before public sample|high-value outreach use|public sample or outreach|public sample or high-value|public sample or outreach report|underwriting_private_beta_recommended|screening_only_public_launch_recommended|do_not_use_for_public_or_high_value_outreach|Ken|high-value quality tier/i.test(JSON.stringify(sparsePlan)),
+  false
+);
 
 const sparseDebtFlagPlan = buildQaActionPlan({
   reportQaFlags: [

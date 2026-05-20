@@ -264,7 +264,7 @@ function actionForReportFlag(flag, context = {}) {
           severity,
           action_type: "source_document_limitation",
           owner_area: "source_documents",
-          recommended_next_step: "Verify whether the acquisition assumptions are fully documented and supported before public sample or outreach use.",
+          recommended_next_step: "Verify whether the acquisition assumptions are fully documented and supported before external distribution.",
           requires_code_patch: false,
           requires_regeneration: false,
           blocks_public_sample: true,
@@ -300,7 +300,7 @@ function actionForReportFlag(flag, context = {}) {
       severity,
       action_type: "production_config_only",
       owner_area: "production_config",
-      recommended_next_step: "Enable and verify production PDF mode before public sample or outreach use.",
+      recommended_next_step: "Enable and verify production PDF mode before external distribution.",
       requires_code_patch: false,
       requires_regeneration: true,
       blocks_public_sample: true,
@@ -381,8 +381,8 @@ function actionForCoverageFlag(flag) {
       action_type: "source_document_limitation",
       owner_area: "source_reconciliation",
       recommended_next_step: parserSuspected
-        ? "Review the rent roll and T12 extraction path for a parser or normalization issue before public sample or outreach use."
-        : "Document the rent roll vs T12 variance, disclose it institutionally, and review before public sample or outreach use.",
+        ? "Review the rent roll and T12 extraction path for a parser or normalization issue before external use."
+        : "Document the rent roll vs T12 variance, disclose it institutionally, and complete internal advisory review before external use.",
       requires_code_patch: false,
       requires_regeneration: false,
       blocks_customer_delivery: customerDeliveryBlocked,
@@ -429,7 +429,7 @@ function actionForCoverageFlag(flag) {
       owner_area: "report_renderer",
       recommended_next_step: code === "CORE_METRICS_WITH_INSUFFICIENT_DATA_LABEL" || code === "CONTRADICTORY_INSUFFICIENT_DATA_CLASSIFICATION"
         ? "Patch capital risk profile gating so core operating metrics prevent an Insufficient Data label."
-        : "Inspect parser artifacts and section gating before using as public sample or outreach report.",
+        : "Inspect parser artifacts and section gating before external distribution.",
       requires_code_patch: true,
       requires_regeneration: true,
       blocks_public_sample: true,
@@ -682,7 +682,7 @@ function actionForReportContractViolation(violation) {
       severity: "high",
       action_type: "admin_review_required",
       owner_area: "report_renderer",
-      recommended_next_step: "Align all rendered current-debt DSCR values to the source-of-truth current debt service basis before public sample or high-value outreach use.",
+      recommended_next_step: "Align all rendered current-debt DSCR values to the source-of-truth current debt service basis before external distribution.",
       requires_code_patch: true,
       requires_regeneration: true,
       blocks_customer_delivery: false,
@@ -752,7 +752,7 @@ function deliveryRecommendation({ actions, publicSampleReady, customerReady }) {
     return "source_package_insufficient";
   }
   if (actions.some((action) => action.requires_code_patch)) return "regenerate_after_code_or_mapping_fix";
-  if (!publicSampleReady) return "do_not_use_for_public_or_high_value_outreach";
+  if (!publicSampleReady) return "distribution_context_review";
   if (actions.length > 0) return "customer_deliverable_with_internal_warning";
   return "customer_deliverable";
 }
@@ -1671,8 +1671,8 @@ export function buildQaActionPlan({
   const unsafeToAutoFixCount = prioritizedActions.filter((action) => !action.safe_to_auto_fix).length;
   const finalDeliveryStatus = customerReady ? "delivery_gate_ready" : "delivery_gate_blocked";
   const launchPathRecommendation = customerReady
-    ? (publicSampleReady && highValueOutreachReady ? "customer_deliverable" : "underwriting_private_beta_recommended")
-    : "screening_only_public_launch_recommended";
+    ? (publicSampleReady && highValueOutreachReady ? "customer_deliverable" : "customer_deliverable_with_internal_advisory")
+    : "internal_review_recommended";
 
   return {
     event: "qa_action_plan",
