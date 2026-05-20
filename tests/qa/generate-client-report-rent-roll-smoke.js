@@ -1059,6 +1059,7 @@ assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
 assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
+assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(documentTreatmentHtml), false);
 
 const metadataFirstOverFilenameHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -1173,6 +1174,21 @@ assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
+const unvalidatedStructuredDocTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "T12 Statement.pdf",
+      doc_type: "t12",
+      display_doc_type: "T12",
+      semantic_doc_role: "t12",
+      semantic_doc_display_label: "t12",
+      parse_status: "parsed_with_warnings",
+      parse_error: "totals_incomplete",
+    },
+  ],
+});
+assert.match(unvalidatedStructuredDocTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.equal(/Structured operating input/i.test(unvalidatedStructuredDocTreatmentHtml), false);
 
 const propertyTaxUnvalidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -1301,6 +1317,7 @@ const reconciliationDisclosureCoverageHtml = generatorTest.buildScreeningDataCov
 });
 assert.match(reconciliationDisclosureCoverageHtml, /SOURCE RECONCILIATION DISCLOSURE/i);
 assert.equal(/Fully Verified/i.test(reconciliationDisclosureCoverageHtml), false);
+assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(reconciliationDisclosureCoverageHtml), false);
 
 const liveCurrentDebtLimitedCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

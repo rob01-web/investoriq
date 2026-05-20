@@ -1587,22 +1587,26 @@ function buildDocumentTreatmentSummaryHtml({
 
     if (supportedOperating) {
       return {
-        category: "Modeled Inputs",
-        note: "Structured operating input",
-        reason_code: "structured_operating_input",
+        category: isParsed && !hasWarnings && !isUnclassified ? "Modeled Inputs" : "Displayed / Limited Use",
+        note: isParsed && !hasWarnings && !isUnclassified
+          ? "Structured operating input"
+          : "Operating support is displayed only; structured parsed state was not validated for modeled use.",
+        reason_code: isParsed && !hasWarnings && !isUnclassified ? "structured_operating_input" : "operating_support_limited_use",
         source_basis: sourceBasis,
       };
     }
     if (supportedRentRoll) {
       return {
-        category: "Modeled Inputs",
-        note: "Structured rent roll input",
-        reason_code: "structured_rent_roll_input",
+        category: isParsed && !hasWarnings && !isUnclassified ? "Modeled Inputs" : "Displayed / Limited Use",
+        note: isParsed && !hasWarnings && !isUnclassified
+          ? "Structured rent roll input"
+          : "Rent-roll support is displayed only; structured parsed state was not validated for modeled use.",
+        reason_code: isParsed && !hasWarnings && !isUnclassified ? "structured_rent_roll_input" : "rent_roll_support_limited_use",
         source_basis: sourceBasis,
       };
     }
     if (supportedMortgage) {
-      if (currentDebtHasTrueBalance && currentDebtIsAssessed) {
+      if (isParsed && !hasWarnings && !isUnclassified && currentDebtHasTrueBalance && currentDebtIsAssessed) {
         return {
           category: "Modeled Inputs",
           note: "Structured current debt input",
