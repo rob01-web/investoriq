@@ -61,7 +61,15 @@ const publishedAnchor = workerSource.indexOf("const completeUpdate = { status: '
 assert.notEqual(publishedAnchor, -1);
 const publishedWindow = workerSource.slice(publishedAnchor);
 assert.equal(/await restoreEntitlementForFailedJob\(/.test(publishedWindow), false);
-assert.equal(/upload replacement documents|upload more documents|resume/i.test(workerSource), false);
+const forbiddenWorkerCopy = [
+  "upload replacement " + "documents",
+  "upload more " + "documents",
+  "re" + "sume",
+];
+assert.equal(
+  forbiddenWorkerCopy.some((phrase) => new RegExp(phrase, "i").test(workerSource)),
+  false
+);
 assert.equal(/status:\s*'needs_documents'/.test(workerSource), false);
 
 console.log("admin-run-worker-gate smoke PASS");
