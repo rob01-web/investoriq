@@ -1,27 +1,102 @@
-# May 20, 2026 Addendum - Remaining Root Class Risk Audit Complete / Dashboard Status Taxonomy Next
+# May 20, 2026 Addendum - Remaining Root Class Audit Completion / Dashboard and Queue Interpretation Drift Closed
 
-## A) REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT complete
+## A) Completed / committed after remaining root-class audit
 
-Codex completed the audit-only pass.
-
-No patches were made.
-
-The audit did not reopen the two completed root classes:
-1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE / COMMITTED
-2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - COMPLETE / COMMITTED
-
-The audit found remaining risks mainly in downstream UI/admin/ops interpretation layers, not in the core customer delivery gate.
-
-## B) Remaining root classes found
-
-Ranked risks:
+Completed / committed:
 
 ```text
-P0 - DASHBOARD_STATUS_HISTORY_INTERPRETATION_DRIFT
-P1 - QA_PUBLIC_SURFACE_LEAKAGE_DRIFT, admin ops surface variant
-P1 - SAMPLE_DEMO_METADATA_LEAKAGE_DRIFT, ops/automation interpretation
-P2 - WORKER_LIFECYCLE_SCHEDULING_DRIFT, semantic overload / latent
-P2 - EMAIL_NOTIFICATION_DRIFT, message-policy alignment risk
+1) DASHBOARD_STATUS_HISTORY_INTERPRETATION_DRIFT
+- src/pages/Dashboard.jsx
+- needs_documents removed as Dashboard live/terminal status
+- recent-jobs status query no longer includes needs_documents
+- source-missing guidance uses failed + MISSING_REQUIRED_SOURCE_DATA
+- publishing + ADMIN_REVIEW_REQUIRED/admin_review_required normalized through isAdminReviewHeldJob(job)
+- active publishing remains active publishing when no admin-review signal exists
+- getCustomerFacingJobStatus(job) uses helper-level normalization
+- no same-job upload-more/upload-replacement/resume wording
+
+2) QA_PUBLIC_SURFACE_LEAKAGE_DRIFT (queue/admin ops variant)
+- api/admin/queue-metrics.js
+- public_sample_ready / high_value_outreach_ready no longer create customer-delivery operational block labels
+- public/high-value readiness no longer creates EXECUTIVE_OVERRIDE_ONLY
+- public/high-value readiness no longer creates fix-queue rows by itself
+- distribution readiness remains visible only as non-authoritative metadata
+- needs_documents removed from analysis_jobs status-count list
+
+3) SAMPLE_DEMO_METADATA_LEAKAGE_DRIFT (queue/admin ops variant)
+- api/admin/queue-metrics.js
+- production_config / exposure metadata no longer affects automation class selection
+- production_config surfaces only as low-confidence metadata/distribution/config awareness
+- stale "configuration blocker" wording replaced with document/source/integrity blocker wording
+- public/sample/high-value/outreach metadata remains non-authoritative
+```
+
+## B) Audited / no patch needed
+
+```text
+4) EMAIL_NOTIFICATION_DRIFT
+- api/admin-run-worker.js
+- lib/email-resend.js
+- report_published email sends only on true published path
+- user_needs_documents remains failed + MISSING_REQUIRED_SOURCE_DATA
+- admin_review_required remains held/admin path
+- no failed-generation email/copy for admin-held jobs
+- no report-ready email for admin-held jobs
+- no same-job upload-more/resume customer copy found
+
+5) WORKER_LIFECYCLE_SCHEDULING_DRIFT
+- api/admin-run-worker.js
+- src/pages/Dashboard.jsx
+- src/pages/ReportHistory.jsx
+- api/admin/queue-metrics.js
+- lib/email-resend.js
+- tests/qa/admin-run-worker-gate-smoke.js
+- internal overload remains: status=publishing can mean active publishing, or admin-held when paired with ADMIN_REVIEW_REQUIRED
+- current inspected surfaces normalize it correctly
+- no active user/admin-visible contradiction found
+- backend status split not required now
+- deferred risk: future consumers must check status + error_code together, or a dedicated admin-held status may be needed later
+```
+
+## C) Operating rule from Rob
+
+```text
+- Do not defer real stale paths just because they are slightly outside the first prompt.
+- If a real stale path/semantic contradiction is found while already in the relevant file/class, patch immediately if small, safe, and adjacent.
+- Otherwise promote it to the next tight micro-prompt.
+- Do not accumulate a graveyard of known-but-unfixed drift.
+- Still no random cleanup, no broad refactors, and Codex must stay tightly contained.
+```
+
+## D) Codex containment rule
+
+```text
+Future Codex prompts must include hard containment: one task, exact files, no broad refactor, no opportunistic cleanup, no unrelated tests, report outside-scope issues under Remaining risks only.
+```
+
+## E) Current status and next action
+
+```text
+- Remaining root-class audit sequence is closed.
+- No new major root class exposed.
+- Next recommended action is real validation/retest, not another patch class.
+- Recommended next validation:
+  run one clean real report regeneration/retest and inspect publish behavior:
+  most structurally usable reports should publish;
+  unsupported optional sections should collapse/disclose;
+  only true core missing/unusable/contradictory documents or true system failures should fail/hold.
+```
+
+## F) Doctrine preserved
+
+```text
+- One elite report-quality standard.
+- No Ken/public/high-value/customer quality tiers.
+- T12 + Rent Roll usable core docs should publish.
+- Optional gaps collapse/disclose, not whole-report fail.
+- No DocRaptor production flip yet unless explicitly chosen.
+- No GitHub worker disable yet unless Supabase Cron stability is proven.
+- No secret rotation mid-debug unless required.
 ```
 
 # May 20, 2026 Same-Day Addendum - Canonical Truth Consumer Drift Complete / Publication Authority Cleanup / One Elite Quality Standard Re-Locked
@@ -33,7 +108,7 @@ Current active root-class sequence:
 ```text
 1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE / COMMITTED
 2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - COMPLETE / COMMITTED
-3. REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT - NEXT
+3. REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT - COMPLETE
 ```
 
 Rob’s preferred workflow is locked:
@@ -327,7 +402,7 @@ Important remaining nuance:
 - Do not patch it unless the next audit or live test shows it as an active root-class risk.
 ```
 
-## I) Next step
+## I) Next step (Historical note: this section is superseded by the May 20 top addendum.)
 
 Next task is audit only:
 
