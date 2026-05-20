@@ -494,6 +494,76 @@ const derivedComputedScorecardEntry = generatorTest.buildCurrentDebtScorecardEnt
 });
 assert.equal(derivedComputedScorecardEntry.hasDscrScore, true);
 assert.match(derivedComputedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
+const canonicalLoanSelection = generatorTest.resolveCanonicalLoanTermSheetArtifacts([
+  {
+    payload: {
+      semantic_doc_role: "purchase_assumptions",
+      debt_basis: "acquisition_financing_assumption",
+      purchase_price: 12000000,
+      ltv: 0.7,
+      interest_rate: 0.0525,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 8400000,
+    },
+  },
+  {
+    payload: {
+      semantic_doc_role: "loan_term_sheet",
+      outstanding_balance: 8750000,
+      current_outstanding_balance: 8750000,
+      interest_rate: 0.0525,
+      amortization_years: 30,
+    },
+  },
+]);
+assert.equal(Number(canonicalLoanSelection.currentDebtPayload?.outstanding_balance), 8750000);
+const canonicalLoanDebtState = buildCurrentDebtAssessmentState({
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: canonicalLoanSelection.currentDebtPayload,
+  t12Noi: 611789.1838458668,
+});
+assert.equal(canonicalLoanDebtState.current_debt_dscr_status, "computed");
+assert.equal(canonicalLoanDebtState.has_true_current_debt_balance, true);
+const canonicalLoanRefiBlockHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.0525,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
+  t12Payload: { net_operating_income: 611789.1838458668 },
+  currentDebtAssessmentState: canonicalLoanDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: canonicalLoanSelection.currentDebtPayload,
+});
+assert.equal(/No current debt document provided|Not assessed - no current debt document|no true current debt balance was verified/i.test(canonicalLoanRefiBlockHtml), false);
+const canonicalLoanDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: canonicalLoanDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: canonicalLoanSelection.currentDebtPayload,
+  t12Payload: { net_operating_income: 611789.1838458668 },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.equal(/No current debt document provided|Not assessed - no current debt document|no true current debt balance was verified/i.test(canonicalLoanDealScoreState.dealScoreTableHtml), false);
 
 const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   currentDebtState: loanTermOnlyCurrentDebtState,

@@ -576,7 +576,7 @@ const currentDebtDscrScorecardComputed = buildReportContractQa({
     "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
     "<tr><td>DSCR (Current Debt)</td><td>7.10x</td><td>1.25-1.35x</td><td>7/10</td></tr>",
     "</table>",
-    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance.</p>",
+    "<p>Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.</p>",
   ].join("\n"),
 });
 assert.equal(
@@ -586,6 +586,10 @@ assert.equal(
 assert.equal(
   currentDebtDscrScorecardComputed.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
   false
+);
+assert.equal(
+  currentDebtDscrScorecardComputed.violations.some((v) => v.code === "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY"),
+  true
 );
 
 const currentDebtDscrScorecardFalsePositiveGuard = buildReportContractQa({

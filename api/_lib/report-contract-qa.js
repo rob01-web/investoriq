@@ -532,6 +532,9 @@ export function buildReportContractQa({
   const hasUnderwritingLeakInScreening =
     reportTypeIsScreeningReport &&
     /\b(?:Debt Structure|Current Debt Coverage|Refinance Stability Classification|Discounted Cash Flow|DCF|Deal Scorecard|Advanced Modeling|Final Recommendation|Renovation Strategy)\b/i.test(text);
+  const hasComputedCurrentDebtState = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() === "computed";
+  const hasStaleMissingDebtCopy =
+    /SOURCE-CONSTRAINED DEBT NOT PROVIDED|DEBT NOT PROVIDED|No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed|no true current debt balance was verified/i.test(text);
 
   if (hasDealScorecardDscrPlaceholder) {
     addRenderedLeakViolation(violations, {
@@ -609,6 +612,14 @@ export function buildReportContractQa({
       severity: "high",
       message: "Rendered report contains section labels that conflict with the report type.",
       evidence: { report_type: reportTypeLabel, excerpt: leakProbeExcerpt },
+    });
+  }
+  if (hasComputedCurrentDebtState && hasStaleMissingDebtCopy) {
+    addRenderedLeakViolation(violations, {
+      code: "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
+      severity: "high",
+      message: "Rendered report contains missing-current-debt limitation copy even though canonical current debt is computed.",
+      evidence: { excerpt: firstPatternExcerpt(text, [/No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed/i]) || leakProbeExcerpt },
     });
   }
 

@@ -720,6 +720,72 @@ function hasDebtTermsPayload(payload) {
     isFinitePositive(payload.refi_cap_rate)
   );
 }
+function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
+  const rows = Array.isArray(loanArtifacts) ? loanArtifacts : [];
+  if (rows.length === 0) {
+    return {
+      currentDebtArtifact: null,
+      acquisitionArtifact: null,
+      currentDebtPayload: null,
+      acquisitionPayload: null,
+    };
+  }
+  const scored = rows.map((row, index) => {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasBalance =
+      isFinitePositive(payload?.outstanding_balance) ||
+      isFinitePositive(payload?.current_outstanding_balance) ||
+      isFinitePositive(payload?.current_loan_balance);
+    const hasTerms =
+      isFinitePositive(payload?.interest_rate) ||
+      isFinitePositive(payload?.amortization_years) ||
+      isFinitePositive(payload?.amort_years) ||
+      isFinitePositive(payload?.ltv) ||
+      isFinitePositive(payload?.monthly_payment) ||
+      isFinitePositive(payload?.annual_debt_service);
+    const hasAcquisitionSignals =
+      isFinitePositive(payload?.purchase_price) ||
+      isFinitePositive(payload?.going_in_cap_rate) ||
+      isFinitePositive(payload?.derived_acquisition_loan_amount) ||
+      debtBasis.includes("acquisition") ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      role.includes("appraisal");
+    const supportsCurrentDebtRole = [
+      "current_mortgage_statement",
+      "current_debt_terms",
+      "mortgage_statement",
+      "loan_term_sheet",
+      "",
+    ].includes(role);
+    const currentDebtScore =
+      (hasBalance ? 400 : 0) +
+      (supportsCurrentDebtRole ? 150 : 0) +
+      (hasTerms ? 40 : 0) +
+      (role ? 30 : 20) -
+      (hasAcquisitionSignals && !hasBalance ? 80 : 0) -
+      (debtBasis.includes("acquisition") ? 80 : 0);
+    const acquisitionScore =
+      (hasAcquisitionSignals ? 240 : 0) +
+      (role === "purchase_assumptions" || role.includes("acquisition") ? 120 : 0) +
+      (isFinitePositive(payload?.derived_acquisition_loan_amount) ? 100 : 0) +
+      (debtBasis.includes("acquisition") ? 100 : 0);
+    return { row, index, currentDebtScore, acquisitionScore };
+  });
+  const currentDebtArtifact =
+    [...scored].sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0]?.row || null;
+  const acquisitionArtifact =
+    [...scored].sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)[0]?.row ||
+    currentDebtArtifact;
+  return {
+    currentDebtArtifact,
+    acquisitionArtifact,
+    currentDebtPayload: currentDebtArtifact?.payload || null,
+    acquisitionPayload: acquisitionArtifact?.payload || null,
+  };
+}
 function getReportQaStatus(flags) {
   const items = Array.isArray(flags) ? flags : [];
   if (items.some((flag) => flag?.severity === "critical")) {
@@ -4132,17 +4198,18 @@ export default async function handler(req, res) {
           .limit(1)
           .maybeSingle();
         propertyTaxPayload = propertyTaxArtifact?.payload || null;
-        const { data: loanTermSheetArtifact } = await supabase
+        const { data: loanTermSheetArtifacts } = await supabase
           .from("analysis_artifacts")
           .select("payload")
           .eq("job_id", jobId)
           .eq("type", "loan_term_sheet_parsed")
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const rawLoanTermSheetPayload = loanTermSheetArtifact?.payload || null;
-        const loanTermSheetPayload = hasUsableDebtPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
-        loanTermSheetTermsPayload = hasDebtTermsPayload(rawLoanTermSheetPayload) ? rawLoanTermSheetPayload : null;
+          .limit(10);
+        const canonicalLoanSelection = resolveCanonicalLoanTermSheetArtifacts(loanTermSheetArtifacts || []);
+        const canonicalCurrentDebtLoanPayload = canonicalLoanSelection.currentDebtPayload || null;
+        loanTermSheetTermsPayload = hasDebtTermsPayload(canonicalCurrentDebtLoanPayload)
+          ? canonicalCurrentDebtLoanPayload
+          : null;
       }
       const { data: sourceRows, error: sourceErr } = await supabase
         .from("analysis_job_files")
@@ -8620,4 +8687,5 @@ export const __test__ = {
   materiallyDifferent,
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
+  resolveCanonicalLoanTermSheetArtifacts,
 };
