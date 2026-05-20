@@ -1,3 +1,376 @@
+# May 20, 2026 Same-Day Addendum - Canonical Truth Consumer Drift Complete / Publication Authority Cleanup / One Elite Quality Standard Re-Locked
+
+## A) Today’s strategic checkpoint
+
+Current active root-class sequence:
+
+```text
+1. CANONICAL_TRUTH_CONSUMER_DRIFT - COMPLETE
+2. PUBLICATION_AUTHORITY / BLOCKER_LOGIC - IN PROGRESS
+3. REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT - NEXT AFTER ROOT CLASS 2
+```
+
+Rob’s preferred workflow is locked:
+
+```text
+- Finish one root class at a time.
+- Bundle 2-3 closely related sub-classes only when safe.
+- Use small, direct Codex micro-prompts.
+- Codex patches.
+- ChatGPT audits patched files before commit.
+- Commit only after audit pass.
+- Then move to the next bundle/root class.
+```
+
+This flow worked well and should remain the default.
+
+## B) Root Class 1 complete - CANONICAL_TRUTH_CONSUMER_DRIFT
+
+Root class definition:
+
+```text
+Canonical truth exists correctly in artifacts/state, but stale renderer, scorecard, verdict, QA, disclosure, or narrative consumers can still render contradictory report text.
+```
+
+This root class is now complete and committed.
+
+Sub-classes completed:
+
+```text
+1. Current Debt / DSCR - COMPLETE
+2. Refinance / debt service / proceeds - COMPLETE
+3. Deal Score / verdict / scorecard - COMPLETE
+4. Source Reconciliation - COMPLETE
+5. Data Coverage / Document Treatment - COMPLETE
+6. QA / public / distribution metadata - COMPLETE
+7. Rent Roll occupancy/rent/market rent/rent gap - COMPLETE
+8. T12 EGI/OpEx/NOI/GPR - COMPLETE
+9. Acquisition assumptions / proposed financing vs current debt - COMPLETE
+10. Appraisal / cap-rate / valuation / DCF - COMPLETE
+11. Property Tax - COMPLETE
+12. Renovation / CapEx - COMPLETE
+```
+
+Key doctrine preserved:
+
+```text
+Canonical artifacts/state are truth.
+No stale renderer fallback may contradict canonical state.
+If optional data is missing, affected sections collapse/disclose; the whole report does not fail.
+If a metric is unsupported, do not fabricate it.
+```
+
+## C) Root Class 2 in progress - PUBLICATION_AUTHORITY / BLOCKER_LOGIC
+
+Codex audit found these actual sub-classes:
+
+```text
+1. DELIVERY_GATE_PARALLEL_AUTHORITY_DRIFT
+2. CUSTOMER_BLOCKER_VS_ADVISORY_METADATA_DRIFT
+3. WORKER_TYPED_GATE_VS_FAILURE_TAXONOMY_DRIFT
+4. PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY
+5. ENTITLEMENT_RESTORE_PATH_DRIFT
+6. STATUS_ENUM_NORMALIZATION_DRIFT
+```
+
+Bundle strategy:
+
+```text
+Bundle 1:
+- WORKER_TYPED_GATE_VS_FAILURE_TAXONOMY_DRIFT
+- STATUS_ENUM_NORMALIZATION_DRIFT
+- worker-facing stale failure copy cleanup
+
+Bundle 2:
+- DELIVERY_GATE_PARALLEL_AUTHORITY_DRIFT
+- CUSTOMER_BLOCKER_VS_ADVISORY_METADATA_DRIFT
+- legacy readiness / public-high-value tier cleanup
+
+Bundle 3:
+- PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY
+- remaining ENTITLEMENT_RESTORE_PATH_DRIFT
+- static future-drift guards
+```
+
+## D) Bundle 1 complete - worker terminal authority and typed gate normalization
+
+Files patched:
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+Accepted behavior:
+
+```text
+- delivery_gate_status="deliverable" continues to publish path.
+- delivery_gate_status="admin_review_required" does not become REPORT_GENERATION_FAILED.
+- delivery_gate_status="user_needs_documents" no longer writes status="needs_documents".
+- "needs_documents" is not a worker/job terminal status in InvestorIQ V1.
+- There is no same-job customer workflow to upload more documents and resume.
+- typed user_needs_documents now maps to:
+  status="failed"
+  error_code="MISSING_REQUIRED_SOURCE_DATA"
+  transition rendering -> failed
+- typed user_needs_documents does not map to REPORT_GENERATION_FAILED.
+- deliverable path missing reportId/storagePath remains true system-contract failure and can remain REPORT_GENERATION_FAILED.
+```
+
+Stale customer-facing failure copy also removed:
+
+```text
+Removed:
+- upload replacement documents
+- upload more documents
+- resume same job implication
+
+Replacement:
+- Please log in to your InvestorIQ dashboard to review the job status.
+```
+
+Important doctrine:
+
+```text
+Do not broaden failure behavior.
+Do not turn optional missing data into failed jobs.
+Only already-decided true core source-data failures can map to MISSING_REQUIRED_SOURCE_DATA.
+```
+
+Commit status:
+
+```text
+Committed and pushed.
+Commit message: Normalize worker terminal gate status and failure copy
+```
+
+## E) Bundle 2 in progress - canonical delivery gate supremacy / one quality standard
+
+Files currently being worked:
+
+```text
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Patch already accepted before final cleanup:
+
+```text
+- buildDeliveryGateDecision(...) is the canonical customer-delivery authority.
+- customer_publish_eligible must be governed by delivery_gate_status.
+- customer_publish_blockers must come from canonical delivery gate reduction.
+- legacy readiness booleans cannot override canonical delivery gate output.
+- public/advisory/demo/sample/DocRaptor/high-value metadata cannot independently block customer delivery.
+```
+
+Then Rob correctly challenged the remaining public/private/Ken/customer tier semantics.
+
+## F) Universal elite quality standard - doctrine re-locked harder
+
+This is now mandatory doctrine:
+
+```text
+InvestorIQ has ONE elite report-quality standard.
+There is no Ken Dunn quality tier.
+There is no public sample quality tier.
+There is no high-value outreach quality tier.
+There is no regular customer quality tier.
+Every customer report must be good enough for sophisticated scrutiny.
+```
+
+Correct interpretation:
+
+```text
+If a report is not good enough for Ken/public scrutiny because of actual report quality, contradiction, unsupported claim, stale consumer, mojibake, bad wording, hard public-language issue, template token leak, or materially misleading output, then it is not good enough for any customer either.
+```
+
+Therefore, this is wrong:
+
+```text
+customer_publish_eligible=true
+public_sample_ready=false because of a true quality issue
+```
+
+That implies two quality standards and must not survive.
+
+Correct behavior:
+
+```text
+True report-quality defect:
+- flows into canonical customer delivery authority;
+- either blocks/holds customer delivery through customer_publish_blockers / admin_review_required;
+- or fails/holds only when core report contract truly cannot be satisfied.
+
+Non-quality distribution/config metadata:
+- may remain as non-authoritative metadata only;
+- cannot imply a separate report-quality gate.
+```
+
+Examples:
+
+```text
+Customer-impacting report-quality defects:
+- BUY / SELL / HOLD language
+- hard public-language contract violation
+- mojibake
+- template token leak
+- stale DSCR placeholder
+- unsupported current debt rendered
+- rendered source contradiction
+- wrong report type leakage
+- materially misleading output
+
+These must affect the one customer delivery gate.
+
+Distribution/config metadata only:
+- DocRaptor test mode
+- demo fixture
+- sample context
+- internal test context
+
+These may describe exposure/distribution context but must not create a lower/higher quality tier.
+```
+
+## G) Current Codex task running
+
+Current Codex prompt/task:
+
+```text
+REMOVE_PUBLIC_HIGH_VALUE_READINESS_AS_QUALITY_TIER
+```
+
+Purpose:
+
+```text
+Remove or demote public/high-value/sample/Ken/outreach readiness semantics so they cannot act like a separate report-quality tier.
+```
+
+Expected behavior:
+
+```text
+- Preserve canonical customer authority:
+  delivery_gate_status
+  customer_publish_eligible
+  customer_publish_blockers
+  customer_delivery_impact
+  publish_decision_reason
+  readiness_hierarchy.final_delivery_authority="delivery_gate"
+
+- Remove/demote:
+  public_sample_ready
+  high_value_outreach_ready
+  public_sample_blockers
+  high_value_outreach_blockers
+  blocks_public_sample
+  blocks_high_value_outreach
+
+- If compatibility fields remain, they must be either:
+  1. aliases of canonical customer publishability, OR
+  2. clearly nested as non-authoritative distribution/context metadata.
+
+- PUBLIC_SAMPLE_NOT_READY must not become a quality blocker.
+- high-value outreach readiness must not define a separate quality bar.
+- customer_publish_eligible must never derive from public_sample_ready/high_value_outreach_ready.
+```
+
+## H) What to do after Codex returns
+
+When Codex returns:
+
+```text
+1. Do not commit immediately.
+2. Upload patched files:
+   - api/_lib/qa-action-plan.js
+   - tests/qa/qa-action-plan-smoke.js
+3. ChatGPT must audit:
+   - syntax
+   - mojibake/stale wording
+   - no public/private/Ken/customer tier semantics
+   - canonical customer gate still works
+   - true quality defects still block/hold customer delivery
+   - DocRaptor/demo/sample metadata is non-authoritative distribution metadata only
+4. Commit only after audit pass.
+```
+
+## I) Remaining work in Root Class 2 after Bundle 2
+
+Likely remaining bundle:
+
+```text
+Bundle 3:
+- PUBLICATION_INSERT_CONTRACT_PARALLEL_AUTHORITY
+- remaining ENTITLEMENT_RESTORE_PATH_DRIFT
+- static future-drift guards
+```
+
+Expected goals:
+
+```text
+- final report insert/storage guard must enforce canonical delivery authority, not create a separate inconsistent authority.
+- entitlement restore must align to final outcome.
+- no duplicate restore.
+- true system/platform failures restore credit.
+- true core source-data failures follow current product policy.
+- published jobs must not restore credit.
+- admin-held jobs must not look like system failures.
+```
+
+## J) Still deferred / do not touch yet
+
+Do not work on these until Root Class 2 is complete:
+
+```text
+- Supabase Cron auth/endpoint contract.
+- GitHub worker disablement.
+- DocRaptor production flip.
+- Stripe/pricing changes.
+- Dashboard history auto-refresh.
+- Broad parser refactors.
+- Broad remaining-root-class audit.
+```
+
+Next audit after Root Class 2:
+
+```text
+REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT
+```
+
+Purpose:
+
+```text
+Identify any remaining systemic root classes before Ken/public sample/outreach and before launch.
+```
+
+Potential classes to evaluate later:
+
+```text
+- Section fail-close/disclosure drift
+- Screening vs Underwriting report-type leakage
+- Supporting-doc taxonomy drift
+- AI recovery artifact acceptance vs renderer trust drift
+- Score/verdict/label contradiction drift
+- QA advisory vs customer-facing truth drift
+- Source reconciliation stale-path drift
+- Demo/public/sample metadata leakage
+- Dashboard/status/history interpretation drift
+- Worker lifecycle/status taxonomy drift
+- Pricing/entitlement/credit restoration edge cases
+```
+
+## K) Micro-prompt rule remains active
+
+```text
+All future Codex prompts must be small, direct micro-prompts.
+No broad drift.
+No unrelated changes.
+No dashboard/worker/parser/cron/DocRaptor/Stripe changes unless specifically requested.
+One patch bundle at a time.
+SHORT FORM RECEIPT ONLY.
+```
+
+
+
+
 # May 20, 2026 Continuation - Publication Progress Confirmed / Canonical Truth Consumer Drift Root Class / Next Systemic Audit Track
 
 ## A) Publication root-class progress

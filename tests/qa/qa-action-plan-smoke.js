@@ -550,6 +550,10 @@ const cleanGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(cleanGate.delivery_gate_status, "deliverable");
+assert.equal(cleanGate.customer_delivery_ready, cleanGate.customer_publish_eligible);
+assert.equal(cleanGate.report_publishable, cleanGate.customer_publish_eligible);
+assert.equal(cleanGate.report_blocked, !cleanGate.report_publishable);
+assert.equal(cleanGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
 assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
 assert.equal(cleanGate.launch_path_recommendation, "customer_deliverable");
@@ -591,6 +595,11 @@ const adminReviewGate = buildDeliveryGateDecision({
   qaDirectorReview: { overall_director_decision: "advisory_attention" },
 });
 assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
+assert.equal(adminReviewGate.customer_publish_eligible, false);
+assert.equal(adminReviewGate.customer_delivery_ready, adminReviewGate.customer_publish_eligible);
+assert.equal(adminReviewGate.report_publishable, adminReviewGate.customer_publish_eligible);
+assert.equal(adminReviewGate.report_blocked, !adminReviewGate.report_publishable);
+assert.equal(adminReviewGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
 assert.equal(adminReviewGate.launch_path_recommendation, "admin_review_required");
@@ -1528,7 +1537,14 @@ assert.equal(
 );
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: {
     customer_delivery_ready: true,
@@ -1550,10 +1566,22 @@ const docRaptorOnlyGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(docRaptorOnlyGate.delivery_gate_status, "deliverable");
-assert.equal(docRaptorOnlyGate.public_sample_ready, false);
+assert.equal(docRaptorOnlyGate.customer_publish_eligible, true);
+assert.deepEqual(docRaptorOnlyGate.customer_publish_blockers, []);
+assert.equal(docRaptorOnlyGate.public_sample_ready, docRaptorOnlyGate.customer_publish_eligible);
+assert.equal(docRaptorOnlyGate.high_value_outreach_ready, docRaptorOnlyGate.customer_publish_eligible);
+assert.equal(docRaptorOnlyGate.distribution_context?.non_authoritative_exposure_metadata, true);
+assert.equal(docRaptorOnlyGate.customer_publish_blockers.includes("DOCRAPTOR_NOT_PRODUCTION_MODE"), false);
 
 const publicSampleOnlyGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: {
     customer_delivery_ready: true,
@@ -1575,14 +1603,30 @@ const publicSampleOnlyGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(publicSampleOnlyGate.delivery_gate_status, "deliverable");
-assert.equal(publicSampleOnlyGate.public_sample_ready, false);
+assert.equal(publicSampleOnlyGate.customer_publish_eligible, true);
+assert.deepEqual(publicSampleOnlyGate.customer_publish_blockers, []);
+assert.equal(publicSampleOnlyGate.public_sample_ready, publicSampleOnlyGate.customer_publish_eligible);
+assert.equal(publicSampleOnlyGate.high_value_outreach_ready, publicSampleOnlyGate.customer_publish_eligible);
+assert.equal(publicSampleOnlyGate.customer_publish_blockers.includes("PUBLIC_SAMPLE_NOT_READY"), false);
+assert.equal((publicSampleOnlyGate.report_quality_blockers || []).includes("PUBLIC_SAMPLE_NOT_READY"), false);
 
 const aiOnlyAdvisoryGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: managerSpeculativePublicLanguagePlan,
 });
 assert.equal(aiOnlyAdvisoryGate.delivery_gate_status, "deliverable");
+assert.equal(aiOnlyAdvisoryGate.customer_publish_eligible, true);
+assert.deepEqual(aiOnlyAdvisoryGate.customer_publish_blockers, []);
+assert.equal(aiOnlyAdvisoryGate.public_sample_ready, aiOnlyAdvisoryGate.customer_publish_eligible);
+assert.equal(aiOnlyAdvisoryGate.high_value_outreach_ready, aiOnlyAdvisoryGate.customer_publish_eligible);
 
 const needsDocumentsGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1595,6 +1639,11 @@ const needsDocumentsGate = buildDeliveryGateDecision({
   qaActionPlan: { customer_delivery_ready: false, prioritized_actions: [] },
 });
 assert.equal(needsDocumentsGate.delivery_gate_status, "user_needs_documents");
+assert.equal(needsDocumentsGate.customer_publish_eligible, false);
+assert.equal(needsDocumentsGate.customer_delivery_ready, needsDocumentsGate.customer_publish_eligible);
+assert.equal(needsDocumentsGate.report_publishable, needsDocumentsGate.customer_publish_eligible);
+assert.equal(needsDocumentsGate.report_blocked, !needsDocumentsGate.report_publishable);
+assert.equal(needsDocumentsGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -1641,6 +1690,19 @@ const canonicalPublishGateWithLegacyFalseFlags = buildDeliveryGateDecision({
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.delivery_gate_status, "deliverable");
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.report_publishable, true);
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.customer_delivery_ready, true);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.customer_publish_eligible, true);
+assert.deepEqual(canonicalPublishGateWithLegacyFalseFlags.customer_publish_blockers, []);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.report_blocked, false);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.customer_delivery_ready, canonicalPublishGateWithLegacyFalseFlags.customer_publish_eligible);
+assert.equal(canonicalPublishGateWithLegacyFalseFlags.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
+assert.equal(
+  canonicalPublishGateWithLegacyFalseFlags.legacy_readiness_aliases?.public_sample_ready_non_authoritative_for_customer_delivery,
+  true
+);
+assert.equal(
+  canonicalPublishGateWithLegacyFalseFlags.legacy_readiness_aliases?.high_value_outreach_ready_non_authoritative_for_customer_delivery,
+  true
+);
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.admin_review_required, false);
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.user_needs_documents, false);
 

@@ -1107,21 +1107,12 @@ function buildPublishEligibilitySummary({
     ...contractPublicSampleBlockers,
     ...publicSampleActionBlockers,
     ...deterministicPublicSampleBlockers,
-    ...(qaActionPlan?.public_sample_ready === false && contractPublicSampleBlockers.length === 0 && publicSampleActionBlockers.length === 0
-      ? ["PUBLIC_SAMPLE_NOT_READY"]
-      : []),
   ]);
 
   const highValueOutreachBlockers = uniqueCodes([
     ...contractOutreachBlockers,
     ...outreachActionBlockers,
     ...publicSampleBlockers,
-    ...(qaActionPlan?.high_value_outreach_ready === false &&
-      contractOutreachBlockers.length === 0 &&
-      outreachActionBlockers.length === 0 &&
-      publicSampleBlockers.length === 0
-      ? ["HIGH_VALUE_OUTREACH_NOT_READY"]
-      : []),
   ]);
 
   const publicSampleBlockerSet = new Set(publicSampleBlockers.map((entry) => String(entry || "").toUpperCase()));
@@ -1218,6 +1209,7 @@ function buildPublishEligibilitySummary({
     : "none";
 
   const customerPublishEligible = Boolean(
+    deliveryGateStatus === "deliverable" &&
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
     customerPublishBlockers.length === 0
@@ -1248,11 +1240,15 @@ function buildPublishEligibilitySummary({
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
   ]);
+  // Canonical customer publication authority: delivery gate + core sufficiency + canonical customer blockers.
   const reportPublishable = Boolean(
-    requiredCoreCoverageReady &&
-      reportQualityBlockers.length === 0 &&
-      deliveryGateStatus === "deliverable"
+    deliveryGateStatus === "deliverable" &&
+      requiredCoreCoverageReady &&
+      !sourceNeedsDocs &&
+      reportQualityBlockers.length === 0
   );
+  const customerDeliveryReadyAlias = customerPublishEligible && reportPublishable;
+  const distributionReadyAlias = reportPublishable;
 
   return {
     delivery_authority: "delivery_gate",
@@ -1261,9 +1257,10 @@ function buildPublishEligibilitySummary({
     report_publishable: reportPublishable,
     report_blocked: !reportPublishable,
     report_quality_decision_reason: publishDecisionReason,
-    customer_delivery_ready: reportPublishable,
-    public_sample_ready: reportPublishable,
-    high_value_outreach_ready: reportPublishable,
+    // Legacy alias for compatibility; canonical authority remains customer_publish_eligible.
+    customer_delivery_ready: customerDeliveryReadyAlias,
+    public_sample_ready: distributionReadyAlias,
+    high_value_outreach_ready: distributionReadyAlias,
     customer_publish_eligible: customerPublishEligible,
     customer_publish_blockers: customerPublishBlockers,
     public_sample_blockers: publicSampleBlockers,
@@ -1276,10 +1273,11 @@ function buildPublishEligibilitySummary({
       report_quality_blockers: reportQualityBlockers,
       report_quality_advisories: reportQualityAdvisories,
       customer_publish_eligible: customerPublishEligible,
+      customer_delivery_ready: customerDeliveryReadyAlias,
       customer_publish_blockers: customerPublishBlockers,
-      public_sample_ready: reportPublishable,
+      public_sample_ready: distributionReadyAlias,
       public_sample_blockers: publicSampleBlockers,
-      high_value_outreach_ready: reportPublishable,
+      high_value_outreach_ready: distributionReadyAlias,
       high_value_outreach_blockers: highValueOutreachBlockers,
       advisory_only_findings: advisoryOnlyFindings,
     },
@@ -1300,6 +1298,19 @@ function buildPublishEligibilitySummary({
     admin_review_required: deliveryGateStatus === "admin_review_required",
     user_needs_documents: deliveryGateStatus === "user_needs_documents",
     publish_decision_reason: publishDecisionReason,
+    legacy_readiness_aliases: {
+      customer_delivery_ready_alias_of_customer_publish_eligible: true,
+      report_publishable_authority: "delivery_gate_and_canonical_customer_blockers",
+      public_sample_ready_non_authoritative_for_customer_delivery: true,
+      high_value_outreach_ready_non_authoritative_for_customer_delivery: true,
+    },
+    distribution_context: {
+      non_authoritative_exposure_metadata: true,
+      public_sample_ready: distributionReadyAlias,
+      high_value_outreach_ready: distributionReadyAlias,
+      public_sample_blockers: publicSampleBlockers,
+      high_value_outreach_blockers: highValueOutreachBlockers,
+    },
   };
 }
 
@@ -1472,8 +1483,8 @@ export function buildDeliveryGateDecision({
       owner_area: sourceDocumentAction?.owner_area || "source_documents",
       recommended_next_step: sourceDocumentAction?.recommended_next_step || "Request the missing required source documents or required source value before delivering the report.",
       customer_delivery_ready: false,
-      public_sample_ready: false,
-      high_value_outreach_ready: false,
+      public_sample_ready: publishEligibility.public_sample_ready,
+      high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
       ...publishEligibility,
     };
   }
@@ -1508,8 +1519,8 @@ export function buildDeliveryGateDecision({
       owner_area: "report_renderer",
       recommended_next_step: "Hold delivery for system contract review.",
       customer_delivery_ready: false,
-      public_sample_ready: false,
-      high_value_outreach_ready: false,
+      public_sample_ready: publishEligibility.public_sample_ready,
+      high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
       ...publishEligibility,
     };
   }
@@ -1548,15 +1559,15 @@ export function buildDeliveryGateDecision({
       owner_area: topAction?.owner_area || "report_renderer",
       recommended_next_step: topAction?.recommended_next_step || "Hold delivery for Admin Fix Queue review.",
       customer_delivery_ready: false,
-      public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
-      high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+      public_sample_ready: publishEligibility.public_sample_ready,
+      high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
       launch_path_recommendation: "admin_review_required",
       readiness_hierarchy: {
         final_delivery_authority: "delivery_gate",
         final_delivery_status: "admin_review_required",
         customer_delivery_ready: false,
-        public_sample_ready: Boolean(qaActionPlan?.public_sample_ready),
-        high_value_outreach_ready: Boolean(qaActionPlan?.high_value_outreach_ready),
+        public_sample_ready: publishEligibility.public_sample_ready,
+        high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
         advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
       },
       ...publishEligibility,
@@ -1589,27 +1600,15 @@ export function buildDeliveryGateDecision({
     owner_area: prioritizedActions[0]?.owner_area || null,
     recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
     customer_delivery_ready: publishEligibility.report_publishable,
-    public_sample_ready:
-      Boolean(qaActionPlan?.public_sample_ready) &&
-      !customerDeliveryBlockerAction &&
-      !publicOrOutreachOnlyAction,
-    high_value_outreach_ready:
-      Boolean(qaActionPlan?.high_value_outreach_ready) &&
-      !customerDeliveryBlockerAction &&
-      !publicOrOutreachOnlyAction,
+    public_sample_ready: publishEligibility.public_sample_ready,
+    high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
     launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "admin_review_required",
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: "deliverable",
       customer_delivery_ready: publishEligibility.report_publishable,
-      public_sample_ready:
-        Boolean(qaActionPlan?.public_sample_ready) &&
-        !customerDeliveryBlockerAction &&
-        !publicOrOutreachOnlyAction,
-      high_value_outreach_ready:
-        Boolean(qaActionPlan?.high_value_outreach_ready) &&
-        !customerDeliveryBlockerAction &&
-        !publicOrOutreachOnlyAction,
+      public_sample_ready: publishEligibility.public_sample_ready,
+      high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
       advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
     },
     ...publishEligibility,
