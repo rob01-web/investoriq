@@ -18,17 +18,26 @@ assert.equal(
   false
 );
 
-const typedGateAnchor = workerSource.indexOf("const typedGateWithoutReportId");
+const typedGateAnchor = workerSource.indexOf("const isTypedGateOutcome");
 assert.notEqual(typedGateAnchor, -1);
 const reportEventAnchor = workerSource.indexOf("const reportEventErr", typedGateAnchor);
 assert.notEqual(reportEventAnchor, -1);
 const typedGateWindow = workerSource.slice(typedGateAnchor, reportEventAnchor);
 assert.match(typedGateWindow, /deliveryGateStatus === 'user_needs_documents'/);
 assert.match(typedGateWindow, /from_status:\s*'rendering'/);
-assert.match(typedGateWindow, /to_status:\s*'needs_documents'/);
+assert.match(typedGateWindow, /to_status:\s*'failed'/);
+assert.match(typedGateWindow, /error_code\s*=\s*'MISSING_REQUIRED_SOURCE_DATA'/);
+assert.equal(/status:\s*'needs_documents'/.test(typedGateWindow), false);
+assert.match(typedGateWindow, /failedJobIds\.push\(job\.id\)/);
 assert.match(typedGateWindow, /deliveryGateStatus === 'admin_review_required'/);
 assert.match(typedGateWindow, /to_status:\s*'publishing'/);
 assert.match(typedGateWindow, /'delivery_gate_decision'/);
 assert.equal(/to_status:\s*'pdf_generating'/.test(typedGateWindow), false);
+assert.equal(/deliveryGateStatus === 'user_needs_documents'[\s\S]{0,320}to_status:\s*'needs_documents'/.test(workerSource), false);
+assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_status:\s*'publishing'/.test(workerSource.slice(reportEventAnchor)), false);
+assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
+assert.match(workerSource, /missing for deliverable path/);
+assert.match(workerSource, /error_code:\s*'REPORT_GENERATION_FAILED'/);
+assert.equal(/upload replacement documents|try again/i.test(typedGateWindow), false);
 
 console.log("admin-run-worker-gate smoke PASS");
