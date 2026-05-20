@@ -69,9 +69,9 @@ function normalizeFixQueueDisplay(raw = {}) {
       : customerReady && publicReady && outreachReady
       ? 'Delivery gate ready'
       : customerReady && !publicReady && !outreachReady
-      ? 'Customer deliverable / public sample blocked'
+      ? 'Delivery gate ready (distribution context flags)'
       : customerReady && publicReady && !outreachReady
-      ? 'Customer deliverable / outreach blocked'
+      ? 'Delivery gate ready (distribution context flags)'
       : raw?.highest_severity || null;
   return {
     display_title: raw?.top_action_title || null,
@@ -386,32 +386,20 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
       : hasAdminHold
         ? 'Delivery gate is intentionally held for human review.'
         : 'Repeated production_config blocker should be reviewed before automation.';
-  } else if (publicBlock || outreachBlock || forcePublishSignal) {
+  } else if (forcePublishSignal) {
     automationClass = 'EXECUTIVE_OVERRIDE_ONLY';
-    proposedAction = forcePublishSignal
-      ? 'Escalate for executive approval'
-      : publicBlock && outreachBlock
-        ? 'Override delivery blocks'
-        : publicBlock
-          ? 'Override public sample block'
-          : 'Override outreach block';
+    proposedAction = 'Escalate for executive approval';
     confidenceScore = 90;
     confidenceLabel = 'high';
     executiveOverrideRequired = true;
     requiredConditions = [
       'Executive approval',
-      forcePublishSignal
-        ? 'Confirm business reason before bypassing QA or publish controls'
-        : 'Confirm business reason for delivery override',
+      'Confirm business reason before bypassing QA or publish controls',
     ];
-    blockedReason = forcePublishSignal
-      ? 'QA bypass or force publish requires executive approval.'
-      : 'Delivery block requires executive approval.';
+    blockedReason = 'QA bypass or force publish requires executive approval.';
     suggestedDelayMinutes = 0;
     escalationTarget = 'Executive approval';
-    rationale = forcePublishSignal
-      ? 'Force publish and QA bypass paths should not be overridden automatically.'
-      : 'Public sample or outreach readiness is blocked and should not be overridden automatically.';
+    rationale = 'Force publish and QA bypass paths should not be overridden automatically.';
   } else if (status === 'failed' && hardDocumentBlocker) {
     automationClass = 'BLOCKED_UNSAFE';
     proposedAction = 'Do not automate';
@@ -482,6 +470,10 @@ function buildAutomationSimulation({ job = null, artifacts = [], fixQueueRow = n
     rationale = 'The failure does not match a safe automation path.';
   }
 
+  if ((publicBlock || outreachBlock) && automationClass === 'NO_ACTION') {
+    rationale = 'Customer delivery authority is unchanged; public/outreach readiness is non-authoritative distribution metadata.';
+  }
+
   return {
     proposed_action: proposedAction,
     automation_class: automationClass,
@@ -518,8 +510,6 @@ function buildFixQueueEntry({ job = null, artifactsByType = {} } = {}) {
   ]);
   const shouldShow =
     (deliveryGateStatus && deliveryGateStatus !== 'deliverable') ||
-    normalizedPlan.public_sample_ready === false ||
-    normalizedPlan.high_value_outreach_ready === false ||
     normalizedPlan.requires_code_patch === true ||
     normalizedPlan.requires_regeneration === true ||
     String(director?.overall_director_decision || "") !== "no_missed_issue_detected" ||
@@ -736,7 +726,6 @@ export default async function handler(req, res) {
     const statuses = [
       'queued',
       'extracting',
-      'needs_documents',
       'underwriting',
       'scoring',
       'rendering',
