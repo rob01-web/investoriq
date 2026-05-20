@@ -174,7 +174,9 @@ function GhostBtn({ children, onClick, disabled, style = {} }) {
 
 // Status badge
 function StatusBadge({ status, errorCode }) {
-  const adminReviewHeld = status === 'publishing' && String(errorCode || '') === 'ADMIN_REVIEW_REQUIRED';
+  const adminReviewHeld =
+    String(status || '').toLowerCase() === 'publishing' &&
+    String(errorCode || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED';
   const map = {
     published:     { bg: T.okBg,      border: T.okBorder,    color: T.okGreen,   label: 'Published'    },
     queued:        { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Queued'       },
@@ -207,10 +209,17 @@ function StatusBadge({ status, errorCode }) {
 }
 
 function getCustomerFacingJobStatus(job) {
-  if (job?.status === 'publishing' && String(job?.error_code || '') === 'ADMIN_REVIEW_REQUIRED') {
+  if (isAdminReviewHeldJob(job)) {
     return 'under review';
   }
   return String(job?.status || '').toLowerCase();
+}
+
+function isAdminReviewHeldJob(job) {
+  return (
+    String(job?.status || '').toLowerCase() === 'publishing' &&
+    String(job?.error_code || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED'
+  );
 }
 
 // File row
@@ -1760,6 +1769,8 @@ useEffect(() => {
                 >
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
+                    : isAdminReviewHeldJob(activeJobForRuns)
+                    ? 'Under review. InvestorIQ is verifying source-backed consistency before delivery.'
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
@@ -1834,7 +1845,7 @@ useEffect(() => {
                           <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
                           <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
                         </div>
-                        {job.status === 'publishing' && job.error_code === 'ADMIN_REVIEW_REQUIRED' && (
+                        {isAdminReviewHeldJob(job) && (
                           <div style={{ color:T.ink2, fontSize:12, lineHeight:1.6, fontWeight:400, marginTop:6 }}>
                             InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.
                           </div>
