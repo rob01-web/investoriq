@@ -38,6 +38,7 @@ assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_stat
 assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
 assert.match(workerSource, /missing for deliverable path/);
 assert.match(workerSource, /error_code:\s*'REPORT_GENERATION_FAILED'/);
-assert.equal(/upload replacement documents|try again/i.test(typedGateWindow), false);
+assert.equal(/upload replacement documents|upload more documents|resume/i.test(workerSource), false);
+assert.equal(/status:\s*'needs_documents'/.test(workerSource), false);
 
 console.log("admin-run-worker-gate smoke PASS");

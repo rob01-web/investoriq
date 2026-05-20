@@ -253,7 +253,7 @@ export default async function handler(req, res) {
     const recordJobFailure = async (job, stage, err) => {
       const safeMessage =
         `Processing failed during ${stage}. ` +
-        'Please log in to your InvestorIQ dashboard to upload replacement documents or try again.';
+        'Please log in to your InvestorIQ dashboard to review the job status.';
       const update = { status: 'failed' };
       if (supportsFailedAt) {
         update.failed_at = nowIso;
@@ -864,8 +864,8 @@ export default async function handler(req, res) {
         timeoutUpdate.error_code = 'TIMEOUT';
       }
       if (supportsErrorMessage) {
-        timeoutUpdate.error_message =
-          'Processing timed out. Please log in to your InvestorIQ dashboard to retry or upload replacement documents.';
+          timeoutUpdate.error_message =
+          'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.';
       }
       const { error: failErr } = await supabaseAdmin
         .from('analysis_jobs')
