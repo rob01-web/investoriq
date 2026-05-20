@@ -1,3 +1,102 @@
+## May 20, 2026 Night Addendum - Debt Render Authority Fixed / Motherload Underwriting Passed / Screening Scope Retest Mostly Passed / Mixup Intake Rescue Passed
+
+### A) Current state after May 20 night sequence
+
+```text
+1) Debt render authority family patch - COMPLETE / COMMITTED
+- Root cause fixed: renderer debt truth previously used latest-single loan artifact while source_report_coverage_qa used canonical multi-artifact loan resolution.
+- Renderer now binds current-debt render truth to canonical multi-artifact selection.
+- True current-debt artifacts (balance + rate + amortization) outrank acquisition-only/purchase-assumption artifacts.
+- Acquisition/proposed financing remains separate from current debt.
+- Debt/refi/risk/scorecard/data-coverage debt consumers route through shared canonical currentDebtAssessmentState/debt basis.
+- report-contract QA smoke now guards computed DSCR + stale missing-debt contradiction via CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY.
+
+2) Motherload Underwriting retest - PASSED
+- Published.
+- Page count returned from 14 -> 16 (debt sections restored, not suppressed).
+- Current debt rendered correctly: balance 8,750,000; rate 5.25%; amortization 30 years; DSCR ~1.06x.
+- Correct verdict behavior: Review - Debt Coverage Constraint due to weak computed DSCR (not missing debt).
+- Stale copy removed from rendered output:
+  SOURCE-CONSTRAINED DEBT NOT PROVIDED
+  No verified current debt document was provided
+  current-debt DSCR and refinance capacity were not assessed
+  Not assessed - no current debt document
+- Delivery gate and report_contract_qa passed.
+- Remaining non-customer blockers are distribution/config items (for example DocRaptor test mode), not core report truth.
+
+3) High-level split-brain audit result
+- Confirmed DSCR-style split-brain risk was concentrated in debt render authority family:
+  Current Debt/DSCR, Refi debt-service/proceeds, Data Coverage debt limitation copy, adjacent risk-register/debt-visibility paths.
+- Other recently patched classes appeared low-risk/firewalled and should not be reopened without concrete new live-test evidence.
+
+4) Screening verdict scope patch - COMPLETE / COMMITTED
+- Root cause fixed: screening_v1 cover classification was borrowing underwriting display verdict label.
+- Screening now uses screening-only class mapping:
+  Stable / Sensitized / High Risk / Insufficient Data.
+- Underwriting DSCR-cap behavior preserved.
+- Screening cover report-tier badge parity added: Screening Scope.
+
+5) Screening normal retest - PASSED (with one small stale rationale copy remaining)
+- Published; cover now shows Stable + Preliminary Screening + Screening Scope.
+- T12 and Rent Roll parsed cleanly; delivery gate deliverable; contract QA passed.
+- Debt/refi/risk/deal-score sections remained omitted as intended for screening.
+- Source snapshot:
+  T12: EGI/GPR 1,036,800; OpEx 425,000; NOI 611,800.
+  Rent roll: 48 units; 46 occupied; 95.83% occupancy; annual in-place 1,036,800; annual market 1,137,600.
+
+6) Screening mixup intake rescue - PASSED
+- Wrong-slot upload test recovered by content authority:
+  T12 uploaded in rent-roll slot was rerouted and parsed as T12.
+  Rent roll uploaded in T12 slot was rerouted/AI-recovered/validated as Rent Roll.
+- Report published; delivery gate deliverable; contract QA passed.
+- Intake doctrine confirmed: upload slot + filename are hints; validated document content is authority.
+```
+
+### B) Immediate next morning item (tiny)
+
+```text
+Next patch: FIX_SCREENING_STALE_DEBT_CAP_RATIONALE_COPY
+- Remaining issue: Screening page-2 Executive Summary rationale can still show stale underwriting debt-cap sentence:
+  "Overall classification is capped at Review (risk classification) because current debt DSCR was not assessed."
+- Required behavior:
+  screening_v1 must not render underwriting debt-cap rationale copy.
+  Preserve underwriting behavior.
+  Do not add debt/refi/risk/deal-score sections to screening.
+```
+
+### C) Advisory / non-launch-core notes
+
+```text
+- DocRaptor test mode remains the primary public/high-value distribution blocker.
+- Raw HTML entity advisory remains (&#9654; marker copy).
+- Rent-to-market upside support wording advisory remains (basis sentence clarity).
+- These are advisory/polish items, not customer-delivery blockers.
+```
+
+### D) Doctrine preserved
+
+```text
+- One elite report-quality standard (no Ken/public/high-value/customer tier split).
+- Canonical truth controls final render output.
+- Legacy/stale authority paths impacting output/gates/QA/admin ops/entitlement/status must be removed, quarantined, or blocked by guards.
+- Optional missing inputs collapse/disclose sections, not whole-report fail.
+- True core-missing/unusable/contradictory packages can fail/hold.
+- Upload slot and filename are hints; validated parser/document content is authority.
+```
+
+### E) Next-action order (current)
+
+```text
+1. Patch only FIX_SCREENING_STALE_DEBT_CAP_RATIONALE_COPY.
+2. Rerun screening retest only if needed.
+3. Do not reopen full root-class audits without new concrete failure evidence.
+4. Do not flip DocRaptor production mode unless explicitly chosen.
+5. Do not disable GitHub worker yet.
+6. Do not change Supabase Cron cadence.
+7. Do not rotate secrets mid-debug.
+8. Continue micro-prompts only.
+```
+
 # May 20, 2026 Addendum - Remaining Root Class Audit Completion / Dashboard and Queue Interpretation Drift Closed
 
 ## A) Completed / committed after remaining root-class audit
@@ -75,6 +174,8 @@ Future Codex prompts must include hard containment: one task, exact files, no br
 ```
 
 ## E) Current status and next action
+
+Historical note: this section is superseded by the May 20 night top addendum.
 
 ```text
 - Remaining root-class audit sequence is closed.
