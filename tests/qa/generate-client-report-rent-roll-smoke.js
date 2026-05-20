@@ -42,6 +42,18 @@ assert.match(
   reportSource,
   /delivery_gate_status === "admin_review_required"[\s\S]{0,120}\|\|[\s\S]{0,120}delivery_gate_status === "user_needs_documents"/
 );
+assert.match(
+  reportSource,
+  /if \(!hasVerifiedCurrentDebtBalance && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)/
+);
+assert.equal(
+  /hasComputedCurrentDebtDscr[\s\S]{0,400}Refinance Stability Classification: Not Assessed/.test(reportSource),
+  false
+);
+assert.match(
+  reportSource,
+  /Refinance Stability Classification: Source-Limited/
+);
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);

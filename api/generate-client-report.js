@@ -4539,6 +4539,10 @@ if (effectiveReportMode === "screening_v1") {
       sourceReconciliationState?.rent_roll_annual_totals ||
       resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
+    const hasComputedCurrentDebtDscr =
+      String(currentDebtAssessmentState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed" &&
+      Number.isFinite(coerceNumber(currentDebtAssessmentState?.current_debt_dscr)) &&
+      coerceNumber(currentDebtAssessmentState?.current_debt_dscr) > 0;
     const execMetricsParts = [];
     const execUnits = coerceNumber(
       computedRentRoll?.total_units ??
@@ -5283,7 +5287,7 @@ if (effectiveReportMode === "screening_v1") {
         financials: refiFinancials,
         t12Payload,
       });
-      if (hasVerifiedCurrentDebtBalance && currentDebtAssessmentState.current_debt_dscr_status === "computed" && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
+      if (hasComputedCurrentDebtDscr && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
         const _ds = formatMultiple(canonicalRefiDebtBasisForBullets.dscr, 2);
         if (canonicalRefiDebtBasisForBullets.dscr >= 1.35) {
           upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
@@ -5501,6 +5505,7 @@ if (effectiveReportMode === "screening_v1") {
       }
       if (
         effectiveReportMode === "v1_core" &&
+        !hasComputedCurrentDebtDscr &&
         currentDebtAssessmentState?.current_debt_dscr_status !== "computed" &&
         currentDebtAssessmentState?.current_debt_limitation_reason_code
       ) {
@@ -6183,7 +6188,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
     } else {
-      if (!hasVerifiedCurrentDebtBalance && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
+      if (!hasVerifiedCurrentDebtBalance && !hasComputedCurrentDebtDscr && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
         const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
           currentDebtState: currentDebtAssessmentState,
           mortgagePayload,
@@ -6230,7 +6235,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
         finalHtml = replaceAll(
           finalHtml,
           "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
+          `<div class="card no-break"><p><strong>Refinance Stability Classification: Source-Limited</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
         );
       } else {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");

@@ -1,3 +1,155 @@
+# May 20, 2026 Continuation - Publication Progress Confirmed / Canonical Truth Consumer Drift Root Class / Next Systemic Audit Track
+
+## A) Publication root-class progress
+
+The repo-wide publication blocker work appears materially successful:
+
+- 124 Richmond Screening retest published.
+- Motherload Underwriting test published.
+- Both reached `delivery_gate_status=deliverable`.
+- Both had `customer_publish_eligible=true`.
+- Both had no `customer_publish_blockers`.
+- No fake `REPORT_GENERATION_FAILED` occurred.
+- No false `user_needs_documents` gate occurred.
+- Worker typed-gate and rent-roll core-sufficiency patches appear effective.
+
+Important distinction:
+
+- This does not mean reports are fully launch-ready.
+- It means the prior root class (publication authority/blocker logic) is materially healthier.
+
+## B) New root class discovered
+
+`CANONICAL_TRUTH_CONSUMER_DRIFT`
+
+Definition:
+
+- Canonical truth exists correctly in artifacts/state, but one or more rendered report consumers, scorecard paths, verdict caps, labels, QA summaries, or narrative surfaces still consume stale/fallback/legacy state and render contradictory text.
+
+Evidence from Motherload:
+
+- Loan source provided outstanding loan balance, rate, amortization, and LTV.
+- Artifacts showed current debt DSCR computed and `has_current_debt_document=true`.
+- PDF still rendered:
+  - `SOURCE-CONSTRAINED DEBT NOT PROVIDED`
+  - `No verified current debt document was provided`
+  - `current-debt DSCR and refinance capacity were not assessed`
+  - `Review - Debt Coverage Constraint` based on missing-DSCR wording.
+
+Correct behavior contract:
+
+- If DSCR is computed, all consumers must render computed DSCR/debt-service/debt-coverage truth.
+- If DSCR is weak, caps/verdicts must be based on actual DSCR weakness, not missing debt language.
+- No section may say debt not provided when canonical `currentDebtState` says computed/verified.
+
+## C) Rob strategic concern
+
+Rob does not want another whack-a-mole loop.
+He wants pre-launch visibility on systemic classes:
+
+- how many root classes may still be hiding;
+- how to flush systemic classes before launch;
+- how to avoid hundreds of post-launch fixes.
+
+Normal occasional post-launch patches are acceptable; launch-breaking systemic classes are not.
+
+## D) Required next repo-wide audit
+
+Next audit:
+
+`REPO_WIDE_CANONICAL_TRUTH_CONSUMER_DRIFT_AUDIT`
+
+Purpose:
+
+- For every canonical truth class, identify every renderer, scorecard, verdict, QA, disclosure, and dashboard/status consumer that may render or act on that truth.
+
+Canonical truth classes:
+
+1. Current Debt / DSCR
+2. Refinance / debt service / proceeds / debt coverage
+3. Rent Roll occupancy / occupied units / annual rent / market rent / rent gap
+4. T12 EGI / OpEx / NOI / GPR
+5. Source Reconciliation
+6. Deal Score / verdict / scorecard / risk register
+7. Renovation / CapEx
+8. Acquisition assumptions / proposed financing vs current debt
+9. Appraisal / cap-rate / valuation framework / DCF
+10. Property Tax
+11. Data Coverage / Document Treatment / Uploaded Files
+12. QA advisory/public/distribution metadata
+
+For each class, audit:
+
+- canonical source function/artifact/state;
+- all renderer consumers;
+- all score/verdict consumers;
+- all QA/contract consumers;
+- all fallback consumers;
+- all stale paths;
+- all contradictory labels/copy;
+- correct collapse/disclosure behavior;
+- required regression.
+
+## E) Known immediate consumer-drift target
+
+`FIX_CURRENT_DEBT_CANONICAL_STATE_CONSUMER_DRIFT`
+
+Expected correction:
+
+When `currentDebtState.current_debt_dscr_status === "computed"`:
+
+- do not render debt-not-provided copy;
+- do not render DSCR-not-assessed copy;
+- do not render no-verified-current-debt-document copy;
+- show computed DSCR/debt service/current debt basis;
+- if DSCR is below threshold, cap verdict for actual DSCR weakness;
+- scorecard/risk register/refi sections must consume the same `currentDebtState`.
+
+## F) Second audit after consumer-drift audit/plan
+
+Then run:
+
+`REPO_WIDE_REMAINING_ROOT_CLASS_RISK_AUDIT`
+
+Purpose:
+
+- Identify likely future systemic classes before launch based on recent patches/live failures.
+
+Likely risk classes to evaluate:
+
+1. Canonical truth consumer drift
+2. Section fail-close/disclosure drift
+3. Screening vs Underwriting report-type leakage
+4. Supporting-doc taxonomy drift
+5. AI recovery artifact acceptance vs renderer trust drift
+6. Score/verdict/label contradiction drift
+7. QA advisory vs customer-facing truth drift
+8. Source reconciliation stale-path drift
+9. Demo/public/sample metadata leakage
+10. Dashboard/status/history interpretation drift
+11. Worker lifecycle/status taxonomy drift
+12. Pricing/entitlement/credit restoration edge cases
+
+## G) Current tactical decision
+
+- Do not immediately patch only Motherload.
+- Use Motherload as evidence for broader consumer-drift audit.
+- Next production-code task should be audit-first:
+  - `REPO_WIDE_CANONICAL_TRUTH_CONSUMER_DRIFT_AUDIT`
+- After audit, patch highest-risk consumer class first (likely Current Debt / DSCR / Refinance / Scorecard).
+
+## H) Doctrine lock to preserve
+
+- One elite report-quality standard.
+- Publish when core docs are usable.
+- Optional gaps fail-close sections, not whole reports.
+- Canonical artifacts/state are truth.
+- No stale renderer fallback may contradict canonical state.
+- No public/private/Ken/customer quality tiers.
+- No token-based blocking for names like test/sample/final/QA.
+- No broad refactors without audit + patch plan.
+
+---
 # May 19, 2026 Late-May Addendum - Repo-Wide Publication Blocker Authority Investigation and Patch Order
 
 ## Why this addendum exists
@@ -10453,3 +10605,4 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Screening is close but needs rent-gap consistency and label polish
   - Harbourstone is stress-test proof only
   - do not show any report to Ken with DocRaptor test watermark, `Test`, `CLEAN`, `MESSY`, typo `Underwritting`, stale Methodology numbering, inconsistent rent-gap percentages, unsupported post-reno wording, or dangling `DATA NOT AVAILABLE`
+
