@@ -4539,10 +4539,24 @@ if (effectiveReportMode === "screening_v1") {
       sourceReconciliationState?.rent_roll_annual_totals ||
       resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
+    const renderCanonicalDscrDirect = coerceNumber(currentDebtAssessmentState?.current_debt_dscr);
+    const renderCanonicalAnnualDebtService = coerceNumber(currentDebtAssessmentState?.current_debt_annual_debt_service);
+    const renderCanonicalNoi = coerceNumber(t12Payload?.net_operating_income);
+    const renderCanonicalDscrDerived =
+      Number.isFinite(renderCanonicalAnnualDebtService) &&
+      renderCanonicalAnnualDebtService > 0 &&
+      Number.isFinite(renderCanonicalNoi) &&
+      renderCanonicalNoi > 0
+        ? renderCanonicalNoi / renderCanonicalAnnualDebtService
+        : null;
+    const renderCanonicalDscr =
+      Number.isFinite(renderCanonicalDscrDirect) && renderCanonicalDscrDirect > 0
+        ? renderCanonicalDscrDirect
+        : renderCanonicalDscrDerived;
     const hasComputedCurrentDebtDscr =
       String(currentDebtAssessmentState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed" &&
-      Number.isFinite(coerceNumber(currentDebtAssessmentState?.current_debt_dscr)) &&
-      coerceNumber(currentDebtAssessmentState?.current_debt_dscr) > 0;
+      Number.isFinite(renderCanonicalDscr) &&
+      renderCanonicalDscr > 0;
     const execMetricsParts = [];
     const execUnits = coerceNumber(
       computedRentRoll?.total_units ??

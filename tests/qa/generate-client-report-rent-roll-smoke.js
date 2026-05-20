@@ -46,6 +46,10 @@ assert.match(
   reportSource,
   /if \(!hasVerifiedCurrentDebtBalance && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)/
 );
+assert.match(
+  reportSource,
+  /const renderCanonicalDscrDerived[\s\S]*renderCanonicalNoi\s*\/\s*renderCanonicalAnnualDebtService/
+);
 assert.equal(
   /hasComputedCurrentDebtDscr[\s\S]{0,400}Refinance Stability Classification: Not Assessed/.test(reportSource),
   false
@@ -432,6 +436,22 @@ assert.ok(Number.isFinite(harbourstoneDealScoreState.computedDscrForVerdict));
 assert.ok(Math.abs(harbourstoneDealScoreState.computedDscrForVerdict - 1.0551661722053094) < 0.01);
 assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(harbourstoneDealScoreState.dealScoreTableHtml), false);
 assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(harbourstoneDealScoreState.dealScoreTableHtml), false);
+const derivedComputedDebtState = {
+  current_debt_dscr_status: "computed",
+  current_debt_dscr: null,
+  current_debt_annual_debt_service: 579813.8872489922,
+  has_current_debt_document: true,
+  has_true_current_debt_balance: true,
+  current_debt_service_source: "source_payment",
+};
+const derivedComputedScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
+  currentDebtState: derivedComputedDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: null,
+  t12Payload: { net_operating_income: 611789.1838458668 },
+});
+assert.equal(derivedComputedScorecardEntry.hasDscrScore, true);
+assert.match(derivedComputedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 
 const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   currentDebtState: loanTermOnlyCurrentDebtState,
