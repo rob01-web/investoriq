@@ -5458,15 +5458,10 @@ if (effectiveReportMode === "screening_v1") {
       sourceReconciliationState,
     });
     const coverClassificationLabel = dealScoreState.displayVerdict?.label || (() => {
-      if (effectiveReportMode === "v1_core") {
-        if (screeningClass === "Fragile") return "High Risk";
-        if (hasVerifiedCurrentDebtBalance && Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay < 1.25) return "Review - Debt Coverage Constraint";
-        if (hasVerifiedCurrentDebtBalance && refiStabilityResult?.tier === "Refinance Shortfall Under Stress") return "Review - Debt Coverage Constraint";
+      if (effectiveReportMode === "screening_v1") {
         if (screeningClass === "Stable") return "Stable";
-        return "Review";
+        if (screeningClass === "Fragile") return "High Risk";
       }
-      if (screeningClass === "Stable") return "Stable";
-      if (screeningClass === "Fragile") return "High Risk";
       return "Review";
     })();
     finalHtml = replaceAll(

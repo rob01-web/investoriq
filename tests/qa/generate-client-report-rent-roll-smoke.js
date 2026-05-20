@@ -40,6 +40,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const coverClassificationLabel = dealScoreState\.displayVerdict\?\.label \|\|/
+);
+assert.match(
+  reportSource,
   /delivery_gate_status === "admin_review_required"[\s\S]{0,120}\|\|[\s\S]{0,120}delivery_gate_status === "user_needs_documents"/
 );
 assert.match(
@@ -727,6 +731,44 @@ const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
 assert.equal(cleanStrongDealScoreState.score, 95);
 assert.equal(cleanStrongDealScoreState.displayVerdict?.label, "Within Underwriting Parameters");
 assert.equal(cleanStrongDealScoreState.dealScoreTableHtml.includes("Review - Source Reconciliation Disclosure"), false);
+const constrainedDscrDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "computed",
+    current_debt_dscr: 1.1,
+    current_debt_annual_debt_service: 590909.0909,
+    has_true_current_debt_balance: true,
+    has_current_debt_document: true,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: null,
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+});
+assert.equal(constrainedDscrDealScoreState.score, 83);
+assert.equal(constrainedDscrDealScoreState.displayVerdict?.label, "Review - Debt Coverage Constraint");
+assert.equal(constrainedDscrDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
+assert.equal(constrainedDscrDealScoreState.displayVerdict?.cap_reason_code, "debt_coverage_constraint");
+assert.equal(constrainedDscrDealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
+assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Review - Debt Coverage Constraint/);
+assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Current debt DSCR is below 1\.25x/i);
+assert.equal(/Current debt is not assessed/i.test(constrainedDscrDealScoreState.dealScoreTableHtml), false);
 
 const constrainedDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
