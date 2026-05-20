@@ -1227,10 +1227,23 @@ function injectOccupancyNote(html, occupancy) {
   return html.replace(regex, `$1${note}`);
 }
 function resolveOccupancyNoteValue(computedRentRoll = null, rentRollPayload = null) {
+  const isPartialSample =
+    computedRentRoll?.is_partial_sample === true ||
+    rentRollPayload?.is_partial_sample === true;
+  const hasTrustedSummaryTotals =
+    rentRollPayload?.totals?.summary_row_detected === true ||
+    rentRollPayload?.summary_row_detected === true ||
+    computedRentRoll?.summary_row_detected === true;
+  if (isPartialSample && !hasTrustedSummaryTotals) {
+    return DATA_NOT_AVAILABLE;
+  }
   if (computedRentRoll && (computedRentRoll.occupancy === null || computedRentRoll.occupancy === undefined)) {
     return DATA_NOT_AVAILABLE;
   }
-  return computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
+  const trustedSummaryOccupancy = hasTrustedSummaryTotals
+    ? coerceNumber(rentRollPayload?.totals?.occupancy ?? rentRollPayload?.occupancy)
+    : null;
+  return trustedSummaryOccupancy ?? computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
 }
 function deriveOccFromRentRollUnits(rentRollPayload) {
   const rrRowsRaw =
@@ -2419,9 +2432,9 @@ function buildScreeningDataCoverageSummary({
     Number.isFinite(rrTotalUnits) && rrTotalUnits > 0 && Number.isFinite(rrOccupiedUnits)
       ? rrOccupiedUnits / rrTotalUnits
       : null;
-  const rrOccPresent = Number.isFinite(
-    coerceNumber(computedRentRoll?.occupancy ?? (isPartialRentRollSample ? null : rentRollPayload?.occupancy))
-  ) || (!isPartialRentRollSample && Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload)));
+  const canonicalOccupancyNoteValue = resolveOccupancyNoteValue(computedRentRoll, rentRollPayload);
+  const rrOccPresent = Number.isFinite(coerceNumber(canonicalOccupancyNoteValue)) ||
+    (!isPartialRentRollSample && Number.isFinite(deriveOccFromRentRollUnits(rentRollPayload)));
   const inPlacePresent =
     Number.isFinite(coerceNumber(computedRentRoll?.total_in_place_annual)) ||
     Number.isFinite(coerceNumber(rentRollPayload?.totals?.in_place_rent_annual)) ||
@@ -3058,9 +3071,7 @@ function buildScreeningNoiStabilityHtml({
   const rrOccupiedUnits = coerceNumber(
     computedRentRoll?.occupied_units ?? (isPartialRentRollSample ? null : rentRollPayload?.occupied_units)
   );
-  let occupancy = coerceNumber(
-    computedRentRoll?.occupancy ?? (isPartialRentRollSample ? null : rentRollPayload?.occupancy)
-  );
+  let occupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
   if (
     !Number.isFinite(occupancy) &&
     Number.isFinite(rrTotalUnits) &&
@@ -4572,11 +4583,7 @@ if (effectiveReportMode === "screening_v1") {
     const execEgi = coerceNumber(t12Payload?.effective_gross_income);
     const execOpex = coerceNumber(t12Payload?.total_operating_expenses);
     const execNoi = coerceNumber(t12Payload?.net_operating_income);
-    const execGpr =
-      coerceNumber(t12Payload?.gross_potential_rent) ??
-      coerceNumber(t12Payload?.gross_scheduled_rent) ??
-      coerceNumber(t12Payload?.gross_income) ??
-      coerceNumber(t12Payload?.total_income);
+    const execGpr = resolveCanonicalT12GprValue(t12Payload);
     const execOccFromT12 =
       coerceNumber(t12Payload?.physical_occupancy) ??
       coerceNumber(t12Payload?.economic_occupancy) ??
@@ -5896,7 +5903,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     const screeningIncomeForensicsHtml = effectiveReportMode === "screening_v1"
       ? (() => {
           const operatingSummaryLines = [];
-          const screeningOccupancy = coerceNumber(computedRentRoll?.occupancy ?? (computedRentRoll?.is_partial_sample === true ? null : rentRollPayload?.occupancy));
+          const screeningOccupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
           const screeningAnnualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? rentRollPayload?.total_in_place_annual);
           const screeningExpenseRatio = Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue) && t12EgiValue > 0
             ? t12TotalExpensesValue / t12EgiValue

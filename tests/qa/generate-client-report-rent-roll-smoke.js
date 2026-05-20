@@ -40,6 +40,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const execGpr = resolveCanonicalT12GprValue\(t12Payload\)/
+);
+assert.match(
+  reportSource,
+  /const screeningOccupancy = coerceNumber\(resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)\)/
+);
+assert.match(
+  reportSource,
   /const coverClassificationLabel = dealScoreState\.displayVerdict\?\.label \|\|/
 );
 assert.match(
@@ -107,6 +115,20 @@ const partialSampleOccupancyNoteValue = generatorTest.resolveOccupancyNoteValue(
   }
 );
 assert.equal(partialSampleOccupancyNoteValue, "Not assessed");
+const partialSampleWithDerivedComputedOccupancy = generatorTest.resolveOccupancyNoteValue(
+  {
+    is_partial_sample: true,
+    summary_row_detected: false,
+    occupancy: 0.97,
+  },
+  {
+    occupancy: 0.97,
+    totals: {
+      summary_row_detected: false,
+    },
+  }
+);
+assert.equal(partialSampleWithDerivedComputedOccupancy, "Not assessed");
 
 const trustedSummaryOccupancyNoteValue = generatorTest.resolveOccupancyNoteValue(
   {
