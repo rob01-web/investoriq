@@ -23,6 +23,19 @@ assert.notEqual(typedGateAnchor, -1);
 const reportEventAnchor = workerSource.indexOf("const reportEventErr", typedGateAnchor);
 assert.notEqual(reportEventAnchor, -1);
 const typedGateWindow = workerSource.slice(typedGateAnchor, reportEventAnchor);
+const helperDefMatches = workerSource.match(/const restoreEntitlementForFailedJob = async/g) || [];
+assert.equal(helperDefMatches.length, 1);
+const inlineRestoreSqlMatches = workerSource.match(/update\(\{ consumed_at: null, job_id: null \}\)/g) || [];
+assert.equal(inlineRestoreSqlMatches.length, 1);
+const helperCallMatches = workerSource.match(/await restoreEntitlementForFailedJob\(/g) || [];
+assert.ok(helperCallMatches.length >= 1);
+const recordFailureAnchor = workerSource.indexOf("const recordJobFailure = async");
+assert.notEqual(recordFailureAnchor, -1);
+const hasCreditAnchor = workerSource.indexOf("const hasCreditConsumed", recordFailureAnchor);
+assert.notEqual(hasCreditAnchor, -1);
+const recordFailureWindow = workerSource.slice(recordFailureAnchor, hasCreditAnchor);
+assert.match(recordFailureWindow, /await restoreEntitlementForFailedJob\(/);
+assert.equal(/update\(\{ consumed_at: null, job_id: null \}\)/.test(recordFailureWindow), false);
 assert.match(typedGateWindow, /deliveryGateStatus === 'user_needs_documents'/);
 assert.match(typedGateWindow, /from_status:\s*'rendering'/);
 assert.match(typedGateWindow, /to_status:\s*'failed'/);
@@ -32,12 +45,22 @@ assert.match(typedGateWindow, /failedJobIds\.push\(job\.id\)/);
 assert.match(typedGateWindow, /deliveryGateStatus === 'admin_review_required'/);
 assert.match(typedGateWindow, /to_status:\s*'publishing'/);
 assert.match(typedGateWindow, /'delivery_gate_decision'/);
+assert.equal(
+  /deliveryGateStatus === 'admin_review_required'[\s\S]{0,600}await restoreEntitlementForFailedJob\(/.test(
+    typedGateWindow
+  ),
+  false
+);
 assert.equal(/to_status:\s*'pdf_generating'/.test(typedGateWindow), false);
 assert.equal(/deliveryGateStatus === 'user_needs_documents'[\s\S]{0,320}to_status:\s*'needs_documents'/.test(workerSource), false);
 assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_status:\s*'publishing'/.test(workerSource.slice(reportEventAnchor)), false);
 assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
 assert.match(workerSource, /missing for deliverable path/);
 assert.match(workerSource, /error_code:\s*'REPORT_GENERATION_FAILED'/);
+const publishedAnchor = workerSource.indexOf("const completeUpdate = { status: 'published' }");
+assert.notEqual(publishedAnchor, -1);
+const publishedWindow = workerSource.slice(publishedAnchor);
+assert.equal(/await restoreEntitlementForFailedJob\(/.test(publishedWindow), false);
 assert.equal(/upload replacement documents|upload more documents|resume/i.test(workerSource), false);
 assert.equal(/status:\s*'needs_documents'/.test(workerSource), false);
 

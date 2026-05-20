@@ -286,42 +286,11 @@ export default async function handler(req, res) {
 
       // Best-effort entitlement restore — always return the credit on any hard failure
       try {
-        const { data: failedJobRow } = await supabaseAdmin
-          .from('analysis_jobs')
-          .select('purchase_id')
-          .eq('id', job.id)
-          .maybeSingle();
-        let restorePurchaseId = failedJobRow?.purchase_id || null;
-        if (!restorePurchaseId) {
-          const { data: purchaseByJobRow } = await supabaseAdmin
-            .from('report_purchases')
-            .select('id')
-            .eq('job_id', job.id)
-            .not('consumed_at', 'is', null)
-            .limit(1)
-            .maybeSingle();
-          restorePurchaseId = purchaseByJobRow?.id || null;
-        }
-        if (restorePurchaseId) {
-          const { data: restoredPurchase } = await supabaseAdmin
-            .from('report_purchases')
-            .update({ consumed_at: null, job_id: null })
-            .eq('id', restorePurchaseId)
-            .not('consumed_at', 'is', null)
-            .select('id')
-            .maybeSingle();
-          if (restoredPurchase?.id) {
-            await supabaseAdmin
-              .from('analysis_jobs')
-              .update({ purchase_id: null })
-              .eq('id', job.id);
-            await writeWorkerEventArtifact(job.id, job.user_id, 'entitlement_restored', {
-              reason: `job_failed_${stage}`,
-              purchase_id: restorePurchaseId,
-              timestamp: nowIso,
-            });
-          }
-        }
+        await restoreEntitlementForFailedJob(
+          job,
+          `job_failed_${stage}`,
+          stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR'
+        );
       } catch (restoreErr) {
         console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
       }
@@ -1547,73 +1516,14 @@ export default async function handler(req, res) {
               throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
             }
 
-            const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .select('purchase_id')
-              .eq('id', job.id)
-              .maybeSingle();
-
-            if (needsDocsJobErr) {
-              throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
-            }
-
-            let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
-            if (!restorePurchaseId) {
-              const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
-                .from('report_purchases')
-                .select('id')
-                .eq('job_id', job.id)
-                .not('consumed_at', 'is', null)
-                .limit(1)
-                .maybeSingle();
-
-              if (purchaseByJobErr) {
-                throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
-              }
-
-              restorePurchaseId = purchaseByJobRow?.id || null;
-            }
-            if (restorePurchaseId) {
-              const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
-                .from('report_purchases')
-                .update({ consumed_at: null, job_id: null })
-                .eq('id', restorePurchaseId)
-                .not('consumed_at', 'is', null)
-                .select('id')
-                .maybeSingle();
-
-              if (restorePurchaseErr) {
-                throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
-              }
-
-              if (restoredPurchase?.id) {
-                const { error: clearPurchaseLinkErr } = await supabaseAdmin
-                  .from('analysis_jobs')
-                  .update({ purchase_id: null })
-                  .eq('id', job.id)
-                  .eq('status', 'failed');
-
-                if (clearPurchaseLinkErr) {
-                  throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
-                }
-
-                const entitlementRestoredErr = await writeWorkerEventArtifact(
-                  job.id,
-                  job.user_id,
-                  'entitlement_restored',
-                  {
-                    reason: 'missing_structured_financials',
-                    purchase_id: restorePurchaseId,
-                    timestamp: nowIso,
-                  }
-                );
-
-                if (entitlementRestoredErr) {
-                  throw new Error(
-                    `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
-                  );
-                }
-              }
+            try {
+              await restoreEntitlementForFailedJob(
+                job,
+                'missing_structured_financials',
+                'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS'
+              );
+            } catch (restoreErr) {
+              throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
             }
 
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
@@ -1915,73 +1825,14 @@ export default async function handler(req, res) {
               throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
             }
 
-            const { data: needsDocsJobRow, error: needsDocsJobErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .select('purchase_id')
-              .eq('id', job.id)
-              .maybeSingle();
-
-            if (needsDocsJobErr) {
-              throw new Error(`Failed to fetch purchase_id for entitlement restore: ${needsDocsJobErr.message}`);
-            }
-
-            let restorePurchaseId = needsDocsJobRow?.purchase_id || null;
-            if (!restorePurchaseId) {
-              const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
-                .from('report_purchases')
-                .select('id')
-                .eq('job_id', job.id)
-                .not('consumed_at', 'is', null)
-                .limit(1)
-                .maybeSingle();
-
-              if (purchaseByJobErr) {
-                throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
-              }
-
-              restorePurchaseId = purchaseByJobRow?.id || null;
-            }
-            if (restorePurchaseId) {
-              const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
-                .from('report_purchases')
-                .update({ consumed_at: null, job_id: null })
-                .eq('id', restorePurchaseId)
-                .not('consumed_at', 'is', null)
-                .select('id')
-                .maybeSingle();
-
-              if (restorePurchaseErr) {
-                throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
-              }
-
-              if (restoredPurchase?.id) {
-                const { error: clearPurchaseLinkErr } = await supabaseAdmin
-                  .from('analysis_jobs')
-                  .update({ purchase_id: null })
-                  .eq('id', job.id)
-                  .eq('status', 'failed');
-
-                if (clearPurchaseLinkErr) {
-                  throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
-                }
-
-                const entitlementRestoredErr = await writeWorkerEventArtifact(
-                  job.id,
-                  job.user_id,
-                  'entitlement_restored',
-                  {
-                    reason: 'rendering_integrity_validation_failed',
-                    purchase_id: restorePurchaseId,
-                    timestamp: nowIso,
-                  }
-                );
-
-                if (entitlementRestoredErr) {
-                  throw new Error(
-                    `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
-                  );
-                }
-              }
+            try {
+              await restoreEntitlementForFailedJob(
+                job,
+                'rendering_integrity_validation_failed',
+                'MISSING_REQUIRED_SOURCE_DATA'
+              );
+            } catch (restoreErr) {
+              throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
             }
 
             const needsDocsTransitionErr = await writeStatusTransitionArtifact(
@@ -2115,74 +1966,14 @@ export default async function handler(req, res) {
                 throw new Error(`Failed to mark job failed for financial scale mismatch: ${mismatchUpdateErr.message}`);
               }
 
-              const { data: mismatchJobRow, error: mismatchJobErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .select('purchase_id')
-                .eq('id', job.id)
-                .maybeSingle();
-
-              if (mismatchJobErr) {
-                throw new Error(`Failed to fetch purchase_id for entitlement restore: ${mismatchJobErr.message}`);
-              }
-
-              let restoreMismatchPurchaseId = mismatchJobRow?.purchase_id || null;
-              if (!restoreMismatchPurchaseId) {
-                const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
-                  .from('report_purchases')
-                  .select('id')
-                  .eq('job_id', job.id)
-                  .not('consumed_at', 'is', null)
-                  .limit(1)
-                  .maybeSingle();
-
-                if (purchaseByJobErr) {
-                  throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
-                }
-
-                restoreMismatchPurchaseId = purchaseByJobRow?.id || null;
-              }
-
-              if (restoreMismatchPurchaseId) {
-                const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
-                  .from('report_purchases')
-                  .update({ consumed_at: null, job_id: null })
-                  .eq('id', restoreMismatchPurchaseId)
-                  .not('consumed_at', 'is', null)
-                  .select('id')
-                  .maybeSingle();
-
-                if (restorePurchaseErr) {
-                  throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
-                }
-
-                if (restoredPurchase?.id) {
-                  const { error: clearPurchaseLinkErr } = await supabaseAdmin
-                    .from('analysis_jobs')
-                    .update({ purchase_id: null })
-                    .eq('id', job.id)
-                    .eq('status', 'failed');
-
-                  if (clearPurchaseLinkErr) {
-                    throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
-                  }
-
-                  const entitlementRestoredErr = await writeWorkerEventArtifact(
-                    job.id,
-                    job.user_id,
-                    'entitlement_restored',
-                    {
-                      reason: 'document_financial_scale_mismatch',
-                      purchase_id: restoreMismatchPurchaseId,
-                      timestamp: nowIso,
-                    }
-                  );
-
-                  if (entitlementRestoredErr) {
-                    throw new Error(
-                      `Failed to write entitlement_restored event: ${entitlementRestoredErr.message}`
-                    );
-                  }
-                }
+              try {
+                await restoreEntitlementForFailedJob(
+                  job,
+                  'document_financial_scale_mismatch',
+                  'DOCUMENT_FINANCIAL_SCALE_MISMATCH'
+                );
+              } catch (restoreErr) {
+                throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
               }
 
               const mismatchTransitionErr = await writeStatusTransitionArtifact(
