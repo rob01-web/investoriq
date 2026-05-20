@@ -459,7 +459,7 @@ function actionForRoute(route) {
     severity: route.severity || "medium",
     action_type: actionType,
     owner_area: ownerArea,
-    recommended_next_step: route.action || "Inspect QA route and resolve before sample use.",
+    recommended_next_step: route.action || "Inspect QA route and resolve before external use.",
     requires_code_patch: ["display_fix", "parser_gap", "artifact_gap", "render_gating_gap"].includes(route.routing),
     requires_regeneration: Boolean(route.requires_regeneration),
     blocks_public_sample: Boolean(route.public_sample_blocker),
