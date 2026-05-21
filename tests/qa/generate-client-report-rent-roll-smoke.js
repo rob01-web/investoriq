@@ -85,7 +85,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)/
+  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)[\s\S]{0,220}stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)/
 );
 assert.match(
   reportSource,

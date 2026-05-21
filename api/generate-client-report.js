@@ -6299,17 +6299,8 @@ if (effectiveReportMode === "screening_v1") {
         Number.isFinite(coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance)) &&
         coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance) > 0;
       if (!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
-        const currentDebtAssessmentCopy = currentDebtNotAssessedCopy({
-          currentDebtState: currentDebtAssessmentState,
-          mortgagePayload,
-          loanTermSheetTermsPayload,
-          t12Noi: coerceNumber(t12Payload?.net_operating_income),
-        });
-        finalHtml = replaceAll(
-          finalHtml,
-          "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Not Assessed</strong></p><p>${escapeHtml(currentDebtAssessmentCopy.explanation)}</p></div>`
-        );
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
       } else {
       const refiResult = buildRefiStabilityModel({
         financials: refiFinancials,
