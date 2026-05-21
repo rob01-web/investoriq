@@ -66,10 +66,7 @@ assert.equal(
   /effectiveReportMode === "screening_v1"[\s\S]{0,180}Review - Debt Coverage Constraint/.test(reportSource),
   false
 );
-assert.match(
-  reportSource,
-  /if \(effectiveReportMode === "screening_v1"\)\s*\{\s*reportTierBadges\.push\("Screening Scope"\);/
-);
+assert.equal(/reportTierBadges|reportTierBadgeHtml|Screening Scope|Source-Constrained|Debt Not Provided|Disclosure Required/.test(reportSource), false);
 assert.match(
   reportSource,
   /if \(effectiveReportMode === "v1_core" && dealScoreState\.displayVerdict\?\.cap_explanation\)/

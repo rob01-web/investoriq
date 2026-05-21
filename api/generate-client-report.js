@@ -5599,31 +5599,7 @@ if (effectiveReportMode === "screening_v1") {
       const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
       if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
       const modeLabel = effectiveReportMode === "v1_core" ? "Underwriting" : "Preliminary Screening";
-      const reportTierBadges = [];
-      if (effectiveReportMode === "screening_v1") {
-        reportTierBadges.push("Screening Scope");
-      }
-      if (effectiveReportMode === "v1_core" && Number(sectionEligibility?.source_constrained_section_count || 0) > 0) {
-        reportTierBadges.push("Source-Constrained");
-      }
-      if (
-        effectiveReportMode === "v1_core" &&
-        !hasComputedCurrentDebtDscr &&
-        currentDebtAssessmentState?.current_debt_dscr_status !== "computed" &&
-        currentDebtAssessmentState?.current_debt_limitation_reason_code
-      ) {
-        reportTierBadges.push("Debt Not Provided");
-      }
-      if (
-        sourceReconciliationState?.publishability_bucket === "disclose_only_publishable" ||
-        sourceReconciliationState?.customer_delivery_impact === "disclose_only"
-      ) {
-        reportTierBadges.push("Disclosure Required");
-      }
-      const reportTierBadgeHtml = reportTierBadges.length
-        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">${reportTierBadges.map((badge) => `<span style="display:inline-block;padding:2px 6px;border:1px solid rgba(201,168,76,0.26);border-radius:999px;color:rgba(255,255,255,0.72);font-size:7pt;letter-spacing:.08em;text-transform:uppercase;">${escapeHtml(badge)}</span>`).join("")}</div>`
-        : "";
-snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}${reportTierBadgeHtml}</div></div>`);
+      snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}</div></div>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
