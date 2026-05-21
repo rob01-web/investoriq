@@ -77,7 +77,15 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /sourceReconciliationNarrativePolicy\.data_coverage_required[\s\S]{0,260}riskBullets\.unshift\([\s\S]{0,200}classification is capped pending source reconciliation\./
+);
+assert.match(
+  reportSource,
   /Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll\/T12 reconciliation disclosure in Data Coverage\./
+);
+assert.match(
+  reportSource,
+  /dcfSourceReconciliationLimited[\s\S]{0,400}Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll\/T12 reconciliation disclosure in Data Coverage\./
 );
 assert.match(
   reportSource,

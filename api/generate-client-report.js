@@ -5396,6 +5396,14 @@ if (effectiveReportMode === "screening_v1") {
     }
     // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
     if (effectiveReportMode === "v1_core") {
+      if (
+        sourceReconciliationNarrativePolicy.data_coverage_required &&
+        hasSourceReconciliationVariance
+      ) {
+        riskBullets.unshift(
+          "Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation."
+        );
+      }
       const canonicalRefiDebtBasisForBullets = resolveCanonicalRefiDebtBasis({
         currentDebtState: currentDebtAssessmentState,
         mortgagePayload,
@@ -6664,6 +6672,9 @@ if (effectiveReportMode === "screening_v1") {
     let dcfTableHtml = "";
     if (t12Payload && effectiveReportMode === "v1_core") {
       const dcfDisplayCopy = buildFrameworkSensitivityDisplayCopy();
+      const dcfSourceReconciliationLimited = Boolean(
+        buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
+      );
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
@@ -6731,6 +6742,9 @@ if (effectiveReportMode === "screening_v1") {
           tableHtml += `<tr${rowBg}><td style="padding:4px 8px;border:1px solid #E5E7EB;">${isBase ? formatCapPercentExact(rowCap) : `${cap.toFixed(1)}%`}${isBase ? ` <span style="font-size:9px;color:#6B7280;">(${exitCapSourceLabel})</span>` : ""}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(exitV)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(pvSum)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:${vs === "-" ? "#374151" : pvSum > totalPv ? "#B8860B" : "#64748B"};">${vs}</td></tr>`;
         }
         tableHtml += `</tbody></table>`;
+        if (dcfSourceReconciliationLimited) {
+          tableHtml += `<p class="small" style="margin-top:6px;color:#64748b;font-style:italic;">Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll/T12 reconciliation disclosure in Data Coverage.</p>`;
+        }
         dcfTableHtml = tableHtml;
       }
     }
