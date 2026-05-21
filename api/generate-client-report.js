@@ -619,6 +619,7 @@ function buildDealScorecardState({
   const sourceReconciliationConstrained = Boolean(
     buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
   );
+  const scoreLabel = sourceReconciliationConstrained ? "Operating Metrics Score" : "Composite Score";
   let note = displayVerdict.cap_explanation ||
     "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
   if (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "debt_coverage_constraint" || displayVerdict.cap_reason_code === "debt_coverage_not_assessed") {
@@ -632,15 +633,16 @@ function buildDealScorecardState({
     }
     if (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "source_reconciliation_disclosure") {
       noteParts.push("Rent-roll/T12 reconciliation remains unresolved.");
+      noteParts.push("Classification is capped by source reconciliation.");
     }
-    noteParts.push("The score should not be read as refinance-ready or unconstrained.");
+    noteParts.push("This score reflects available operating metrics only and should not be read as an unconstrained investment score.");
     note = noteParts.join(" ");
   }
   const dealScoreTableHtml =
     `<div class="card no-break" style="margin-top:12px;">` +
     `<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;">` +
     `<span style="font-size:24px;font-weight:800;color:#1F3A5F;letter-spacing:2px;">${escapeHtml(displayVerdict.label)}</span>` +
-    `<span style="display:block;font-size:12px;color:#3F5E84;margin-top:4px;">Composite Score: ${score} / 100</span>` +
+    `<span style="display:block;font-size:12px;color:#3F5E84;margin-top:4px;">${scoreLabel}: ${score} / 100</span>` +
     `</div>` +
     `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
     `<thead><tr>` +
@@ -651,7 +653,7 @@ function buildDealScorecardState({
     `</tr></thead>` +
     `<tbody>${rows}</tbody>` +
     `<tfoot><tr style="background:#FFFFFF;font-weight:700;">` +
-    `<td colspan="3" style="padding:4px 8px;border:1px solid #E5E7EB;">Composite Score (normalized)</td>` +
+    `<td colspan="3" style="padding:4px 8px;border:1px solid #E5E7EB;">${scoreLabel} (normalized)</td>` +
     `<td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${score}/100</td>` +
     `</tr></tfoot>` +
     `</table>` +
@@ -5039,6 +5041,14 @@ if (effectiveReportMode === "screening_v1") {
     if (hasCurrentDebtAssessmentGap) {
       primaryPressurePoint =
         "Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.";
+    }
+    if (
+      effectiveReportMode === "v1_core" &&
+      sourceReconciliationNarrativePolicy.data_coverage_required &&
+      hasSourceReconciliationVariance
+    ) {
+      primaryPressurePoint =
+        "Primary Constraint: Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.";
     }
     const hasCoreUnderwritingOperatingMetrics =
       Number.isFinite(execEgi) &&

@@ -73,6 +73,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /sourceReconciliationNarrativePolicy\.data_coverage_required[\s\S]{0,280}Primary Constraint: Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation\./
+);
+assert.match(
+  reportSource,
   /delivery_gate_status === "admin_review_required"[\s\S]{0,120}\|\|[\s\S]{0,120}delivery_gate_status === "user_needs_documents"/
 );
 assert.match(
@@ -808,10 +812,11 @@ assert.equal(retest9DealScoreState.displayVerdict?.cap_reason_code, "source_reco
 assert.match(retest9DealScoreState.displayVerdict?.cap_explanation || "", /rent-roll\/T12 reconciliation variance described in Data Coverage/i);
 assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
 assert.match(retest9DealScoreState.dealScoreTableHtml, /Review - Source Reconciliation Disclosure/);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite Score: 95 \/ 100/);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Operating Metrics Score: 95 \/ 100/);
 assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only/i);
 assert.match(retest9DealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /The score should not be read as refinance-ready or unconstrained/i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Classification is capped by source reconciliation\./i);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /should not be read as an unconstrained investment score/i);
 
 const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -934,9 +939,11 @@ const constrainedDealScoreState = generatorTest.buildDealScorecardState({
 assert.equal(constrainedDealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
 assert.equal(constrainedDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
 assert.equal(constrainedDealScoreState.score, 94);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /Operating Metrics Score: 94 \/ 100/);
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /Current debt is not assessed/i);
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /The score should not be read as refinance-ready or unconstrained/i);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /Classification is capped by source reconciliation\./i);
+assert.match(constrainedDealScoreState.dealScoreTableHtml, /should not be read as an unconstrained investment score/i);
 assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(constrainedDealScoreState.dealScoreTableHtml), false);
 
 const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
