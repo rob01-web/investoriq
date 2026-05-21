@@ -77,6 +77,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll\/T12 reconciliation disclosure in Data Coverage\./
+);
+assert.match(
+  reportSource,
   /delivery_gate_status === "admin_review_required"[\s\S]{0,120}\|\|[\s\S]{0,120}delivery_gate_status === "user_needs_documents"/
 );
 assert.match(
@@ -1473,6 +1477,56 @@ const reconciliationDisclosureCoverageHtml = generatorTest.buildScreeningDataCov
 assert.match(reconciliationDisclosureCoverageHtml, /SOURCE RECONCILIATION DISCLOSURE/i);
 assert.equal(/Fully Verified/i.test(reconciliationDisclosureCoverageHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(reconciliationDisclosureCoverageHtml), false);
+
+const reconciliationDisclosureCoverageHtmlUnderwriting = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: {
+      outstanding_balance: 1500000,
+      monthly_payment: 9000,
+      interest_rate: 0.065,
+      amort_years: 30,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "source_reconciliation_required",
+    publishability_bucket: "disclose_only_publishable",
+    variance_pct: -0.48043243243243244,
+    customer_delivery_impact: "disclose_only",
+    public_outreach_impact: "block_until_review",
+    source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(reconciliationDisclosureCoverageHtmlUnderwriting, /Field extraction completeness does not imply cross-source reconciliation/i);
 
 const liveCurrentDebtLimitedCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
