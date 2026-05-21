@@ -1,3 +1,416 @@
+# May 21, 2026 Night Addendum - Source Reconciliation Surface Alignment Passed / No-Current-Debt Refi Collapse Passed / Test 3 Final Retest Passed
+
+## A) Current checkpoint
+
+```text
+BOOOOOOOOOOM.
+```
+
+The May 21 six-test red-pen series and follow-up patch sequence produced a major report-surface win.
+
+The two biggest root classes from the six-test batch are now patched, committed, and live-retested:
+
+```text
+1. SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT - COMPLETE / COMMITTED / LIVE RETEST PASSED
+2. NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE - COMPLETE / COMMITTED / LIVE RETEST PASSED
+```
+
+Live proof report:
+
+```text
+TEST 3 FINAL RETEST
+Report type: Full Underwriting
+Classification: Review - Source Reconciliation Disclosure
+Customer-deliverable: YES, with disclosure
+Public/outreach sample-ready: NO, because the source package has a real rent-roll/T12 reconciliation issue and DocRaptor remains in test mode
+```
+
+## B) Six-test validation result
+
+The six-test batch was a positive validation event.
+
+```text
+Tests 1-4:
+Published Full Underwriting reports with disclosure.
+They exposed repeated source-reconciliation surface misalignment and no-current-debt refi-section over-rendering.
+
+Test 5:
+Screening failed closed because rent roll could not be validated.
+PASS. No hallucinated report. Entitlement restored.
+
+Test 6:
+Screening failed closed because T12 and rent roll scale mismatch was extreme.
+PASS. No misleading report. Entitlement restored.
+```
+
+Confirmed pass classes from the series:
+
+```text
+SCREENING_BAD_RENT_ROLL_FAIL_CLOSED
+SCREENING_FINANCIAL_SCALE_MISMATCH_FAIL_CLOSED
+UNSUPPORTED_DOCUMENT_GATING_SURFACE_ALIGNMENT
+HISTORICAL_CAPEX_CONTEXT_ONLY_RENDERING
+RENOVATION_BUDGET_NO_ROI_RENDERING
+UNSUPPORTED_OFFERING_SUMMARY_GATING
+FORWARD_RENOVATION_RENT_LIFT_TRANSPARENCY_RENDERING
+COVER_PILL_REMOVAL
+```
+
+## C) Patch sequence completed
+
+### Patch 1 - SOURCE_RECONCILIATION_PRIMARY_CONSTRAINT_AND_SCORE_QUALIFICATION
+
+Completed / committed.
+
+Behavior:
+
+```text
+- Executive Summary Primary Constraint now prioritizes source reconciliation when source reconciliation caps classification.
+- Missing current debt no longer outranks source reconciliation in that case.
+- Deal Scorecard label conditionally changes from Composite Score to Operating Metrics Score.
+- Score math unchanged.
+- Added qualification:
+  Classification is capped by source reconciliation.
+  This score reflects available operating metrics only and should not be read as an unconstrained investment score.
+```
+
+Preserved:
+
+```text
+- Weak computed DSCR underwriting still renders Review - Debt Coverage Constraint.
+- Screening unchanged.
+```
+
+### Patch 2 - SOURCE_RECONCILIATION_DCF_AND_DATA_COVERAGE_LIMITATION_NOTE
+
+Completed / committed.
+
+Behavior:
+
+```text
+- Data Coverage now states field extraction completeness does not imply cross-source reconciliation.
+- DCF/framework value received source-reconciliation limitation wording, but the first live retest showed the note was not visibly landing near the DCF value output.
+```
+
+### Patch 3 - NO_CURRENT_DEBT_REFI_SECTION_COLLAPSE
+
+Completed / committed.
+
+Behavior:
+
+```text
+- In Full Underwriting, if no true current-debt basis exists, the standalone Refinance Stress Test & Constraint Analysis section collapses.
+- The old full-section Refinance Stability Classification: Not Assessed card path no longer renders.
+- Concise current-debt limitation remains in appropriate surfaces.
+```
+
+Preserved:
+
+```text
+- Supported current-debt/refi behavior remains.
+- Weak computed DSCR behavior remains.
+- Acquisition-only proposed financing remains separate from current debt.
+- Screening unchanged.
+```
+
+### Patch 4 - SOURCE_RECONCILIATION_DCF_NOTE_RENDER_AND_PRIMARY_CONSTRAINTS_BULLET_ALIGNMENT
+
+Completed / committed / live retested.
+
+Behavior:
+
+```text
+- DCF source-reconciliation note now inserts directly into dcfTableHtml so it appears in the actual DCF/value section.
+- PRIMARY CONSTRAINTS bullet list now inserts source reconciliation first when reconciliation cap is active.
+- Missing/no-current-debt bullet may remain second if applicable.
+```
+
+## D) TEST 3 FINAL RETEST live proof
+
+The retest showed all source-reconciliation and refi-collapse win conditions passing.
+
+Cover:
+
+```text
+TEST 3 FINAL RETEST
+Review - Source Reconciliation Disclosure
+30 Units | NOI $587,520 | Expense Ratio 35.6% | NOI Margin 64.4%
+REPORT TIER Underwriting
+```
+
+Executive Summary top constraint:
+
+```text
+Primary Constraint: Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.
+```
+
+PRIMARY CONSTRAINTS bullet list:
+
+```text
+- Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.
+- No current debt document provided. Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.
+```
+
+Refi section:
+
+```text
+has_refi_stability_section: false
+```
+
+Deal Scorecard:
+
+```text
+Operating Metrics Score: 94 / 100
+```
+
+Score qualification:
+
+```text
+Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only. Current debt is not assessed. Rent-roll/T12 reconciliation remains unresolved. Classification is capped by source reconciliation. This score reflects available operating metrics only and should not be read as an unconstrained investment score.
+```
+
+Data Coverage:
+
+```text
+CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE.
+Required T12 and rent roll fields were extracted, but rent roll and T12 remain materially unreconciled.
+Field extraction completeness does not imply cross-source reconciliation. The T12 and rent roll fields were extracted, but the income scale variance remains unresolved.
+```
+
+DCF:
+
+```text
+Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll/T12 reconciliation disclosure in Data Coverage.
+```
+
+Delivery gate:
+
+```text
+delivery_gate_status: deliverable
+customer_delivery_ready: true
+customer_publish_eligible: true
+customer_delivery_impact: disclose_only
+source_limitation_reason_codes: RENT_ROLL_T12_RECONCILIATION_REQUIRED
+```
+
+Interpretation:
+
+```text
+Customer-deliverable with disclosure.
+Not public/outreach-ready because source package has real reconciliation issue and DocRaptor is still test mode.
+```
+
+## E) Remaining active list after May 21 night
+
+The scary report-surface classes from the six-test batch are now closed.
+
+Still pending:
+
+### 1. FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+
+Scope:
+
+```text
+Dashboard/customer failed-state UX; system-wide.
+```
+
+From Tests 5 and 6:
+
+```text
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS
+DOCUMENT_FINANCIAL_SCALE_MISMATCH
+```
+
+Goal:
+
+```text
+Plain-English customer copy.
+Mention no report published and credit restored where applicable.
+Preserve internal error codes and diagnostics.
+```
+
+Desired copy for bad/vague rent roll:
+
+```text
+The uploaded rent roll could not be verified as a usable rent roll. No report was published and your report credit was restored. Please start a new report with a clearer rent roll for the same property and reporting period.
+```
+
+Desired copy for T12/rent-roll scale mismatch:
+
+```text
+The uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published and your report credit was restored. Please start a new report with documents for the same property and reporting period.
+```
+
+### 2. MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+
+Scope:
+
+```text
+Worker/internal diagnostics.
+```
+
+Goal:
+
+```text
+If T12 parsed and rent roll failed, internal missing/invalid list should identify rent_roll only.
+Do not imply both T12 and rent roll are missing when T12 parsed successfully.
+Preserve fail-closed behavior.
+```
+
+### 3. WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+
+Scope:
+
+```text
+Pipeline infrastructure / worker lifecycle.
+```
+
+Current evidence:
+
+```text
+Some reports in the batch still required GitHub/manual worker intervention to move out of extracting.
+```
+
+Known future investigation:
+
+```text
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+```
+
+Do later:
+
+```text
+- confirm Supabase Cron target URL;
+- confirm x-cron-secret header exactly matches CRON_SECRET;
+- confirm /api/admin-run-worker accepts Supabase pg_net header shape;
+- confirm /api/admin/run-eligible-jobs-once is expected or deprecated;
+- explain 401/403 Vercel logs separately from successful worker continuation;
+- do not disable GitHub fallback until Supabase Cron reliability is proven.
+```
+
+## F) Later polish queue
+
+Do not forget, but do not let these jump ahead of failed-state/diagnostic/worker reliability unless Rob explicitly chooses a polish pass.
+
+```text
+METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+- Replace:
+  InvestorIQ does not invent missing data or fabricate market inputs.
+- With:
+  Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.
+
+ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+- Top Income Line Concentration looks awkward when only ancillary income lines appear.
+
+RENOVATION_NOTE_DUPLICATION_POLISH
+- Budget-only renovation sections can repeat the same limitation note twice.
+
+RENOVATION_RENT_LIFT_NOT_NOMODEL_COPY_POLISH
+- Improve distinction between document-stated gross rent-lift potential and non-modeled ROI/payback/NOI/valuation impact.
+
+RENOVATION_TITLE_POLISH
+- Consider:
+  Document-Stated Renovation Plan
+  Renovation Strategy & Capital Plan
+  Renovation Budget and Scope Summary
+
+PUBLIC_SAMPLE_NAME_HYGIENE
+- Distribution-only.
+- Do not globally sanitize or block customer property names.
+```
+
+## G) Current next-action order
+
+Recommended next morning order:
+
+```text
+1. Start with FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY.
+2. Then MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION.
+3. Then WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT.
+4. Then later polish queue, one micro-prompt at a time.
+```
+
+Do not reopen source reconciliation or no-current-debt refi collapse unless a concrete new live failure appears.
+
+## H) Working rules remain active
+
+```text
+- Micro-prompts only.
+- One task at a time.
+- Exact files when possible.
+- No broad refactors.
+- No unrelated cleanup.
+- No broad tests.
+- SHORT FORM RECEIPT ONLY.
+- Do not flip DocRaptor production mode unless explicitly chosen.
+- Do not disable GitHub worker yet.
+- Do not change Supabase Cron cadence.
+- Do not rotate secrets mid-debug.
+- Do not reopen root-class audits without concrete evidence.
+```
+
+## I) Fresh chat prompt for tomorrow
+
+```text
+We are continuing InvestorIQ from the May 21 night master context.
+
+Immediate checkpoint:
+The six-test red-pen series is complete and the two major published-report root classes are patched, committed, and live-retested.
+
+Closed / passed:
+1. SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+   - Executive Summary Primary Constraint names source reconciliation.
+   - PRIMARY CONSTRAINTS bullet list includes source reconciliation first.
+   - Deal Scorecard uses Operating Metrics Score under reconciliation cap.
+   - Score is qualified as available operating metrics only, not an unconstrained investment score.
+   - Data Coverage clarifies field extraction completeness does not imply cross-source reconciliation.
+   - DCF framework value section visibly includes source-reconciliation limitation.
+   - TEST 3 FINAL RETEST passed.
+
+2. NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+   - Standalone refi stress-test section collapses when no true current-debt basis exists.
+   - Risk Register still preserves concise Current Debt DSCR Not assessed limitation.
+   - Supported current debt / weak DSCR behavior preserved.
+   - Screening unchanged.
+
+TEST 3 FINAL RETEST proof:
+- Classification: Review - Source Reconciliation Disclosure.
+- Customer-deliverable with disclosure.
+- Not public/outreach-ready because source package has real reconciliation issue and DocRaptor is still test mode.
+- has_refi_stability_section: false.
+- Operating Metrics Score: 94 / 100.
+- DCF note appears near framework value output.
+
+Remaining active list:
+1. FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY.
+2. MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION.
+3. WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT.
+4. Later polish queue:
+   - methodology wording;
+   - ancillary income concentration label;
+   - renovation note duplication;
+   - renovation rent-lift/no-model copy polish;
+   - renovation title polish;
+   - public sample name hygiene.
+
+First task tomorrow:
+Create a tiny Codex prompt for FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY only.
+
+Rules:
+- Micro-prompt only.
+- One task.
+- No broad refactor.
+- Do not touch source reconciliation or refi collapse.
+- Do not touch parser unless absolutely necessary.
+- Do not change cron/worker reliability yet.
+- Do not flip DocRaptor production mode.
+- Do not disable GitHub worker.
+- SHORT FORM RECEIPT ONLY.
+```
+
+---
+
+
 ## May 20, 2026 Night Addendum - Debt Render Authority Fixed / Motherload Underwriting Passed / Screening Scope Retest Mostly Passed / Mixup Intake Rescue Passed
 
 ### A) Current state after May 20 night sequence

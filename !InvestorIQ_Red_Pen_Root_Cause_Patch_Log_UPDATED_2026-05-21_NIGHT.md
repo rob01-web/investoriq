@@ -1057,3 +1057,331 @@ InvestorIQ showed institutional discipline by:
 - and preserving deterministic boundaries.
 
 The remaining work is not broad panic. It is a focused report-surface alignment and failed-state clarity pass.
+
+---
+
+# May 21 Night Addendum — Source Reconciliation Root Class Patched / Test 3 Final Retest Passed
+
+**Added:** May 21, 2026 night  
+**Status:** Major source-reconciliation and no-current-debt report-surface root classes patched, committed, and live-retested.
+
+## Executive Result
+
+```text
+BOOOOOOOOOOM.
+```
+
+The six-test red-pen series produced two major published-report root classes and two Screening fail-closed validations.
+
+After the patch sequence and live retest, the primary report-surface root classes are now materially closed:
+
+```text
+SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT — PATCHED / COMMITTED / LIVE RETEST PASSED
+NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE — PATCHED / COMMITTED / LIVE RETEST PASSED
+```
+
+Latest live proof report:
+
+```text
+TEST 3 FINAL RETEST
+Report type: Full Underwriting
+Classification: Review - Source Reconciliation Disclosure
+Customer-deliverable: YES, with disclosure
+Public/outreach sample-ready: NO, because source package has real reconciliation issue and DocRaptor remains in test mode
+```
+
+---
+
+# Patch Sequence Completed After Six-Test Series
+
+## Patch 1 — SOURCE_RECONCILIATION_PRIMARY_CONSTRAINT_AND_SCORE_QUALIFICATION
+
+**Status:** Complete / committed.
+
+Behavior fixed:
+
+- Executive Summary `Primary Constraint` now prioritizes source reconciliation.
+- Missing/no-current-debt limitation no longer outranks source reconciliation when source reconciliation is the actual classification cap.
+- Deal Scorecard label conditionally changes from `Composite Score` to `Operating Metrics Score`.
+- Score math is unchanged.
+- Added score qualification:
+  - `Classification is capped by source reconciliation.`
+  - `This score reflects available operating metrics only and should not be read as an unconstrained investment score.`
+
+Preserved:
+
+- Weak computed DSCR underwriting still renders `Review - Debt Coverage Constraint`.
+- Screening branches unchanged.
+- No underwriting/debt/deal-score leakage into Screening.
+
+## Patch 2 — SOURCE_RECONCILIATION_DCF_AND_DATA_COVERAGE_LIMITATION_NOTE
+
+**Status:** Complete / committed.
+
+Behavior fixed:
+
+- Data Coverage now clarifies field extraction completeness does not imply cross-source reconciliation.
+- DCF/framework value output received source-reconciliation limitation wording, initially through an interpretation-token path.
+
+Live retest finding:
+
+- Initial live retest showed the Data Coverage clarification appeared, but the DCF note did not visibly appear near the actual DCF/value output. That required a surgical follow-up patch.
+
+## Patch 3 — NO_CURRENT_DEBT_REFI_SECTION_COLLAPSE
+
+**Status:** Complete / committed.
+
+Behavior fixed:
+
+- In Full Underwriting, if no true current-debt basis exists, the standalone `Refinance Stress Test & Constraint Analysis` section collapses.
+- The old full-section `Refinance Stability Classification: Not Assessed` card path no longer renders.
+- Concise current-debt limitation remains in appropriate surfaces.
+
+Preserved:
+
+- Supported current-debt/refi behavior remains.
+- Weak computed DSCR behavior remains.
+- Acquisition-only proposed financing remains separate from current debt.
+- Screening unchanged.
+
+## Patch 4 — SOURCE_RECONCILIATION_DCF_NOTE_RENDER_AND_PRIMARY_CONSTRAINTS_BULLET_ALIGNMENT
+
+**Status:** Complete / committed / live retested.
+
+Behavior fixed:
+
+- DCF source-reconciliation note now inserts directly into `dcfTableHtml`, so it appears in the actual rendered DCF/value section.
+- `PRIMARY CONSTRAINTS` bullet list now inserts the source-reconciliation bullet first via `riskBullets.unshift(...)` when reconciliation cap is active.
+- Missing/no-current-debt bullet may remain second if applicable.
+
+Required DCF note now visible:
+
+```text
+Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll/T12 reconciliation disclosure in Data Coverage.
+```
+
+---
+
+# Live Retest Result — TEST 3 FINAL RETEST
+
+## Passed
+
+### Cover
+
+```text
+TEST 3 FINAL RETEST
+Review - Source Reconciliation Disclosure
+30 Units | NOI $587,520 | Expense Ratio 35.6% | NOI Margin 64.4%
+REPORT TIER Underwriting
+```
+
+No cover pills.
+
+### Executive Summary Top Constraint
+
+Now correctly renders:
+
+```text
+Primary Constraint: Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.
+```
+
+### PRIMARY CONSTRAINTS Bullet List
+
+Now correctly renders source reconciliation first:
+
+```text
+• Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.
+• No current debt document provided. Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.
+```
+
+### Refi Section Collapse
+
+The standalone no-current-debt refi section is gone.
+
+Artifact/report evidence:
+
+```text
+has_refi_stability_section: false
+```
+
+The concise current-debt limitation remains in the Risk Register as intended.
+
+### Deal Scorecard Score Qualification
+
+Now renders:
+
+```text
+Operating Metrics Score: 94 / 100
+```
+
+with institutional qualification:
+
+```text
+Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only. Current debt is not assessed. Rent-roll/T12 reconciliation remains unresolved. Classification is capped by source reconciliation. This score reflects available operating metrics only and should not be read as an unconstrained investment score.
+```
+
+### Data Coverage Clarification
+
+Data Coverage now separates field extraction from cross-source reconciliation:
+
+```text
+CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE.
+Required T12 and rent roll fields were extracted, but rent roll and T12 remain materially unreconciled.
+Field extraction completeness does not imply cross-source reconciliation. The T12 and rent roll fields were extracted, but the income scale variance remains unresolved.
+```
+
+### DCF Local Limitation
+
+The DCF note now appears near the framework value output:
+
+```text
+Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll/T12 reconciliation disclosure in Data Coverage.
+```
+
+### Delivery / QA Artifacts
+
+Report published and reached published status.
+
+Delivery gate result remained customer-deliverable:
+
+```text
+delivery_gate_status: deliverable
+customer_delivery_ready: true
+customer_publish_eligible: true
+customer_delivery_impact: disclose_only
+source_limitation_reason_codes: RENT_ROLL_T12_RECONCILIATION_REQUIRED
+```
+
+Internal QA confirms this is not public/outreach-ready because of source reconciliation and DocRaptor test mode, but customer delivery is allowed with disclosure.
+
+---
+
+# Current Status of Major Six-Test Root Classes
+
+## Closed / Patched / Retested
+
+### SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+
+**Status:** Closed for the exposed Full Underwriting source-reconciliation pattern.
+
+Closed sub-classes:
+
+- Executive Summary primary constraint alignment.
+- PRIMARY CONSTRAINTS bullet ordering.
+- Score overconfidence / Composite Score label issue.
+- DCF/framework value local limitation.
+- Data Coverage field extraction vs reconciliation clarity.
+- Classification consistency retained as `Review - Source Reconciliation Disclosure`.
+
+### NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+
+**Status:** Closed for the exposed Full Underwriting no-current-debt pattern.
+
+Closed behavior:
+
+- No standalone refi stress-test page/section when current debt is not assessed.
+- Concise limitation remains in risk/disclosure surfaces.
+- Supported current-debt behavior preserved.
+
+---
+
+# Remaining Patch List After May 21 Night
+
+## Priority 3 — FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+
+**Scope:** Dashboard/customer failed-state UX; system-wide.  
+**Status:** Still pending.  
+**Source tests:** Test 5 and Test 6.
+
+Goal:
+
+- Improve customer-facing language for fail-closed jobs while preserving internal diagnostic codes.
+
+Target codes:
+
+```text
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS
+DOCUMENT_FINANCIAL_SCALE_MISMATCH
+```
+
+Desired customer copy for bad/vague rent roll:
+
+```text
+The uploaded rent roll could not be verified as a usable rent roll. No report was published and your report credit was restored. Please start a new report with a clearer rent roll for the same property and reporting period.
+```
+
+Desired customer copy for T12/rent-roll scale mismatch:
+
+```text
+The uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published and your report credit was restored. Please start a new report with documents for the same property and reporting period.
+```
+
+## Priority 4 — MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+
+**Scope:** Worker/internal diagnostics.  
+**Status:** Pending.
+
+Goal:
+
+- If T12 parsed successfully and rent roll failed, internal missing/invalid artifact list should identify only the missing/invalid `rent_roll`, not imply both T12 and rent roll are missing.
+- Preserve fail-closed behavior.
+- Preserve credit restore behavior.
+- Do not weaken bad-rent-roll rejection.
+
+## Priority 5 — WORKER_CONTINUATION_RELIABILITY
+
+**Scope:** Pipeline infrastructure / worker lifecycle.  
+**Status:** Pending / operational watch.
+
+Current evidence:
+
+- Some batch reports still required GitHub/manual worker intervention to move out of `extracting`.
+
+Known separate future class:
+
+```text
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+```
+
+Do later:
+
+- Confirm Supabase Cron target URL.
+- Confirm `x-cron-secret` header exactly matches `CRON_SECRET`.
+- Confirm `/api/admin-run-worker` accepts Supabase `pg_net` header shape.
+- Confirm no old scheduled call still hits wrong/legacy endpoint.
+- Explain 401/403 Vercel logs separately from successful worker continuation.
+- Do not disable GitHub fallback yet.
+
+---
+
+# Later Polish Queue Still Open
+
+These remain real, but should not jump ahead of failed-state clarity / diagnostics / worker reliability unless explicitly chosen.
+
+- `METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP`
+  - Replace `InvestorIQ does not invent missing data or fabricate market inputs.`
+  - With `Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.`
+- `ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH`
+- `RENOVATION_NOTE_DUPLICATION_POLISH`
+- `RENOVATION_RENT_LIFT_NOT_NOMODEL_COPY_POLISH`
+- `RENOVATION_TITLE_POLISH`
+- `PUBLIC_SAMPLE_NAME_HYGIENE`
+
+---
+
+# Recommended Next Morning Plan
+
+```text
+1. Start with FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY.
+2. Then MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION.
+3. Then WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT.
+4. Then later polish queue, one micro-prompt at a time.
+```
+
+Suggested next Codex task:
+
+```text
+FAILED_STATE_COPY_CLARITY
+```
+
+Scope should be limited to customer-facing failed-state copy only. Do not patch worker diagnostics in the same prompt unless file truth shows it is a tiny adjacent mapping.
