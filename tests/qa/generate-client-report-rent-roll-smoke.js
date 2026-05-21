@@ -72,6 +72,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /if \(effectiveReportMode === "v1_core" && dealScoreState\.displayVerdict\?\.cap_explanation\)/
+);
+assert.match(
+  reportSource,
   /delivery_gate_status === "admin_review_required"[\s\S]{0,120}\|\|[\s\S]{0,120}delivery_gate_status === "user_needs_documents"/
 );
 assert.match(

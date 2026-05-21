@@ -7316,7 +7316,7 @@ snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="wi
     // Hard fail-closed: purge all remaining {{...}} tokens before HTML leaves this function
     // Build a deterministic institutional-grade rationale sentence from computed metrics
     let execRationale = "";
-    if (dealScoreState.displayVerdict?.cap_explanation) {
+    if (effectiveReportMode === "v1_core" && dealScoreState.displayVerdict?.cap_explanation) {
       execRationale = dealScoreState.displayVerdict.cap_explanation;
     } else if (screeningClass && screeningClass !== "Insufficient Data" && effectiveReportMode === "screening_v1") {
       const erStr  = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
