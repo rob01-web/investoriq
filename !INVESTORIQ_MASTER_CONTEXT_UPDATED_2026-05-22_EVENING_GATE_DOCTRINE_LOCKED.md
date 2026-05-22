@@ -1,28 +1,42 @@
-# May 22, 2026 Evening Addendum - Self-Heal Patch Committed / Core Sufficiency Authority Audit Complete / Core Bucket Gate Patch In Progress
+# May 22, 2026 Evening Addendum - Core Sufficiency Gate Doctrine Locked / Self-Heal Delivery Matrix Complete
 
 ## A) Current checkpoint
 
 ```text
-BOOOOOOM.
+BOOOOOOOOOOM.
 ```
 
-The self-heal-first delivery contract patch is now committed and passed.
+The May 22 evening core-sufficiency / self-heal delivery-gate sequence is now complete, committed, and passed.
 
-Completed / committed after the May 22 afternoon doctrine discussion:
+Completed / committed / passed after the May 22 afternoon doctrine discussion:
 
 ```text
 1. SELF_HEAL_FIRST_DELIVERY_CONTRACT_PATCH - COMPLETE / COMMITTED / PASS
 2. WEBSITE_DOCUMENT_LIMITATION_COPY - COMPLETE / COMMITTED / PASS
 3. CORE_DOCUMENT_SUFFICIENCY_AUTHORITY_AUDIT - COMPLETE / AUDIT PASS
+4. CORE_BUCKET_STRICT_REDUCTION_TO_GATE - COMPLETE / COMMITTED / PASS
+5. OPTIONAL_SUPPORTING_CONTRACT_VIOLATION_FIREWALL - COMPLETE / COMMITTED / PASS
+6. SOURCE_RECON_TO_DISCLOSE_ONLY_ENFORCEMENT - COMPLETE / COMMITTED / PASS
+7. RENDER_CONTRADICTION_SELF_HEAL_CLASS_MATRIX - COMPLETE / COMMITTED / PASS
+8. CUSTOMER_DELIVERY_GATE_REGRESSION_LOCK - COMPLETE / COMMITTED / PASS
+9. REPORT_CONTRACT_QA_NEW_CODE_MATRIX_GUARD - COMPLETE / COMMITTED / PASS
+10. UNKNOWN_CUSTOMER_BLOCKER_RATIONALE_GUARD - COMPLETE / COMMITTED / PASS
 ```
 
-Currently in progress with Codex:
+Current state:
 
 ```text
-CORE_BUCKET_STRICT_REDUCTION_TO_GATE
+The core-document sufficiency delivery gate doctrine is now locked in code and guarded by focused smoke coverage.
 ```
 
-This is Patch Bundle 1 from the Core Document Sufficiency Authority audit.
+Interpretation:
+
+```text
+Usable T12 + usable rent roll should publish by default.
+Optional/supporting gaps disclose, qualify, collapse, or constrain affected sections.
+Deterministic self-heal render issues should not become whole-report admin-review factories.
+Only true missing/unusable required core docs, explicit fail-closed/system-contract states, runtime/system/storage failures, and true non-negotiable hard customer defects block customer delivery.
+```
 
 ## B) Self-heal-first delivery contract patch committed
 
@@ -73,15 +87,6 @@ Preserved:
 - No parser behavior changed.
 - No worker/cron behavior changed.
 - No dashboard/Stripe/DocRaptor/entitlement behavior changed.
-```
-
-Still-blocking whole-report classes remain:
-
-```text
-- True missing/unusable required core-source paths.
-- True runtime/system/storage failures.
-- Non-negotiable hard rendered defects where deterministic safe self-heal is not available or not satisfied.
-- Prohibited customer-facing public/debug/internal language where it creates a true customer-facing safety/quality defect.
 ```
 
 Important interpretation:
@@ -173,7 +178,7 @@ Under-block finding:
 No clear high-confidence under-block path was found for truly missing core structured artifacts. Worker fail-closed paths for missing/unusable core docs are explicit.
 ```
 
-Remaining major risk:
+Main risk identified and now patched:
 
 ```text
 Over-fail / over-review risk from downstream blocker leakage after core sufficiency passes.
@@ -181,7 +186,7 @@ Over-fail / over-review risk from downstream blocker leakage after core sufficie
 
 ## E) Core sufficiency doctrine re-locked
 
-This doctrine must guide the next patch and future launch work:
+This doctrine now controls delivery-gate work:
 
 ```text
 If T12 + rent roll pass core sufficiency, the delivery gate should treat the report as publishable by default.
@@ -232,124 +237,362 @@ restore credit
 publish no report
 ```
 
-## F) Recommended patch plan from Core Sufficiency Authority audit
+## F) Gate-doctrine patch sequence completed
 
-Codex recommended these patch bundles, no patch included in the audit itself:
+### 1. CORE_BUCKET_STRICT_REDUCTION_TO_GATE
 
-```text
-1. CORE_BUCKET_STRICT_REDUCTION_TO_GATE
-   Files:
-   - api/_lib/qa-action-plan.js
-   - tests/qa/qa-action-plan-smoke.js
-   Target:
-   enforce core-doc sufficiency supremacy; optional/supporting issues default to constrained publish.
-
-2. RENDER_CONTRADICTION_SELF_HEAL_CLASS_MATRIX
-   Files:
-   - api/_lib/report-contract-qa.js
-   - api/_lib/qa-fix-routing.js
-   - tests/qa/report-contract-qa-smoke.js
-   Target:
-   reclassify deterministic render contradictions to self-heal-first routing.
-
-3. SOURCE_RECON_TO_DISCLOSE_ONLY_ENFORCEMENT
-   Files:
-   - api/_lib/source-report-coverage-qa.js
-   - api/_lib/qa-action-plan.js
-   Target:
-   material reconciliation stays disclose/section-constrained unless explicit severe fail-closed threshold is met.
-
-4. OPTIONAL_DOC_BLOCKER_FIREWALL
-   Files:
-   - api/_lib/source-package-qa.js
-   - api/_lib/report-contract-qa.js
-   - api/_lib/qa-action-plan.js
-   Target:
-   optional docs cannot become whole-report blockers unless mapped to true customer safety/runtime/core failure.
-
-5. WORKER_FAIL_CLOSED_DIAGNOSTIC_PRECISION
-   Files:
-   - api/admin-run-worker.js
-   - api/_lib/validator-diagnostics-rollup.js
-   - focused worker smoke
-   Target:
-   keep fail-closed strict for unusable core docs and improve missing-artifact diagnostics.
-```
-
-## G) Current Codex task in progress
-
-Rob has now given Codex the Patch Bundle 1 prompt:
-
-```text
-CORE_BUCKET_STRICT_REDUCTION_TO_GATE only.
-```
-
-Goal:
-
-```text
-Strengthen buildDeliveryGateDecision(...) so that when required core docs are usable:
-- optional/supporting-doc gaps default to publish_with_disclosure_section_constrained;
-- public-sample/high-value/internal/advisory blockers do not affect normal customer delivery;
-- customer delivery is blocked only for true missing/unusable required core docs, explicit fail-closed/system-contract states, true runtime/system/storage failure, or non-negotiable hard customer defects already explicitly mapped as customer blockers.
-```
-
-Likely files:
+Files changed:
 
 ```text
 api/_lib/qa-action-plan.js
 tests/qa/qa-action-plan-smoke.js
 ```
 
-Guardrails:
+Behavior:
 
 ```text
-- Do not weaken fail-closed behavior for unusable T12/rent roll.
-- Do not make every warning publishable.
-- Do not touch parser behavior.
-- Do not touch worker/cron/dashboard/DocRaptor/Stripe/credits.
-- Do not change calculations.
-- Do not broad-refactor.
+- Added core-bucket publishability helper.
+- buildDeliveryGateDecision(...) now distinguishes publishable core sufficiency buckets from true core-failure paths.
+- Optional/supporting source-document limitation actions no longer become whole-report customer blockers when core sufficiency is publishable.
+- Optional/supporting overblocks are excluded from sourceNeedsDocs escalation, customerDeliveryBlockerAction selection, and customer_publish_blockers reduction.
 ```
 
-Required regression guards in current Codex task:
+Whole-report blocks preserved for:
 
 ```text
-1. Usable T12 + usable rent roll + optional debt/appraisal/renovation/property-tax/acquisition gap
-   -> deliverable / customer_publish_eligible true.
-
-2. Missing/unusable T12
-   -> user_needs_documents / fail-closed preserved.
-
-3. Missing/unusable rent roll
-   -> user_needs_documents / fail-closed preserved.
-
-4. Disclose-only source reconciliation with usable core docs
-   -> deliverable / customer_publish_eligible true.
-
-5. Public-sample/high-value blockers do not reduce customer_publish_eligible when normal customer delivery is otherwise safe.
+- user_needs_documents
+- required core docs missing/unusable
+- typed fail_closed/system_contract_failure
+- non-negotiable hard customer defects
 ```
 
-## H) Current next action
+### 2. OPTIONAL_SUPPORTING_CONTRACT_VIOLATION_FIREWALL
 
-When Codex returns, review the receipt before any commit.
-
-Expected receipt sections:
+Files changed:
 
 ```text
-A. Files changed
-B. Core sufficiency gate strengthened how
-C. Optional/supporting blocker firewall added how
-D. What still blocks whole-report delivery
-E. Fail-closed behavior preserved? yes/no
-F. Customer delivery vs public/high-value/internal readiness separated? yes/no
-G. Focused guards added/updated
-H. Validation
-I. Remaining risks, max 2 bullets
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
 ```
 
-Do not run another live test until this patch receipt is reviewed and either committed or rejected.
+Behavior:
 
-## I) Working rules still active
+```text
+- Added context-aware contract blocker evaluation.
+- Optional/supporting limitation-style reportContractQa.violations no longer count as customer blockers when core sufficiency is publishable.
+- True hard customer defects remain block-capable.
+```
+
+Guard added:
+
+```text
+Usable T12 + usable rent roll + contract violation DEBT_FILE_WITH_MISSING_BALANCE marked blocks_customer_delivery=true
+-> delivery_gate_status=deliverable
+-> customer_publish_eligible=true
+-> report_publishable=true
+-> customer_publish_blockers=[]
+-> limitation remains advisory/disclosure-tracked
+```
+
+### 3. SOURCE_RECON_TO_DISCLOSE_ONLY_ENFORCEMENT
+
+Files changed:
+
+```text
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Behavior:
+
+```text
+- Added canonical disclose-only source-reconciliation helper.
+- disclose_only_publishable, customer_delivery_impact=disclose_only, or source_reconciliation_required without explicit block/system failure stays deliverable.
+- Explicit reconciliation block states still block.
+- RENT_ROLL_T12_RECONCILIATION_REQUIRED stays in source_limitation_reason_codes.
+```
+
+Guard added:
+
+```text
+Usable core docs + disclose-only reconciliation
+-> delivery_gate_status=deliverable
+-> customer_publish_eligible=true
+-> report_publishable=true
+-> customer_delivery_impact=disclose_only
+-> customer_publish_blockers=[]
+-> source_limitation_reason_codes includes RENT_ROLL_T12_RECONCILIATION_REQUIRED
+```
+
+### 4. RENDER_CONTRADICTION_SELF_HEAL_CLASS_MATRIX
+
+Files changed:
+
+```text
+api/_lib/report-contract-qa.js
+api/_lib/qa-action-plan.js
+tests/qa/report-contract-qa-smoke.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Self-heal / disclose-only render classes:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER
+CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY
+RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER
+RENDERED_PLACEHOLDER_METRIC_VALUE
+RENDERED_PLACEHOLDER_VALUE_LEAK
+INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION
+RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH only when canonical/source evidence indicates disclose-only reconciliation state
+```
+
+Hard blockers preserved:
+
+```text
+HARD_PUBLIC_LANGUAGE_CONTRACT
+PUBLIC_LANGUAGE_CONTRACT_VIOLATION
+RENDERED_TEMPLATE_TOKEN_LEAK
+RENDERED_MOJIBAKE_LEAK
+INTERNAL_DEBUG_LANGUAGE_LEAK
+REPORT_TYPE_SECTION_LEAK
+SCREENING_UNDERWRITING_SECTION_LEAK
+UNSUPPORTED_CURRENT_DEBT_RENDERED
+UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED
+CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH
+Reconciliation mismatch when reconciliation state is explicit block/non-disclose-only
+```
+
+Behavior:
+
+```text
+Usable core docs + publishable core bucket + self-heal render contradiction only
+-> delivery_gate_status=deliverable
+-> customer_publish_eligible=true
+-> no customer blocker entry
+
+Hard defects still route to admin_review_required / customer_publish_eligible=false.
+```
+
+### 5. CUSTOMER_DELIVERY_GATE_REGRESSION_LOCK
+
+Files changed:
+
+```text
+tests/qa/qa-action-plan-smoke.js
+```
+
+Implementation change:
+
+```text
+No.
+```
+
+Regression lock added for:
+
+```text
+1. Usable core + optional/supporting source-document limitation -> deliverable.
+2. Usable core + optional/supporting contract violation -> deliverable.
+3. Usable core + disclose-only reconciliation -> deliverable / disclose_only.
+4. Usable core + deterministic self-heal render contradiction -> deliverable.
+5. Public/internal-only blocker -> not a normal customer blocker.
+6. Hard defect -> admin_review_required.
+7. Missing required core doc -> user_needs_documents / fail closed.
+```
+
+### 6. REPORT_CONTRACT_QA_NEW_CODE_MATRIX_GUARD
+
+Files changed:
+
+```text
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Behavior:
+
+```text
+- Added explicit report-contract code classifier.
+- Known self-heal render codes remain non-customer-blocking.
+- Known hard customer defects remain blocking.
+- Unknown soft report-contract codes with blocks_customer_delivery=false remain advisory/non-blocking.
+- Unknown report-contract codes with blocks_customer_delivery=true still block/admin-review.
+```
+
+Guards added:
+
+```text
+FUTURE_SOFT_RENDER_WARNING with blocks_customer_delivery=false
+-> deliverable / eligible / publishable / advisory tracked
+
+FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER with blocks_customer_delivery=true
+-> admin_review_required / customer_publish_eligible=false / report_publishable=false
+```
+
+### 7. UNKNOWN_CUSTOMER_BLOCKER_RATIONALE_GUARD
+
+Files changed:
+
+```text
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Behavior:
+
+```text
+- Added rationale-recognition helper for unknown customer-blocking report-contract codes.
+- Unknown reportContractQa violations with blocks_customer_delivery=true and no recognized customer-block rationale now add governance advisory:
+  UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE
+- Blocking behavior is unchanged.
+```
+
+Recognized rationale metadata includes:
+
+```text
+customer_block_reason
+customer_block_rationale
+customer_safety_class
+delivery_block_class
+recognized hard categories such as public_language, section_gating_contract, report_type_contract, debt_contract, system_contract_failure
+```
+
+Guard behavior:
+
+```text
+Unknown explicit blocker without rationale
+-> still admin_review_required
+-> still customer_publish_eligible=false
+-> still report_publishable=false
+-> report_quality_advisories includes UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE
+
+Unknown explicit blocker with rationale
+-> still admin_review_required
+-> still customer_publish_eligible=false
+-> still report_publishable=false
+-> no missing-rationale governance advisory
+
+Unknown soft code
+-> deliverable / eligible / publishable
+-> no missing-rationale governance advisory
+```
+
+## G) Final customer-delivery contract after May 22 evening
+
+Locked contract:
+
+```text
+1. Core docs unusable/missing/unverifiable
+   -> fail closed, restore credit, publish no report.
+
+2. Core docs usable but messy, incomplete, inconsistent, unsupported, or materially unreconciled
+   -> publish with transparent disclosure and collapse/qualify/omit affected sections.
+
+3. Unsafe rendered surface detected
+   -> deterministic allowlisted self-heal/collapse/qualify/omit where safe.
+
+4. Admin review
+   -> rare emergency catch net only when the system cannot safely self-heal or a true hard customer blocker exists.
+```
+
+Customer delivery blocks only for:
+
+```text
+- missing/unusable required T12;
+- missing/unusable required rent roll;
+- explicit fail_closed / system_contract_failure;
+- true runtime/system/storage failure;
+- hard public-language/template/mojibake/internal-debug/report-type/current-debt defects;
+- unsupported rendered current debt analysis;
+- reconciliation state explicitly marked block/admin/system failure;
+- unknown future report-contract codes explicitly marked blocks_customer_delivery=true.
+```
+
+Customer delivery does NOT block merely because of:
+
+```text
+- optional debt/appraisal/renovation/property-tax/acquisition support gap;
+- source-document limitation when core docs are usable;
+- disclose-only rent-roll/T12 source reconciliation;
+- public-sample/high-value/internal readiness metadata;
+- DocRaptor test mode;
+- deterministic self-heal render placeholder class;
+- future soft report-contract warning marked blocks_customer_delivery=false.
+```
+
+## H) Validation status
+
+Codex validation passed across the sequence using focused checks only.
+
+Representative validations run:
+
+```text
+node --check api/_lib/qa-action-plan.js
+node --check api/_lib/report-contract-qa.js
+node --check tests/qa/qa-action-plan-smoke.js
+node --check tests/qa/report-contract-qa-smoke.js
+node tests/qa/qa-action-plan-smoke.js
+node tests/qa/report-contract-qa-smoke.js
+git diff --check
+```
+
+No live retest has been run yet after the full evening gate-doctrine sequence.
+
+## I) Remaining risks / follow-ups
+
+Near-term follow-ups:
+
+```text
+1. Commit this updated master context file.
+2. Then consider one real validation job to prove the gate-doctrine sequence live.
+3. Watch for any new report-contract code that is not explicitly classified.
+4. Watch for unknown blockers missing rationale; the advisory now surfaces UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE.
+```
+
+Known residual risks:
+
+```text
+- Future new violation codes still require explicit matrix placement.
+- Unknown codes with blocks_customer_delivery=true remain fail-safe blockers, but now emit governance advisory if they lack rationale.
+- Reconciliation mismatch self-heal depends on canonical disclose-only evidence being present in violation context; missing evidence defaults stricter.
+- Supabase Cron real end-to-end continuation proof remains open from earlier May 22 work.
+- GitHub scheduled worker should not be disabled until Supabase Cron stability is proven on real queued jobs.
+- DocRaptor production mode remains a separate launch step and is not flipped.
+- Vercel/environment secret rotation remains a pre-launch hardening task.
+```
+
+## J) Recommended next action
+
+Recommended next step:
+
+```text
+Update/commit this master .MD file first.
+```
+
+After the master context is committed:
+
+```text
+Run one controlled real validation job and inspect whether the gate doctrine behaves live:
+- usable core docs publish;
+- optional/supporting gaps disclose or constrain sections;
+- disclose-only reconciliation publishes with disclosure;
+- self-heal render classes do not force admin review;
+- hard defects and missing core docs still fail/hold correctly.
+```
+
+Do not yet:
+
+```text
+- flip DocRaptor production mode;
+- disable GitHub worker;
+- rotate secrets mid-debug;
+- change Supabase Cron cadence;
+- start a broad new audit;
+- run a broad test suite;
+- patch parser/worker/cron/dashboard/Stripe unless a concrete live failure appears.
+```
+
+## K) Working rules still active
 
 ```text
 - Micro-prompts only.
@@ -367,6 +610,7 @@ Do not run another live test until this patch receipt is reviewed and either com
 - Do not let the new doctrine become “everything fails.”
 - Do not let the new doctrine become “publish unsafe reports.”
 - Core sufficiency passes -> publish by default unless a true customer safety/core/runtime blocker is proven.
+- Unknown future customer blockers must either be known hard defects or carry rationale metadata; otherwise keep blocking but surface UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE.
 ```
 
 ---
