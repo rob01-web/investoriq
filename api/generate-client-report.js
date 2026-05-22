@@ -1888,7 +1888,7 @@ function buildHistoricalCapexDisplayCopy({
   if (normalizedRenovationDisplayMode === "budget_only_no_roi") {
     return {
       display_mode: normalizedRenovationDisplayMode,
-      section_title: "Renovation Budget Summary - No ROI Inputs Provided",
+      section_title: "Renovation Budget Summary",
       budget_card_title: "Renovation Budget Items",
       show_execution_card: false,
       budget_note: budgetOnlyDisclaimer,
@@ -1900,8 +1900,8 @@ function buildHistoricalCapexDisplayCopy({
   if (normalizedRenovationDisplayMode === "forward_looking_modelable") {
     return {
       display_mode: normalizedRenovationDisplayMode,
-      section_title: "Renovation Strategy & Capital Plan",
-      budget_card_title: "Renovation Budget Breakdown",
+      section_title: "Document-Supported Renovation Assumptions",
+      budget_card_title: "Renovation Budget Items",
       show_execution_card: true,
       budget_note: DATA_NOT_AVAILABLE,
       execution_note: DATA_NOT_AVAILABLE,
@@ -1912,15 +1912,15 @@ function buildHistoricalCapexDisplayCopy({
   if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift") {
     return {
       display_mode: normalizedRenovationDisplayMode,
-      section_title: "Renovation Strategy & Capital Plan",
-      budget_card_title: "Renovation Budget Breakdown",
+      section_title: "Document-Stated Renovation Assumptions",
+      budget_card_title: "Renovation Budget Items",
       show_execution_card: true,
       budget_note:
-        "Document-stated renovation rent-lift assumptions are displayed by row. Gross annual rent-lift potential is shown only where unit count and expected monthly rent lift are explicitly provided.",
+        "Document-stated renovation rent-lift assumptions are displayed by row for source transparency only. Gross annual rent-lift potential is shown only where unit count and expected monthly rent lift are explicitly provided and is not converted into NOI, ROI, payback, valuation, or refinance outputs.",
       execution_note:
-        "ROI, payback, and cost recovery are not modeled unless those assumptions are explicitly document-supported.",
+        "ROI, payback, cost recovery, NOI impact, valuation impact, and refinance impact are not modeled unless those assumptions are explicitly document-supported.",
       interpretation:
-        "Document-stated rent-lift assumptions are shown for transparency. This is not an NOI, ROI, payback, or valuation model.",
+        "Document-stated rent-lift assumptions are shown for transparency only. This is not an NOI, ROI, payback, valuation, or refinance model.",
       historical_capex_disclaimer: historicalCapitalItemsDisclaimer,
     };
   }
@@ -2056,9 +2056,9 @@ function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
     { key: "unitType", label: "Unit Type" },
     { key: "unitCount", label: "Unit Count" },
     { key: "costPerUnit", label: "Cost per Unit" },
-    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated)" },
+    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated Assumption)" },
     { key: "phaseTiming", label: "Phase Timing / Phasing" },
-    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated)" },
+    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated Assumption)" },
     { key: "cost", label: "Estimated Cost" },
     { key: "percent", label: "Percent of Budget" },
     { key: "objective", label: "Primary Objective" },
@@ -2077,7 +2077,7 @@ function buildRenovationBudgetRows(rows, formatValue, columnVisibility = null) {
     .join("");
 }
 
-function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE, columnVisibility = null, title = "Renovation Budget Breakdown") {
+function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILABLE, columnVisibility = null, title = "Renovation Budget Items") {
   const summary = summarizeRenovationBudgetRows(rows, formatValue);
   const visibleColumns = columnVisibility || summary.visibleColumns;
   const columns = [
@@ -2086,9 +2086,9 @@ function buildRenovationBudgetCardHtml(rows, formatValue, note = DATA_NOT_AVAILA
     { key: "unitType", label: "Unit Type" },
     { key: "unitCount", label: "Unit Count" },
     { key: "costPerUnit", label: "Cost per Unit" },
-    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated)" },
+    { key: "expectedMonthlyRentLift", label: "Expected Monthly Rent Lift (Document-Stated Assumption)" },
     { key: "phaseTiming", label: "Phase Timing / Phasing" },
-    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated)" },
+    { key: "grossAnnualRentLiftPotential", label: "Gross Annual Rent-Lift Potential (Document-Stated Assumption)" },
     { key: "cost", label: "Estimated Cost" },
     { key: "percent", label: "Percent of Budget" },
     { key: "objective", label: "Primary Objective" },
@@ -2163,7 +2163,7 @@ function buildRenovationExecutionCardHtml(rows, formatValue, note = DATA_NOT_AVA
       : "";
   }
   return `<div style="margin-top:18px; page-break-before: avoid; break-before: avoid;">
-    <p class="subsection-title">Cost Per Unit and Execution Phasing</p>
+    <p class="subsection-title">Execution and Unit-Cost Inputs (Document-Stated)</p>
     <table>
       <thead>
         <tr>
