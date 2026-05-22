@@ -906,9 +906,16 @@ function isManagerContradictionCustomerBlocking(action, {
 }
 
 function isCustomerPublishBlockingViolation(violation) {
+  return isCustomerPublishBlockingViolationWithContext(violation);
+}
+
+function isCustomerPublishBlockingViolationWithContext(violation, {
+  coreSufficiencyPublishable = false,
+} = {}) {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
   if (!code) return false;
+  if (isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable })) return false;
   const customerImpact = normalizeImpactValue(
     violation?.customer_delivery_impact ??
     violation?.evidence?.customer_delivery_impact
@@ -926,6 +933,24 @@ function isCustomerPublishBlockingViolation(violation) {
   }
   if (explicitlyNonBlockingImpact) return false;
   return isNonNegotiableCustomerHardDefect(code) || legacyCustomerBlockerFallbackCodes.has(code);
+}
+
+function isOptionalSupportingContractOverblockViolation(violation, {
+  coreSufficiencyPublishable = false,
+} = {}) {
+  if (!coreSufficiencyPublishable) return false;
+  if (!violation) return false;
+  const code = String(violation?.code || "").toUpperCase();
+  if (!code || isNonNegotiableCustomerHardDefect(code)) return false;
+  if (violation?.blocks_customer_delivery !== true) return false;
+  const category = String(violation?.category || "").toLowerCase();
+  const sourceArtifact = String(violation?.source_artifact || "").toLowerCase();
+  return (
+    category.includes("source_document") ||
+    category.includes("source_report_coverage") ||
+    category.includes("source_documents") ||
+    sourceArtifact.includes("source_report_coverage_qa")
+  );
 }
 
 function normalizeImpactValue(value) {
@@ -1096,7 +1121,7 @@ function buildPublishEligibilitySummary({
 
   const contractCustomerBlockingViolations = uniqueCodes(
     (Array.isArray(contractViolations) ? contractViolations : [])
-      .filter((violation) => isCustomerPublishBlockingViolation(violation))
+      .filter((violation) => isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }))
       .map((violation) => violation?.code)
   );
   const contractPublicSampleBlockers = uniqueCodes(
@@ -1109,6 +1134,11 @@ function buildPublishEligibilitySummary({
       .filter((violation) => Boolean(violation?.blocks_high_value_outreach))
       .map((violation) => violation?.code)
   );
+  const optionalSupportingContractAdvisories = uniqueCodes(
+    (Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable }))
+      .map((violation) => violation?.code)
+  );
 
   const customerPublishBlockerCandidates = uniqueCodes([
     ...(sourceNeedsDocs ? [
@@ -1118,7 +1148,7 @@ function buildPublishEligibilitySummary({
     ...contractCustomerBlockingViolations,
     ...customerActionBlockers,
     ...(managerContradictionAction && managerContradictionBlocksCustomer ? [managerContradictionAction.code] : []),
-    ...(reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation) ? [reconciliationViolation.code] : []),
+    ...(reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable }) ? [reconciliationViolation.code] : []),
   ]);
 
   const publicSampleBlockers = uniqueCodes([
@@ -1261,6 +1291,7 @@ function buildPublishEligibilitySummary({
   const reportQualityBlockers = customerPublishBlockers;
   const reportQualityAdvisories = uniqueCodes([
     ...advisoryOnlyFindings,
+    ...optionalSupportingContractAdvisories,
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
   ]);
@@ -1469,6 +1500,8 @@ export function buildDeliveryGateDecision({
     contractViolations,
     deterministicFlags,
   });
+  const contractCustomerBlockingViolation =
+    contractViolations.find((violation) => isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable })) || null;
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
   const sourceDocumentActionBlocksCustomer = Boolean(sourceDocumentAction?.blocks_customer_delivery);
   const sourceDocumentActionIsOptionalOverblock = isOptionalSupportingOverblockAction(sourceDocumentAction, {
@@ -1481,6 +1514,7 @@ export function buildDeliveryGateDecision({
       !isManagerContradictionAction(row.action) &&
       !isOptionalSupportingOverblockAction(row.action, { coreSufficiencyPublishable })
     )?.action ||
+    contractCustomerBlockingViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
     null;
   const publicOrOutreachOnlyAction =
@@ -1489,7 +1523,7 @@ export function buildDeliveryGateDecision({
   const adminReviewAction = customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
-    Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)));
+    Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable })));
 
   const sourceNeedsDocs =
     (!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
@@ -1499,7 +1533,7 @@ export function buildDeliveryGateDecision({
     coreInputSystemContractFailureTyped ||
     (coreInputBucket === "admin_review_required" && coreInputCustomerFailClosed);
   const customerBlockingReconciliationViolation =
-    reconciliationViolation && isCustomerPublishBlockingViolation(reconciliationViolation)
+    reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable })
       ? reconciliationViolation
       : null;
   const adminReviewBlockingAction =

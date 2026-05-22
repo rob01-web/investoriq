@@ -1743,6 +1743,89 @@ assert.deepEqual(optionalSupportingGapGate.customer_publish_blockers, []);
 assert.equal(optionalSupportingGapGate.customer_delivery_impact, "disclose_only");
 assert.deepEqual(optionalSupportingGapGate.source_limitation_reason_codes, ["DEBT_FILE_WITH_MISSING_BALANCE"]);
 
+const optionalSupportingContractViolationGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      customer_delivery_impact: "allow",
+      blocks_customer_delivery: false,
+    },
+  },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "DEBT_FILE_WITH_MISSING_BALANCE",
+        category: "source_documents",
+        source_artifact: "source_report_coverage_qa",
+        severity: "medium",
+        blocks_customer_delivery: true,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [],
+  },
+});
+assert.equal(optionalSupportingContractViolationGate.delivery_gate_status, "deliverable");
+assert.equal(optionalSupportingContractViolationGate.customer_publish_eligible, true);
+assert.equal(optionalSupportingContractViolationGate.report_publishable, true);
+assert.deepEqual(optionalSupportingContractViolationGate.customer_publish_blockers, []);
+assert.equal((optionalSupportingContractViolationGate.report_quality_advisories || []).includes("DEBT_FILE_WITH_MISSING_BALANCE"), true);
+
+const hardContractDefectGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      customer_delivery_impact: "allow",
+      blocks_customer_delivery: false,
+    },
+  },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "HARD_PUBLIC_LANGUAGE_CONTRACT",
+        category: "public_language",
+        source_artifact: "report_contract_qa",
+        severity: "critical",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [],
+  },
+});
+assert.equal(hardContractDefectGate.delivery_gate_status, "admin_review_required");
+assert.equal(hardContractDefectGate.customer_publish_eligible, false);
+assert.equal(
+  String(hardContractDefectGate.publish_decision_reason || "").startsWith("admin_review_required:HARD_PUBLIC_LANGUAGE_CONTRACT"),
+  true
+);
+
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
   reportContractQa: { contract_status: "pass", violations: [] },
