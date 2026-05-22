@@ -71,5 +71,10 @@ assert.equal(
   false
 );
 assert.equal(/status:\s*'needs_documents'/.test(workerSource), false);
+assert.equal(/missing:\s*\[\s*'rent_roll'\s*,\s*'t12_or_operating_statement'\s*\]/.test(workerSource), false);
+assert.match(workerSource, /const missingStructuredArtifacts = \[\];/);
+assert.match(workerSource, /if \(!hasRentRollParsed\) missingStructuredArtifacts\.push\('rent_roll'\);/);
+assert.match(workerSource, /if \(!hasT12Parsed\) missingStructuredArtifacts\.push\('t12_or_operating_statement'\);/);
+assert.match(workerSource, /missing:\s*missingStructuredArtifacts/);
 
 console.log("admin-run-worker-gate smoke PASS");

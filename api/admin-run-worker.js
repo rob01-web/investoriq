@@ -1556,6 +1556,9 @@ export default async function handler(req, res) {
             const detected = Array.from(
               new Set((detectedRows || []).map((row) => row.doc_type).filter(Boolean))
             );
+            const missingStructuredArtifacts = [];
+            if (!hasRentRollParsed) missingStructuredArtifacts.push('rent_roll');
+            if (!hasT12Parsed) missingStructuredArtifacts.push('t12_or_operating_statement');
 
             const { data: existingEvent } = await supabaseAdmin
               .from('analysis_artifacts')
@@ -1576,7 +1579,7 @@ export default async function handler(req, res) {
                   level: 'error',
                   error_message:
                     'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts. Generation halted before report publication due to document integrity validation.',
-                  missing: ['rent_roll', 't12_or_operating_statement'],
+                  missing: missingStructuredArtifacts,
                   detected,
                   timestamp: nowIso,
                 }
