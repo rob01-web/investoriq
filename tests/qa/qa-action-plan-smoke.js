@@ -2078,5 +2078,206 @@ assert.equal(
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.admin_review_required, false);
 assert.equal(canonicalPublishGateWithLegacyFalseFlags.user_needs_documents, false);
 
+// Regression lock: customer-delivery gate doctrine must remain stable.
+const gateLockBaseCoverage = {
+  qa_status: "pass",
+  deterministic_flags: [],
+  artifact_inventory: {
+    t12_parsed: { present: true, has_core_totals: true },
+    rent_roll_parsed: { present: true },
+  },
+  core_input_sufficiency_state: {
+    publishability_bucket: "core_sufficient_publishable",
+    required_core_docs_missing: false,
+    customer_delivery_impact: "allow",
+    blocks_customer_delivery: false,
+  },
+};
+
+const gateLockScenario = ({
+  sourceReportCoverageQa = gateLockBaseCoverage,
+  reportContractQa = { contract_status: "pass", violations: [] },
+  qaActionPlan = { customer_delivery_ready: true, prioritized_actions: [] },
+}) => buildDeliveryGateDecision({ sourceReportCoverageQa, reportContractQa, qaActionPlan });
+
+const gateLockOptionalSourceLimitation = gateLockScenario({
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [
+      {
+        code: "DEBT_FILE_WITH_MISSING_BALANCE",
+        action_type: "source_document_limitation",
+        owner_area: "source_documents",
+        blocks_customer_delivery: true,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(gateLockOptionalSourceLimitation.delivery_gate_status, "deliverable");
+assert.equal(gateLockOptionalSourceLimitation.customer_publish_eligible, true);
+assert.equal(gateLockOptionalSourceLimitation.report_publishable, true);
+assert.deepEqual(gateLockOptionalSourceLimitation.customer_publish_blockers, []);
+
+const gateLockOptionalContractViolation = gateLockScenario({
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "DEBT_FILE_WITH_MISSING_BALANCE",
+        category: "source_documents",
+        source_artifact: "source_report_coverage_qa",
+        severity: "medium",
+        blocks_customer_delivery: true,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(gateLockOptionalContractViolation.delivery_gate_status, "deliverable");
+assert.equal(gateLockOptionalContractViolation.customer_publish_eligible, true);
+assert.equal(gateLockOptionalContractViolation.report_publishable, true);
+assert.deepEqual(gateLockOptionalContractViolation.customer_publish_blockers, []);
+
+const gateLockDiscloseOnlyReconciliation = gateLockScenario({
+  sourceReportCoverageQa: {
+    ...gateLockBaseCoverage,
+    core_input_sufficiency_state: {
+      publishability_bucket: "disclose_only_publishable",
+      required_core_docs_missing: false,
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+    },
+    source_reconciliation_state: {
+      status: "source_reconciliation_required",
+      publishability_bucket: "disclose_only_publishable",
+      customer_delivery_impact: "disclose_only",
+      public_outreach_impact: "block_until_review",
+    },
+    deterministic_flags: [
+      {
+        code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+        severity: "medium",
+        blocks_customer_delivery: false,
+        routing: "public_sample_blocker",
+        evidence: {
+          source_reconciliation_state: {
+            status: "source_reconciliation_required",
+            publishability_bucket: "disclose_only_publishable",
+            customer_delivery_impact: "disclose_only",
+            public_outreach_impact: "block_until_review",
+          },
+        },
+      },
+    ],
+  },
+});
+assert.equal(gateLockDiscloseOnlyReconciliation.delivery_gate_status, "deliverable");
+assert.equal(gateLockDiscloseOnlyReconciliation.customer_publish_eligible, true);
+assert.equal(gateLockDiscloseOnlyReconciliation.report_publishable, true);
+assert.equal(gateLockDiscloseOnlyReconciliation.customer_delivery_impact, "disclose_only");
+assert.deepEqual(gateLockDiscloseOnlyReconciliation.customer_publish_blockers, []);
+
+const gateLockSelfHealRender = gateLockScenario({
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+        severity: "high",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: gateLockBaseCoverage,
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+          severity: "high",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+  }),
+});
+assert.equal(gateLockSelfHealRender.delivery_gate_status, "deliverable");
+assert.equal(gateLockSelfHealRender.customer_publish_eligible, true);
+assert.equal(gateLockSelfHealRender.report_publishable, true);
+assert.deepEqual(gateLockSelfHealRender.customer_publish_blockers, []);
+
+const gateLockPublicOnly = gateLockScenario({
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [
+      {
+        code: "PUBLIC_SAMPLE_NOT_READY",
+        action_type: "production_config_only",
+        owner_area: "production_config",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(gateLockPublicOnly.delivery_gate_status, "deliverable");
+assert.equal(gateLockPublicOnly.customer_publish_eligible, true);
+assert.equal(gateLockPublicOnly.report_publishable, true);
+assert.equal((gateLockPublicOnly.customer_publish_blockers || []).includes("PUBLIC_SAMPLE_NOT_READY"), false);
+
+const gateLockHardDefect = gateLockScenario({
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "HARD_PUBLIC_LANGUAGE_CONTRACT",
+        category: "public_language",
+        severity: "critical",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(gateLockHardDefect.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockHardDefect.customer_publish_eligible, false);
+
+const gateLockMissingCoreDoc = gateLockScenario({
+  sourceReportCoverageQa: {
+    qa_status: "warn",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: false, has_core_totals: false },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "user_needs_documents",
+      required_core_docs_missing: true,
+      customer_delivery_impact: "block",
+      blocks_customer_delivery: true,
+    },
+  },
+  qaActionPlan: { customer_delivery_ready: false, prioritized_actions: [] },
+});
+assert.equal(gateLockMissingCoreDoc.delivery_gate_status, "user_needs_documents");
+assert.equal(gateLockMissingCoreDoc.customer_publish_eligible, false);
+assert.equal(gateLockMissingCoreDoc.report_publishable, false);
+
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));
