@@ -4523,7 +4523,7 @@ export default async function handler(req, res) {
   finalHtml,
   "{{ASSUMPTIONS_DISCLOSURE}}",
   allowAssumptions
-    ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. InvestorIQ does not invent missing data or fabricate market inputs."
+    ? "Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs."
     : "Outputs are document-backed and framework-constrained. Missing inputs are not inferred."
 );
 finalHtml = replaceAll(
