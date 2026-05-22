@@ -2300,6 +2300,10 @@ assert.equal(gateLockUnknownSoftContractCode.customer_publish_eligible, true);
 assert.equal(gateLockUnknownSoftContractCode.report_publishable, true);
 assert.deepEqual(gateLockUnknownSoftContractCode.customer_publish_blockers, []);
 assert.equal((gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("FUTURE_SOFT_RENDER_WARNING"), true);
+assert.equal(
+  (gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
+  false
+);
 
 const gateLockUnknownExplicitContractBlock = gateLockScenario({
   reportContractQa: {
@@ -2321,9 +2325,38 @@ assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "admin_r
 assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, false);
 assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, false);
 assert.equal(
+  (gateLockUnknownExplicitContractBlock.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
+  true
+);
+assert.equal(
   (gateLockUnknownExplicitContractBlock.customer_publish_blockers || []).includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER") ||
     String(gateLockUnknownExplicitContractBlock.publish_decision_reason || "").includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER"),
   true
+);
+
+const gateLockUnknownExplicitContractBlockWithRationale = gateLockScenario({
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER_WITH_RATIONALE",
+        category: "report_contract",
+        severity: "high",
+        blocks_customer_delivery: true,
+        customer_block_reason: "runtime_customer_safety",
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.customer_publish_eligible, false);
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.report_publishable, false);
+assert.equal(
+  (gateLockUnknownExplicitContractBlockWithRationale.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
+  false
 );
 
 console.log("qa-action-plan smoke PASS");

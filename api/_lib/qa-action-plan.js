@@ -838,6 +838,36 @@ function classifyReportContractViolationCode(code = "") {
   return "unknown";
 }
 
+function hasRecognizedCustomerBlockRationaleMetadata(violation = null) {
+  if (!violation || typeof violation !== "object") return false;
+  const explicitReason = String(
+    violation?.customer_block_reason ||
+    violation?.customer_block_rationale ||
+    violation?.customer_safety_class ||
+    violation?.delivery_block_class ||
+    ""
+  ).trim();
+  if (explicitReason) return true;
+  const category = String(violation?.category || "").trim().toLowerCase();
+  const recognizedHardCategories = new Set([
+    "public_language",
+    "section_gating_contract",
+    "report_type_contract",
+    "debt_contract",
+    "system_contract_failure",
+  ]);
+  if (recognizedHardCategories.has(category)) return true;
+  const customerImpact = normalizeImpactValue(violation?.customer_delivery_impact);
+  const hasExplicitBlockingImpact = [
+    "block",
+    "blocked",
+    "customer_blocked",
+    "customer_delivery_blocked",
+    "customer_delivery_blocker",
+  ].includes(customerImpact);
+  return hasExplicitBlockingImpact && Boolean(explicitReason || recognizedHardCategories.has(category));
+}
+
 const managerContradictionLimitationCodes = new Set([
   "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
   "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
@@ -1163,6 +1193,17 @@ function buildPublishEligibilitySummary({
       .filter((violation) => Boolean(violation?.blocks_high_value_outreach))
       .map((violation) => violation?.code)
   );
+  const unclassifiedCustomerBlockersMissingRationale = uniqueCodes(
+    (Array.isArray(contractViolations) ? contractViolations : [])
+      .filter((violation) => {
+        if (!violation || violation?.blocks_customer_delivery !== true) return false;
+        const codeClass = classifyReportContractViolationCode(violation?.code);
+        if (codeClass !== "unknown") return false;
+        if (isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable })) return false;
+        return !hasRecognizedCustomerBlockRationaleMetadata(violation);
+      })
+      .map(() => "UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE")
+  );
   const optionalSupportingContractAdvisories = uniqueCodes(
     (Array.isArray(contractViolations) ? contractViolations : [])
       .filter((violation) => isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable }))
@@ -1320,6 +1361,7 @@ function buildPublishEligibilitySummary({
   const reportQualityBlockers = customerPublishBlockers;
   const reportQualityAdvisories = uniqueCodes([
     ...advisoryOnlyFindings,
+    ...unclassifiedCustomerBlockersMissingRationale,
     ...optionalSupportingContractAdvisories,
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
