@@ -2241,19 +2241,61 @@ function buildFinancingEnvelopeGrid(noi, units) {
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
-function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t12Payload, reportType, reportTier }) {
+function buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload,
+  acquisitionTermsPayload = null,
+  t12Payload,
+  reportType,
+  reportTier,
+}) {
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericTier = Number(reportTier);
   const isFullUnderwriting = normalizedReportType === "underwriting" || numericTier === 2;
-  if (!isFullUnderwriting || !loanTermSheetTermsPayload || typeof loanTermSheetTermsPayload !== "object") return "";
+  if (!isFullUnderwriting) return "";
+  const currentDebtTermsPayload =
+    loanTermSheetTermsPayload && typeof loanTermSheetTermsPayload === "object"
+      ? loanTermSheetTermsPayload
+      : null;
+  const acquisitionContextPayload =
+    acquisitionTermsPayload && typeof acquisitionTermsPayload === "object"
+      ? acquisitionTermsPayload
+      : null;
+  const acquisitionSupportPayload =
+    acquisitionContextPayload?.acquisition_support &&
+    typeof acquisitionContextPayload.acquisition_support === "object"
+      ? acquisitionContextPayload.acquisition_support
+      : null;
+  const termsPayload = acquisitionContextPayload || currentDebtTermsPayload;
+  if (!termsPayload || typeof termsPayload !== "object") return "";
 
-  const purchasePrice = coerceNumber(loanTermSheetTermsPayload.purchase_price);
-  const ltv = coerceNumber(loanTermSheetTermsPayload.ltv);
-  const loanAmount = coerceNumber(loanTermSheetTermsPayload.derived_acquisition_loan_amount);
-  const ratePct = coerceNumber(loanTermSheetTermsPayload.interest_rate);
-  const amortYears = coerceNumber(loanTermSheetTermsPayload.amortization_years ?? loanTermSheetTermsPayload.amort_years);
-  const goingInCapRate = coerceNumber(loanTermSheetTermsPayload.going_in_cap_rate);
-  const closingCostsPercent = coerceNumber(loanTermSheetTermsPayload.closing_costs_percent);
+  const purchasePrice = coerceNumber(
+    termsPayload.purchase_price ??
+      termsPayload.purchasePrice ??
+      termsPayload.acquisition_price ??
+      termsPayload.purchase_price_amount ??
+      acquisitionSupportPayload?.purchase_price ??
+      acquisitionSupportPayload?.purchasePrice ??
+      acquisitionSupportPayload?.acquisition_price ??
+      acquisitionSupportPayload?.purchase_price_amount
+  );
+  const ltv = coerceNumber(termsPayload.ltv ?? acquisitionSupportPayload?.ltv);
+  const loanAmount = coerceNumber(
+    termsPayload.derived_acquisition_loan_amount ??
+      acquisitionSupportPayload?.derived_acquisition_loan_amount
+  );
+  const ratePct = coerceNumber(termsPayload.interest_rate ?? acquisitionSupportPayload?.interest_rate);
+  const amortYears = coerceNumber(
+    termsPayload.amortization_years ??
+      termsPayload.amort_years ??
+      acquisitionSupportPayload?.amortization_years ??
+      acquisitionSupportPayload?.amort_years
+  );
+  const goingInCapRate = coerceNumber(
+    termsPayload.going_in_cap_rate ?? acquisitionSupportPayload?.going_in_cap_rate
+  );
+  const closingCostsPercent = coerceNumber(
+    termsPayload.closing_costs_percent ?? acquisitionSupportPayload?.closing_costs_percent
+  );
   const hasMeaningfulAcquisitionField = [
     purchasePrice,
     ltv,
@@ -2267,8 +2309,13 @@ function buildAcquisitionFinancingAssumptionsHtml({ loanTermSheetTermsPayload, t
 
   const noi = coerceNumber(t12Payload?.net_operating_income);
   const limitations = [];
-  if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+  const hasDocumentStatedPurchasePrice = Number.isFinite(purchasePrice) && purchasePrice > 0;
+  if (!hasDocumentStatedPurchasePrice) {
     limitations.push("Purchase price was not verified in the uploaded documents.");
+  } else {
+    limitations.push(
+      "Purchase price is document-stated in uploaded acquisition assumptions and is shown for acquisition context only. It is not appraised value and is not treated as current outstanding debt."
+    );
   }
   if (!Number.isFinite(ltv) || ltv <= 0) {
     limitations.push("Acquisition debt sizing was not modeled because LTV was not verified in the uploaded documents.");
@@ -4142,6 +4189,7 @@ export default async function handler(req, res) {
     let t12Payload = null;
     let mortgagePayload = null;
     let loanTermSheetTermsPayload = null;
+    let acquisitionTermsPayload = null;
     let appraisalPayload = null;
     let appraisalCapRateBase = null;
     let propertyTaxPayload = null;
@@ -4207,6 +4255,7 @@ export default async function handler(req, res) {
           .limit(10);
         const canonicalLoanSelection = resolveCanonicalLoanTermSheetArtifacts(loanTermSheetArtifacts || []);
         const canonicalCurrentDebtLoanPayload = canonicalLoanSelection.currentDebtPayload || null;
+        acquisitionTermsPayload = canonicalLoanSelection.acquisitionPayload || null;
         loanTermSheetTermsPayload = hasDebtTermsPayload(canonicalCurrentDebtLoanPayload)
           ? canonicalCurrentDebtLoanPayload
           : null;
@@ -5430,6 +5479,18 @@ if (effectiveReportMode === "screening_v1") {
         : null;
       if (_refiClass) riskBullets.push(_refiClass);
     }
+    const primaryConstraintAlreadyCarriesDscr =
+      effectiveReportMode === "v1_core" &&
+      /DSCR of .*?(constrains refinance capacity|moderate debt coverage)/i.test(
+        String(primaryPressurePoint || "")
+      );
+    if (primaryConstraintAlreadyCarriesDscr) {
+      for (let i = riskBullets.length - 1; i >= 0; i -= 1) {
+        if (/^Base case DSCR of .*?(coverage thresholds|refinance capacity)/i.test(riskBullets[i])) {
+          riskBullets.splice(i, 1);
+        }
+      }
+    }
     const upsideHtml = upsideBullets
       .slice(0, 3)
       .map((line) => `<li>${escapeHtml(line)}</li>`)
@@ -5723,6 +5784,7 @@ if (effectiveReportMode === "screening_v1") {
     }
     const acquisitionFinancingAssumptionsHtml = buildAcquisitionFinancingAssumptionsHtml({
       loanTermSheetTermsPayload,
+      acquisitionTermsPayload,
       t12Payload,
       reportType,
       reportTier,

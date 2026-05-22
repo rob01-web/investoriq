@@ -1,3 +1,579 @@
+# May 22, 2026 Morning Addendum - Failed-State / Worker Continuation / Polish Queue Closed + Supabase Cron 3-Minute Cadence Verified
+
+## A) Current checkpoint
+
+```text
+BOOOOOOOOOOM.
+```
+
+The May 22 morning pass cleared the remaining active list that was open after the May 21 night source-reconciliation / no-current-debt retest win.
+
+Previously closed from May 21 night:
+
+```text
+1. SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT - COMPLETE / COMMITTED / LIVE RETEST PASSED
+2. NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE - COMPLETE / COMMITTED / LIVE RETEST PASSED
+```
+
+Now also completed / committed from May 22 morning:
+
+```text
+3. FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY - COMPLETE / COMMITTED
+4. MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION - COMPLETE / COMMITTED
+5. STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED - COMPLETE / COMMITTED
+6. SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT - VERIFIED / CADENCE UPDATED TO EVERY 3 MINUTES
+7. METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP - COMPLETE / COMMITTED
+8. ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH - COMPLETE / COMMITTED
+9. RENOVATION_NOTE_DUPLICATION_POLISH - COMPLETE / COMMITTED
+10. RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH - COMPLETE / COMMITTED
+11. RENOVATION_TITLE_POLISH - COMPLETE / COMMITTED
+12. PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION - COMPLETE / COMMITTED
+```
+
+Interpretation:
+
+```text
+The active May 21/22 red-pen patch list is now cleared.
+Next step should be validation/monitoring, not another broad patch class.
+```
+
+---
+
+## B) Failed-state copy clarity patch
+
+Class:
+
+```text
+FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+```
+
+Files changed:
+
+```text
+src/lib/jobFailureMessaging.js
+tests/qa/job-failure-messaging-smoke.js
+```
+
+Behavior fixed:
+
+```text
+- Added plain-English customer copy for MISSING_STRUCTURED_FINANCIAL_ARTIFACTS.
+- Updated DOCUMENT_FINANCIAL_SCALE_MISMATCH copy to plain-English source-package reconciliation wording.
+- Copy states no report was published and the report credit was restored.
+- Customer next step tells user to start a new report with clearer/same-property/same-period documents.
+```
+
+Internal diagnostics preserved:
+
+```text
+- error_code / referenceCode remains unchanged.
+- MISSING_STRUCTURED_FINANCIAL_ARTIFACTS remains available internally.
+- DOCUMENT_FINANCIAL_SCALE_MISMATCH remains available internally.
+- No worker/parser/status/entitlement logic changed.
+```
+
+Known nuance:
+
+```text
+The Dashboard may still visibly print raw codes in some status-line/reference-code surfaces by design. This patch improved the body/next-step copy. A future optional dashboard status-line copy pass can be handled separately if needed.
+```
+
+Validation passed:
+
+```text
+node --check src/lib/jobFailureMessaging.js
+node --check tests/qa/job-failure-messaging-smoke.js
+node tests/qa/job-failure-messaging-smoke.js
+git diff --check
+```
+
+---
+
+## C) Missing structured artifact diagnostic precision patch
+
+Class:
+
+```text
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+```
+
+Files changed:
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+Root cause:
+
+```text
+In the MISSING_STRUCTURED_FINANCIAL_ARTIFACTS fail-closed branch, the worker event payload had a hardcoded missing list:
+['rent_roll', 't12_or_operating_statement']
+
+This could imply both required artifacts were missing even when T12 had parsed successfully and only the rent roll was invalid/missing.
+```
+
+Behavior fixed:
+
+```text
+missingStructuredArtifacts is now dynamic:
+- add rent_roll only when !hasRentRollParsed;
+- add t12_or_operating_statement only when !hasT12Parsed.
+```
+
+Preserved:
+
+```text
+- Same fail-closed path.
+- Same error code: MISSING_STRUCTURED_FINANCIAL_ARTIFACTS.
+- Same entitlement restore behavior.
+- Same worker continuation behavior.
+```
+
+Validation passed:
+
+```text
+node --check api/admin-run-worker.js
+node --check tests/qa/admin-run-worker-gate-smoke.js
+node tests/qa/admin-run-worker-gate-smoke.js
+git diff --check
+```
+
+---
+
+## D) Worker extracting continuation patch
+
+Class:
+
+```text
+STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+```
+
+Files changed:
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+Root cause:
+
+```text
+In the extracting loop, a rent_roll parse-doc non-OK dispatch could be console-logged only and leave the file in pending/extracted. That could cause repeated redispatch loops and jobs lingering in extracting.
+```
+
+Behavior fixed:
+
+For required structured documents only (`rent_roll`, `t12`), a non-OK parse-doc dispatch now durably records failure:
+
+```text
+parse_status = failed
+parse_error = rent_roll_parse_request_failed OR t12_parse_request_failed
+worker_event = structured_doc_parse_dispatch_failed
+```
+
+Event payload includes:
+
+```text
+doc_type
+file_id
+status
+timestamp
+```
+
+Preserved:
+
+```text
+- Fail-closed behavior preserved.
+- Existing missing-structured-artifacts path preserved.
+- No cron/auth/cadence behavior changed.
+- No parser logic changed.
+```
+
+Validation passed:
+
+```text
+node --check api/admin-run-worker.js
+node --check tests/qa/admin-run-worker-gate-smoke.js
+node tests/qa/admin-run-worker-gate-smoke.js
+git diff --check
+```
+
+Operational interpretation:
+
+```text
+If parse-doc dispatch fails because of an upstream/external dependency, the job should fail closed faster and visibly instead of silently looping in extracting.
+```
+
+---
+
+## E) Supabase Cron endpoint/auth contract verified and cadence updated
+
+Class:
+
+```text
+WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+```
+
+Investigation result:
+
+```text
+No code patch was required for endpoint/auth.
+```
+
+Expected Supabase Cron contract:
+
+```text
+Method: POST
+Endpoint: https://investoriq.tech/api/admin-run-worker
+Header: x-cron-secret: <CRON_SECRET>
+Body: {}
+```
+
+Verified Supabase SQL shape:
+
+```sql
+select
+  net.http_post(
+    url := 'https://investoriq.tech/api/admin-run-worker',
+    headers := '{"Content-Type":"application/json","x-cron-secret":"<redacted>"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 50000
+  );
+```
+
+Cadence changed:
+
+```text
+From: */5 * * * *
+To:   */3 * * * *
+```
+
+Reason:
+
+```text
+3 minutes is a safer launch-speed compromise than 1 minute or 2 minutes while overlap/idempotency hardening is still limited.
+```
+
+Evidence:
+
+```text
+Supabase Cron logs showed recurring successful executions on the every-3-minute cadence.
+```
+
+Current operational stance:
+
+```text
+- Supabase Cron firing: PASS.
+- Endpoint/auth contract: PASS.
+- 3-minute schedule: PASS.
+- Keep GitHub worker/manual fallback enabled for now.
+- Do not disable scheduled GitHub worker until at least one or more real queued/extracting jobs progress end-to-end from Supabase Cron without manual GitHub intervention.
+```
+
+Future optional hardening before 1-minute cadence:
+
+```text
+- global worker mutex / lock row with TTL;
+- per-job lease/claim for extracting/rendering;
+- late-stage CAS guards;
+- atomic email/report side-effect dedupe;
+- stronger idempotency around publishing/email/credit transitions.
+```
+
+---
+
+## F) Later polish queue completed
+
+### 1. METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Replaced:
+
+```text
+InvestorIQ does not invent missing data or fabricate market inputs.
+```
+
+With:
+
+```text
+Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.
+```
+
+Behavior changed:
+
+```text
+No. Wording only.
+```
+
+### 2. ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Changed:
+
+```text
+Top Income Line Concentration
+```
+
+To:
+
+```text
+Top Income Line Share of EGI
+```
+
+Added note:
+
+```text
+Largest eligible income line as a share of Effective Gross Income.
+```
+
+Behavior changed:
+
+```text
+No. Calculations unchanged.
+```
+
+### 3. RENOVATION_NOTE_DUPLICATION_POLISH
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Root cause:
+
+```text
+renovationInterpretation could equal renovationBudgetNote / renovationExecutionNote in the same section, especially budget-only and historical modes.
+```
+
+Behavior fixed:
+
+```text
+Render-time de-duplication suppresses duplicated interpretation text when it exactly matches an already-rendered budget/execution note.
+```
+
+Disclosure preserved:
+
+```text
+Yes.
+```
+
+Calculations/logic changed:
+
+```text
+No. Render wording/presence only.
+```
+
+### 4. RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Behavior fixed:
+
+```text
+Document-stated rent-lift assumptions remain visible, but copy now says they are source transparency only and are not converted into NOI, ROI, payback, valuation, or refinance outputs without separate support.
+```
+
+Labels changed:
+
+```text
+Expected Monthly Rent Lift (Document-Stated)
+-> Expected Monthly Rent Lift (Document-Stated Assumption)
+
+Gross Annual Rent-Lift Potential (Document-Stated)
+-> Gross Annual Rent-Lift Potential (Document-Stated Assumption)
+```
+
+Calculations/logic changed:
+
+```text
+No.
+```
+
+### 5. RENOVATION_TITLE_POLISH
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Titles changed:
+
+```text
+Renovation Budget Summary - No ROI Inputs Provided -> Renovation Budget Summary
+Renovation Strategy & Capital Plan (forward_looking_modelable) -> Document-Supported Renovation Assumptions
+Renovation Strategy & Capital Plan (forward_looking_with_rent_lift) -> Document-Stated Renovation Assumptions
+Renovation Budget Breakdown/default -> Renovation Budget Items
+Cost Per Unit and Execution Phasing -> Execution and Unit-Cost Inputs (Document-Stated)
+```
+
+Preserved:
+
+```text
+- Document-backed renovation rows.
+- Renovation display modes.
+- Calculations.
+- Parser behavior.
+```
+
+### 6. PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+
+File changed:
+
+```text
+api/generate-client-report.js
+```
+
+Risk found:
+
+```text
+Production property-name display cleanup was globally stripping tokens/patterns such as clean, messy, test, QA, and Underwriting/Screening Test patterns before replacing {{PROPERTY_NAME}}.
+```
+
+Behavior fixed:
+
+```text
+Aggressive token/pattern stripping was removed from sanitizePropertyNameDisplayText(...).
+Only light display cleanup remains:
+- spacing cleanup;
+- punctuation/comma cleanup;
+- delimiter edge trim;
+- Underwritting -> Underwriting typo cleanup.
+```
+
+Residual strip also removed:
+
+```text
+Removed residual normal-render cleanup:
+.replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
+```
+
+Production property-name doctrine re-locked:
+
+```text
+Do not globally strip/block/flag property names.
+Do not fail, block, downgrade, sanitize, or review a report because a property name/address/filename contains words like test, sample, final, screening, underwriting, clean, messy, QA, or similar tokens.
+Property names and addresses are source-of-truth display inputs and receive only light HTML/display safety cleanup.
+Public/demo sample hygiene is distribution hygiene, not production report logic.
+```
+
+---
+
+## G) Current active list after May 22 morning
+
+The May 21/22 active patch list is cleared.
+
+Closed / committed:
+
+```text
+SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT / 3-minute cadence verification
+METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+RENOVATION_NOTE_DUPLICATION_POLISH
+RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+RENOVATION_TITLE_POLISH
+PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+```
+
+Still open / monitor only:
+
+```text
+1. Real end-to-end Supabase Cron continuation proof:
+   - Watch at least one real queued/extracting job progress without GitHub/manual kick after the structured parse dispatch failure patch and 3-minute cadence.
+
+2. GitHub worker disablement:
+   - Do not disable yet.
+   - Disable scheduled GitHub worker only after Supabase Cron stability is proven on real jobs.
+   - Preserve manual/emergency dispatch if possible.
+
+3. Dashboard failed-state status-line cleanup:
+   - Optional later polish only.
+   - Message body/next-step copy is improved, but some status-line/reference-code surfaces may still show raw technical codes.
+
+4. Broader non-target failure-code copy sweep:
+   - Optional later pass if additional failure codes show older phrasing.
+
+5. DocRaptor production mode:
+   - Still not flipped.
+   - Production-mode verification remains a separate launch step.
+
+6. Vercel/environment secret rotation:
+   - Still required before launch.
+   - Do carefully after core launch blockers are stable.
+```
+
+---
+
+## H) Recommended next action
+
+Do not start another patch family immediately.
+
+Recommended next step:
+
+```text
+Run one real validation job and let Supabase Cron carry it without GitHub/manual worker intervention.
+```
+
+Win conditions:
+
+```text
+- Supabase Cron invokes /api/admin-run-worker every 3 minutes.
+- Job leaves queued/extracting without GitHub/manual kick.
+- Required structured parse dispatch failures, if any, terminalize durably instead of looping.
+- Usable source package publishes or reaches correct disclose/fail-closed state.
+- No report-surface regressions from the wording/polish patches.
+```
+
+After one clean real cycle:
+
+```text
+- Consider whether to leave cadence at */3 or later tighten to */2.
+- Do not move to */1 without overlap/idempotency hardening.
+- Consider DocRaptor production-mode verification only after report-output confidence is clean.
+```
+
+---
+
+## I) Working rules still active
+
+```text
+- Micro-prompts only.
+- One task at a time.
+- Exact files when possible.
+- No broad refactors.
+- No unrelated cleanup.
+- No broad tests unless explicitly chosen.
+- SHORT FORM RECEIPT ONLY.
+- Do not flip DocRaptor production mode unless explicitly chosen.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Do not reopen source reconciliation or no-current-debt refi collapse unless a concrete new live failure appears.
+- Do not globally sanitize customer property names.
+```
+
+---
+
 # May 21, 2026 Night Addendum - Source Reconciliation Surface Alignment Passed / No-Current-Debt Refi Collapse Passed / Test 3 Final Retest Passed
 
 ## A) Current checkpoint

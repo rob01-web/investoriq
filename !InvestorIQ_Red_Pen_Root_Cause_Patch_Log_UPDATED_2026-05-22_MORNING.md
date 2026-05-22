@@ -1,3 +1,592 @@
+# May 22, 2026 Morning Addendum - Remaining Red-Pen Active List Cleared
+
+**Added:** May 22, 2026 morning  
+**Status:** May 21/22 red-pen active patch list cleared.  
+**Standard reaffirmed:** every InvestorIQ report has one elite institutional-quality standard. Public/demo naming hygiene must never corrupt production customer property names.
+
+---
+
+## Executive Rollup
+
+```text
+BOOOOOOOOOOM.
+```
+
+After the May 21 night source-reconciliation / no-current-debt win, the remaining active list was completed on May 22 morning.
+
+Closed before this addendum:
+
+```text
+SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT - CLOSED / COMMITTED / LIVE RETEST PASSED
+NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE - CLOSED / COMMITTED / LIVE RETEST PASSED
+```
+
+Closed in this May 22 morning pass:
+
+```text
+FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY - CLOSED / COMMITTED
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION - CLOSED / COMMITTED
+STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED - CLOSED / COMMITTED
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT - VERIFIED; CRON CADENCE MOVED TO */3
+METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP - CLOSED / COMMITTED
+ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH - CLOSED / COMMITTED
+RENOVATION_NOTE_DUPLICATION_POLISH - CLOSED / COMMITTED
+RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH - CLOSED / COMMITTED
+RENOVATION_TITLE_POLISH - CLOSED / COMMITTED
+PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION - CLOSED / COMMITTED
+```
+
+Current interpretation:
+
+```text
+The six-test red-pen root-class patch family is now materially complete.
+Next step should be real validation/monitoring, not another broad root-class patch.
+```
+
+---
+
+# Classes Closed in the May 22 Morning Pass
+
+## 1. FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+
+**Scope:** Dashboard/customer failed-state UX; system-wide.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+src/lib/jobFailureMessaging.js
+tests/qa/job-failure-messaging-smoke.js
+```
+
+### Root issue
+
+Tests 5 and 6 correctly failed closed and restored entitlement, but visible customer copy relied too heavily on technical codes:
+
+```text
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS
+DOCUMENT_FINANCIAL_SCALE_MISMATCH
+```
+
+### Patch summary
+
+Customer-facing body/next-step copy now uses plain English for:
+
+```text
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS
+DOCUMENT_FINANCIAL_SCALE_MISMATCH
+```
+
+The copy states:
+
+```text
+- no report was published;
+- the report credit was restored;
+- user should start a new report with clearer / same-property / same-period documents.
+```
+
+### Preserved
+
+```text
+- Internal error_code / referenceCode values remain unchanged.
+- No worker/parser/status/entitlement behavior changed.
+```
+
+### Remaining optional polish
+
+```text
+Dashboard status lines/reference-code surfaces may still show raw technical codes by design. This is not a report-quality blocker and can be a separate future micro-prompt if desired.
+```
+
+---
+
+## 2. MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+
+**Scope:** Worker/internal diagnostics.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+### Root issue
+
+The `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` worker event used a hardcoded missing list:
+
+```text
+['rent_roll', 't12_or_operating_statement']
+```
+
+That could imply T12 was missing even when T12 had parsed and only the rent roll was invalid/missing.
+
+### Patch summary
+
+Missing artifact list is now dynamic:
+
+```text
+- add rent_roll only if !hasRentRollParsed;
+- add t12_or_operating_statement only if !hasT12Parsed.
+```
+
+### Preserved
+
+```text
+- Same fail-closed behavior.
+- Same error code.
+- Same entitlement restore behavior.
+- Same worker continuation behavior.
+```
+
+---
+
+## 3. STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+
+**Scope:** Worker extracting loop / structured document parse dispatch.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/admin-run-worker.js
+tests/qa/admin-run-worker-gate-smoke.js
+```
+
+### Root issue
+
+A `rent_roll` parse-doc non-OK dispatch in the extracting loop could be console-logged only, leaving the file in `pending/extracted` and causing repeated redispatch loops.
+
+### Patch summary
+
+For required structured docs only (`rent_roll`, `t12`), non-OK parse-doc dispatch now durably terminalizes the file:
+
+```text
+parse_status = failed
+parse_error = rent_roll_parse_request_failed OR t12_parse_request_failed
+worker_event = structured_doc_parse_dispatch_failed
+```
+
+### Preserved
+
+```text
+- Existing fail-closed path.
+- Entitlement behavior.
+- Parser behavior.
+- Cron/auth/cadence behavior.
+```
+
+### Interpretation
+
+```text
+Jobs should now fail closed visibly instead of silently looping in extracting when required structured parse dispatch fails upstream.
+```
+
+---
+
+## 4. WORKER_CONTINUATION_RELIABILITY / SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+
+**Scope:** Operational worker invocation.  
+**Status:** Endpoint/auth verified; cadence updated to every 3 minutes; real end-to-end job continuation still monitor-only.  
+**Files changed:** none for endpoint/auth investigation.
+
+### Verified contract
+
+```text
+POST https://investoriq.tech/api/admin-run-worker
+x-cron-secret: <CRON_SECRET>
+body: {}
+```
+
+### Supabase Cron SQL shape
+
+```sql
+select
+  net.http_post(
+    url := 'https://investoriq.tech/api/admin-run-worker',
+    headers := '{"Content-Type":"application/json","x-cron-secret":"<redacted>"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 50000
+  );
+```
+
+### Cadence decision
+
+Changed:
+
+```text
+*/5 * * * *
+```
+
+To:
+
+```text
+*/3 * * * *
+```
+
+Reason:
+
+```text
+3 minutes is safer than 1 minute or 2 minutes while overlap/idempotency protection is not yet hardened.
+```
+
+### Evidence
+
+Supabase Cron logs showed repeated successful executions on the 3-minute cadence.
+
+### Still do not do yet
+
+```text
+Do not disable GitHub worker yet.
+Do not move to */1.
+Do not rotate secrets mid-debug.
+```
+
+---
+
+## 5. METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+
+**Scope:** Report methodology / assumptions disclosure.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+Replaced:
+
+```text
+InvestorIQ does not invent missing data or fabricate market inputs.
+```
+
+With:
+
+```text
+Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.
+```
+
+Behavior changed:
+
+```text
+No.
+```
+
+---
+
+## 6. ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+
+**Scope:** Operating forensics / income concentration card.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+Changed:
+
+```text
+Top Income Line Concentration
+```
+
+To:
+
+```text
+Top Income Line Share of EGI
+```
+
+Added note:
+
+```text
+Largest eligible income line as a share of Effective Gross Income.
+```
+
+Calculations changed:
+
+```text
+No.
+```
+
+---
+
+## 7. RENOVATION_NOTE_DUPLICATION_POLISH
+
+**Scope:** Renovation render surfaces.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+Root cause:
+
+```text
+renovationInterpretation could equal renovationBudgetNote / renovationExecutionNote in the same section.
+```
+
+Patch:
+
+```text
+Render-time exact-match de-duplication suppresses duplicated interpretation text when it repeats an already-rendered budget/execution note.
+```
+
+Disclosure preserved:
+
+```text
+Yes.
+```
+
+Calculations/logic changed:
+
+```text
+No.
+```
+
+---
+
+## 8. RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+
+**Scope:** Renovation rent-lift wording and table labels.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+Patch:
+
+```text
+Rent-lift assumptions are now described as source transparency only and are not converted into NOI, ROI, payback, valuation, or refinance outputs without separate support.
+```
+
+Labels changed:
+
+```text
+Expected Monthly Rent Lift (Document-Stated)
+-> Expected Monthly Rent Lift (Document-Stated Assumption)
+
+Gross Annual Rent-Lift Potential (Document-Stated)
+-> Gross Annual Rent-Lift Potential (Document-Stated Assumption)
+```
+
+Calculations changed:
+
+```text
+No.
+```
+
+---
+
+## 9. RENOVATION_TITLE_POLISH
+
+**Scope:** Renovation section/card titles.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+Titles changed:
+
+```text
+Renovation Budget Summary - No ROI Inputs Provided -> Renovation Budget Summary
+Renovation Strategy & Capital Plan (forward_looking_modelable) -> Document-Supported Renovation Assumptions
+Renovation Strategy & Capital Plan (forward_looking_with_rent_lift) -> Document-Stated Renovation Assumptions
+Renovation Budget Breakdown/default -> Renovation Budget Items
+Cost Per Unit and Execution Phasing -> Execution and Unit-Cost Inputs (Document-Stated)
+```
+
+Document-backed renovation rows preserved:
+
+```text
+Yes.
+```
+
+Calculations/logic changed:
+
+```text
+No.
+```
+
+---
+
+## 10. PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+
+**Scope:** Production customer property-name display safety.  
+**Status:** Closed / committed.  
+**Files changed:**
+
+```text
+api/generate-client-report.js
+```
+
+### Root issue
+
+Aggressive public/demo sample cleanup was still applied to the normal production property-name render path.
+
+It stripped tokens/patterns such as:
+
+```text
+clean
+messy
+test
+QA
+Underwriting Test ...
+Screening Test ...
+(clean test1)
+(messy test2)
+```
+
+### Patch summary
+
+Aggressive token/pattern stripping was removed from production property-name cleanup.
+
+Remaining cleanup is light display safety only:
+
+```text
+- spacing cleanup;
+- comma/punctuation cleanup;
+- leading/trailing delimiter trim;
+- Underwritting -> Underwriting typo cleanup.
+```
+
+### Doctrine locked
+
+```text
+Do not globally strip/block/flag property names.
+Do not fail, block, downgrade, sanitize, or review reports because names/addresses/filenames include tokens like test, sample, final, screening, underwriting, clean, messy, or QA.
+Public/demo sample name hygiene is distribution hygiene only.
+```
+
+---
+
+# Current Status Board After May 22 Morning
+
+## Closed / Do Not Reopen Without New Concrete Evidence
+
+```text
+SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+RENOVATION_NOTE_DUPLICATION_POLISH
+RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+RENOVATION_TITLE_POLISH
+PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+```
+
+## Operationally Verified / Still Monitor
+
+```text
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT
+- endpoint/auth verified;
+- cadence moved to */3;
+- logs show successful Cron executions;
+- still need real end-to-end queued/extracting job proof before disabling GitHub worker.
+```
+
+## Remaining Monitor / Launch-Hardening Items
+
+```text
+1. Real job continuation under Supabase Cron without GitHub/manual kick.
+2. Disable scheduled GitHub worker only after Supabase Cron proves stable on real jobs.
+3. Optional Dashboard failed-state status-line copy polish if raw codes are too visible.
+4. Optional broader failure-code copy sweep for non-target failure codes.
+5. DocRaptor production-mode verification.
+6. Secret/environment variable rotation before launch.
+```
+
+---
+
+# Recommended Next Step
+
+Do not start a new root-class patch family.
+
+Recommended next action:
+
+```text
+Run one real validation job and let Supabase Cron carry it without GitHub/manual worker intervention.
+```
+
+Win condition:
+
+```text
+- Supabase Cron fires every 3 minutes.
+- Job progresses without manual GitHub kick.
+- Usable source package publishes or correctly discloses/fails closed.
+- No stuck extracting loop.
+- No report-surface regression from the wording/polish patches.
+```
+
+After one or more clean real cycles:
+
+```text
+- Consider leaving Cron at */3 for launch.
+- Consider */2 only if needed and after evidence.
+- Avoid */1 until overlap/idempotency is hardened.
+- Consider DocRaptor production-mode verification only after report-output confidence is clean.
+```
+
+---
+
+# Fresh Chat Prompt From This Checkpoint
+
+```text
+We are continuing InvestorIQ from the May 22 morning master context.
+
+Immediate checkpoint:
+The May 21/22 red-pen active patch list is now cleared.
+
+Closed / committed:
+1. SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+2. NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+3. FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+4. MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+5. STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+6. METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+7. ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+8. RENOVATION_NOTE_DUPLICATION_POLISH
+9. RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+10. RENOVATION_TITLE_POLISH
+11. PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+
+Operationally verified:
+- Supabase Cron endpoint/auth contract is correct.
+- Cron target is POST https://investoriq.tech/api/admin-run-worker.
+- x-cron-secret header is used.
+- Supabase Cron cadence was changed from */5 to */3.
+- Logs showed successful 3-minute executions.
+
+Important nuance:
+- Do not disable GitHub worker yet.
+- Need real end-to-end queued/extracting job proof under Supabase Cron before disabling scheduled GitHub fallback.
+- Do not move to */1 without overlap/idempotency hardening.
+
+Next recommended action:
+Run one real validation job and let Supabase Cron carry it without GitHub/manual kick.
+
+Win conditions:
+- job leaves queued/extracting without manual GitHub kick;
+- required structured parse dispatch failures terminalize durably if they occur;
+- usable package publishes or correctly discloses/fails closed;
+- no report-surface regression from polish patches.
+
+Rules:
+- Micro-prompts only if a concrete new issue appears.
+- No broad refactors.
+- No DocRaptor production flip until explicitly chosen.
+- No GitHub worker disablement until Supabase Cron proves stable.
+- No secret rotation mid-debug.
+- Do not globally sanitize customer property names.
+```
+
+---
+
 # InvestorIQ Red-Pen Root-Cause Patch Log
 
 **Created:** May 21, 2026  
@@ -25,8 +614,8 @@
 
 **Scope:** System-wide, mainly Full Underwriting first; Screening may need separate copy rules if source reconciliation appears there.  
 **Triggered by:** Test 1 / FINAL TEST 1 / Maplewell Court.  
-**Severity:** Ken/public blocker; customer-deliverable with disclosure.  
-**Status:** Open.
+**Severity:** Previously Ken/public blocker; customer-deliverable with disclosure.  
+**Status:** Closed / patched / committed / live retest passed. See May 21 night and May 22 morning addenda above.
 
 ### Root Issue
 
@@ -113,7 +702,7 @@ When rent roll and T12 are materially unreconciled, the system correctly detects
 **Scope:** System-wide; both Screening and Full Underwriting.  
 **Triggered by:** Test 1 page 16.  
 **Severity:** Small polish; not customer blocker.  
-**Status:** Open.
+**Status:** Closed / committed. See May 22 morning addendum.
 
 ### Problem
 
@@ -136,7 +725,7 @@ Replace with:
 **Scope:** Full Underwriting operating profile; possibly Screening if same metric appears.  
 **Triggered by:** Test 1.  
 **Severity:** Small/medium polish.  
-**Status:** Open.
+**Status:** Closed / committed. See May 22 morning addendum.
 
 ### Problem
 
@@ -155,7 +744,7 @@ Replace with:
 **Scope:** Distribution/public sample workflow only; must not affect normal customer delivery.  
 **Triggered by:** Test 1 cover using `FINAL TEST 1`.  
 **Severity:** Public/Ken sample blocker only; not product-quality logic.  
-**Status:** Open / operational.
+**Status:** Closed as production-safety patch / committed. Public/demo naming remains distribution hygiene only. See May 22 morning addendum.
 
 ### Problem
 
