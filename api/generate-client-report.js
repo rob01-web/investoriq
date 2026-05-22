@@ -1118,11 +1118,6 @@ function sanitizeDisplayText(s) {
 function sanitizePropertyNameDisplayText(s) {
   if (!s) return s;
   return sanitizeDisplayText(s)
-    .replace(/\bFinal\s+Regression\b/gi, " ")
-    .replace(/\s*\((?:clean|messy|test|qa|final\s+regression)[^)]*\)\s*/gi, " ")
-    .replace(/['"]\s*(?:clean|messy|qa|test)\s*['"]/gi, " ")
-    .replace(/\b(?:clean|messy)\s+(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
-    .replace(/\b(Underwriting|Screening)\s+Test\s+\d+\b/gi, "$1")
     .replace(/\s*[-|:]\s*$/g, "")
     .replace(/^\s*[-|:]\s*/g, "")
     .replace(/\s{2,}/g, " ")
@@ -4451,7 +4446,6 @@ export default async function handler(req, res) {
     const displayPropertyAddress = (sanitizeDisplayText(propertyAddress) || "").replace(/\s+,/g, ",");
     const displayPropertyTitle = sanitizeDisplayText(propertyTitle) || "";
     const propertyNameDisplay = displayPropertyName
-      .replace(/\s*\((clean|messy)\s*test\d+\)\s*/gi, " ")
       .replace(/\s{2,}/g, " ")
       .replace(/\s+,/g, ",")
       .trim();
