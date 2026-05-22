@@ -2279,5 +2279,52 @@ assert.equal(gateLockMissingCoreDoc.delivery_gate_status, "user_needs_documents"
 assert.equal(gateLockMissingCoreDoc.customer_publish_eligible, false);
 assert.equal(gateLockMissingCoreDoc.report_publishable, false);
 
+const gateLockUnknownSoftContractCode = gateLockScenario({
+  reportContractQa: {
+    contract_status: "warn",
+    customer_delivery_ready: true,
+    violations: [
+      {
+        code: "FUTURE_SOFT_RENDER_WARNING",
+        category: "report_contract",
+        severity: "medium",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(gateLockUnknownSoftContractCode.delivery_gate_status, "deliverable");
+assert.equal(gateLockUnknownSoftContractCode.customer_publish_eligible, true);
+assert.equal(gateLockUnknownSoftContractCode.report_publishable, true);
+assert.deepEqual(gateLockUnknownSoftContractCode.customer_publish_blockers, []);
+assert.equal((gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("FUTURE_SOFT_RENDER_WARNING"), true);
+
+const gateLockUnknownExplicitContractBlock = gateLockScenario({
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER",
+        category: "report_contract",
+        severity: "high",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, false);
+assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, false);
+assert.equal(
+  (gateLockUnknownExplicitContractBlock.customer_publish_blockers || []).includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER") ||
+    String(gateLockUnknownExplicitContractBlock.publish_decision_reason || "").includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER"),
+  true
+);
+
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));

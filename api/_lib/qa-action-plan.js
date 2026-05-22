@@ -653,14 +653,6 @@ function actionForManagerDecision(decision) {
 function actionForReportContractViolation(violation) {
   if (!violation) return null;
   const code = String(violation?.code || "REPORT_CONTRACT_VIOLATION");
-  const deterministicSelfHealRenderCodes = new Set([
-    "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
-    "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
-    "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-    "RENDERED_PLACEHOLDER_METRIC_VALUE",
-    "RENDERED_PLACEHOLDER_VALUE_LEAK",
-    "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
-  ]);
   const hardPublicOrDebug =
     code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
     String(violation?.category || "") === "public_language";
@@ -703,7 +695,7 @@ function actionForReportContractViolation(violation) {
   const materiallyMisleadingDebt =
     code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
-  const deterministicSelfHealEligible = deterministicSelfHealRenderCodes.has(code) || (
+  const deterministicSelfHealEligible = classifyReportContractViolationCode(code) === "self_heal_render" || (
     code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH" &&
     isDiscloseOnlySourceReconciliationState(violation?.evidence?.source_reconciliation_state)
   );
@@ -829,6 +821,23 @@ const deterministicRegenerationRequiredCodes = new Set([
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
+const knownSelfHealRenderContractCodes = new Set([
+  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+  "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
+  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+  "RENDERED_PLACEHOLDER_METRIC_VALUE",
+  "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+]);
+
+function classifyReportContractViolationCode(code = "") {
+  const normalized = String(code || "").toUpperCase();
+  if (!normalized) return "unknown";
+  if (knownSelfHealRenderContractCodes.has(normalized)) return "self_heal_render";
+  if (isNonNegotiableCustomerHardDefect(normalized)) return "hard_customer_defect";
+  return "unknown";
+}
+
 const managerContradictionLimitationCodes = new Set([
   "DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT",
   "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
@@ -912,15 +921,9 @@ function isCustomerPublishBlockingViolationWithContext(violation, {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
   if (!code) return false;
+  const contractClass = classifyReportContractViolationCode(code);
   const isDeterministicSelfHealRenderViolation =
-    [
-      "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
-      "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
-      "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-      "RENDERED_PLACEHOLDER_METRIC_VALUE",
-      "RENDERED_PLACEHOLDER_VALUE_LEAK",
-      "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
-    ].includes(code) ||
+    contractClass === "self_heal_render" ||
     (
       code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH" &&
       isDiscloseOnlySourceReconciliationState(violation?.evidence?.source_reconciliation_state)
