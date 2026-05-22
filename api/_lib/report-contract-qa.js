@@ -516,14 +516,26 @@ export function buildReportContractQa({
   const dealScorecardDscrRows = dealScorecardRows.filter((row) =>
     /\b(?:Current Debt DSCR|DSCR \(Current Debt\))\b/i.test(row.text)
   );
+  const dscrPlaceholderTokenPattern = /(?:DATA NOT AVAILABLE|N\/A|Not modeled|undefined|null|NaN|\[object Object\])/i;
+  const dscrNoDebtLanguagePattern = /(?:current debt balance not provided|no current debt document provided|no verified current debt document|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|no true current debt balance was verified)/i;
+  const dscrNotAssessedPattern = /\b(?:Not assessed|NOT ASSESSED)\b/i;
+  const dscrFiniteValuePattern = /\b\d+(?:\.\d+)?x\b/i;
   const hasDealScorecardDscrPlaceholder =
     !(
       safeCurrentDebtLimitationState ||
       currentDebtNotAssessedPhrase
     ) &&
-    dealScorecardDscrRows.some((row) =>
-      /(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\]|Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|0\/10)/i.test(row.text)
-    );
+    dealScorecardDscrRows.some((row) => {
+      const rowText = String(row?.text || "");
+      const hasFiniteDscrValue = dscrFiniteValuePattern.test(rowText);
+      const hasPlaceholderToken = dscrPlaceholderTokenPattern.test(rowText);
+      const hasNoDebtLanguage = dscrNoDebtLanguagePattern.test(rowText);
+      const hasNotAssessedLanguage = dscrNotAssessedPattern.test(rowText);
+      const hasStaleLanguage = hasPlaceholderToken || hasNoDebtLanguage || hasNotAssessedLanguage;
+      if (!hasStaleLanguage) return false;
+      if (hasFiniteDscrValue && !hasNoDebtLanguage && !hasNotAssessedLanguage) return false;
+      return true;
+    });
   const hasMetricNaPlaceholder =
     /\b(?:DSCR|NOI|IRR|Cap Rate|Occupancy|Rent|Score|Value|Return|LTV|ROI|payback)\b[\s\S]{0,60}\bN\/A\b/i.test(text);
   const hasTemplateTokenLeak =
@@ -567,7 +579,7 @@ export function buildReportContractQa({
       evidence: {
         excerpt:
           dealScorecardDscrRows[0]?.html ||
-          firstPatternExcerpt(dealScorecardTable, [/\b(?:Current Debt DSCR|DSCR \(Current Debt\))\b[\s\S]{0,140}?(?:DATA NOT AVAILABLE|N\/A|undefined|null|NaN|\[object Object\]|Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|0\/10)/i]) ||
+          firstPatternExcerpt(dealScorecardTable, [/\b(?:Current Debt DSCR|DSCR \(Current Debt\))\b[\s\S]{0,160}?(?:DATA NOT AVAILABLE|N\/A|Not modeled|undefined|null|NaN|\[object Object\]|Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|no verified current debt document|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed|no true current debt balance was verified)/i]) ||
           leakProbeExcerpt,
       },
     });

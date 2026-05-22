@@ -664,6 +664,42 @@ assert.equal(Boolean(staleScorecardPlaceholderViolation), true);
 assert.equal(staleScorecardPlaceholderViolation.blocks_customer_delivery, false);
 assert.equal(staleScorecardPlaceholderViolation.customer_delivery_impact, "disclose_only");
 
+const validComputedDscrScorecardRow = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<h2>Deal Scorecard</h2>",
+    "<table>",
+    "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
+    "<tr><td>Current Debt DSCR</td><td>7.10x</td><td>Above 1.35x</td><td>10/10</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+assert.equal(
+  validComputedDscrScorecardRow.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"),
+  false
+);
+
+const weakButComputedDscrScorecardRow = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<h2>Deal Scorecard</h2>",
+    "<table>",
+    "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
+    "<tr><td>Current Debt DSCR</td><td>1.06x</td><td>Below 1.25x</td><td>0/10</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+assert.equal(
+  weakButComputedDscrScorecardRow.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"),
+  false
+);
+
 const screeningLeak = buildReportContractQa({
   reportType: "screening",
   reportTier: 1,
