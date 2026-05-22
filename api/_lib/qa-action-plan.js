@@ -960,6 +960,28 @@ function normalizeImpactValue(value) {
     .replace(/[\s-]+/g, "_");
 }
 
+function hasExplicitCustomerBlockImpact(value) {
+  const normalized = normalizeImpactValue(value);
+  return [
+    "block",
+    "blocked",
+    "customer_blocked",
+    "customer_delivery_blocked",
+    "customer_delivery_blocker",
+  ].includes(normalized);
+}
+
+function isDiscloseOnlySourceReconciliationState(state) {
+  if (!state || typeof state !== "object") return false;
+  const publishabilityBucket = normalizeImpactValue(state?.publishability_bucket);
+  const customerDeliveryImpact = normalizeImpactValue(state?.customer_delivery_impact);
+  if (publishabilityBucket === "disclose_only_publishable") return true;
+  if (customerDeliveryImpact === "disclose_only") return true;
+  if (hasExplicitCustomerBlockImpact(customerDeliveryImpact)) return false;
+  if (publishabilityBucket === "user_needs_documents" || publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure") return false;
+  return String(state?.status || "") === "source_reconciliation_required";
+}
+
 function isNonNegotiableCustomerHardDefect(code) {
   const normalized = String(code || "").toUpperCase();
   if (!normalized) return false;
@@ -1077,14 +1099,7 @@ function buildPublishEligibilitySummary({
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputSufficiencyState?.publishability_bucket);
-  const sourceReconciliationIsDiscloseOnly = Boolean(
-    sourceReconciliationState &&
-      (
-        normalizeImpactValue(sourceReconciliationState?.publishability_bucket) === "disclose_only_publishable" ||
-        normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact) === "disclose_only" ||
-        String(sourceReconciliationState?.status || "") === "source_reconciliation_required"
-      )
-  );
+  const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
   const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
   const t12Ready = Boolean(sourceInventory?.t12_parsed?.present && sourceInventory?.t12_parsed?.has_core_totals);
   const rentRollReady = Boolean(sourceInventory?.rent_roll_parsed?.present);
@@ -1463,11 +1478,7 @@ export function buildDeliveryGateDecision({
   const coreInputCustomerFailClosed = isCoreInputCustomerFailClosed(coreInputSufficiencyState);
   const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
-  const sourceReconciliationPublishabilityBucket = normalizeImpactValue(sourceReconciliationState?.publishability_bucket);
-  const sourceReconciliationCustomerImpact = normalizeImpactValue(sourceReconciliationState?.customer_delivery_impact);
-  const sourceReconciliationIsDiscloseOnly =
-    sourceReconciliationPublishabilityBucket === "disclose_only_publishable" ||
-    sourceReconciliationCustomerImpact === "disclose_only";
+  const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
   const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
   const sourceBlockingFlags = deterministicFlags.filter((flag) => {
     if (!flag) return false;

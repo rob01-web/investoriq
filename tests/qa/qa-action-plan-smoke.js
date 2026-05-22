@@ -946,9 +946,74 @@ const reconciliationGate = buildDeliveryGateDecision({
 });
 assert.equal(reconciliationGate.delivery_gate_status, "deliverable");
 assert.equal(reconciliationGate.customer_delivery_ready, true);
+assert.equal(reconciliationGate.customer_publish_eligible, true);
+assert.equal(reconciliationGate.report_publishable, true);
 assert.deepEqual(reconciliationGate.customer_publish_blockers, []);
+assert.equal(reconciliationGate.customer_delivery_impact, "disclose_only");
+assert.equal((reconciliationGate.source_limitation_reason_codes || []).includes("RENT_ROLL_T12_RECONCILIATION_REQUIRED"), true);
 assert.equal(reconciliationGate.public_sample_ready, true);
 assert.equal(reconciliationGate.high_value_outreach_ready, true);
+
+const reconciliationExplicitBlockGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    ...retest8SourceReportCoverageQa,
+    source_reconciliation_state: {
+      ...retest8SourceReconciliationState,
+      publishability_bucket: "admin_review_required",
+      customer_delivery_impact: "block",
+      public_outreach_impact: "block_until_review",
+    },
+    deterministic_flags: [
+      {
+        code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+        severity: "high",
+        message: "Material source mismatch requires blocking review.",
+        evidence: {
+          source_reconciliation_state: {
+            ...retest8SourceReconciliationState,
+            publishability_bucket: "admin_review_required",
+            customer_delivery_impact: "block",
+            public_outreach_impact: "block_until_review",
+          },
+        },
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: true,
+      },
+    ],
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: buildQaActionPlan({
+    sourceReportCoverageQa: {
+      ...retest8SourceReportCoverageQa,
+      source_reconciliation_state: {
+        ...retest8SourceReconciliationState,
+        publishability_bucket: "admin_review_required",
+        customer_delivery_impact: "block",
+        public_outreach_impact: "block_until_review",
+      },
+      deterministic_flags: [
+        {
+          code: "RENT_ROLL_T12_RECONCILIATION_REQUIRED",
+          severity: "high",
+          message: "Material source mismatch requires blocking review.",
+          evidence: {
+            source_reconciliation_state: {
+              ...retest8SourceReconciliationState,
+              publishability_bucket: "admin_review_required",
+              customer_delivery_impact: "block",
+              public_outreach_impact: "block_until_review",
+            },
+          },
+          routing: "public_sample_blocker",
+          blocks_customer_delivery: true,
+        },
+      ],
+    },
+    reportContractQa: { contract_status: "pass", violations: [] },
+  }),
+});
+assert.notEqual(reconciliationExplicitBlockGate.delivery_gate_status, "deliverable");
+assert.equal(reconciliationExplicitBlockGate.customer_publish_eligible, false);
 
 const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
