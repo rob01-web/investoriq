@@ -38,8 +38,23 @@ const mismatchCopy = buildCustomerFailureMessage({
 });
 assert.equal(mismatchCopy.title, 'Source package could not be reconciled');
 assert.match(mismatchCopy.body, /uploaded T12 and rent roll could not be reconciled as a consistent source package/i);
+assert.match(mismatchCopy.nextStep, /same property and reporting period/i);
 assert.equal(mismatchCopy.referenceCode, 'DOCUMENT_FINANCIAL_SCALE_MISMATCH');
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(mismatchCopy)), false);
+
+const missingStructuredArtifactsCopy = buildCustomerFailureMessage(
+  {
+    error_code: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
+    failure_reason: 'Missing required financial source artifacts',
+  },
+  { creditRestored: true }
+);
+assert.equal(missingStructuredArtifactsCopy.title, 'Rent roll could not be verified - credit restored');
+assert.match(missingStructuredArtifactsCopy.body, /uploaded rent roll could not be verified as a usable rent roll/i);
+assert.match(missingStructuredArtifactsCopy.body, /No report was published and your report credit was restored/i);
+assert.match(missingStructuredArtifactsCopy.nextStep, /clearer rent roll for the same property and reporting period/i);
+assert.equal(missingStructuredArtifactsCopy.referenceCode, 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS');
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(missingStructuredArtifactsCopy)), false);
 
 const t12MissingCopy = buildCustomerFailureMessage({
   error_code: 'MISSING_REQUIRED_DOCUMENTS',

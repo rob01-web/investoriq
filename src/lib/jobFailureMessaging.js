@@ -94,6 +94,7 @@ export function buildEntitlementRestoredMap(artifactRows = []) {
 export function buildCustomerFailureMessage(job = {}, options = {}) {
   const classification = classifyFailure(job);
   const creditRestored = options.creditRestored === true;
+  const errorCode = String(job?.error_code || '').trim().toUpperCase();
   const referenceCode = classification.referenceCode;
   const creditLine = creditRestored
     ? 'Your report credit has been returned to your account.'
@@ -113,6 +114,17 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   }
 
   if (classification.kind === 'missing_documents') {
+    if (errorCode === 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS') {
+      return {
+        title: creditRestored ? 'Rent roll could not be verified - credit restored' : 'Rent roll could not be verified',
+        body: creditRestored
+          ? 'The uploaded rent roll could not be verified as a usable rent roll. No report was published and your report credit was restored.'
+          : 'The uploaded rent roll could not be verified as a usable rent roll. No report was published. If this was a source-package issue, your report credit will be restored automatically.',
+        nextStep: 'Please start a new report with a clearer rent roll for the same property and reporting period. If you believe the document is correct, contact reports@investoriq.tech.',
+        referenceCode,
+        creditLine,
+      };
+    }
     const missingCategory = classifyMissingDocumentCategory(job);
     const missingCategoryTitle = {
       t12: 'T12 / operating statement could not be verified',
@@ -147,9 +159,9 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return {
       title: creditRestored ? 'Source package could not be reconciled - credit restored' : 'Source package could not be reconciled',
       body: creditRestored
-        ? 'Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published, and 1 report credit has been returned to your account.'
-        : 'Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published. If this was a source package issue, your report credit will be restored automatically.',
-      nextStep: 'Please start a new report with documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.',
+        ? 'The uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published and your report credit was restored.'
+        : 'The uploaded T12 and rent roll could not be reconciled as a consistent source package. No report was published. If this was a source-package issue, your report credit will be restored automatically.',
+      nextStep: 'Please start a new report with documents for the same property and reporting period. If you believe the documents are correct, contact reports@investoriq.tech.',
       referenceCode,
       creditLine,
     };
