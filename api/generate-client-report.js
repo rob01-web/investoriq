@@ -447,7 +447,7 @@ function buildCurrentDebtScorecardEntry({
       },
       hasDscrScore: true,
       scoreRow: {
-        label: canonicalHasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
+        label: "Current Debt DSCR",
         value: formatMultiple(canonicalDscrForScore, 2),
         pts: canonicalDscrForScore > 1.35 ? 10 : canonicalDscrForScore >= 1.25 ? 7 : 3,
         max: 10,
@@ -465,7 +465,7 @@ function buildCurrentDebtScorecardEntry({
       currentDebtCoverage,
       hasDscrScore: true,
       scoreRow: {
-        label: currentDebtCoverage.hasSourcePayment ? "DSCR (Current Debt)" : "DSCR (Computed)",
+        label: "Current Debt DSCR",
         value: formatMultiple(currentDebtCoverage.dscr, 2),
         pts: currentDebtCoverage.dscr > 1.35 ? 10 : currentDebtCoverage.dscr >= 1.25 ? 7 : 3,
         max: 10,
