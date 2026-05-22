@@ -6269,6 +6269,26 @@ if (effectiveReportMode === "screening_v1") {
         )
         : ""
       : "";
+    const normalizeRenovationNote = (value) =>
+      String(value || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase();
+    const normalizedInterpretationNote = normalizeRenovationNote(renovationInterpretation);
+    const interpretationDuplicatesBudget =
+      normalizedInterpretationNote &&
+      normalizedInterpretationNote !== normalizeRenovationNote(DATA_NOT_AVAILABLE) &&
+      normalizedInterpretationNote === normalizeRenovationNote(renovationBudgetNote) &&
+      Boolean(renovationBudgetCardHtml);
+    const interpretationDuplicatesExecution =
+      normalizedInterpretationNote &&
+      normalizedInterpretationNote !== normalizeRenovationNote(DATA_NOT_AVAILABLE) &&
+      normalizedInterpretationNote === normalizeRenovationNote(renovationExecutionNote) &&
+      Boolean(renovationExecutionCardHtml);
+    const renovationInterpretationForRender =
+      interpretationDuplicatesBudget || interpretationDuplicatesExecution
+        ? DATA_NOT_AVAILABLE
+        : renovationInterpretation;
     const normalizedRenovationBudgetCardHtml = renovationBudgetCardHtml;
     finalHtml = finalHtml.replace(
       /<!-- RENOVATION BUDGET TABLE -->[\s\S]*?<!-- COST PER UNIT -->/,
@@ -6287,7 +6307,7 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = replaceAll(
       finalHtml,
       "{{RENOVATION_INTERPRETATION}}",
-      escapeHtml(renovationInterpretation)
+      escapeHtml(renovationInterpretationForRender)
     );
     let canRenderRefi = false;
     if (effectiveReportMode !== "v1_core") {
