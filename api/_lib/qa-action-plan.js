@@ -659,6 +659,7 @@ function actionForReportContractViolation(violation) {
     "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
     "RENDERED_PLACEHOLDER_METRIC_VALUE",
     "RENDERED_PLACEHOLDER_VALUE_LEAK",
+    "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
   ]);
   const hardPublicOrDebug =
     code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
@@ -702,7 +703,10 @@ function actionForReportContractViolation(violation) {
   const materiallyMisleadingDebt =
     code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
-  const deterministicSelfHealEligible = deterministicSelfHealRenderCodes.has(code);
+  const deterministicSelfHealEligible = deterministicSelfHealRenderCodes.has(code) || (
+    code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH" &&
+    isDiscloseOnlySourceReconciliationState(violation?.evidence?.source_reconciliation_state)
+  );
   const actionType = hardPublicOrDebug ? "code_patch_required" : "render_gating_fix_required";
   return {
     code,
@@ -779,9 +783,6 @@ function uniqueCodes(values) {
 }
 
 const legacyCustomerBlockerFallbackCodes = new Set([
-  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-  "RENDERED_PLACEHOLDER_METRIC_VALUE",
-  "RENDERED_PLACEHOLDER_VALUE_LEAK",
   "RENDERED_TEMPLATE_TOKEN_LEAK",
   "RENDERED_MOJIBAKE_LEAK",
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
@@ -796,9 +797,6 @@ const legacyCustomerBlockerFallbackCodes = new Set([
 ]);
 
 const deterministicCustomerHardDefectCodes = new Set([
-  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-  "RENDERED_PLACEHOLDER_METRIC_VALUE",
-  "RENDERED_PLACEHOLDER_VALUE_LEAK",
   "RENDERED_TEMPLATE_TOKEN_LEAK",
   "RENDERED_MOJIBAKE_LEAK",
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
@@ -808,7 +806,6 @@ const deterministicCustomerHardDefectCodes = new Set([
   "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
   "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-  "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
   "SCREENING_UNDERWRITING_SECTION_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
@@ -915,6 +912,20 @@ function isCustomerPublishBlockingViolationWithContext(violation, {
   if (!violation) return false;
   const code = String(violation?.code || "").toUpperCase();
   if (!code) return false;
+  const isDeterministicSelfHealRenderViolation =
+    [
+      "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+      "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
+      "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+      "RENDERED_PLACEHOLDER_METRIC_VALUE",
+      "RENDERED_PLACEHOLDER_VALUE_LEAK",
+      "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+    ].includes(code) ||
+    (
+      code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH" &&
+      isDiscloseOnlySourceReconciliationState(violation?.evidence?.source_reconciliation_state)
+    );
+  if (isDeterministicSelfHealRenderViolation) return false;
   if (isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable })) return false;
   const customerImpact = normalizeImpactValue(
     violation?.customer_delivery_impact ??

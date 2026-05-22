@@ -263,6 +263,17 @@ function addRenderedLeakViolation(violations, {
   });
 }
 
+function isDiscloseOnlyReconciliationState(state) {
+  if (!state || typeof state !== "object") return false;
+  const bucket = String(state?.publishability_bucket || "").trim().toLowerCase();
+  const impact = String(state?.customer_delivery_impact || "").trim().toLowerCase();
+  if (bucket === "disclose_only_publishable") return true;
+  if (impact === "disclose_only") return true;
+  if (["block", "blocked", "customer_blocked", "customer_delivery_blocked", "customer_delivery_blocker"].includes(impact)) return false;
+  if (["user_needs_documents", "admin_review_required", "system_contract_failure"].includes(bucket)) return false;
+  return String(state?.status || "") === "source_reconciliation_required";
+}
+
 function windowAfter(text, pattern, chars = 1400) {
   const match = pattern.exec(text);
   if (!match) return "";
@@ -565,6 +576,8 @@ export function buildReportContractQa({
       code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
       severity: "high",
       message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+      customerDeliveryImpact: "disclose_only",
+      blocksCustomerDelivery: false,
       evidence: { excerpt: firstPatternExcerpt(text, [/\bDATA NOT AVAILABLE\b/i]) || leakProbeExcerpt },
     });
   }
@@ -573,6 +586,8 @@ export function buildReportContractQa({
       code: "RENDERED_PLACEHOLDER_METRIC_VALUE",
       severity: "high",
       message: "Rendered report uses N/A as a metric value where a clean omission or disclosure is required.",
+      customerDeliveryImpact: "disclose_only",
+      blocksCustomerDelivery: false,
       evidence: { excerpt: firstPatternExcerpt(text, [/\bN\/A\b/i]) || leakProbeExcerpt },
     });
   }
@@ -581,6 +596,8 @@ export function buildReportContractQa({
       code: "RENDERED_PLACEHOLDER_VALUE_LEAK",
       severity: "high",
       message: "Rendered report contains raw placeholder value leakage.",
+      customerDeliveryImpact: "disclose_only",
+      blocksCustomerDelivery: false,
       evidence: { excerpt: leakProbeExcerpt },
     });
   }
@@ -631,6 +648,8 @@ export function buildReportContractQa({
       code: "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
       severity: "high",
       message: "Rendered report contains missing-current-debt limitation copy even though canonical current debt is computed.",
+      customerDeliveryImpact: "disclose_only",
+      blocksCustomerDelivery: false,
       evidence: { excerpt: firstPatternExcerpt(text, [/No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed/i]) || leakProbeExcerpt },
     });
   }
@@ -753,12 +772,15 @@ export function buildReportContractQa({
       Math.abs(entry.value - canonicalVariancePct) > 0.2
     );
     if (mismatchedValues.length > 0) {
+      const reconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
+      const discloseOnlyReconciliationMismatch = isDiscloseOnlyReconciliationState(reconciliationState);
       addViolation(violations, {
         code: "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
         severity: "high",
         category: "source_report_reconciliation",
         message: "Rendered rent roll vs T12 GPR variance disagrees with canonical source reconciliation state.",
         evidence: {
+          source_reconciliation_state: reconciliationState,
           canonical_variance_pct: canonicalSourceReconciliationVariance,
           canonical_rr_annual_in_place: sourceReportCoverageQa?.source_reconciliation_state?.rr_annual_in_place ?? null,
           canonical_t12_gpr: sourceReportCoverageQa?.source_reconciliation_state?.t12_gpr ?? null,
@@ -769,7 +791,8 @@ export function buildReportContractQa({
               /Rent roll annualized rent is/i,
             ]) || leakProbeExcerpt,
         },
-        blocks_customer_delivery: true,
+        customer_delivery_impact: discloseOnlyReconciliationMismatch ? "disclose_only" : "block",
+        blocks_customer_delivery: !discloseOnlyReconciliationMismatch,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });

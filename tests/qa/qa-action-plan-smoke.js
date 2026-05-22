@@ -1662,6 +1662,132 @@ assert.equal(
   true
 );
 
+const placeholderContractViolationPlan = buildQaActionPlan({
+  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+        severity: "high",
+        message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+});
+const placeholderContractViolationAction = placeholderContractViolationPlan.prioritized_actions.find(
+  (action) => action.code === "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER"
+);
+assert.equal(placeholderContractViolationAction.blocks_customer_delivery, false);
+assert.equal(placeholderContractViolationAction.action_type, "render_gating_fix_required");
+assert.equal(
+  buildDeliveryGateDecision({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      core_input_sufficiency_state: {
+        publishability_bucket: "core_sufficient_publishable",
+        customer_delivery_impact: "allow",
+        required_core_docs_missing: false,
+      },
+      artifact_inventory: {
+        t12_parsed: { present: true, has_core_totals: true },
+        rent_roll_parsed: { present: true },
+      },
+      deterministic_flags: [],
+    },
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+          severity: "high",
+          message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+    qaActionPlan: placeholderContractViolationPlan,
+  }).delivery_gate_status,
+  "deliverable"
+);
+assert.equal(
+  buildDeliveryGateDecision({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      core_input_sufficiency_state: {
+        publishability_bucket: "core_sufficient_publishable",
+        customer_delivery_impact: "allow",
+        required_core_docs_missing: false,
+      },
+      artifact_inventory: {
+        t12_parsed: { present: true, has_core_totals: true },
+        rent_roll_parsed: { present: true },
+      },
+      deterministic_flags: [],
+    },
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+          severity: "high",
+          message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+    qaActionPlan: placeholderContractViolationPlan,
+  }).customer_publish_eligible,
+  true
+);
+
+const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      customer_delivery_impact: "allow",
+      blocks_customer_delivery: false,
+    },
+  },
+  reportContractQa: {
+    contract_status: "block",
+    customer_delivery_ready: false,
+    violations: [
+      {
+        code: "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+        category: "section_gating_contract",
+        severity: "high",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [],
+  },
+});
+assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "admin_review_required");
+assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, false);
+
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
     qa_status: "pass",

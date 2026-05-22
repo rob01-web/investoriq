@@ -180,12 +180,45 @@ assert.equal(
 const sourceReconciliationMismatchViolation = sourceReconciliationMismatch.violations.find(
   (v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"
 );
-assert.equal(sourceReconciliationMismatchViolation.blocks_customer_delivery, true);
+assert.equal(sourceReconciliationMismatchViolation.blocks_customer_delivery, false);
+assert.equal(sourceReconciliationMismatchViolation.customer_delivery_impact, "disclose_only");
 assert.equal(sourceReconciliationMismatchViolation.evidence.canonical_variance_pct, 0.06078702702702703);
 assert.equal(
   sourceReconciliationMismatchViolation.evidence.rendered_values.some((entry) => entry.value === -48.0),
   true
 );
+
+const sourceReconciliationBlockingCoverage = {
+  ...baseCoverage,
+  source_reconciliation_state: {
+    status: "source_reconciliation_required",
+    rr_annual_in_place: 1962456,
+    t12_gpr: 1850000,
+    variance_pct: 0.06078702702702703,
+    has_material_variance: true,
+    publishability_bucket: "admin_review_required",
+    customer_delivery_impact: "block",
+    public_outreach_impact: "block_until_review",
+  },
+};
+const sourceReconciliationMismatchBlocking = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sourceReconciliationBlockingCoverage,
+  html: [
+    "<h2>Operating Profile</h2>",
+    "<table>",
+    "<tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr>",
+    "</table>",
+    "<p>Rent roll annualized rent is -48.0% vs T12 GPR.</p>",
+  ].join("\n"),
+});
+const sourceReconciliationMismatchBlockingViolation = sourceReconciliationMismatchBlocking.violations.find(
+  (v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"
+);
+assert.equal(sourceReconciliationMismatchBlockingViolation.blocks_customer_delivery, true);
+assert.equal(sourceReconciliationMismatchBlockingViolation.customer_delivery_impact, "block");
 
 const badIncomeTable = buildReportContractQa({
   reportType: "underwriting",
