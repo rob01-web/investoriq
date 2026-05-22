@@ -1511,7 +1511,8 @@ const dealScorecardViolationPlan = buildQaActionPlan({
         code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
         severity: "high",
         message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
-        blocks_customer_delivery: true,
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       },
@@ -1521,11 +1522,27 @@ const dealScorecardViolationPlan = buildQaActionPlan({
 const dealScorecardViolationAction = dealScorecardViolationPlan.prioritized_actions.find(
   (action) => action.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"
 );
-assert.equal(dealScorecardViolationAction.blocks_customer_delivery, true);
+assert.equal(dealScorecardViolationAction.blocks_customer_delivery, false);
 assert.equal(dealScorecardViolationAction.action_type, "render_gating_fix_required");
 assert.equal(
+  dealScorecardViolationAction.recommended_next_step.includes("deterministic self-heal"),
+  true
+);
+assert.equal(
   buildDeliveryGateDecision({
-    sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      core_input_sufficiency_state: {
+        publishability_bucket: "disclose_only_publishable",
+        customer_delivery_impact: "disclose_only",
+        required_core_docs_missing: false,
+      },
+      artifact_inventory: {
+        t12_parsed: { present: true, has_core_totals: true },
+        rent_roll_parsed: { present: true },
+      },
+      deterministic_flags: [],
+    },
     reportContractQa: {
       contract_status: "block",
       customer_delivery_ready: false,
@@ -1534,15 +1551,50 @@ assert.equal(
           code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
           severity: "high",
           message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
-          blocks_customer_delivery: true,
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
           blocks_public_sample: true,
           blocks_high_value_outreach: true,
         },
       ],
     },
     qaActionPlan: dealScorecardViolationPlan,
-  }).customer_delivery_ready,
-  false
+  }).delivery_gate_status,
+  "deliverable"
+);
+assert.equal(
+  buildDeliveryGateDecision({
+    sourceReportCoverageQa: {
+      qa_status: "pass",
+      core_input_sufficiency_state: {
+        publishability_bucket: "disclose_only_publishable",
+        customer_delivery_impact: "disclose_only",
+        required_core_docs_missing: false,
+      },
+      artifact_inventory: {
+        t12_parsed: { present: true, has_core_totals: true },
+        rent_roll_parsed: { present: true },
+      },
+      deterministic_flags: [],
+    },
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [
+        {
+          code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+          severity: "high",
+          message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        },
+      ],
+    },
+    qaActionPlan: dealScorecardViolationPlan,
+  }).customer_publish_eligible,
+  true
 );
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({

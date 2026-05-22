@@ -653,6 +653,13 @@ function actionForManagerDecision(decision) {
 function actionForReportContractViolation(violation) {
   if (!violation) return null;
   const code = String(violation?.code || "REPORT_CONTRACT_VIOLATION");
+  const deterministicSelfHealRenderCodes = new Set([
+    "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+    "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
+    "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+    "RENDERED_PLACEHOLDER_METRIC_VALUE",
+    "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  ]);
   const hardPublicOrDebug =
     code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
     String(violation?.category || "") === "public_language";
@@ -695,6 +702,7 @@ function actionForReportContractViolation(violation) {
   const materiallyMisleadingDebt =
     code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" ||
     code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED";
+  const deterministicSelfHealEligible = deterministicSelfHealRenderCodes.has(code);
   const actionType = hardPublicOrDebug ? "code_patch_required" : "render_gating_fix_required";
   return {
     code,
@@ -705,10 +713,15 @@ function actionForReportContractViolation(violation) {
     owner_area: hardPublicOrDebug ? "report_renderer" : "qa_contract",
     recommended_next_step: hardPublicOrDebug
       ? "Remove prohibited public/internal/debug language at the deterministic render source and regenerate."
+      : deterministicSelfHealEligible
+      ? "Apply deterministic self-heal (collapse/omit/qualify/replace with canonical disclosure) for the affected rendered surface, then regenerate."
       : "Patch deterministic renderer gating so the unsupported table, section, label, or report-type content cannot render.",
     requires_code_patch: true,
     requires_regeneration: true,
-    blocks_customer_delivery: Boolean(violation?.blocks_customer_delivery) || (hardPublicOrDebug || materiallyMisleadingDebt),
+    blocks_customer_delivery:
+      deterministicSelfHealEligible
+        ? false
+        : Boolean(violation?.blocks_customer_delivery) || (hardPublicOrDebug || materiallyMisleadingDebt),
     blocks_public_sample: Boolean(violation?.blocks_public_sample),
     blocks_high_value_outreach: Boolean(violation?.blocks_high_value_outreach),
     safe_to_auto_fix: false,
@@ -767,7 +780,6 @@ function uniqueCodes(values) {
 
 const legacyCustomerBlockerFallbackCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
   "RENDERED_PLACEHOLDER_VALUE_LEAK",
   "RENDERED_TEMPLATE_TOKEN_LEAK",
@@ -785,7 +797,6 @@ const legacyCustomerBlockerFallbackCodes = new Set([
 
 const deterministicCustomerHardDefectCodes = new Set([
   "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
-  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
   "RENDERED_PLACEHOLDER_VALUE_LEAK",
   "RENDERED_TEMPLATE_TOKEN_LEAK",

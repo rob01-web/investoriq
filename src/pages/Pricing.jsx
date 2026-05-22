@@ -436,6 +436,18 @@ export default function PricingPage() {
             }}>
               Built from your T12, rent roll, and supporting deal documents, with assumptions constrained by uploaded source materials.
             </motion.p>
+            <motion.p variants={fadeUp} style={{
+              fontFamily:   "'DM Sans', sans-serif",
+              fontSize:     13,
+              fontWeight:   300,
+              color:        'rgba(255,255,255,0.58)',
+              maxWidth:     760,
+              lineHeight:   1.6,
+              marginTop:    10,
+              marginBottom: isAuthed ? 20 : 0,
+            }}>
+              InvestorIQ reports are generated from the documents uploaded by the user. Where documents are incomplete, inconsistent, unsupported, or materially unreconciled, InvestorIQ does not infer missing facts or fabricate conclusions. Affected sections may be limited, qualified, or omitted, and the report will disclose the source limitation. If required core documents cannot be verified, no report will be published and the report credit will be restored.
+            </motion.p>
 
             {isAuthed && (
               <motion.p variants={fadeUp}>

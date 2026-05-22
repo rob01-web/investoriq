@@ -211,6 +211,7 @@ function addViolation(violations, violation) {
     category: violation.category || "report_contract",
     message: violation.message || "",
     evidence: violation.evidence || {},
+    customer_delivery_impact: violation.customer_delivery_impact || null,
     blocks_customer_delivery: Boolean(violation.blocks_customer_delivery),
     blocks_public_sample: violation.blocks_public_sample !== false,
     blocks_high_value_outreach: violation.blocks_high_value_outreach !== false,
@@ -240,13 +241,22 @@ function firstPatternExcerpt(text, patterns, radius = 140) {
   return "";
 }
 
-function addRenderedLeakViolation(violations, { code, severity = "high", category = "report_contract", message, evidence, blocksCustomerDelivery = true }) {
+function addRenderedLeakViolation(violations, {
+  code,
+  severity = "high",
+  category = "report_contract",
+  message,
+  evidence,
+  blocksCustomerDelivery = true,
+  customerDeliveryImpact = null,
+}) {
   addViolation(violations, {
     code,
     severity,
     category,
     message,
     evidence,
+    customer_delivery_impact: customerDeliveryImpact,
     blocks_customer_delivery: blocksCustomerDelivery,
     blocks_public_sample: true,
     blocks_high_value_outreach: true,
@@ -541,6 +551,8 @@ export function buildReportContractQa({
       code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
       severity: "high",
       message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+      customerDeliveryImpact: "disclose_only",
+      blocksCustomerDelivery: false,
       evidence: {
         excerpt:
           dealScorecardDscrRows[0]?.html ||

@@ -611,6 +611,25 @@ assert.equal(
   currentDebtDscrScorecardFalsePositiveGuard.violations.some((v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"),
   false
 );
+const staleScorecardPlaceholder = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: currentDebtCoverage,
+  html: [
+    "<h2>Deal Scorecard</h2>",
+    "<table>",
+    "<tr><td>Factor</td><td>Value</td><td>Threshold</td><td>Score</td></tr>",
+    "<tr><td>Current Debt DSCR</td><td>Not assessed</td><td>current debt balance not provided</td><td>0/10</td></tr>",
+    "</table>",
+  ].join("\n"),
+});
+const staleScorecardPlaceholderViolation = staleScorecardPlaceholder.violations.find(
+  (v) => v.code === "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER"
+);
+assert.equal(Boolean(staleScorecardPlaceholderViolation), true);
+assert.equal(staleScorecardPlaceholderViolation.blocks_customer_delivery, false);
+assert.equal(staleScorecardPlaceholderViolation.customer_delivery_impact, "disclose_only");
 
 const screeningLeak = buildReportContractQa({
   reportType: "screening",
