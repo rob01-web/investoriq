@@ -2783,9 +2783,9 @@ function buildScreeningIncomeForensicsHtml({
       ? incomeLines[0].amount / egi
       : null;
   const concentrationLineHtml = Number.isFinite(topIncomeLineConcentration)
-    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Concentration</p><div style="font-size:11px;line-height:1.6;color:#374151;">${escapeHtml(
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Share of EGI</p><div style="font-size:11px;line-height:1.6;color:#374151;">${escapeHtml(
         formatPercent1(topIncomeLineConcentration)
-      )}</div></div>`
+      )}</div><div class="note">Largest eligible income line as a share of Effective Gross Income.</div></div>`
     : "";
   let marketPremiumPct = null;
   const avgInPlace = coerceNumber(
