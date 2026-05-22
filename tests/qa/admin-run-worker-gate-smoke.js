@@ -76,5 +76,22 @@ assert.match(workerSource, /const missingStructuredArtifacts = \[\];/);
 assert.match(workerSource, /if \(!hasRentRollParsed\) missingStructuredArtifacts\.push\('rent_roll'\);/);
 assert.match(workerSource, /if \(!hasT12Parsed\) missingStructuredArtifacts\.push\('t12_or_operating_statement'\);/);
 assert.match(workerSource, /missing:\s*missingStructuredArtifacts/);
+assert.match(
+  workerSource,
+  /if \(!rentRollRes\.ok\)[\s\S]{0,260}parse_status:\s*'failed'[\s\S]{0,220}parse_error:\s*'rent_roll_parse_request_failed'/
+);
+assert.match(
+  workerSource,
+  /if \(!t12Res\.ok\)[\s\S]{0,260}parse_status:\s*'failed'[\s\S]{0,220}parse_error:\s*'t12_parse_request_failed'/
+);
+assert.match(
+  workerSource,
+  /'structured_doc_parse_dispatch_failed'[\s\S]{0,220}doc_type:\s*'rent_roll'/
+);
+assert.match(
+  workerSource,
+  /'structured_doc_parse_dispatch_failed'[\s\S]{0,220}doc_type:\s*'t12'/
+);
+assert.equal(/x-cron-secret/.test(workerSource), true);
 
 console.log("admin-run-worker-gate smoke PASS");

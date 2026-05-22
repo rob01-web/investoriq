@@ -1432,6 +1432,30 @@ export default async function handler(req, res) {
                     });
                     if (!rentRollRes.ok) {
                       console.error('parse-doc failed (rent_roll):', rentRollRes.status);
+                      await supabaseAdmin
+                        .from('analysis_job_files')
+                        .update({
+                          parse_status: 'failed',
+                          parse_error: 'rent_roll_parse_request_failed',
+                        })
+                        .eq('id', pendingFile.id);
+                      const workerEventErr = await writeWorkerEventArtifact(
+                        job.id,
+                        job.user_id,
+                        'structured_doc_parse_dispatch_failed',
+                        {
+                          doc_type: 'rent_roll',
+                          file_id: pendingFile.id,
+                          status: rentRollRes.status,
+                          timestamp: nowIso,
+                        }
+                      );
+                      if (workerEventErr) {
+                        console.error(
+                          'Failed to write structured_doc_parse_dispatch_failed event (rent_roll):',
+                          workerEventErr.message
+                        );
+                      }
                     }
                   }
                 }
@@ -1460,6 +1484,23 @@ export default async function handler(req, res) {
                           parse_error: 't12_parse_request_failed',
                         })
                         .eq('id', pendingFile.id);
+                      const workerEventErr = await writeWorkerEventArtifact(
+                        job.id,
+                        job.user_id,
+                        'structured_doc_parse_dispatch_failed',
+                        {
+                          doc_type: 't12',
+                          file_id: pendingFile.id,
+                          status: t12Res.status,
+                          timestamp: nowIso,
+                        }
+                      );
+                      if (workerEventErr) {
+                        console.error(
+                          'Failed to write structured_doc_parse_dispatch_failed event (t12):',
+                          workerEventErr.message
+                        );
+                      }
                     }
                   }
                 }
