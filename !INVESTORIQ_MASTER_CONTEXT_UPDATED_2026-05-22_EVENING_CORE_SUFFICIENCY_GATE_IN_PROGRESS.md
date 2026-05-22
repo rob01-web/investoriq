@@ -1,3 +1,631 @@
+# May 22, 2026 Evening Addendum - Self-Heal Patch Committed / Core Sufficiency Authority Audit Complete / Core Bucket Gate Patch In Progress
+
+## A) Current checkpoint
+
+```text
+BOOOOOOM.
+```
+
+The self-heal-first delivery contract patch is now committed and passed.
+
+Completed / committed after the May 22 afternoon doctrine discussion:
+
+```text
+1. SELF_HEAL_FIRST_DELIVERY_CONTRACT_PATCH - COMPLETE / COMMITTED / PASS
+2. WEBSITE_DOCUMENT_LIMITATION_COPY - COMPLETE / COMMITTED / PASS
+3. CORE_DOCUMENT_SUFFICIENCY_AUTHORITY_AUDIT - COMPLETE / AUDIT PASS
+```
+
+Currently in progress with Codex:
+
+```text
+CORE_BUCKET_STRICT_REDUCTION_TO_GATE
+```
+
+This is Patch Bundle 1 from the Core Document Sufficiency Authority audit.
+
+## B) Self-heal-first delivery contract patch committed
+
+Files changed:
+
+```text
+api/_lib/report-contract-qa.js
+api/_lib/qa-action-plan.js
+tests/qa/report-contract-qa-smoke.js
+tests/qa/qa-action-plan-smoke.js
+src/pages/Pricing.jsx
+```
+
+Root class patched:
+
+```text
+ADMIN_REVIEW_TO_DETERMINISTIC_SELF_HEAL_DELIVERY_CONTRACT
+```
+
+Behavior changed:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER remains detected by report-contract QA, but it no longer automatically blocks normal customer delivery when it is a deterministic self-heal / section-collapse / disclosure-eligible render-surface contamination class.
+```
+
+New classification for the allowlisted deterministic render-surface class:
+
+```text
+blocks_customer_delivery: false
+customer_delivery_impact: disclose_only
+```
+
+Action-plan behavior:
+
+```text
+- Added deterministic self-heal allowlist for render-surface contamination classes, including DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER.
+- Allowlisted codes route to deterministic self-heal + regenerate / section-collapse behavior rather than automatic admin_review_required.
+- Removed DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER from hard/fallback customer-block sets so it cannot force admin hold by code alone.
+```
+
+Preserved:
+
+```text
+- QA detection remains intact.
+- Report-contract QA still detects unsafe render surfaces.
+- No DSCR math changed.
+- No debt-service math changed.
+- No parser behavior changed.
+- No worker/cron behavior changed.
+- No dashboard/Stripe/DocRaptor/entitlement behavior changed.
+```
+
+Still-blocking whole-report classes remain:
+
+```text
+- True missing/unusable required core-source paths.
+- True runtime/system/storage failures.
+- Non-negotiable hard rendered defects where deterministic safe self-heal is not available or not satisfied.
+- Prohibited customer-facing public/debug/internal language where it creates a true customer-facing safety/quality defect.
+```
+
+Important interpretation:
+
+```text
+This patch does NOT mean “publish bad reports.”
+It means: detect unsafe rendered surface -> preserve QA signal -> self-heal/collapse/qualify when deterministic and allowlisted -> publish if core docs are usable and no true customer blocker remains.
+```
+
+## C) Website/product copy added
+
+File changed:
+
+```text
+src/pages/Pricing.jsx
+```
+
+Copy added once on the public pricing page hero, immediately below the existing “Built from your T12...” paragraph:
+
+```text
+InvestorIQ reports are generated from the documents uploaded by the user. Where documents are incomplete, inconsistent, unsupported, or materially unreconciled, InvestorIQ does not infer missing facts or fabricate conclusions. Affected sections may be limited, qualified, or omitted, and the report will disclose the source limitation. If required core documents cannot be verified, no report will be published and the report credit will be restored.
+```
+
+Rules preserved:
+
+```text
+- Do not add AI wording.
+- Do not weaken product positioning.
+- Do not redesign website broadly.
+- Do not rewrite marketing copy broadly.
+```
+
+## D) Core Document Sufficiency Authority audit complete
+
+Audit task completed:
+
+```text
+CORE_DOCUMENT_SUFFICIENCY_AUTHORITY_AUDIT
+```
+
+Purpose:
+
+```text
+Determine who decides whether T12 + rent roll are “enough” to publish, and ensure the new doctrine does not cause most usable reports to fail or go to review.
+```
+
+Audit answer:
+
+```text
+The doctrine itself is not the over-fail risk.
+The risk is inconsistent authority paths deciding publish/fail/review differently.
+```
+
+Canonical chain found:
+
+```text
+T12 usability / rent roll usability
+-> api/_lib/report-surface-contracts.js
+-> api/_lib/source-report-coverage-qa.js
+-> api/_lib/qa-action-plan.js delivery gate
+-> api/generate-client-report.js and api/admin-run-worker.js consume the typed result
+```
+
+Canonical sufficiency authority files:
+
+```text
+api/_lib/report-surface-contracts.js
+- buildT12SufficiencyState(...)
+- buildRentRollSufficiencyState(...)
+- buildCoreInputSufficiencyState(...)
+- normalizeCoreSufficiencyBucket(...)
+
+api/_lib/source-report-coverage-qa.js
+- assembles/forwards source coverage, source reconciliation, and core_input_sufficiency_state
+
+api/_lib/qa-action-plan.js
+- buildDeliveryGateDecision(...) is final customer-delivery authority
+```
+
+Key audit finding:
+
+```text
+The current system has a decent core sufficiency concept, but optional/supporting issues, public/outreach/internal metadata, and rendered-surface contradictions can still leak into customer-blocking paths if not strictly reduced by the delivery gate.
+```
+
+Under-block finding:
+
+```text
+No clear high-confidence under-block path was found for truly missing core structured artifacts. Worker fail-closed paths for missing/unusable core docs are explicit.
+```
+
+Remaining major risk:
+
+```text
+Over-fail / over-review risk from downstream blocker leakage after core sufficiency passes.
+```
+
+## E) Core sufficiency doctrine re-locked
+
+This doctrine must guide the next patch and future launch work:
+
+```text
+If T12 + rent roll pass core sufficiency, the delivery gate should treat the report as publishable by default.
+
+Everything else must prove it is a true customer safety/core/runtime blocker before it can stop publication.
+```
+
+Screening core sufficiency:
+
+```text
+Required:
+- usable T12 / operating statement
+- usable rent roll
+
+Not required to publish Screening:
+- debt document
+- appraisal
+- renovation budget
+- property tax bill
+- market survey
+- acquisition assumptions
+- other supporting docs
+```
+
+Full Underwriting core sufficiency, V1 doctrine:
+
+```text
+Required baseline:
+- usable T12 / operating statement
+- usable rent roll
+
+Supporting documents drive optional/advanced sections unless an explicit product-specific required-support rule already exists and is customer-blocking.
+```
+
+If core sufficiency passes:
+
+```text
+default outcome = publish_clean OR publish_with_disclosure_section_constrained
+optional/supporting gaps = collapse / qualify / omit affected sections only
+source reconciliation = disclose / cap / qualify unless explicit severe fail-closed threshold is crossed
+```
+
+If core sufficiency fails:
+
+```text
+fail closed
+restore credit
+publish no report
+```
+
+## F) Recommended patch plan from Core Sufficiency Authority audit
+
+Codex recommended these patch bundles, no patch included in the audit itself:
+
+```text
+1. CORE_BUCKET_STRICT_REDUCTION_TO_GATE
+   Files:
+   - api/_lib/qa-action-plan.js
+   - tests/qa/qa-action-plan-smoke.js
+   Target:
+   enforce core-doc sufficiency supremacy; optional/supporting issues default to constrained publish.
+
+2. RENDER_CONTRADICTION_SELF_HEAL_CLASS_MATRIX
+   Files:
+   - api/_lib/report-contract-qa.js
+   - api/_lib/qa-fix-routing.js
+   - tests/qa/report-contract-qa-smoke.js
+   Target:
+   reclassify deterministic render contradictions to self-heal-first routing.
+
+3. SOURCE_RECON_TO_DISCLOSE_ONLY_ENFORCEMENT
+   Files:
+   - api/_lib/source-report-coverage-qa.js
+   - api/_lib/qa-action-plan.js
+   Target:
+   material reconciliation stays disclose/section-constrained unless explicit severe fail-closed threshold is met.
+
+4. OPTIONAL_DOC_BLOCKER_FIREWALL
+   Files:
+   - api/_lib/source-package-qa.js
+   - api/_lib/report-contract-qa.js
+   - api/_lib/qa-action-plan.js
+   Target:
+   optional docs cannot become whole-report blockers unless mapped to true customer safety/runtime/core failure.
+
+5. WORKER_FAIL_CLOSED_DIAGNOSTIC_PRECISION
+   Files:
+   - api/admin-run-worker.js
+   - api/_lib/validator-diagnostics-rollup.js
+   - focused worker smoke
+   Target:
+   keep fail-closed strict for unusable core docs and improve missing-artifact diagnostics.
+```
+
+## G) Current Codex task in progress
+
+Rob has now given Codex the Patch Bundle 1 prompt:
+
+```text
+CORE_BUCKET_STRICT_REDUCTION_TO_GATE only.
+```
+
+Goal:
+
+```text
+Strengthen buildDeliveryGateDecision(...) so that when required core docs are usable:
+- optional/supporting-doc gaps default to publish_with_disclosure_section_constrained;
+- public-sample/high-value/internal/advisory blockers do not affect normal customer delivery;
+- customer delivery is blocked only for true missing/unusable required core docs, explicit fail-closed/system-contract states, true runtime/system/storage failure, or non-negotiable hard customer defects already explicitly mapped as customer blockers.
+```
+
+Likely files:
+
+```text
+api/_lib/qa-action-plan.js
+tests/qa/qa-action-plan-smoke.js
+```
+
+Guardrails:
+
+```text
+- Do not weaken fail-closed behavior for unusable T12/rent roll.
+- Do not make every warning publishable.
+- Do not touch parser behavior.
+- Do not touch worker/cron/dashboard/DocRaptor/Stripe/credits.
+- Do not change calculations.
+- Do not broad-refactor.
+```
+
+Required regression guards in current Codex task:
+
+```text
+1. Usable T12 + usable rent roll + optional debt/appraisal/renovation/property-tax/acquisition gap
+   -> deliverable / customer_publish_eligible true.
+
+2. Missing/unusable T12
+   -> user_needs_documents / fail-closed preserved.
+
+3. Missing/unusable rent roll
+   -> user_needs_documents / fail-closed preserved.
+
+4. Disclose-only source reconciliation with usable core docs
+   -> deliverable / customer_publish_eligible true.
+
+5. Public-sample/high-value blockers do not reduce customer_publish_eligible when normal customer delivery is otherwise safe.
+```
+
+## H) Current next action
+
+When Codex returns, review the receipt before any commit.
+
+Expected receipt sections:
+
+```text
+A. Files changed
+B. Core sufficiency gate strengthened how
+C. Optional/supporting blocker firewall added how
+D. What still blocks whole-report delivery
+E. Fail-closed behavior preserved? yes/no
+F. Customer delivery vs public/high-value/internal readiness separated? yes/no
+G. Focused guards added/updated
+H. Validation
+I. Remaining risks, max 2 bullets
+```
+
+Do not run another live test until this patch receipt is reviewed and either committed or rejected.
+
+## I) Working rules still active
+
+```text
+- Micro-prompts only.
+- One task at a time.
+- Exact files when possible.
+- No broad refactors.
+- No unrelated cleanup.
+- No broad tests unless deliberately chosen.
+- SHORT FORM RECEIPT ONLY.
+- Do not flip DocRaptor production mode.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Do not change Supabase Cron cadence unless explicitly chosen.
+- Do not let optional/supporting gaps become whole-report blockers when core docs are usable.
+- Do not let the new doctrine become “everything fails.”
+- Do not let the new doctrine become “publish unsafe reports.”
+- Core sufficiency passes -> publish by default unless a true customer safety/core/runtime blocker is proven.
+```
+
+---
+
+# May 22, 2026 Afternoon Addendum - Self-Healing Delivery Doctrine / Repo-Wide Authority Audit Complete
+
+## A) New customer-delivery doctrine locked
+
+InvestorIQ is not a manual-review factory and is not here to guess missing numbers from bad uploads.
+
+Normal customer reports should almost never go to admin review.
+
+Locked outcome hierarchy:
+
+```text
+1. Core documents unusable / missing / unverifiable
+   -> fail closed, restore credit, publish no report.
+
+2. Core documents usable but messy, incomplete, inconsistent, unsupported, or materially unreconciled
+   -> publish with transparent disclosure and collapse / qualify / omit affected sections.
+
+3. Unsafe rendered surface detected
+   -> self-heal / collapse / qualify that surface before delivery whenever deterministically safe.
+
+4. Admin review
+   -> rare emergency catch net only when the system cannot safely self-heal.
+```
+
+Website/product copy doctrine to preserve:
+
+```text
+InvestorIQ reports are generated from the documents uploaded by the user. Where documents are incomplete, inconsistent, unsupported, or materially unreconciled, InvestorIQ does not infer missing facts or fabricate conclusions. Affected sections may be limited, qualified, or omitted, and the report will disclose the source limitation. If required core documents cannot be verified, no report will be published and the report credit will be restored.
+```
+
+Business/product interpretation:
+
+```text
+InvestorIQ should not babysit users or fabricate unsupported conclusions.
+If the user uploads weak, messy, or contradictory documents, the report should clearly reflect the limitations.
+If the core package is still usable, InvestorIQ should still deliver useful institutional analysis using only supported sections.
+If the core package is not usable, InvestorIQ should fail closed and restore the credit.
+```
+
+## B) Why FINAL TEST 1 should have published with disclosure
+
+FINAL TEST 1 had usable core/support documents:
+
+```text
+- T12 parsed.
+- Rent roll parsed.
+- Current mortgage / current debt parsed.
+- Property tax parsed.
+```
+
+The source issue was a material rent-roll/T12 reconciliation variance:
+
+```text
+T12 GPR: 1,850,000
+Rent roll annual in-place selected: 961,200
+Variance: about -48.0%
+Source reconciliation state: source_reconciliation_required
+Intended customer impact: disclose_only / publish-with-disclosure
+```
+
+Correct customer outcome:
+
+```text
+publish_with_disclosure_section_constrained
+```
+
+Not:
+
+```text
+admin_review_required
+```
+
+The report should have published with source-reconciliation disclosure and constrained/collapsed/qualified affected scorecard/refi/value/risk consumers.
+
+## C) Repo-wide authority audit result
+
+Audit task completed:
+
+```text
+REPO_WIDE_SELF_HEAL_VS_BLOCKER_AUTHORITY_AUDIT_STRICT_REFERENCED
+```
+
+Codex inspected the authority chain and found the canonical delivery authority is:
+
+```text
+api/_lib/qa-action-plan.js
+buildDeliveryGateDecision(...)
+```
+
+Primary flow:
+
+```text
+report_contract_qa / source_report_coverage_qa / qa_action_plan
+-> buildDeliveryGateDecision(...)
+-> api/generate-client-report.js typed gate response
+-> api/admin-run-worker.js typed gate terminal mapping
+```
+
+Key drift found:
+
+```text
+Some deterministic render-surface contradictions are being treated as customer-delivery blockers / admin-review triggers,
+even when they should self-heal, collapse, or become disclosure-only.
+```
+
+## D) FINAL TEST 1 review contributor assessment
+
+Primary contributor:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER
+```
+
+Observed evidence row:
+
+```text
+Current Debt DSCR | 7.10x | Above 1.35x | 10/10
+```
+
+Issue:
+
+```text
+Under active source reconciliation, a clean unconstrained DSCR scorecard row can violate the source-reconciliation cap.
+That should be self-healed / qualified / collapsed before delivery, not automatically route the entire customer report to review.
+```
+
+Propagation path:
+
+```text
+report_contract_qa violation
+-> qa_action_plan prioritized action
+-> buildDeliveryGateDecision customerDeliveryBlocked branch
+-> delivery_gate_status = admin_review_required
+-> generator typed hold
+-> worker admin-held mapping
+```
+
+## E) Overbroad paths requiring root cleanup
+
+Priority overbroad paths from audit:
+
+```text
+1. report-contract-qa DSCR stale placeholder path
+   Should trigger deterministic self-heal/collapse/qualification first, not immediate customer block.
+
+2. report-contract-qa rendered source-reconciliation mismatch path
+   Should canonicalize rendered text when canonical variance exists; block only if post-heal mismatch remains.
+
+3. qa-fix-routing render-gap defaults
+   Render gaps should not default to admin_review_required when they are deterministic UI/text contradictions that can self-heal.
+
+4. buildDeliveryGateDecision customerDeliveryBlocked branch
+   Must distinguish self-healable rendered-surface contradictions from true unsafe/non-self-healable customer blockers.
+```
+
+## F) Recommended patch bundle order
+
+Do not patch everything at once.
+
+Recommended bundle order from audit:
+
+```text
+1. Self-heal-first contract violations
+   Files:
+   - api/_lib/report-contract-qa.js
+   - api/_lib/qa-action-plan.js
+
+   Behavior:
+   classify stale render placeholder contradictions as self-heal-required first;
+   block only on post-heal failure.
+
+2. Canonical reconciliation render guard promotion
+   Files:
+   - api/generate-client-report.js
+   - api/_lib/report-contract-qa.js
+
+   Behavior:
+   enforce canonical reconciliation rewrite before contract block decision.
+
+3. Routing impact narrowing for render gaps
+   Files:
+   - api/_lib/qa-fix-routing.js
+   - api/_lib/qa-action-plan.js
+
+   Behavior:
+   render-gap defaults become disclosure/regeneration advisories unless proven unsafe for customer delivery.
+
+4. Director mismatch threshold hardening
+   Files:
+   - api/_lib/qa-director-review.js
+   - api/_lib/qa-action-plan.js
+
+   Behavior:
+   director escalation only for non-self-healable criticals, not deterministic UI/copy healables.
+
+5. Status/ops clarity
+   Files:
+   - api/admin-run-worker.js
+   - src/pages/Dashboard.jsx
+   - src/lib/jobFailureMessaging.js
+
+   Behavior:
+   keep review/fail messaging aligned to canonical gate outputs.
+```
+
+## G) Immediate next action
+
+Next Codex task should be Patch Bundle 1 only:
+
+```text
+SELF_HEAL_FIRST_CONTRACT_VIOLATIONS
+```
+
+Scope:
+
+```text
+- api/_lib/report-contract-qa.js
+- api/_lib/qa-action-plan.js
+- focused QA smoke only
+```
+
+Goal:
+
+```text
+Self-healable rendered-surface contradictions should not become normal customer admin-review holds.
+They should emit a self-heal-required/advisory classification that the renderer/gate can handle deterministically.
+Only true non-self-healable report contract defects should remain customer blockers/admin-review triggers.
+```
+
+Do not change:
+
+```text
+- DSCR math
+- debt parsing
+- T12/rent-roll parsing
+- source reconciliation calculations
+- worker/cron/dashboard behavior
+- DocRaptor mode
+- Stripe/entitlements
+```
+
+## H) Working rule re-locked
+
+```text
+No more symptom-only patches.
+Patch the authority/self-heal contract so the same class cannot return in another consumer.
+Every report must meet the same elite quality standard.
+Usable core docs + messy source package = publish with disclosure and section constraints.
+Unusable core docs = fail closed and restore credit.
+Admin review = rare emergency catch net only.
+```
+
+---
+
+
 # May 22, 2026 Morning Addendum - Failed-State / Worker Continuation / Polish Queue Closed + Supabase Cron 3-Minute Cadence Verified
 
 ## A) Current checkpoint

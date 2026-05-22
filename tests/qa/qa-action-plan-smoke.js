@@ -1706,6 +1706,43 @@ assert.equal(needsDocumentsGate.report_publishable, needsDocumentsGate.customer_
 assert.equal(needsDocumentsGate.report_blocked, !needsDocumentsGate.report_publishable);
 assert.equal(needsDocumentsGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 
+const optionalSupportingGapGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      customer_delivery_impact: "allow",
+      blocks_customer_delivery: false,
+    },
+  },
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: {
+    customer_delivery_ready: false,
+    prioritized_actions: [
+      {
+        code: "DEBT_FILE_WITH_MISSING_BALANCE",
+        action_type: "source_document_limitation",
+        owner_area: "source_documents",
+        blocks_customer_delivery: true,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(optionalSupportingGapGate.delivery_gate_status, "deliverable");
+assert.equal(optionalSupportingGapGate.customer_publish_eligible, true);
+assert.equal(optionalSupportingGapGate.report_publishable, true);
+assert.deepEqual(optionalSupportingGapGate.customer_publish_blockers, []);
+assert.equal(optionalSupportingGapGate.customer_delivery_impact, "disclose_only");
+assert.deepEqual(optionalSupportingGapGate.source_limitation_reason_codes, ["DEBT_FILE_WITH_MISSING_BALANCE"]);
+
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
   reportContractQa: { contract_status: "pass", violations: [] },

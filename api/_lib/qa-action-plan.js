@@ -1050,6 +1050,8 @@ function buildPublishEligibilitySummary({
   publicOrOutreachOnlyAction = null,
 }) {
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
+  const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
+  const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputSufficiencyState?.publishability_bucket);
   const sourceReconciliationIsDiscloseOnly = Boolean(
     sourceReconciliationState &&
       (
@@ -1070,7 +1072,12 @@ function buildPublishEligibilitySummary({
   );
   const actionRows = Array.isArray(prioritizedActions) ? prioritizedActions : [];
   const customerActionBlockers = actionRows
-    .filter((action) => isManagerContradictionAction(action) ? managerContradictionBlocksCustomer : classifyActionDeliveryImpact(action) === "customer_delivery_blocker")
+    .filter((action) => {
+      if (isOptionalSupportingOverblockAction(action, { coreSufficiencyPublishable })) return false;
+      return isManagerContradictionAction(action)
+        ? managerContradictionBlocksCustomer
+        : classifyActionDeliveryImpact(action) === "customer_delivery_blocker";
+    })
     .map((action) => action?.code);
   const publicSampleActionBlockers = actionRows
     .filter((action) => Boolean(action?.blocks_public_sample))
@@ -1154,6 +1161,12 @@ function buildPublishEligibilitySummary({
     if (publicSampleBlockerSet.has(normalized)) return false;
     if (highValueOutreachBlockerSet.has(normalized)) return false;
     if (optionalLimitationCodes.has(normalized)) return false;
+    if (
+      coreSufficiencyPublishable &&
+      requiredCoreCoverageReady &&
+      sourceLimitationsByCode.has(normalized) &&
+      !isNonNegotiableCustomerHardDefect(normalized)
+    ) return false;
     if (sourceReconciliationIsDiscloseOnly && normalized === "RENT_ROLL_T12_RECONCILIATION_REQUIRED") return false;
     return true;
   });
@@ -1378,6 +1391,26 @@ function classifyActionDeliveryImpact(action) {
   return "advisory_only";
 }
 
+function isCoreSufficiencyPublishableBucket(bucketValue) {
+  const bucket = normalizeImpactValue(bucketValue);
+  return (
+    bucket === "core_sufficient_publishable" ||
+    bucket === "section_constrained_publishable" ||
+    bucket === "disclose_only_publishable"
+  );
+}
+
+function isOptionalSupportingOverblockAction(action, {
+  coreSufficiencyPublishable = false,
+} = {}) {
+  if (!coreSufficiencyPublishable) return false;
+  if (!action || String(action?.action_type || "") !== "source_document_limitation") return false;
+  if (action?.blocks_customer_delivery !== true) return false;
+  const code = String(action?.code || "").toUpperCase();
+  if (!code) return true;
+  return !isNonNegotiableCustomerHardDefect(code);
+}
+
 export function buildDeliveryGateDecision({
   sourceReportCoverageQa = null,
   reportContractQa = null,
@@ -1394,6 +1427,7 @@ export function buildDeliveryGateDecision({
   const sourceStatus = String(sourceReportCoverageQa?.qa_status || "").toLowerCase();
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
+  const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputBucket);
   const coreInputRequiredCoreDocsMissing = coreInputSufficiencyState?.required_core_docs_missing === true;
   const coreInputCustomerFailClosed = isCoreInputCustomerFailClosed(coreInputSufficiencyState);
   const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
@@ -1436,8 +1470,17 @@ export function buildDeliveryGateDecision({
     deterministicFlags,
   });
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
+  const sourceDocumentActionBlocksCustomer = Boolean(sourceDocumentAction?.blocks_customer_delivery);
+  const sourceDocumentActionIsOptionalOverblock = isOptionalSupportingOverblockAction(sourceDocumentAction, {
+    coreSufficiencyPublishable,
+  });
+  const sourceDocumentActionIsCustomerBlocking = sourceDocumentActionBlocksCustomer && !sourceDocumentActionIsOptionalOverblock;
   const customerDeliveryBlockerAction =
-    actionImpactRows.find((row) => row.impact === "customer_delivery_blocker" && !isManagerContradictionAction(row.action))?.action ||
+    actionImpactRows.find((row) =>
+      row.impact === "customer_delivery_blocker" &&
+      !isManagerContradictionAction(row.action) &&
+      !isOptionalSupportingOverblockAction(row.action, { coreSufficiencyPublishable })
+    )?.action ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
     null;
   const publicOrOutreachOnlyAction =
@@ -1450,7 +1493,7 @@ export function buildDeliveryGateDecision({
 
   const sourceNeedsDocs =
     (!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
-    Boolean(sourceDocumentAction && sourceDocumentAction.blocks_customer_delivery);
+    sourceDocumentActionIsCustomerBlocking;
   const sourceNeedsReview =
     coreInputBucket === "system_contract_failure" ||
     coreInputSystemContractFailureTyped ||
