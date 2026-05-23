@@ -1723,7 +1723,8 @@ function buildDocumentTreatmentSummaryHtml({
         renovationDisplayMode === "historical_only"
           ? renovationDisplayMode
           : "historical_only";
-      if (normalizedRenovationDisplayMode === "forward_looking_modelable") {
+      const hasValidatedForwardLookingRenovationSupport = Boolean(hasForwardLookingRenovationInputs);
+      if (normalizedRenovationDisplayMode === "forward_looking_modelable" && hasValidatedForwardLookingRenovationSupport) {
         return {
           category: "Modeled Inputs",
           note: "Forward-looking renovation support is document-backed",
@@ -1731,7 +1732,7 @@ function buildDocumentTreatmentSummaryHtml({
           source_basis: renovationSourceBasis,
         };
       }
-      if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift") {
+      if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift" && hasValidatedForwardLookingRenovationSupport) {
         return {
           category: "Modeled Inputs",
           note: "Forward-looking renovation support includes document-stated rent-lift assumptions",

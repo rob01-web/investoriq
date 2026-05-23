@@ -395,7 +395,7 @@ const computedScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   },
 });
 assert.equal(computedScorecardEntry.hasDscrScore, true);
-assert.match(computedScorecardEntry.scoreRow.label, /DSCR \(Current Debt\)|DSCR \(Computed\)/i);
+assert.match(computedScorecardEntry.scoreRow.label, /Current Debt DSCR|DSCR \(Current Debt\)|DSCR \(Computed\)/i);
 assert.match(computedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 
 const loanTermOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
@@ -1131,7 +1131,7 @@ assert.match(historicalCapexDisplayCopy.interpretation, /does not model renovati
 const budgetOnlyRenovationDisplayCopy = generatorTest.buildRenovationDisplayCopy({
   renovationDisplayMode: "budget_only_no_roi",
 });
-assert.equal(budgetOnlyRenovationDisplayCopy.section_title, "Renovation Budget Summary - No ROI Inputs Provided");
+assert.equal(budgetOnlyRenovationDisplayCopy.section_title, "Renovation Budget Summary");
 assert.equal(budgetOnlyRenovationDisplayCopy.budget_card_title, "Renovation Budget Items");
 assert.equal(budgetOnlyRenovationDisplayCopy.show_execution_card, false);
 assert.match(budgetOnlyRenovationDisplayCopy.budget_note, /Budget and scope items are displayed from the uploaded renovation budget/i);
@@ -1140,8 +1140,8 @@ assert.match(budgetOnlyRenovationDisplayCopy.interpretation, /does not model ren
 const forwardLookingRenovationDisplayCopy = generatorTest.buildRenovationDisplayCopy({
   renovationDisplayMode: "forward_looking_modelable",
 });
-assert.equal(forwardLookingRenovationDisplayCopy.section_title, "Renovation Strategy & Capital Plan");
-assert.equal(forwardLookingRenovationDisplayCopy.budget_card_title, "Renovation Budget Breakdown");
+assert.equal(forwardLookingRenovationDisplayCopy.section_title, "Document-Supported Renovation Assumptions");
+assert.equal(forwardLookingRenovationDisplayCopy.budget_card_title, "Renovation Budget Items");
 assert.equal(forwardLookingRenovationDisplayCopy.show_execution_card, true);
 const financialsOnlyRenovationMode = generatorTest.resolveRenovationDisplayMode({
   financials: {
@@ -1192,6 +1192,28 @@ assert.match(documentTreatmentHtml, /Historical capital items are displayed for 
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(documentTreatmentHtml), false);
+assert.equal(/Forward-looking renovation support is document-backed/i.test(documentTreatmentHtml), false);
+
+const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Historical_CapEx_Note.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+  ],
+  renovationDisplayMode: "forward_looking_modelable",
+  hasForwardLookingRenovationInputs: false,
+});
+assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
+assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
+assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Historical capital items are displayed for context only/i);
+
+const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Forward Looking Renovation Budget.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+  ],
+  renovationDisplayMode: "forward_looking_with_rent_lift",
+  hasForwardLookingRenovationInputs: true,
+});
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Modeled Inputs/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Forward-looking renovation support includes document-stated rent-lift assumptions/i);
 
 const metadataFirstOverFilenameHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

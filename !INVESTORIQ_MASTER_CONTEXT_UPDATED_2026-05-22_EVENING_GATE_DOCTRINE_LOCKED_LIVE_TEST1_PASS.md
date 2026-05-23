@@ -1,4 +1,4 @@
-# May 22, 2026 Evening Addendum - Core Sufficiency Gate Doctrine Locked / Self-Heal Delivery Matrix Complete
+# May 22, 2026 Evening Addendum - Core Sufficiency Gate Doctrine Locked / Live Test 1 Pass / DSCR QA Calibration Complete
 
 ## A) Current checkpoint
 
@@ -21,12 +21,14 @@ Completed / committed / passed after the May 22 afternoon doctrine discussion:
 8. CUSTOMER_DELIVERY_GATE_REGRESSION_LOCK - COMPLETE / COMMITTED / PASS
 9. REPORT_CONTRACT_QA_NEW_CODE_MATRIX_GUARD - COMPLETE / COMMITTED / PASS
 10. UNKNOWN_CUSTOMER_BLOCKER_RATIONALE_GUARD - COMPLETE / COMMITTED / PASS
+11. FINAL_TEST_1_RETEST_LIVE_VALIDATION - COMPLETE / LIVE PASS / PUBLISHED
+12. DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER_FALSE_POSITIVE_CALIBRATION - COMPLETE / COMMITTED / PASS
 ```
 
 Current state:
 
 ```text
-The core-document sufficiency delivery gate doctrine is now locked in code and guarded by focused smoke coverage.
+The core-document sufficiency delivery gate doctrine is now locked in code, guarded by focused smoke coverage, and live-validated by FINAL TEST 1 RETEST.
 ```
 
 Interpretation:
@@ -520,7 +522,147 @@ Customer delivery does NOT block merely because of:
 - future soft report-contract warning marked blocks_customer_delivery=false.
 ```
 
-## H) Validation status
+## H) Live validation - FINAL TEST 1 RETEST passed
+
+Live report:
+
+```text
+FINAL TEST 1 RETEST
+Report type: Full Underwriting
+Classification: Review - Source Reconciliation Disclosure
+Customer delivery: PASS
+Publication: PASS
+```
+
+Observed report surface:
+
+```text
+- Cover and Executive Summary rendered Review - Source Reconciliation Disclosure.
+- Primary Constraint identified rent roll / T12 income evidence as materially unreconciled.
+- Data Coverage rendered CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE.
+- Required T12 and rent roll fields were extracted.
+- InvestorIQ disclosed that the rent roll / T12 variance remains unresolved and did not infer the cause.
+- Framework value sensitivity remained subject to the source-reconciliation disclosure.
+```
+
+Delivery gate proof:
+
+```text
+delivery_gate_status: deliverable
+report_publishable: true
+customer_publish_eligible: true
+customer_delivery_ready: true
+customer_publish_blockers: []
+report_quality_blockers: []
+customer_delivery_impact: disclose_only
+source_limitation_reason_codes: RENT_ROLL_T12_RECONCILIATION_REQUIRED
+admin_review_required: false
+user_needs_documents: false
+launch_path_recommendation: customer_deliverable
+```
+
+Pipeline proof:
+
+```text
+queued -> extracting -> underwriting -> scoring -> rendering -> pdf_generating -> publishing -> published
+report_published email_sent artifact written
+```
+
+Important advisory/non-customer blockers observed:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER
+DOCRAPTOR_NOT_PRODUCTION_MODE
+RENT_ROLL_T12_RECONCILIATION_REQUIRED
+PUBLIC_SAMPLE_NOT_READY
+```
+
+Correct interpretation:
+
+```text
+These remained advisory / public-sample / high-value-outreach / production-config concerns.
+They did not block normal customer delivery.
+```
+
+Why this matters:
+
+```text
+This was the first live proof after the evening gate-doctrine sequence that usable core docs plus disclose-only reconciliation publish with disclosure instead of going to admin review.
+```
+
+Outcome:
+
+```text
+FINAL TEST 1 RETEST = BOOOOOOOOM PASS.
+```
+
+## I) DSCR placeholder QA false-positive calibration complete
+
+Patch:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER_FALSE_POSITIVE_CALIBRATION
+```
+
+Files changed:
+
+```text
+api/_lib/report-contract-qa.js
+tests/qa/report-contract-qa-smoke.js
+```
+
+Root cause:
+
+```text
+DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER detector treated 0/10 as stale by itself.
+That meant valid computed DSCR scorecard rows could be flagged, especially weak-but-computed DSCR rows.
+```
+
+Behavior fixed:
+
+```text
+The detector now requires stale / no-document / not-assessed / placeholder language signals, not score alone.
+```
+
+Valid computed DSCR rows no longer trigger stale-placeholder QA:
+
+```text
+Current Debt DSCR | 7.10x | Above 1.35x | 10/10
+Current Debt DSCR | 1.06x | Below 1.25x | 0/10
+```
+
+True stale/no-current-debt placeholder still triggers:
+
+```text
+Current Debt DSCR | Not assessed | current debt balance not provided | 0/10
+```
+
+Preserved:
+
+```text
+- Detector remains active.
+- Hard current-debt contradiction detection remains active.
+- Renderer output unchanged.
+- Parser/worker/cron/dashboard/DocRaptor/Stripe/credits/calculations unchanged.
+```
+
+Validation passed:
+
+```text
+node --check api/_lib/report-contract-qa.js
+node --check tests/qa/report-contract-qa-smoke.js
+node tests/qa/report-contract-qa-smoke.js
+git diff --check
+```
+
+Commit status:
+
+```text
+Committed and pushed.
+Suggested commit message used: Calibrate DSCR placeholder QA detector
+```
+
+## J) Updated validation status
 
 Codex validation passed across the sequence using focused checks only.
 
@@ -536,17 +678,18 @@ node tests/qa/report-contract-qa-smoke.js
 git diff --check
 ```
 
-No live retest has been run yet after the full evening gate-doctrine sequence.
+Live FINAL TEST 1 RETEST has now passed after the full evening gate-doctrine sequence.
 
-## I) Remaining risks / follow-ups
+## K) Remaining risks / follow-ups
 
 Near-term follow-ups:
 
 ```text
 1. Commit this updated master context file.
-2. Then consider one real validation job to prove the gate-doctrine sequence live.
+2. Consider whether to run one more controlled clean validation report only if needed.
 3. Watch for any new report-contract code that is not explicitly classified.
 4. Watch for unknown blockers missing rationale; the advisory now surfaces UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE.
+5. Keep DocRaptor production mode, GitHub worker disablement, and secret rotation as separate launch-hardening steps.
 ```
 
 Known residual risks:
@@ -561,7 +704,7 @@ Known residual risks:
 - Vercel/environment secret rotation remains a pre-launch hardening task.
 ```
 
-## J) Recommended next action
+## L) Recommended next action
 
 Recommended next step:
 
@@ -572,12 +715,12 @@ Update/commit this master .MD file first.
 After the master context is committed:
 
 ```text
-Run one controlled real validation job and inspect whether the gate doctrine behaves live:
-- usable core docs publish;
-- optional/supporting gaps disclose or constrain sections;
-- disclose-only reconciliation publishes with disclosure;
-- self-heal render classes do not force admin review;
-- hard defects and missing core docs still fail/hold correctly.
+Do not rush into another functional patch.
+The gate doctrine has live proof from FINAL TEST 1 RETEST.
+Next work should be chosen deliberately:
+- one more controlled clean validation report, if Rob wants additional confidence;
+- or a small master-context / launch-readiness checkpoint;
+- or DocRaptor production-mode verification later, only when explicitly chosen.
 ```
 
 Do not yet:
@@ -592,7 +735,7 @@ Do not yet:
 - patch parser/worker/cron/dashboard/Stripe unless a concrete live failure appears.
 ```
 
-## K) Working rules still active
+## M) Working rules still active
 
 ```text
 - Micro-prompts only.
