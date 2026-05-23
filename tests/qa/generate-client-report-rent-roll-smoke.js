@@ -1614,6 +1614,21 @@ assert.match(acquisitionContextTextMappingHtml, /Closing Cost Notes[\s\S]{0,120}
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionContextTextMappingHtml), false);
 assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionContextTextMappingHtml), false);
 assert.equal(/Current Debt DSCR/i.test(acquisitionContextTextMappingHtml), false);
+const normalizedAcquisitionArtifactPayload = generatorTest.normalizeAcquisitionFinancingArtifactPayload({
+  purchase_price: 937500,
+  loan_amount: 937500,
+  ltv: 0.75,
+  closing_costs_percent: 0,
+  source_text:
+    "Loan Amount (at $1,250,000 purchase price) $937,500. Proposed Loan-to-Value (LTV) 75%. Closing / Fees 1.00% lender fee + standard legal / appraisal costs.",
+});
+assert.equal(normalizedAcquisitionArtifactPayload.purchase_price, 1250000);
+assert.equal(normalizedAcquisitionArtifactPayload.stated_acquisition_loan_amount, 937500);
+assert.equal(normalizedAcquisitionArtifactPayload.loan_amount, 937500);
+assert.equal(normalizedAcquisitionArtifactPayload.lender_fee_percent, 0.01);
+assert.equal("closing_costs_percent" in normalizedAcquisitionArtifactPayload, false);
+assert.match(String(normalizedAcquisitionArtifactPayload.closing_cost_notes || ""), /Legal\/appraisal costs noted; not quantified/i);
+assert.equal(normalizedAcquisitionArtifactPayload.outstanding_balance, undefined);
 assert.equal(
   /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Unsupported (?:Appraisal Summary|Market Survey)\.pdf/i.test(documentTreatmentHtml),
   false

@@ -750,6 +750,155 @@ function hasDebtTermsPayload(payload) {
     isFinitePositive(payload.refi_cap_rate)
   );
 }
+function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
+  if (!payload || typeof payload !== "object") return payload;
+  const normalized = { ...payload };
+  const firstFinite = (...values) => {
+    for (const value of values) {
+      const parsed = coerceNumber(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const parseMoneyFromCapture = (rawValue) => {
+    if (typeof rawValue !== "string") return null;
+    const numeric = Number(rawValue.replace(/[$,\s]/g, ""));
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  };
+  const extractPurchasePriceFromText = (text) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const patterns = [
+      /(?:at|based on)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
+      /(?:purchase|acquisition|asking)\s*price[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      const parsed = parseMoneyFromCapture(match?.[1] ?? null);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const extractLoanAmountFromText = (text) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const patterns = [
+      /loan amount\s*\([^)]*\)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      const parsed = parseMoneyFromCapture(match?.[1] ?? null);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const extractPercentFromText = (text, labelRegex) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const directPattern = new RegExp(`${labelRegex.source}[^0-9.;:\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
+    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^.;:\\n]{0,20}${labelRegex.source}`, "i");
+    const directMatch = text.match(directPattern);
+    const reverseMatch = text.match(reversePattern);
+    const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed / 100 : null;
+  };
+  const materiallyDifferentAmount = (left, right) => {
+    const a = coerceNumber(left);
+    const b = coerceNumber(right);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    const scale = Math.max(Math.abs(a), Math.abs(b), 1);
+    return Math.abs(a - b) > Math.max(100, scale * 0.02);
+  };
+  const rawText = [
+    normalized?.source_text,
+    normalized?.raw_text,
+    normalized?.extracted_text,
+    normalized?.notes,
+    normalized?.closing_cost_notes,
+    normalized?.acquisition_support?.source_text,
+    normalized?.acquisition_support?.raw_text,
+    normalized?.acquisition_support?.extracted_text,
+    normalized?.acquisition_support?.notes,
+    normalized?.acquisition_support?.closing_cost_notes,
+  ]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join("\n");
+  const explicitPurchasePriceFromText = extractPurchasePriceFromText(rawText);
+  const explicitLoanAmountFromText = extractLoanAmountFromText(rawText);
+  const purchasePrice = firstFinite(
+    normalized.purchase_price,
+    normalized.purchasePrice,
+    normalized.acquisition_price,
+    normalized.purchase_price_amount
+  );
+  const statedLoanAmount = firstFinite(
+    normalized.stated_acquisition_loan_amount,
+    normalized.loan_amount,
+    normalized.proposed_loan_amount,
+    normalized.acquisition_loan_amount
+  );
+  const resolvedStatedLoanAmount = firstFinite(statedLoanAmount, explicitLoanAmountFromText);
+  let resolvedPurchasePrice = firstFinite(purchasePrice, explicitPurchasePriceFromText);
+  if (
+    Number.isFinite(explicitPurchasePriceFromText) &&
+    explicitPurchasePriceFromText > 0 &&
+    Number.isFinite(resolvedStatedLoanAmount) &&
+    resolvedStatedLoanAmount > 0 &&
+    !materiallyDifferentAmount(resolvedPurchasePrice, resolvedStatedLoanAmount) &&
+    materiallyDifferentAmount(explicitPurchasePriceFromText, resolvedStatedLoanAmount)
+  ) {
+    resolvedPurchasePrice = explicitPurchasePriceFromText;
+  }
+  if (Number.isFinite(resolvedPurchasePrice) && resolvedPurchasePrice > 0) {
+    normalized.purchase_price = resolvedPurchasePrice;
+  }
+  if (Number.isFinite(resolvedStatedLoanAmount) && resolvedStatedLoanAmount > 0) {
+    normalized.stated_acquisition_loan_amount = resolvedStatedLoanAmount;
+    normalized.loan_amount = resolvedStatedLoanAmount;
+  }
+  const lenderFeePercent = firstFinite(
+    normalized.lender_fee_percent,
+    normalized.financing_fee_percent,
+    normalized.origination_fee_percent,
+    extractPercentFromText(rawText, /(lender fee|financing fee|origination fee)/)
+  );
+  if (Number.isFinite(lenderFeePercent) && lenderFeePercent > 0) {
+    normalized.lender_fee_percent = lenderFeePercent;
+  }
+  const closingCostNotes = String(normalized.closing_cost_notes || "");
+  const hasLegalAppraisalMention = /legal|appraisal/i.test(`${closingCostNotes} ${rawText}`);
+  const closingCostsPercent = coerceNumber(normalized.closing_costs_percent);
+  if (!Number.isFinite(closingCostsPercent) || closingCostsPercent <= 0) {
+    delete normalized.closing_costs_percent;
+    if (hasLegalAppraisalMention && !/not quantified/i.test(closingCostNotes)) {
+      normalized.closing_cost_notes = [closingCostNotes.trim(), "Legal/appraisal costs noted; not quantified."]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
+  const ltv = coerceNumber(normalized.ltv);
+  const computedFromPurchaseAndLtv =
+    Number.isFinite(resolvedPurchasePrice) &&
+    resolvedPurchasePrice > 0 &&
+    Number.isFinite(ltv) &&
+    ltv > 0
+      ? resolvedPurchasePrice * ltv
+      : null;
+  if (!Number.isFinite(resolvedStatedLoanAmount) || resolvedStatedLoanAmount <= 0) {
+    if (Number.isFinite(computedFromPurchaseAndLtv) && computedFromPurchaseAndLtv > 0) {
+      normalized.derived_acquisition_loan_amount = computedFromPurchaseAndLtv;
+    }
+  } else {
+    if (
+      Number.isFinite(computedFromPurchaseAndLtv) &&
+      computedFromPurchaseAndLtv > 0 &&
+      materiallyDifferentAmount(resolvedStatedLoanAmount, computedFromPurchaseAndLtv)
+    ) {
+      normalized.acquisition_limitation_reason_code = "stated_vs_purchase_ltv_mismatch";
+    } else {
+      delete normalized.acquisition_limitation_reason_code;
+    }
+  }
+  return normalized;
+}
 function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
   const rows = Array.isArray(loanArtifacts) ? loanArtifacts : [];
   if (rows.length === 0) {
@@ -761,7 +910,9 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
     };
   }
   const scored = rows.map((row, index) => {
-    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const payload = normalizeAcquisitionFinancingArtifactPayload(
+      row?.payload && typeof row.payload === "object" ? row.payload : {}
+    );
     const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
     const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
     const hasBalance =
@@ -812,8 +963,8 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
   return {
     currentDebtArtifact,
     acquisitionArtifact,
-    currentDebtPayload: currentDebtArtifact?.payload || null,
-    acquisitionPayload: acquisitionArtifact?.payload || null,
+    currentDebtPayload: normalizeAcquisitionFinancingArtifactPayload(currentDebtArtifact?.payload || null),
+    acquisitionPayload: normalizeAcquisitionFinancingArtifactPayload(acquisitionArtifact?.payload || null),
   };
 }
 function getReportQaStatus(flags) {
@@ -2408,8 +2559,8 @@ function buildAcquisitionFinancingAssumptionsHtml({
   };
   const extractPercentFromText = (text, labelRegex) => {
     if (typeof text !== "string" || !text.trim()) return null;
-    const pattern = new RegExp(`${labelRegex.source}[^0-9]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
-    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,40}${labelRegex.source}`, "i");
+    const pattern = new RegExp(`${labelRegex.source}[^0-9.;:\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
+    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^.;:\\n]{0,20}${labelRegex.source}`, "i");
     const directMatch = text.match(pattern);
     const reverseMatch = text.match(reversePattern);
     const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
@@ -9060,6 +9211,7 @@ try {
 }
 
 export const __test__ = {
+  normalizeAcquisitionFinancingArtifactPayload,
   alignDealScorecardVisibleClassificationHtml,
   buildAcquisitionFinancingAssumptionsHtml,
   buildCurrentDebtScorecardEntry,
