@@ -119,7 +119,7 @@ export default function About() {
               <motion.div variants={fadeUp}>
                 {[
                   'InvestorIQ produces institutional-format underwriting reports from the documents you provide. Outputs are document-based and deterministic.',
-                  'Missing inputs are never assumed or filled. Where data is absent or unreadable, InvestorIQ displays DATA NOT AVAILABLE. Every gap is disclosed, not papered over.',
+                  'Missing inputs are never assumed or filled. Unsupported, incomplete, or unreconciled sections are disclosed, limited, or omitted rather than inferred.',
                   'Outputs are structured for investment committee review. The same inputs always produce the same outputs, with a complete audit trail.',
                 ].map((para, i) => (
                   <p key={i} style={{

@@ -391,7 +391,7 @@ export default function LandingPage() {
                 marginBottom: 40,
                 letterSpacing: "0.01em",
               }}>
-                Built strictly from your documents, with outputs traceable to source inputs. Missing items are disclosed as DATA NOT AVAILABLE.
+                Built strictly from your documents, with outputs traceable to source inputs. Unsupported or unreconciled sections are limited, omitted, or disclosed rather than inferred.
               </motion.p>
 
               {/* CTAs */}
@@ -672,7 +672,7 @@ export default function LandingPage() {
                 {/* Body copy */}
                 {[
                   "InvestorIQ follows a locked underwriting process. Outputs are generated strictly from extracted and computed data.",
-                  "The system does not infer missing values or introduce unsupported assumptions. Where inputs are absent, InvestorIQ displays DATA NOT AVAILABLE.",
+                  "The system does not infer missing values or introduce unsupported assumptions. Affected sections are limited, qualified, or omitted when source support is incomplete.",
                   "Outputs are structured for investment committee review. Each stage is logged and fail-closed.",
                 ].map((para, i) => (
                   <motion.p key={i} variants={fadeUp} style={{

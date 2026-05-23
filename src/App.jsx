@@ -196,7 +196,7 @@ function TermsPage() {
       <h2>Regeneration Policy</h2>
       <p>If a report fails to generate or is incomplete due to a system or processing error caused by InvestorIQ, InvestorIQ will regenerate the report for the same property at no additional cost.</p>
       <h2>Important Disclosures</h2>
-      <p>InvestorIQ provides document-based analytical reports only. Reports do not constitute investment advice, financial advice, or an appraisal. InvestorIQ does not introduce assumptions or inferred data. Missing or insufficient source data is explicitly disclosed as "DATA NOT AVAILABLE".</p>
+      <p>InvestorIQ provides document-based analytical reports only. Reports do not constitute investment advice, financial advice, or an appraisal. InvestorIQ does not infer missing facts or fabricate unsupported conclusions. If required core documents cannot be verified, no report is published and the report credit is restored. Where source support is incomplete, affected sections may be limited, qualified, or omitted.</p>
       <h2>8. Availability and changes</h2>
       <p>InvestorIQ may modify, suspend, or discontinue features to maintain security, compliance, or service quality.</p>
       <h2>9. Limitation of liability</h2>
