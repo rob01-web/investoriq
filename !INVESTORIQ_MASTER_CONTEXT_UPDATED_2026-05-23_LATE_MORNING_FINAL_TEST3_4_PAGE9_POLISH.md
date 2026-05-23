@@ -1,4 +1,4 @@
-# May 23, 2026 Late-Morning Addendum - Final Test 3 Mixup Rescue Passed / Final Test 4 Renovation Label Passed / Page 9 NOI Stability Polish In Progress
+# May 23, 2026 Late-Morning Addendum - Final Test 3 Mixup Rescue Passed / Final Test 4 Renovation Label Passed / Page 9 NOI Stability Polish Closed
 
 ## A) Current checkpoint
 
@@ -11,7 +11,7 @@ After the May 23 morning Live Test 2 / CapEx context update, Rob continued live 
 ```text
 1. FINAL_TEST_3_CORE_DOC_SLOT_MIXUP_RESCUE - LIVE PASS / PUBLISHED
 2. FINAL_TEST_4_FORWARD_RENOVATION_LABEL_RESTORE - LIVE RETEST PASS / PUBLISHED
-3. NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH - CODEX RECEIPT RECEIVED / PASS TO COMMIT RECOMMENDED / COMMIT STATUS TO CONFIRM
+3. NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH - COMPLETE / COMMITTED / VISUAL RETEST PASSED / CLOSED
 ```
 
 Current interpretation:
@@ -22,7 +22,7 @@ Usable core docs publish.
 Wrong-slot core docs now rescue bidirectionally.
 Forward-looking renovation support is labeled correctly.
 Unreconciled source packages publish with warning truth, not fabricated certainty.
-The current open item is presentation polish only: Page 9 / Break-Even Occupancy Buffer white-space balance.
+No active report-quality or presentation patch remains open from the May 23 test sequence.
 ```
 
 ---
@@ -281,7 +281,7 @@ Current-debt DSCR and refinance capacity are not assessed without a current debt
 
 ---
 
-## E) Page 9 / NOI Stability white-space polish is the only current open patch
+## E) Page 9 / NOI Stability white-space polish is complete and closed
 
 Rob noticed that page 9 in FINAL TEST 4 RETEST looked visually bare:
 
@@ -362,8 +362,9 @@ git diff --check -- api/generate-client-report.js tests/qa/generate-client-repor
 Review status:
 
 ```text
-Receipt appears scoped and consistent with the requested presentation-only patch.
-PASS TO COMMIT is recommended, but Rob should confirm commit status in the next chat before moving on.
+Committed and pushed.
+FINAL TEST 4 RETEST 2 visually confirmed Page 9 improvement.
+Remaining whitespace is acceptable presentation spacing and not a launch blocker.
 ```
 
 Remaining risks from Codex:
@@ -380,9 +381,7 @@ Remaining risks from Codex:
 Active / immediate:
 
 ```text
-1. Confirm whether NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH has been committed.
-2. If not committed, review/commit it.
-3. Optional: rerun FINAL TEST 4 RETEST once after commit to visually confirm page 9 is improved.
+No active report-quality or presentation patch remains open from the May 23 test sequence.
 ```
 
 Still open / launch-hardening / monitor-only:
@@ -461,28 +460,9 @@ FINAL TEST 3 mixup rescue passed live and published after CORE_TABULAR_OPPOSITE_
 FINAL TEST 4 RETEST passed live and published after FORWARD_RENOVATION_DOCUMENT_TREATMENT_LABEL_RESTORE.
 FINAL TEST 4 source reconciliation warning was correct because the test fixture itself was numerically unreconciled.
 
-Current Codex patch receipt waiting for final review/commit confirmation:
-NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH only.
-Files changed:
-- api/generate-client-report.js
-- tests/qa/generate-client-report-rent-roll-smoke.js
-
-Codex receipt summary:
-- {{OCCUPANCY_BUFFER_VISUAL}} rendered as a short gauge-only block, leaving large white space when adjacent content was sparse.
-- Added compact interpretation card below Break-Even Occupancy Buffer using existing computed values only.
-- Added conditional source-reconciliation caution only when reconciliation disclosure is active.
-- Math/source truth unchanged.
-- Guards added for interpretation values, conditional caution, and no BUY/SELL/proceed language.
-- Validation passed:
-  node --check api/generate-client-report.js
-  node --check tests/qa/generate-client-report-rent-roll-smoke.js
-  node tests/qa/generate-client-report-rent-roll-smoke.js
-  git diff --check -- api/generate-client-report.js tests/qa/generate-client-report-rent-roll-smoke.js
-
-First task in the new chat:
-Review the uploaded patched files / receipt and tell me whether NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH is PASS TO COMMIT.
-Do not create a new Codex prompt until this is reviewed.
-Do not run live tests yet.
+NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH is committed, visually retested, and closed.
+FINAL TEST 4 RETEST 2 confirmed Page 9 now reads as an intentional lightweight visual page with an interpretation card under Break-Even Occupancy Buffer.
+Next work should return to launch-hardening / monitoring unless a new concrete live failure appears.
 
 Rules:
 - Micro-prompts only.
@@ -14099,4 +14079,3 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Screening is close but needs rent-gap consistency and label polish
   - Harbourstone is stress-test proof only
   - do not show any report to Ken with DocRaptor test watermark, `Test`, `CLEAN`, `MESSY`, typo `Underwritting`, stale Methodology numbering, inconsistent rent-gap percentages, unsupported post-reno wording, or dangling `DATA NOT AVAILABLE`
-

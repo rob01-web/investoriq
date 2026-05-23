@@ -1,0 +1,29 @@
+FINAL TEST 7 - CONTROLLED SOURCE RECONCILIATION DISCLOSURE
+
+Purpose:
+Validate that InvestorIQ publishes a Screening report with source-reconciliation disclosure when both required core documents are structurally usable but materially unreconciled.
+
+Files:
+1. T12_Final_Test_7_Controlled_Source_Reconciliation.csv
+2. Rent_Roll_Final_Test_7_Controlled_Source_Reconciliation.csv
+
+Expected source values:
+- T12 Effective Gross Income: $1,200,000
+- T12 Net Operating Income: $774,000
+- Rent roll annual in-place rent: $900,000
+- Rent roll annual market rent: $1,020,000
+- Units: 50
+- Occupancy: 100%
+
+Expected mismatch:
+- Rent roll annual in-place is 25% below T12 EGI.
+- This is intentionally material, but not a violent 5x/10x mismatch.
+
+Expected InvestorIQ behavior:
+- Should NOT fail closed.
+- Should NOT go to admin review.
+- Should publish with source reconciliation disclosure.
+- Expected classification: Review - Source Reconciliation Disclosure, or equivalent source-reconciliation capped classification.
+- Data Coverage should state that required T12 and rent roll fields were extracted but income scale variance remains unresolved.
+- Report should not infer the cause of the variance.
+- Current-debt / refinance conclusions should remain omitted/not assessed unless a separate current debt document is uploaded.

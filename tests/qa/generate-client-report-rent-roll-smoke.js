@@ -60,12 +60,22 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const coverClassificationLabel = effectiveReportMode === "screening_v1"[\s\S]{0,420}screeningClass === "Sensitized"[\s\S]{0,240}: \(dealScoreState\.displayVerdict\?\.label \|\| "Review"\)/
+  /const coverClassificationLabel = normalizeVisibleReportClassification\(\{[\s\S]{0,600}baseClass:[\s\S]{0,800}sourceReconciliationCapActive[\s\S]{0,300}coreSupportInsufficient[\s\S]{0,300}debtCoverageConstraintActive/
 );
+assert.match(
+  reportSource,
+  /function normalizeVisibleReportClassification\([\s\S]*sourceReconciliationCapActive[\s\S]*Review - Source Reconciliation Disclosure[\s\S]*coreSupportInsufficient[\s\S]*Review - Insufficient Core Support[\s\S]*debtCoverageConstraintActive[\s\S]*Review - Debt Coverage Constraint/
+);
+assert.match(
+  reportSource,
+  /const coverClassificationLabel = normalizeVisibleReportClassification\(\{[\s\S]*sourceReconciliationCapActive[\s\S]*coreSupportInsufficient[\s\S]*debtCoverageConstraintActive/
+);
+assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);
 assert.equal(
   /effectiveReportMode === "screening_v1"[\s\S]{0,180}Review - Debt Coverage Constraint/.test(reportSource),
   false
 );
+assert.equal(/Pass Conditions \(All must hold\)|Hard Disqualifiers \(Any triggers fail\)|Decision Status: Full Compliance|Decision Status: Non-Compliance|Decision Status: Partial Compliance/.test(reportSource), false);
 assert.equal(/reportTierBadges|reportTierBadgeHtml|Screening Scope|Source-Constrained|Debt Not Provided|Disclosure Required/.test(reportSource), false);
 assert.match(
   reportSource,

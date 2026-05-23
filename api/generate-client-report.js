@@ -121,6 +121,26 @@ function formatDistanceKm(value) {
     }) + " km"
   );
 }
+function normalizeVisibleReportClassification({
+  baseClass = null,
+  sourceReconciliationCapActive = false,
+  coreSupportInsufficient = false,
+  debtCoverageConstraintActive = false,
+} = {}) {
+  if (sourceReconciliationCapActive) {
+    return "Review - Source Reconciliation Disclosure";
+  }
+  if (coreSupportInsufficient) {
+    return "Review - Insufficient Core Support";
+  }
+  if (debtCoverageConstraintActive) {
+    return "Review - Debt Coverage Constraint";
+  }
+  if (baseClass === "Stable" || baseClass === "Sensitized" || baseClass === "Fragile") {
+    return baseClass;
+  }
+  return "Review - Insufficient Core Support";
+}
 // Helper to safely replace all occurrences of a token
 function replaceAll(str, token, value) {
   if (!str || !token) return str;
@@ -5204,13 +5224,21 @@ if (effectiveReportMode === "screening_v1") {
         "Operating margins remain within a stable range based on uploaded operating results.";
     }
     if (effectiveReportMode === "v1_core" && hasCoreUnderwritingOperatingMetrics && screeningClass === "Stable") {
-      screeningClass = "Document-Constrained Review";
+      screeningClass = "Review - Insufficient Core Support";
       screeningExplanation =
         "Core operating metrics are present, while debt/refinance conclusions remain constrained by uploaded source coverage.";
     }
     if (effectiveReportMode === "screening_v1") {
+      const screeningVisibleLabel = normalizeVisibleReportClassification({
+        baseClass: screeningClass,
+        sourceReconciliationCapActive: Boolean(
+          sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
+        ),
+        coreSupportInsufficient: Boolean(!screeningHasSufficientData || screeningClass === "Insufficient Data"),
+        debtCoverageConstraintActive: false,
+      });
       execScreeningLines.push(
-        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningClass}`)}</p>`
+        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningVisibleLabel}`)}</p>`
       );
       execScreeningLines.push(
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
@@ -5296,8 +5324,8 @@ if (effectiveReportMode === "screening_v1") {
         .map((row) => {
           const status = Number.isFinite(row.value)
             ? row.test(row.value)
-              ? "PASS"
-              : "FAIL"
+              ? "Meets threshold"
+              : "Below threshold"
             : "Not assessed";
           return `<li>${escapeHtml(row.label)}: ${escapeHtml(status)} (${escapeHtml(
             formatDecisionValue(row.value)
@@ -5325,13 +5353,13 @@ if (effectiveReportMode === "screening_v1") {
       finitePassCount = passChecks.filter((row) => Number.isFinite(row.value)).length;
       allPass = finitePassCount === passChecks.length && satisfiedCount === passChecks.length;
       const decisionStatusText = anyHardDisq
-        ? "Decision Status: Non-Compliance"
+        ? "Decision Status: Elevated Risk Triggered"
         : allPass
-        ? "Decision Status: Full Compliance"
+        ? "Decision Status: Metrics Aligned"
         : satisfiedCount === 0
-        ? "Decision Status: Non-Compliance"
-        : `Decision Status: Partial Compliance (${satisfiedCount} of 3 criteria satisfied)`;
-      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Operating Decision Summary</p><p class="exec-signal-line"><strong>Pass Conditions (All must hold)</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Disqualifiers (Any triggers fail)</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
+        ? "Decision Status: Elevated Risk Triggered"
+        : `Decision Status: Mixed Signals (${satisfiedCount} of 3 thresholds met)`;
+      decisionContextHtml = `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Operating Decision Summary</p><p class="exec-signal-line"><strong>Operating Thresholds</strong></p><ul>${passLinesHtml}</ul><p class="exec-signal-line"><strong>Hard Risk Triggers</strong></p><ul>${disqualifierLinesHtml}</ul><p class="exec-signal-line">${decisionStatusText}</p></div>`;
     }
     if (
       effectiveReportMode === "screening_v1" &&
@@ -5541,8 +5569,18 @@ if (effectiveReportMode === "screening_v1") {
         dscrNotAssessedCopy.explanation
       );
       }
-      const _refiClass = hasVerifiedCurrentDebtBalance && screeningClass && screeningClass !== "Insufficient Data"
-        ? `Operating profile classified ${screeningClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
+      const visibleRefiClass = normalizeVisibleReportClassification({
+        baseClass: screeningClass === "Fragile" ? "Fragile" : screeningClass,
+        sourceReconciliationCapActive: Boolean(
+          sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
+        ),
+        coreSupportInsufficient: Boolean(!screeningHasSufficientData || screeningClass === "Insufficient Data"),
+        debtCoverageConstraintActive: Boolean(
+          Number.isFinite(canonicalRefiDebtBasisForBullets?.dscr) && canonicalRefiDebtBasisForBullets.dscr < 1.25
+        ),
+      });
+      const _refiClass = hasVerifiedCurrentDebtBalance && visibleRefiClass
+        ? `Operating profile classified ${visibleRefiClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
         : null;
       if (_refiClass) riskBullets.push(_refiClass);
     }
@@ -5687,15 +5725,29 @@ if (effectiveReportMode === "screening_v1") {
       t12Payload,
       sourceReconciliationState,
     });
-    const coverClassificationLabel = effectiveReportMode === "screening_v1"
-      ? (() => {
-        if (screeningClass === "Stable") return "Stable";
-        if (screeningClass === "Fragile") return "High Risk";
-        if (screeningClass === "Sensitized") return "Sensitized";
-        if (screeningClass === "Insufficient Data") return "Insufficient Data";
-        return "Review";
-      })()
-      : (dealScoreState.displayVerdict?.label || "Review");
+    const sourceReconciliationCapActive = Boolean(
+      sourceReconciliationNarrativePolicy?.data_coverage_required === true &&
+      hasSourceReconciliationVariance
+    );
+    const debtCoverageConstraintActive = Boolean(
+      dealScoreState?.displayVerdict?.cap_reason_code === "debt_coverage_constraint" ||
+      (Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay > 0 && currentDebtDscrForDisplay < 1.25)
+    );
+    const coreSupportInsufficient = Boolean(
+      !screeningHasSufficientData ||
+      screeningClass === "Insufficient Data" ||
+      dealScoreState?.displayVerdict?.label === "Insufficient Data"
+    );
+    const baseVisibleClass =
+      effectiveReportMode === "screening_v1"
+        ? (screeningClass === "Fragile" ? "Fragile" : screeningClass)
+        : (dealScoreState.displayVerdict?.label || "Review - Insufficient Core Support");
+    const coverClassificationLabel = normalizeVisibleReportClassification({
+      baseClass: baseVisibleClass,
+      sourceReconciliationCapActive,
+      coreSupportInsufficient,
+      debtCoverageConstraintActive,
+    });
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
@@ -5703,7 +5755,7 @@ if (effectiveReportMode === "screening_v1") {
     );
     const verdictCssClass = coverClassificationLabel === "Stable" ? "verdict-stable"
       : /^Review\b/i.test(coverClassificationLabel) ? "verdict-sensitized"
-      : coverClassificationLabel === "High Risk" ? "verdict-fragile"
+      : coverClassificationLabel === "High Risk" || coverClassificationLabel === "Fragile" ? "verdict-fragile"
       : coverClassificationLabel === "Constrained" ? "verdict-sensitized"
       : coverClassificationLabel === "Outside Parameters" ? "verdict-fragile"
       : "";
