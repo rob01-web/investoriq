@@ -1205,15 +1205,51 @@ assert.equal(/Forward-looking renovation support is document-backed/i.test(histo
 assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
 assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Historical capital items are displayed for context only/i);
 
+const historicalOnlyOverrideWithNoisyForwardFlagHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "CapEx Scope.pdf",
+      doc_type: "renovation",
+      semantic_doc_role: "renovation_budget",
+      semantic_doc_role_reason: "historical capital items only",
+      parse_status: "parsed",
+    },
+  ],
+  renovationDisplayMode: "forward_looking_modelable",
+  hasForwardLookingRenovationInputs: true,
+  renovationPayload: {
+    timing_or_phasing: "Historical",
+    interpretation: "Historical capital items only. No forward-looking budget, no rent lift, no ROI, no payback, and no implementation schedule.",
+  },
+});
+assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
+assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
+assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Historical capital items are displayed for context only/i);
+
 const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { original_filename: "Forward Looking Renovation Budget.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
   ],
   renovationDisplayMode: "forward_looking_with_rent_lift",
   hasForwardLookingRenovationInputs: true,
+  renovationPayload: {
+    timing_or_phasing: "12 months implementation",
+    rent_lift: "150",
+  },
 });
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Modeled Inputs/i);
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Forward-looking renovation support includes document-stated rent-lift assumptions/i);
+
+const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Renovation Budget Items.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+  ],
+  renovationDisplayMode: "budget_only_no_roi",
+  hasForwardLookingRenovationInputs: true,
+});
+assert.match(budgetOnlyNoRoiTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(budgetOnlyNoRoiTreatmentHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+assert.equal(/Forward-looking renovation support is document-backed/i.test(budgetOnlyNoRoiTreatmentHtml), false);
 
 const metadataFirstOverFilenameHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

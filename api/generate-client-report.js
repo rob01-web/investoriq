@@ -1590,6 +1590,7 @@ function buildDocumentTreatmentSummaryHtml({
   currentDebtAssessmentState = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
+  renovationPayload = null,
   propertyTaxPayload = null,
 } = {}) {
   const files = Array.isArray(documentSources)
@@ -1622,6 +1623,34 @@ function buildDocumentTreatmentSummaryHtml({
       .toLowerCase();
   const hasText = (value, pattern) => pattern.test(normalizedText(value));
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
+  const hasHistoricalOnlyRenovationEvidence = (row = null) => {
+    const payloadText = [
+      renovationPayload?.timing_or_phasing,
+      renovationPayload?.interpretation,
+      renovationPayload?.budget_note,
+      renovationPayload?.execution_note,
+    ]
+      .map(normalizedText)
+      .join(" | ");
+    const rowText = [
+      row?.semantic_doc_role,
+      row?.semantic_doc_display_label,
+      row?.semantic_doc_role_reason,
+      row?.display_doc_type,
+      row?.doc_type,
+      row?.parse_error,
+    ]
+      .map(normalizedText)
+      .join(" | ");
+    const combined = `${payloadText} | ${rowText}`;
+    const explicitHistoricalSignals =
+      /(^|[^a-z])historical([^a-z]|$)|past repairs?|prior work|completed work|completed items?|historical capex|historical capital/i.test(combined);
+    const explicitNoForwardSignals =
+      /no forward-looking budget|no rent lift|no roi|no payback|no implementation schedule/i.test(combined);
+    const timingHistorical = /\btiming[_\s-]*or[_\s-]*phasing\b[\s\S]{0,30}\bhistorical\b/i.test(`timing_or_phasing ${payloadText}`) ||
+      /\bhistorical\b/.test(normalizedText(renovationPayload?.timing_or_phasing));
+    return explicitHistoricalSignals || explicitNoForwardSignals || timingHistorical;
+  };
   const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
   const hasValidatedModeledPropertyTax = isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
@@ -1723,7 +1752,16 @@ function buildDocumentTreatmentSummaryHtml({
         renovationDisplayMode === "historical_only"
           ? renovationDisplayMode
           : "historical_only";
+      const historicalOnlyOverride = hasHistoricalOnlyRenovationEvidence(row);
       const hasValidatedForwardLookingRenovationSupport = Boolean(hasForwardLookingRenovationInputs);
+      if (historicalOnlyOverride) {
+        return {
+          category: "Displayed / Limited Use",
+          note: "Historical capital items are displayed for context only.",
+          reason_code: "historical_capex_only",
+          source_basis: renovationSourceBasis,
+        };
+      }
       if (normalizedRenovationDisplayMode === "forward_looking_modelable" && hasValidatedForwardLookingRenovationSupport) {
         return {
           category: "Modeled Inputs",
@@ -2487,6 +2525,7 @@ function buildScreeningDataCoverageSummary({
   sectionEligibility = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
+  renovationPayload = null,
   propertyTaxPayload = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
@@ -2652,6 +2691,7 @@ function buildScreeningDataCoverageSummary({
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
       renovationDisplayMode,
+      renovationPayload,
       propertyTaxPayload,
     });
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>`;
@@ -2676,6 +2716,7 @@ function buildScreeningDataCoverageSummary({
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
       renovationDisplayMode,
+      renovationPayload,
       propertyTaxPayload,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
@@ -7130,6 +7171,7 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
       renovationDisplayMode,
+      renovationPayload,
       propertyTaxPayload,
     });
     finalHtml = replaceAll(
