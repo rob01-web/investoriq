@@ -138,6 +138,12 @@ assert.match(
   /const hasSourceReconciliationCaution =[\s\S]{0,180}sourceReconciliationNarrativePolicy\?\.data_coverage_required === true[\s\S]{0,120}hasSourceReconciliationVariance/
 );
 assert.equal(/BUY|SELL|proceed recommendation/i.test(reportSource), false);
+assert.equal(/shown as unavailable/i.test(reportSource), false);
+assert.match(
+  reportSource,
+  /Metrics dependent on missing source inputs are omitted or qualified\./
+);
+assert.match(reportSource, /Unsupported metrics are not inferred\./);
 assert.match(
   reportSource,
   /Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll\/T12 reconciliation disclosure in Data Coverage\./

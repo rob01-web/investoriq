@@ -1317,7 +1317,7 @@ function dedupeDataNotAvailableBySection(html) {
     }
     const note =
       `<p class="small data-gap-note">${DATA_NOT_AVAILABLE}. ` +
-      "Metrics that depend on missing source inputs are shown as unavailable.</p>";
+      "Metrics dependent on missing source inputs are omitted or qualified. Unsupported metrics are not inferred.</p>";
     let nextBody = body.split(DATA_NOT_AVAILABLE).join(shortDna);
     if (!/class="small data-gap-note"/.test(nextBody)) {
       nextBody = `${note}${nextBody}`;
