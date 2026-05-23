@@ -5153,9 +5153,9 @@ if (effectiveReportMode === "screening_v1") {
       if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
         if (currentDebtCoverage.dscr < 1.25) {
-          primaryPressurePoint = `DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds`;
+          primaryPressurePoint = `Primary Constraint: Current Debt DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds.`;
         } else if (currentDebtCoverage.dscr < 1.35) {
-          primaryPressurePoint = `DSCR of ${_ds}: moderate debt coverage with limited refinancing cushion`;
+          primaryPressurePoint = `Primary Constraint: Current Debt DSCR of ${_ds} indicates moderate debt coverage with limited refinancing cushion.`;
         } else if (!driver1) {
           primaryPressurePoint = "Primary Constraint: Current debt coverage appears within assessed thresholds; refinance risk remains subject to source completeness.";
         }
@@ -5173,7 +5173,7 @@ if (effectiveReportMode === "screening_v1") {
       ].includes(String(currentDebtAssessmentState?.current_debt_limitation_reason_code || "").trim());
     if (hasCurrentDebtAssessmentGap) {
       primaryPressurePoint =
-        "Primary Constraint: No verified current debt document was provided; current-debt DSCR and refinance capacity were not assessed.";
+        "Primary Constraint: Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.";
     }
     if (
       effectiveReportMode === "v1_core" &&
@@ -5552,11 +5552,11 @@ if (effectiveReportMode === "screening_v1") {
       if (hasComputedCurrentDebtDscr && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
         const _ds = formatMultiple(canonicalRefiDebtBasisForBullets.dscr, 2);
         if (canonicalRefiDebtBasisForBullets.dscr >= 1.35) {
-          upsideBullets.push(`DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
+          upsideBullets.push(`Current Debt DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
         } else if (canonicalRefiDebtBasisForBullets.dscr >= 1.25) {
-          riskBullets.push(`DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
+          riskBullets.push(`Current Debt DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
         } else {
-          riskBullets.push(`Base case DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
+          riskBullets.push(`Base case Current Debt DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
         }
       } else {
         const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
@@ -5586,12 +5586,12 @@ if (effectiveReportMode === "screening_v1") {
     }
     const primaryConstraintAlreadyCarriesDscr =
       effectiveReportMode === "v1_core" &&
-      /DSCR of .*?(constrains refinance capacity|moderate debt coverage)/i.test(
+      /Current Debt DSCR of .*?(constrains refinance capacity|moderate debt coverage)/i.test(
         String(primaryPressurePoint || "")
       );
     if (primaryConstraintAlreadyCarriesDscr) {
       for (let i = riskBullets.length - 1; i >= 0; i -= 1) {
-        if (/^Base case DSCR of .*?(coverage thresholds|refinance capacity)/i.test(riskBullets[i])) {
+        if (/^Base case Current Debt DSCR of .*?(coverage thresholds|refinance capacity)/i.test(riskBullets[i])) {
           riskBullets.splice(i, 1);
         }
       }
@@ -6485,9 +6485,13 @@ if (effectiveReportMode === "screening_v1") {
       escapeHtml(renovationInterpretationForRender)
     );
     let canRenderRefi = false;
+    const currentDebtNotAssessedRenderCopy =
+      "Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.";
     if (effectiveReportMode !== "v1_core") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
       finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+      finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", "");
+      finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", "");
     } else {
       const canonicalRefiDebtBasisForRender = resolveCanonicalRefiDebtBasis({
         currentDebtState: currentDebtAssessmentState,
@@ -6501,9 +6505,24 @@ if (effectiveReportMode === "screening_v1") {
         !Boolean(canonicalRefiDebtBasisForRender?.isAcquisitionOnly) &&
         Number.isFinite(coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance)) &&
         coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance) > 0;
-      if (!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState?.current_debt_limitation_reason_code) {
+      if (!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr) {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+        finalHtml = finalHtml.replace(
+          /<p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis<\/p>[\s\S]*?<p class="small" style="margin-top:8px;">[\s\S]*?<\/p>/i,
+          `<p class="small">${escapeHtml(currentDebtNotAssessedRenderCopy)}</p>`
+        );
+        finalHtml = finalHtml.replace(
+          /<p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis<\/p>[\s\S]*?<p>\s*\{\{DEBT_REFI_CONSIDERATIONS\}\}\s*<\/p>/i,
+          ""
+        );
+        finalHtml = finalHtml.replace(
+          /<p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity<\/p>[\s\S]*?\{\{REFI_SENSITIVITY_MATRIX_BLOCK\}\}/i,
+          ""
+        );
+        finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", currentDebtNotAssessedRenderCopy);
+        finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", currentDebtNotAssessedRenderCopy);
+        finalHtml = replaceAll(finalHtml, "{{REFI_SENSITIVITY_MATRIX_BLOCK}}", "");
       } else {
       const refiResult = buildRefiStabilityModel({
         financials: refiFinancials,
@@ -6544,6 +6563,18 @@ if (effectiveReportMode === "screening_v1") {
       } else {
         finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+      }
+      if (hasCanonicalCurrentRefiDebtBasis || hasComputedCurrentDebtDscr) {
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{DEBT_DSCR_NOTE}}",
+          "Current Debt DSCR reflects current outstanding debt service and T12 NOI only. Proposed acquisition financing assumptions are evaluated separately and do not replace current debt coverage assessment."
+        );
+        finalHtml = replaceAll(
+          finalHtml,
+          "{{DEBT_REFI_CONSIDERATIONS}}",
+          "Refinance stress and binding-constraint analysis is based on current outstanding debt inputs and deterministic stress assumptions. Proposed acquisition financing assumptions are not used as current debt."
+        );
       }
       }
     }

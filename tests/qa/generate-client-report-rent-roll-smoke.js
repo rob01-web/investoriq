@@ -91,6 +91,31 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /Primary Constraint: Current Debt DSCR of \$\{_ds\} constrains refinance capacity below standard lender coverage thresholds\./
+);
+assert.match(
+  reportSource,
+  /Primary Constraint: Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided\./
+);
+assert.match(
+  reportSource,
+  /\{\{DEBT_DSCR_NOTE\}\}/
+);
+assert.match(
+  reportSource,
+  /Current Debt DSCR reflects current outstanding debt service and T12 NOI only\./
+);
+assert.match(
+  reportSource,
+  /\{\{DEBT_REFI_CONSIDERATIONS\}\}/
+);
+assert.match(
+  reportSource,
+  /Refinance stress and binding-constraint analysis is based on current outstanding debt inputs/
+);
+assert.equal(/DSCR \(Computed\)/i.test(reportSource), false);
+assert.match(
+  reportSource,
   /const occupancyInterpretation = `Break-even occupancy is \$\{beoFmt\} versus current occupancy of \$\{currFmt\}, indicating a \$\{bufPts\} percentage-point operating cushion based on reported T12 totals\.`/
 );
 assert.match(
@@ -116,7 +141,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr && currentDebtAssessmentState\?\.current_debt_limitation_reason_code\)[\s\S]{0,220}stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)/
+  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr\)[\s\S]{0,320}stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)/
 );
 assert.match(
   reportSource,
@@ -418,7 +443,7 @@ const computedScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   },
 });
 assert.equal(computedScorecardEntry.hasDscrScore, true);
-assert.match(computedScorecardEntry.scoreRow.label, /Current Debt DSCR|DSCR \(Current Debt\)|DSCR \(Computed\)/i);
+assert.match(computedScorecardEntry.scoreRow.label, /Current Debt DSCR|DSCR \(Current Debt\)/i);
 assert.match(computedScorecardEntry.scoreRow.value, /^\d+\.\d{2}x$/);
 
 const loanTermOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
@@ -489,7 +514,7 @@ assert.ok(Number.isFinite(loanTermOnlyDealScoreState.computedDscrForVerdict));
 assert.match(loanTermOnlyDealScoreState.dealScoreTableHtml, /Current Debt|DSCR/i);
 assert.equal(/Not assessed - no current debt document|No current debt document provided/i.test(loanTermOnlyDealScoreState.dealScoreTableHtml), false);
 const loanTermOnlyDscrRow = loanTermOnlyDealScoreState.scoreRows.find((row) =>
-  /Current Debt DSCR|DSCR \(Current Debt\)|DSCR \(Computed\)/i.test(String(row?.label || ""))
+  /Current Debt DSCR|DSCR \(Current Debt\)/i.test(String(row?.label || ""))
 );
 assert.ok(loanTermOnlyDscrRow);
 assert.notEqual(loanTermOnlyDscrRow.pts, 0);
