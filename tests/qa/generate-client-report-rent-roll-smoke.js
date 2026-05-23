@@ -1517,6 +1517,29 @@ assert.equal(/Current Debt DSCR/i.test(acquisitionSizingHtml), false);
 assert.match(acquisitionSizingHtml, /not current outstanding debt/i);
 assert.match(acquisitionSizingHtml, /does not represent appraised value/i);
 assert.equal(/BUY|SELL|HOLD/i.test(acquisitionSizingHtml), false);
+const acquisitionCanonicalMappingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 1250000,
+    loan_amount: 937500,
+    ltv: 0.75,
+    lender_fee_percent: 0.01,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    closing_cost_notes: "1.00% lender fee plus standard legal/appraisal costs",
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.match(acquisitionCanonicalMappingHtml, /Purchase Price[\s\S]{0,80}\$1,250,000/i);
+assert.match(acquisitionCanonicalMappingHtml, /Stated Acquisition Loan Amount[\s\S]{0,80}\$937,500/i);
+assert.equal(/Purchase Price[\s\S]{0,80}\$937,500/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquisitionCanonicalMappingHtml), false);
+assert.match(acquisitionCanonicalMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
+assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Current Debt DSCR/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(
   /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Unsupported (?:Appraisal Summary|Market Survey)\.pdf/i.test(documentTreatmentHtml),
   false

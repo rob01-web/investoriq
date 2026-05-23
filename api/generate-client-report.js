@@ -2352,42 +2352,94 @@ function buildAcquisitionFinancingAssumptionsHtml({
   const termsPayload = acquisitionContextPayload || currentDebtTermsPayload;
   if (!termsPayload || typeof termsPayload !== "object") return "";
 
-  const purchasePrice = coerceNumber(
-    termsPayload.purchase_price ??
-      termsPayload.purchasePrice ??
-      termsPayload.acquisition_price ??
-      termsPayload.purchase_price_amount ??
-      acquisitionSupportPayload?.purchase_price ??
-      acquisitionSupportPayload?.purchasePrice ??
-      acquisitionSupportPayload?.acquisition_price ??
-      acquisitionSupportPayload?.purchase_price_amount
+  const firstFinite = (...values) => {
+    for (const value of values) {
+      const parsed = coerceNumber(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const materiallyDifferentAmount = (left, right) => {
+    const a = coerceNumber(left);
+    const b = coerceNumber(right);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    const scale = Math.max(Math.abs(a), Math.abs(b), 1);
+    return Math.abs(a - b) > Math.max(100, scale * 0.02);
+  };
+
+  const purchasePrice = firstFinite(
+    termsPayload.purchase_price,
+    termsPayload.purchasePrice,
+    termsPayload.acquisition_price,
+    termsPayload.purchase_price_amount,
+    acquisitionSupportPayload?.purchase_price,
+    acquisitionSupportPayload?.purchasePrice,
+    acquisitionSupportPayload?.acquisition_price,
+    acquisitionSupportPayload?.purchase_price_amount
   );
-  const ltv = coerceNumber(termsPayload.ltv ?? acquisitionSupportPayload?.ltv);
-  const loanAmount = coerceNumber(
-    termsPayload.derived_acquisition_loan_amount ??
-      acquisitionSupportPayload?.derived_acquisition_loan_amount
+  const ltv = firstFinite(termsPayload.ltv, acquisitionSupportPayload?.ltv);
+  const statedLoanAmount = firstFinite(
+    termsPayload.loan_amount,
+    termsPayload.proposed_loan_amount,
+    termsPayload.acquisition_loan_amount,
+    termsPayload.stated_loan_amount,
+    acquisitionSupportPayload?.loan_amount,
+    acquisitionSupportPayload?.proposed_loan_amount,
+    acquisitionSupportPayload?.acquisition_loan_amount,
+    acquisitionSupportPayload?.stated_loan_amount
   );
-  const ratePct = coerceNumber(termsPayload.interest_rate ?? acquisitionSupportPayload?.interest_rate);
-  const amortYears = coerceNumber(
-    termsPayload.amortization_years ??
-      termsPayload.amort_years ??
-      acquisitionSupportPayload?.amortization_years ??
-      acquisitionSupportPayload?.amort_years
+  const providedDerivedLoanAmount = firstFinite(
+    termsPayload.derived_acquisition_loan_amount,
+    acquisitionSupportPayload?.derived_acquisition_loan_amount
   );
-  const goingInCapRate = coerceNumber(
-    termsPayload.going_in_cap_rate ?? acquisitionSupportPayload?.going_in_cap_rate
+  const computedDerivedLoanAmount =
+    Number.isFinite(purchasePrice) &&
+    purchasePrice > 0 &&
+    Number.isFinite(ltv) &&
+    ltv > 0
+      ? purchasePrice * ltv
+      : null;
+  const derivedLoanAmount =
+    Number.isFinite(statedLoanAmount) && statedLoanAmount > 0
+      ? null
+      : firstFinite(providedDerivedLoanAmount, computedDerivedLoanAmount);
+
+  const ratePct = firstFinite(termsPayload.interest_rate, acquisitionSupportPayload?.interest_rate);
+  const amortYears = firstFinite(
+    termsPayload.amortization_years,
+    termsPayload.amort_years,
+    acquisitionSupportPayload?.amortization_years,
+    acquisitionSupportPayload?.amort_years
   );
-  const closingCostsPercent = coerceNumber(
-    termsPayload.closing_costs_percent ?? acquisitionSupportPayload?.closing_costs_percent
+  const goingInCapRate = firstFinite(
+    termsPayload.going_in_cap_rate,
+    acquisitionSupportPayload?.going_in_cap_rate
+  );
+  const closingCostsPercent = firstFinite(
+    termsPayload.closing_costs_percent,
+    acquisitionSupportPayload?.closing_costs_percent
+  );
+  const lenderFeePercent = firstFinite(
+    termsPayload.lender_fee_percent,
+    termsPayload.financing_fee_percent,
+    termsPayload.origination_fee_percent,
+    acquisitionSupportPayload?.lender_fee_percent,
+    acquisitionSupportPayload?.financing_fee_percent,
+    acquisitionSupportPayload?.origination_fee_percent
+  );
+  const unquantifiedLegalAppraisalMention = /legal|appraisal/.test(
+    `${String(termsPayload?.closing_cost_notes || "")} ${String(acquisitionSupportPayload?.closing_cost_notes || "")}`.toLowerCase()
   );
   const hasMeaningfulAcquisitionField = [
     purchasePrice,
     ltv,
-    loanAmount,
+    statedLoanAmount,
+    derivedLoanAmount,
     ratePct,
     amortYears,
     goingInCapRate,
     closingCostsPercent,
+    lenderFeePercent,
   ].some((value) => Number.isFinite(value) && value > 0);
   if (!hasMeaningfulAcquisitionField) return "";
 
@@ -2404,6 +2456,17 @@ function buildAcquisitionFinancingAssumptionsHtml({
   if (!Number.isFinite(ltv) || ltv <= 0) {
     limitations.push("Acquisition debt sizing was not modeled because LTV was not verified in the uploaded documents.");
   }
+  if (
+    Number.isFinite(statedLoanAmount) &&
+    statedLoanAmount > 0 &&
+    Number.isFinite(computedDerivedLoanAmount) &&
+    computedDerivedLoanAmount > 0 &&
+    materiallyDifferentAmount(statedLoanAmount, computedDerivedLoanAmount)
+  ) {
+    limitations.push(
+      "Stated acquisition loan amount and purchase-price/LTV-derived loan amount differ materially; stated source values are shown without silent re-derivation."
+    );
+  }
   if (!Number.isFinite(ratePct) || ratePct <= 0) {
     limitations.push("Estimated acquisition debt service was not modeled because the interest rate was not verified.");
   }
@@ -2412,11 +2475,11 @@ function buildAcquisitionFinancingAssumptionsHtml({
   }
   const mortgageConstant = computeMortgageConstant(ratePct / 100, amortYears);
   const annualDebtService =
-    Number.isFinite(loanAmount) &&
-    loanAmount > 0 &&
+    Number.isFinite(statedLoanAmount ?? derivedLoanAmount) &&
+    (statedLoanAmount ?? derivedLoanAmount) > 0 &&
     Number.isFinite(mortgageConstant) &&
     mortgageConstant > 0
-      ? loanAmount * mortgageConstant
+      ? (statedLoanAmount ?? derivedLoanAmount) * mortgageConstant
       : null;
   const acquisitionDscr =
     Number.isFinite(noi) && noi > 0 && Number.isFinite(annualDebtService) && annualDebtService > 0
@@ -2425,11 +2488,14 @@ function buildAcquisitionFinancingAssumptionsHtml({
   const rows = [
     Number.isFinite(purchasePrice) && purchasePrice > 0 ? ["Purchase Price", formatCurrency(purchasePrice)] : null,
     Number.isFinite(ltv) && ltv > 0 ? ["Documented LTV", formatPercent1(ltv)] : null,
-    Number.isFinite(loanAmount) && loanAmount > 0 ? ["Derived Acquisition Loan Amount", formatCurrency(loanAmount)] : null,
+    Number.isFinite(statedLoanAmount) && statedLoanAmount > 0 ? ["Stated Acquisition Loan Amount", formatCurrency(statedLoanAmount)] : null,
+    Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0 ? ["Derived Acquisition Loan Amount", formatCurrency(derivedLoanAmount)] : null,
     Number.isFinite(ratePct) && ratePct > 0 ? ["Interest Rate", formatInterestRatePercent(ratePct)] : null,
     Number.isFinite(amortYears) && amortYears > 0 ? ["Amortization", `${Math.round(amortYears)} years`] : null,
     Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? ["Going-In Cap Rate", formatPercent1(goingInCapRate)] : null,
-    Number.isFinite(closingCostsPercent) && closingCostsPercent >= 0 ? ["Closing Costs", formatPercentExactDisplay(closingCostsPercent)] : null,
+    Number.isFinite(closingCostsPercent) && closingCostsPercent > 0 ? ["Closing Costs", formatPercentExactDisplay(closingCostsPercent)] : null,
+    Number.isFinite(lenderFeePercent) && lenderFeePercent > 0 ? ["Lender Fee", formatPercent1(lenderFeePercent)] : null,
+    !Number.isFinite(closingCostsPercent) && unquantifiedLegalAppraisalMention ? ["Closing Cost Notes", "Legal/appraisal costs noted; not quantified"] : null,
   ].filter(Boolean);
   if (Number.isFinite(annualDebtService) && annualDebtService > 0) {
     rows.push(["Estimated Annual Debt Service", formatCurrency(annualDebtService)]);
