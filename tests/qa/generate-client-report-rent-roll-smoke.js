@@ -1288,10 +1288,28 @@ assert.match(documentTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
 assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
+assert.match(documentTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.equal(/Unsupported Phase I ESA\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support is displayed only)/i.test(documentTreatmentHtml), false);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(documentTreatmentHtml), false);
 assert.equal(/Forward-looking renovation support is document-backed/i.test(documentTreatmentHtml), false);
+const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Zoning Compliance Letter.pdf",
+      doc_type: "supporting_documents_unclassified",
+      semantic_doc_role: "property_tax_support",
+      semantic_doc_display_label: "Property tax support",
+      semantic_doc_role_reason: "zoning compliance context",
+      parse_status: "parsed_with_warnings",
+      parse_error: "doc_type_unclassified",
+    },
+  ],
+  propertyTaxPayload: { annual_tax: 18950 },
+});
+assert.match(zoningSupportTreatmentHtml, /Zoning\/compliance context only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Property tax support is displayed only/i.test(zoningSupportTreatmentHtml), false);
 
 const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

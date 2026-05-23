@@ -1873,15 +1873,18 @@ function buildDocumentTreatmentSummaryHtml({
     const isUnclassified = /unclassified|supporting_documents_unclassified|doc_type_unclassified/.test(metadataText);
     const filenameOnly = sourceBasis === "filename_fallback";
     const semanticText = hasSemanticMetadata ? metadataText : "";
+    const semanticAndFileText = `${semanticText} | ${fileText}`;
 
     const supportedOperating = /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(semanticText);
     const supportedRentRoll = /(^|\b)(rent roll|rent_roll)(\b|$)/.test(semanticText);
     const supportedMortgage = /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(semanticText);
-    const supportedPropertyTax = /(^|\b)(property tax|property_tax)(\b|$)/.test(semanticText);
+    const supportedPropertyTax = /(^|\b)(property tax|property_tax|tax bill|tax notice|municipal tax)(\b|$)/.test(semanticText);
     const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
     const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
     const appraisalLike = /(^|\b)(appraisal|market survey|market_survey)(\b|$)/.test(semanticText);
-    const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(semanticText);
+    const environmentalLike = /(^|\b)(phase i|phase_i|esa|environment|environmental|site assessment)(\b|$)/.test(semanticAndFileText);
+    const zoningComplianceLike = /(^|\b)(zoning|compliance|land use|entitlement|municipal code)(\b|$)/.test(semanticAndFileText);
+    const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(semanticAndFileText);
 
     if (supportedOperating) {
       return {
@@ -1921,7 +1924,23 @@ function buildDocumentTreatmentSummaryHtml({
         source_basis: sourceBasis,
       };
     }
-    if (supportedPropertyTax) {
+    if (environmentalLike) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Environmental due-diligence context only; not used quantitatively.",
+        reason_code: "environmental_support_context_only",
+        source_basis: sourceBasis,
+      };
+    }
+    if (zoningComplianceLike) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Zoning/compliance context only; not used quantitatively.",
+        reason_code: "zoning_compliance_context_only",
+        source_basis: sourceBasis,
+      };
+    }
+    if (supportedPropertyTax && !environmentalLike && !zoningComplianceLike) {
       return {
         category: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax ? "Modeled Inputs" : "Displayed / Limited Use",
         note: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax
@@ -2036,11 +2055,23 @@ function buildDocumentTreatmentSummaryHtml({
               note: "Rent-roll support is displayed only; filename-only evidence is not modeled.",
               reason_code: "filename_fallback_rent_roll_support_only",
             }
-          : /property\s*tax|tax\s*notice/.test(lower)
+          : /property\s*tax|tax\s*notice|tax\s*bill|municipal\s*tax/.test(lower) && !/phase\s*i|esa|environment|environmental|zoning|compliance/.test(lower)
           ? {
               category: "Displayed / Limited Use",
               note: "Property-tax support is displayed only; filename-only evidence is not modeled.",
               reason_code: "filename_fallback_property_tax_support_only",
+            }
+          : /phase\s*i|esa|environment|environmental/.test(lower)
+          ? {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Environmental due-diligence context only; not used quantitatively.",
+              reason_code: "filename_fallback_environmental_support_only",
+            }
+          : /zoning|compliance|land\s*use|entitlement/.test(lower)
+          ? {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Zoning/compliance context only; not used quantitatively.",
+              reason_code: "filename_fallback_zoning_support_only",
             }
           : /debt|mortgage|loan|lender|amort|interest\s*rate|term\s*sheet/.test(lower)
           ? {
