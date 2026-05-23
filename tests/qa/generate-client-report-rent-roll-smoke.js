@@ -81,6 +81,19 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const occupancyInterpretation = `Break-even occupancy is \$\{beoFmt\} versus current occupancy of \$\{currFmt\}, indicating a \$\{bufPts\} percentage-point operating cushion based on reported T12 totals\.`/
+);
+assert.match(
+  reportSource,
+  /const reconciliationCaution = hasSourceReconciliationCaution[\s\S]{0,260}variance-sensitive conclusions remain constrained when rent roll and T12 income evidence are materially unreconciled\./
+);
+assert.match(
+  reportSource,
+  /const hasSourceReconciliationCaution =[\s\S]{0,180}sourceReconciliationNarrativePolicy\?\.data_coverage_required === true[\s\S]{0,120}hasSourceReconciliationVariance/
+);
+assert.equal(/BUY|SELL|proceed recommendation/i.test(reportSource), false);
+assert.match(
+  reportSource,
   /Framework value sensitivity is based on reported T12 NOI and remains subject to the rent roll\/T12 reconciliation disclosure in Data Coverage\./
 );
 assert.match(

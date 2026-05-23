@@ -7441,6 +7441,13 @@ if (effectiveReportMode === "screening_v1") {
         const beoW = Math.round(breakEvenOccR * 100);
         const bufColor = "#B8860B";
         const bufLabel = (execOccupancy - breakEvenOccR) >= 0.20 ? "Strong cushion" : (execOccupancy - breakEvenOccR) >= 0.10 ? "Adequate cushion" : "Limited cushion";
+        const hasSourceReconciliationCaution =
+          sourceReconciliationNarrativePolicy?.data_coverage_required === true &&
+          hasSourceReconciliationVariance;
+        const occupancyInterpretation = `Break-even occupancy is ${beoFmt} versus current occupancy of ${currFmt}, indicating a ${bufPts} percentage-point operating cushion based on reported T12 totals.`;
+        const reconciliationCaution = hasSourceReconciliationCaution
+          ? " Interpret this cushion alongside source reconciliation disclosure, because variance-sensitive conclusions remain constrained when rent roll and T12 income evidence are materially unreconciled."
+          : "";
         html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Break-Even Occupancy Buffer</p>` +
           `<div style="background:#E5E7EB;height:20px;border-radius:4px;overflow:hidden;position:relative;">` +
           `<div style="background:#B8860B;height:100%;width:${beoW}%;border-radius:4px 0 0 4px;"></div>` +
@@ -7449,7 +7456,10 @@ if (effectiveReportMode === "screening_v1") {
           `<span style="font-size:10px;color:#1e293b;font-weight:600;">Break-even: ${beoFmt}</span>` +
           `<span style="font-size:10px;color:#1e293b;font-weight:600;">Current occupancy: ${currFmt}</span>` +
           `</div>` +
-          `<p class="small" style="margin-top:4px;color:${bufColor};font-weight:700;">Buffer: ${bufPts} percentage points &mdash; ${bufLabel}</p></div>`;
+          `<p class="small" style="margin-top:4px;color:${bufColor};font-weight:700;">Buffer: ${bufPts} percentage points - ${bufLabel}</p>` +
+          `<div style="margin-top:6px;padding:8px 10px;border:1px solid #E5E7EB;border-left:3px solid #9CA3AF;border-radius:4px;background:#F9FAFB;">` +
+          `<p class="small" style="margin:0;color:#374151;">${escapeHtml(occupancyInterpretation + reconciliationCaution)}</p>` +
+          `</div></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{OCCUPANCY_BUFFER_VISUAL}}", html);
     }

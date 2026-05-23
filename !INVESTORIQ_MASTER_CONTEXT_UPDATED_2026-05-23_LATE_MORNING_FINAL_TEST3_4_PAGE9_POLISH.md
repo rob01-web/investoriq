@@ -1,3 +1,526 @@
+# May 23, 2026 Late-Morning Addendum - Final Test 3 Mixup Rescue Passed / Final Test 4 Renovation Label Passed / Page 9 NOI Stability Polish In Progress
+
+## A) Current checkpoint
+
+```text
+BOOOOOOOOOOM.
+```
+
+After the May 23 morning Live Test 2 / CapEx context update, Rob continued live validation and uncovered three important follow-up classes:
+
+```text
+1. FINAL_TEST_3_CORE_DOC_SLOT_MIXUP_RESCUE - LIVE PASS / PUBLISHED
+2. FINAL_TEST_4_FORWARD_RENOVATION_LABEL_RESTORE - LIVE RETEST PASS / PUBLISHED
+3. NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH - CODEX RECEIPT RECEIVED / PASS TO COMMIT RECOMMENDED / COMMIT STATUS TO CONFIRM
+```
+
+Current interpretation:
+
+```text
+The report-delivery doctrine is still holding.
+Usable core docs publish.
+Wrong-slot core docs now rescue bidirectionally.
+Forward-looking renovation support is labeled correctly.
+Unreconciled source packages publish with warning truth, not fabricated certainty.
+The current open item is presentation polish only: Page 9 / Break-Even Occupancy Buffer white-space balance.
+```
+
+---
+
+## B) FINAL TEST 3 mixup initially failed, then root cause was patched and live-passed
+
+Rob deliberately reversed the T12 and rent roll upload slots:
+
+```text
+T12_Northbank_Terrace.csv uploaded in Rent Roll slot.
+Rent_Roll_Northbank_Terrace.csv uploaded in T12 slot.
+```
+
+Initial failure:
+
+```text
+MISSING_STRUCTURED_FINANCIALS / missing ["t12"]
+```
+
+Important diagnosis:
+
+```text
+This was not a bad-document failure.
+Both required core documents were present.
+The failure was intake/routing asymmetry.
+```
+
+Investigation finding:
+
+```text
+Rent roll uploaded in T12 slot rescued successfully through tabular header classifier reroute:
+declared=t12 -> detected=rent_roll -> parsed as rent_roll.
+
+T12 uploaded in rent-roll slot did not rescue when the tabular classifier returned unknown:
+declared=rent_roll -> effectiveDocType stayed rent_roll -> rent-roll parser/recovery rejected candidate_not_rent_roll -> T12 recovery never ran -> no t12_parsed artifact.
+```
+
+Patch:
+
+```text
+CORE_TABULAR_OPPOSITE_PARSER_RESCUE_BEFORE_FAIL_CLOSED
+```
+
+Files changed:
+
+```text
+api/parse/parse-doc.js
+tests/qa/t12-rent-roll-diagnostics-regression.js
+```
+
+Behavior added:
+
+```text
+Declared rent_roll + failed rent-roll parse/recovery + no accepted T12 yet:
+-> attempt strict T12 parse/core validation on the same tabular file before missing-core fail-closed.
+
+Declared t12 + failed T12 validation + no accepted rent roll yet:
+-> attempt strict rent-roll structure validation on the same tabular file before missing-core fail-closed.
+```
+
+Strictness preserved:
+
+```text
+- No filename-only acceptance.
+- No loosened T12 validation.
+- No loosened rent-roll validation.
+- Ambiguous opposite-parser candidate remains rejected.
+- Existing header-classifier reroute preserved.
+```
+
+Live retest result:
+
+```text
+FINAL TEST 3 MIXUP = PASS / PUBLISHED.
+```
+
+Live proof:
+
+```text
+opposite_core_parser_rescue_accepted
+declared_doc_type: rent_roll
+accepted_doc_type: t12
+
+t12_parsed: present
+rent_roll_parsed: present
+has_t12_parsed: true
+has_rent_roll_parsed: true
+no MISSING_STRUCTURED_FINANCIALS
+pipeline completed through published
+```
+
+Interpretation:
+
+```text
+Upload slot and filename are now better aligned with the locked doctrine:
+slot/filename are hints; validated document content is authority.
+```
+
+Commit status:
+
+```text
+Committed and pushed before live retest.
+```
+
+---
+
+## C) FINAL TEST 4 exposed forward-looking renovation document-treatment label regression, then retest passed
+
+FINAL TEST 4 was designed to validate:
+
+```text
+Usable T12 + usable rent roll + true forward-looking renovation plan with rent lift/phasing.
+```
+
+The report published and was customer-deliverable, but initially mislabeled the renovation support document in Document Treatment as historical-only:
+
+```text
+Reno_Plan_Willowmere.pdf - Historical capital items are displayed for context only.
+```
+
+This was wrong because the source was true forward-looking renovation support:
+
+```text
+- forward-looking renovation plan;
+- supported rent lift;
+- phase timing;
+- unit count;
+- cost per unit;
+- expected monthly rent lift;
+- total forward-looking renovation budget.
+```
+
+Patch:
+
+```text
+FORWARD_RENOVATION_DOCUMENT_TREATMENT_LABEL_RESTORE
+```
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Root cause:
+
+```text
+Renovation document-treatment classification could fall back to historical_only without considering row-level forward-looking evidence such as phase_timing, expected_monthly_rent_lift, unit_count, and cost_per_unit when top-level timing was null/noisy.
+```
+
+Behavior fixed:
+
+```text
+Row-level forward-looking evidence now defeats historical-only labeling when there is no explicit historical-only override.
+Historical-only override remains preserved when explicit historical-only evidence exists.
+Budget-only/no-ROI support remains limited-use.
+```
+
+FINAL TEST 4 RETEST result:
+
+```text
+PASS / PUBLISHED.
+```
+
+Correct Document Treatment now renders:
+
+```text
+Modeled Inputs
+- Rent_Roll_Willowmere_Place.csv - Structured rent roll input
+- T12_Willowmere_Place.csv - Structured operating input
+- Reno_Plan_Willowmere.pdf - Forward-looking renovation support includes document-stated rent-lift assumptions
+```
+
+Renovation section still safe:
+
+```text
+Document-stated renovation rent-lift assumptions are displayed by row for source transparency only.
+Gross annual rent-lift potential is shown only where unit count and expected monthly rent lift are explicitly provided.
+Not converted into NOI, ROI, payback, valuation, DCF, refinance, or score outputs.
+```
+
+Delivery proof:
+
+```text
+delivery_gate_status: deliverable
+report_publishable: true
+customer_publish_eligible: true
+customer_delivery_ready: true
+customer_publish_blockers: []
+admin_review_required: false
+user_needs_documents: false
+report_contract_qa: pass
+```
+
+Commit status:
+
+```text
+Committed and pushed before FINAL TEST 4 RETEST.
+```
+
+---
+
+## D) FINAL TEST 4 source reconciliation warning was correct, not a code bug
+
+Rob asked whether the T12/rent-roll reconciliation warning should be fixed.
+
+Conclusion:
+
+```text
+No code patch needed.
+The test fixture itself was numerically unreconciled.
+InvestorIQ correctly published with warning truth.
+```
+
+Fixture scale issue:
+
+```text
+T12 Gross Potential Rent: approximately $2,160,000
+T12 Effective Gross Income: approximately $2,076,000
+Rent roll annual in-place rent: approximately $1,104,300
+Rent roll annual market rent: approximately $1,368,000
+```
+
+Interpretation:
+
+```text
+Even the rent roll annual market rent was materially below T12 GPR.
+The report correctly treated the package as source-reconciliation-required.
+```
+
+Correct report behavior:
+
+```text
+- Published because core docs were usable.
+- Capped classification at Review - Source Reconciliation Disclosure.
+- Disclosed that InvestorIQ has not reconciled the variance and does not infer the cause.
+- Withheld unsupported current-debt/refi conclusions because no current debt document was provided.
+- Preserved a 17-page institutional report without fabricating certainty.
+```
+
+Business interpretation:
+
+```text
+This report would not tell an investor “buy.”
+It would tell an investor the asset may be interesting, but the package requires diligence escalation before relying on the numbers.
+```
+
+Diligence caution the report successfully communicates:
+
+```text
+Proceed with caution / diligence escalation.
+Do not rely on T12 NOI without reconciling rent roll to T12 income scale.
+Current-debt DSCR and refinance capacity are not assessed without a current debt document.
+```
+
+---
+
+## E) Page 9 / NOI Stability white-space polish is the only current open patch
+
+Rob noticed that page 9 in FINAL TEST 4 RETEST looked visually bare:
+
+```text
+Only the Break-Even Occupancy Buffer visual rendered, leaving a large white-space area.
+```
+
+This is not a logic bug:
+
+```text
+- The report was safe.
+- The math was correct.
+- Section gating worked.
+- Customer delivery passed.
+```
+
+It is presentation polish:
+
+```text
+NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH
+```
+
+Codex receipt received:
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Cause:
+
+```text
+{{OCCUPANCY_BUFFER_VISUAL}} rendered as a short gauge-only block, leaving a large vertical gap when adjacent content was sparse.
+```
+
+Polish added:
+
+```text
+A compact interpretation card now renders directly under Break-Even Occupancy Buffer using existing computed values:
+- break-even occupancy;
+- current occupancy;
+- occupancy buffer/cushion.
+```
+
+Conditional source-reconciliation caution:
+
+```text
+If reconciliation disclosure is active, the interpretation card includes a caution that variance-sensitive conclusions remain constrained when rent roll and T12 income evidence are materially unreconciled.
+
+If no reconciliation issue exists, the caution does not render.
+```
+
+Math/source truth:
+
+```text
+Unchanged.
+```
+
+Focused guards added/updated:
+
+```text
+- interpretation sentence includes break-even/current occupancy/cushion values;
+- conditional reconciliation caution is tied to existing reconciliation state;
+- no BUY/SELL/proceed recommendation language.
+```
+
+Validation from Codex receipt:
+
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check -- api/generate-client-report.js tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Review status:
+
+```text
+Receipt appears scoped and consistent with the requested presentation-only patch.
+PASS TO COMMIT is recommended, but Rob should confirm commit status in the next chat before moving on.
+```
+
+Remaining risks from Codex:
+
+```text
+- Final page flow still depends on DocRaptor pagination; dense nearby sections can shift the card to the next page in some variants.
+- Future template spacing changes could reintroduce white-space imbalance.
+```
+
+---
+
+## F) Current open list after this addendum
+
+Active / immediate:
+
+```text
+1. Confirm whether NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH has been committed.
+2. If not committed, review/commit it.
+3. Optional: rerun FINAL TEST 4 RETEST once after commit to visually confirm page 9 is improved.
+```
+
+Still open / launch-hardening / monitor-only:
+
+```text
+1. Real end-to-end Supabase Cron continuation proof.
+2. Disable scheduled GitHub worker only after Cron proves stable on real jobs.
+3. DocRaptor production-mode verification before external/public distribution.
+4. Vercel/environment secret rotation before launch.
+5. Optional dashboard failed-state status-line cleanup.
+6. Optional broader failure-code copy sweep.
+```
+
+Not currently active unless new evidence appears:
+
+```text
+- no broad report-quality patch family;
+- no new root-class audit;
+- no parser/worker/dashboard/Stripe changes;
+- no source reconciliation patch for FINAL TEST 4 fixture mismatch;
+- no renovation document-treatment patch unless a new concrete label failure appears.
+```
+
+---
+
+## G) Updated launch confidence interpretation
+
+Current report engine posture:
+
+```text
+Materially safer than May 21/22.
+```
+
+Live proof now includes:
+
+```text
+- usable messy core docs publish with disclosure;
+- optional/supporting gaps do not overblock customer delivery;
+- source reconciliation caps classification instead of fabricating alignment;
+- no-current-debt sections collapse/refuse unsupported DSCR/refi claims;
+- wrong-slot T12/rent roll core docs rescue bidirectionally;
+- historical-only CapEx is not mislabeled as forward-looking modeled support;
+- true forward-looking renovation support is labeled correctly and remains source-transparency only;
+- customer delivery is separated from public/high-value distribution readiness.
+```
+
+Current biggest non-code blockers before Ken/public distribution:
+
+```text
+1. DocRaptor still test mode.
+2. Need one intentionally clean Ken-style sample without source-reconciliation variance if the report is meant for outreach/sample use.
+3. Supabase Cron continuation proof remains operational monitoring.
+```
+
+Important distinction:
+
+```text
+A source-reconciliation-disclosure report can be customer-deliverable and useful.
+It is not ideal as a Ken/public sample unless the goal is to demonstrate how InvestorIQ handles messy source packages.
+```
+
+---
+
+## H) Fresh chat continuation prompt
+
+Use this to start the next chat:
+
+```text
+We are continuing InvestorIQ from the May 23 late-morning master context.
+
+I will upload:
+!INVESTORIQ_MASTER_CONTEXT_UPDATED_2026-05-23_LATE_MORNING_FINAL_TEST3_4_PAGE9_POLISH.md
+
+Immediate checkpoint:
+FINAL TEST 3 mixup rescue passed live and published after CORE_TABULAR_OPPOSITE_PARSER_RESCUE_BEFORE_FAIL_CLOSED.
+FINAL TEST 4 RETEST passed live and published after FORWARD_RENOVATION_DOCUMENT_TREATMENT_LABEL_RESTORE.
+FINAL TEST 4 source reconciliation warning was correct because the test fixture itself was numerically unreconciled.
+
+Current Codex patch receipt waiting for final review/commit confirmation:
+NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH only.
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+Codex receipt summary:
+- {{OCCUPANCY_BUFFER_VISUAL}} rendered as a short gauge-only block, leaving large white space when adjacent content was sparse.
+- Added compact interpretation card below Break-Even Occupancy Buffer using existing computed values only.
+- Added conditional source-reconciliation caution only when reconciliation disclosure is active.
+- Math/source truth unchanged.
+- Guards added for interpretation values, conditional caution, and no BUY/SELL/proceed language.
+- Validation passed:
+  node --check api/generate-client-report.js
+  node --check tests/qa/generate-client-report-rent-roll-smoke.js
+  node tests/qa/generate-client-report-rent-roll-smoke.js
+  git diff --check -- api/generate-client-report.js tests/qa/generate-client-report-rent-roll-smoke.js
+
+First task in the new chat:
+Review the uploaded patched files / receipt and tell me whether NOI_STABILITY_PAGE_9_WHITE_SPACE_POLISH is PASS TO COMMIT.
+Do not create a new Codex prompt until this is reviewed.
+Do not run live tests yet.
+
+Rules:
+- Micro-prompts only.
+- One task at a time.
+- SHORT FORM RECEIPT ONLY.
+- No broad refactor.
+- No parser/worker/dashboard/Stripe/DocRaptor/cron changes unless explicitly requested.
+- Do not flip DocRaptor production mode.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+```
+
+---
+
+## I) Working rules still active
+
+```text
+- Micro-prompts only.
+- One task at a time.
+- Exact files when possible.
+- No broad refactors.
+- No unrelated cleanup.
+- No broad tests unless explicitly chosen.
+- SHORT FORM RECEIPT ONLY.
+- Do not flip DocRaptor production mode.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Do not change Supabase Cron cadence unless explicitly chosen.
+- Do not let optional/supporting gaps become whole-report blockers when core docs are usable.
+- Core sufficiency passes -> publish by default unless a true customer safety/core/runtime blocker is proven.
+- Slot/filename are hints; validated document content is authority.
+- Historical-only CapEx / renovation sources must never be labeled as forward-looking modeled support.
+- True forward-looking renovation support requires validated future-facing source evidence.
+- Source reconciliation variance should be disclosed/capped, not forcibly reconciled or fabricated.
+```
+
+---
+
 # May 23, 2026 Morning Addendum - Live Test 2 Pass / Historical CapEx Document-Treatment Patches Complete / Red-Pen Log Archive-Ready
 
 ## A) Current checkpoint
