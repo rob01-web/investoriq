@@ -1,3 +1,389 @@
+# May 23, 2026 Night Addendum - 124 Richmond / Motherload Retest Batch, Classification Family Locked, Acquisition Mapping Fixed, Screening Polish Closed
+
+## A) Major live validation results from today
+
+1. Final Motherload Test 2:
+- Published.
+- Full Underwriting.
+- Customer-deliverable.
+- Classification: Review - Debt Coverage Constraint.
+- Current Debt DSCR wording is now clean.
+- Acquisition financing stayed separate from current debt.
+- Unsupported Phase I/appraisal/market survey-type docs were not quantitatively modeled.
+- Core source hierarchy looked strong.
+- Public sample readiness is close, but DocRaptor production mode and final sample review remain blockers.
+
+2. 124 Richmond Screening 2:
+- Published.
+- Customer-deliverable.
+- Not public/Ken ready at that moment because:
+  - dangling ranked-driver row still appeared: "3. : (trigger: )"
+  - Screening Data Coverage headline was too severe for clean 4/4 T12 + Rent Roll coverage
+  - DocRaptor still not production mode.
+- Later patch closed the ranked-driver and Screening coverage-headline class.
+
+3. 124 Richmond MESSY 2:
+- Published.
+- Customer-deliverable.
+- Classification: Review - Insufficient Core Support.
+- Acquisition/current-debt separation mostly worked.
+- Current debt/refinance capacity were not assessed because no verified current outstanding debt balance existed.
+- Income-line >100% optics patch worked.
+- Market survey and unsupported docs did not override modeled truth.
+- Not public/Ken ready before patches because:
+  - Deal Scorecard classification mismatch
+  - Phase I / Zoning document-treatment label drift
+  - stale "shown as unavailable" wording
+  - DocRaptor test mode.
+
+4. 124 Richmond CLEAN 2:
+- Published.
+- Customer-deliverable.
+- Not public/Ken ready before patches because:
+  - acquisition financing mapping bug persisted in rendered output and internal artifact consumption:
+    source said "Loan Amount (at $1,250,000 purchase price) $937,500"
+    but report/artifact treated $937,500 as purchase price.
+  - Closing Costs rendered 0.0% despite 1.00% lender fee + legal/appraisal note.
+  - Deal Scorecard classification mismatch.
+  - Phase I ESA showed as property tax/structured property-tax support.
+  - stale unavailable wording.
+  - DocRaptor still test mode.
+
+## B) Classification family locked
+
+InvestorIQ visible classification family:
+- Stable
+- Sensitized
+- Fragile
+- Review - Source Reconciliation Disclosure
+- Review - Insufficient Core Support
+- Review - Debt Coverage Constraint
+
+Rules:
+- Do not use Pass/Fail as visible report classification language.
+- Do not use BUY/SELL/HOLD.
+- Source reconciliation cap takes precedence.
+- Insufficient core support cap takes precedence over debt coverage when current debt is not assessed because support is insufficient.
+- Debt coverage constraint applies when true current-debt DSCR/current-debt coverage is computed and binding.
+- Never show pure Stable when a material source reconciliation cap is active.
+
+## C) Patch batch completed / committed tonight
+
+1. VISIBLE_CLASSIFICATION_SURFACE_DRIFT
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Added normalizeVisibleReportClassification(...).
+- Enforced precedence:
+  1. Review - Source Reconciliation Disclosure
+  2. Review - Insufficient Core Support
+  3. Review - Debt Coverage Constraint
+  4. Stable / Sensitized / Fragile
+- Removed visible High Risk mapping for Fragile on cover classification surfaces.
+- Replaced pass/fail-style wording with threshold/risk wording.
+Validation passed:
+- node --check api/generate-client-report.js
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+2. DEBT_DSCR_LABELING_AND_SECTION_SURFACE_CLARITY
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- DSCR language now explicitly says Current Debt DSCR.
+- Current debt/refi not-assessed copy now says no verified current outstanding debt balance was provided.
+- Debt section clarifies current-debt basis and proposed-acquisition separation.
+- If no canonical current refi debt basis and no computed current debt DSCR:
+  - strip SECTION_7_REFI_STABILITY
+  - remove empty DSCR Sensitivity / Refinance Stress / Current Debt Coverage heading blocks
+  - suppress refi sensitivity matrix token
+  - inject one clean current-debt limitation message.
+- Proposed Acquisition DSCR remains separate.
+Validation passed.
+
+3. SCREENING_EMPTY_RANKED_DRIVER_ROW_SUPPRESSION
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Initial ranked-driver render-boundary filtering added.
+- Suppresses empty/malformed driver rows.
+- Later superseded/closed more completely by SCREENING_RANKED_DRIVER_AND_COVERAGE_HEADLINE_POLISH.
+
+4. ACQUISITION_FINANCING_ASSUMPTION_CANONICAL_MAPPING
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Purchase price sourced only from explicit purchase-price/acquisition-price fields.
+- Stated acquisition loan amount takes precedence.
+- Derive loan amount only if stated amount missing and purchase price + LTV verified.
+- Closing Costs row only renders when true positive closing_costs_percent exists.
+- Lender Fee renders separately.
+- Legal/appraisal costs noted without quantified total render as notes, not 0.0%.
+- Acquisition financing remains context-only and separate from current debt.
+Validation passed.
+Note:
+- This initial render-level patch was later strengthened by artifact-level canonicalization.
+
+5. PUBLIC_COPY_DATA_NOT_AVAILABLE_DOCTRINE_DRIFT
+Files:
+- src/pages/LandingPage.jsx
+- src/pages/About.jsx
+- src/App.jsx
+Behavior:
+- Replaced public "DATA NOT AVAILABLE" style missing-item copy with doctrine-aligned copy:
+  document-driven only, no inferred/fabricated facts, unsupported/incomplete/unreconciled sections limited/qualified/omitted/disclosed, core unverifiable => no report published + credit restored.
+- Remaining DATA_NOT_AVAILABLE references were not in updated public marketing/legal pages.
+Validation/grep passed.
+No report-generation logic changed.
+
+6. INCOME_LINE_CONCENTRATION_VACANCY_OFFSET_OPTICS
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Replaced "Top Income Line Share of EGI" with "Top Income Line Compared with EGI."
+- Added EGI context: EGI is net of vacancy / credit-loss offsets.
+- Added >100% explanation:
+  Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income.
+- Table heading changed to "Top Positive Income Lines Compared with EGI."
+- Math unchanged.
+Validation passed.
+
+7. ACQUISITION_FINANCING_EXTRACTION_AND_DISPLAY_DRIFT
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Added deterministic pre-render normalization in buildAcquisitionFinancingAssumptionsHtml(...).
+- Phrase "Loan Amount (at $1,250,000 purchase price) $937,500" now maps in rendered output to:
+  purchase_price = 1,250,000
+  stated acquisition loan amount = 937,500
+- Keeps stated acquisition loan amount authoritative.
+- Prevents conflicting derived loan rendering when stated amount exists.
+- Extracts lender fee from "lender fee 1.00%" and "1.00% lender fee."
+- Preserves no Closing Costs 0.0%.
+- Preserves legal/appraisal note.
+- Acquisition financing remains separate from current debt.
+Validation passed.
+
+8. VISIBLE_CLASSIFICATION_ALIGNMENT_DEAL_SCORECARD
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Added alignDealScorecardVisibleClassificationHtml(...).
+- Deal Scorecard header classification now aligns to same normalized visible classification as cover/Executive Summary when report-level caps are active.
+- Prevents cover = Review - Insufficient Core Support while Deal Scorecard = Review - Debt Coverage Constraint when current debt is not assessed.
+- True computed DSCR < 1.25x still renders Debt Coverage Constraint when that is the active cap.
+- Source reconciliation precedence preserved.
+Validation passed.
+
+9. ACQUISITION_FINANCING_ARTIFACT_CANONICALIZATION
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Added normalizeAcquisitionFinancingArtifactPayload(payload).
+- Applied in resolveCanonicalLoanTermSheetArtifacts(...) before canonical payload selection/consumption.
+- Artifact consumption now canonicalizes:
+  "Loan Amount (at $1,250,000 purchase price) $937,500"
+  into:
+  purchase_price = 1,250,000
+  stated_acquisition_loan_amount / loan_amount = 937,500
+- Keeps stated acquisition loan amount authoritative.
+- Only derives acquisition loan amount if stated amount missing.
+- Extracts lender_fee_percent = 0.01.
+- Removes non-meaningful closing_costs_percent <= 0.
+- Preserves legal/appraisal mention as not quantified.
+- Does not populate current outstanding debt fields or current-debt DSCR basis.
+Note:
+- Patch is anchored at canonical artifact consumption and render backstop; it did not modify parser persistence pipeline.
+Validation passed.
+
+10. SUPPORT_DOC_TREATMENT_LABEL_DRIFT
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Phase I / ESA / environmental documents now classify as:
+  Listed but Not Quantitatively Modeled
+  Environmental due-diligence context only; not used quantitatively.
+- Zoning/compliance documents now classify as:
+  Listed but Not Quantitatively Modeled
+  Zoning/compliance context only; not used quantitatively.
+- Environmental/zoning checks run before property-tax branch.
+- Only true property-tax evidence with valid annual tax can render Structured property tax input.
+Validation passed.
+
+11. STALE_UNAVAILABLE_WORDING_SURFACE_DRIFT
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Replaced visible stale sentence:
+  "Metrics that depend on missing source inputs are shown as unavailable."
+- With:
+  "Metrics dependent on missing source inputs are omitted or qualified. Unsupported metrics are not inferred."
+- DATA_NOT_AVAILABLE remains as internal token/fallback mapping to visible "Not assessed."
+- "Not assessed" remains visible where intended.
+- No BUY/SELL/AI wording introduced.
+Validation passed.
+
+12. SCREENING_RANKED_DRIVER_AND_COVERAGE_HEADLINE_POLISH
+Files:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+Behavior:
+- Added sanitizeScreeningRankedDriversHtml(...) applied after final Screening HTML driver token replacement.
+- Suppresses malformed ranked-driver rows:
+  3. : (trigger: )
+  : (trigger: )
+  :
+  (trigger: )
+  blank <li>
+- Preserves valid driver rows.
+- Collapses ranked-driver block when no valid rows remain.
+- Tightened Screening Data Coverage headline gate:
+  clean Screening 4/4 T12 + 4/4 Rent Roll now stays on CORE INPUT COVERAGE CONFIRMED...
+  SOURCE RECONCILIATION DISCLOSURE still renders when reconciliation required.
+  SOURCE LIMITATIONS DISCLOSURE still renders for true explicit Screening limitation or incomplete-core constrained cases.
+- No scoring/classification/parser/delivery changes.
+Validation passed.
+
+## D) Current patch batch status
+
+```text
+The May 23 late-day/night root-class patch batch is complete and committed/pass-to-commit through SCREENING_RANKED_DRIVER_AND_COVERAGE_HEADLINE_POLISH.
+
+No more testing was performed after this batch because Rob intentionally paused retesting until all known patches were complete.
+Next work should be controlled regeneration/retest of the critical set after deployment, not another patch unless a concrete new failure appears.
+```
+
+## E) Next controlled retest set
+
+Next controlled regeneration/retest set:
+1. 124 Richmond CLEAN underwriting
+2. 124 Richmond MESSY underwriting
+3. 124 Richmond Screening
+4. Final Motherload underwriting
+5. Final controlled Screening source-reconciliation disclosure test if needed
+
+Inspection checklist:
+- no dangling ranked-driver row
+- clean Screening coverage headline for clean 4/4 Screening package
+- acquisition term sheet maps purchase price $1,250,000 and stated loan $937,500
+- lender fee shows 1.0%
+- no Closing Costs 0.0%
+- Deal Scorecard classification matches cover/Executive Summary
+- Phase I and Zoning are not property-tax support
+- income-line >100% has EGI/vacancy-credit-loss context
+- no stale "shown as unavailable" wording
+- current-debt DSCR and proposed acquisition DSCR remain separate
+- unsupported docs remain listed but not quantitatively modeled
+- DocRaptor production mode still remains separate final public-sample blocker
+
+## F) Launch/Ken-readiness plan
+
+Target: launch / Ken Dunn outreach by end of day Monday May 25 is realistic only if the next controlled retest batch passes and patches remain surgical.
+
+Remaining blockers before public/Ken distribution:
+1. Controlled retest batch must pass.
+2. Pick final public Screening PDF and final public Underwriting PDF.
+3. DocRaptor production mode must be enabled/verified for final public sample generation.
+4. Final Doberman review:
+   - no watermark
+   - no classification mismatch
+   - no wrong document-treatment labels
+   - no acquisition/current-debt contamination
+   - no stale DATA NOT AVAILABLE/unavailable wording
+   - no BUY/SELL/HOLD
+   - no AI/vendor/internal QA language
+   - no mojibake/template tokens/undefined/NaN
+5. Wire approved final sample PDFs/preview images into homepage placeholders.
+6. Run one checkout/upload/publish smoke if time permits.
+7. Send Ken outreach.
+
+Important:
+
+Homepage preview boxes should remain placeholders until final production-mode Screening and Underwriting reports are generated, reviewed, and approved.
+Do not polish/replace preview boxes before final samples exist.
+
+## G) Still open / launch-hardening / monitor-only
+
+1. DocRaptor production-mode verification before public/external sample distribution.
+2. Supabase Cron continuation proof on real queued jobs.
+3. Disable scheduled GitHub worker only after Cron proves stable; preserve manual/emergency fallback if possible.
+4. Rotate important Vercel secrets before launch.
+5. Pre-outreach Codex repo-wide audit before messaging Ken:
+   look for hidden surprises, duplicate blocks, launch blockers, stale public wording, and repo hygiene.
+6. Dashboard auto-visibility/refresh polish remains post-launch or later hardening, not current report-core blocker.
+
+## H) Fresh chat continuation prompt
+
+We are continuing InvestorIQ from the May 23 night master context.
+
+Immediate checkpoint:
+The May 23 late-day/night root-class patch batch is complete through:
+1. VISIBLE_CLASSIFICATION_SURFACE_DRIFT
+2. DEBT_DSCR_LABELING_AND_SECTION_SURFACE_CLARITY
+3. SCREENING_EMPTY_RANKED_DRIVER_ROW_SUPPRESSION
+4. ACQUISITION_FINANCING_ASSUMPTION_CANONICAL_MAPPING
+5. PUBLIC_COPY_DATA_NOT_AVAILABLE_DOCTRINE_DRIFT
+6. INCOME_LINE_CONCENTRATION_VACANCY_OFFSET_OPTICS
+7. ACQUISITION_FINANCING_EXTRACTION_AND_DISPLAY_DRIFT
+8. VISIBLE_CLASSIFICATION_ALIGNMENT_DEAL_SCORECARD
+9. ACQUISITION_FINANCING_ARTIFACT_CANONICALIZATION
+10. SUPPORT_DOC_TREATMENT_LABEL_DRIFT
+11. STALE_UNAVAILABLE_WORDING_SURFACE_DRIFT
+12. SCREENING_RANKED_DRIVER_AND_COVERAGE_HEADLINE_POLISH
+
+Classification family locked:
+Stable
+Sensitized
+Fragile
+Review - Source Reconciliation Disclosure
+Review - Insufficient Core Support
+Review - Debt Coverage Constraint
+
+Do not use Pass/Fail as visible report classification language.
+
+No more testing was done after the final Screening polish patch because Rob paused retesting until all patches were complete.
+
+Next action:
+Deploy/confirm patches, then run controlled retest batch:
+1. 124 Richmond CLEAN underwriting
+2. 124 Richmond MESSY underwriting
+3. 124 Richmond Screening
+4. Final Motherload underwriting
+5. Controlled Screening source-reconciliation disclosure test if needed
+
+Rules:
+- Micro-prompts only.
+- One task at a time.
+- No broad refactors.
+- No new patch unless retest exposes concrete failure.
+- Do not flip DocRaptor production mode until controlled retest batch passes and final sample generation is explicitly chosen.
+- Do not replace homepage sample placeholders until final production-mode public Screening + Underwriting PDFs are approved.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Preserve customer-deliverable vs public-sample distinction.
+
+## I) Safety constraints for this MD update
+
+- Do not rewrite old history.
+- Do not remove older addenda.
+- Do not delete the existing May 23 late-morning addendum.
+- Add this as the new top/current addendum.
+- Keep wording concise but complete.
+- Do not invent unconfirmed live retest results after the patch batch.
+- Mark the next step as controlled retest, not already passed.
+
+---
 # May 23, 2026 Late-Morning Addendum - Final Test 3 Mixup Rescue Passed / Final Test 4 Renovation Label Passed / Page 9 NOI Stability Polish Closed
 
 ## A) Current checkpoint
@@ -14079,3 +14465,4 @@ Use Repo-Wide Audit Mode after two failed surgical patches in the same bug class
   - Screening is close but needs rent-gap consistency and label polish
   - Harbourstone is stress-test proof only
   - do not show any report to Ken with DocRaptor test watermark, `Test`, `CLEAN`, `MESSY`, typo `Underwritting`, stale Methodology numbering, inconsistent rent-gap percentages, unsupported post-reno wording, or dangling `DATA NOT AVAILABLE`
+
