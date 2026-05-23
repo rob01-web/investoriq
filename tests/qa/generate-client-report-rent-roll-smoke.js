@@ -1714,6 +1714,42 @@ const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCover
 });
 assert.match(liveCurrentDebtModeledCoverageHtml, /Structured current debt input/i);
 assert.match(liveCurrentDebtModeledCoverageHtml, /Modeled Inputs/i);
+const cleanScreeningCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "screening_v1",
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    variance_pct: 0,
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+});
+assert.match(cleanScreeningCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.equal(/SOURCE LIMITATIONS DISCLOSURE/i.test(cleanScreeningCoverageHtml), false);
+
 const reconciliationDisclosureCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
     gross_potential_rent: 1087488,
@@ -1750,6 +1786,41 @@ const reconciliationDisclosureCoverageHtml = generatorTest.buildScreeningDataCov
 assert.match(reconciliationDisclosureCoverageHtml, /SOURCE RECONCILIATION DISCLOSURE/i);
 assert.equal(/Fully Verified/i.test(reconciliationDisclosureCoverageHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(reconciliationDisclosureCoverageHtml), false);
+const sourceLimitedScreeningCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "screening_v1",
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    variance_pct: null,
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+    source_limited_disclosure_required: true,
+  },
+});
+assert.match(sourceLimitedScreeningCoverageHtml, /SOURCE LIMITATIONS DISCLOSURE/i);
 
 const reconciliationDisclosureCoverageHtmlUnderwriting = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
@@ -2156,6 +2227,11 @@ const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeFor
 });
 assert.equal(suppressedReconciliationIncomeHtml.includes("Rent roll annualized rent is"), false);
 assert.equal(suppressedReconciliationIncomeHtml.includes("-48.0%"), false);
+const malformedRankedDriversHtml = "<!-- BEGIN EXEC_RANKED_DRIVERS --><ol><li>1. NOI Margin: 32.0% (trigger: <= 45.0% sensitized threshold breached)</li><li>3. : (trigger: )</li></ol><!-- END EXEC_RANKED_DRIVERS -->";
+const sanitizedRankedDriversHtml = generatorTest.sanitizeScreeningRankedDriversHtml(malformedRankedDriversHtml);
+assert.equal(/: \(trigger:\s*\)/i.test(sanitizedRankedDriversHtml), false);
+assert.equal(/<li>\s*:\s*<\/li>|<li>\s*\(trigger:\s*\)\s*<\/li>/i.test(sanitizedRankedDriversHtml), false);
+assert.match(sanitizedRankedDriversHtml, /NOI Margin: 32\.0%/i);
 
 const acquisitionOnlyCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {

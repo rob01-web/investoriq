@@ -1306,6 +1306,33 @@ function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
 }
 
+function sanitizeScreeningRankedDriversHtml(html) {
+  if (typeof html !== "string") return html;
+  const sectionPattern = /<!-- BEGIN EXEC_RANKED_DRIVERS -->([\s\S]*?)<!-- END EXEC_RANKED_DRIVERS -->/g;
+  return html.replace(sectionPattern, (_full, body) => {
+    if (typeof body !== "string" || !body.trim()) return "";
+    let nextBody = body.replace(/<li>([\s\S]*?)<\/li>/gi, (row, inner) => {
+      const plain = String(inner || "")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!plain) return "";
+      if (
+        /^\d+\.\s*:\s*\(trigger:\s*\)$/i.test(plain) ||
+        /^:\s*\(trigger:\s*\)$/i.test(plain) ||
+        /^\(trigger:\s*\)$/i.test(plain) ||
+        /^:$/i.test(plain)
+      ) {
+        return "";
+      }
+      return row;
+    });
+    nextBody = nextBody.replace(/<ol>\s*<\/ol>/gi, "");
+    const hasValidRow = /<li>[\s\S]*?<\/li>/i.test(nextBody);
+    return hasValidRow ? `<!-- BEGIN EXEC_RANKED_DRIVERS -->${nextBody}<!-- END EXEC_RANKED_DRIVERS -->` : "";
+  });
+}
+
 function dedupeDataNotAvailableBySection(html) {
   if (typeof html !== "string") return html;
   const sectionPattern = /<!-- BEGIN ([A-Z0-9_]+) -->([\s\S]*?)<!-- END \1 -->/g;
@@ -3030,7 +3057,14 @@ function buildScreeningDataCoverageSummary({
   const sourceReconciliationRequired = Boolean(
     buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
   );
-  const sourceLimitedDisclosureRequired = Number(sectionEligibility?.source_constrained_section_count || 0) > 0;
+  const sourceConstrainedSectionCount = Number(sectionEligibility?.source_constrained_section_count || 0);
+  const explicitScreeningSourceLimitedDisclosure =
+    sectionEligibility?.source_limited_disclosure_required === true ||
+    sectionEligibility?.screening_source_limited_disclosure_required === true;
+  const sourceLimitedDisclosureRequired =
+    effectiveReportMode === "screening_v1"
+      ? explicitScreeningSourceLimitedDisclosure || (sourceConstrainedSectionCount > 0 && !allPresent)
+      : sourceConstrainedSectionCount > 0;
   const suppressVerifiedCoverageCopy = sourceReconciliationRequired || sourceLimitedDisclosureRequired;
   const reconciliationCoverageHeadline = sourceReconciliationRequired
     ? "CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE"
@@ -6187,6 +6221,9 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_LABEL}}", driver3?.label || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+    if (effectiveReportMode === "screening_v1") {
+      finalHtml = sanitizeScreeningRankedDriversHtml(finalHtml);
+    }
     // Ranked drivers are screening-only and only render when a true pressure driver exists.
     if (effectiveReportMode === "v1_core" || !driver1) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_RANKED_DRIVERS");
@@ -9262,6 +9299,7 @@ export const __test__ = {
   buildScreeningExpenseStructureHtml,
   buildScreeningNoiStabilityHtml,
   buildScreeningRentRollDistributionHtml,
+  sanitizeScreeningRankedDriversHtml,
   buildRenovationBudgetRows,
   buildRenovationBudgetCardHtml,
   buildRenovationExecutionRows,
