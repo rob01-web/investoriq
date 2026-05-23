@@ -2977,10 +2977,11 @@ function buildScreeningIncomeForensicsHtml({
     Number.isFinite(incomeLines[0]?.amount)
       ? incomeLines[0].amount / egi
       : null;
+  const concentrationExceedsEgi = Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration > 1;
   const concentrationLineHtml = Number.isFinite(topIncomeLineConcentration)
-    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Share of EGI</p><div style="font-size:11px;line-height:1.6;color:#374151;">${escapeHtml(
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Top Income Line Compared with EGI</p><div style="font-size:11px;line-height:1.6;color:#374151;">${escapeHtml(
         formatPercent1(topIncomeLineConcentration)
-      )}</div><div class="note">Largest eligible income line as a share of Effective Gross Income.</div></div>`
+      )}${concentrationExceedsEgi ? ` <span style="color:#6b7280;">(EGI is net of vacancy / credit-loss offsets)</span>` : ""}</div><div class="note">Largest eligible income line compared with Effective Gross Income after vacancy / credit-loss offsets.${concentrationExceedsEgi ? " Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income." : ""}</div></div>`
     : "";
   let marketPremiumPct = null;
   const avgInPlace = coerceNumber(
@@ -3008,7 +3009,7 @@ function buildScreeningIncomeForensicsHtml({
     bullets.push(
       `Top income line concentration is ${formatPercent1(
         topIncomeLineConcentration
-      )} of EGI (concentration flag).`
+      )} of EGI${topIncomeLineConcentration > 1 ? " (EGI net of vacancy / credit-loss offsets)" : ""} (concentration flag).`
   );
 }
 
@@ -3060,7 +3061,7 @@ function buildScreeningIncomeForensicsHtml({
     ? `<div class="card no-break" style="margin-top:6px;"><ul>${bulletsHtml}</ul></div>`
     : "";
   const incomeCard = incomeRowsHtml
-    ? `<div class="card no-break"><p class="subsection-title">Top Positive Income Lines (% of EGI, before vacancy offset)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table></div>`
+    ? `<div class="card no-break"><p class="subsection-title">Top Positive Income Lines Compared with EGI</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${incomeRowsHtml}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Line-item comparisons use EGI as denominator; EGI is net of vacancy / credit-loss offsets.</p></div>`
     : "";
   const expenseCard = expenseRowsHtml
     ? `<div class="card no-break"><p class="subsection-title">Top Expense Drivers (share of OpEx)</p><table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml}</tbody></table></div>`

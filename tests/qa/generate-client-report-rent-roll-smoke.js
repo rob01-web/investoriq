@@ -114,6 +114,13 @@ assert.match(
   /Refinance stress and binding-constraint analysis is based on current outstanding debt inputs/
 );
 assert.equal(/DSCR \(Computed\)/i.test(reportSource), false);
+assert.equal(/Top Income Line Share of EGI/.test(reportSource), false);
+assert.match(reportSource, /Top Income Line Compared with EGI/);
+assert.match(reportSource, /EGI is net of vacancy \/ credit-loss offsets/);
+assert.match(
+  reportSource,
+  /Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income\./
+);
 assert.match(
   reportSource,
   /const occupancyInterpretation = `Break-even occupancy is \$\{beoFmt\} versus current occupancy of \$\{currFmt\}, indicating a \$\{bufPts\} percentage-point operating cushion based on reported T12 totals\.`/
@@ -324,6 +331,36 @@ const rentRollLeakFreeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
 assert.equal(rentRollLeakFreeHtml.includes("$21,744,000"), false);
 assert.match(rentRollLeakFreeHtml, /\$1,087,488/);
 assert.match(rentRollLeakFreeHtml, /\$961,200/);
+assert.equal(rentRollLeakFreeHtml.includes("Top Income Line Share of EGI"), false);
+
+const overEgiIncomeConcentrationHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+  t12Payload: {
+    effective_gross_income: 1100000,
+    gross_potential_rent: 1850000,
+    gross_scheduled_rent: 1850000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+    income_lines: [{ label: "Gross Rental Income", amount: 1850000 }],
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    occupancy: 0.95,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 961200,
+    occupancy: 0.95,
+  },
+  formatCurrency,
+});
+assert.match(overEgiIncomeConcentrationHtml, /Top Income Line Compared with EGI/);
+assert.match(overEgiIncomeConcentrationHtml, /EGI is net of vacancy \/ credit-loss offsets/i);
+assert.match(
+  overEgiIncomeConcentrationHtml,
+  /Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income\./i
+);
+assert.equal(overEgiIncomeConcentrationHtml.includes("Top Income Line Share of EGI"), false);
 
 const rendererCanonicalState = generatorTest.buildRendererCanonicalState({
   computedRentRoll: { total_units: 48, total_in_place_annual: 1087488 },
@@ -1942,6 +1979,9 @@ const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml
 });
 assert.match(reconciliationIncomeHtml, /Rent Roll vs T12 GPR variance: \+6\.1%\. See Data Coverage\./i);
 assert.equal(reconciliationIncomeHtml.includes("-48.0%"), false);
+assert.match(reconciliationIncomeHtml, /Top Income Line Compared with EGI/);
+assert.match(reconciliationIncomeHtml, /EGI is net of vacancy \/ credit-loss offsets/i);
+assert.equal(reconciliationIncomeHtml.includes("Top Income Line Share of EGI"), false);
 
 const reconciliationNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
   t12Payload: {
