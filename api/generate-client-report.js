@@ -141,6 +141,14 @@ function normalizeVisibleReportClassification({
   }
   return "Review - Insufficient Core Support";
 }
+function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visibleClassificationLabel) {
+  if (typeof dealScoreTableHtml !== "string" || !dealScoreTableHtml.trim()) return dealScoreTableHtml || "";
+  if (typeof visibleClassificationLabel !== "string" || !visibleClassificationLabel.trim()) return dealScoreTableHtml;
+  return dealScoreTableHtml.replace(
+    /(<span style="font-size:24px;font-weight:800;color:#1F3A5F;letter-spacing:2px;">)([^<]*)(<\/span>)/i,
+    `$1${escapeHtml(visibleClassificationLabel)}$3`
+  );
+}
 // Helper to safely replace all occurrences of a token
 function replaceAll(str, token, value) {
   if (!str || !token) return str;
@@ -2366,8 +2374,65 @@ function buildAcquisitionFinancingAssumptionsHtml({
     const scale = Math.max(Math.abs(a), Math.abs(b), 1);
     return Math.abs(a - b) > Math.max(100, scale * 0.02);
   };
+  const parseMoneyFromCapture = (rawValue) => {
+    if (typeof rawValue !== "string") return null;
+    const normalized = rawValue.replace(/[$,\s]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+  const extractPurchasePriceFromText = (text) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const contextualPatterns = [
+      /(?:at|based on)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
+      /(?:purchase|acquisition|asking)\s*price[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ];
+    for (const pattern of contextualPatterns) {
+      const match = text.match(pattern);
+      const parsed = parseMoneyFromCapture(match?.[1] ?? null);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const extractStatedLoanAmountFromText = (text) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const contextualPatterns = [
+      /loan amount\s*\([^)]*\)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ];
+    for (const pattern of contextualPatterns) {
+      const match = text.match(pattern);
+      const parsed = parseMoneyFromCapture(match?.[1] ?? null);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const extractPercentFromText = (text, labelRegex) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const pattern = new RegExp(`${labelRegex.source}[^0-9]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
+    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,40}${labelRegex.source}`, "i");
+    const directMatch = text.match(pattern);
+    const reverseMatch = text.match(reversePattern);
+    const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed / 100 : null;
+  };
+  const acquisitionContextText = [
+    termsPayload?.source_text,
+    termsPayload?.raw_text,
+    termsPayload?.notes,
+    termsPayload?.loan_terms_text,
+    termsPayload?.extracted_text,
+    termsPayload?.closing_cost_notes,
+    acquisitionSupportPayload?.source_text,
+    acquisitionSupportPayload?.raw_text,
+    acquisitionSupportPayload?.notes,
+    acquisitionSupportPayload?.loan_terms_text,
+    acquisitionSupportPayload?.extracted_text,
+    acquisitionSupportPayload?.closing_cost_notes,
+  ]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join("\n");
 
-  const purchasePrice = firstFinite(
+  let purchasePrice = firstFinite(
     termsPayload.purchase_price,
     termsPayload.purchasePrice,
     termsPayload.acquisition_price,
@@ -2378,7 +2443,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
     acquisitionSupportPayload?.purchase_price_amount
   );
   const ltv = firstFinite(termsPayload.ltv, acquisitionSupportPayload?.ltv);
-  const statedLoanAmount = firstFinite(
+  let statedLoanAmount = firstFinite(
     termsPayload.loan_amount,
     termsPayload.proposed_loan_amount,
     termsPayload.acquisition_loan_amount,
@@ -2388,6 +2453,24 @@ function buildAcquisitionFinancingAssumptionsHtml({
     acquisitionSupportPayload?.acquisition_loan_amount,
     acquisitionSupportPayload?.stated_loan_amount
   );
+  const purchasePriceFromText = extractPurchasePriceFromText(acquisitionContextText);
+  const statedLoanAmountFromText = extractStatedLoanAmountFromText(acquisitionContextText);
+  if (!Number.isFinite(statedLoanAmount) || statedLoanAmount <= 0) {
+    statedLoanAmount = statedLoanAmountFromText;
+  }
+  if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+    purchasePrice = purchasePriceFromText;
+  } else if (
+    Number.isFinite(statedLoanAmount) &&
+    statedLoanAmount > 0 &&
+    materiallyDifferentAmount(purchasePrice, purchasePriceFromText) &&
+    !materiallyDifferentAmount(purchasePrice, statedLoanAmount) &&
+    Number.isFinite(purchasePriceFromText) &&
+    purchasePriceFromText > 0
+  ) {
+    // If extracted purchase price duplicated loan amount, prefer explicit purchase-price context from source text.
+    purchasePrice = purchasePriceFromText;
+  }
   const providedDerivedLoanAmount = firstFinite(
     termsPayload.derived_acquisition_loan_amount,
     acquisitionSupportPayload?.derived_acquisition_loan_amount
@@ -2419,13 +2502,18 @@ function buildAcquisitionFinancingAssumptionsHtml({
     termsPayload.closing_costs_percent,
     acquisitionSupportPayload?.closing_costs_percent
   );
+  const lenderFeePercentFromText = extractPercentFromText(
+    acquisitionContextText,
+    /(lender fee|financing fee|origination fee)/
+  );
   const lenderFeePercent = firstFinite(
     termsPayload.lender_fee_percent,
     termsPayload.financing_fee_percent,
     termsPayload.origination_fee_percent,
     acquisitionSupportPayload?.lender_fee_percent,
     acquisitionSupportPayload?.financing_fee_percent,
-    acquisitionSupportPayload?.origination_fee_percent
+    acquisitionSupportPayload?.origination_fee_percent,
+    lenderFeePercentFromText
   );
   const unquantifiedLegalAppraisalMention = /legal|appraisal/.test(
     `${String(termsPayload?.closing_cost_notes || "")} ${String(acquisitionSupportPayload?.closing_cost_notes || "")}`.toLowerCase()
@@ -5815,6 +5903,12 @@ if (effectiveReportMode === "screening_v1") {
       coreSupportInsufficient,
       debtCoverageConstraintActive,
     });
+    if (effectiveReportMode === "v1_core") {
+      dealScoreState.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml(
+        dealScoreState.dealScoreTableHtml,
+        coverClassificationLabel
+      );
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_PROFILE_CLASSIFICATION}}",
@@ -8966,6 +9060,7 @@ try {
 }
 
 export const __test__ = {
+  alignDealScorecardVisibleClassificationHtml,
   buildAcquisitionFinancingAssumptionsHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,

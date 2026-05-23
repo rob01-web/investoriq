@@ -70,6 +70,10 @@ assert.match(
   reportSource,
   /const coverClassificationLabel = normalizeVisibleReportClassification\(\{[\s\S]*sourceReconciliationCapActive[\s\S]*coreSupportInsufficient[\s\S]*debtCoverageConstraintActive/
 );
+assert.match(
+  reportSource,
+  /dealScoreState\.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml\([\s\S]{0,220}coverClassificationLabel/
+);
 assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);
 assert.equal(
   /effectiveReportMode === "screening_v1"[\s\S]{0,180}Review - Debt Coverage Constraint/.test(reportSource),
@@ -988,6 +992,12 @@ assert.equal(constrainedDscrDealScoreState.dealScoreTableHtml.includes("Within U
 assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Review - Debt Coverage Constraint/);
 assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Current debt DSCR is below 1\.25x/i);
 assert.equal(/Current debt is not assessed/i.test(constrainedDscrDealScoreState.dealScoreTableHtml), false);
+const insufficientCoreSupportAlignedScorecardHtml = generatorTest.alignDealScorecardVisibleClassificationHtml(
+  constrainedDscrDealScoreState.dealScoreTableHtml,
+  "Review - Insufficient Core Support"
+);
+assert.match(insufficientCoreSupportAlignedScorecardHtml, /Review - Insufficient Core Support/);
+assert.equal(/Review - Debt Coverage Constraint/i.test(insufficientCoreSupportAlignedScorecardHtml), false);
 
 const constrainedDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -1577,6 +1587,33 @@ assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquis
 assert.match(acquisitionCanonicalMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(/Current Debt DSCR/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionCanonicalMappingHtml), false);
+const acquisitionContextTextMappingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  acquisitionTermsPayload: {
+    purchase_price: 937500,
+    loan_amount: 937500,
+    ltv: 0.75,
+    interest_rate: 5.85,
+    amortization_years: 30,
+    closing_cost_notes: "1.00% lender fee + standard legal / appraisal costs",
+    source_text:
+      "Loan Amount (at $1,250,000 purchase price) $937,500. Proposed Loan-to-Value (LTV) 75%. Interest Rate 5.85%. Amortization 30 years. Closing / Fees 1.00% lender fee + standard legal / appraisal costs.",
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.match(acquisitionContextTextMappingHtml, /Purchase Price[\s\S]{0,80}\$1,250,000/i);
+assert.match(acquisitionContextTextMappingHtml, /Stated Acquisition Loan Amount[\s\S]{0,80}\$937,500/i);
+assert.equal(/Purchase Price[\s\S]{0,80}\$937,500/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquisitionContextTextMappingHtml), false);
+assert.match(acquisitionContextTextMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
+assert.match(acquisitionContextTextMappingHtml, /Closing Cost Notes[\s\S]{0,120}Legal\/appraisal costs noted; not quantified/i);
+assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/Current Debt DSCR/i.test(acquisitionContextTextMappingHtml), false);
 assert.equal(
   /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Unsupported (?:Appraisal Summary|Market Survey)\.pdf/i.test(documentTreatmentHtml),
   false
