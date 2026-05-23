@@ -1,3 +1,378 @@
+# May 23, 2026 Morning Addendum - Live Test 2 Pass / Historical CapEx Document-Treatment Patches Complete / Red-Pen Log Archive-Ready
+
+## A) Current checkpoint
+
+```text
+BOOOOOOOOOOM.
+```
+
+After the May 22 evening gate-doctrine lock and FINAL TEST 1 live pass, Rob ran FINAL TEST 2 as the final night validation. FINAL TEST 2 passed and published.
+
+Current completed/committed items since the previous master context update:
+
+```text
+1. FINAL_TEST_2_LIVE_VALIDATION - COMPLETE / LIVE PASS / PUBLISHED
+2. HISTORICAL_CAPEX_DOCUMENT_TREATMENT_LABEL_POLISH - COMPLETE / COMMITTED / PASS
+3. HISTORICAL_CAPEX_OVERRIDE_FORWARD_LOOKING_NOISY_FLAG - COMPLETE / COMMITTED / PASS
+4. RED_PEN_PATCH_LOG_STATUS_REVIEW - COMPLETE / ARCHIVE-READY AFTER THIS MASTER CONTEXT IS COMMITTED
+```
+
+Current interpretation:
+
+```text
+The May 21/22 red-pen root-class patch list is complete.
+The May 22 evening delivery-gate doctrine is complete and live-validated.
+FINAL TEST 1 and FINAL TEST 2 both published under the new disclose-only / self-heal delivery doctrine.
+The remaining work is launch-hardening / monitoring unless a new concrete live failure appears.
+```
+
+---
+
+## B) FINAL TEST 2 live validation passed
+
+Live report:
+
+```text
+FINAL TEST 2
+Report type: Full Underwriting
+Classification: Review - Source Reconciliation Disclosure
+Customer delivery: PASS
+Publication: PASS
+```
+
+Delivery-gate proof:
+
+```text
+delivery_gate_status: deliverable
+report_publishable: true
+customer_publish_eligible: true
+customer_delivery_ready: true
+customer_publish_blockers: []
+admin_review_required: false
+user_needs_documents: false
+customer_delivery_impact: disclose_only
+source_limitation_reason_codes: RENT_ROLL_T12_RECONCILIATION_REQUIRED
+```
+
+Pipeline proof:
+
+```text
+extracting -> underwriting -> scoring -> rendering -> pdf_generating -> publishing -> published
+report row created
+PDF stored
+report_published email_sent artifact written
+```
+
+Report-surface proof:
+
+```text
+- Cover / classification rendered Review - Source Reconciliation Disclosure.
+- Required T12 and rent roll fields were extracted.
+- Data Coverage disclosed that the rent roll / T12 income scale variance remains unresolved.
+- The source package published with disclosure rather than admin review.
+```
+
+Important support-doc gating proof:
+
+```text
+Unsupported / background documents were listed but not quantitatively modeled:
+- Broker_Email_Silvergate.pdf
+- UNSUPPORTED_Phase_I_ESA.pdf
+- UNSUPPORTED_Appraisal_Summary.pdf
+- UNSUPPORTED_Market_Survey.pdf
+```
+
+Historical CapEx proof:
+
+```text
+Historical_CapEx_Note.pdf rendered historical line items only.
+InvestorIQ did not model ROI, rent lift, payback, NOI impact, valuation impact, refinance impact, or forward-looking renovation returns from the historical-only source.
+```
+
+Tiny issue found from FINAL TEST 2:
+
+```text
+Document Treatment Summary initially labeled Historical_CapEx_Note.pdf under Modeled Inputs as:
+“Forward-looking renovation support is document-backed”
+
+But the source was historical-only. The rendered renovation section itself was safe; the issue was document-treatment label/classification polish only.
+```
+
+Outcome:
+
+```text
+FINAL TEST 2 = BOOOOOOOOM PASS.
+Customer delivery: PASS.
+Publication pipeline: PASS.
+Unsupported support-doc gating: PASS.
+Historical CapEx rendering: PASS.
+Source reconciliation disclose-only delivery: PASS.
+```
+
+---
+
+## C) Historical CapEx document-treatment label polish complete
+
+Patch:
+
+```text
+HISTORICAL_CAPEX_DOCUMENT_TREATMENT_LABEL_POLISH
+```
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+System-wide label cause:
+
+```text
+Renovation document treatment labeled forward-looking modeled input from renovationDisplayMode alone, even when validated forward-looking support was absent.
+```
+
+Behavior fixed:
+
+```text
+In buildDocumentTreatmentSummaryHtml(...), forward-looking renovation modeled labels now require hasForwardLookingRenovationInputs === true.
+If renovationDisplayMode is forward-looking but validated forward-looking inputs are absent, classification falls back to limited-use historical/budget wording.
+```
+
+Expected behavior after patch:
+
+```text
+Historical-only renovation / CapEx support:
+-> Displayed / Limited Use
+-> Historical capital items are displayed for context only.
+-> not Modeled Inputs as forward-looking renovation support
+-> no “Forward-looking renovation support is document-backed” label
+```
+
+Preserved:
+
+```text
+True forward-looking renovation support remains classified as modeled / structured only when validated forward-looking inputs are present.
+No parser, AI recovery, report math, delivery gate, worker, cron, dashboard, DocRaptor, Stripe, credit, or renderer-section behavior changed.
+```
+
+Validation passed:
+
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Commit status:
+
+```text
+Committed and pushed.
+```
+
+---
+
+## D) Historical CapEx override for noisy forward-looking flags complete
+
+Patch:
+
+```text
+HISTORICAL_CAPEX_OVERRIDE_FORWARD_LOOKING_NOISY_FLAG
+```
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Remaining risk fixed:
+
+```text
+If upstream set hasForwardLookingRenovationInputs=true too permissively, a historical-only CapEx / renovation document could still be mislabeled as forward-looking modeled support.
+```
+
+Behavior fixed:
+
+```text
+A narrow historical-only override now wins over noisy forward-looking flags.
+Forward-looking modeled labeling now requires both forward-looking mode/flag and no historical-only override evidence.
+```
+
+Historical-only override signals include explicit payload/metadata text such as:
+
+```text
+timing_or_phasing = Historical
+historical-only interpretation / budget_note / execution_note
+historical capital items
+past repairs
+prior work
+completed work
+no forward-looking budget
+no rent lift
+no ROI
+no payback
+no implementation schedule
+```
+
+Expected behavior after patch:
+
+```text
+Historical-only evidence + noisy forward-looking flag:
+-> Displayed / Limited Use
+-> historical context wording
+-> not Modeled Inputs
+-> no “Forward-looking renovation support is document-backed”
+```
+
+Preserved:
+
+```text
+True forward-looking support remains modeled when evidence includes future implementation timing / phasing and/or document-stated rent lift, with no historical-only override language.
+Budget-only / no-ROI mode remains limited-use.
+```
+
+Validation passed:
+
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Commit status:
+
+```text
+Committed and pushed.
+```
+
+---
+
+## E) Red-pen root-cause patch log status
+
+Uploaded red-pen file reviewed:
+
+```text
+!InvestorIQ_Red_Pen_Root_Cause_Patch_Log_UPDATED_2026-05-22_MORNING.md
+```
+
+Conclusion:
+
+```text
+The May 21/22 red-pen active patch list is complete.
+The red-pen file is now a historical working log, not an active task list.
+After this master context file is committed, the red-pen file can be archived or deleted from the repo.
+```
+
+Closed active red-pen classes include:
+
+```text
+SOURCE_RECONCILIATION_REVIEW_SURFACE_ALIGNMENT
+NO_CURRENT_DEBT_SECTION_SURFACE_COLLAPSE
+FAILED_STATE_COPY_AND_DIAGNOSTIC_CLARITY
+MISSING_STRUCTURED_FINANCIAL_ARTIFACTS_DIAGNOSTIC_PRECISION
+STRUCTURED_PARSE_DISPATCH_FAILURE_NOT_TERMINALIZED
+SUPABASE_CRON_AUTH_AND_ENDPOINT_CONTRACT / 3-minute cadence verification
+METHODOLOGY_INSTITUTIONAL_WORDING_CLEANUP
+ANCILLARY_INCOME_CONCENTRATION_LABEL_POLISH
+RENOVATION_NOTE_DUPLICATION_POLISH
+RENOVATION_RENT_LIFT_NO_MODEL_COPY_POLISH
+RENOVATION_TITLE_POLISH
+PUBLIC_SAMPLE_NAME_HYGIENE / PRODUCTION PROPERTY NAME PRESERVATION
+```
+
+The two CapEx document-treatment patches from May 23 extend/lock the already-closed historical CapEx / renovation treatment classes and should live in this master context rather than keeping a separate active red-pen log.
+
+Recommended repo action after committing this master context:
+
+```text
+Archive/delete the separate red-pen patch log from the repo if desired.
+Keep a local copy only if Rob wants historical notes.
+Do not treat the red-pen file as active operating context going forward.
+```
+
+---
+
+## F) Current active list after May 23 morning
+
+No active report-quality patch list remains open from the red-pen series or FINAL TEST 1 / FINAL TEST 2 sequence.
+
+Still open / launch-hardening / monitor-only:
+
+```text
+1. Real end-to-end Supabase Cron continuation proof.
+   - Watch at least one real queued/extracting job progress without GitHub/manual kick.
+
+2. GitHub worker disablement.
+   - Do not disable yet.
+   - Disable scheduled GitHub worker only after Supabase Cron stability is proven on real jobs.
+   - Preserve manual/emergency dispatch if possible.
+
+3. Dashboard failed-state status-line cleanup.
+   - Optional later polish only.
+   - Message body/next-step copy improved; some status-line/reference-code surfaces may still show raw technical codes.
+
+4. Broader non-target failure-code copy sweep.
+   - Optional later pass only if additional failure codes show old phrasing.
+
+5. DocRaptor production mode.
+   - Still not flipped.
+   - Production-mode verification remains a separate launch step.
+
+6. Vercel/environment secret rotation.
+   - Still required before launch.
+   - Do carefully after core launch blockers are stable.
+```
+
+Recommended next action:
+
+```text
+Commit this updated master context.
+Then choose deliberately between:
+- one controlled validation / Cron observation cycle; or
+- launch-hardening checkpoint planning; or
+- DocRaptor production-mode verification later, only when explicitly chosen.
+```
+
+Do not do next without explicit choice:
+
+```text
+- no broad patch family;
+- no broad root-class audit;
+- no DocRaptor production flip;
+- no GitHub worker disablement;
+- no secret rotation mid-debug;
+- no Supabase Cron cadence change;
+- no parser/worker/dashboard/Stripe changes unless a concrete failure appears.
+```
+
+---
+
+## G) Working rules still active
+
+```text
+- Micro-prompts only.
+- One task at a time.
+- Exact files when possible.
+- No broad refactors.
+- No unrelated cleanup.
+- No broad tests unless explicitly chosen.
+- SHORT FORM RECEIPT ONLY.
+- Do not flip DocRaptor production mode.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Do not change Supabase Cron cadence unless explicitly chosen.
+- Do not let optional/supporting gaps become whole-report blockers when core docs are usable.
+- Core sufficiency passes -> publish by default unless a true customer safety/core/runtime blocker is proven.
+- Historical-only CapEx / renovation sources must never be labeled as forward-looking modeled support.
+- True forward-looking renovation support requires validated future-facing source evidence.
+```
+
+---
+
 # May 22, 2026 Evening Addendum - Core Sufficiency Gate Doctrine Locked / Live Test 1 Pass / DSCR QA Calibration Complete
 
 ## A) Current checkpoint

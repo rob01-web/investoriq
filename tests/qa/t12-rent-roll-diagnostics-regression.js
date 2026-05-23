@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   parseRentRollFromRowMatrices,
+  resolveOppositeCoreTabularRescue,
   parseT12FromRowMatrices,
   validateCoreT12Payload,
 } from "../../api/parse/parse-doc.js";
@@ -217,5 +218,54 @@ assert.equal(
   true
 );
 assert.equal(vagueRentRoll.diagnostics.validation_reasons.includes("missing_unit_rows"), true);
+
+const t12DeclaredRentRollOppositeRescue = resolveOppositeCoreTabularRescue({
+  declaredDocType: "rent_roll",
+  rowMatrices: [
+    {
+      rows: [
+        ["Line Item", "TTM Amount"],
+        ["Gross Potential Rent", "1850000"],
+        ["Effective Gross Income", "1839900"],
+        ["Total Operating Expenses", "679596"],
+        ["Net Operating Income", "1160304"],
+      ],
+    },
+  ],
+});
+assert.equal(t12DeclaredRentRollOppositeRescue.ok, true);
+assert.equal(t12DeclaredRentRollOppositeRescue.opposite_doc_type, "t12");
+assert.equal(t12DeclaredRentRollOppositeRescue.payload.core_t12_validation.ok, true);
+
+const rentRollDeclaredT12OppositeRescue = resolveOppositeCoreTabularRescue({
+  declaredDocType: "t12",
+  rowMatrices: [
+    {
+      rows: [
+        ["Unit", "Unit Type", "Current Rent", "Status"],
+        ["101", "1BR", "1200", "Occupied"],
+        ["102", "1BR", "1225", "Occupied"],
+        ["201", "2BR", "1450", "Occupied"],
+        ["202", "2BR", "1475", "Vacant"],
+      ],
+    },
+  ],
+});
+assert.equal(rentRollDeclaredT12OppositeRescue.ok, true);
+assert.equal(rentRollDeclaredT12OppositeRescue.opposite_doc_type, "rent_roll");
+
+const ambiguousOppositeRescue = resolveOppositeCoreTabularRescue({
+  declaredDocType: "rent_roll",
+  rowMatrices: [
+    {
+      rows: [
+        ["Line Item", "Amount"],
+        ["Rent", "1000"],
+        ["Repairs", "200"],
+      ],
+    },
+  ],
+});
+assert.equal(ambiguousOppositeRescue.ok, false);
 
 console.log("t12-rent-roll diagnostics regression PASS");

@@ -1118,6 +1118,69 @@ const deleteExistingT12Artifacts = async (supabaseAdmin, jobId, fileId) => {
   }
 };
 
+export const resolveOppositeCoreTabularRescue = ({ declaredDocType, rowMatrices }) => {
+  const declared = String(declaredDocType || '').toLowerCase();
+  if (!Array.isArray(rowMatrices) || rowMatrices.length === 0) {
+    return { ok: false, reason: 'missing_row_matrices' };
+  }
+
+  if (declared === 'rent_roll') {
+    const parsedT12Result = parseT12FromRowMatrices(rowMatrices, { includeDiagnostics: true });
+    const parsedT12Payload = parsedT12Result?.payload || null;
+    if (!parsedT12Payload) {
+      return { ok: false, opposite_doc_type: 't12', reason: 't12_payload_missing' };
+    }
+    const coreValidation = validateCoreT12Payload(
+      parsedT12Payload,
+      parsedT12Payload?.method || 'spreadsheet'
+    );
+    if (!coreValidation.ok) {
+      return {
+        ok: false,
+        opposite_doc_type: 't12',
+        reason: 'invalid_core_t12_values',
+        validation_failures: coreValidation.failures,
+      };
+    }
+    return {
+      ok: true,
+      opposite_doc_type: 't12',
+      payload: {
+        ...parsedT12Payload,
+        parse_branch: coreValidation.parse_branch,
+        core_t12_validation: coreValidation,
+      },
+      diagnostics: parsedT12Result?.diagnostics || null,
+    };
+  }
+
+  if (declared === 't12') {
+    const parsedRentRollResult = parseRentRollFromRowMatrices(rowMatrices, { includeDiagnostics: true });
+    const parsedRentRollPayload = parsedRentRollResult?.payload || null;
+    const units = Array.isArray(parsedRentRollPayload?.units) ? parsedRentRollPayload.units : [];
+    const totalUnits = Number.isFinite(parsedRentRollPayload?.total_units) ? parsedRentRollPayload.total_units : 0;
+    const hasFiniteInPlaceRent = units.some((row) => Number.isFinite(row?.in_place_rent));
+    const hasUnitIdentifier = units.some((row) => String(row?.unit || '').trim() !== '');
+    const hasBedsOrStatus = units.some(
+      (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
+    );
+    const hasMarketRent = units.some((row) => Number.isFinite(row?.market_rent));
+    const hasMinimumRentRoll = Number.isFinite(totalUnits) && totalUnits >= 4 && hasFiniteInPlaceRent;
+    const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
+    if (!(parsedRentRollPayload && hasMinimumRentRoll && hasSecondarySignal)) {
+      return { ok: false, opposite_doc_type: 'rent_roll', reason: 'insufficient_rent_roll_structure' };
+    }
+    return {
+      ok: true,
+      opposite_doc_type: 'rent_roll',
+      payload: parsedRentRollPayload,
+      diagnostics: parsedRentRollResult?.diagnostics || null,
+    };
+  }
+
+  return { ok: false, reason: 'declared_doc_type_not_core' };
+};
+
 const toSheetRows = (sheet) => {
   const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) || [];
   return rawRows.map((row) =>
@@ -1905,6 +1968,20 @@ const detectDocTypeFromTabular = ({ headers, sampleRows }) => {
     },
     score: { rent_roll_score, t12_score },
   };
+};
+
+const hasMinimumRentRollStructure = (parsedRentRoll) => {
+  const units = Array.isArray(parsedRentRoll?.units) ? parsedRentRoll.units : [];
+  const totalUnits = Number.isFinite(parsedRentRoll?.total_units) ? parsedRentRoll.total_units : 0;
+  const hasFiniteInPlaceRent = units.some((row) => Number.isFinite(row?.in_place_rent));
+  const hasUnitIdentifier = units.some((row) => String(row?.unit || '').trim() !== '');
+  const hasBedsOrStatus = units.some(
+    (row) => Number.isFinite(row?.beds) || String(row?.status || '').trim() !== ''
+  );
+  const hasMarketRent = units.some((row) => Number.isFinite(row?.market_rent));
+  const hasMinimumRentRoll = Number.isFinite(totalUnits) && totalUnits >= 4 && hasFiniteInPlaceRent;
+  const hasSecondarySignal = hasUnitIdentifier || hasBedsOrStatus || hasMarketRent;
+  return hasMinimumRentRoll && hasSecondarySignal;
 };
 
 const isPdfOrImage = (mime) => {
@@ -3019,6 +3096,106 @@ export default async function handler(req, res) {
               continue;
             }
 
+            const oppositeRescue = resolveOppositeCoreTabularRescue({
+              declaredDocType: 'rent_roll',
+              rowMatrices,
+            });
+            if (oppositeRescue?.ok && oppositeRescue?.opposite_doc_type === 't12' && oppositeRescue?.payload) {
+              const t12ParseWarnings = Array.from(
+                new Set([
+                  ...(Array.isArray(oppositeRescue.payload.parse_warnings)
+                    ? oppositeRescue.payload.parse_warnings
+                    : []),
+                  'declared_doc_type_mismatch',
+                  'opposite_core_parser_rescue_attempted',
+                  'opposite_core_parser_rescue_accepted',
+                ])
+              );
+              const t12Payload = {
+                ...oppositeRescue.payload,
+                declared_doc_type: declaredDocType,
+                detected_doc_type: detectedDocType,
+                classifier_score: classifierScore,
+                classifier_signals: classifierSignals,
+                parse_warnings: t12ParseWarnings,
+                opposite_core_parser_rescue: {
+                  from_declared_doc_type: 'rent_roll',
+                  accepted_as_doc_type: 't12',
+                },
+              };
+
+              await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
+              const { error: rescuedT12ArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 't12_parsed',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${jobId}/t12/${file.id}.json`,
+                  payload: t12Payload,
+                },
+              ]);
+              if (rescuedT12ArtifactErr) {
+                throw new Error(rescuedT12ArtifactErr.message || 'Failed to write opposite-rescued t12 artifact');
+              }
+
+              const { error: rescuedT12StatusErr } = await supabaseAdmin
+                .from('analysis_job_files')
+                .update({ parse_status: 'parsed', parse_error: null, doc_type: 't12' })
+                .eq('id', file.id);
+              if (rescuedT12StatusErr) {
+                throw new Error(`Failed to mark opposite-rescued t12 parsed: ${rescuedT12StatusErr.message}`);
+              }
+
+              const { error: rescueEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 'worker_event',
+                  bucket: 'internal',
+                  object_path: `analysis_jobs/${jobId}/worker_event/structured_doc_parse_dispatch_failed/${file.id}/${safeTimestamp(
+                    nowIso
+                  )}.json`,
+                  payload: {
+                    event: 'opposite_core_parser_rescue_accepted',
+                    declared_doc_type: 'rent_roll',
+                    accepted_doc_type: 't12',
+                    file_id: file.id,
+                    timestamp: nowIso,
+                  },
+                },
+              ]);
+              if (rescueEventErr) {
+                console.error('Failed to write opposite_core_parser_rescue_accepted event:', rescueEventErr.message);
+              }
+
+              parsedCount += 1;
+              continue;
+            }
+
+            const { error: rescueRejectedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/structured_doc_parse_dispatch_failed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'opposite_core_parser_rescue_rejected',
+                  declared_doc_type: 'rent_roll',
+                  attempted_doc_type: 't12',
+                  file_id: file.id,
+                  reason: oppositeRescue?.reason || 'unusable_opposite_core_parse',
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+            if (rescueRejectedEventErr) {
+              console.error('Failed to write opposite_core_parser_rescue_rejected event:', rescueRejectedEventErr.message);
+            }
+
             await supabaseAdmin
               .from('analysis_job_files')
               .update({
@@ -3966,6 +4143,114 @@ export default async function handler(req, res) {
             payload?.method || 'spreadsheet'
           );
           if (!coreT12Validation.ok) {
+            const oppositeRescue = resolveOppositeCoreTabularRescue({
+              declaredDocType: 't12',
+              rowMatrices,
+            });
+            if (
+              oppositeRescue?.ok &&
+              oppositeRescue?.opposite_doc_type === 'rent_roll' &&
+              oppositeRescue?.payload
+            ) {
+              const rescuedRentRollPayload = oppositeRescue.payload;
+              const rescuedWarnings = Array.from(
+                new Set([
+                  ...(Array.isArray(rescuedRentRollPayload.parse_warnings)
+                    ? rescuedRentRollPayload.parse_warnings
+                    : []),
+                  'declared_doc_type_mismatch',
+                  'opposite_core_parser_rescue_attempted',
+                  'opposite_core_parser_rescue_accepted',
+                ])
+              );
+              const { error: rescuedRentRollArtifactErr } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .insert([
+                  {
+                    job_id: jobId,
+                    user_id: file.user_id || null,
+                    type: 'rent_roll_parsed',
+                    bucket: 'system',
+                    object_path: `analysis_jobs/${jobId}/rent_roll/${file.id}.json`,
+                    payload: {
+                      ...rescuedRentRollPayload,
+                      declared_doc_type: declaredDocType,
+                      detected_doc_type: detectedDocType,
+                      classifier_score: classifierScore,
+                      classifier_signals: classifierSignals,
+                      parse_warnings: rescuedWarnings,
+                      opposite_core_parser_rescue: {
+                        from_declared_doc_type: 't12',
+                        accepted_as_doc_type: 'rent_roll',
+                      },
+                    },
+                  },
+                ]);
+              if (rescuedRentRollArtifactErr) {
+                throw new Error(
+                  rescuedRentRollArtifactErr.message || 'Failed to write opposite-rescued rent roll artifact'
+                );
+              }
+
+              const { error: rescuedRentRollStatusErr } = await supabaseAdmin
+                .from('analysis_job_files')
+                .update({ parse_status: 'parsed', parse_error: null, doc_type: 'rent_roll' })
+                .eq('id', file.id);
+              if (rescuedRentRollStatusErr) {
+                throw new Error(
+                  `Failed to mark opposite-rescued rent roll parsed: ${rescuedRentRollStatusErr.message}`
+                );
+              }
+
+              const { error: rescueEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 'worker_event',
+                  bucket: 'internal',
+                  object_path: `analysis_jobs/${jobId}/worker_event/structured_doc_parse_dispatch_failed/${file.id}/${safeTimestamp(
+                    nowIso
+                  )}.json`,
+                  payload: {
+                    event: 'opposite_core_parser_rescue_accepted',
+                    declared_doc_type: 't12',
+                    accepted_doc_type: 'rent_roll',
+                    file_id: file.id,
+                    timestamp: nowIso,
+                  },
+                },
+              ]);
+              if (rescueEventErr) {
+                console.error('Failed to write opposite_core_parser_rescue_accepted event:', rescueEventErr.message);
+              }
+
+              parsedCount += 1;
+              continue;
+            }
+
+            const { error: rescueRejectedEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: file.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/structured_doc_parse_dispatch_failed/${file.id}/${safeTimestamp(
+                  nowIso
+                )}.json`,
+                payload: {
+                  event: 'opposite_core_parser_rescue_rejected',
+                  declared_doc_type: 't12',
+                  attempted_doc_type: 'rent_roll',
+                  file_id: file.id,
+                  reason: oppositeRescue?.reason || 'unusable_opposite_core_parse',
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+            if (rescueRejectedEventErr) {
+              console.error('Failed to write opposite_core_parser_rescue_rejected event:', rescueRejectedEventErr.message);
+            }
+
             await supabaseAdmin
               .from('analysis_job_files')
               .update({
