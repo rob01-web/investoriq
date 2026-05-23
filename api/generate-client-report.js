@@ -1623,6 +1623,20 @@ function buildDocumentTreatmentSummaryHtml({
       .toLowerCase();
   const hasText = (value, pattern) => pattern.test(normalizedText(value));
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
+  const hasForwardLookingRenovationRowSignals = () => {
+    const rows = [
+      ...(Array.isArray(renovationPayload?.budget_rows) ? renovationPayload.budget_rows : []),
+      ...(Array.isArray(renovationPayload?.execution_rows) ? renovationPayload.execution_rows : []),
+    ];
+    return rows.some((row) => {
+      const phaseTiming = normalizedText(row?.phase_timing || row?.timing_or_phasing || "");
+      const hasFutureTiming = /\b(month|months|phase|q[1-4]|quarter|year|years)\b/.test(phaseTiming) && !/\bhistorical\b/.test(phaseTiming);
+      const hasRentLift = Number.isFinite(coerceNumber(row?.expected_monthly_rent_lift)) && coerceNumber(row?.expected_monthly_rent_lift) > 0;
+      const hasCostPerUnit = Number.isFinite(coerceNumber(row?.cost_per_unit)) && coerceNumber(row?.cost_per_unit) > 0;
+      const hasUnitCount = Number.isFinite(coerceNumber(row?.unit_count)) && coerceNumber(row?.unit_count) > 0;
+      return hasFutureTiming || hasRentLift || (hasCostPerUnit && hasUnitCount);
+    });
+  };
   const hasHistoricalOnlyRenovationEvidence = (row = null) => {
     const payloadText = [
       renovationPayload?.timing_or_phasing,
@@ -1753,7 +1767,10 @@ function buildDocumentTreatmentSummaryHtml({
           ? renovationDisplayMode
           : "historical_only";
       const historicalOnlyOverride = hasHistoricalOnlyRenovationEvidence(row);
-      const hasValidatedForwardLookingRenovationSupport = Boolean(hasForwardLookingRenovationInputs);
+      const hasForwardLookingRenovationRowSupport = hasForwardLookingRenovationRowSignals();
+      const hasValidatedForwardLookingRenovationSupport = Boolean(
+        hasForwardLookingRenovationInputs || hasForwardLookingRenovationRowSupport
+      );
       if (historicalOnlyOverride) {
         return {
           category: "Displayed / Limited Use",
@@ -1783,6 +1800,14 @@ function buildDocumentTreatmentSummaryHtml({
           category: "Displayed / Limited Use",
           note: "Budget/scope only; no ROI/payback/rent-lift modeling",
           reason_code: "renovation_budget_no_roi_inputs",
+          source_basis: renovationSourceBasis,
+        };
+      }
+      if (normalizedRenovationDisplayMode === "historical_only" && hasValidatedForwardLookingRenovationSupport) {
+        return {
+          category: "Displayed / Limited Use",
+          note: "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; not used for ROI, payback, NOI, valuation, or refinance outputs.",
+          reason_code: "renovation_forward_looking_transparency_only",
           source_basis: renovationSourceBasis,
         };
       }

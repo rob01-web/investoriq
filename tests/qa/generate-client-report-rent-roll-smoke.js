@@ -1240,6 +1240,25 @@ const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocument
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Modeled Inputs/i);
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Forward-looking renovation support includes document-stated rent-lift assumptions/i);
 
+const forwardLookingRowEvidenceTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Reno Plan Willowmere.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+  ],
+  renovationDisplayMode: "historical_only",
+  hasForwardLookingRenovationInputs: false,
+  renovationPayload: {
+    total_budget: 540000,
+    budget_rows: [
+      { unit_type: "1BR", unit_count: 8, cost_per_unit: 18000, expected_monthly_rent_lift: 125, phase_timing: "Months 1-18" },
+      { unit_type: "2BR", unit_count: 6, cost_per_unit: 22000, expected_monthly_rent_lift: 175, phase_timing: "Months 1-24" },
+    ],
+  },
+});
+assert.equal(/Historical capital items are displayed for context only/i.test(forwardLookingRowEvidenceTreatmentHtml), false);
+assert.match(forwardLookingRowEvidenceTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(forwardLookingRowEvidenceTreatmentHtml, /Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
+assert.equal(/ROI, payback, NOI, valuation, or refinance outputs/i.test(forwardLookingRowEvidenceTreatmentHtml), true);
+
 const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { original_filename: "Renovation Budget Items.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
