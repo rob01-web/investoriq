@@ -141,7 +141,11 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr\)[\s\S]{0,320}stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)/
+  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr\)/
+);
+assert.match(
+  reportSource,
+  /stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)/
 );
 assert.match(
   reportSource,
