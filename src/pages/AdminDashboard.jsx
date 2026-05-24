@@ -526,6 +526,24 @@ export default function AdminDashboard() {
     fixQueueActionLoading === action ? `${fallback}...` : fallback
   ), [fixQueueActionLoading]);
 
+  // SLICE 2A — Doctrine-aligned bucketization of the Triage Workspace.
+  // Pure presentation. Uses only fields already present on fixQueueForDisplay
+  // rows. No new data fetch, no underlying value rename, no behavioural change.
+  const fixQueueBuckets = useMemo(() => {
+    const failClosedCore = [];
+    const operationalHealth = [];
+    const publishedWithDiagnostics = [];
+    for (const row of fixQueueForDisplay) {
+      const gateStatus = String(row?.delivery_gate_status || '').toLowerCase();
+      const isFailClosed = row?.customer_delivery_ready === false || gateStatus === 'admin_review_required';
+      if (isFailClosed) { failClosedCore.push(row); continue; }
+      const isOperational = row?.requires_code_patch === true || row?.requires_regeneration === true;
+      if (isOperational) { operationalHealth.push(row); continue; }
+      publishedWithDiagnostics.push(row);
+    }
+    return { failClosedCore, operationalHealth, publishedWithDiagnostics };
+  }, [fixQueueForDisplay]);
+
   // INIT
   useEffect(() => {
     if (!authed) return;
@@ -800,7 +818,7 @@ export default function AdminDashboard() {
           <Card>
             <SectionHeader
               eyebrow="Internal"
-              title="Admin Review / Fix Queue"
+              title="Triage Workspace"
               action={
                 <Btn onClick={fetchFixQueue} disabled={fixQueueLoading} variant={fixQueueOpen ? 'warn' : 'primary'}>
                   <RefreshCcw size={9} />
@@ -825,92 +843,163 @@ export default function AdminDashboard() {
               <div style={{ padding:'18px 20px', background:T.errBg, border:`1px solid ${T.errBorder}`, color:T.errRed, fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300 }}>
                 {fixQueueError}
               </div>
-            ) : fixQueue.length === 0 ? (
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No review items require attention.</p>
-            ) : (
-              <div style={{ overflowX:'auto' }}>
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead>
-                    <tr>
-                      <TblTh>Property</TblTh>
-                      <TblTh>Report</TblTh>
-                      <TblTh>Severity</TblTh>
-                      <TblTh>Status / Priority</TblTh>
-                      <TblTh>Issue</TblTh>
-                      <TblTh>Reason</TblTh>
-                      <TblTh>Next Step</TblTh>
-                      <TblTh>Created</TblTh>
-                      <TblTh>Actions</TblTh>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fixQueueForDisplay.map((item, i) => {
-                      const displayTitle = item.display_title || item.top_action_title || item.top_action_code || '-';
-                      const displayReason = item.display_reason || '-';
-                      const displayNextStep = item.display_next_step || item.recommended_next_step || '-';
-                      const displayCategory = item.display_category || item.owner_area || '-';
-                      const displayPriority = item.display_priority || (String(item.delivery_gate_status || '').toLowerCase() === 'admin_review_required' ? 'Admin review required' : '-');
-                      const isCustomerHold = item.customer_delivery_ready === false;
-                      const isPublicBlocked = item.public_sample_ready === false;
-                      const isOutreachBlocked = item.high_value_outreach_ready === false;
-                      const actionBtnStyle = { padding:'4px 8px', background:T.white, borderColor:T.hairlineMid, color:T.ink2 };
-                      return (
-                        <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                          <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '-'}</TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{item.report_type || '-'}</TblTd>
-                          <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
-                          <TblTd style={{ maxWidth:170 }}>
-                            <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                              <StatusPill label={displayPriority} tone="warn" />
-                              {displayCategory !== '-' && <div style={{ fontSize:11, color:T.ink3 }}>{displayCategory}</div>}
-                            </div>
-                          </TblTd>
-                          <TblTd style={{ maxWidth:240 }}>
-                            <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, lineHeight:1.4 }}>{displayTitle}</div>
-                            {item.top_action_code && (
-                              <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4, marginTop:4 }}>
-                                {item.top_action_code}
-                              </div>
-                            )}
-                          </TblTd>
-                          <TblTd style={{ maxWidth:320 }}>
-                            <div style={{ fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayReason}</div>
-                            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                              <StatusPill label={isCustomerHold ? 'Customer Hold' : 'Customer Ready'} tone={isCustomerHold ? 'warn' : 'success'} />
-                              <StatusPill label={isPublicBlocked ? 'Public Blocked' : 'Public Ready'} tone={isPublicBlocked ? 'warn' : 'success'} />
-                              <StatusPill label={isOutreachBlocked ? 'Outreach Blocked' : 'Outreach Ready'} tone={isOutreachBlocked ? 'warn' : 'success'} />
-                              {item.requires_code_patch && <StatusPill label="Patch Required" tone="danger" />}
-                              {item.requires_regeneration && <StatusPill label="Regeneration Required" tone="info" />}
-                            </div>
-                          </TblTd>
-                          <TblTd style={{ maxWidth:320, fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayNextStep}</TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</TblTd>
-                          <TblTd style={{ minWidth:260 }}>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                              <Btn title="View job details" onClick={() => openFixQueueDetail(item.job_id, 'job')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
-                                <Eye size={9} /> Job
-                              </Btn>
-                              <Btn title="View QA / action plan details" onClick={() => openFixQueueDetail(item.job_id, 'qa')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
-                                <Shield size={9} /> QA
-                              </Btn>
-                              <Btn title="View uploaded files" onClick={() => openFixQueueDetail(item.job_id, 'files')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
-                                <FileText size={9} /> Files
-                              </Btn>
-                              <Btn title="View parsed/internal artifact summary" onClick={() => openFixQueueDetail(item.job_id, 'artifacts')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
-                                <BarChart3 size={9} /> Artifacts
-                              </Btn>
-                              <Btn title="View worker events / log trail" onClick={() => openFixQueueDetail(item.job_id, 'events')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
-                                <Activity size={9} /> Events
-                              </Btn>
-                            </div>
-                          </TblTd>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            ) : (() => {
+              // SLICE 2A — Doctrine-aligned sub-section render. Same data set,
+              // same row primitives, same handlers. Splits the legacy single
+              // table into Published-With-Diagnostics / Fail-Closed-Core /
+              // Operational-Health buckets so admins see triage by doctrine
+              // category rather than a mixed review queue.
+              const SEV_ORDER = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
+              const maxSeverityOf = (items) => items.reduce((acc, it) => {
+                const s = String(it?.highest_severity || 'none').toLowerCase();
+                return SEV_ORDER[s] > SEV_ORDER[acc] ? s : acc;
+              }, 'none');
+
+              const renderTriageRow = (item, i) => {
+                const gateStatus = String(item.delivery_gate_status || '').toLowerCase();
+                const displayTitle = item.display_title || item.top_action_title || item.top_action_code || '-';
+                const displayReason = item.display_reason || '-';
+                const displayNextStep = item.display_next_step || item.recommended_next_step || '-';
+                const displayCategory = item.display_category || item.owner_area || '-';
+                // Display-rename only. Underlying delivery_gate_status payload
+                // value is unchanged. We surface 'Fail-Closed Core' wherever
+                // the gate is admin_review_required so admins see the doctrine
+                // framing instead of the legacy 'Admin review required' label.
+                let displayPriority = item.display_priority || '-';
+                if (gateStatus === 'admin_review_required') {
+                  displayPriority = 'Fail-Closed Core';
+                } else if (displayPriority === '-' || /admin\s*review/i.test(displayPriority)) {
+                  if (gateStatus === 'admin_review_required') displayPriority = 'Fail-Closed Core';
+                }
+                const isCustomerHold = item.customer_delivery_ready === false;
+                const isPublicBlocked = item.public_sample_ready === false;
+                const isOutreachBlocked = item.high_value_outreach_ready === false;
+                const actionBtnStyle = { padding:'4px 8px', background:T.white, borderColor:T.hairlineMid, color:T.ink2 };
+                return (
+                  <tr key={`${item.job_id || 'job'}-${i}`} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                    <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:180 }}>{item.property_name || '-'}</TblTd>
+                    <TblTd mono style={{ fontSize:9 }}>{item.report_type || '-'}</TblTd>
+                    <TblTd><SeverityBadge severity={item.highest_severity || 'none'} /></TblTd>
+                    <TblTd style={{ maxWidth:170 }}>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        <StatusPill label={displayPriority} tone="warn" />
+                        {displayCategory !== '-' && <div style={{ fontSize:11, color:T.ink3 }}>{displayCategory}</div>}
+                      </div>
+                    </TblTd>
+                    <TblTd style={{ maxWidth:240 }}>
+                      <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:500, color:T.ink, lineHeight:1.4 }}>{displayTitle}</div>
+                      {item.top_action_code && (
+                        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4, marginTop:4 }}>
+                          {item.top_action_code}
+                        </div>
+                      )}
+                    </TblTd>
+                    <TblTd style={{ maxWidth:320 }}>
+                      <div style={{ fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayReason}</div>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
+                        <StatusPill label={isCustomerHold ? 'Customer Hold' : 'Customer Ready'} tone={isCustomerHold ? 'warn' : 'success'} />
+                        <StatusPill label={isPublicBlocked ? 'Public Blocked' : 'Public Ready'} tone={isPublicBlocked ? 'warn' : 'success'} />
+                        <StatusPill label={isOutreachBlocked ? 'Outreach Blocked' : 'Outreach Ready'} tone={isOutreachBlocked ? 'warn' : 'success'} />
+                        {item.requires_code_patch && <StatusPill label="Patch Required" tone="danger" />}
+                        {item.requires_regeneration && <StatusPill label="Regeneration Required" tone="info" />}
+                      </div>
+                    </TblTd>
+                    <TblTd style={{ maxWidth:320, fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayNextStep}</TblTd>
+                    <TblTd mono style={{ fontSize:9 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</TblTd>
+                    <TblTd style={{ minWidth:260 }}>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                        <Btn title="View job details" onClick={() => openFixQueueDetail(item.job_id, 'job')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                          <Eye size={9} /> Job
+                        </Btn>
+                        <Btn title="View QA / action plan details" onClick={() => openFixQueueDetail(item.job_id, 'qa')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                          <Shield size={9} /> QA
+                        </Btn>
+                        <Btn title="View uploaded files" onClick={() => openFixQueueDetail(item.job_id, 'files')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                          <FileText size={9} /> Files
+                        </Btn>
+                        <Btn title="View parsed/internal artifact summary" onClick={() => openFixQueueDetail(item.job_id, 'artifacts')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                          <BarChart3 size={9} /> Artifacts
+                        </Btn>
+                        <Btn title="View worker events / log trail" onClick={() => openFixQueueDetail(item.job_id, 'events')} disabled={fixQueueDetailLoading && selectedFixQueueJobId === item.job_id} variant="ghost" style={actionBtnStyle}>
+                          <Activity size={9} /> Events
+                        </Btn>
+                      </div>
+                    </TblTd>
+                  </tr>
+                );
+              };
+
+              const TriageSubSection = ({ eyebrow, title, description, items, emptyMessage }) => {
+                const maxSev = maxSeverityOf(items);
+                return (
+                  <div style={{ marginTop:18, paddingTop:14, borderTop:`1px solid ${T.hairline}` }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:6 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:T.goldDark }}>{eyebrow}</span>
+                        <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color:T.ink, letterSpacing:'-0.01em' }}>{title}</span>
+                        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>({items.length})</span>
+                        {items.length > 0 && <SeverityBadge severity={maxSev} />}
+                      </div>
+                    </div>
+                    {description && (
+                      <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4, lineHeight:1.55, marginBottom:10 }}>
+                        {description}
+                      </div>
+                    )}
+                    {items.length === 0 ? (
+                      <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300, color:T.ink4, padding:'10px 0' }}>{emptyMessage}</p>
+                    ) : (
+                      <div style={{ overflowX:'auto' }}>
+                        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                          <thead>
+                            <tr>
+                              <TblTh>Property</TblTh>
+                              <TblTh>Report</TblTh>
+                              <TblTh>Severity</TblTh>
+                              <TblTh>Status / Priority</TblTh>
+                              <TblTh>Issue</TblTh>
+                              <TblTh>Reason</TblTh>
+                              <TblTh>Next Step</TblTh>
+                              <TblTh>Created</TblTh>
+                              <TblTh>Actions</TblTh>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map(renderTriageRow)}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+                <>
+                  <TriageSubSection
+                    eyebrow="Doctrine · Customer outcome"
+                    title="Published With Diagnostics"
+                    description="Published reports whose post-publish diagnostics warrant intelligence review. Read-only triage — not a re-approval surface."
+                    items={fixQueueBuckets.publishedWithDiagnostics}
+                    emptyMessage="Per-job published diagnostics will be populated in Slice 2B. Slice 1 code-level diagnostics are available above."
+                  />
+                  <TriageSubSection
+                    eyebrow="Doctrine · Fail-closed"
+                    title="Fail-Closed Core"
+                    description="Customer-blocked jobs where the core delivery contract failed. The customer outcome is fail-closed + credit restore — not manual approval."
+                    items={fixQueueBuckets.failClosedCore}
+                    emptyMessage="No fail-closed core jobs awaiting review."
+                  />
+                  <TriageSubSection
+                    eyebrow="Doctrine · Operational"
+                    title="Operational Health"
+                    description="System / engineering signals — code-patch or regeneration required. Not a customer-facing outcome. See also Stuck Jobs above."
+                    items={fixQueueBuckets.operationalHealth}
+                    emptyMessage="No operational health signals."
+                  />
+                </>
+              );
+            })()}
             {selectedFixQueueJobId && (
               <div ref={fixQueueDetailPanelRef} style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${T.hairline}` }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap', marginBottom:10 }}>
@@ -954,9 +1043,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.warnBorder}`, background:'#FFF9EE' }}>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.warnAmber, marginBottom:6 }}>Controlled admin actions</div>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.warnAmber, marginBottom:6 }}>Operational Recovery (controlled, scoped)</div>
                   <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
-                    Controlled admin action. Does not publish, notify customer, regenerate reports, or change credits.
+                    Operational recovery only. Does not approve reports, publish reports, notify customers, regenerate PDFs, or change credits.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
                     <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
@@ -1026,10 +1115,10 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.infoBorder}`, background:T.infoBg }}>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.infoBlue, marginBottom:6 }}>Delivery gate actions</div>
+                <div style={{ marginBottom:12, padding:14, border:`1px solid ${T.errBorder}`, background:T.errBg }}>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:T.errRed, marginBottom:6 }}>Emergency Overrides — LOCKED</div>
                   <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
-                    Phase 3 actions are locked until delivery approval rules are finalized.
+                    Emergency-only. Not a report approval surface. Locked pending explicit governance implementation.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
                     <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
