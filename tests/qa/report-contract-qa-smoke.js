@@ -474,6 +474,17 @@ assert.equal(supportDocTreatmentViolation.severity, "high");
 assert.equal(supportDocTreatmentViolation.blocks_customer_delivery, false);
 assert.equal(supportDocTreatmentViolation.blocks_public_sample, true);
 assert.equal(supportDocTreatmentViolation.blocks_high_value_outreach, true);
+const supportDocTreatmentClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Document Treatment Summary</h2>",
+    "<p>Environmental and zoning support documents were reviewed for qualitative context and are not treated as structured property-tax inputs.</p>",
+  ].join("\n"),
+});
+assert.equal(supportDocTreatmentClean.violations.some((v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"), false);
 
 const acquisitionWithCurrentDscrValue = buildReportContractQa({
   reportType: "underwriting",
@@ -543,6 +554,31 @@ assert.equal(
   acquisitionLenderFeeOmittedRendered.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"),
   true
 );
+const acquisitionLenderFeeRenderedClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        lender_fee_percent: 0.0085,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr><tr><td>Lender Fee</td><td>0.85%</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  acquisitionLenderFeeRenderedClean.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"),
+  false
+);
 
 const acquisitionClosingCostZeroRendered = buildReportContractQa({
   reportType: "underwriting",
@@ -568,6 +604,56 @@ const acquisitionClosingCostZeroRendered = buildReportContractQa({
 assert.equal(
   acquisitionClosingCostZeroRendered.violations.some((v) => v.code === "ACQUISITION_CLOSING_COSTS_ZERO_RENDERED_WITH_UNQUANTIFIED_NOTES"),
   true
+);
+const acquisitionClosingCostRenderedClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        debt_basis: "acquisition_financing_assumption",
+        closing_cost_notes: "Legal and appraisal fees expected.",
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Closing Costs</td><td>2.0%</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  acquisitionClosingCostRenderedClean.violations.some((v) => v.code === "ACQUISITION_CLOSING_COSTS_ZERO_RENDERED_WITH_UNQUANTIFIED_NOTES"),
+  false
+);
+
+const acquisitionPurchasePriceMismatchRenderedClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  acquisitionPurchasePriceMismatchRenderedClean.violations.some((v) => v.code === "ACQUISITION_PURCHASE_PRICE_LOAN_AMOUNT_MISMATCH_RENDERED"),
+  false
 );
 
 const acquisitionWithRefiClassification = buildReportContractQa({
