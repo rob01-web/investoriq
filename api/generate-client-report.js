@@ -3145,10 +3145,12 @@ function buildScreeningDataCoverageSummary({
   const explicitScreeningSourceLimitedDisclosure =
     sectionEligibility?.source_limited_disclosure_required === true ||
     sectionEligibility?.screening_source_limited_disclosure_required === true;
+  const explicitUnderwritingSourceLimitedDisclosure =
+    sectionEligibility?.source_limited_disclosure_required === true;
   const sourceLimitedDisclosureRequired =
     effectiveReportMode === "screening_v1"
       ? explicitScreeningSourceLimitedDisclosure || (sourceConstrainedSectionCount > 0 && !allPresent)
-      : sourceConstrainedSectionCount > 0;
+      : explicitUnderwritingSourceLimitedDisclosure;
   const suppressVerifiedCoverageCopy = sourceReconciliationRequired || sourceLimitedDisclosureRequired;
   const reconciliationCoverageHeadline = sourceReconciliationRequired
     ? "CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE"
@@ -3183,7 +3185,7 @@ function buildScreeningDataCoverageSummary({
           : "Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.";
       const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
   const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
-      ? "Some underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+      ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
     const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
       documentSources,
@@ -3208,7 +3210,7 @@ function buildScreeningDataCoverageSummary({
         : `Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. ${currentDebtCoverageState.explanation}`;
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
     const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
-      ? "Some underwriting sections are source-constrained and are not treated as underdevelopment when required inputs are absent."
+      ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
     const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
       documentSources,

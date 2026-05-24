@@ -1857,6 +1857,93 @@ const sourceLimitedScreeningCoverageHtml = generatorTest.buildScreeningDataCover
 });
 assert.match(sourceLimitedScreeningCoverageHtml, /SOURCE LIMITATIONS DISCLOSURE/i);
 
+const cleanCoreOptionalConstrainedUnderwritingCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [],
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    variance_pct: 0,
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 2,
+    source_limited_disclosure_required: false,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(cleanCoreOptionalConstrainedUnderwritingCoverageHtml, /CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified/i);
+assert.equal(/SOURCE LIMITATIONS DISCLOSURE/i.test(cleanCoreOptionalConstrainedUnderwritingCoverageHtml), false);
+assert.match(cleanCoreOptionalConstrainedUnderwritingCoverageHtml, /Optional underwriting sections are source-constrained where supporting inputs were not verified\./i);
+
+const cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1117800,
+    occupancy: 0.95,
+    unit_mix: [{ label: "1BR", in_place_rent: 1888, market_rent: 1950 }],
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: true,
+  hasUploadedFiles: true,
+  documentSources: [
+    { original_filename: "UNSUPPORTED_Market_Survey.pdf", parse_status: "unsupported", doc_type: "market_survey" },
+    { original_filename: "UNSUPPORTED_Phase_I_ESA.pdf", parse_status: "unsupported", doc_type: "environmental_report" },
+  ],
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    variance_pct: 0,
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 1,
+    source_limited_disclosure_required: false,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml, /CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified/i);
+assert.equal(/SOURCE LIMITATIONS DISCLOSURE/i.test(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml), false);
+assert.match(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml, /BEGIN DOCUMENT_TREATMENT_SUMMARY/);
+
 const reconciliationDisclosureCoverageHtmlUnderwriting = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
     gross_potential_rent: 1087488,

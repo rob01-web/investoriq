@@ -220,6 +220,66 @@ const sourceReconciliationMismatchBlockingViolation = sourceReconciliationMismat
 assert.equal(sourceReconciliationMismatchBlockingViolation.blocks_customer_delivery, true);
 assert.equal(sourceReconciliationMismatchBlockingViolation.customer_delivery_impact, "block");
 
+const cleanCoreCoverageState = {
+  ...baseCoverage,
+  core_input_sufficiency_state: {
+    publishability_bucket: "core_sufficient_publishable",
+  },
+  source_reconciliation_state: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    source_reconciliation_disclosure: null,
+  },
+};
+const dataCoverageOptionalLimitationHeadlineDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: cleanCoreCoverageState,
+  html: [
+    "<h2>Data Coverage &amp; Underwriting Scope</h2>",
+    "<p>CORE INPUTS EXTRACTED - SOURCE LIMITATIONS DISCLOSURE</p>",
+    "<p>Optional underwriting sections are source-constrained where supporting inputs were not verified.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  dataCoverageOptionalLimitationHeadlineDrift.violations.some((v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"),
+  true
+);
+const dataCoverageOptionalLimitationHeadlineDriftViolation = dataCoverageOptionalLimitationHeadlineDrift.violations.find(
+  (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
+);
+assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.severity, "high");
+assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_customer_delivery, false);
+assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_public_sample, true);
+assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_high_value_outreach, true);
+assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.category, "data_coverage_taxonomy_contract");
+
+const dataCoverageReconciliationHeadlineAllowed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: {
+      publishability_bucket: "disclose_only_publishable",
+    },
+    source_reconciliation_state: {
+      status: "source_reconciliation_required",
+      publishability_bucket: "disclose_only_publishable",
+      source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
+    },
+  },
+  html: [
+    "<h2>Data Coverage &amp; Underwriting Scope</h2>",
+    "<p>CORE INPUTS EXTRACTED - SOURCE RECONCILIATION DISCLOSURE</p>",
+  ].join("\n"),
+});
+assert.equal(
+  dataCoverageReconciliationHeadlineAllowed.violations.some((v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"),
+  false
+);
+
 const badIncomeTable = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

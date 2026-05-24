@@ -574,6 +574,35 @@ export function buildReportContractQa({
   const hasComputedCurrentDebtState = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() === "computed";
   const hasStaleMissingDebtCopy =
     /SOURCE-CONSTRAINED DEBT NOT PROVIDED|DEBT NOT PROVIDED|No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed|no true current debt balance was verified/i.test(text);
+  const coreInputBucket = String(sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket || "").toLowerCase();
+  const reconciliationStatus = String(sourceReportCoverageQa?.source_reconciliation_state?.status || "").toLowerCase();
+  const noMaterialReconciliationDisclosureActive =
+    reconciliationStatus !== "source_reconciliation_required" &&
+    reconciliationStatus !== "parser_suspected";
+  const sourceLimitationHeadlineShown =
+    /CORE INPUTS EXTRACTED\s*-\s*SOURCE LIMITATIONS DISCLOSURE/i.test(text) ||
+    /(?:^|\n)\s*SOURCE LIMITATIONS DISCLOSURE(?:\s|$)/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    coreInputBucket === "core_sufficient_publishable" &&
+    noMaterialReconciliationDisclosureActive &&
+    sourceLimitationHeadlineShown
+  ) {
+    addViolation(violations, {
+      code: "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT",
+      severity: "high",
+      category: "data_coverage_taxonomy_contract",
+      message: "Data Coverage headline implies core source limitation despite clean core T12/rent roll coverage and no active source reconciliation disclosure.",
+      evidence: {
+        core_input_publishability_bucket: coreInputBucket,
+        source_reconciliation_status: reconciliationStatus || null,
+        excerpt: firstPatternExcerpt(text, [/CORE INPUTS EXTRACTED\s*-\s*SOURCE LIMITATIONS DISCLOSURE/i, /SOURCE LIMITATIONS DISCLOSURE/i]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
 
   if (hasDealScorecardDscrPlaceholder) {
     addRenderedLeakViolation(violations, {
