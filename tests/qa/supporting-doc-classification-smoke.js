@@ -319,6 +319,32 @@ const acquisitionFinancingTaxonomy = buildSupportDocTaxonomyState({
 assert.equal(acquisitionFinancingTaxonomy.semantic_doc_role, "purchase_assumptions");
 assert.notEqual(acquisitionFinancingTaxonomy.semantic_doc_role, "current_mortgage_statement");
 assert.equal(acquisitionFinancingTaxonomy.semantic_doc_display_label, "purchase_assumptions");
+const phaseIOverrideTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "property_tax",
+  detectedDocType: "property_tax",
+  originalFilename: "124_Richmond_Phase_I_ESA.pdf",
+  rawText: [
+    "Phase I ESA",
+    "Recognized Environmental Condition discussion",
+    "Environmental site assessment summary.",
+  ].join("\n"),
+  payload: {},
+});
+assert.equal(phaseIOverrideTaxonomy.semantic_doc_role, "environmental_due_diligence");
+assert.notEqual(phaseIOverrideTaxonomy.semantic_doc_role, "property_tax");
+
+const zoningOverrideTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "property_tax",
+  detectedDocType: "property_tax",
+  originalFilename: "Municipal_Zoning_Compliance_Letter.pdf",
+  rawText: [
+    "Municipal zoning compliance letter",
+    "Permitted use confirmation",
+  ].join("\n"),
+  payload: {},
+});
+assert.equal(zoningOverrideTaxonomy.semantic_doc_role, "zoning_compliance_context");
+assert.notEqual(zoningOverrideTaxonomy.semantic_doc_role, "property_tax");
 
 assert.equal(
   shouldAttemptRenovationRecovery(

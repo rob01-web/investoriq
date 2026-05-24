@@ -1908,9 +1908,10 @@ function buildDocumentTreatmentSummaryHtml({
     const supportedPropertyTax = /(^|\b)(property tax|property_tax|tax bill|tax notice|municipal tax)(\b|$)/.test(semanticText);
     const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
     const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
-    const appraisalLike = /(^|\b)(appraisal|market survey|market_survey)(\b|$)/.test(semanticText);
-    const environmentalLike = /(^|\b)(phase i|phase_i|esa|environment|environmental|site assessment)(\b|$)/.test(semanticAndFileText);
-    const zoningComplianceLike = /(^|\b)(zoning|compliance|land use|entitlement|municipal code)(\b|$)/.test(semanticAndFileText);
+    const appraisalLike = /(^|\b)(appraisal|valuation report|opinion of value|appraised value)(\b|$)/.test(semanticAndFileText);
+    const marketSurveyLike = /(^|\b)(market survey|market_survey|rent survey|rent comp|rent comparables)(\b|$)/.test(semanticAndFileText);
+    const environmentalLike = /(^|\b)(phase i|phase 1|phase_i|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|rec)(\b|$)/.test(semanticAndFileText);
+    const zoningComplianceLike = /(^|\b)(zoning|compliance|permitted use|municipal zoning|land use|entitlement|municipal code)(\b|$)/.test(semanticAndFileText);
     const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(semanticAndFileText);
 
     if (supportedOperating) {
@@ -2059,6 +2060,14 @@ function buildDocumentTreatmentSummaryHtml({
         source_basis: sourceBasis,
       };
     }
+    if (marketSurveyLike) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Market survey / rent context only; not used to override rent roll.",
+        reason_code: "market_survey_context_only",
+        source_basis: sourceBasis,
+      };
+    }
     if (phaseIOrContext || isUnclassified || hasWarnings) {
       return {
         category: "Listed but Not Quantitatively Modeled",
@@ -2112,7 +2121,19 @@ function buildDocumentTreatmentSummaryHtml({
               note: "Historical capital items are displayed for context only.",
               reason_code: "historical_capex_only",
             }
-          : /appraisal|market survey|phase i|broker|email|background|supporting/.test(lower)
+          : /market survey|market_survey|rent survey|rent comp|rent comparables/.test(lower)
+          ? {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Market survey / rent context only; not used to override rent roll.",
+              reason_code: "filename_fallback_market_survey_context_only",
+            }
+          : /appraisal/.test(lower)
+          ? {
+              category: "Listed but Not Quantitatively Modeled",
+              note: "Listed for auditability only; not used quantitatively",
+              reason_code: "filename_fallback_unsupported_appraisal_source",
+            }
+          : /phase i|broker|email|background|supporting/.test(lower)
           ? {
               category: "Listed but Not Quantitatively Modeled",
               note: "Listed for auditability only; not used quantitatively",

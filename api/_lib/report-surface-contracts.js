@@ -1381,6 +1381,27 @@ export function buildSupportDocTaxonomyState({
   const hasPropertyTaxSignals =
     positiveNumber(payload?.annual_tax) ||
     hasText(["property tax", "tax bill", "assessment notice", "assessment", "roll number", "municipal tax"]);
+  const hasEnvironmentalSignals =
+    hasText([
+      "phase i",
+      "phase 1",
+      "esa",
+      "environmental",
+      "environment",
+      "recognized environmental condition",
+      "recognized environmental conditions",
+      "rec",
+      "site assessment",
+    ]);
+  const hasZoningComplianceSignals =
+    hasText([
+      "zoning",
+      "compliance",
+      "permitted use",
+      "municipal zoning",
+      "land use",
+      "entitlement",
+    ]);
   const hasAppraisalSignals =
     positiveNumber(payload?.appraised_value) ||
     positiveNumber(payload?.cap_rate) ||
@@ -1408,7 +1429,15 @@ export function buildSupportDocTaxonomyState({
   let semanticDocRoleReason = "fallback_other_support";
   let confidence = 0.5;
 
-  if (hasCurrentDebtSignals) {
+  if (hasEnvironmentalSignals) {
+    semanticDocRole = "environmental_due_diligence";
+    semanticDocRoleReason = "environmental_support_signals";
+    confidence = 0.98;
+  } else if (hasZoningComplianceSignals) {
+    semanticDocRole = "zoning_compliance_context";
+    semanticDocRoleReason = "zoning_compliance_support_signals";
+    confidence = 0.96;
+  } else if (hasCurrentDebtSignals) {
     semanticDocRole = "current_mortgage_statement";
     semanticDocRoleReason = "current_debt_support_signals";
     confidence = 0.98;
@@ -1438,7 +1467,16 @@ export function buildSupportDocTaxonomyState({
     confidence = 0.88;
   } else {
     const fallbackDocType = normalizeText(detectedDocType || declaredDocType || payload?.doc_type || "");
-    if (fallbackDocType === "mortgage_statement") {
+    const fallbackText = normalizeText(`${originalFilename || ""} ${rawText || ""}`);
+    if (/(phase\s*i|phase\s*1|esa|environment|environmental|recognized environmental condition|recognized environmental conditions|\brec\b|site assessment)/.test(fallbackText)) {
+      semanticDocRole = "environmental_due_diligence";
+      semanticDocRoleReason = "fallback_environmental_context_override";
+      confidence = 0.86;
+    } else if (/(zoning|compliance|permitted use|municipal zoning|land use|entitlement)/.test(fallbackText)) {
+      semanticDocRole = "zoning_compliance_context";
+      semanticDocRoleReason = "fallback_zoning_context_override";
+      confidence = 0.84;
+    } else if (fallbackDocType === "mortgage_statement") {
       semanticDocRole = "current_mortgage_statement";
       semanticDocRoleReason = "fallback_doc_type_mortgage_statement";
       confidence = 0.7;

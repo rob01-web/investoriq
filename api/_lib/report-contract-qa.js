@@ -655,6 +655,21 @@ export function buildReportContractQa({
       evidence: { report_type: reportTypeLabel, excerpt: leakProbeExcerpt },
     });
   }
+  const supportDocPropertyTaxLeakMatch = /(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,180}(?:property tax support|structured property tax input|modeled property tax input)|(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,180}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)/i.exec(text);
+  if (supportDocPropertyTaxLeakMatch) {
+    addViolation(violations, {
+      code: "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT",
+      severity: "high",
+      category: "compliance",
+      message: "Environmental/zoning/compliance support docs are labeled as property-tax support or modeled property-tax input.",
+      evidence: {
+        excerpt: supportDocPropertyTaxLeakMatch[0],
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
   if (hasComputedCurrentDebtState && hasStaleMissingDebtCopy) {
     addRenderedLeakViolation(violations, {
       code: "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",

@@ -396,6 +396,24 @@ const contaminatedAcquisition = buildReportContractQa({
 });
 assert.equal(contaminatedAcquisition.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), true);
 assert.equal(contaminatedAcquisition.customer_delivery_ready, false);
+const supportDocTreatmentLeak = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h2>Document Treatment Summary</h2>",
+    "<p>Unsupported Phase I ESA.pdf - Structured property tax input</p>",
+  ].join("\n"),
+});
+const supportDocTreatmentViolation = supportDocTreatmentLeak.violations.find(
+  (v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"
+);
+assert.equal(Boolean(supportDocTreatmentViolation), true);
+assert.equal(supportDocTreatmentViolation.severity, "high");
+assert.equal(supportDocTreatmentViolation.blocks_customer_delivery, false);
+assert.equal(supportDocTreatmentViolation.blocks_public_sample, true);
+assert.equal(supportDocTreatmentViolation.blocks_high_value_outreach, true);
 
 const acquisitionWithCurrentDscrValue = buildReportContractQa({
   reportType: "underwriting",

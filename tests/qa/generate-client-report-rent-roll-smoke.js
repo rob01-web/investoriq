@@ -1295,6 +1295,7 @@ assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
 assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
 assert.match(documentTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.match(documentTreatmentHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
 assert.equal(/Unsupported Phase I ESA\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support is displayed only)/i.test(documentTreatmentHtml), false);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
