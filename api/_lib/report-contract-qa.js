@@ -110,8 +110,17 @@ function positive(value) {
 }
 
 function coerceNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function normalizeOccupancyRatio(value) {
+  const n = coerceNumber(value);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 0 && n <= 1) return n;
+  if (n > 1 && n <= 100) return n / 100;
+  return null;
 }
 
 function escapeRegExp(value) {
@@ -144,6 +153,35 @@ function extractLabeledNumber(text, labels) {
     if (Number.isFinite(value)) return value;
   }
   return null;
+}
+
+function extractRenderedOccupancyValues(text) {
+  const source = String(text || "");
+  const values = [];
+  const blockedContext = /\b(?:break[- ]?even|stabilized|sensitized|buffer|stress|threshold|vacancy|market occupancy)\b/i;
+  const labels = [
+    "Occupancy",
+    "Current Occupancy",
+    "Rent Roll Occupancy",
+    "Physical Occupancy",
+  ];
+  for (const label of labels) {
+    const pattern = new RegExp(`${escapeRegExp(label)}[^0-9]{0,40}([0-9]+(?:\\.[0-9]+)?)\\s*%?`, "ig");
+    let match;
+    while ((match = pattern.exec(source)) !== null) {
+      const windowStart = Math.max(0, match.index - 60);
+      const windowEnd = Math.min(source.length, match.index + match[0].length + 60);
+      const contextWindow = source.slice(windowStart, windowEnd);
+      if (blockedContext.test(contextWindow)) continue;
+      const ratio = normalizeOccupancyRatio(match[1]);
+      if (!Number.isFinite(ratio)) continue;
+      values.push({
+        label,
+        value: ratio,
+      });
+    }
+  }
+  return values;
 }
 
 function extractCurrentDebtDscrValues(text) {
@@ -527,6 +565,49 @@ function resolveCanonicalRentRollAnnualTotalsForContract({
     trusted_summary_totals: trustedSummaryTotals,
     rent_roll_state: sourceReportCoverageQa?.rent_roll_sufficiency_state || null,
     rent_roll_inventory: sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed || null,
+  };
+}
+
+function resolveCanonicalOccupancyForContract({
+  artifacts = [],
+  sourceReportCoverageQa = null,
+} = {}) {
+  const rentRollPayload = latestPayload(artifacts, "rent_roll_parsed") || null;
+  const totals = rentRollPayload?.totals && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
+  const invRentRoll = sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed || null;
+  const rrSufficiency = sourceReportCoverageQa?.rent_roll_sufficiency_state || null;
+  const occupancyCandidates = [
+    invRentRoll?.occupancy,
+    rrSufficiency?.occupancy,
+    rrSufficiency?.evidence?.occupancy,
+    rentRollPayload?.occupancy,
+    totals?.occupancy,
+    (Number.isFinite(coerceNumber(totals?.occupied_units)) &&
+      Number.isFinite(coerceNumber(totals?.total_units)) &&
+      coerceNumber(totals?.total_units) > 0)
+      ? coerceNumber(totals?.occupied_units) / coerceNumber(totals?.total_units)
+      : null,
+  ];
+  let canonicalOccupancy = null;
+  for (const candidate of occupancyCandidates) {
+    const normalized = normalizeOccupancyRatio(candidate);
+    if (Number.isFinite(normalized) && normalized >= 0 && normalized <= 1) {
+      canonicalOccupancy = normalized;
+      break;
+    }
+  }
+  const isPartialSample = rentRollPayload?.is_partial_sample === true;
+  const trustedSummaryTotals =
+    totals?.summary_row_detected === true ||
+    rentRollPayload?.summary_row_detected === true;
+  const sufficiencyNotes = Array.isArray(rrSufficiency?.notes) ? rrSufficiency.notes : [];
+  const occupancyTrustedBySufficiency = sufficiencyNotes.includes("summary_totals_trusted");
+  return {
+    canonical_occupancy: canonicalOccupancy,
+    is_partial_sample: isPartialSample,
+    trusted_occupancy: trustedSummaryTotals || occupancyTrustedBySufficiency,
+    rent_roll_state: rrSufficiency || null,
+    rent_roll_inventory: invRentRoll || null,
   };
 }
 
@@ -1135,6 +1216,60 @@ export function buildReportContractQa({
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });
+    }
+  }
+
+  const canonicalOccupancyState = resolveCanonicalOccupancyForContract({
+    artifacts,
+    sourceReportCoverageQa,
+  });
+  const canonicalOccupancy = canonicalOccupancyState?.canonical_occupancy;
+  const skipOccupancyParityForUntrustedPartialSample =
+    canonicalOccupancyState?.is_partial_sample === true &&
+    canonicalOccupancyState?.trusted_occupancy !== true;
+  if (
+    Number.isFinite(canonicalOccupancy) &&
+    canonicalOccupancy >= 0 &&
+    canonicalOccupancy <= 1 &&
+    !skipOccupancyParityForUntrustedPartialSample
+  ) {
+    const renderedOccupancyValues = extractRenderedOccupancyValues(text);
+    if (renderedOccupancyValues.length > 0) {
+      const tolerancePercentagePoints = 0.5;
+      const mismatchedValues = renderedOccupancyValues.filter((entry) =>
+        Math.abs((entry.value - canonicalOccupancy) * 100) > tolerancePercentagePoints
+      ).map((entry) => ({
+        ...entry,
+        canonical_value: canonicalOccupancy,
+        absolute_difference_percentage_points: Math.abs((entry.value - canonicalOccupancy) * 100),
+      }));
+      if (mismatchedValues.length > 0) {
+        addViolation(violations, {
+          code: "OCCUPANCY_CANONICAL_VALUE_DRIFT",
+          severity: "high",
+          category: "source_report_reconciliation",
+          message: "Rendered occupancy values drift from canonical occupancy.",
+          evidence: {
+            canonical_occupancy: canonicalOccupancy,
+            rendered_values: renderedOccupancyValues,
+            mismatched_values: mismatchedValues,
+            tolerance_percentage_points: tolerancePercentagePoints,
+            excerpt:
+              firstPatternExcerpt(text, [
+                /Occupancy/i,
+                /Current Occupancy/i,
+                /Rent Roll Occupancy/i,
+                /Physical Occupancy/i,
+              ]) || leakProbeExcerpt,
+            rent_roll_state: canonicalOccupancyState?.rent_roll_state || null,
+            rent_roll_inventory: canonicalOccupancyState?.rent_roll_inventory || null,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        });
+      }
     }
   }
 

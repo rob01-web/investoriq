@@ -307,6 +307,198 @@ assert.equal(
   false
 );
 
+const canonicalOccupancyAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: "<p>Occupancy: 95.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyAligned.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
+const canonicalOccupancyDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: "<p>Occupancy: 92.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyDrift.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  true
+);
+
+const canonicalOccupancyMultiAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: [
+    "<p>Occupancy: 95.0%</p>",
+    "<p>Current Occupancy: 95.0%</p>",
+    "<p>Physical Occupancy: 95.0%</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalOccupancyMultiAligned.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
+const canonicalOccupancyOneSectionDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: [
+    "<p>Occupancy: 95.0%</p>",
+    "<p>Physical Occupancy: 92.0%</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalOccupancyOneSectionDrift.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  true
+);
+
+const canonicalOccupancyBreakEvenIgnored = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: "<p>Break-even Occupancy: 70.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyBreakEvenIgnored.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
+const canonicalOccupancyBufferIgnored = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: "<p>Occupancy Buffer: 25.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyBufferIgnored.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
+const canonicalOccupancyMissingNoViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 10,
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: null,
+      },
+    },
+  },
+  html: "<p>Occupancy: 92.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyMissingNoViolation.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
+const canonicalOccupancyPartialUntrustedNoViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        is_partial_sample: true,
+        occupancy: 0.95,
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      rent_roll_parsed: {
+        ...baseCoverage.artifact_inventory.rent_roll_parsed,
+        occupancy: 0.95,
+      },
+    },
+  },
+  html: "<p>Occupancy: 92.0%</p>",
+});
+assert.equal(
+  canonicalOccupancyPartialUntrustedNoViolation.violations.some((v) => v.code === "OCCUPANCY_CANONICAL_VALUE_DRIFT"),
+  false
+);
+
 const sourceReconciliationCoverage = {
   ...baseCoverage,
   source_reconciliation_state: {
