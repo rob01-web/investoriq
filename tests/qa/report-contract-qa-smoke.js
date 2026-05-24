@@ -840,6 +840,102 @@ assert.equal(
   currentDebtDscrAligned.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH"),
   false
 );
+const canonicalCurrentDebtDscrCoverage = {
+  ...baseCoverage,
+  current_debt_state: {
+    current_debt_dscr_status: "computed",
+    current_debt_dscr: 1.23,
+  },
+};
+const canonicalCurrentDebtDscrSingleAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: canonicalCurrentDebtDscrCoverage,
+  html: "<p>Current Debt DSCR: 1.23x</p>",
+});
+assert.equal(
+  canonicalCurrentDebtDscrSingleAligned.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  false
+);
+const canonicalCurrentDebtDscrSingleDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: canonicalCurrentDebtDscrCoverage,
+  html: "<p>Current Debt DSCR: 1.31x</p>",
+});
+assert.equal(
+  canonicalCurrentDebtDscrSingleDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  true
+);
+const canonicalCurrentDebtDscrMultiAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: canonicalCurrentDebtDscrCoverage,
+  html: [
+    "<p>DSCR (Computed): 1.23x</p>",
+    "<h3>Current Debt Coverage / Constraint Sensitivity</h3>",
+    "<table><tr><td>Base</td><td>1.23x</td></tr></table>",
+    "<h2>Deal Scorecard</h2>",
+    "<p>DSCR (Current Debt): 1.23x</p>",
+    "<h2>Risk Register</h2>",
+    "<table><tr><td>DSCR (Current Debt)</td><td>1.23x</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalCurrentDebtDscrMultiAligned.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  false
+);
+const canonicalCurrentDebtDscrMultiDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: canonicalCurrentDebtDscrCoverage,
+  html: [
+    "<p>DSCR (Computed): 1.23x</p>",
+    "<h3>Current Debt Coverage / Constraint Sensitivity</h3>",
+    "<table><tr><td>Base</td><td>1.23x</td></tr></table>",
+    "<h2>Deal Scorecard</h2>",
+    "<p>DSCR (Current Debt): 1.31x</p>",
+    "<h2>Risk Register</h2>",
+    "<table><tr><td>DSCR (Current Debt)</td><td>1.23x</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalCurrentDebtDscrMultiDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  true
+);
+const canonicalCurrentDebtNotAssessedNoDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      current_debt_limitation_reason_code: "no_true_current_debt_source",
+    },
+  },
+  html: "<p>Current Debt DSCR: Not assessed - current debt balance not provided</p>",
+});
+assert.equal(
+  canonicalCurrentDebtNotAssessedNoDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  false
+);
+const proposedAcquisitionDscrNoDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: canonicalCurrentDebtDscrCoverage,
+  html: "<p>Proposed Acquisition DSCR: 1.31x</p>",
+});
+assert.equal(
+  proposedAcquisitionDscrNoDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  false
+);
 
 const currentDebtDscrScorecardComputed = buildReportContractQa({
   reportType: "underwriting",

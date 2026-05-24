@@ -154,6 +154,8 @@ function extractCurrentDebtDscrValues(text) {
     const match = new RegExp(`${escapeRegExp(label)}[^0-9]{0,80}([0-9]+(?:\\.[0-9]+)?)x`, "i").exec(source);
     if (match) pushValue(label, match[1]);
   }
+  const currentDebtLabelMatch = /Current Debt DSCR[^0-9]{0,80}([0-9]+(?:\.[0-9]+)?)x/i.exec(source);
+  if (currentDebtLabelMatch) pushValue("Current Debt DSCR", currentDebtLabelMatch[1]);
 
   const dealScorecardSection = subsectionAfter(source, /Deal Scorecard/i, [/Risk Register/i], 2000);
   const dealScorecardMatch = /DSCR\s*\(Current Debt\)[^0-9]{0,80}?([0-9]+(?:\.[0-9]+)?)x/i.exec(dealScorecardSection);
@@ -1045,6 +1047,44 @@ export function buildReportContractQa({
   }
 
   const currentDebtDscrValues = extractCurrentDebtDscrValues(text);
+  const canonicalCurrentDebtDscrStatus = String(sourceReportCoverageQa?.current_debt_state?.current_debt_dscr_status || "").toLowerCase();
+  const canonicalCurrentDebtDscr = Number(sourceReportCoverageQa?.current_debt_state?.current_debt_dscr);
+  if (canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
+    const tolerance = 0.02;
+    const mismatchedValues = currentDebtDscrValues.filter((entry) =>
+      Math.abs(entry.value - canonicalCurrentDebtDscr) > tolerance
+    );
+    if (mismatchedValues.length > 0) {
+      addViolation(violations, {
+        code: "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT",
+        severity: "high",
+        category: "source_report_reconciliation",
+        message: "Rendered current-debt DSCR values drift from canonical computed current-debt DSCR.",
+        evidence: {
+          canonical_current_debt_dscr: canonicalCurrentDebtDscr,
+          rendered_values: currentDebtDscrValues,
+          mismatched_values: mismatchedValues,
+          tolerance,
+          excerpt:
+            firstPatternExcerpt(text, [
+              /\bDSCR \(Computed\)\b/i,
+              /\bDSCR \(T12 NOI\)\b/i,
+              /\bDSCR \(Current Debt\)\b/i,
+              /\bCurrent Debt DSCR\b/i,
+              /\bCurrent Debt Coverage\b/i,
+            ]) || leakProbeExcerpt,
+          current_debt_state: {
+            current_debt_dscr_status: sourceReportCoverageQa?.current_debt_state?.current_debt_dscr_status || null,
+            current_debt_dscr: sourceReportCoverageQa?.current_debt_state?.current_debt_dscr ?? null,
+          },
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
   if (currentDebtDscrValues.length >= 2) {
     const numericValues = currentDebtDscrValues.map((entry) => entry.value).filter((value) => Number.isFinite(value));
     const minValue = Math.min(...numericValues);
