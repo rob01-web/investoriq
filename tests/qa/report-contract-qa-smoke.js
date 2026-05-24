@@ -1090,4 +1090,110 @@ const strongDscrPressure = buildReportContractQa({
 });
 assert.equal(strongDscrPressure.violations.some((v) => v.code === "PRIMARY_PRESSURE_POINT_STABLE_METRIC_CONTRACT"), true);
 
+const sectionEligibilityNoCurrentDebt = {
+  ...baseCoverage,
+  current_debt_state: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "no_true_current_debt_source",
+  },
+  section_eligibility: {
+    sections: {
+      debt_structure: {
+        source_constrained: true,
+        omission_reason_code: "no_true_current_debt_source",
+      },
+      renovation_strategy: {
+        source_constrained: true,
+      },
+    },
+  },
+};
+const sectionEligibilityCurrentDebtDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<table><tr><td>Current Debt DSCR</td><td>1.23x</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  sectionEligibilityCurrentDebtDrift.violations.some((v) => v.code === "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT"),
+  true
+);
+
+const sectionEligibilityCurrentDebtClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: [
+    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance.</p>",
+    "<p>Current debt service is not assessed because no current outstanding debt balance was provided.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  sectionEligibilityCurrentDebtClean.violations.some((v) => v.code === "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT"),
+  false
+);
+
+const sectionEligibilityRefiDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: "<p>Refinance Stability Classification: Stable</p>",
+});
+assert.equal(
+  sectionEligibilityRefiDrift.violations.some((v) => v.code === "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT"),
+  true
+);
+
+const sectionEligibilityRefiClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: "<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p>",
+});
+assert.equal(
+  sectionEligibilityRefiClean.violations.some((v) => v.code === "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT"),
+  false
+);
+
+const sectionEligibilityRenovationDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: [
+    "<h2>Renovation Strategy</h2>",
+    "<p>Renovation ROI: 18.0%</p>",
+    "<p>Payback analysis: 4.2 years</p>",
+    "<p>NOI impact: +$120,000</p>",
+  ].join("\n"),
+});
+assert.equal(
+  sectionEligibilityRenovationDrift.violations.some((v) => v.code === "SECTION_ELIGIBILITY_RENOVATION_RENDER_DRIFT"),
+  true
+);
+
+const sectionEligibilityRenovationClean = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: sectionEligibilityNoCurrentDebt,
+  html: [
+    "<h2>Renovation Notes</h2>",
+    "<p>Historical renovation observations were reviewed for context only.</p>",
+    "<p>No renovation return, rent lift, ROI, or payback analysis is modeled.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  sectionEligibilityRenovationClean.violations.some((v) => v.code === "SECTION_ELIGIBILITY_RENOVATION_RENDER_DRIFT"),
+  false
+);
+
 console.log("report-contract-qa smoke PASS");

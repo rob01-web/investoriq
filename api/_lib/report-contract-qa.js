@@ -465,6 +465,9 @@ export function buildReportContractQa({
       sourceReportCoverageQa,
       t12Noi: t12Payload?.net_operating_income,
     });
+  const sectionEligibilitySections = sourceReportCoverageQa?.section_eligibility?.sections || null;
+  const debtStructureEligibility = sectionEligibilitySections?.debt_structure || null;
+  const renovationEligibility = sectionEligibilitySections?.renovation_strategy || null;
   const totalUnits = extractLabeledNumber(text, ["Total Units"]);
   const annualMarketRentTotal = extractLabeledNumber(text, [
     "Annual Market Rent (Total)",
@@ -598,6 +601,87 @@ export function buildReportContractQa({
         source_reconciliation_status: reconciliationStatus || null,
         excerpt: firstPatternExcerpt(text, [/CORE INPUTS EXTRACTED\s*-\s*SOURCE LIMITATIONS DISCLOSURE/i, /SOURCE LIMITATIONS DISCLOSURE/i]) || leakProbeExcerpt,
       },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const hasComputedCurrentDebtSurface =
+    /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i.test(text) ||
+    /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i.test(text);
+  const hasCurrentDebtCoverageSurface =
+    /Current Debt Coverage|DSCR Sensitivity|Full Refinance Sufficiency/i.test(text) &&
+    !/current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    debtStructureEligibility &&
+    debtStructureEligibility.source_constrained === true &&
+    debtStructureEligibility.omission_reason_code === "no_true_current_debt_source" &&
+    (hasComputedCurrentDebtSurface || hasCurrentDebtCoverageSurface)
+  ) {
+    addViolation(violations, {
+      code: "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT",
+      severity: "high",
+      category: "section_eligibility_render_contract",
+      message: "Canonical section eligibility marks current debt as source-constrained, but rendered output includes computed current-debt analysis surfaces.",
+      evidence: {
+        section_eligibility_debt_structure: debtStructureEligibility,
+        current_debt_state: currentDebtState || null,
+        excerpt: firstPatternExcerpt(text, [/Current Debt DSCR/i, /Current Debt Coverage/i, /DSCR \(T12 NOI\)/i]) || leakProbeExcerpt,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const hasRefiEligibilityDrift =
+    /Refinance Stability Classification\s*[:\n]\s*(?:Stable|Review|Constrained|Sensitized|Fragile|High Risk|Refinance Shortfall)/i.test(text) ||
+    /Refinance Proceeds\s*\/\s*Debt Balance/i.test(text) ||
+    /Refinance Stress Test|Binding Constraint/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    debtStructureEligibility &&
+    debtStructureEligibility.source_constrained === true &&
+    debtStructureEligibility.omission_reason_code === "no_true_current_debt_source" &&
+    hasRefiEligibilityDrift &&
+    !/refinance stability classification not produced due to insufficient refinance inputs|current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text)
+  ) {
+    addViolation(violations, {
+      code: "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT",
+      severity: "high",
+      category: "section_eligibility_render_contract",
+      message: "Canonical section eligibility marks refinance/current-debt basis as constrained, but rendered output includes refinance classification or proceeds surfaces.",
+      evidence: {
+        section_eligibility_debt_structure: debtStructureEligibility,
+        current_debt_state: currentDebtState || null,
+        excerpt: firstPatternExcerpt(text, [/Refinance Stability Classification/i, /Refinance Proceeds/i, /Refinance Stress Test/i, /Binding Constraint/i]) || leakProbeExcerpt,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const hasRenovationModelingSurface =
+    /Renovation (?:ROI|Return)|payback analysis|NOI impact|value impact|rent lift/i.test(text) &&
+    !/No renovation return, rent lift, ROI, or payback analysis is modeled|not modeled as a prospective renovation strategy|no verified forward-looking/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    renovationEligibility &&
+    renovationEligibility.source_constrained === true &&
+    hasRenovationModelingSurface
+  ) {
+    addViolation(violations, {
+      code: "SECTION_ELIGIBILITY_RENOVATION_RENDER_DRIFT",
+      severity: "high",
+      category: "section_eligibility_render_contract",
+      message: "Canonical section eligibility marks renovation strategy as source-constrained, but rendered output includes forward-looking renovation modeling surfaces.",
+      evidence: {
+        section_eligibility_renovation_strategy: renovationEligibility,
+        excerpt: firstPatternExcerpt(text, [/Renovation ROI/i, /payback analysis/i, /NOI impact/i, /value impact/i, /rent lift/i]) || leakProbeExcerpt,
+      },
+      customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
