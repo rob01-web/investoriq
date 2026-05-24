@@ -1,6 +1,231 @@
 import { createClient } from '@supabase/supabase-js';
+import { classifyDiagnosticOwnerArea } from '../_lib/validator-diagnostics-rollup.js';
 
 const severityRank = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
+
+// ──────────────────────────────────────────────────────────────────────────
+// DIAGNOSTICS INTELLIGENCE ROLLUP (Slice 1 — additive, read-only)
+// Aggregates diagnostic / action / violation / finding codes across recent
+// analysis_artifacts of these types:
+//     qa_action_plan
+//     report_contract_qa
+//     source_report_coverage_qa
+//     validator_diagnostics_rollup
+// Returns one row per distinct code with 7d/30d counts, owner area,
+// example job_ids (capped at 5), and the three doctrine readiness blockers.
+// ──────────────────────────────────────────────────────────────────────────
+const ROLLUP_ARTIFACT_TYPES = [
+  'qa_action_plan',
+  'report_contract_qa',
+  'source_report_coverage_qa',
+  'validator_diagnostics_rollup',
+];
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+// Returns `value` when it is a real boolean, otherwise the fallback. Critical
+// for blocker precedence: an artifact that explicitly says `blocks_* === false`
+// must NOT be overridden by a severity-derived heuristic. Only when the field
+// is absent or non-boolean do we fall back.
+function explicitBooleanOr(value, fallback) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function severityIsHigher(candidate, current) {
+  return severityRank[normalizeSeverity(candidate)] > severityRank[normalizeSeverity(current)];
+}
+
+function classifyOwnerSafe(code) {
+  try {
+    const area = classifyDiagnosticOwnerArea(code);
+    if (area && typeof area === 'string') return area;
+    if (area && typeof area === 'object' && area.owner_area) return area.owner_area;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Pulls every diagnostic-shaped record out of an artifact payload regardless
+// of its specific shape. Each yielded item carries the four normalized fields
+// the rollup needs.
+function extractCodesFromArtifact(type, payload = {}) {
+  const out = [];
+  if (!payload || typeof payload !== 'object') return out;
+
+  const push = ({ code, section, severity, blocks_customer_delivery, blocks_public_sample, blocks_high_value_outreach }) => {
+    if (!code || typeof code !== 'string') return;
+    out.push({
+      code,
+      section: section && typeof section === 'string' ? section : null,
+      severity: severity || null,
+      blocks_customer_delivery: Boolean(blocks_customer_delivery),
+      blocks_public_sample: Boolean(blocks_public_sample),
+      blocks_high_value_outreach: Boolean(blocks_high_value_outreach),
+    });
+  };
+
+  // qa_action_plan: { prioritized_actions: [{ code, section, severity, blocks_* }] }
+  if (type === 'qa_action_plan') {
+    for (const action of safeArray(payload.prioritized_actions)) {
+      push({
+        code: action?.code,
+        section: action?.section || action?.owner_area || null,
+        severity: action?.severity,
+        blocks_customer_delivery: action?.blocks_customer_delivery,
+        blocks_public_sample: action?.blocks_public_sample,
+        blocks_high_value_outreach: action?.blocks_high_value_outreach,
+      });
+    }
+    return out;
+  }
+
+  // report_contract_qa: { violations: [{ code, severity, section, blocks_* }] }
+  // Doctrine: explicit blocker booleans on the artifact item win. Severity
+  // is ONLY a fallback when the field is absent. An explicit `false` (e.g.
+  // a disclose-only contract violation at high severity) must NOT be
+  // promoted to a customer blocker.
+  if (type === 'report_contract_qa') {
+    for (const v of safeArray(payload.violations)) {
+      const sevRank = severityRank[normalizeSeverity(v?.severity)];
+      // Conservative fallback for customer delivery: critical-only.
+      // High-severity contract violations are NOT auto-promoted to
+      // customer blockers — only explicit artifact intent or true core
+      // (critical) severity routes there.
+      const fallbackCustomerBlock = sevRank >= severityRank.critical;
+      const fallbackPublicBlock = sevRank >= severityRank.medium;
+      const fallbackOutreachBlock = sevRank >= severityRank.medium;
+      push({
+        code: v?.code,
+        section: v?.section || v?.contract || null,
+        severity: v?.severity,
+        blocks_customer_delivery: explicitBooleanOr(v?.blocks_customer_delivery, fallbackCustomerBlock),
+        blocks_public_sample: explicitBooleanOr(v?.blocks_public_sample, fallbackPublicBlock),
+        blocks_high_value_outreach: explicitBooleanOr(v?.blocks_high_value_outreach, fallbackOutreachBlock),
+      });
+    }
+    return out;
+  }
+
+  // source_report_coverage_qa: { findings: [{ code, section, severity, blocks_* }] }
+  // Same explicit-first behavior. Conservative fallback: only critical
+  // severity blocks customer delivery; medium+ blocks public/outreach.
+  // Explicit `false` from the artifact is preserved.
+  if (type === 'source_report_coverage_qa') {
+    for (const f of safeArray(payload.findings)) {
+      const sevRank = severityRank[normalizeSeverity(f?.severity)];
+      const fallbackCustomerBlock = sevRank >= severityRank.critical;
+      const fallbackPublicBlock = sevRank >= severityRank.medium;
+      const fallbackOutreachBlock = sevRank >= severityRank.medium;
+      push({
+        code: f?.code,
+        section: f?.section || null,
+        severity: f?.severity,
+        blocks_customer_delivery: explicitBooleanOr(f?.blocks_customer_delivery, fallbackCustomerBlock),
+        blocks_public_sample: explicitBooleanOr(f?.blocks_public_sample, fallbackPublicBlock),
+        blocks_high_value_outreach: explicitBooleanOr(f?.blocks_high_value_outreach, fallbackOutreachBlock),
+      });
+    }
+    return out;
+  }
+
+  // validator_diagnostics_rollup: per-job summary, can include
+  // { codes: [...], top_codes: [...], items: [{ code, severity, section }] }
+  if (type === 'validator_diagnostics_rollup') {
+    const items = safeArray(payload.items).length ? safeArray(payload.items)
+      : safeArray(payload.codes).length ? safeArray(payload.codes).map((c) => ({ code: c }))
+      : safeArray(payload.top_codes).map((c) => (typeof c === 'string' ? { code: c } : c));
+    for (const item of items) {
+      push({
+        code: item?.code,
+        section: item?.section || null,
+        severity: item?.severity,
+        blocks_customer_delivery: item?.blocks_customer_delivery,
+        blocks_public_sample: item?.blocks_public_sample,
+        blocks_high_value_outreach: item?.blocks_high_value_outreach,
+      });
+    }
+    return out;
+  }
+
+  return out;
+}
+
+async function buildDiagnosticsRollup(supabase) {
+  const now = Date.now();
+  const since30d = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const since7d = now - 7 * 24 * 60 * 60 * 1000;
+
+  const { data: rows, error } = await supabase
+    .from('analysis_artifacts')
+    .select('job_id, type, payload, created_at')
+    .in('type', ROLLUP_ARTIFACT_TYPES)
+    .gte('created_at', since30d)
+    .order('created_at', { ascending: false })
+    .limit(2000);
+
+  if (error) {
+    return { ok: false, error: error.message || 'rollup_query_failed' };
+  }
+
+  // Aggregate: one entry per code
+  const byCode = new Map();
+  for (const row of rows || []) {
+    if (!row?.type || !row?.payload) continue;
+    const createdAtMs = row.created_at ? Date.parse(row.created_at) : 0;
+    const items = extractCodesFromArtifact(row.type, row.payload);
+    for (const item of items) {
+      const key = item.code;
+      let entry = byCode.get(key);
+      if (!entry) {
+        entry = {
+          code: key,
+          owner_area: classifyOwnerSafe(key),
+          section: item.section || null,
+          severity: 'none',
+          count_7d: 0,
+          count_30d: 0,
+          example_job_ids: [],
+          _job_set: new Set(),
+          blocks_customer_delivery: false,
+          blocks_public_sample: false,
+          blocks_high_value_outreach: false,
+        };
+        byCode.set(key, entry);
+      }
+      entry.count_30d += 1;
+      if (createdAtMs >= since7d) entry.count_7d += 1;
+      if (severityIsHigher(item.severity, entry.severity)) {
+        entry.severity = normalizeSeverity(item.severity);
+      }
+      if (item.section && !entry.section) entry.section = item.section;
+      if (item.blocks_customer_delivery) entry.blocks_customer_delivery = true;
+      if (item.blocks_public_sample) entry.blocks_public_sample = true;
+      if (item.blocks_high_value_outreach) entry.blocks_high_value_outreach = true;
+      if (row.job_id && !entry._job_set.has(row.job_id) && entry.example_job_ids.length < 5) {
+        entry._job_set.add(row.job_id);
+        entry.example_job_ids.push(row.job_id);
+      }
+    }
+  }
+
+  // Strip the helper Set before returning + final shape
+  const rollup = Array.from(byCode.values())
+    .map(({ _job_set, ...rest }) => ({
+      ...rest,
+      section: rest.section || 'Unclassified',
+      severity: rest.severity === 'none' ? 'low' : rest.severity,
+    }))
+    .sort((a, b) =>
+      severityRank[b.severity] - severityRank[a.severity] ||
+      b.count_7d - a.count_7d ||
+      b.count_30d - a.count_30d
+    );
+
+  return { ok: true, rollup };
+}
 
 function normalizeSeverity(value) {
   const severity = String(value || "").toLowerCase();
@@ -719,6 +944,27 @@ export default async function handler(req, res) {
     const includeFixQueueDetails = String(req.query?.include_fix_queue_details || "").toLowerCase() === "true";
     const fixQueueJobId = String(req.query?.fix_queue_job_id || req.query?.job_id || "").trim();
     const includeUsers = String(req.query?.include_users || "").toLowerCase() === "true";
+    const includeDiagnosticsRollup = String(req.query?.include_diagnostics_rollup || "").toLowerCase() === "true";
+
+    // Slice 1 — Diagnostics Intelligence Rollup. Read-only, additive.
+    // Short-circuits the rest of queue-metrics: this branch returns just
+    // the rollup so a dedicated client (DiagnosticsIntelligence.jsx) does
+    // not pay the cost of every other panel's data.
+    if (includeDiagnosticsRollup) {
+      const result = await buildDiagnosticsRollup(supabaseAdmin);
+      if (!result.ok) {
+        return res.status(200).json({
+          ok: false,
+          diagnostics_rollup: [],
+          diagnostics_rollup_error: result.error || 'rollup_failed',
+        });
+      }
+      return res.status(200).json({
+        ok: true,
+        diagnostics_rollup: result.rollup,
+      });
+    }
+
     const statuses = [
       'queued',
       'extracting',

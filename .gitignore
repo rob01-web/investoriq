@@ -38,3 +38,9 @@ Project file.zip
 
 # Local reference / prototype folders
 InvestorIQ-Empire-v2-EMERGENT/
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials

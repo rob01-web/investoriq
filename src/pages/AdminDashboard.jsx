@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
+import DiagnosticsIntelligence from "@/components/Admin/DiagnosticsIntelligence.jsx";
 
 // DESIGN TOKENS
 const T = {
@@ -789,6 +790,11 @@ export default function AdminDashboard() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/*  ZONE 2.5: DIAGNOSTICS INTELLIGENCE — additive, read-only  */}
+          <Card>
+            <DiagnosticsIntelligence adminRunKey={adminRunKey} />
+          </Card>
 
           {/*  ZONE 3: REPORTS TABLE  */}
           <Card>
