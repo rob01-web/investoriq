@@ -611,6 +611,81 @@ function resolveCanonicalOccupancyForContract({
   };
 }
 
+function normalizeSupportRole(value) {
+  const role = String(value || "").trim().toLowerCase();
+  if (!role) return null;
+  if (/property[_\s-]*tax|tax[_\s-]*bill|municipal[_\s-]*tax|assessment[_\s-]*tax|property[_\s-]*tax[_\s-]*statement/.test(role)) return "property_tax";
+  if (/phase[_\s-]*i|phase[_\s-]*1|esa|environment/.test(role)) return "environmental";
+  if (/zoning|compliance/.test(role)) return "zoning_compliance";
+  if (/market[_\s-]*survey/.test(role)) return "market_survey";
+  if (/appraisal|valuation/.test(role)) return "appraisal";
+  if (/background|qualitative|unmodeled|limited_support|support/.test(role)) return "qualitative_support";
+  return role;
+}
+
+function collectCanonicalSupportDocs(sourceReportCoverageQa = null, artifacts = []) {
+  const docs = [];
+  const pushDoc = (row) => {
+    if (!row || typeof row !== "object") return;
+    const role = normalizeSupportRole(
+      row.semantic_doc_role ||
+      row.document_role ||
+      row.source_role ||
+      row.doc_type ||
+      row.role
+    );
+    if (!role) return;
+    const name = String(
+      row.original_filename ||
+      row.file_name ||
+      row.filename ||
+      row.name ||
+      ""
+    ).trim() || null;
+    const treatmentText = String(
+      row.treatment ||
+      row.modeled_input_type ||
+      row.semantic_doc_display_label ||
+      ""
+    ).toLowerCase();
+    const explicitlyModeled =
+      /structured|modeled|quantitative|underwriting input|used in modeled outputs/.test(treatmentText) &&
+      !/unmodeled|qualitative|context/.test(treatmentText);
+    docs.push({ role, name, explicitly_modeled: explicitlyModeled, source: row });
+  };
+
+  const supportRows = [
+    ...(Array.isArray(sourceReportCoverageQa?.support_documents) ? sourceReportCoverageQa.support_documents : []),
+    ...(Array.isArray(sourceReportCoverageQa?.document_treatment) ? sourceReportCoverageQa.document_treatment : []),
+    ...(Array.isArray(sourceReportCoverageQa?.document_treatments) ? sourceReportCoverageQa.document_treatments : []),
+  ];
+  for (const row of supportRows) pushDoc(row);
+
+  for (const artifact of Array.isArray(artifacts) ? artifacts : []) {
+    const payload = artifact?.payload;
+    if (!payload || typeof payload !== "object") continue;
+    if (
+      !payload.semantic_doc_role &&
+      !payload.document_role &&
+      !payload.source_role &&
+      !payload.doc_type
+    ) continue;
+    pushDoc(payload);
+  }
+
+  const inv = sourceReportCoverageQa?.artifact_inventory || {};
+  const invCandidates = [
+    inv.appraisal_parsed,
+    inv.property_tax_parsed,
+    inv.renovation_parsed,
+    inv.loan_term_sheet_parsed,
+    inv.mortgage_statement_parsed,
+  ];
+  for (const row of invCandidates) pushDoc(row);
+
+  return docs;
+}
+
 function countBySeverity(violations) {
   const counts = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
   for (const violation of violations) {
@@ -1077,6 +1152,92 @@ export function buildReportContractQa({
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
     });
+  }
+  const canonicalSupportDocs = collectCanonicalSupportDocs(sourceReportCoverageQa, artifacts);
+  if (canonicalSupportDocs.length > 0) {
+    const propertyTaxRenderedLabelPattern =
+      /structured property tax input|modeled property tax input|property tax support|limited property tax support|property tax evidence|property tax source/i;
+    const modeledRenderedLabelPattern =
+      /structured input|modeled input|modeled support|quantitative support|used in modeled outputs|used as underwriting input/i;
+    const nonPropertyTaxRoles = new Set([
+      "environmental",
+      "zoning_compliance",
+      "market_survey",
+      "appraisal",
+      "background",
+      "qualitative_support",
+      "unmodeled_support",
+      "limited_support",
+    ]);
+    const conflictingDocs = [];
+    for (const doc of canonicalSupportDocs) {
+      const role = normalizeSupportRole(doc.role);
+      if (!role) continue;
+      const isCanonicalPropertyTax = role === "property_tax";
+      const isCanonicalNonModeled = !doc.explicitly_modeled && !isCanonicalPropertyTax;
+      const docName = String(doc.name || "").trim();
+      const roleKeyword =
+        role === "environmental" ? /phase\s*i|phase\s*1|esa|environment/i :
+        role === "zoning_compliance" ? /zoning|compliance|permitted use|municipal zoning/i :
+        role === "market_survey" ? /market survey|rent survey|rent comp/i :
+        role === "appraisal" ? /appraisal|valuation/i :
+        role === "qualitative_support" ? /qualitative|background|support/i :
+        null;
+
+      let contextWindow = "";
+      if (docName) {
+        const docMatch = new RegExp(escapeRegExp(docName), "i").exec(text);
+        if (docMatch) {
+          const windowStart = Math.max(0, docMatch.index - 140);
+          const windowEnd = Math.min(text.length, docMatch.index + docMatch[0].length + 220);
+          contextWindow = text.slice(windowStart, windowEnd);
+        }
+      }
+      if (!contextWindow && roleKeyword) {
+        const roleMatch = roleKeyword.exec(text);
+        if (roleMatch) {
+          const windowStart = Math.max(0, roleMatch.index - 120);
+          const windowEnd = Math.min(text.length, roleMatch.index + roleMatch[0].length + 220);
+          contextWindow = text.slice(windowStart, windowEnd);
+        }
+      }
+      if (!contextWindow) continue;
+
+      const hasPropertyTaxLabel = propertyTaxRenderedLabelPattern.test(contextWindow);
+      const hasModeledLabel =
+        modeledRenderedLabelPattern.test(contextWindow) &&
+        !/not used in modeled outputs|not modeled|qualitative support|unmodeled support|for context only/i.test(contextWindow);
+      if (
+        nonPropertyTaxRoles.has(role) &&
+        (hasPropertyTaxLabel || (isCanonicalNonModeled && hasModeledLabel))
+      ) {
+        conflictingDocs.push({
+          canonical_role: role,
+          canonical_treatment_modeled: doc.explicitly_modeled,
+          document_name: docName || null,
+          rendered_conflicting_label: hasPropertyTaxLabel
+            ? "property_tax_modeled_label"
+            : "generic_modeled_label",
+          excerpt: contextWindow.trim(),
+          source_summary: doc.source || null,
+        });
+      }
+    }
+    if (conflictingDocs.length > 0) {
+      addViolation(violations, {
+        code: "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Rendered support-document treatment labels conflict with canonical support-document role/treatment metadata.",
+        evidence: {
+          conflicts: conflictingDocs,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
   }
   if (hasComputedCurrentDebtState && hasStaleMissingDebtCopy) {
     addRenderedLeakViolation(violations, {

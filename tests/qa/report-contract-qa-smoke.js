@@ -856,6 +856,132 @@ const supportDocTreatmentClean = buildReportContractQa({
 });
 assert.equal(supportDocTreatmentClean.violations.some((v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"), false);
 
+const supportDocCanonicalEnvironmentalDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "environmental_report.pdf", semantic_doc_role: "environmental" },
+    ],
+  },
+  html: "<p>environmental_report.pdf - Structured property tax input</p>",
+});
+assert.equal(
+  supportDocCanonicalEnvironmentalDrift.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  true
+);
+
+const supportDocCanonicalZoningDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "zoning_letter.pdf", semantic_doc_role: "zoning" },
+    ],
+  },
+  html: "<p>zoning_letter.pdf - Property tax support</p>",
+});
+assert.equal(
+  supportDocCanonicalZoningDrift.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  true
+);
+
+const supportDocCanonicalMarketSurveyDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "market_survey.pdf", semantic_doc_role: "market_survey" },
+    ],
+  },
+  html: "<p>market_survey.pdf - Modeled property tax input</p>",
+});
+assert.equal(
+  supportDocCanonicalMarketSurveyDrift.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  true
+);
+
+const supportDocCanonicalUnmodeledDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "background_support.pdf", semantic_doc_role: "unmodeled_support" },
+    ],
+  },
+  html: "<p>background_support.pdf - Structured input used as underwriting input</p>",
+});
+assert.equal(
+  supportDocCanonicalUnmodeledDrift.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  true
+);
+
+const supportDocCanonicalPropertyTaxAllowed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "property_tax_bill.pdf", semantic_doc_role: "property_tax" },
+    ],
+  },
+  html: "<p>property_tax_bill.pdf - Property tax support</p>",
+});
+assert.equal(
+  supportDocCanonicalPropertyTaxAllowed.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  false
+);
+
+const supportDocCanonicalEnvironmentalQualitativeAllowed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "environmental_report.pdf", semantic_doc_role: "environmental" },
+    ],
+  },
+  html: "<p>environmental_report.pdf - Qualitative support; not used in modeled outputs</p>",
+});
+assert.equal(
+  supportDocCanonicalEnvironmentalQualitativeAllowed.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  false
+);
+
+const supportDocNoCanonicalExistingLeakStillFires = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Phase I ESA - Structured property tax input</p>",
+});
+assert.equal(
+  supportDocNoCanonicalExistingLeakStillFires.violations.some((v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"),
+  true
+);
+
+const supportDocNoCanonicalNeutralNoNewViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Uploaded supporting documents were reviewed for qualitative context.</p>",
+});
+assert.equal(
+  supportDocNoCanonicalNeutralNoNewViolation.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  false
+);
+
 const acquisitionWithCurrentDscrValue = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
