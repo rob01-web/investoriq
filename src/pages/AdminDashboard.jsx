@@ -433,7 +433,7 @@ export default function AdminDashboard() {
       setFixQueue(Array.isArray(data?.fix_queue) ? data.fix_queue.slice(0, 10) : []);
     } catch (e) {
       console.error('fixQueue error', e);
-      setFixQueueError('Failed to load Fix Queue.');
+      setFixQueueError('Failed to load Triage Workspace.');
     } finally {
       setFixQueueLoading(false);
     }
@@ -814,7 +814,7 @@ export default function AdminDashboard() {
             <DiagnosticsIntelligence adminRunKey={adminRunKey} />
           </Card>
 
-          {/*  ZONE 3: REPORTS TABLE  */}
+          {/*  ZONE 3: TRIAGE WORKSPACE  */}
           <Card>
             <SectionHeader
               eyebrow="Internal"
@@ -822,17 +822,17 @@ export default function AdminDashboard() {
               action={
                 <Btn onClick={fetchFixQueue} disabled={fixQueueLoading} variant={fixQueueOpen ? 'warn' : 'primary'}>
                   <RefreshCcw size={9} />
-                  {fixQueueOpen ? 'Refresh Fix Queue' : 'Load Fix Queue'}
+                  {fixQueueOpen ? 'Refresh' : 'Load Triage Workspace'}
                 </Btn>
               }
             />
             {!fixQueueOpen ? (
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'18px 0 6px' }}>
                 <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, margin:0 }}>
-                  Fix Queue is deferred until explicitly loaded.
+                  Triage Workspace is deferred until explicitly loaded.
                 </p>
                 <Btn onClick={fetchFixQueue} disabled={fixQueueLoading} variant="primary">
-                  <RefreshCcw size={9} /> Load Fix Queue
+                  <RefreshCcw size={9} /> Load Triage Workspace
                 </Btn>
               </div>
             ) : fixQueueLoading ? (
@@ -1121,22 +1121,22 @@ export default function AdminDashboard() {
                     Emergency-only. Not a report approval surface. Locked pending explicit governance implementation.
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
-                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                    <div style={{ padding:10, border:`1px solid ${T.errBorder}`, background:T.white }}>
                       <Btn
-                        title="Locked until delivery approval rules are finalized"
+                        title="Locked. Emergency-only override."
                         disabled
                         variant="primary"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        Approve for customer delivery
+                        Manual delivery override
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Disabled: approval rules not finalized.
+                        Locked. Not a routine admin function.
                       </div>
                     </div>
-                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                    <div style={{ padding:10, border:`1px solid ${T.errBorder}`, background:T.white }}>
                       <Btn
-                        title="Locked until delivery approval rules are finalized"
+                        title="Locked. Emergency-only override."
                         disabled
                         variant="warn"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
@@ -1144,12 +1144,12 @@ export default function AdminDashboard() {
                         Regenerate report
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Disabled: regenerate is locked in Phase 3.
+                        Locked. Not a routine admin function.
                       </div>
                     </div>
-                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                    <div style={{ padding:10, border:`1px solid ${T.errBorder}`, background:T.white }}>
                       <Btn
-                        title="Locked until delivery approval rules are finalized"
+                        title="Locked. Emergency-only override."
                         disabled
                         variant="ghost"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
@@ -1157,12 +1157,12 @@ export default function AdminDashboard() {
                         Override public sample block
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Disabled: public override not yet approved.
+                        Locked. Not a routine admin function.
                       </div>
                     </div>
-                    <div style={{ padding:10, border:`1px solid ${T.infoBorder}`, background:T.white }}>
+                    <div style={{ padding:10, border:`1px solid ${T.errBorder}`, background:T.white }}>
                       <Btn
-                        title="Locked until delivery approval rules are finalized"
+                        title="Locked. Emergency-only override."
                         disabled
                         variant="ghost"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
@@ -1170,7 +1170,7 @@ export default function AdminDashboard() {
                         Override outreach block
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Disabled: outreach override not yet approved.
+                        Locked. Not a routine admin function.
                       </div>
                     </div>
                   </div>
