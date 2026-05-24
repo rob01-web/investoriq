@@ -1026,6 +1026,208 @@ assert.equal(
   false
 );
 
+const acquisitionCanonicalPurchasePriceAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Purchase Price $2,840,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalPurchasePriceAligned.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
+const acquisitionCanonicalPurchasePriceDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Purchase Price $2,130,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalPurchasePriceDrift.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), true);
+
+const acquisitionCanonicalStatedLoanAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        stated_acquisition_loan_amount: 2130000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Stated Acquisition Loan Amount $2,130,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalStatedLoanAligned.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
+const acquisitionCanonicalStatedLoanDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        stated_acquisition_loan_amount: 2130000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Stated Acquisition Loan Amount $1,900,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalStatedLoanDrift.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), true);
+
+const acquisitionCanonicalDerivedLoanAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        derived_acquisition_loan_amount: 7000000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Derived Acquisition Loan Amount $7,000,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalDerivedLoanAligned.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
+const acquisitionCanonicalDerivedLoanDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        derived_acquisition_loan_amount: 7000000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Derived Acquisition Loan Amount $6,500,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalDerivedLoanDrift.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), true);
+
+const acquisitionCanonicalLenderFeeAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        lender_fee_percent: 0.0085,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Lender Fee 0.85%</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalLenderFeeAligned.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
+const acquisitionCanonicalLenderFeeDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        lender_fee_percent: 0.0085,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Lender Fee 1.25%</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalLenderFeeDrift.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), true);
+
+const acquisitionCanonicalIgnoreCurrentDebtSection = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        derived_acquisition_loan_amount: 7000000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Derived Acquisition Loan Amount $6,500,000</p>",
+    "<p>Purchase Price $2,130,000</p>",
+  ].join("\n"),
+});
+assert.equal(acquisitionCanonicalIgnoreCurrentDebtSection.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
+const acquisitionCanonicalNoSectionNoViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        derived_acquisition_loan_amount: 7000000,
+        lender_fee_percent: 0.0085,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: "<p>Acquisition assumptions reviewed.</p>",
+});
+assert.equal(acquisitionCanonicalNoSectionNoViolation.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+
 const acquisitionWithRefiClassification = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

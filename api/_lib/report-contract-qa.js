@@ -1520,6 +1520,7 @@ export function buildReportContractQa({
       [/Current Debt Coverage/i, /Deal Scorecard/i, /Risk Register/i],
       2400
     );
+    const hasAcquisitionSection = /Proposed Acquisition Debt Sizing/i.test(text) && String(acquisitionSection || "").trim().length > 0;
     const purchasePrice = Number(acquisitionLoan?.purchase_price);
     const statedLoan = Number(acquisitionLoan?.stated_acquisition_loan_amount ?? acquisitionLoan?.loan_amount);
     if (
@@ -1595,6 +1596,102 @@ export function buildReportContractQa({
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });
+    }
+    if (hasAcquisitionSection) {
+      const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed || null;
+      const invAcq = invLoan?.acquisition_support || null;
+      const canonicalPurchasePrice = coerceNumber(
+        acquisitionLoan?.purchase_price ??
+        invAcq?.purchase_price
+      );
+      const canonicalStatedLoanAmount = coerceNumber(
+        acquisitionLoan?.stated_acquisition_loan_amount ??
+        acquisitionLoan?.loan_amount ??
+        invAcq?.stated_acquisition_loan_amount
+      );
+      const canonicalDerivedLoanAmount = coerceNumber(
+        acquisitionLoan?.derived_acquisition_loan_amount ??
+        invAcq?.derived_acquisition_loan_amount
+      );
+      const canonicalLenderFeePercent = normalizePercentForComparison(
+        acquisitionLoan?.lender_fee_percent ??
+        acquisitionLoan?.origination_fee_percent ??
+        acquisitionLoan?.financing_fee_percent
+      );
+
+      const renderedPurchasePrice = extractLabeledNumber(acquisitionSection, ["Purchase Price"]);
+      const renderedStatedLoanAmount = extractLabeledNumber(acquisitionSection, ["Stated Acquisition Loan Amount"]);
+      const renderedDerivedLoanAmount =
+        extractLabeledNumber(acquisitionSection, ["Derived Acquisition Loan Amount"]) ??
+        extractLabeledNumber(acquisitionSection, ["Acquisition Loan Amount"]);
+      const renderedLenderFeeMatch =
+        /(?:Lender Fee|Origination Fee|Financing Fee)[^0-9]{0,80}([0-9]+(?:\.[0-9]+)?)\s*%/i.exec(acquisitionSection);
+      const renderedLenderFeePercent = renderedLenderFeeMatch
+        ? coerceNumber(renderedLenderFeeMatch[1]) / 100
+        : null;
+
+      const moneyAbsTolerance = 100;
+      const moneyRelTolerance = 0.005;
+      const feeTolerancePercentagePoints = 0.05;
+      const mismatchedValues = [];
+      const compareMoney = (metric, canonicalValue, renderedValue) => {
+        if (!Number.isFinite(canonicalValue) || canonicalValue <= 0 || !Number.isFinite(renderedValue)) return;
+        const absDiff = Math.abs(renderedValue - canonicalValue);
+        const relDiff = absDiff / Math.max(Math.abs(canonicalValue), 1);
+        if (absDiff > moneyAbsTolerance && relDiff > moneyRelTolerance) {
+          mismatchedValues.push({
+            metric,
+            canonical_value: canonicalValue,
+            rendered_value: renderedValue,
+            absolute_difference: absDiff,
+            relative_difference: relDiff,
+          });
+        }
+      };
+      compareMoney("purchase_price", canonicalPurchasePrice, renderedPurchasePrice);
+      compareMoney("stated_acquisition_loan_amount", canonicalStatedLoanAmount, renderedStatedLoanAmount);
+      compareMoney("derived_acquisition_loan_amount", canonicalDerivedLoanAmount, renderedDerivedLoanAmount);
+      if (Number.isFinite(canonicalLenderFeePercent) && canonicalLenderFeePercent > 0 && Number.isFinite(renderedLenderFeePercent)) {
+        const absDiffPercentagePoints = Math.abs(renderedLenderFeePercent - canonicalLenderFeePercent) * 100;
+        if (absDiffPercentagePoints > feeTolerancePercentagePoints) {
+          mismatchedValues.push({
+            metric: "lender_fee_percent",
+            canonical_value: canonicalLenderFeePercent,
+            rendered_value: renderedLenderFeePercent,
+            absolute_difference_percentage_points: absDiffPercentagePoints,
+          });
+        }
+      }
+      if (mismatchedValues.length > 0) {
+        addViolation(violations, {
+          code: "ACQUISITION_CANONICAL_VALUE_DRIFT",
+          severity: "high",
+          category: "debt_contract",
+          message: "Rendered acquisition financing values drift from canonical acquisition financing values.",
+          evidence: {
+            canonical_purchase_price: Number.isFinite(canonicalPurchasePrice) ? canonicalPurchasePrice : null,
+            rendered_purchase_price: Number.isFinite(renderedPurchasePrice) ? renderedPurchasePrice : null,
+            canonical_stated_acquisition_loan_amount: Number.isFinite(canonicalStatedLoanAmount) ? canonicalStatedLoanAmount : null,
+            rendered_stated_acquisition_loan_amount: Number.isFinite(renderedStatedLoanAmount) ? renderedStatedLoanAmount : null,
+            canonical_derived_acquisition_loan_amount: Number.isFinite(canonicalDerivedLoanAmount) ? canonicalDerivedLoanAmount : null,
+            rendered_derived_acquisition_loan_amount: Number.isFinite(renderedDerivedLoanAmount) ? renderedDerivedLoanAmount : null,
+            canonical_lender_fee_percent: Number.isFinite(canonicalLenderFeePercent) ? canonicalLenderFeePercent : null,
+            rendered_lender_fee_percent: Number.isFinite(renderedLenderFeePercent) ? renderedLenderFeePercent : null,
+            mismatched_values: mismatchedValues,
+            tolerance: {
+              money_absolute_difference: moneyAbsTolerance,
+              money_relative_difference: moneyRelTolerance,
+              percent_absolute_difference_percentage_points: feeTolerancePercentagePoints,
+            },
+            excerpt: acquisitionSection.slice(0, 500),
+            acquisition_inventory_summary: invAcq || null,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        });
+      }
     }
   }
 
