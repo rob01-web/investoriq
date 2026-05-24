@@ -109,6 +109,11 @@ function positive(value) {
   return Number.isFinite(n) && n > 0;
 }
 
+function coerceNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function escapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -478,6 +483,50 @@ function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
     has_cap: false,
     cap_reason_code: null,
     expected_label: null,
+  };
+}
+
+function resolveCanonicalRentRollAnnualTotalsForContract({
+  artifacts = [],
+  sourceReportCoverageQa = null,
+} = {}) {
+  const rentRollPayload = latestPayload(artifacts, "rent_roll_parsed") || null;
+  const totals = rentRollPayload?.totals && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
+  const isPartialSample = rentRollPayload?.is_partial_sample === true;
+  const trustedSummaryTotals =
+    totals?.summary_row_detected === true ||
+    rentRollPayload?.summary_row_detected === true;
+  const canonicalAnnualInPlaceCandidates = [
+    sourceReportCoverageQa?.source_reconciliation_state?.rr_annual_in_place,
+    rentRollPayload?.annual_in_place_rent,
+    rentRollPayload?.annualized_in_place_rent,
+    rentRollPayload?.total_in_place_annual,
+    totals?.in_place_rent_annual,
+    totals?.current_rent_annual,
+    Number.isFinite(coerceNumber(totals?.in_place_rent_monthly)) ? coerceNumber(totals?.in_place_rent_monthly) * 12 : null,
+    Number.isFinite(coerceNumber(totals?.current_rent_monthly)) ? coerceNumber(totals?.current_rent_monthly) * 12 : null,
+  ];
+  const canonicalAnnualMarketCandidates = [
+    rentRollPayload?.annual_market_rent,
+    rentRollPayload?.annualized_market_rent,
+    rentRollPayload?.total_market_annual,
+    totals?.market_rent_annual,
+    Number.isFinite(coerceNumber(totals?.market_rent_monthly)) ? coerceNumber(totals?.market_rent_monthly) * 12 : null,
+  ];
+  const firstPositiveFinite = (values) => {
+    for (const value of values) {
+      const n = coerceNumber(value);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return null;
+  };
+  return {
+    annual_in_place_rent: firstPositiveFinite(canonicalAnnualInPlaceCandidates),
+    annual_market_rent: firstPositiveFinite(canonicalAnnualMarketCandidates),
+    is_partial_sample: isPartialSample,
+    trusted_summary_totals: trustedSummaryTotals,
+    rent_roll_state: sourceReportCoverageQa?.rent_roll_sufficiency_state || null,
+    rent_roll_inventory: sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed || null,
   };
 }
 
@@ -996,6 +1045,97 @@ export function buildReportContractQa({
       evidence: { matched: true },
       blocks_customer_delivery: true,
     });
+  }
+
+  const canonicalRentRollTotals = resolveCanonicalRentRollAnnualTotalsForContract({
+    artifacts,
+    sourceReportCoverageQa,
+  });
+  const canonicalAnnualInPlaceRent = coerceNumber(canonicalRentRollTotals?.annual_in_place_rent);
+  const canonicalAnnualMarketRent = coerceNumber(canonicalRentRollTotals?.annual_market_rent);
+  const hasCanonicalAnnualRentTotals =
+    (Number.isFinite(canonicalAnnualInPlaceRent) && canonicalAnnualInPlaceRent > 0) ||
+    (Number.isFinite(canonicalAnnualMarketRent) && canonicalAnnualMarketRent > 0);
+  const skipCanonicalRentRollParityForUntrustedPartialSample =
+    canonicalRentRollTotals?.is_partial_sample === true &&
+    canonicalRentRollTotals?.trusted_summary_totals !== true;
+  if (hasCanonicalAnnualRentTotals && !skipCanonicalRentRollParityForUntrustedPartialSample) {
+    const renderedAnnualInPlaceRent = extractLabeledNumber(text, [
+      "Annual In-Place Rent (Total)",
+      "Annual In-Place Rent",
+    ]);
+    const renderedAnnualMarketRent = extractLabeledNumber(text, [
+      "Annual Market Rent (Total)",
+      "Annual Market Rent (100% Occupancy)",
+      "Annual Market Rent",
+    ]);
+    const absTolerance = 100;
+    const relTolerance = 0.005;
+    const mismatchedValues = [];
+    if (
+      Number.isFinite(canonicalAnnualInPlaceRent) &&
+      canonicalAnnualInPlaceRent > 0 &&
+      Number.isFinite(renderedAnnualInPlaceRent)
+    ) {
+      const absDiff = Math.abs(renderedAnnualInPlaceRent - canonicalAnnualInPlaceRent);
+      const relDiff = absDiff / Math.max(Math.abs(canonicalAnnualInPlaceRent), 1);
+      if (absDiff > absTolerance && relDiff > relTolerance) {
+        mismatchedValues.push({
+          metric: "annual_in_place_rent",
+          canonical_value: canonicalAnnualInPlaceRent,
+          rendered_value: renderedAnnualInPlaceRent,
+          absolute_difference: absDiff,
+          relative_difference: relDiff,
+        });
+      }
+    }
+    if (
+      Number.isFinite(canonicalAnnualMarketRent) &&
+      canonicalAnnualMarketRent > 0 &&
+      Number.isFinite(renderedAnnualMarketRent)
+    ) {
+      const absDiff = Math.abs(renderedAnnualMarketRent - canonicalAnnualMarketRent);
+      const relDiff = absDiff / Math.max(Math.abs(canonicalAnnualMarketRent), 1);
+      if (absDiff > absTolerance && relDiff > relTolerance) {
+        mismatchedValues.push({
+          metric: "annual_market_rent",
+          canonical_value: canonicalAnnualMarketRent,
+          rendered_value: renderedAnnualMarketRent,
+          absolute_difference: absDiff,
+          relative_difference: relDiff,
+        });
+      }
+    }
+    if (mismatchedValues.length > 0) {
+      addViolation(violations, {
+        code: "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT",
+        severity: "high",
+        category: "source_report_reconciliation",
+        message: "Rendered annual rent-roll totals drift from canonical annual rent-roll totals.",
+        evidence: {
+          canonical_annual_in_place_rent: Number.isFinite(canonicalAnnualInPlaceRent) ? canonicalAnnualInPlaceRent : null,
+          canonical_annual_market_rent: Number.isFinite(canonicalAnnualMarketRent) ? canonicalAnnualMarketRent : null,
+          rendered_annual_in_place_rent: Number.isFinite(renderedAnnualInPlaceRent) ? renderedAnnualInPlaceRent : null,
+          rendered_annual_market_rent: Number.isFinite(renderedAnnualMarketRent) ? renderedAnnualMarketRent : null,
+          mismatched_values: mismatchedValues,
+          tolerance: {
+            absolute_difference: absTolerance,
+            relative_difference: relTolerance,
+          },
+          excerpt:
+            firstPatternExcerpt(text, [
+              /Annual In-Place Rent(?: \(Total\))?/i,
+              /Annual Market Rent(?: \(Total\)| \(100% Occupancy\))?/i,
+            ]) || leakProbeExcerpt,
+          rent_roll_state: canonicalRentRollTotals?.rent_roll_state || null,
+          rent_roll_inventory: canonicalRentRollTotals?.rent_roll_inventory || null,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
   }
 
   if (reportTypeIsScreening(reportType, reportTier)) {

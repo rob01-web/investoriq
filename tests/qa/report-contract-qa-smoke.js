@@ -129,6 +129,184 @@ assert.equal(
   false
 );
 
+const canonicalRentRollInPlaceAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_in_place_annual: 1200000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual In-Place Rent (Total) $1,200,000</p>",
+});
+assert.equal(
+  canonicalRentRollInPlaceAligned.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
+const canonicalRentRollInPlaceDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_in_place_annual: 1200000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual In-Place Rent (Total) $900,000</p>",
+});
+assert.equal(
+  canonicalRentRollInPlaceDrift.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  true
+);
+
+const canonicalRentRollMarketAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_market_annual: 1500000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual Market Rent (Total) $1,500,000</p>",
+});
+assert.equal(
+  canonicalRentRollMarketAligned.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
+const canonicalRentRollMarketDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_market_annual: 1500000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual Market Rent (100% Occupancy) $1,200,000</p>",
+});
+assert.equal(
+  canonicalRentRollMarketDrift.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  true
+);
+
+const canonicalRentRollBothAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_in_place_annual: 1200000,
+        total_market_annual: 1500000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Annual In-Place Rent (Total) $1,200,000</p>",
+    "<p>Annual Market Rent (Total) $1,500,000</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalRentRollBothAligned.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
+const canonicalRentRollInPlaceAlignedMarketDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+        total_in_place_annual: 1200000,
+        total_market_annual: 1500000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Annual In-Place Rent (Total) $1,200,000</p>",
+    "<p>Annual Market Rent (Total) $1,200,000</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalRentRollInPlaceAlignedMarketDrift.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  true
+);
+
+const canonicalRentRollTotalsMissing = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 24,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Annual In-Place Rent (Total) $1,200,000</p>",
+    "<p>Annual Market Rent (Total) $1,500,000</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalRentRollTotalsMissing.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
+const canonicalRentRollPartialUntrustedNoViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        is_partial_sample: true,
+        total_in_place_annual: 1200000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual In-Place Rent (Total) $900,000</p>",
+});
+assert.equal(
+  canonicalRentRollPartialUntrustedNoViolation.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
 const sourceReconciliationCoverage = {
   ...baseCoverage,
   source_reconciliation_state: {
