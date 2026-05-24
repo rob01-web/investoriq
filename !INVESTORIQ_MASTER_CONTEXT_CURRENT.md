@@ -1,3 +1,159 @@
+# May 24/25, 2026 Addendum - Canonical Render Parity Contracts Completed / Admin Diagnostics Slice 2A Deployed / Next Step Retest
+
+## A. Completed Root-Class + Admin Diagnostics Status (May 24/25)
+
+1. SUPPORT_DOC_TREATMENT_CONTRACT_GAP  
+Status: patched, committed, deployed/pass.  
+Outcome: Environmental / Phase I / ESA / zoning / compliance docs cannot be rendered as property-tax support or structured property-tax inputs. Deterministic contract enforcement exists; advisory AI is not the authority.
+
+2. ACQUISITION_FINANCING_CANONICALIZATION_GAP  
+Status: patched, committed, deployed/pass.  
+Outcome: Acquisition/proposed financing canonicalization now handles clean/messy/shorthand term-sheet formats generally, including purchase price, stated acquisition loan amount, derived acquisition loan amount, LTV/rate/amortization, lender/origination/financing fees, and unquantified legal/appraisal/closing notes. Acquisition/proposed financing remains separate from current outstanding debt unless true current debt balance evidence exists.
+
+3. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Clean core T12 + Rent Roll coverage should not be mislabeled as severe source limitation just because optional/support sections are constrained. Optional underwriting constraints should be disclosed separately from core input sufficiency.
+
+4. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP  
+Status: completed, committed, deployed/pass.  
+Outcome: Final sweep expanded rendered contract coverage using tests-only/generalized coverage where appropriate. This was not a renderer rewrite.
+
+5. ROOT-FAMILY_TAXONOMY_AUDIT  
+Status: completed audit-only.  
+Outcome: Audit identified canonical-value/rendered-value drift as the next root family and recommended targeted QA contracts instead of broad refactors.
+
+6. SECTION_ELIGIBILITY_RENDER_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: If canonical section eligibility says current debt/refi/renovation sections are source-constrained, rendered output should not show computed/numeric modeled surfaces for those sections. Unsupported optional sections should collapse/qualify/omit instead of inventing outputs.
+
+7. VERDICT_CAP_EXPLANATION_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Visible classification and explanation language must align with canonical verdict caps. Stable language cannot appear when source reconciliation, insufficient core support, or debt coverage constraints cap the report to Review-class labels.
+
+8. CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Rendered current-debt DSCR values across customer-facing surfaces must match canonical computed current-debt DSCR within tolerance. Proposed/acquisition DSCR is excluded from current-debt DSCR parity.
+
+9. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Rendered Annual In-Place Rent and Annual Market Rent totals must match canonical rent-roll annual totals when canonical trusted totals exist. Partial-sample rent rolls without trusted summary totals are skipped.
+
+10. OCCUPANCY_CANONICAL_VALUE_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Rendered current/rent-roll/physical occupancy must match canonical trusted occupancy within tolerance. Break-even, buffer, stress, sensitized, vacancy, and market occupancy contexts are excluded.
+
+11. ACQUISITION_CANONICAL_VALUE_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: Rendered Proposed Acquisition Debt Sizing values must match same-label canonical acquisition payload values when both exist, including purchase price, stated acquisition loan amount, derived acquisition loan amount, and lender/origination/financing fee. Contract is scoped only to Proposed Acquisition Debt Sizing, not current debt/refi/scorecard/risk register.
+
+12. SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT  
+Status: patched, committed, deployed/pass.  
+Outcome: When canonical support-document role/treatment metadata exists, rendered document-treatment labels must not contradict canonical support role. Environmental, zoning/compliance, market survey, appraisal/background, qualitative, unmodeled, or limited-support docs cannot be rendered as property-tax support or modeled/structured underwriting inputs unless canonical metadata explicitly supports that class. Existing SUPPORT_DOC_TREATMENT_LABEL_CONTRACT remains active for obvious text leaks when canonical metadata is absent.
+
+13. Admin Diagnostics Intelligence Layer Slice 1  
+Status: patched, committed, deployed/pass.  
+Outcome: Admin dashboard now has a read-only diagnostics intelligence rollup using existing QA artifacts. Explicit blocker booleans from report_contract_qa and source_report_coverage_qa take precedence over severity-derived fallback, so high-severity disclose-only diagnostics are not mislabeled as customer blockers.
+
+14. Admin Diagnostics Slice 2A - Triage Workspace  
+Status: clean PR merged to main and Vercel production deployed green.  
+Outcome: AdminDashboard.jsx frontend-only restructure:
+- "Admin Review / Fix Queue" renamed to "Triage Workspace"
+- rows bucketed into Published With Diagnostics, Fail-Closed Core, and Operational Health
+- delivery_gate_status underlying values unchanged
+- "admin_review_required" display renamed to "Fail-Closed Core" only in UI
+- operational recovery controls remain scoped
+- emergency override controls remain locked and reframed as emergency-only, not report approval
+- no backend/API/schema/customer-dashboard/package/env changes
+
+All known May 24 root-class blocker patches from the active patch order have now been completed and deployed/pass. The current active next step is not another blind patch. The next step is a controlled live retest batch.
+
+## B. Current Recommended Next Action
+
+Run controlled live retests:
+1. Clean Screening
+2. Clean Full Underwriting
+3. Messy Full Underwriting / acquisition-financing scenario
+4. One fail-closed core-doc test if needed
+
+For each retest, capture:
+- PDF
+- analysis_artifacts_rows.json
+- any report_contract_qa / source_report_coverage_qa / qa_action_plan artifacts
+- Admin Diagnostics view if relevant
+
+Retest checklist:
+- no Phase I / ESA / environmental / zoning / compliance doc appears as property-tax support
+- Data Coverage headline distinguishes clean core coverage from optional/support constraints
+- acquisition/proposed financing purchase price, stated loan, derived loan, fee, and closing notes render correctly
+- acquisition/proposed financing is not treated as current debt
+- current-debt DSCR/refi sections collapse/qualify when true current debt balance is absent
+- canonical DSCR/rent-roll/occupancy/acquisition values match rendered values
+- visible classification is aligned across cover/executive/scorecard/risk surfaces
+- unsupported renovation/CapEx does not produce ROI/payback/rent-lift/NOI impact
+- Screening does not leak underwriting sections
+- no DATA NOT AVAILABLE / N/A metric placeholders / unresolved tokens / internal QA/admin/parser/artifact language / public AI language / mojibake
+- Admin Diagnostics Triage Workspace appears as expected
+
+## C. Active Patch Order (Current Checkpoint)
+
+0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP - done/deployed/pass
+1. ACQUISITION_FINANCING_CANONICALIZATION_GAP - done/deployed/pass
+2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT - done/deployed/pass
+3. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP - done/deployed/pass
+4. ROOT-FAMILY_TAXONOMY_AUDIT - done audit-only
+5. CANONICAL VALUE / RENDERED VALUE DRIFT CONTRACTS:
+   - CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT - done/deployed/pass
+   - OCCUPANCY_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - ACQUISITION_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
+6. Admin Diagnostics Slice 1 - done/deployed/pass
+7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
+8. NEXT: controlled live retest batch
+
+## D. Doctrine (Unchanged)
+
+- Publish vs fail-closed remains the operating model.
+- Admin review is not a normal customer outcome.
+- Entire-report fail-closed only when core T12/Rent Roll are unusable/missing/unreadable/materially invalid or true system/runtime/storage failure blocks generation.
+- Optional/support/section-specific limitations should collapse, omit, qualify, disclose, or render Not Assessed where appropriate.
+- Unsupported optional/support issues should emit structured diagnostics.
+- Diagnostics are product intelligence, not routine manual review.
+- Universal report-quality standard for customers, public samples, and high-value outreach.
+- No Ken/public/customer quality-tier distinction.
+- Root-class patches must be generalized with anti-hardcode proof/tests.
+- No report-specific hacks.
+
+## E. Fresh-Chat Continuation Prompt (Updated)
+
+We are continuing InvestorIQ after the May 24/25 root-class hardening sprint.
+
+Completed/deployed/pass:
+- SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+- ACQUISITION_FINANCING_CANONICALIZATION_GAP
+- UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+- RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
+- ROOT-FAMILY_TAXONOMY_AUDIT audit-only
+- SECTION_ELIGIBILITY_RENDER_DRIFT
+- VERDICT_CAP_EXPLANATION_DRIFT
+- CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
+- RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+- OCCUPANCY_CANONICAL_VALUE_DRIFT
+- ACQUISITION_CANONICAL_VALUE_DRIFT
+- SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
+- Admin Diagnostics Slice 1
+- Admin Diagnostics Slice 2A Triage Workspace
+
+Current next step:
+Run controlled live retests and inspect PDFs + artifacts before deciding any further patches.
+
+Do not start Slice 2B yet.
+Do not do broad refactors.
+Do not rotate secrets mid-debug.
+Do not flip DocRaptor production mode yet.
+Do not disable GitHub worker yet.
+
+---
 # May 24, 2026 Addendum - Publish-vs-Fail Doctrine Refined / Section Diagnostics Strategy Locked / Support-Doc Contract Gap Patched / Next Root-Family Work
 
 ## A) New practical customer outcome doctrine
@@ -376,69 +532,47 @@ This May 24 status supersedes earlier May 23 language that stated no active repo
 
 ## Active Patch Order
 
-0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP — patched/pass-to-commit
-1. ACQUISITION_FINANCING_CANONICALIZATION_GAP — next
-2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
-3. RENDERED_QA_CONTRACT_EXPANSION / final sweep
-4. ROOT-FAMILY TAXONOMY AUDIT
-
-## Diagnostics Schema And Rollup Example
-
-`json
-{
-  "event": "section_fail_closed",
-  "job_id": "...",
-  "report_type": "underwriting",
-  "section": "acquisition_financing",
-  "status": "omitted_or_qualified",
-  "reason_code": "purchase_price_not_verified",
-  "source_family": "loan_term_sheet",
-  "customer_delivery_impact": "none",
-  "report_quality_impact": "advisory_or_external_distribution_blocker",
-  "input_fields_missing": ["purchase_price"],
-  "input_fields_present": ["ltv", "interest_rate", "loan_amount"],
-  "recommended_admin_bucket": "possible_parser_subclass",
-  "rendered_behavior": "section qualified; no fabricated purchase price",
-  "needs_code_patch": "unknown_until_recurs"
-}
-`
-
-Recurring diagnostics rollup example:
-- purchase_price_not_verified: 7 reports
-- market_survey_not_modeled: 12 reports
-- renovation_roi_missing: 9 reports
-- current_debt_not_assessed: 5 reports
-- support_doc_unclassified: 14 reports
+Current checkpoint:
+0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP - done/deployed/pass
+1. ACQUISITION_FINANCING_CANONICALIZATION_GAP - done/deployed/pass
+2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT - done/deployed/pass
+3. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP - done/deployed/pass
+4. ROOT-FAMILY_TAXONOMY_AUDIT - done audit-only
+5. CANONICAL VALUE / RENDERED VALUE DRIFT CONTRACTS:
+   - CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT - done/deployed/pass
+   - OCCUPANCY_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - ACQUISITION_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
+6. Admin Diagnostics Slice 1 - done/deployed/pass
+7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
+8. NEXT: controlled live retest batch
 
 ## Fresh-Chat Continuation Prompt
 
-We are continuing InvestorIQ from the May 24 current context.
+We are continuing InvestorIQ after the May 24/25 root-class hardening sprint.
 
-Immediate checkpoint:
-- SUPPORT_DOC_TREATMENT_CONTRACT_GAP is patched/pass-to-commit.
-- Next patch is ACQUISITION_FINANCING_CANONICALIZATION_GAP.
-- Then patch UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT.
-- Then run RENDERED_QA_CONTRACT_EXPANSION final sweep.
-- Then run ROOT-FAMILY TAXONOMY AUDIT.
+Completed/deployed/pass:
+- SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+- ACQUISITION_FINANCING_CANONICALIZATION_GAP
+- UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+- RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
+- ROOT-FAMILY_TAXONOMY_AUDIT audit-only
+- SECTION_ELIGIBILITY_RENDER_DRIFT
+- VERDICT_CAP_EXPLANATION_DRIFT
+- CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
+- RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+- OCCUPANCY_CANONICAL_VALUE_DRIFT
+- ACQUISITION_CANONICAL_VALUE_DRIFT
+- SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
+- Admin Diagnostics Slice 1
+- Admin Diagnostics Slice 2A Triage Workspace
 
-Core doctrine:
-- Publish if usable T12 + Rent Roll support a defensible report.
-- Fail entire report only if core T12/Rent Roll cannot support a defensible report or true runtime/system/storage failure blocks generation.
-- Optional/support sections fail closed at section/line level.
+Current next step:
+Run controlled live retests and inspect PDFs + artifacts before deciding any further patches.
 
-Execution constraints:
-- No report-specific fixes.
-- Root-class patch only, with generalized invariant + anti-hardcode proof/tests.
-- One task at a time; micro-prompts only.
-
-## Working Rules
-
-- Micro-prompts only.
-- One task at a time.
-- No broad refactors.
-- No unrelated cleanup.
-- Short receipts only.
-- Do not flip DocRaptor production mode yet.
-- Do not disable GitHub worker yet.
-- Do not rotate secrets mid-debug.
-- Do not change Supabase Cron cadence unless explicitly chosen.
+Do not start Slice 2B yet.
+Do not do broad refactors.
+Do not rotate secrets mid-debug.
+Do not flip DocRaptor production mode yet.
+Do not disable GitHub worker yet.
