@@ -430,6 +430,55 @@ function coreCoveragePresent(sourceReportCoverageQa) {
   return Boolean(inv?.t12_parsed?.has_core_totals && inv?.rent_roll_parsed?.present);
 }
 
+function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
+  const verdictState = sourceReportCoverageQa?.display_verdict_state || sourceReportCoverageQa?.canonical_display_verdict_state || null;
+  const explicitCapReason = String(verdictState?.cap_reason_code || "").trim();
+  if (explicitCapReason) {
+    return {
+      has_cap: true,
+      cap_reason_code: explicitCapReason,
+      expected_label: String(verdictState?.label || "").trim() || null,
+    };
+  }
+  const reconciliationStatus = String(sourceReportCoverageQa?.source_reconciliation_state?.status || "").toLowerCase();
+  if (reconciliationStatus === "source_reconciliation_required" || reconciliationStatus === "parser_suspected") {
+    return {
+      has_cap: true,
+      cap_reason_code: "source_reconciliation_disclosure",
+      expected_label: "Review - Source Reconciliation Disclosure",
+    };
+  }
+  const currentDebtState = sourceReportCoverageQa?.current_debt_state || null;
+  const debtDscr = Number(currentDebtState?.current_debt_dscr);
+  if (currentDebtState?.current_debt_dscr_status === "computed" && Number.isFinite(debtDscr) && debtDscr < 1.25) {
+    return {
+      has_cap: true,
+      cap_reason_code: "debt_coverage_constraint",
+      expected_label: "Review - Debt Coverage Constraint",
+    };
+  }
+  if (currentDebtState?.current_debt_dscr_status === "not_assessed") {
+    return {
+      has_cap: true,
+      cap_reason_code: "debt_coverage_not_assessed",
+      expected_label: "Review - Debt Coverage Constraint",
+    };
+  }
+  const coreBucket = String(sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket || "").toLowerCase();
+  if (["user_needs_documents", "admin_review_required", "system_contract_failure"].includes(coreBucket)) {
+    return {
+      has_cap: true,
+      cap_reason_code: "insufficient_core_support",
+      expected_label: "Review - Insufficient Core Support",
+    };
+  }
+  return {
+    has_cap: false,
+    cap_reason_code: null,
+    expected_label: null,
+  };
+}
+
 function countBySeverity(violations) {
   const counts = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
   for (const violation of violations) {
@@ -680,6 +729,114 @@ export function buildReportContractQa({
       evidence: {
         section_eligibility_renovation_strategy: renovationEligibility,
         excerpt: firstPatternExcerpt(text, [/Renovation ROI/i, /payback analysis/i, /NOI impact/i, /value impact/i, /rent lift/i]) || leakProbeExcerpt,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const canonicalVerdictCapState = inferCanonicalVerdictCapState(sourceReportCoverageQa);
+  const renderedStableClassification =
+    /\b(?:Within Underwriting Parameters|Refinance Stability Classification\s*[:\n]\s*Stable|Capital Risk Profile\s*[:\n]\s*Stable)\b/i.test(text);
+  const renderedReviewDebtConstraint = /Review\s*-\s*Debt Coverage Constraint/i.test(text);
+  const renderedReviewSourceReconciliation = /Review\s*-\s*Source Reconciliation Disclosure/i.test(text);
+  const renderedReviewInsufficientCoreSupport = /Review\s*-\s*Insufficient Core Support/i.test(text);
+  if (canonicalVerdictCapState.has_cap && renderedStableClassification) {
+    addViolation(violations, {
+      code: "VERDICT_CAP_RENDER_DRIFT",
+      severity: "high",
+      category: "visible_classification_contract",
+      message: "Canonical verdict state is capped at Review, but rendered report includes uncapped stable classification language.",
+      evidence: {
+        canonical_cap_reason_code: canonicalVerdictCapState.cap_reason_code,
+        canonical_expected_label: canonicalVerdictCapState.expected_label,
+        excerpt: firstPatternExcerpt(text, [/Within Underwriting Parameters/i, /Refinance Stability Classification\s*[:\n]\s*Stable/i, /Capital Risk Profile\s*[:\n]\s*Stable/i]) || leakProbeExcerpt,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  if (
+    canonicalVerdictCapState.cap_reason_code === "debt_coverage_constraint" ||
+    canonicalVerdictCapState.cap_reason_code === "debt_coverage_not_assessed"
+  ) {
+    if (!renderedReviewDebtConstraint) {
+      addViolation(violations, {
+        code: "VERDICT_CAP_EXPLANATION_CONTRADICTION",
+        severity: "high",
+        category: "visible_classification_contract",
+        message: "Canonical debt-coverage cap exists, but rendered report lacks aligned debt-coverage review classification language.",
+        evidence: {
+          canonical_cap_reason_code: canonicalVerdictCapState.cap_reason_code,
+          canonical_expected_label: canonicalVerdictCapState.expected_label,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  } else if (canonicalVerdictCapState.cap_reason_code === "source_reconciliation_disclosure") {
+    if (!renderedReviewSourceReconciliation) {
+      addViolation(violations, {
+        code: "VERDICT_CAP_EXPLANATION_CONTRADICTION",
+        severity: "high",
+        category: "visible_classification_contract",
+        message: "Canonical source-reconciliation cap exists, but rendered report lacks aligned source-reconciliation review classification language.",
+        evidence: {
+          canonical_cap_reason_code: canonicalVerdictCapState.cap_reason_code,
+          canonical_expected_label: canonicalVerdictCapState.expected_label,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  } else if (canonicalVerdictCapState.cap_reason_code === "insufficient_core_support") {
+    if (!renderedReviewInsufficientCoreSupport) {
+      addViolation(violations, {
+        code: "VERDICT_CAP_EXPLANATION_CONTRADICTION",
+        severity: "high",
+        category: "visible_classification_contract",
+        message: "Canonical insufficient-core-support cap exists, but rendered report lacks aligned insufficient-core-support review classification language.",
+        evidence: {
+          canonical_cap_reason_code: canonicalVerdictCapState.cap_reason_code,
+          canonical_expected_label: canonicalVerdictCapState.expected_label,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
+  const visibleClassificationLabels = [];
+  const addVisibleLabel = (label, pattern) => {
+    if (pattern.test(text)) visibleClassificationLabels.push(label);
+  };
+  addVisibleLabel("review_debt_coverage_constraint", /Review\s*-\s*Debt Coverage Constraint/i);
+  addVisibleLabel("review_source_reconciliation_disclosure", /Review\s*-\s*Source Reconciliation Disclosure/i);
+  addVisibleLabel("review_insufficient_core_support", /Review\s*-\s*Insufficient Core Support/i);
+  addVisibleLabel("stable", /\b(?:Within Underwriting Parameters|Refinance Stability Classification\s*[:\n]\s*Stable|Capital Risk Profile\s*[:\n]\s*Stable)\b/i);
+  const uniqueVisibleLabels = [...new Set(visibleClassificationLabels)];
+  const hasConflictingVisibleClassifications =
+    uniqueVisibleLabels.length > 1 &&
+    (
+      uniqueVisibleLabels.includes("stable") ||
+      uniqueVisibleLabels.filter((label) => label.startsWith("review_")).length > 1
+    );
+  if (hasConflictingVisibleClassifications) {
+    addViolation(violations, {
+      code: "VISIBLE_CLASSIFICATION_CONFLICT",
+      severity: "high",
+      category: "visible_classification_contract",
+      message: "Rendered report contains conflicting visible classification labels across sections.",
+      evidence: {
+        visible_classification_labels: uniqueVisibleLabels,
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,

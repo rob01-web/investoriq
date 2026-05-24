@@ -1196,4 +1196,106 @@ assert.equal(
   false
 );
 
+const canonicalDebtConstraintStableDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.1,
+    },
+    display_verdict_state: {
+      label: "Review - Debt Coverage Constraint",
+      cap_reason_code: "debt_coverage_constraint",
+    },
+  },
+  html: "<p>Capital Risk Profile: Stable</p>",
+});
+assert.equal(canonicalDebtConstraintStableDrift.violations.some((v) => v.code === "VERDICT_CAP_RENDER_DRIFT"), true);
+
+const canonicalDebtConstraintAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    display_verdict_state: {
+      label: "Review - Debt Coverage Constraint",
+      cap_reason_code: "debt_coverage_constraint",
+    },
+  },
+  html: "<p>Review - Debt Coverage Constraint</p>",
+});
+assert.equal(canonicalDebtConstraintAligned.violations.some((v) => v.code === "VERDICT_CAP_RENDER_DRIFT"), false);
+assert.equal(canonicalDebtConstraintAligned.violations.some((v) => v.code === "VERDICT_CAP_EXPLANATION_CONTRADICTION"), false);
+
+const canonicalSourceReconciliationStableDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    source_reconciliation_state: {
+      status: "source_reconciliation_required",
+      publishability_bucket: "disclose_only_publishable",
+    },
+  },
+  html: "<p>Refinance Stability Classification: Stable</p>",
+});
+assert.equal(canonicalSourceReconciliationStableDrift.violations.some((v) => v.code === "VERDICT_CAP_RENDER_DRIFT"), true);
+
+const canonicalSourceReconciliationAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    source_reconciliation_state: {
+      status: "source_reconciliation_required",
+      publishability_bucket: "disclose_only_publishable",
+    },
+  },
+  html: "<p>Review - Source Reconciliation Disclosure</p>",
+});
+assert.equal(canonicalSourceReconciliationAligned.violations.some((v) => v.code === "VERDICT_CAP_RENDER_DRIFT"), false);
+assert.equal(canonicalSourceReconciliationAligned.violations.some((v) => v.code === "VERDICT_CAP_EXPLANATION_CONTRADICTION"), false);
+
+const visibleClassificationConflict = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    display_verdict_state: {
+      label: "Review - Insufficient Core Support",
+      cap_reason_code: "insufficient_core_support",
+    },
+  },
+  html: [
+    "<p>Review - Insufficient Core Support</p>",
+    "<p>Review - Debt Coverage Constraint</p>",
+  ].join("\n"),
+});
+assert.equal(visibleClassificationConflict.violations.some((v) => v.code === "VISIBLE_CLASSIFICATION_CONFLICT"), true);
+
+const visibleClassificationAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    display_verdict_state: {
+      label: "Review - Debt Coverage Constraint",
+      cap_reason_code: "debt_coverage_constraint",
+    },
+  },
+  html: [
+    "<p>Review - Debt Coverage Constraint</p>",
+    "<p>Review - Debt Coverage Constraint</p>",
+  ].join("\n"),
+});
+assert.equal(visibleClassificationAligned.violations.some((v) => v.code === "VISIBLE_CLASSIFICATION_CONFLICT"), false);
+
 console.log("report-contract-qa smoke PASS");
