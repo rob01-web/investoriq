@@ -768,8 +768,10 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
   const extractPurchasePriceFromText = (text) => {
     if (typeof text !== "string" || !text.trim()) return null;
     const patterns = [
+      /price\s*ref[^0-9$]{0,12}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /(?:at|based on)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
       /(?:purchase|acquisition|asking)\s*price[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
     ];
     for (const pattern of patterns) {
       const match = text.match(pattern);
@@ -781,8 +783,10 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
   const extractLoanAmountFromText = (text) => {
     if (typeof text !== "string" || !text.trim()) return null;
     const patterns = [
+      /price\s*ref[^\\n]{0,80}?loan[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /loan amount\s*\([^)]*\)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
-      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount|proposed loan|acquisition loan)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /([0-9][0-9,]*(?:\.[0-9]+)?)\s*loan/i,
     ];
     for (const pattern of patterns) {
       const match = text.match(pattern);
@@ -793,12 +797,21 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
   };
   const extractPercentFromText = (text, labelRegex) => {
     if (typeof text !== "string" || !text.trim()) return null;
-    const directPattern = new RegExp(`${labelRegex.source}[^0-9.;:\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
-    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^.;:\\n]{0,20}${labelRegex.source}`, "i");
+    const directPattern = new RegExp(`(?:${labelRegex.source})[^0-9\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
+    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,20}(?:${labelRegex.source})`, "i");
     const directMatch = text.match(directPattern);
     const reverseMatch = text.match(reversePattern);
     const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
     return Number.isFinite(parsed) && parsed > 0 ? parsed / 100 : null;
+  };
+  const extractYearsFromText = (text, labelRegex) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const directPattern = new RegExp(`(?:${labelRegex.source})[^0-9\\n]{0,20}([0-9]{1,2}(?:\\.[0-9]+)?)`, "i");
+    const reversePattern = new RegExp(`([0-9]{1,2}(?:\\.[0-9]+)?)\\s*(?:years?|yrs?)?[^\\n]{0,20}(?:${labelRegex.source})`, "i");
+    const directMatch = text.match(directPattern);
+    const reverseMatch = text.match(reversePattern);
+    const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   };
   const materiallyDifferentAmount = (left, right) => {
     const a = coerceNumber(left);
@@ -860,8 +873,19 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     normalized.origination_fee_percent,
     extractPercentFromText(rawText, /(lender fee|financing fee|origination fee)/)
   );
-  if (Number.isFinite(lenderFeePercent) && lenderFeePercent > 0) {
-    normalized.lender_fee_percent = lenderFeePercent;
+  const lenderFeeFallbackMatch =
+    typeof rawText === "string"
+      ? rawText.match(/(?:lender fee|financing fee|origination fee)[^0-9\n]{0,20}([0-9]+(?:\.[0-9]+)?)\s*%/i)
+      : null;
+  const lenderFeeFallback = Number(lenderFeeFallbackMatch?.[1]);
+  const resolvedLenderFeePercent =
+    Number.isFinite(lenderFeePercent) && lenderFeePercent > 0
+      ? lenderFeePercent
+      : Number.isFinite(lenderFeeFallback) && lenderFeeFallback > 0
+      ? lenderFeeFallback / 100
+      : null;
+  if (Number.isFinite(resolvedLenderFeePercent) && resolvedLenderFeePercent > 0) {
+    normalized.lender_fee_percent = resolvedLenderFeePercent;
   }
   const closingCostNotes = String(normalized.closing_cost_notes || "");
   const hasLegalAppraisalMention = /legal|appraisal/i.test(`${closingCostNotes} ${rawText}`);
@@ -875,12 +899,33 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     }
   }
   const ltv = coerceNumber(normalized.ltv);
+  if ((!Number.isFinite(ltv) || ltv <= 0) && typeof rawText === "string" && rawText.length > 0) {
+    const ltvPattern = /(?:\bltv\b|loan[-\s]*to[-\s]*value)[^0-9\n]{0,20}([0-9]+(?:\.[0-9]+)?)\s*%/i;
+    const reverseLtvPattern = /([0-9]+(?:\.[0-9]+)?)\s*%[^\n]{0,20}(?:\bltv\b|loan[-\s]*to[-\s]*value)/i;
+    const ltvMatch = rawText.match(ltvPattern) || rawText.match(reverseLtvPattern);
+    const ltvFromText = Number(ltvMatch?.[1]);
+    if (Number.isFinite(ltvFromText) && ltvFromText > 0) normalized.ltv = ltvFromText / 100;
+  }
+  const ratePattern = /(?:interest rate|\brate\b)[^0-9\n]{0,20}([0-9]+(?:\.[0-9]+)?)\s*%/i;
+  const reverseRatePattern = /([0-9]+(?:\.[0-9]+)?)\s*%[^\n]{0,20}(?:interest rate|\brate\b)/i;
+  const rateMatch = rawText.match(ratePattern) || rawText.match(reverseRatePattern);
+  const rateFromText = Number(rateMatch?.[1]);
+  if ((!Number.isFinite(coerceNumber(normalized.interest_rate)) || coerceNumber(normalized.interest_rate) <= 0) && Number.isFinite(rateFromText) && rateFromText > 0) {
+    normalized.interest_rate = rateFromText / 100;
+  }
+  const amortPattern = /(?:amortization|amort|am\b)[^0-9\n]{0,20}([0-9]{1,2}(?:\.[0-9]+)?)/i;
+  const reverseAmortPattern = /([0-9]{1,2}(?:\.[0-9]+)?)\s*(?:years?|yrs?)?[^\n]{0,20}(?:amortization|amort|am\b)/i;
+  const amortMatch = rawText.match(amortPattern) || rawText.match(reverseAmortPattern);
+  const amortYearsFromText = Number(amortMatch?.[1]);
+  if ((!Number.isFinite(coerceNumber(normalized.amortization_years)) || coerceNumber(normalized.amortization_years) <= 0) && Number.isFinite(amortYearsFromText) && amortYearsFromText > 0) {
+    normalized.amortization_years = amortYearsFromText;
+  }
   const computedFromPurchaseAndLtv =
     Number.isFinite(resolvedPurchasePrice) &&
     resolvedPurchasePrice > 0 &&
-    Number.isFinite(ltv) &&
-    ltv > 0
-      ? resolvedPurchasePrice * ltv
+    Number.isFinite(coerceNumber(normalized.ltv)) &&
+    coerceNumber(normalized.ltv) > 0
+      ? resolvedPurchasePrice * coerceNumber(normalized.ltv)
       : null;
   if (!Number.isFinite(resolvedStatedLoanAmount) || resolvedStatedLoanAmount <= 0) {
     if (Number.isFinite(computedFromPurchaseAndLtv) && computedFromPurchaseAndLtv > 0) {
@@ -2613,8 +2658,10 @@ function buildAcquisitionFinancingAssumptionsHtml({
   const extractPurchasePriceFromText = (text) => {
     if (typeof text !== "string" || !text.trim()) return null;
     const contextualPatterns = [
+      /price\s*ref[^0-9$]{0,12}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /(?:at|based on)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
       /(?:purchase|acquisition|asking)\s*price[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /([0-9][0-9,]*(?:\.[0-9]+)?)\s*purchase price/i,
     ];
     for (const pattern of contextualPatterns) {
       const match = text.match(pattern);
@@ -2626,8 +2673,10 @@ function buildAcquisitionFinancingAssumptionsHtml({
   const extractStatedLoanAmountFromText = (text) => {
     if (typeof text !== "string" || !text.trim()) return null;
     const contextualPatterns = [
+      /price\s*ref[^\n]{0,80}?loan[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /loan amount\s*\([^)]*\)\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
-      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /(?:loan amount|mortgage amount|proposed loan amount|acquisition loan amount|proposed loan|acquisition loan)[^$0-9]{0,24}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /([0-9][0-9,]*(?:\.[0-9]+)?)\s*loan/i,
     ];
     for (const pattern of contextualPatterns) {
       const match = text.match(pattern);
@@ -2638,12 +2687,21 @@ function buildAcquisitionFinancingAssumptionsHtml({
   };
   const extractPercentFromText = (text, labelRegex) => {
     if (typeof text !== "string" || !text.trim()) return null;
-    const pattern = new RegExp(`${labelRegex.source}[^0-9.;:\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
-    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^.;:\\n]{0,20}${labelRegex.source}`, "i");
+    const pattern = new RegExp(`(?:${labelRegex.source})[^0-9\\n]{0,20}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i");
+    const reversePattern = new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,20}(?:${labelRegex.source})`, "i");
     const directMatch = text.match(pattern);
     const reverseMatch = text.match(reversePattern);
     const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
     return Number.isFinite(parsed) && parsed > 0 ? parsed / 100 : null;
+  };
+  const extractYearsFromText = (text, labelRegex) => {
+    if (typeof text !== "string" || !text.trim()) return null;
+    const pattern = new RegExp(`(?:${labelRegex.source})[^0-9\\n]{0,20}([0-9]{1,2}(?:\\.[0-9]+)?)`, "i");
+    const reversePattern = new RegExp(`([0-9]{1,2}(?:\\.[0-9]+)?)\\s*(?:years?|yrs?)?[^\\n]{0,20}(?:${labelRegex.source})`, "i");
+    const directMatch = text.match(pattern);
+    const reverseMatch = text.match(reversePattern);
+    const parsed = Number(directMatch?.[1] ?? reverseMatch?.[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   };
   const acquisitionContextText = [
     termsPayload?.source_text,
@@ -2672,8 +2730,10 @@ function buildAcquisitionFinancingAssumptionsHtml({
     acquisitionSupportPayload?.acquisition_price,
     acquisitionSupportPayload?.purchase_price_amount
   );
-  const ltv = firstFinite(termsPayload.ltv, acquisitionSupportPayload?.ltv);
+  const ltvFromText = extractPercentFromText(acquisitionContextText, /(ltv|loan[-\s]*to[-\s]*value)/);
+  const ltv = firstFinite(termsPayload.ltv, acquisitionSupportPayload?.ltv, ltvFromText);
   let statedLoanAmount = firstFinite(
+    termsPayload.stated_acquisition_loan_amount,
     termsPayload.loan_amount,
     termsPayload.proposed_loan_amount,
     termsPayload.acquisition_loan_amount,
@@ -2685,6 +2745,8 @@ function buildAcquisitionFinancingAssumptionsHtml({
   );
   const purchasePriceFromText = extractPurchasePriceFromText(acquisitionContextText);
   const statedLoanAmountFromText = extractStatedLoanAmountFromText(acquisitionContextText);
+  const rateFromText = extractPercentFromText(acquisitionContextText, /(interest rate|rate)/);
+  const amortYearsFromText = extractYearsFromText(acquisitionContextText, /(amortization|amort|am\b)/);
   if (!Number.isFinite(statedLoanAmount) || statedLoanAmount <= 0) {
     statedLoanAmount = statedLoanAmountFromText;
   }
@@ -2717,12 +2779,13 @@ function buildAcquisitionFinancingAssumptionsHtml({
       ? null
       : firstFinite(providedDerivedLoanAmount, computedDerivedLoanAmount);
 
-  const ratePct = firstFinite(termsPayload.interest_rate, acquisitionSupportPayload?.interest_rate);
+  const ratePct = firstFinite(termsPayload.interest_rate, acquisitionSupportPayload?.interest_rate, rateFromText);
   const amortYears = firstFinite(
     termsPayload.amortization_years,
     termsPayload.amort_years,
     acquisitionSupportPayload?.amortization_years,
-    acquisitionSupportPayload?.amort_years
+    acquisitionSupportPayload?.amort_years,
+    amortYearsFromText
   );
   const goingInCapRate = firstFinite(
     termsPayload.going_in_cap_rate,
@@ -8164,6 +8227,15 @@ try {
     !isFinitePositive(mortgagePayload?.loan_amount) &&
     !isFinitePositive(mortgagePayload?.outstanding_balance) &&
     loanTermSheetTermsPayload?.debt_basis === "acquisition_financing_assumption";
+  const acquisitionLenderFeePresent = isFinitePositive(
+    loanTermSheetTermsPayload?.lender_fee_percent ??
+    loanTermSheetTermsPayload?.origination_fee_percent ??
+    loanTermSheetTermsPayload?.financing_fee_percent
+  );
+  const acquisitionStatedLoanPresent = isFinitePositive(
+    loanTermSheetTermsPayload?.stated_acquisition_loan_amount ?? loanTermSheetTermsPayload?.loan_amount
+  );
+  const acquisitionPurchasePricePresent = isFinitePositive(loanTermSheetTermsPayload?.purchase_price);
 
   if (acquisitionFinancingInputsUsable && !acquisitionFinancingRendered) {
     qaFlags.push({
@@ -8177,6 +8249,57 @@ try {
         current_loan_amount_present: isFinitePositive(loanTermSheetTermsPayload?.loan_amount),
       },
       admin_check: "Inspect report renderer/token/section gating.",
+    });
+  }
+  if (effectiveReportMode === "v1_core" && !acquisitionPurchasePricePresent && isFinitePositive(loanTermSheetTermsPayload?.ltv)) {
+    qaFlags.push({
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      severity: "medium",
+      reason_code: "purchase_price_not_verified",
+      message: "Acquisition financing purchase price was not verified; acquisition section should be qualified/limited.",
+      evidence: {
+        purchase_price_present: false,
+        ltv_present: isFinitePositive(loanTermSheetTermsPayload?.ltv),
+      },
+      admin_check: "Review canonical acquisition field extraction for purchase price support.",
+    });
+  }
+  if (effectiveReportMode === "v1_core" && !acquisitionStatedLoanPresent && !isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)) {
+    qaFlags.push({
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      severity: "medium",
+      reason_code: "stated_acquisition_loan_amount_not_verified",
+      message: "Stated acquisition loan amount was not verified; acquisition loan rows should remain omitted/qualified.",
+      evidence: {
+        stated_acquisition_loan_amount_present: false,
+        derived_acquisition_loan_amount_present: isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount),
+      },
+      admin_check: "Review canonical acquisition field extraction for stated loan amount support.",
+    });
+  }
+  if (effectiveReportMode === "v1_core" && !acquisitionLenderFeePresent) {
+    qaFlags.push({
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      severity: "low",
+      reason_code: "lender_fee_percent_not_verified",
+      message: "Lender/origination fee percent was not verified from acquisition support.",
+      evidence: {
+        lender_fee_percent_present: false,
+      },
+      admin_check: "Confirm fee terms were absent or unparseable in source acquisition support.",
+    });
+  }
+  if (effectiveReportMode === "v1_core" && loanTermSheetTermsPayload?.debt_basis === "acquisition_financing_assumption") {
+    qaFlags.push({
+      code: "ACQUISITION_NOT_CURRENT_DEBT_CLASSIFICATION",
+      severity: "low",
+      reason_code: "acquisition_financing_not_current_debt",
+      message: "Acquisition/proposed financing is classified separately from current debt coverage basis.",
+      evidence: {
+        debt_basis: loanTermSheetTermsPayload?.debt_basis || null,
+        outstanding_balance_present: isFinitePositive(loanTermSheetTermsPayload?.outstanding_balance),
+      },
+      admin_check: "Informational classification marker; no action required if current-debt separation remains intact.",
     });
   }
 

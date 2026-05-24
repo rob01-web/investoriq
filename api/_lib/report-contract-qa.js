@@ -407,6 +407,12 @@ function hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa) {
   );
 }
 
+function normalizePercentForComparison(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed > 1 ? parsed / 100 : parsed;
+}
+
 function hasStructuredRenovation(artifacts) {
   const renovation = latestPayload(artifacts, "renovation_parsed");
   return Boolean(
@@ -886,6 +892,7 @@ export function buildReportContractQa({
 
   const derivedAcq = hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
   const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
+  const { acquisitionLoan } = resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa);
   const hasCurrentDebtTermsSupport =
     Boolean(sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed?.present) ||
     hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) ||
@@ -918,6 +925,90 @@ export function buildReportContractQa({
         message: "Derived acquisition financing is not clearly separated from current debt/refi treatment.",
         evidence: { has_separation: hasSeparation, contaminated_current_debt_language: contaminated },
         blocks_customer_delivery: contaminated,
+      });
+    }
+  }
+  if (acquisitionLoan && typeof acquisitionLoan === "object") {
+    const acquisitionSection = subsectionAfter(
+      text,
+      /Proposed Acquisition Debt Sizing/i,
+      [/Current Debt Coverage/i, /Deal Scorecard/i, /Risk Register/i],
+      2400
+    );
+    const purchasePrice = Number(acquisitionLoan?.purchase_price);
+    const statedLoan = Number(acquisitionLoan?.stated_acquisition_loan_amount ?? acquisitionLoan?.loan_amount);
+    if (
+      Number.isFinite(purchasePrice) &&
+      purchasePrice > 0 &&
+      Number.isFinite(statedLoan) &&
+      statedLoan > 0 &&
+      Math.abs(purchasePrice - statedLoan) > Math.max(100, purchasePrice * 0.02)
+    ) {
+      const renderedPurchaseMatch = /Purchase Price[^\n]{0,120}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(acquisitionSection);
+      const renderedStatedLoanMatch = /Stated Acquisition Loan Amount[^\n]{0,120}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(acquisitionSection);
+      const renderedPurchaseValue = renderedPurchaseMatch
+        ? Number(String(renderedPurchaseMatch[1]).replace(/,/g, ""))
+        : null;
+      const renderedStatedLoanValue = renderedStatedLoanMatch
+        ? Number(String(renderedStatedLoanMatch[1]).replace(/,/g, ""))
+        : null;
+      const badPurchaseLine =
+        Number.isFinite(renderedPurchaseValue) &&
+        Math.abs(renderedPurchaseValue - purchasePrice) > Math.max(100, purchasePrice * 0.02) &&
+        (
+          Math.abs(renderedPurchaseValue - statedLoan) <= Math.max(100, statedLoan * 0.02) ||
+          (
+            Number.isFinite(renderedStatedLoanValue) &&
+            Math.abs(renderedPurchaseValue - renderedStatedLoanValue) <= Math.max(100, renderedStatedLoanValue * 0.02)
+          )
+        );
+      if (badPurchaseLine) {
+        addViolation(violations, {
+          code: "ACQUISITION_PURCHASE_PRICE_LOAN_AMOUNT_MISMATCH_RENDERED",
+          severity: "high",
+          category: "debt_contract",
+          message: "Rendered acquisition purchase price appears to be populated from stated loan amount.",
+          evidence: { purchase_price: purchasePrice, stated_acquisition_loan_amount: statedLoan, excerpt: acquisitionSection.slice(0, 400) },
+          blocks_customer_delivery: false,
+          blocks_public_sample: true,
+          blocks_high_value_outreach: true,
+        });
+      }
+    }
+    const lenderFeePercent = normalizePercentForComparison(
+      acquisitionLoan?.lender_fee_percent ?? acquisitionLoan?.origination_fee_percent ?? acquisitionLoan?.financing_fee_percent
+    );
+    if (
+      Number.isFinite(lenderFeePercent) &&
+      lenderFeePercent > 0 &&
+      /Proposed Acquisition Debt Sizing/i.test(text) &&
+      !/Lender Fee/i.test(acquisitionSection)
+    ) {
+      addViolation(violations, {
+        code: "ACQUISITION_LENDER_FEE_OMITTED_RENDERED",
+        severity: "high",
+        category: "debt_contract",
+        message: "Document-stated lender/origination fee was parsed but omitted in rendered acquisition section.",
+        evidence: { lender_fee_percent: lenderFeePercent, excerpt: acquisitionSection.slice(0, 400) },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+    const closingCostNotes = String(acquisitionLoan?.closing_cost_notes || "").toLowerCase();
+    const hasOnlyUnquantifiedClosingNotes =
+      (closingCostNotes.includes("legal") || closingCostNotes.includes("appraisal") || closingCostNotes.includes("closing")) &&
+      !positive(acquisitionLoan?.closing_costs_percent);
+    if (hasOnlyUnquantifiedClosingNotes && /Closing Costs[^\\n]{0,40}0\.0%/i.test(acquisitionSection)) {
+      addViolation(violations, {
+        code: "ACQUISITION_CLOSING_COSTS_ZERO_RENDERED_WITH_UNQUANTIFIED_NOTES",
+        severity: "high",
+        category: "debt_contract",
+        message: "Rendered acquisition section shows Closing Costs 0.0% despite only unquantified legal/appraisal/closing notes.",
+        evidence: { excerpt: firstPatternExcerpt(acquisitionSection, [/Closing Costs[^\n]{0,40}0\.0%/i]) },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
       });
     }
   }
