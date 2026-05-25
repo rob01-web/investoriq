@@ -178,17 +178,17 @@ function StatusBadge({ status, errorCode }) {
     String(status || '').toLowerCase() === 'publishing' &&
     String(errorCode || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED';
   const map = {
-    published:     { bg: T.okBg,      border: T.okBorder,    color: T.okGreen,   label: 'Published'    },
+    published:     { bg: T.okBg,      border: T.okBorder,    color: T.okGreen,   label: 'Ready'        },
     queued:        { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Queued'       },
-    extracting:    { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Extracting'   },
-    underwriting:  { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Underwriting' },
-    scoring:       { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Scoring'      },
-    rendering:     { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Rendering'    },
-    pdf_generating:{ bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Generating'   },
+    extracting:    { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
+    underwriting:  { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
+    scoring:       { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
+    rendering:     { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
+    pdf_generating:{ bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
     publishing:    adminReviewHeld
       ? { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' }
-      : { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Publishing' },
-    failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Failed'       },
+      : { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Preparing' },
+    failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Publication held' },
   };
   const s = map[status] || { bg: T.warm, border: T.hairline, color: T.ink4, label: status };
   return (
@@ -682,7 +682,7 @@ useEffect(() => {
   useEffect(() => {
     const url = new URL(window.location.href);
     const checkout = url.searchParams.get('checkout');
-    if (checkout === 'success') { toast({ title: 'Payment received', description: 'Report entitlement added.' }); setCheckoutSuccess(true); }
+    if (checkout === 'success') { toast({ title: 'Payment received', description: 'Your report credit has been added. Upload documents below to begin.' }); setCheckoutSuccess(true); }
     else if (checkout === 'cancelled') { toast({ title: 'Payment cancelled', description: 'No charge was made.' }); }
     if (checkout) { url.searchParams.delete('checkout'); window.history.replaceState({}, document.title, url.toString()); }
   }, []);
@@ -1317,9 +1317,9 @@ useEffect(() => {
                       return (
                         <>
                           <div style={failedMessageStatusStyle}>
-                            {String(latestFailedJob.status || 'failed').toUpperCase()}
-                            {latestFailedJob.report_type ? ` - ${String(latestFailedJob.report_type).toUpperCase()}` : ''}
-                            {latestFailedJob.error_code ? ` - ${latestFailedJob.error_code}` : ''}
+                            {latestFailedJob.report_type
+                              ? `Publication held - ${String(latestFailedJob.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(latestFailedJob.report_type).toLowerCase() === 'screening' ? 'Screening' : String(latestFailedJob.report_type)}`
+                              : 'Publication held'}
                           </div>
                           <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
                             {copy.body}
@@ -1390,7 +1390,7 @@ useEffect(() => {
                     />
                     <div>
                       <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                        I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
+                        I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as unavailable in the report. Refunds are not available once report generation begins.
                       </div>
                       <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
                         Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
@@ -1631,7 +1631,7 @@ useEffect(() => {
                 />
                 <div>
                   <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                    I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as DATA NOT AVAILABLE. Refunds are not available once report generation begins.
+                    I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as unavailable in the report. Refunds are not available once report generation begins.
                   </div>
                   <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
                     Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
@@ -1743,7 +1743,7 @@ useEffect(() => {
                     </div>
                   ))}
                   {preflightHardMissing && <div style={{ ...bodySmall, fontSize:12, color:T.errorRed, fontWeight:500, marginTop:10 }}>Missing required documents. Generation is blocked until all required items are uploaded.</div>}
-                  {!preflightHardMissing && !preflightDebtTerms && <div style={{ ...bodySmall, fontSize:12, color:T.warnAmber, marginTop:10 }}>Some optional inputs are missing. Related sections may be omitted and shown as DATA NOT AVAILABLE.</div>}
+                  {!preflightHardMissing && !preflightDebtTerms && <div style={{ ...bodySmall, fontSize:12, color:T.warnAmber, marginTop:10 }}>Some optional inputs are missing. Related sections may be omitted and shown as unavailable in the report.</div>}
                 </div>
               </div>
             )}
@@ -1874,7 +1874,9 @@ useEffect(() => {
                       <strong style={{ fontWeight:500 }}>{buildCustomerFailureMessage(job, { creditRestored: failedJobCreditRestoredById[String(job.id)] === true }).title}</strong> - {job.property_name || 'Unknown property'}
                     </div>
                     <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
-                      FAILED{job.report_type ? ` - ${String(job.report_type).toUpperCase()}` : ''}{job.error_code ? ` - ${job.error_code}` : ''}
+                      {job.report_type
+                        ? `Publication held - ${String(job.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(job.report_type).toLowerCase() === 'screening' ? 'Screening' : String(job.report_type)}`
+                        : 'Publication held'}
                     </div>
                     {(() => {
                       const copy = buildCustomerFailureMessage(job, {
@@ -1960,8 +1962,8 @@ useEffect(() => {
         <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.88)' }}>
           <div style={{ background:T.white, border:`1px solid ${T.hairline}`, padding:'40px 48px', maxWidth:360, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
             <Loader2 style={{ width:28, height:28, color:T.green, animation:'spin 1s linear infinite', marginBottom:20 }} />
-            <p style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:18, fontWeight:500, color:T.ink, marginBottom:8 }}>Underwriting in Progress</p>
-            <p style={{ ...bodySmall, fontSize:13 }}>InvestorIQ is analyzing your documents and generating your institutional-grade report.</p>
+            <p style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:18, fontWeight:500, color:T.ink, marginBottom:8 }}>Submitting your documents</p>
+            <p style={{ ...bodySmall, fontSize:13 }}>Uploading and queuing your report. You can close this page - we'll continue in the background.</p>
             <div style={{ width:'100%', height:2, background:T.hairline, marginTop:20, overflow:'hidden' }}>
               <div style={{ height:'100%', background:T.gold, width:'40%', animation:'progress 2s ease-in-out infinite' }} />
             </div>
