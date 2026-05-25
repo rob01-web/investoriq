@@ -243,6 +243,7 @@ export default function AdminDashboard() {
   const [expandedRpt, setExpandedRpt] = useState(null);
   const [rptBusy, setRptBusy]         = useState({});
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmForceFail, setConfirmForceFail] = useState(null);
 
   // Users
   const [users, setUsers]             = useState([]);
@@ -733,6 +734,17 @@ export default function AdminDashboard() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {confirmForceFail && (
+        <ConfirmModal
+          message="Force-fail this job? Credit will be restored if entitlement logic is in place."
+          onConfirm={() => {
+            const forceFailId = confirmForceFail.id;
+            setConfirmForceFail(null);
+            forceFailJob(forceFailId);
+          }}
+          onCancel={() => setConfirmForceFail(null)}
+        />
+      )}
 
       <div style={{ minHeight:'100vh', background:T.warm }}>
 
@@ -794,7 +806,7 @@ export default function AdminDashboard() {
                                 <Btn onClick={() => regenReport(j.id)} disabled={rptBusy[`regen-${j.id}`]} variant="warn">
                                   <RotateCcw size={9} /> Regen
                                 </Btn>
-                                <Btn onClick={() => forceFailJob(j.id)} disabled={rptBusy[`fail-${j.id}`]} variant="danger">
+                                <Btn onClick={() => setConfirmForceFail({ id: j.id })} disabled={rptBusy[`fail-${j.id}`]} variant="danger">
                                   <XCircle size={9} /> Force-Fail
                                 </Btn>
                               </div>
@@ -947,7 +959,7 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     {items.length === 0 ? (
-                      <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300, color:T.ink4, padding:'10px 0' }}>{emptyMessage}</p>
+                      <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300, color:T.ink4, padding:'6px 0' }}>{title} - 0 jobs · all clear</p>
                     ) : (
                       <div style={{ overflowX:'auto' }}>
                         <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -981,7 +993,7 @@ export default function AdminDashboard() {
                     title="Published With Diagnostics"
                     description="Published reports whose post-publish diagnostics warrant intelligence review. Read-only triage — not a re-approval surface."
                     items={fixQueueBuckets.publishedWithDiagnostics}
-                    emptyMessage="Per-job published diagnostics will be populated in Slice 2B. Slice 1 code-level diagnostics are available above."
+                    emptyMessage="No items today."
                   />
                   <TriageSubSection
                     eyebrow="Doctrine · Fail-closed"
@@ -1485,7 +1497,7 @@ export default function AdminDashboard() {
                                         </div>
                                         <div>
                                           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
-                                          <div>{ai ? <AiBadge type={ai} /> : <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None - deterministic only</span>}</div>
+                                          <div><span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None - deterministic only</span></div>
                                         </div>
                                         {r.storage_path && (
                                           <div style={{ gridColumn:'1/-1' }}>
