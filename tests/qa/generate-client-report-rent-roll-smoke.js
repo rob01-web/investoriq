@@ -1556,6 +1556,7 @@ assert.equal(/Structured property tax input/i.test(propertyTaxUnvalidatedTreatme
 const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
+      id: "doc-property-tax-1",
       original_filename: "PropertyTaxNotice.pdf",
       doc_type: "property_tax",
       display_doc_type: "Property Tax",
@@ -1566,10 +1567,56 @@ const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSu
   ],
   propertyTaxPayload: {
     annual_tax: 18950,
+    source_file_id: "doc-property-tax-1",
   },
 });
 assert.match(propertyTaxValidatedTreatmentHtml, /Modeled Inputs/i);
 assert.match(propertyTaxValidatedTreatmentHtml, /Structured property tax input/i);
+const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      id: "doc-env-1",
+      original_filename: "Environmental_Report.pdf",
+      doc_type: "supporting",
+      display_doc_type: "Environmental",
+      semantic_doc_role: "environmental",
+      semantic_doc_display_label: "environmental support",
+      parse_status: "parsed",
+    },
+    {
+      id: "doc-property-tax-2",
+      original_filename: "Tax_Record.pdf",
+      doc_type: "property_tax",
+      display_doc_type: "Property Tax",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 21000,
+    source_file_id: "doc-property-tax-2",
+  },
+});
+assert.equal(/Environmental_Report\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support)/i.test(propertyTaxMismatchedSupportDocHtml), false);
+assert.match(propertyTaxMismatchedSupportDocHtml, /Tax_Record\.pdf[\s\S]{0,220}Structured property tax input/i);
+const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "PropertyTaxSource.pdf",
+      doc_type: "property_tax",
+      display_doc_type: "Property Tax",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 22000,
+  },
+});
+assert.equal(/Structured property tax input|Property tax support/i.test(propertyTaxMissingBindingHtml), false);
+assert.match(propertyTaxMissingBindingHtml, /Uploaded support document - not used quantitatively\./i);
 const acquisitionSizingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2000000,

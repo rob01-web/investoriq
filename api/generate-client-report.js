@@ -1844,10 +1844,60 @@ function buildDocumentTreatmentSummaryHtml({
   renovationPayload = null,
   propertyTaxPayload = null,
 } = {}) {
+  const normalizeIdentityToken = (value) => {
+    const token = String(value ?? "").trim().toLowerCase();
+    return token.length > 0 ? token : "";
+  };
+  const resolvePropertyTaxSourceBindings = (payload = null) => {
+    const idCandidates = [
+      payload?.source_file_id,
+      payload?.file_id,
+      payload?.document_id,
+      payload?.artifact_file_id,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    const nameCandidates = [
+      payload?.source_original_filename,
+      payload?.original_filename,
+      payload?.file_name,
+      payload?.filename,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    return {
+      hasReliableBinding: idCandidates.length > 0 || nameCandidates.length > 0,
+      idCandidates: new Set(idCandidates),
+      nameCandidates: new Set(nameCandidates),
+    };
+  };
+  const rowMatchesPropertyTaxSourceBinding = (row, binding) => {
+    if (!binding?.hasReliableBinding) return false;
+    const rowIdTokens = [
+      row?.id,
+      row?.file_id,
+      row?.source_file_id,
+      row?.document_id,
+      row?.artifact_file_id,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    if (rowIdTokens.some((token) => binding.idCandidates.has(token))) return true;
+    const rowNameTokens = [row?.original_filename, row?.file_name, row?.filename]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    return rowNameTokens.some((token) => binding.nameCandidates.has(token));
+  };
   const files = Array.isArray(documentSources)
     ? documentSources
         .map((row) => ({
+          id: row?.id ?? null,
+          file_id: row?.file_id ?? null,
+          source_file_id: row?.source_file_id ?? null,
+          document_id: row?.document_id ?? null,
+          artifact_file_id: row?.artifact_file_id ?? null,
           original_filename: String(row?.original_filename || "").trim(),
+          file_name: String(row?.file_name || "").trim(),
           doc_type: String(row?.doc_type || "").trim(),
           display_doc_type: String(row?.display_doc_type || "").trim(),
           semantic_doc_role: String(row?.semantic_doc_role || "").trim(),
@@ -1919,6 +1969,7 @@ function buildDocumentTreatmentSummaryHtml({
   const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
   const hasValidatedModeledPropertyTax = isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
+  const propertyTaxSourceBinding = resolvePropertyTaxSourceBindings(propertyTaxPayload);
   const classifyRow = (row) => {
     const hasSemanticMetadata = hasAnyText(
       row.semantic_doc_role,
@@ -2014,12 +2065,18 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedPropertyTax && !environmentalLike && !zoningComplianceLike) {
+      const boundToValidatedPropertyTaxSource = rowMatchesPropertyTaxSourceBinding(row, propertyTaxSourceBinding);
+      const canUseModeledPropertyTaxLabel = isParsed &&
+        !hasWarnings &&
+        !isUnclassified &&
+        hasValidatedModeledPropertyTax &&
+        boundToValidatedPropertyTaxSource;
       return {
-        category: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax ? "Modeled Inputs" : "Displayed / Limited Use",
-        note: isParsed && !hasWarnings && !isUnclassified && hasValidatedModeledPropertyTax
+        category: canUseModeledPropertyTaxLabel ? "Modeled Inputs" : "Displayed / Limited Use",
+        note: canUseModeledPropertyTaxLabel
           ? "Structured property tax input"
-          : "Property tax support is displayed only; not treated as a primary modeled input.",
-        reason_code: "property_tax_support",
+          : "Uploaded support document - not used quantitatively.",
+        reason_code: canUseModeledPropertyTaxLabel ? "property_tax_support" : "property_tax_support_unbound",
         source_basis: sourceBasis,
       };
     }

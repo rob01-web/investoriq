@@ -1,3 +1,158 @@
+# May 25/26, 2026 Addendum - Full Underwriting Architecture Audit / Whack-a-Mole Freeze / Screening-First Launch Path
+
+## A. New current status
+
+- The May 24/25 root-class patches were completed/deployed/pass, but controlled live underwriting retests proved Full Underwriting still has structural report-quality drift.
+- The issue is not one remaining bug; it is fragmented underwriting truth architecture.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening remains the safer public launch path.
+- Full Underwriting should be beta/invite-only/operator-reviewed until canonical-state consolidation is completed.
+
+## B. Safe UI/customer/admin patches completed
+
+- AdminDashboard.jsx Slice 2A.2 completed/pass:
+  - undefined `ai` expanded-row reference removed
+  - AI Recovery fallback now deterministic: `None - deterministic only`
+  - compact Triage empty state: `{title} - 0 jobs · all clear`
+  - roadmap leak copy replaced with `No items today.`
+  - Force-Fail confirmation modal added before executing existing forceFailJob call
+  - no backend/API/doctrine/gating changes
+
+- Dashboard.jsx customer launch copy cleanup completed/pass:
+  - internal status labels collapsed to customer labels: Preparing, Ready, Publication held
+  - failed-job header changed from raw FAILED / ERROR_CODE style to Publication held - Screening/Underwriting
+  - muted reference code remains for support
+  - upload overlay changed to Submitting your documents
+  - checkout toast changed to Your report credit has been added
+  - Dashboard.jsx DATA NOT AVAILABLE copy replaced with sentence-case prose
+  - no API/admin/report-engine/lifecycle changes
+
+## C. Customer Launch Audit results
+
+- Journey mostly safe, doctrine/copy/fail-closed handling unusually disciplined.
+- Main customer trust risk was internal pipeline jargon/raw error-code leakage during waiting/failure; Dashboard copy cleanup addressed the highest-value items.
+- Remaining launch blocker: public sample assets are broken/missing because LandingPage references public/samples paths that do not exist.
+- Do not generate underwriting sample assets from current flawed underwriting PDFs.
+- STRONG BUY remains in dead/orphan chain; verify build/dist grep before public launch, but do not edit dead chain unless it reaches dist or active routes.
+- Recommended current stance: do not touch orphan/dead-code cleanup pre-launch unless proven reachable.
+
+## D. Live underwriting retest findings
+
+1. Final Motherload underwriting 2:
+- Published successfully and was likely customer-deliverable.
+- Core T12/Rent Roll/current debt values mostly rendered correctly.
+- Support-doc treatment mostly worked: Phase I/ESA was listed as not quantitatively modeled.
+- But visible contradiction remained:
+  - Refinance Stability header said refinance stability was not assessed due to missing current debt/refi inputs.
+  - Later debt sections rendered current debt balance, rate, amortization, DSCR, and DSCR sensitivity.
+- Root symptom: refinance header and debt body read different state/authority.
+
+2. 124 Richmond CLEAN underwriting 2:
+- Published, but not public-sample/high-value-ready.
+- Visible failures persisted:
+  - Phase I ESA rendered as Structured property tax input in Data Coverage.
+  - Acquisition financing table rendered purchase price and stated acquisition loan amount both as $937,500, despite source language indicating loan amount at a higher purchase price.
+  - Closing costs rendered 0.0% despite source lender fee evidence.
+  - QA artifacts detected high-severity rendered-contract issues only after PDF rendering.
+- Root symptom: renderer still bypasses canonical/QA-supported state and reads raw/fallback/local classification paths.
+
+## E. Emergent Full Underwriting Architecture Audit - controlling diagnosis
+
+- Root cause is architectural, not one more parser/label bug.
+- There is no complete canonical UnderwritingState object.
+- Existing `buildRendererCanonicalState` is partial and does not own all 18 critical underwriting truth families.
+- The renderer is still acting as classifier/calculator/label generator/template engine.
+- `buildDocumentTreatmentSummaryHtml` has its own inline regex/classification chain.
+- `buildSupportDocTaxonomyState` exists, but renderer does not consistently consume it; QA consumes it.
+- QA runs after finalHtml exists, so it detects contradictions too late to prevent customer-visible PDF issues.
+- Root-class patches have been fixing individual authority paths, not replacing the authority model.
+- Architecture risk: fragmented truth model; Full Underwriting is too fragile for public self-serve launch without canonical-state consolidation.
+
+## F. Strategic decision / doctrine update
+
+- Freeze tactical one-off Full Underwriting patches unless they are part of the canonical-state roadmap.
+- Stop prompts like:
+  - add one more regex
+  - add one keyword to classifier
+  - patch this exact refinance permutation
+  - patch this exact visible label
+  - add another post-render QA detector as primary fix
+- Screening-first public launch is the recommended path.
+- Full Underwriting may remain visible only as invite-only/beta/operator-reviewed or unavailable for self-serve until consolidation.
+- Public sample assets should use Screening first unless/until Full Underwriting passes sample-grade QA.
+- Do not flip DocRaptor production mode or create underwriting sample assets from flawed PDFs.
+
+## G. 99.999% Full Underwriting reliability requirements
+
+1. Complete immutable UnderwritingState owning operating, rent roll, current debt, acquisition financing, refinance, valuation, property tax, support docs, data coverage, classification, section eligibility, diagnostics.
+2. Renderer must consume UnderwritingState, not raw parser payloads.
+3. Pre-render contract gates must collapse/qualify/omit before HTML is assembled.
+4. Section-level narrative state machines so header/body cannot disagree.
+5. Rendered QA becomes safety net, not primary authority.
+6. Per-file binding for modeled support docs, especially property tax/appraisal/mortgage.
+7. Acquisition triangle validation before render.
+8. Refi/current-debt narrative state machine.
+9. 120-ish fixture matrix / snapshot harness or equivalent broad regression coverage.
+10. Separate customer-delivery gate from public-sample/high-value-outreach gate.
+
+## H. Current active next step
+
+- Emergent is running/should run Underwriting Renderer Canonical Consumption Audit.
+- Goal: map every non-canonical/raw/fallback read in api/generate-client-report.js across the 18 underwriting truth families.
+- No code edits during this audit.
+- Do not run another Full Underwriting patch until the canonical consumption map is reviewed.
+
+After that:
+1. Decide Screening-first launch implementation steps.
+2. Use Codex for the first implementation PR only after the consumption audit identifies the highest-leverage architectural patch.
+3. Likely first candidates:
+   - renderer consumes canonical support-doc taxonomy
+   - acquisition triangle pre-render gate
+   - refi/current-debt narrative state machine
+   - UnderwritingState skeleton
+
+## I. Current working rules
+
+- Micro-prompts only.
+- One task at a time.
+- Audit before patch.
+- No broad refactor unless explicitly scoped.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off values in production logic.
+- No more whack-a-mole renderer regex patches.
+- Screening public launch path is allowed to move forward while Full Underwriting consolidation continues.
+- Full Underwriting public self-serve is paused pending architecture consolidation.
+
+## J. Fresh-Chat Continuation Prompt
+
+We are continuing InvestorIQ after the May 25/26 Full Underwriting Architecture Audit.
+
+Current controlling status:
+- May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening is the recommended public launch path.
+- Full Underwriting should be invite-only/beta/operator-reviewed until canonical-state consolidation.
+- AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
+- Customer launch audit found missing sample assets as the remaining major public launch blocker.
+- Do not create underwriting sample assets from flawed underwriting PDFs.
+- Emergent is running the Underwriting Renderer Canonical Consumption Audit.
+- Do not run another tactical underwriting patch until the canonical consumption map is reviewed.
+
+Immediate next work:
+1. Complete/review Emergent canonical consumption audit.
+2. Decide Screening-first public launch implementation.
+3. Then scope first architectural Full Underwriting PR.
+
+Do not:
+- start Admin Slice 2B
+- patch another one-off underwriting renderer symptom
+- add classifier keywords/regex branches
+- rotate secrets mid-debug
+- flip DocRaptor production mode yet
+- disable GitHub worker yet
+- generate public underwriting samples from current flawed PDFs
+
+---
 # May 24/25, 2026 Addendum - Canonical Render Parity Contracts Completed / Admin Diagnostics Slice 2A Deployed / Next Step Retest
 
 ## A. Completed Root-Class + Admin Diagnostics Status (May 24/25)
@@ -109,7 +264,7 @@ Retest checklist:
    - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
 6. Admin Diagnostics Slice 1 - done/deployed/pass
 7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
-8. NEXT: controlled live retest batch
+8. NEXT: canonical consumption audit + Screening-first launch decision. (supersedes controlled live retest batch)
 
 ## D. Doctrine (Unchanged)
 
@@ -145,7 +300,7 @@ Completed/deployed/pass:
 - Admin Diagnostics Slice 2A Triage Workspace
 
 Current next step:
-Run controlled live retests and inspect PDFs + artifacts before deciding any further patches.
+Superseded: canonical consumption audit + Screening-first launch decision.
 
 Do not start Slice 2B yet.
 Do not do broad refactors.
@@ -546,33 +701,33 @@ Current checkpoint:
    - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
 6. Admin Diagnostics Slice 1 - done/deployed/pass
 7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
-8. NEXT: controlled live retest batch
+8. NEXT: canonical consumption audit + Screening-first launch decision. (supersedes controlled live retest batch)
 
 ## Fresh-Chat Continuation Prompt
 
-We are continuing InvestorIQ after the May 24/25 root-class hardening sprint.
+We are continuing InvestorIQ after the May 25/26 Full Underwriting Architecture Audit.
 
-Completed/deployed/pass:
-- SUPPORT_DOC_TREATMENT_CONTRACT_GAP
-- ACQUISITION_FINANCING_CANONICALIZATION_GAP
-- UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
-- RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
-- ROOT-FAMILY_TAXONOMY_AUDIT audit-only
-- SECTION_ELIGIBILITY_RENDER_DRIFT
-- VERDICT_CAP_EXPLANATION_DRIFT
-- CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
-- RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
-- OCCUPANCY_CANONICAL_VALUE_DRIFT
-- ACQUISITION_CANONICAL_VALUE_DRIFT
-- SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
-- Admin Diagnostics Slice 1
-- Admin Diagnostics Slice 2A Triage Workspace
+Current controlling status:
+- May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening is the recommended public launch path.
+- Full Underwriting should be invite-only/beta/operator-reviewed until canonical-state consolidation.
+- AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
+- Customer launch audit found missing sample assets as the remaining major public launch blocker.
+- Do not create underwriting sample assets from flawed underwriting PDFs.
+- Emergent is running the Underwriting Renderer Canonical Consumption Audit.
+- Do not run another tactical underwriting patch until the canonical consumption map is reviewed.
 
-Current next step:
-Run controlled live retests and inspect PDFs + artifacts before deciding any further patches.
+Immediate next work:
+1. Complete/review Emergent canonical consumption audit.
+2. Decide Screening-first public launch implementation.
+3. Then scope first architectural Full Underwriting PR.
 
-Do not start Slice 2B yet.
-Do not do broad refactors.
-Do not rotate secrets mid-debug.
-Do not flip DocRaptor production mode yet.
-Do not disable GitHub worker yet.
+Do not:
+- start Admin Slice 2B
+- patch another one-off underwriting renderer symptom
+- add classifier keywords/regex branches
+- rotate secrets mid-debug
+- flip DocRaptor production mode yet
+- disable GitHub worker yet
+- generate public underwriting samples from current flawed PDFs
