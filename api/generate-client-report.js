@@ -2180,6 +2180,11 @@ function buildDocumentTreatmentSummaryHtml({
     }
     if (filenameOnly) {
       const lower = fileText;
+      const boundToValidatedPropertyTaxSource = rowMatchesPropertyTaxSourceBinding(row, propertyTaxSourceBinding);
+      const canUsePropertyTaxSupportLabel =
+        hasValidatedModeledPropertyTax &&
+        propertyTaxSourceBinding.hasReliableBinding &&
+        boundToValidatedPropertyTaxSource;
       const filenameFallbackClass =
         /\bt12\b|trailing[- ]?12|12[- ]?month|ttm operating statement|operating statement/.test(lower)
           ? {
@@ -2196,8 +2201,12 @@ function buildDocumentTreatmentSummaryHtml({
           : /property\s*tax|tax\s*notice|tax\s*bill|municipal\s*tax/.test(lower) && !/phase\s*i|esa|environment|environmental|zoning|compliance/.test(lower)
           ? {
               category: "Displayed / Limited Use",
-              note: "Property-tax support is displayed only; filename-only evidence is not modeled.",
-              reason_code: "filename_fallback_property_tax_support_only",
+              note: canUsePropertyTaxSupportLabel
+                ? "Property-tax support is displayed only; filename-only evidence is not modeled."
+                : "Uploaded support document - not used quantitatively.",
+              reason_code: canUsePropertyTaxSupportLabel
+                ? "filename_fallback_property_tax_support_only"
+                : "filename_fallback_property_tax_support_unbound",
             }
           : /phase\s*i|esa|environment|environmental/.test(lower)
           ? {

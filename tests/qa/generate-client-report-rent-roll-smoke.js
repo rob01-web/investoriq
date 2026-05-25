@@ -1507,6 +1507,37 @@ assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
+const filenameOnlyPropertyTaxUnboundHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "Municipal Tax Notice.pdf" },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 18500,
+  },
+});
+assert.equal(/Property-tax support is displayed only/i.test(filenameOnlyPropertyTaxUnboundHtml), false);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Uploaded support document - not used quantitatively\./i);
+const filenameOnlyPropertyTaxMismatchedBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { id: "doc-tax-row", original_filename: "Property Tax Bill.pdf" },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 18500,
+    source_file_id: "other-doc-id",
+  },
+});
+assert.equal(/Property-tax support is displayed only/i.test(filenameOnlyPropertyTaxMismatchedBindingHtml), false);
+assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Uploaded support document - not used quantitatively\./i);
+const filenameOnlyPropertyTaxBoundHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { id: "doc-tax-bound", original_filename: "Property Tax Statement.pdf" },
+  ],
+  propertyTaxPayload: {
+    annual_tax: 18500,
+    source_file_id: "doc-tax-bound",
+  },
+});
+assert.match(filenameOnlyPropertyTaxBoundHtml, /Property-tax support is displayed only; filename-only evidence is not modeled\./i);
 const filenameOnlyRenovationTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { original_filename: "CapEx Plan - Historical.pdf" },
