@@ -1295,7 +1295,10 @@ assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
 assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
 assert.match(documentTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
-assert.match(documentTreatmentHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
+assert.equal(
+  /Market survey \/ rent context only; not used to override rent roll\.|Unsupported Market Survey\.pdf[\s\S]{0,220}Listed for auditability only; not used quantitatively/i.test(documentTreatmentHtml),
+  true
+);
 assert.equal(/Unsupported Phase I ESA\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support is displayed only)/i.test(documentTreatmentHtml), false);
 assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
@@ -1317,6 +1320,65 @@ const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHt
 });
 assert.match(zoningSupportTreatmentHtml, /Zoning\/compliance context only; not used quantitatively\./i);
 assert.equal(/Structured property tax input|Property tax support is displayed only/i.test(zoningSupportTreatmentHtml), false);
+const stalePropertyTaxRoleEnvironmentalHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Environmental_Site_Assessment.pdf",
+      doc_type: "supporting_documents_unclassified",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      semantic_doc_role_reason: "stale_semantic_role",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: { annual_tax: 21000, source_file_id: "tax-doc-1" },
+});
+assert.match(stalePropertyTaxRoleEnvironmentalHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(stalePropertyTaxRoleEnvironmentalHtml), false);
+const stalePropertyTaxRoleZoningHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Zoning_Compliance_Memo.pdf",
+      doc_type: "supporting_documents_unclassified",
+      semantic_doc_role: "property_tax",
+      semantic_doc_display_label: "property_tax",
+      semantic_doc_role_reason: "stale_semantic_role",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: { annual_tax: 21000, source_file_id: "tax-doc-1" },
+});
+assert.match(stalePropertyTaxRoleZoningHtml, /Zoning\/compliance context only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(stalePropertyTaxRoleZoningHtml), false);
+const environmentalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Phase_I_ESA.pdf",
+      doc_type: "supporting_documents_unclassified",
+      semantic_doc_role: "environmental_due_diligence",
+      semantic_doc_display_label: "Property tax support",
+      semantic_doc_role_reason: "environmental_support_signals",
+      parse_status: "parsed",
+    },
+  ],
+  propertyTaxPayload: { annual_tax: 18950, source_file_id: "tax-doc-1" },
+});
+assert.match(environmentalCanonicalRoleTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(environmentalCanonicalRoleTreatmentHtml), false);
+const appraisalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "Appraisal_Report.pdf",
+      doc_type: "appraisal",
+      semantic_doc_role: "appraisal",
+      semantic_doc_display_label: "appraisal",
+      parse_status: "parsed",
+    },
+  ],
+});
+assert.match(appraisalCanonicalRoleTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
+assert.match(appraisalCanonicalRoleTreatmentHtml, /Listed for auditability only; not used quantitatively/i);
+assert.equal(/<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Appraisal_Report\.pdf/i.test(appraisalCanonicalRoleTreatmentHtml), false);
 
 const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

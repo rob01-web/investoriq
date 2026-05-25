@@ -27,6 +27,7 @@ import {
   formatAssumptionAttributionLabel,
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationRenderState,
+  buildSupportDocTaxonomyState,
   resolveCanonicalRentRollAnnualTotals,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
@@ -1971,6 +1972,32 @@ function buildDocumentTreatmentSummaryHtml({
   const hasValidatedModeledPropertyTax = isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
   const propertyTaxSourceBinding = resolvePropertyTaxSourceBindings(propertyTaxPayload);
   const classifyRow = (row) => {
+    const canonicalSupportDocTaxonomy = buildSupportDocTaxonomyState({
+      declaredDocType: row?.doc_type || null,
+      detectedDocType: row?.display_doc_type || null,
+      originalFilename: row?.original_filename || null,
+      payload: {
+        semantic_doc_role: row?.semantic_doc_role || null,
+        semantic_doc_role_reason: row?.semantic_doc_role_reason || null,
+        doc_type: row?.doc_type || null,
+        display_doc_type: row?.display_doc_type || null,
+      },
+    });
+    const canonicalRole = normalizedText(canonicalSupportDocTaxonomy?.semantic_doc_role || "");
+    const existingSemanticRole = normalizedText(row?.semantic_doc_role || "");
+    const trustedExistingRoleSet = new Set([
+      "t12",
+      "rent_roll",
+      "current_mortgage_statement",
+      "property_tax",
+      "renovation_budget",
+      "loan_term_sheet",
+      "purchase_assumptions",
+      "appraisal",
+      "environmental_due_diligence",
+      "zoning_compliance_context",
+      "broker_email",
+    ]);
     const hasSemanticMetadata = hasAnyText(
       row.semantic_doc_role,
       row.semantic_doc_display_label,
@@ -1997,17 +2024,56 @@ function buildDocumentTreatmentSummaryHtml({
     const filenameOnly = sourceBasis === "filename_fallback";
     const semanticText = hasSemanticMetadata ? metadataText : "";
     const semanticAndFileText = `${semanticText} | ${fileText}`;
+    const explicitEnvironmentalSignals = /(phase[\s_]*i|phase[\s_]*1|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|\brec\b)/.test(semanticAndFileText);
+    const explicitZoningSignals = /(zoning|compliance|permitted use|municipal zoning|land use|entitlement|municipal code)/.test(semanticAndFileText);
+    const canonicalRoleCandidate =
+      canonicalRole && canonicalRole !== "other_support"
+        ? canonicalRole
+        : trustedExistingRoleSet.has(existingSemanticRole)
+        ? existingSemanticRole
+        : canonicalRole;
+    const effectiveCanonicalRole =
+      canonicalRoleCandidate === "environmental_due_diligence" && !explicitEnvironmentalSignals
+        ? ""
+        : canonicalRoleCandidate === "zoning_compliance_context" && !explicitZoningSignals
+        ? ""
+        : canonicalRoleCandidate;
+    const hasUsefulCanonicalRole = effectiveCanonicalRole.length > 0 && effectiveCanonicalRole !== "other_support";
 
-    const supportedOperating = /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(semanticText);
-    const supportedRentRoll = /(^|\b)(rent roll|rent_roll)(\b|$)/.test(semanticText);
-    const supportedMortgage = /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(semanticText);
-    const supportedPropertyTax = /(^|\b)(property tax|property_tax|tax bill|tax notice|municipal tax)(\b|$)/.test(semanticText);
-    const supportedRenovation = /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
-    const supportedLoanTerms = /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
-    const appraisalLike = /(^|\b)(appraisal|valuation report|opinion of value|appraised value)(\b|$)/.test(semanticAndFileText);
-    const marketSurveyLike = /(^|\b)(market survey|market_survey|rent survey|rent comp|rent comparables)(\b|$)/.test(semanticAndFileText);
-    const environmentalLike = /(^|\b)(phase i|phase 1|phase_i|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|rec)(\b|$)/.test(semanticAndFileText);
-    const zoningComplianceLike = /(^|\b)(zoning|compliance|permitted use|municipal zoning|land use|entitlement|municipal code)(\b|$)/.test(semanticAndFileText);
+    const supportedOperating = hasUsefulCanonicalRole
+      ? effectiveCanonicalRole === "t12"
+      : /(^|\b)(t12|trailing-?12|ttm operating statement|operating statement|income statement)(\b|$)/.test(semanticText);
+    const supportedRentRoll = hasUsefulCanonicalRole
+      ? effectiveCanonicalRole === "rent_roll"
+      : /(^|\b)(rent roll|rent_roll)(\b|$)/.test(semanticText);
+    const supportedMortgage =
+      hasUsefulCanonicalRole
+        ? effectiveCanonicalRole === "current_mortgage_statement"
+        : /(^|\b)(mortgage statement|current mortgage statement|mortgage_statement)(\b|$)/.test(semanticText);
+    const supportedPropertyTax =
+      hasUsefulCanonicalRole
+        ? effectiveCanonicalRole === "property_tax"
+        : /(^|\b)(property tax|property_tax|tax bill|tax notice|municipal tax)(\b|$)/.test(semanticText);
+    const supportedRenovation =
+      hasUsefulCanonicalRole
+        ? effectiveCanonicalRole === "renovation_budget"
+        : /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
+    const supportedLoanTerms =
+      hasUsefulCanonicalRole
+        ? (effectiveCanonicalRole === "loan_term_sheet" || effectiveCanonicalRole === "purchase_assumptions")
+        : /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
+    const appraisalLike =
+      hasUsefulCanonicalRole
+        ? effectiveCanonicalRole === "appraisal"
+        : /(^|\b)(appraisal|valuation report|opinion of value|appraised value)(\b|$)/.test(semanticAndFileText);
+    const marketSurveyLike =
+      /(^|\b)(market survey|market_survey|rent survey|rent comp|rent comparables)(\b|$)/.test(semanticAndFileText);
+    const environmentalLike = hasUsefulCanonicalRole
+      ? effectiveCanonicalRole === "environmental_due_diligence"
+      : /(^|\b)(phase i|phase 1|phase_i|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|rec)(\b|$)/.test(semanticAndFileText);
+    const zoningComplianceLike = hasUsefulCanonicalRole
+      ? effectiveCanonicalRole === "zoning_compliance_context"
+      : /(^|\b)(zoning|compliance|permitted use|municipal zoning|land use|entitlement|municipal code)(\b|$)/.test(semanticAndFileText);
     const phaseIOrContext = /(^|\b)(phase i|phase_i|esa|environment|broker|email|background|supporting|generic|document)(\b|$)/.test(semanticAndFileText);
 
     if (supportedOperating) {
@@ -2064,7 +2130,7 @@ function buildDocumentTreatmentSummaryHtml({
         source_basis: sourceBasis,
       };
     }
-    if (supportedPropertyTax && !environmentalLike && !zoningComplianceLike) {
+    if (supportedPropertyTax && !filenameOnly && !environmentalLike && !zoningComplianceLike) {
       const boundToValidatedPropertyTaxSource = rowMatchesPropertyTaxSourceBinding(row, propertyTaxSourceBinding);
       const canUseModeledPropertyTaxLabel = isParsed &&
         !hasWarnings &&
