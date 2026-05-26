@@ -853,6 +853,33 @@ const mortgageOnlyNonCanonicalRefiBasis = generatorTest.resolveCanonicalRefiDebt
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.annualDebtService, null);
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.dscr, null);
 assert.equal(acquisitionOnlyRefiBasis.isAcquisitionOnly, true);
+const notAssessedRefiModel = generatorTest.buildRefiStabilityModel({
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "missing_current_debt_support",
+  },
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amort_years: 30,
+  },
+  loanTermSheetTermsPayload: null,
+  t12Payload: { net_operating_income: 650000 },
+  formatValue: formatCurrency,
+});
+assert.equal(notAssessedRefiModel?.tier, null);
+assert.equal(String(notAssessedRefiModel?.html || "").trim(), "");
 
 const missingRefiAssumptionSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
   financials: {
@@ -878,6 +905,199 @@ const missingRefiAssumptionSufficiencyHtml = generatorTest.buildScreeningRefiSuf
 assert.match(missingRefiAssumptionSufficiencyHtml, /Refinance cap rate/i);
 assert.match(missingRefiAssumptionSufficiencyHtml, /Missing/i);
 assert.match(missingRefiAssumptionSufficiencyHtml, /Refinance Stability Classification not produced due to insufficient refinance inputs/i);
+const sourceLimitedRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "missing_current_debt_support",
+  },
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amort_years: 30,
+  },
+  loanTermSheetTermsPayload: null,
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.match(sourceLimitedRefiSufficiencyHtml, /Debt\/refinance metrics were source-limited because the uploaded debt evidence did not verify a current outstanding debt balance sufficient for refinance analysis\./i);
+assert.equal(/\$1,500,000|Interest rate|Amortization \(years\)|Refinance cap rate/i.test(sourceLimitedRefiSufficiencyHtml), false);
+const sourceLimitedRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "missing_current_debt_support",
+  },
+  mortgagePayload: {
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amort_years: 30,
+  },
+  loanTermSheetTermsPayload: null,
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+const sourceLimitedCombinedRefiBlockHtml =
+  sourceLimitedRefiSufficiencyHtml +
+  (sourceLimitedRenderStateForCombinedRefiBlock.allowDebtMath
+    ? generatorTest.buildFinancingEnvelopeGrid(650000, 48)
+    : "");
+assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(sourceLimitedCombinedRefiBlockHtml), false);
+const notAssessedRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {},
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "no_current_debt_document",
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: null,
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.match(notAssessedRefiSufficiencyHtml, /Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided\./i);
+assert.equal(/\$|Interest rate|Amortization \(years\)|Refinance cap rate|Missing/i.test(notAssessedRefiSufficiencyHtml), false);
+const notAssessedRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "no_current_debt_document",
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: null,
+  financials: {},
+  t12Payload: { net_operating_income: 650000 },
+});
+const notAssessedCombinedRefiBlockHtml =
+  notAssessedRefiSufficiencyHtml +
+  (notAssessedRenderStateForCombinedRefiBlock.allowDebtMath
+    ? generatorTest.buildFinancingEnvelopeGrid(650000, 48)
+    : "");
+assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(notAssessedCombinedRefiBlockHtml), false);
+const acquisitionOnlyRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+      debt_basis: "acquisition_financing_assumption",
+    },
+    t12Noi: 650000,
+  }),
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+    debt_basis: "acquisition_financing_assumption",
+  },
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(acquisitionOnlyRenderStateForCombinedRefiBlock.allowDebtMath, false);
+const acquisitionOnlyCombinedRefiBlockHtml =
+  generatorTest.buildScreeningRefiSufficiencyTable({
+    financials: {
+      refi_ltv_max: 0.75,
+      refi_dscr_min: 1.25,
+    },
+    currentDebtAssessmentState: acquisitionOnlyRenderStateForCombinedRefiBlock.canonicalRefiDebtBasis?.limitationReasonCode
+      ? buildCurrentDebtAssessmentState({
+          mortgagePayload: null,
+          loanTermSheetTermsPayload: {
+            purchase_price: 2000000,
+            ltv: 0.75,
+            interest_rate: 0.065,
+            amortization_years: 30,
+            derived_acquisition_loan_amount: 1500000,
+            debt_basis: "acquisition_financing_assumption",
+          },
+          t12Noi: 650000,
+        })
+      : null,
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+      debt_basis: "acquisition_financing_assumption",
+    },
+    t12Payload: { net_operating_income: 650000 },
+  }) +
+  (acquisitionOnlyRenderStateForCombinedRefiBlock.allowDebtMath
+    ? generatorTest.buildFinancingEnvelopeGrid(650000, 48)
+    : "");
+assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(acquisitionOnlyCombinedRefiBlockHtml), false);
+const validRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+const validCombinedRefiBlockHtml =
+  generatorTest.buildScreeningRefiSufficiencyTable({
+    financials: {
+      refi_ltv_max: 0.75,
+      refi_dscr_min: 1.25,
+      refi_interest_rate: 0.065,
+      refi_amort_years: 30,
+      refi_cap_rate_base: 0.055,
+      stress_noi_shocks: [-0.05],
+      stress_cap_rate_bps: [0],
+      stress_rate_bps: [0],
+    },
+    currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      current_outstanding_balance: 1500000,
+      current_loan_balance: 1500000,
+      outstanding_balance: 1500000,
+      interest_rate: 0.065,
+      amortization_years: 30,
+    },
+    t12Payload: { net_operating_income: 650000 },
+  }) +
+  (validRenderStateForCombinedRefiBlock.allowDebtMath
+    ? generatorTest.buildFinancingEnvelopeGrid(650000, 48)
+    : "");
+assert.match(validCombinedRefiBlockHtml, /Maximum Financing Envelope|Base Case Supportable Loan/i);
 
 const retest9CurrentDebtState = buildCurrentDebtAssessmentState({
   mortgagePayload: {

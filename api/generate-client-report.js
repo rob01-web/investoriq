@@ -444,6 +444,64 @@ function resolveCanonicalRefiDebtBasis({
     limitationReasonCode: canonicalReasonCode || null,
   };
 }
+function buildRefiDebtRenderState({
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  financials = null,
+  t12Payload = null,
+} = {}) {
+  const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
+    currentDebtState: currentDebtAssessmentState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    financials,
+    t12Payload,
+  });
+  const hasVerifiedCurrentDebtBalance = Boolean(canonicalRefiDebtBasis?.hasTrueCurrentDebtBalance);
+  const isAcquisitionOnly = Boolean(canonicalRefiDebtBasis?.isAcquisitionOnly);
+  const debtLikeSignalsPresent = [
+    canonicalRefiDebtBasis?.debtBalance,
+    canonicalRefiDebtBasis?.interestRatePct,
+    canonicalRefiDebtBasis?.amortYears,
+    canonicalRefiDebtBasis?.annualDebtService,
+    mortgagePayload?.outstanding_balance,
+    mortgagePayload?.interest_rate,
+    mortgagePayload?.amort_years,
+    loanTermSheetTermsPayload?.outstanding_balance,
+    loanTermSheetTermsPayload?.current_outstanding_balance,
+    loanTermSheetTermsPayload?.current_loan_balance,
+    loanTermSheetTermsPayload?.interest_rate,
+    loanTermSheetTermsPayload?.amortization_years,
+    loanTermSheetTermsPayload?.amort_years,
+    financials?.refi_debt_balance,
+    financials?.refi_interest_rate,
+    financials?.refi_amort_years,
+  ].some((value) => Number.isFinite(coerceNumber(value)) && coerceNumber(value) > 0);
+  let status = "valid";
+  let disclosureReasonCode = "current_debt_verified";
+  if (hasVerifiedCurrentDebtBalance && !isAcquisitionOnly) {
+    status = "valid";
+    disclosureReasonCode = "current_debt_verified";
+  } else if (isAcquisitionOnly) {
+    status = "not_assessed";
+    disclosureReasonCode = "acquisition_only_not_current_debt";
+  } else if (debtLikeSignalsPresent) {
+    status = "source_limited";
+    disclosureReasonCode = "current_debt_source_limited";
+  } else {
+    status = "not_assessed";
+    disclosureReasonCode = "no_verified_current_debt_balance";
+  }
+  return {
+    status,
+    hasVerifiedCurrentDebtBalance,
+    isAcquisitionOnly,
+    allowDebtMath: status === "valid",
+    disclosureReasonCode,
+    canonicalRefiDebtBasis,
+  };
+}
 function buildCurrentDebtScorecardEntry({
   currentDebtState = null,
   mortgagePayload = null,
@@ -1081,13 +1139,17 @@ function buildRefiStabilityModel({
   loanTermSheetTermsPayload = null,
 }) {
   const f = financials && typeof financials === "object" ? financials : {};
-  const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
-    currentDebtState,
+  const refiDebtRenderState = buildRefiDebtRenderState({
+    currentDebtAssessmentState: currentDebtState,
     mortgagePayload,
     loanTermSheetTermsPayload,
     financials: f,
     t12Payload,
   });
+  if (!refiDebtRenderState.allowDebtMath) {
+    return { tier: null, evidence: null, html: "" };
+  }
+  const canonicalRefiDebtBasis = refiDebtRenderState.canonicalRefiDebtBasis;
   const debtBalance = coerceNumber(canonicalRefiDebtBasis.debtBalance);
   const ltvMaxRaw = coerceNumber(f.refi_ltv_max);
   const ltvMax = Number.isFinite(ltvMaxRaw) && ltvMaxRaw > 1.5 ? ltvMaxRaw / 100 : ltvMaxRaw;
@@ -3143,13 +3205,20 @@ function buildScreeningRefiSufficiencyTable({
   loanTermSheetTermsPayload = null,
 } = {}) {
   const f = financials && typeof financials === "object" ? financials : {};
-  const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
-    currentDebtState: currentDebtAssessmentState,
+  const refiDebtRenderState = buildRefiDebtRenderState({
+    currentDebtAssessmentState,
     mortgagePayload,
     loanTermSheetTermsPayload,
     financials: f,
     t12Payload,
   });
+  if (!refiDebtRenderState.allowDebtMath) {
+    if (refiDebtRenderState.status === "source_limited") {
+      return `<p>Debt/refinance metrics were source-limited because the uploaded debt evidence did not verify a current outstanding debt balance sufficient for refinance analysis.</p>`;
+    }
+    return `<p>Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.</p>`;
+  }
+  const canonicalRefiDebtBasis = refiDebtRenderState.canonicalRefiDebtBasis;
   const canonicalRefiInterestRate = coerceNumber(canonicalRefiDebtBasis?.interestRatePct);
   const canonicalRefiAmortYears = coerceNumber(canonicalRefiDebtBasis?.amortYears);
   const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
@@ -6965,19 +7034,29 @@ if (effectiveReportMode === "screening_v1") {
     const screeningRefiSufficiencyHtml =
       effectiveReportMode === "screening_v1"
         ? ""
-        : (
-            buildScreeningRefiSufficiencyTable({
+        : (() => {
+            const refiDebtRenderStateForScreeningBlock = buildRefiDebtRenderState({
+              currentDebtAssessmentState,
+              mortgagePayload,
+              loanTermSheetTermsPayload,
+              financials,
+              t12Payload,
+            });
+            const sufficiencyHtml = buildScreeningRefiSufficiencyTable({
               financials,
               t12Payload,
               currentDebtAssessmentState,
               mortgagePayload,
               loanTermSheetTermsPayload,
-            }) +
-            buildFinancingEnvelopeGrid(
-              coerceNumber(t12Payload?.net_operating_income),
-              Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
-            )
-          );
+            });
+            const financingEnvelopeHtml = refiDebtRenderStateForScreeningBlock.allowDebtMath
+              ? buildFinancingEnvelopeGrid(
+                  coerceNumber(t12Payload?.net_operating_income),
+                  Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
+                )
+              : "";
+            return sufficiencyHtml + financingEnvelopeHtml;
+          })();
     let screeningCoverageHtml = "";
     finalHtml = replaceAll(
       finalHtml,
@@ -9675,8 +9754,10 @@ export const __test__ = {
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
   resolveCanonicalRefiDebtBasis,
+  buildRefiDebtRenderState,
   buildRefiStabilityModel,
   buildScreeningRefiSufficiencyTable,
+  buildFinancingEnvelopeGrid,
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
   resolveRenovationDisplayMode,
