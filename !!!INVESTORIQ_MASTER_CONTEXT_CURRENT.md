@@ -1,3 +1,34 @@
+# May 26, 2026 (Late Evening) Addendum - PR 1 + PR 4 Micro Completed / Launch Path Still Open
+
+## A. Architecture cleanup completed tonight
+
+1. PR 1 - Property-tax per-file binding  
+Status: completed and committed.  
+Outcome: Renderer document-treatment property-tax modeled/support labels are now bound to the validated property-tax source file identity. Missing, unreliable, or mismatched binding fails safe to neutral non-modeled treatment. This prevents Phase I ESA, environmental, zoning/compliance, appraisal, market survey, or generic support docs from being labeled as property-tax support solely because propertyTaxPayload exists elsewhere.
+
+2. PR 4 micro - Renderer consumes support-doc taxonomy  
+Status: completed and committed.  
+Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and uildDocumentTreatmentSummaryHtml uses canonical taxonomy semantic_doc_role as primary authority for support-doc role classification. Existing semantic_doc_role is fallback only when taxonomy role is absent/non-useful. Inline regex/filename logic remains fallback only. PR 1 property-tax per-file binding remains intact.
+
+## B. Launch-strategy clarification (current)
+
+- Rob has not made a final decision to launch Screening-only.
+- Current launch strategy is still undecided.
+- Full Underwriting cleanup is being executed now to preserve the option of launching Screening + Full Underwriting together if Full Underwriting reaches the universal quality bar.
+- Do not automatically convert Pricing Underwriting to invite-only unless Rob explicitly decides Full Underwriting will not be public self-serve at launch.
+- Emergent's Pricing invite-only recommendation remains a fallback launch-safety option, not an approved patch.
+
+## C. Next architecture sequence
+
+1. PR 2 - Acquisition triangle pre-render gate (next).
+2. PR 3 - Refi / Debt state machine.
+3. PR 5 - UnderwritingState skeleton (explicitly deferred until after PR 1 + PR 4 canonical consumption proof).
+
+## D. Proven pattern from tonight
+
+- Canonical helper logic must be consumed by the renderer to matter; exported-only canonical helpers do not prevent rendered drift.
+
+---
 # May 25/26, 2026 Addendum - Full Underwriting Architecture Audit / Whack-a-Mole Freeze / Screening-First Launch Path
 
 ## A. New current status

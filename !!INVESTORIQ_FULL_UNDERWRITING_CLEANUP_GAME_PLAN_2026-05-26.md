@@ -1,3 +1,33 @@
+# May 26, 2026 (Late Evening) Addendum - PR 1 + PR 4 Micro Completion Update
+
+## Status update (controlling for this game-plan checkpoint)
+
+- PR 1 - Property-tax per-file binding: complete.
+- PR 4 micro - Renderer consumes support-doc taxonomy: complete.
+- PR 2 - Acquisition triangle pre-render gate: next.
+- PR 5 - UnderwritingState skeleton: explicitly deferred.
+
+## What was proven tonight
+
+- Canonical helpers must be consumed by the renderer, not merely exported.
+- Property-tax treatment labels now remain bound to validated per-file identity, with fail-safe neutral treatment when binding is missing, unreliable, or mismatched.
+- Support-doc taxonomy now drives primary role classification in renderer document treatment, with regex/filename logic retained as fallback.
+
+## Launch-strategy clarification
+
+- Launch strategy is currently undecided.
+- Screening-only launch is not a final decision.
+- Full Underwriting public self-serve is not permanently rejected.
+- Cleanup work is preserving the option to launch Screening + Full Underwriting together if Full Underwriting reaches the universal quality bar.
+- Pricing invite-only handling for Underwriting remains a fallback safety option, not an approved patch in this prompt.
+
+## Sequence remains
+
+1. PR 2 next.
+2. PR 3 after PR 2.
+3. PR 5 later, and only after PR 1 + PR 4 canonical-consumption pattern is proven in production code paths.
+
+---
 # InvestorIQ Full Underwriting Cleanup Game Plan
 ## Canonical Consumption / UnderwritingState Migration Roadmap
 
