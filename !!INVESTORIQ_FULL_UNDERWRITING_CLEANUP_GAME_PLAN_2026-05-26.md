@@ -1,3 +1,37 @@
+# May 27, 2026 (Night) Addendum - Current Controlling Status (Supersedes Earlier Sequence Notes)
+
+## A. Completed sequence now recorded as committed
+
+- BLK-1: complete/committed. Scorecard current debt coverage no longer uses legacy/raw mortgage fallback when canonical current debt is not computed (`resolveCanonicalCurrentDebtScoreInputs(...)` returns null coverage and `usedCanonicalState: false`; scorecard entry treats null as not assessed).
+- BLK-3 Part 1: complete/committed. Added `tests/qa/refi-gate-not-assessed-finalhtml-smoke.js` (finalHtml-like/helper-assembly coverage; not a true full `generateClientReport()` customer HTML invocation).
+- BLK-3 Part 2: complete/committed. Added `tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js` (finalHtml-like/helper-assembly coverage; not a true full `generateClientReport()` customer HTML invocation).
+- BLK-3 Part 3: complete/committed. Added `tests/qa/property-tax-binding-finalhtml-smoke.js` (finalHtml-like/helper-assembly coverage; not a true full `generateClientReport()` customer HTML invocation).
+- BLK-2: complete/committed. Acquisition financing artifact provenance pollution patched; parsed/source fields are no longer back-mutated by text-recovered/renderer-derived values, with recovered values separated under `_renderer_derived_fields`.
+
+## B. Remaining caveats and tracked hardening work
+
+- The three BLK-3 smokes are useful regression coverage but are helper-assembly/finalHtml-like, not true full-generator/full-render customer HTML coverage.
+- Pre-launch hardening still required: a dedicated true full-generator/full-render regression harness proving no bypass of:
+  1. refi/debt not-assessed gate
+  2. acquisition triangle collapse gate
+  3. property-tax source-binding/document-treatment gate
+- Follow-up provenance cleanup: review whether `ltv`, `interest_rate`, and `amortization_years` should also be separated into explicit source fields vs `_renderer_derived_fields` when recovered only from free text. Do not patch ad hoc; handle under a future canonical acquisition/provenance cleanup pass.
+
+## C. Controlling launch-hardening status
+
+- Live testing remains paused.
+- Do not mark Full Underwriting as launch-ready yet.
+- Do not auto-start PR 5 / UnderwritingState; keep deferred unless final checkpoint says needed now.
+- Immediate likely order:
+  1. Documentation update (this addendum)
+  2. Consider true full-generator/full-render regression harness PR
+  3. Final Emergent repo-wide Full Underwriting audit
+  4. Decide if PR 5 is needed before controlled live testing
+  5. Resume controlled live testing only after that sequence
+
+Older statements below indicating PR 1/2/3 are next, immediate live retesting, or implicit launch readiness are historical context and superseded by this May 27, 2026 controlling addendum.
+
+---
 # May 26, 2026 (Late Evening) Addendum - PR 1 + PR 4 Micro Completion Update
 
 ## Status update (controlling for this game-plan checkpoint)
@@ -908,3 +942,4 @@ Current next-step status:
 - PR 1, PR 4, PR 2, PR 3 are complete.
 - PR 5 / UnderwritingState remains deferred unless the final checkpoint indicates it is necessary now.
 - Next likely step after this markdown update: small audit-only checkpoint to decide whether remaining micro patches are needed before the final Emergent audit.
+
