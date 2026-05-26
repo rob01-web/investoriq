@@ -812,6 +812,12 @@ function hasDebtTermsPayload(payload) {
 function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
   if (!payload || typeof payload !== "object") return payload;
   const normalized = { ...payload };
+  const rendererDerivedFields = { ...(normalized._renderer_derived_fields || {}) };
+  const setDerivedField = (key, value) => {
+    if (Number.isFinite(coerceNumber(value)) && coerceNumber(value) > 0) {
+      rendererDerivedFields[key] = coerceNumber(value);
+    }
+  };
   const firstFinite = (...values) => {
     for (const value of values) {
       const parsed = coerceNumber(value);
@@ -907,8 +913,10 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     normalized.proposed_loan_amount,
     normalized.acquisition_loan_amount
   );
-  const resolvedStatedLoanAmount = firstFinite(statedLoanAmount, explicitLoanAmountFromText);
-  let resolvedPurchasePrice = firstFinite(purchasePrice, explicitPurchasePriceFromText);
+  const resolvedStatedLoanAmount = statedLoanAmount;
+  let resolvedPurchasePrice = purchasePrice;
+  setDerivedField("purchase_price_from_text", explicitPurchasePriceFromText);
+  setDerivedField("stated_acquisition_loan_amount_from_text", explicitLoanAmountFromText);
   if (
     Number.isFinite(explicitPurchasePriceFromText) &&
     explicitPurchasePriceFromText > 0 &&
@@ -917,7 +925,7 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     !materiallyDifferentAmount(resolvedPurchasePrice, resolvedStatedLoanAmount) &&
     materiallyDifferentAmount(explicitPurchasePriceFromText, resolvedStatedLoanAmount)
   ) {
-    resolvedPurchasePrice = explicitPurchasePriceFromText;
+    setDerivedField("purchase_price_from_text", explicitPurchasePriceFromText);
   }
   if (Number.isFinite(resolvedPurchasePrice) && resolvedPurchasePrice > 0) {
     normalized.purchase_price = resolvedPurchasePrice;
@@ -943,7 +951,15 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
       : Number.isFinite(lenderFeeFallback) && lenderFeeFallback > 0
       ? lenderFeeFallback / 100
       : null;
-  if (Number.isFinite(resolvedLenderFeePercent) && resolvedLenderFeePercent > 0) {
+  const hasExplicitLenderFeePercent = Number.isFinite(
+    firstFinite(
+      normalized.lender_fee_percent,
+      normalized.financing_fee_percent,
+      normalized.origination_fee_percent
+    )
+  );
+  setDerivedField("lender_fee_percent_from_text", resolvedLenderFeePercent);
+  if (hasExplicitLenderFeePercent && Number.isFinite(resolvedLenderFeePercent) && resolvedLenderFeePercent > 0) {
     normalized.lender_fee_percent = resolvedLenderFeePercent;
   }
   const closingCostNotes = String(normalized.closing_cost_notes || "");
@@ -986,10 +1002,9 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     coerceNumber(normalized.ltv) > 0
       ? resolvedPurchasePrice * coerceNumber(normalized.ltv)
       : null;
+  setDerivedField("derived_acquisition_loan_amount_from_purchase_ltv", computedFromPurchaseAndLtv);
   if (!Number.isFinite(resolvedStatedLoanAmount) || resolvedStatedLoanAmount <= 0) {
-    if (Number.isFinite(computedFromPurchaseAndLtv) && computedFromPurchaseAndLtv > 0) {
-      normalized.derived_acquisition_loan_amount = computedFromPurchaseAndLtv;
-    }
+    // Preserve parsed/source provenance. Derived values remain in renderer metadata only.
   } else {
     if (
       Number.isFinite(computedFromPurchaseAndLtv) &&
@@ -1000,6 +1015,9 @@ function normalizeAcquisitionFinancingArtifactPayload(payload = null) {
     } else {
       delete normalized.acquisition_limitation_reason_code;
     }
+  }
+  if (Object.keys(rendererDerivedFields).length > 0) {
+    normalized._renderer_derived_fields = rendererDerivedFields;
   }
   return normalized;
 }

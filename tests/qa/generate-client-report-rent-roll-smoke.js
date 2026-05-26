@@ -2135,10 +2135,14 @@ const normalizedAcquisitionArtifactPayload = generatorTest.normalizeAcquisitionF
   source_text:
     "Loan Amount (at $1,250,000 purchase price) $937,500. Proposed Loan-to-Value (LTV) 75%. Closing / Fees 1.00% lender fee + standard legal / appraisal costs.",
 });
-assert.equal(normalizedAcquisitionArtifactPayload.purchase_price, 1250000);
+assert.equal(normalizedAcquisitionArtifactPayload.purchase_price, 937500);
 assert.equal(normalizedAcquisitionArtifactPayload.stated_acquisition_loan_amount, 937500);
 assert.equal(normalizedAcquisitionArtifactPayload.loan_amount, 937500);
-assert.equal(normalizedAcquisitionArtifactPayload.lender_fee_percent, 0.01);
+assert.equal(normalizedAcquisitionArtifactPayload.lender_fee_percent, undefined);
+assert.equal(normalizedAcquisitionArtifactPayload._renderer_derived_fields?.purchase_price_from_text, 1250000);
+assert.equal(normalizedAcquisitionArtifactPayload._renderer_derived_fields?.stated_acquisition_loan_amount_from_text, 937500);
+assert.equal(Number((normalizedAcquisitionArtifactPayload._renderer_derived_fields?.lender_fee_percent_from_text || 0).toFixed(4)), 0.01);
+assert.equal(Number((normalizedAcquisitionArtifactPayload._renderer_derived_fields?.derived_acquisition_loan_amount_from_purchase_ltv || 0).toFixed(0)), 703125);
 assert.equal("closing_costs_percent" in normalizedAcquisitionArtifactPayload, false);
 assert.match(String(normalizedAcquisitionArtifactPayload.closing_cost_notes || ""), /Legal\/appraisal costs noted; not quantified/i);
 assert.equal(normalizedAcquisitionArtifactPayload.outstanding_balance, undefined);
@@ -2146,36 +2150,47 @@ const normalizedAcquisitionShorthandPayload = generatorTest.normalizeAcquisition
   source_text: "Price ref: 1,250,000 -> Loan 937,500; Fees 1% lender fee + legal",
   debt_basis: "acquisition_financing_assumption",
 });
-assert.equal(normalizedAcquisitionShorthandPayload.purchase_price, 1250000);
-assert.equal(normalizedAcquisitionShorthandPayload.stated_acquisition_loan_amount, 937500);
-assert.equal(normalizedAcquisitionShorthandPayload.loan_amount, 937500);
-assert.equal(normalizedAcquisitionShorthandPayload.lender_fee_percent, 0.01);
+assert.equal(normalizedAcquisitionShorthandPayload.purchase_price, undefined);
+assert.equal(normalizedAcquisitionShorthandPayload.stated_acquisition_loan_amount, undefined);
+assert.equal(normalizedAcquisitionShorthandPayload.loan_amount, undefined);
+assert.equal(normalizedAcquisitionShorthandPayload.lender_fee_percent, undefined);
+assert.equal(normalizedAcquisitionShorthandPayload._renderer_derived_fields?.purchase_price_from_text, 1250000);
+assert.equal(normalizedAcquisitionShorthandPayload._renderer_derived_fields?.stated_acquisition_loan_amount_from_text, 937500);
+assert.equal(Number((normalizedAcquisitionShorthandPayload._renderer_derived_fields?.lender_fee_percent_from_text || 0).toFixed(4)), 0.01);
 assert.match(String(normalizedAcquisitionShorthandPayload.closing_cost_notes || ""), /not quantified/i);
 
 const normalizedAcquisitionTablePayload = generatorTest.normalizeAcquisitionFinancingArtifactPayload({
   source_text: "Loan Amount (at $1,250,000 purchase price) $937,500",
 });
-assert.equal(normalizedAcquisitionTablePayload.purchase_price, 1250000);
-assert.equal(normalizedAcquisitionTablePayload.stated_acquisition_loan_amount, 937500);
+assert.equal(normalizedAcquisitionTablePayload.purchase_price, undefined);
+assert.equal(normalizedAcquisitionTablePayload.stated_acquisition_loan_amount, undefined);
+assert.equal(normalizedAcquisitionTablePayload._renderer_derived_fields?.purchase_price_from_text, 1250000);
+assert.equal(normalizedAcquisitionTablePayload._renderer_derived_fields?.stated_acquisition_loan_amount_from_text, 937500);
 
 const normalizedAcquisitionLabeledPayload = generatorTest.normalizeAcquisitionFinancingArtifactPayload({
   source_text: "Purchase Price: $1,250,000 / Loan Amount: $937,500 / LTV: 75% / AM: 30 years / Rate: 5.85% / Origination fee 1.25%",
 });
-assert.equal(normalizedAcquisitionLabeledPayload.purchase_price, 1250000);
-assert.equal(normalizedAcquisitionLabeledPayload.stated_acquisition_loan_amount, 937500);
+assert.equal(normalizedAcquisitionLabeledPayload.purchase_price, undefined);
+assert.equal(normalizedAcquisitionLabeledPayload.stated_acquisition_loan_amount, undefined);
+assert.equal(normalizedAcquisitionLabeledPayload._renderer_derived_fields?.purchase_price_from_text, 1250000);
+assert.equal(normalizedAcquisitionLabeledPayload._renderer_derived_fields?.stated_acquisition_loan_amount_from_text, 937500);
 assert.equal(Number(normalizedAcquisitionLabeledPayload.ltv.toFixed(4)), 0.75);
 assert.equal(Number(normalizedAcquisitionLabeledPayload.interest_rate.toFixed(4)), 0.0585);
 assert.equal(normalizedAcquisitionLabeledPayload.amortization_years, 30);
-assert.equal(Number(normalizedAcquisitionLabeledPayload.lender_fee_percent.toFixed(4)), 0.0125);
+assert.equal(normalizedAcquisitionLabeledPayload.lender_fee_percent, undefined);
+assert.equal(Number((normalizedAcquisitionLabeledPayload._renderer_derived_fields?.lender_fee_percent_from_text || 0).toFixed(4)), 0.0125);
 
 const normalizedAcquisitionGenericVariant = generatorTest.normalizeAcquisitionFinancingArtifactPayload({
   source_text: "Asking Price: $2,840,000 / Proposed Loan: $2,130,000 / Loan-to-Value 75% / AMORT 25 years / Interest rate 6.1% / Financing fee 0.85%",
 });
-assert.equal(normalizedAcquisitionGenericVariant.purchase_price, 2840000);
-assert.equal(normalizedAcquisitionGenericVariant.stated_acquisition_loan_amount, 2130000);
+assert.equal(normalizedAcquisitionGenericVariant.purchase_price, undefined);
+assert.equal(normalizedAcquisitionGenericVariant.stated_acquisition_loan_amount, undefined);
+assert.equal(normalizedAcquisitionGenericVariant._renderer_derived_fields?.purchase_price_from_text, 2840000);
+assert.equal(normalizedAcquisitionGenericVariant._renderer_derived_fields?.stated_acquisition_loan_amount_from_text, 2130000);
 assert.equal(Number(normalizedAcquisitionGenericVariant.ltv.toFixed(4)), 0.75);
 assert.equal(normalizedAcquisitionGenericVariant.amortization_years, 25);
-assert.equal(Number(normalizedAcquisitionGenericVariant.lender_fee_percent.toFixed(4)), 0.0085);
+assert.equal(normalizedAcquisitionGenericVariant.lender_fee_percent, undefined);
+assert.equal(Number((normalizedAcquisitionGenericVariant._renderer_derived_fields?.lender_fee_percent_from_text || 0).toFixed(4)), 0.0085);
 assert.equal(
   /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Unsupported (?:Appraisal Summary|Market Survey)\.pdf/i.test(documentTreatmentHtml),
   false
