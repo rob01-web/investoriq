@@ -358,7 +358,7 @@ function resolveCanonicalCurrentDebtScoreInputs({
     };
   }
   return {
-    currentDebtCoverage: fallbackCoverage,
+    currentDebtCoverage: null,
     usedCanonicalState: false,
   };
 }
@@ -547,7 +547,7 @@ function buildCurrentDebtScorecardEntry({
     mortgagePayload,
     t12Payload,
   });
-  if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
+  if (currentDebtCoverage && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
     return {
       currentDebtCoverage,
       hasDscrScore: true,

@@ -762,3 +762,39 @@ Do not:
 - flip DocRaptor production mode yet
 - disable GitHub worker yet
 - generate public underwriting samples from current flawed PDFs
+
+## May 27, 2026 Addendum - Full Underwriting Cleanup Sequence Status
+
+Completed and committed cleanup sequence:
+1. PR 1 - Property-tax per-file binding.
+2. PR 4 - Renderer consumes support-doc taxonomy authority.
+3. PR 2 - Acquisition Triangle Pre-Render Gate.
+4. PR 3 - Refi / Debt Render-State Gate.
+
+PR 2 status summary:
+- Full Proposed Acquisition Debt Sizing table renders only when acquisition triangle is valid/safe.
+- Incomplete, inconsistent, or unsupported acquisition evidence collapses to disclosure.
+- Contradictory purchase price / LTV / stated loan / derived loan fields are suppressed in collapsed mode.
+- Missing/null fees no longer render as 0.0%.
+- Text-derived lender fee does not render unless explicitly structured/verified.
+- Acquisition/proposed financing remains separate from current outstanding debt.
+
+PR 3 status summary:
+- Added refi/debt render-state gate.
+- Refinance/current-debt/DSCR/debt-capacity math surfaces render only when verified current debt basis exists.
+- Source-limited or not-assessed current debt states collapse to disclosure.
+- SCREENING_REFI_DATA_SUFFICIENCY_BLOCK no longer appends financing envelope/debt-capacity math unless debt math is valid.
+- Acquisition-only proposed financing maps to not_assessed for current debt/refi math.
+- Valid verified-current-debt cases preserve existing refi/debt math.
+
+Testing and final-audit sequence update:
+- Do not return to live testing yet.
+- Finish the cleanup-sequence checkpoint first.
+- Then run one final Emergent repo-wide Full Underwriting audit before live testing resumes.
+- Emergent remaining credits are limited (roughly 40) and should be used strategically for that final underwriting/report-surface audit.
+- Final Emergent audit objective: determine whether Full Underwriting is truly elite/launch-ready and catch remaining repo-wide/report-surface issues before additional testing.
+
+Next-step status:
+- PR 1, PR 4, PR 2, PR 3 are complete.
+- PR 5 / UnderwritingState remains deferred unless the final checkpoint indicates it is necessary now.
+- Next likely step after this context update: small audit-only checkpoint to decide whether any remaining micro patches are needed before the final Emergent audit.
