@@ -2931,6 +2931,14 @@ function buildAcquisitionFinancingAssumptionsHtml({
     acquisitionContextText,
     /(lender fee|financing fee|origination fee)/
   );
+  const lenderFeeExplicitlyVerified = [
+    termsPayload.lender_fee_percent,
+    termsPayload.financing_fee_percent,
+    termsPayload.origination_fee_percent,
+    acquisitionSupportPayload?.lender_fee_percent,
+    acquisitionSupportPayload?.financing_fee_percent,
+    acquisitionSupportPayload?.origination_fee_percent,
+  ].some((value) => Number.isFinite(coerceNumber(value)) && coerceNumber(value) > 0);
   const lenderFeePercent = firstFinite(
     termsPayload.lender_fee_percent,
     termsPayload.financing_fee_percent,
@@ -2955,6 +2963,82 @@ function buildAcquisitionFinancingAssumptionsHtml({
     lenderFeePercent,
   ].some((value) => Number.isFinite(value) && value > 0);
   if (!hasMeaningfulAcquisitionField) return "";
+  const validateAcquisitionTriangle = ({
+    purchasePrice: trianglePurchasePrice,
+    statedLoanAmount: triangleStatedLoanAmount,
+    derivedLoanAmount: triangleDerivedLoanAmount,
+    ltv: triangleLtv,
+    ratePct: triangleRatePct,
+    amortYears: triangleAmortYears,
+    lenderFeePercent: triangleLenderFeePercent,
+  }) => {
+    const verifiedFields = [];
+    const missingFields = [];
+    const inconsistentFields = [];
+    const hasPurchasePrice = Number.isFinite(trianglePurchasePrice) && trianglePurchasePrice > 0;
+    const hasStatedLoan = Number.isFinite(triangleStatedLoanAmount) && triangleStatedLoanAmount > 0;
+    const hasDerivedLoan = Number.isFinite(triangleDerivedLoanAmount) && triangleDerivedLoanAmount > 0;
+    const hasLtv = Number.isFinite(triangleLtv) && triangleLtv > 0;
+    const hasRate = Number.isFinite(triangleRatePct) && triangleRatePct > 0;
+    const hasAmort = Number.isFinite(triangleAmortYears) && triangleAmortYears > 0;
+    const hasLenderFee = Number.isFinite(triangleLenderFeePercent) && triangleLenderFeePercent > 0;
+    if (hasPurchasePrice) verifiedFields.push("purchase_price");
+    if (hasStatedLoan) verifiedFields.push("stated_acquisition_loan_amount");
+    if (hasDerivedLoan) verifiedFields.push("derived_acquisition_loan_amount");
+    if (hasLtv) verifiedFields.push("ltv");
+    if (hasRate) verifiedFields.push("interest_rate");
+    if (hasAmort) verifiedFields.push("amortization_years");
+    if (hasLenderFee) verifiedFields.push("lender_fee_percent");
+    if (!hasPurchasePrice) missingFields.push("purchase_price");
+    if (!hasLtv) missingFields.push("ltv");
+    if (!hasRate) missingFields.push("interest_rate");
+    if (!hasAmort) missingFields.push("amortization_years");
+    const computedLoanFromTriangle =
+      hasPurchasePrice && hasLtv ? trianglePurchasePrice * triangleLtv : null;
+    if (
+      hasStatedLoan &&
+      Number.isFinite(computedLoanFromTriangle) &&
+      computedLoanFromTriangle > 0 &&
+      materiallyDifferentAmount(triangleStatedLoanAmount, computedLoanFromTriangle)
+    ) {
+      inconsistentFields.push("stated_vs_purchase_ltv_loan_amount");
+    }
+    if (hasDerivedLoan && hasStatedLoan && materiallyDifferentAmount(triangleDerivedLoanAmount, triangleStatedLoanAmount)) {
+      inconsistentFields.push("stated_vs_derived_loan_amount");
+    }
+    let status = "valid";
+    let disclosureReasonCode = null;
+    if (!hasPurchasePrice && (hasStatedLoan || hasLtv || hasDerivedLoan)) {
+      status = "incomplete";
+      disclosureReasonCode = "acq_triangle_missing_purchase_price";
+    }
+    if (inconsistentFields.length > 0) {
+      status = "inconsistent";
+      disclosureReasonCode = "acq_triangle_internal_mismatch";
+    }
+    if (!hasLtv && !hasStatedLoan && !hasDerivedLoan) {
+      status = "unsupported";
+      disclosureReasonCode = "acq_triangle_missing_financing_basis";
+    }
+    return {
+      status,
+      triangleConsistent: inconsistentFields.length === 0,
+      verifiedFields,
+      missingFields,
+      inconsistentFields,
+      disclosureReasonCode,
+      renderedBehavior: status === "valid" ? "render_table" : "collapse_to_disclosure",
+    };
+  };
+  const acquisitionTriangleValidation = validateAcquisitionTriangle({
+    purchasePrice,
+    statedLoanAmount,
+    derivedLoanAmount,
+    ltv,
+    ratePct,
+    amortYears,
+    lenderFeePercent,
+  });
 
   const noi = coerceNumber(t12Payload?.net_operating_income);
   const limitations = [];
@@ -2986,6 +3070,11 @@ function buildAcquisitionFinancingAssumptionsHtml({
   if (!Number.isFinite(amortYears) || amortYears <= 0) {
     limitations.push("Estimated acquisition debt service was not modeled because amortization was not verified.");
   }
+  if (acquisitionTriangleValidation.status !== "valid") {
+    limitations.push(
+      "Acquisition debt sizing table was collapsed because acquisition purchase/loan/LTV inputs were incomplete, inconsistent, or unsupported."
+    );
+  }
   const mortgageConstant = computeMortgageConstant(ratePct / 100, amortYears);
   const annualDebtService =
     Number.isFinite(statedLoanAmount ?? derivedLoanAmount) &&
@@ -3007,7 +3096,9 @@ function buildAcquisitionFinancingAssumptionsHtml({
     Number.isFinite(amortYears) && amortYears > 0 ? ["Amortization", `${Math.round(amortYears)} years`] : null,
     Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? ["Going-In Cap Rate", formatPercent1(goingInCapRate)] : null,
     Number.isFinite(closingCostsPercent) && closingCostsPercent > 0 ? ["Closing Costs", formatPercentExactDisplay(closingCostsPercent)] : null,
-    Number.isFinite(lenderFeePercent) && lenderFeePercent > 0 ? ["Lender Fee", formatPercent1(lenderFeePercent)] : null,
+    lenderFeeExplicitlyVerified && Number.isFinite(lenderFeePercent) && lenderFeePercent > 0
+      ? ["Lender Fee", formatPercent1(lenderFeePercent)]
+      : null,
     !Number.isFinite(closingCostsPercent) && unquantifiedLegalAppraisalMention ? ["Closing Cost Notes", "Legal/appraisal costs noted; not quantified"] : null,
   ].filter(Boolean);
   if (Number.isFinite(annualDebtService) && annualDebtService > 0) {
@@ -3020,7 +3111,28 @@ function buildAcquisitionFinancingAssumptionsHtml({
   const limitationHtml = limitations.length
     ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(limitations.join(" "))}</p>`
     : "";
-
+  if (acquisitionTriangleValidation.renderedBehavior === "collapse_to_disclosure") {
+    const inconsistentFieldSet = new Set(acquisitionTriangleValidation.inconsistentFields || []);
+    const hasStatedVsPurchaseLtvMismatch = inconsistentFieldSet.has("stated_vs_purchase_ltv_loan_amount");
+    const hasStatedVsDerivedMismatch = inconsistentFieldSet.has("stated_vs_derived_loan_amount");
+    const safeRows = rows.filter(([label]) => {
+      const normalizedLabel = String(label || "");
+      if (/Estimated Annual Debt Service|Proposed Acquisition DSCR/i.test(normalizedLabel)) return false;
+      if (hasStatedVsPurchaseLtvMismatch) {
+        if (/Purchase Price|Documented LTV|Stated Acquisition Loan Amount/i.test(normalizedLabel)) return false;
+      }
+      if (hasStatedVsDerivedMismatch) {
+        if (/Stated Acquisition Loan Amount|Derived Acquisition Loan Amount/i.test(normalizedLabel)) return false;
+      }
+      return true;
+    });
+    const safeRowsHtml = safeRows.length
+      ? `<table><thead><tr><th>Verified Field</th><th>Document-Derived Value</th></tr></thead><tbody>${safeRows
+          .map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`)
+          .join("")}</tbody></table>`
+      : "";
+    return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Acquisition financing inputs were not safe to render as a full debt sizing table. This section is limited to non-contradictory verified fields only. This is not current outstanding debt and is not used as a current refinance debt balance.</p>${safeRowsHtml}${limitationHtml}</div>`;
+  }
   return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt, is not used as a current refinance debt balance, and does not represent appraised value.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
 }
 function buildScreeningRefiSufficiencyTable({

@@ -1729,6 +1729,7 @@ assert.equal(/Current Debt DSCR/i.test(acquisitionSizingHtml), false);
 assert.match(acquisitionSizingHtml, /not current outstanding debt/i);
 assert.match(acquisitionSizingHtml, /does not represent appraised value/i);
 assert.equal(/BUY|SELL|HOLD/i.test(acquisitionSizingHtml), false);
+assert.match(acquisitionSizingHtml, /<th>Input<\/th><th>Document-Derived Value<\/th>/i);
 const acquisitionCanonicalMappingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 1250000,
@@ -1753,6 +1754,82 @@ assert.match(acquisitionCanonicalMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(/Current Debt DSCR/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionCanonicalMappingHtml), false);
+const acquisitionInconsistentTriangleHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 1250000,
+    loan_amount: 500000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(acquisitionInconsistentTriangleHtml), false);
+assert.match(acquisitionInconsistentTriangleHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionInconsistentTriangleHtml, /differ materially; stated source values are shown without silent re-derivation/i);
+assert.equal(/Purchase Price[\s\S]{0,80}\$1,250,000/i.test(acquisitionInconsistentTriangleHtml), false);
+assert.equal(/Documented LTV[\s\S]{0,80}75\.0%/i.test(acquisitionInconsistentTriangleHtml), false);
+assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$500,000/i.test(acquisitionInconsistentTriangleHtml), false);
+assert.match(acquisitionInconsistentTriangleHtml, /Interest Rate[\s\S]{0,80}6\.50%/i);
+assert.match(acquisitionInconsistentTriangleHtml, /Amortization[\s\S]{0,80}30 years/i);
+const acquisitionMissingPurchasePriceHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    loan_amount: 900000,
+    ltv: 0.75,
+    interest_rate: 0.061,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(acquisitionMissingPurchasePriceHtml), false);
+assert.equal(/Purchase Price[\s\S]{0,80}\$/i.test(acquisitionMissingPurchasePriceHtml), false);
+assert.match(acquisitionMissingPurchasePriceHtml, /not safe to render as a full debt sizing table/i);
+const acquisitionMismatchedStatedVsDerivedHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 1000000,
+    loan_amount: 650000,
+    ltv: 0.8,
+    interest_rate: 0.062,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
+assert.match(acquisitionMismatchedStatedVsDerivedHtml, /differ materially; stated source values are shown without silent re-derivation/i);
+assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$650,000/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
+assert.match(acquisitionMismatchedStatedVsDerivedHtml, /Interest Rate[\s\S]{0,80}6\.20%/i);
+assert.match(acquisitionMismatchedStatedVsDerivedHtml, /Amortization[\s\S]{0,80}30 years/i);
+const acquisitionLenderFeeNotExplicitlyVerifiedHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 1250000,
+    loan_amount: 937500,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    source_text: "Closing / Fees 1.00% lender fee + legal/appraisal costs.",
+    closing_cost_notes: "legal/appraisal costs noted",
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.equal(/Lender Fee[\s\S]{0,80}1\.0%/i.test(acquisitionLenderFeeNotExplicitlyVerifiedHtml), false);
+assert.match(acquisitionLenderFeeNotExplicitlyVerifiedHtml, /Closing Cost Notes[\s\S]{0,120}Legal\/appraisal costs noted; not quantified/i);
+assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionLenderFeeNotExplicitlyVerifiedHtml), false);
 const acquisitionContextTextMappingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   acquisitionTermsPayload: {
     purchase_price: 937500,
@@ -1774,7 +1851,7 @@ assert.match(acquisitionContextTextMappingHtml, /Purchase Price[\s\S]{0,80}\$1,2
 assert.match(acquisitionContextTextMappingHtml, /Stated Acquisition Loan Amount[\s\S]{0,80}\$937,500/i);
 assert.equal(/Purchase Price[\s\S]{0,80}\$937,500/i.test(acquisitionContextTextMappingHtml), false);
 assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquisitionContextTextMappingHtml), false);
-assert.match(acquisitionContextTextMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
+assert.equal(/Lender Fee[\s\S]{0,80}1\.0%/i.test(acquisitionContextTextMappingHtml), false);
 assert.match(acquisitionContextTextMappingHtml, /Closing Cost Notes[\s\S]{0,120}Legal\/appraisal costs noted; not quantified/i);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionContextTextMappingHtml), false);
 assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionContextTextMappingHtml), false);
