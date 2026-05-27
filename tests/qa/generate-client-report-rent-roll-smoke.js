@@ -61,7 +61,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const coverClassificationLabel = normalizeVisibleReportClassification\(\{[\s\S]{0,600}baseClass:[\s\S]{0,800}sourceReconciliationCapActive[\s\S]{0,300}coreSupportInsufficient[\s\S]{0,300}debtCoverageConstraintActive/
+  /const computedVisibleLabelInputs = \{[\s\S]{0,500}baseClass:\s*baseVisibleClass[\s\S]{0,500}sourceReconciliationCapActive[\s\S]{0,300}coreSupportInsufficient[\s\S]{0,300}debtCoverageConstraintActive/
 );
 assert.match(
   reportSource,
@@ -69,7 +69,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const coverClassificationLabel = normalizeVisibleReportClassification\(\{[\s\S]*sourceReconciliationCapActive[\s\S]*coreSupportInsufficient[\s\S]*debtCoverageConstraintActive/
+  /underwritingState\.core\.classification\.visibleLabelInputs = computedVisibleLabelInputs[\s\S]{0,300}underwritingState\.core\.classification\.visibleLabel = computedCoverClassificationLabel/
 );
 assert.match(
   reportSource,

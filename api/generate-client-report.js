@@ -6630,12 +6630,21 @@ if (effectiveReportMode === "screening_v1") {
       effectiveReportMode === "screening_v1"
         ? (screeningClass === "Fragile" ? "Fragile" : screeningClass)
         : (dealScoreState.displayVerdict?.label || "Review - Insufficient Core Support");
-    const coverClassificationLabel = normalizeVisibleReportClassification({
+    const computedVisibleLabelInputs = {
       baseClass: baseVisibleClass,
       sourceReconciliationCapActive,
       coreSupportInsufficient,
       debtCoverageConstraintActive,
-    });
+    };
+    const computedCoverClassificationLabel = normalizeVisibleReportClassification(computedVisibleLabelInputs);
+    if (underwritingState?.core?.classification) {
+      underwritingState.core.classification.visibleLabelInputs = computedVisibleLabelInputs;
+      underwritingState.core.classification.visibleLabel = computedCoverClassificationLabel;
+      underwritingState.core.classification.verdictState = dealScoreState.displayVerdict || null;
+    }
+    const classificationState = underwritingState?.core?.classification || null;
+    const coverClassificationLabel =
+      classificationState?.visibleLabel || computedCoverClassificationLabel;
     if (effectiveReportMode === "v1_core") {
       dealScoreState.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml(
         dealScoreState.dealScoreTableHtml,
