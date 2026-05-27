@@ -217,6 +217,18 @@ assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOM
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
 assert.match(reportSource, /unsupported appraisal\/market survey files are not treated as appraised value/i);
+assert.match(
+  reportSource,
+  /const acquisitionPurchasePriceVerifiedByTriangle =[\s\S]{0,260}verifiedFields\.includes\("purchase_price"\)/
+);
+assert.match(
+  reportSource,
+  /if \(marketSurveyLike\) \{[\s\S]{0,220}Market survey \/ rent context only; not used to override rent roll\./
+);
+assert.match(
+  reportSource,
+  /Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./
+);
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
   totalUnits: 48,
@@ -1644,6 +1656,35 @@ assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(documentTreatmentHtml), false);
 assert.equal(/Forward-looking renovation support is document-backed/i.test(documentTreatmentHtml), false);
+const marketSurveyTaggedAsRentRollHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    { original_filename: "market_rent_survey_unstructured_source.txt", doc_type: "rent_roll", parse_status: "parsed" },
+  ],
+});
+assert.match(marketSurveyTaggedAsRentRollHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
+assert.equal(/Structured rent roll input/i.test(marketSurveyTaggedAsRentRollHtml), false);
+assert.equal(/Rent-roll support is displayed only/i.test(marketSurveyTaggedAsRentRollHtml), false);
+const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  documentSources: [
+    {
+      original_filename: "purchase_assumptions_source.txt",
+      doc_type: "loan_term_sheet",
+      semantic_doc_role: "purchase_assumptions",
+      parse_status: "parsed",
+    },
+  ],
+});
+assert.match(
+  purchaseAssumptionsLimitedUseHtml,
+  /Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+);
+assert.match(purchaseAssumptionsLimitedUseHtml, /Displayed \/ Limited Use/i);
+assert.equal(
+  /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]*purchase_assumptions_source\.txt/i.test(
+    purchaseAssumptionsLimitedUseHtml
+  ),
+  false
+);
 const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {

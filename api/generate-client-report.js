@@ -2174,7 +2174,7 @@ function buildDocumentTreatmentSummaryHtml({
         ? effectiveCanonicalRole === "appraisal"
         : /(^|\b)(appraisal|valuation report|opinion of value|appraised value)(\b|$)/.test(semanticAndFileText);
     const marketSurveyLike =
-      /(^|\b)(market survey|market_survey|rent survey|rent comp|rent comparables)(\b|$)/.test(semanticAndFileText);
+      /(market[\s_]*survey|market[\s_]*rent[\s_]*survey|rent[\s_]*survey|rent[\s_]*comp(?:arables)?)/.test(semanticAndFileText);
     const environmentalLike = hasUsefulCanonicalRole
       ? effectiveCanonicalRole === "environmental_due_diligence"
       : /(^|\b)(phase i|phase 1|phase_i|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|rec)(\b|$)/.test(semanticAndFileText);
@@ -2190,6 +2190,14 @@ function buildDocumentTreatmentSummaryHtml({
           ? "Structured operating input"
           : "Operating support is displayed only; structured parsed state was not validated for modeled use.",
         reason_code: isParsed && !hasWarnings && !isUnclassified ? "structured_operating_input" : "operating_support_limited_use",
+        source_basis: sourceBasis,
+      };
+    }
+    if (marketSurveyLike) {
+      return {
+        category: "Listed but Not Quantitatively Modeled",
+        note: "Market survey / rent context only; not used to override rent roll.",
+        reason_code: "market_survey_context_only",
         source_basis: sourceBasis,
       };
     }
@@ -2322,7 +2330,7 @@ function buildDocumentTreatmentSummaryHtml({
     if (supportedLoanTerms) {
       return {
         category: "Displayed / Limited Use",
-        note: "Proposed acquisition assumptions only; not current debt",
+        note: "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt.",
         reason_code: "loan_term_sheet_proposed_acquisition_only",
         source_basis: sourceBasis,
       };
@@ -2332,14 +2340,6 @@ function buildDocumentTreatmentSummaryHtml({
         category: "Listed but Not Quantitatively Modeled",
         note: "Listed for auditability only; not used quantitatively",
         reason_code: "unsupported_appraisal_or_market_source",
-        source_basis: sourceBasis,
-      };
-    }
-    if (marketSurveyLike) {
-      return {
-        category: "Listed but Not Quantitatively Modeled",
-        note: "Market survey / rent context only; not used to override rent roll.",
-        reason_code: "market_survey_context_only",
         source_basis: sourceBasis,
       };
     }
@@ -2405,7 +2405,7 @@ function buildDocumentTreatmentSummaryHtml({
               note: "Historical capital items are displayed for context only.",
               reason_code: "historical_capex_only",
             }
-          : /market survey|market_survey|rent survey|rent comp|rent comparables/.test(lower)
+          : /(market[\s_]*survey|market[\s_]*rent[\s_]*survey|rent[\s_]*survey|rent[\s_]*comp(?:arables)?)/.test(lower)
           ? {
               category: "Listed but Not Quantitatively Modeled",
               note: "Market survey / rent context only; not used to override rent roll.",
@@ -8750,7 +8750,14 @@ try {
   const acquisitionStatedLoanPresent = isFinitePositive(
     loanTermSheetTermsPayload?.stated_acquisition_loan_amount ?? loanTermSheetTermsPayload?.loan_amount
   );
-  const acquisitionPurchasePricePresent = isFinitePositive(loanTermSheetTermsPayload?.purchase_price);
+  const acquisitionTriangleValidationStateForQa =
+    underwritingState?.core?.acquisition?.triangleValidationState || null;
+  const acquisitionPurchasePriceVerifiedByTriangle =
+    acquisitionTriangleValidationStateForQa &&
+    Array.isArray(acquisitionTriangleValidationStateForQa.verifiedFields) &&
+    acquisitionTriangleValidationStateForQa.verifiedFields.includes("purchase_price");
+  const acquisitionPurchasePricePresent =
+    isFinitePositive(loanTermSheetTermsPayload?.purchase_price) || acquisitionPurchasePriceVerifiedByTriangle;
 
   if (acquisitionFinancingInputsUsable && !acquisitionFinancingRendered) {
     qaFlags.push({
