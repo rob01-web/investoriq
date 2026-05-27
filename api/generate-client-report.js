@@ -2827,6 +2827,8 @@ function buildAcquisitionFinancingAssumptionsHtml({
   t12Payload,
   reportType,
   reportTier,
+  acquisitionTriangleValidationState = null,
+  returnState = false,
 }) {
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericTier = Number(reportTier);
@@ -3111,7 +3113,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
       renderedBehavior: status === "valid" ? "render_table" : "collapse_to_disclosure",
     };
   };
-  const acquisitionTriangleValidation = validateAcquisitionTriangle({
+  const computedAcquisitionTriangleValidation = validateAcquisitionTriangle({
     purchasePrice,
     statedLoanAmount,
     derivedLoanAmount,
@@ -3120,6 +3122,10 @@ function buildAcquisitionFinancingAssumptionsHtml({
     amortYears,
     lenderFeePercent,
   });
+  const acquisitionTriangleValidation =
+    acquisitionTriangleValidationState && typeof acquisitionTriangleValidationState === "object"
+      ? acquisitionTriangleValidationState
+      : computedAcquisitionTriangleValidation;
 
   const noi = coerceNumber(t12Payload?.net_operating_income);
   const limitations = [];
@@ -3212,9 +3218,25 @@ function buildAcquisitionFinancingAssumptionsHtml({
           .map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`)
           .join("")}</tbody></table>`
       : "";
-    return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Acquisition financing inputs were not safe to render as a full debt sizing table. This section is limited to non-contradictory verified fields only. This is not current outstanding debt and is not used as a current refinance debt balance.</p>${safeRowsHtml}${limitationHtml}</div>`;
+    const html = `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Acquisition financing inputs were not safe to render as a full debt sizing table. This section is limited to non-contradictory verified fields only. This is not current outstanding debt and is not used as a current refinance debt balance.</p>${safeRowsHtml}${limitationHtml}</div>`;
+    if (returnState) {
+      return {
+        html,
+        triangleValidationState: acquisitionTriangleValidation,
+        renderBehavior: acquisitionTriangleValidation.renderedBehavior,
+      };
+    }
+    return html;
   }
-  return `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt, is not used as a current refinance debt balance, and does not represent appraised value.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
+  const html = `<div class="card no-break" style="margin:12px 0;"><p class="subsection-title">Proposed Acquisition Debt Sizing</p><p class="small">Derived from uploaded purchase assumptions. This is not current outstanding debt, is not used as a current refinance debt balance, and does not represent appraised value.</p><table><thead><tr><th>Input</th><th>Document-Derived Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>${limitationHtml}</div>`;
+  if (returnState) {
+    return {
+      html,
+      triangleValidationState: acquisitionTriangleValidation,
+      renderBehavior: acquisitionTriangleValidation.renderedBehavior,
+    };
+  }
+  return html;
 }
 function buildScreeningRefiSufficiencyTable({
   financials,
@@ -6748,14 +6770,30 @@ if (effectiveReportMode === "screening_v1") {
       const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(profileNote)}</p></div>`;
       execVerdictExpansionHtml = profileCard;
     }
-    const acquisitionFinancingAssumptionsHtml = buildAcquisitionFinancingAssumptionsHtml({
+    const acquisitionRenderStateFromBuilder = underwritingState?.core?.acquisition || {};
+    const acquisitionFinancingAssumptionsRender = buildAcquisitionFinancingAssumptionsHtml({
       loanTermSheetTermsPayload,
       acquisitionTermsPayload,
       t12Payload,
       reportType,
       reportTier,
+      acquisitionTriangleValidationState: acquisitionRenderStateFromBuilder?.triangleValidationState || null,
+      returnState: true,
     });
-    const hasProposedAcquisitionFinancing = currentDebtAssessmentState.has_proposed_acquisition_financing;
+    const acquisitionFinancingAssumptionsHtml =
+      typeof acquisitionFinancingAssumptionsRender === "string"
+        ? acquisitionFinancingAssumptionsRender
+        : acquisitionFinancingAssumptionsRender?.html || "";
+    if (underwritingState?.core?.acquisition && acquisitionFinancingAssumptionsRender && typeof acquisitionFinancingAssumptionsRender === "object") {
+      underwritingState.core.acquisition.triangleValidationState =
+        acquisitionFinancingAssumptionsRender.triangleValidationState || null;
+      underwritingState.core.acquisition.renderBehavior =
+        acquisitionFinancingAssumptionsRender.renderBehavior || null;
+    }
+    const hasProposedAcquisitionFinancing = Boolean(
+      underwritingState?.core?.acquisition?.assumptionState?.has_proposed_acquisition_financing ??
+      currentDebtAssessmentState.has_proposed_acquisition_financing
+    );
     const hasTrueCurrentDebtBalance = currentDebtAssessmentState.has_true_current_debt_balance;
     const acquisitionOnlyDebt = effectiveReportMode === "v1_core" && hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);

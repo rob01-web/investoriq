@@ -81,6 +81,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const acquisitionFinancingAssumptionsRender = buildAcquisitionFinancingAssumptionsHtml\([\s\S]{0,300}returnState:\s*true/
+);
+assert.match(
+  reportSource,
+  /underwritingState\.core\.acquisition\.triangleValidationState\s*=\s*acquisitionFinancingAssumptionsRender\.triangleValidationState/
+);
+assert.match(
+  reportSource,
   /dealScoreState\.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml\([\s\S]{0,220}coverClassificationLabel/
 );
 assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);
