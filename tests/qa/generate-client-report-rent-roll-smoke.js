@@ -89,6 +89,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const propertyTaxBindingState =\s*underwritingState\?\.core\?\.documentTreatment\?\.propertyTaxBindingState \|\| null/
+);
+assert.match(
+  reportSource,
+  /buildDocumentTreatmentSummaryHtml\(\{[\s\S]{0,260}propertyTaxBindingState[\s\S]{0,260}\}\)/
+);
+assert.match(
+  reportSource,
   /dealScoreState\.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml\([\s\S]{0,220}coverClassificationLabel/
 );
 assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);

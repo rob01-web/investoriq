@@ -1925,12 +1925,36 @@ function buildDocumentTreatmentSummaryHtml({
   renovationDisplayMode = null,
   renovationPayload = null,
   propertyTaxPayload = null,
+  propertyTaxBindingState = null,
 } = {}) {
   const normalizeIdentityToken = (value) => {
     const token = String(value ?? "").trim().toLowerCase();
     return token.length > 0 ? token : "";
   };
-  const resolvePropertyTaxSourceBindings = (payload = null) => {
+  const resolvePropertyTaxSourceBindings = (payload = null, bindingState = null) => {
+    const bindingIds = Array.isArray(bindingState?.bindingCandidates?.idCandidates)
+      ? bindingState.bindingCandidates.idCandidates
+      : null;
+    const bindingNames = Array.isArray(bindingState?.bindingCandidates?.nameCandidates)
+      ? bindingState.bindingCandidates.nameCandidates
+      : null;
+    if (bindingIds || bindingNames) {
+      const idCandidates = (bindingIds || []).map(normalizeIdentityToken).filter(Boolean);
+      const nameCandidates = (bindingNames || []).map(normalizeIdentityToken).filter(Boolean);
+      const stateHasReliableBinding =
+        typeof bindingState?.hasReliableBinding === "boolean"
+          ? bindingState.hasReliableBinding
+          : idCandidates.length > 0 || nameCandidates.length > 0;
+      if (!stateHasReliableBinding && idCandidates.length === 0 && nameCandidates.length === 0) {
+        // Preserve legacy payload-derived behavior when state binding is present but empty.
+      } else {
+      return {
+        hasReliableBinding: stateHasReliableBinding,
+        idCandidates: new Set(idCandidates),
+        nameCandidates: new Set(nameCandidates),
+      };
+      }
+    }
     const idCandidates = [
       payload?.source_file_id,
       payload?.file_id,
@@ -2050,8 +2074,10 @@ function buildDocumentTreatmentSummaryHtml({
   };
   const currentDebtHasTrueBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtIsAssessed = currentDebtAssessmentState?.current_debt_dscr_status === "computed";
-  const hasValidatedModeledPropertyTax = isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
-  const propertyTaxSourceBinding = resolvePropertyTaxSourceBindings(propertyTaxPayload);
+  const hasValidatedModeledPropertyTax =
+    propertyTaxBindingState?.hasValidatedAnnualTax === true ||
+    isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
+  const propertyTaxSourceBinding = resolvePropertyTaxSourceBindings(propertyTaxPayload, propertyTaxBindingState);
   const classifyRow = (row) => {
     const canonicalSupportDocTaxonomy = buildSupportDocTaxonomyState({
       declaredDocType: row?.doc_type || null,
@@ -5605,6 +5631,8 @@ if (effectiveReportMode === "screening_v1") {
     });
     const currentDebtAssessmentState =
       underwritingState?.core?.currentDebt?.assessmentState || canonicalCurrentDebtAssessmentState;
+    const propertyTaxBindingState =
+      underwritingState?.core?.documentTreatment?.propertyTaxBindingState || null;
     const sharedRefiDebtRenderState =
       underwritingState?.core?.currentDebt?.refiRenderState ||
       buildRefiDebtRenderState({
@@ -8530,6 +8558,7 @@ if (effectiveReportMode === "screening_v1") {
         renovationDisplayMode,
         renovationPayload,
         propertyTaxPayload,
+        propertyTaxBindingState,
       });
       if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
@@ -9180,6 +9209,7 @@ try {
       hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
       renovationDisplayMode,
       propertyTaxPayload,
+      propertyTaxBindingState,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
