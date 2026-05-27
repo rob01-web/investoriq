@@ -178,4 +178,59 @@ assert.equal(
   false
 );
 
+const debtBoundTreatmentHtml = await renderUnderwritingHtml({
+  t12Payload: {
+    effective_gross_income: 1400000,
+    total_operating_expenses: 500000,
+    net_operating_income: 900000,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: "current_mortgage_statement",
+    source_original_filename: "Current_Debt_Terms_Source.txt",
+    current_outstanding_balance: 8750000,
+    interest_rate: 5.25,
+    amortization_years: 30,
+    monthly_payment: 70800,
+  },
+  propertyTaxPayload: {
+    annual_tax: 42750,
+    source_file_id: "bound-tax-file",
+    original_filename: "Bound_Tax_Document.pdf",
+  },
+  documentSources: [
+    {
+      file_id: "current-debt-file",
+      original_filename: "Current_Debt_Terms_Source.txt",
+      doc_type: "loan_term_sheet",
+      parse_status: "parsed",
+      uploaded_at: "2026-05-27T22:10:00.000Z",
+      semantic_doc_role: "loan_term_sheet",
+    },
+    {
+      file_id: "purchase-assumptions-file",
+      original_filename: "Purchase_Assumptions_Context.txt",
+      doc_type: "loan_term_sheet",
+      parse_status: "parsed",
+      uploaded_at: "2026-05-27T22:11:00.000Z",
+      semantic_doc_role: "purchase_assumptions",
+    },
+  ],
+});
+
+assert.match(
+  debtBoundTreatmentHtml,
+  /Current_Debt_Terms_Source\.txt[\s\S]{0,260}Structured current debt input/i
+);
+assert.equal(
+  /Current_Debt_Terms_Source\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i.test(
+    debtBoundTreatmentHtml
+  ),
+  false
+);
+assert.match(
+  debtBoundTreatmentHtml,
+  /Purchase_Assumptions_Context\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+);
+
 console.log("full-underwriting-gates-full-render smoke PASS");

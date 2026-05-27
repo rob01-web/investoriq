@@ -1090,6 +1090,77 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
     acquisitionPayload: normalizeAcquisitionFinancingArtifactPayload(acquisitionArtifact?.payload || null),
   };
 }
+
+function buildDocumentQuantitativeUsageMap({
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+} = {}) {
+  const hasTrueCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
+  const currentDebtComputed = String(currentDebtAssessmentState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed";
+  const payloadHasCurrentDebtSignals = Boolean(
+    isFinitePositive(mortgagePayload?.outstanding_balance) ||
+    isFinitePositive(mortgagePayload?.current_outstanding_balance) ||
+    isFinitePositive(mortgagePayload?.current_loan_balance) ||
+    isFinitePositive(loanTermSheetTermsPayload?.outstanding_balance) ||
+    isFinitePositive(loanTermSheetTermsPayload?.current_outstanding_balance) ||
+    isFinitePositive(loanTermSheetTermsPayload?.current_loan_balance)
+  );
+  const hasCurrentDebtQuantitativeUse =
+    hasTrueCurrentDebtBalance ||
+    currentDebtComputed ||
+    payloadHasCurrentDebtSignals;
+  if (!hasCurrentDebtQuantitativeUse) {
+    return { rows: [] };
+  }
+  const normalizeIdentityToken = (value) => {
+    const token = String(value ?? "").trim().toLowerCase();
+    return token.length > 0 ? token : "";
+  };
+  const rows = [];
+  const pushCurrentDebtUsage = (payload = null, sourceBasis = null) => {
+    if (!payload || typeof payload !== "object") return;
+    const idTokens = [
+      payload?.source_file_id,
+      payload?.file_id,
+      payload?.document_id,
+      payload?.artifact_file_id,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    const nameTokens = [
+      payload?.source_original_filename,
+      payload?.original_filename,
+      payload?.file_name,
+      payload?.filename,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    if (idTokens.length === 0 && nameTokens.length === 0) return;
+    const usageFields = [
+      isFinitePositive(payload?.outstanding_balance) || isFinitePositive(payload?.current_outstanding_balance) || isFinitePositive(payload?.current_loan_balance)
+        ? "current_outstanding_balance"
+        : null,
+      isFinitePositive(payload?.interest_rate) ? "interest_rate" : null,
+      isFinitePositive(payload?.amortization_years) || isFinitePositive(payload?.amort_years) ? "amortization_years" : null,
+      isFinitePositive(payload?.monthly_payment) || isFinitePositive(payload?.annual_debt_service) ? "debt_service" : null,
+      currentDebtComputed ? "current_debt_dscr_basis" : null,
+    ].filter(Boolean);
+    rows.push({
+      usageType: "current_debt",
+      source_basis: sourceBasis || "canonical_payload",
+      fields_used: [...new Set(usageFields)],
+      identity: {
+        idTokens: new Set(idTokens),
+        nameTokens: new Set(nameTokens),
+      },
+    });
+  };
+  pushCurrentDebtUsage(mortgagePayload, "canonical_mortgage_payload");
+  pushCurrentDebtUsage(loanTermSheetTermsPayload, "canonical_loan_term_sheet_payload");
+  return { rows };
+}
+
 function getReportQaStatus(flags) {
   const items = Array.isArray(flags) ? flags : [];
   if (items.some((flag) => flag?.severity === "critical")) {
@@ -1926,6 +1997,7 @@ function buildDocumentTreatmentSummaryHtml({
   renovationPayload = null,
   propertyTaxPayload = null,
   propertyTaxBindingState = null,
+  documentQuantitativeUsageMap = null,
 } = {}) {
   const normalizeIdentityToken = (value) => {
     const token = String(value ?? "").trim().toLowerCase();
@@ -2078,7 +2150,46 @@ function buildDocumentTreatmentSummaryHtml({
     propertyTaxBindingState?.hasValidatedAnnualTax === true ||
     isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax);
   const propertyTaxSourceBinding = resolvePropertyTaxSourceBindings(propertyTaxPayload, propertyTaxBindingState);
+  const quantitativeUsageRows = Array.isArray(documentQuantitativeUsageMap?.rows)
+    ? documentQuantitativeUsageMap.rows
+    : [];
+  const findQuantitativeUsage = (row) => {
+    if (!quantitativeUsageRows.length) return null;
+    const rowIdTokens = [
+      row?.id,
+      row?.file_id,
+      row?.source_file_id,
+      row?.document_id,
+      row?.artifact_file_id,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    if (rowIdTokens.length > 0) {
+      const idMatch = quantitativeUsageRows.find((entry) => {
+        const ids = entry?.identity?.idTokens;
+        return ids instanceof Set && rowIdTokens.some((token) => ids.has(token));
+      });
+      if (idMatch) return idMatch;
+    }
+    const rowNameTokens = [row?.original_filename, row?.file_name, row?.filename]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    if (rowNameTokens.length === 0) return null;
+    return quantitativeUsageRows.find((entry) => {
+      const names = entry?.identity?.nameTokens;
+      return names instanceof Set && rowNameTokens.some((token) => names.has(token));
+    }) || null;
+  };
   const classifyRow = (row) => {
+    const quantitativeUsage = findQuantitativeUsage(row);
+    if (quantitativeUsage?.usageType === "current_debt") {
+      return {
+        category: "Modeled Inputs",
+        note: "Structured current debt input",
+        reason_code: "canonical_current_debt_quantitative_usage",
+        source_basis: quantitativeUsage?.source_basis || "canonical_usage_map",
+      };
+    }
     const canonicalSupportDocTaxonomy = buildSupportDocTaxonomyState({
       declaredDocType: row?.doc_type || null,
       detectedDocType: row?.display_doc_type || null,
@@ -3401,6 +3512,7 @@ function buildScreeningDataCoverageSummary({
   renovationDisplayMode = null,
   renovationPayload = null,
   propertyTaxPayload = null,
+  documentQuantitativeUsageMap = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const t12Checks = [
@@ -3586,6 +3698,7 @@ function buildScreeningDataCoverageSummary({
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      documentQuantitativeUsageMap,
     });
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>`;
   }
@@ -3617,6 +3730,7 @@ function buildScreeningDataCoverageSummary({
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      documentQuantitativeUsageMap,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
@@ -5664,6 +5778,11 @@ if (effectiveReportMode === "screening_v1") {
       sourceReconciliationState?.rent_roll_annual_totals ||
       resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
+    let documentQuantitativeUsageMap = buildDocumentQuantitativeUsageMap({
+      currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+    });
     const renderCanonicalDscrDirect = coerceNumber(currentDebtAssessmentState?.current_debt_dscr);
     const renderCanonicalAnnualDebtService = coerceNumber(currentDebtAssessmentState?.current_debt_annual_debt_service);
     const renderCanonicalNoi = coerceNumber(t12Payload?.net_operating_income);
@@ -6501,6 +6620,11 @@ if (effectiveReportMode === "screening_v1") {
           .join("");
         documentSourcesHtml = `<ul>${items}</ul>`;
       }
+      documentQuantitativeUsageMap = buildDocumentQuantitativeUsageMap({
+        currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+      });
     }
     const upsideHtml = upsideBullets
       .slice(0, 3)
@@ -8238,6 +8362,7 @@ if (effectiveReportMode === "screening_v1") {
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      documentQuantitativeUsageMap,
     });
     finalHtml = replaceAll(
       finalHtml,
@@ -8611,6 +8736,7 @@ if (effectiveReportMode === "screening_v1") {
         renovationPayload,
         propertyTaxPayload,
         propertyTaxBindingState,
+        documentQuantitativeUsageMap,
       });
       if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
@@ -9269,6 +9395,7 @@ try {
       renovationDisplayMode,
       propertyTaxPayload,
       propertyTaxBindingState,
+      documentQuantitativeUsageMap,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
