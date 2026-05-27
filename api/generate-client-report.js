@@ -1527,6 +1527,99 @@ function normalizeExitCapSourceLabel(value) {
   if (compact === "unavailable") return "unavailable";
   return escapeHtml(raw);
 }
+function normalizeCapRatePercent(value) {
+  const n = coerceNumber(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n > 1.5 ? n : n * 100;
+}
+function capRateMatches(a, b, tolerance = 0.01) {
+  const left = normalizeCapRatePercent(a);
+  const right = normalizeCapRatePercent(b);
+  return Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) <= tolerance;
+}
+function resolveCapRateSourceProvenance({
+  capRatePercent = null,
+  rawFinancials = null,
+  loanTermSheetTermsPayload = null,
+  acquisitionAssumptionState = null,
+  appraisalPayload = null,
+} = {}) {
+  const pickFirstFinite = (...values) => {
+    for (const value of values) {
+      const numeric = coerceNumber(value);
+      if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    }
+    return null;
+  };
+  const rf = rawFinancials && typeof rawFinancials === "object" ? rawFinancials : {};
+  const loan = loanTermSheetTermsPayload && typeof loanTermSheetTermsPayload === "object"
+    ? loanTermSheetTermsPayload
+    : {};
+  const appraisal = appraisalPayload && typeof appraisalPayload === "object" ? appraisalPayload : {};
+  const explicitExitCap = pickFirstFinite(
+    rf?.exit_cap_rate,
+    rf?.terminal_cap_rate,
+    rf?.resale_cap_rate,
+    rf?.disposition_cap_rate,
+    rf?.reversion_cap_rate,
+    loan?.exit_cap_rate,
+    loan?.terminal_cap_rate,
+    loan?.resale_cap_rate,
+    loan?.disposition_cap_rate,
+    loan?.reversion_cap_rate,
+    appraisal?.exit_cap_rate,
+    appraisal?.terminal_cap_rate,
+    appraisal?.resale_cap_rate,
+    appraisal?.disposition_cap_rate,
+    appraisal?.reversion_cap_rate
+  );
+  const hasExplicitExitCap = Number.isFinite(coerceNumber(explicitExitCap)) && coerceNumber(explicitExitCap) > 0;
+  const explicitRefiOrUnderwritingCap = pickFirstFinite(
+    rf?.refi_cap_rate_base,
+    loan?.refi_cap_rate,
+    loan?.underwriting_cap_rate,
+    appraisal?.cap_rate
+  );
+  const hasRefiOrUnderwritingCap =
+    Number.isFinite(coerceNumber(explicitRefiOrUnderwritingCap)) && coerceNumber(explicitRefiOrUnderwritingCap) > 0;
+  const goingInCapReference = pickFirstFinite(
+    acquisitionAssumptionState?.validated_fields?.going_in_cap_rate ? loan?.going_in_cap_rate : null,
+    loan?.going_in_cap_rate
+  );
+  const hasGoingInCapReference =
+    Number.isFinite(coerceNumber(goingInCapReference)) && coerceNumber(goingInCapReference) > 0;
+  const capMatchesGoingInReference =
+    hasGoingInCapReference && capRateMatches(capRatePercent, goingInCapReference);
+
+  if (hasExplicitExitCap && capRateMatches(capRatePercent, explicitExitCap)) {
+    return {
+      mode: "verified_exit_cap",
+      label: "document-derived exit cap",
+    };
+  }
+  if (capMatchesGoingInReference) {
+    return {
+      mode: "acquisition_going_in_reference",
+      label: "document-stated going-in cap reference (sensitivity anchor only; not a verified exit cap)",
+    };
+  }
+  if (hasRefiOrUnderwritingCap && capRateMatches(capRatePercent, explicitRefiOrUnderwritingCap)) {
+    return {
+      mode: "refi_or_underwriting_cap_assumption",
+      label: "refinance/underwriting cap assumption (not a verified exit cap)",
+    };
+  }
+  if (Number.isFinite(coerceNumber(capRatePercent)) && coerceNumber(capRatePercent) > 0) {
+    return {
+      mode: "framework_default",
+      label: "standardized framework assumption",
+    };
+  }
+  return {
+    mode: "unverified_or_unsupported",
+    label: "unsupported cap-rate context",
+  };
+}
 function hasMeaningfulNarrative(html) {
   if (!html || typeof html !== "string") return false;
   if (html.includes(DATA_NOT_AVAILABLE)) return false;
@@ -7944,11 +8037,13 @@ if (effectiveReportMode === "screening_v1") {
       };
       const resolvedCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const baseCapPct = (Number.isFinite(resolvedCapPct) && resolvedCapPct > 0) ? resolvedCapPct : 5.5;
-      const capSource = buildAssumptionAttributionState({
-        sourceProvided: Number.isFinite(resolvedCapPct) && resolvedCapPct > 0,
-        frameworkProvided: true,
-      }).attribution;
-      const capSourceLabel = formatAssumptionAttributionLabel(capSource);
+      const capSourceLabel = resolveCapRateSourceProvenance({
+        capRatePercent: baseCapPct,
+        rawFinancials,
+        loanTermSheetTermsPayload,
+        acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
+        appraisalPayload,
+      }).label;
 
       if (Number.isFinite(noiBase) && noiBase > 0 && Number.isFinite(baseRatePct) && baseRatePct > 0 && Number.isFinite(debtBal) && debtBal > 0) {
         const LTV = 0.75;
@@ -8007,11 +8102,13 @@ if (effectiveReportMode === "screening_v1") {
       const noiYear0 = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
-      const exitCapSource = buildAssumptionAttributionState({
-        sourceProvided: Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0,
-        frameworkProvided: true,
-      }).attribution;
-      const exitCapSourceLabel = formatAssumptionAttributionLabel(exitCapSource);
+      const exitCapSourceLabel = resolveCapRateSourceProvenance({
+        capRatePercent: exitCapPct,
+        rawFinancials,
+        loanTermSheetTermsPayload,
+        acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
+        appraisalPayload,
+      }).label;
       const GROWTH = 0.03; // 3% annual NOI growth standardized framework assumption
       const DISCOUNT = 0.08; // 8% discount rate standardized framework assumption
 
@@ -8085,11 +8182,13 @@ if (effectiveReportMode === "screening_v1") {
       const noiBasis = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
-      const exitCapSource = buildAssumptionAttributionState({
-        sourceProvided: Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0,
-        frameworkProvided: true,
-      }).attribution;
-      const exitCapSourceLabel = formatAssumptionAttributionLabel(exitCapSource);
+      const exitCapSourceLabel = resolveCapRateSourceProvenance({
+        capRatePercent: exitCapPct,
+        rawFinancials,
+        loanTermSheetTermsPayload,
+        acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
+        appraisalPayload,
+      }).label;
       const exitCapDec = exitCapPct / 100;
       if (Number.isFinite(noiBasis) && noiBasis > 0) {
         const growthRates = [

@@ -236,4 +236,41 @@ assert.match(
 );
 assert.equal(/refinance stability was not assessed/i.test(debtBoundTreatmentHtml), false);
 
+const goingInCapOnlyHtml = await renderUnderwritingHtml(
+  {
+    t12Payload: {
+      effective_gross_income: 1320000,
+      total_operating_expenses: 470000,
+      net_operating_income: 850000,
+    },
+    loanTermSheetTermsPayload: {
+      semantic_doc_role: "purchase_assumptions",
+      purchase_price: 2100000,
+      going_in_cap_rate: 5.75,
+      interest_rate: 5.9,
+      amortization_years: 30,
+    },
+    documentSources: [
+      {
+        file_id: "purchase-assumptions-only-file",
+        original_filename: "Purchase_Assumptions_Only.txt",
+        doc_type: "loan_term_sheet",
+        parse_status: "parsed",
+        uploaded_at: "2026-05-27T23:21:00.000Z",
+        semantic_doc_role: "purchase_assumptions",
+      },
+    ],
+  },
+  {
+    financials: {
+      refi_cap_rate_base: 5.75,
+    },
+  }
+);
+assert.equal(/document-derived exit cap/i.test(goingInCapOnlyHtml), false);
+assert.match(
+  goingInCapOnlyHtml,
+  /going-in cap reference \(sensitivity anchor only; not a verified exit cap\)/i
+);
+
 console.log("full-underwriting-gates-full-render smoke PASS");
