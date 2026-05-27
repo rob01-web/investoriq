@@ -707,8 +707,8 @@ const rentRollPublicOnlyGate = buildDeliveryGateDecision({
 });
 assert.equal(rentRollPublicOnlyGate.delivery_gate_status, "deliverable");
 assert.equal(rentRollPublicOnlyGate.customer_delivery_ready, true);
-assert.equal(rentRollPublicOnlyGate.public_sample_ready, true);
-assert.equal(rentRollPublicOnlyGate.high_value_outreach_ready, true);
+assert.equal(rentRollPublicOnlyGate.public_sample_ready, false);
+assert.equal(rentRollPublicOnlyGate.high_value_outreach_ready, false);
 assert.equal(rentRollPublicOnlyGate.report_publishable, true);
 assert.equal(rentRollPublicOnlyGate.report_blocked, false);
 
@@ -827,8 +827,8 @@ const managerContradictionGate = buildDeliveryGateDecision({
 });
 assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
 assert.equal(managerContradictionGate.customer_delivery_ready, true);
-assert.equal(managerContradictionGate.public_sample_ready, true);
-assert.equal(managerContradictionGate.high_value_outreach_ready, true);
+assert.equal(managerContradictionGate.public_sample_ready, false);
+assert.equal(managerContradictionGate.high_value_outreach_ready, false);
 assert.equal(managerContradictionGate.report_publishable, true);
 
 const advisoryOnlyGate = buildDeliveryGateDecision({
@@ -951,8 +951,8 @@ assert.equal(reconciliationGate.report_publishable, true);
 assert.deepEqual(reconciliationGate.customer_publish_blockers, []);
 assert.equal(reconciliationGate.customer_delivery_impact, "disclose_only");
 assert.equal((reconciliationGate.source_limitation_reason_codes || []).includes("RENT_ROLL_T12_RECONCILIATION_REQUIRED"), true);
-assert.equal(reconciliationGate.public_sample_ready, true);
-assert.equal(reconciliationGate.high_value_outreach_ready, true);
+assert.equal(reconciliationGate.public_sample_ready, false);
+assert.equal(reconciliationGate.high_value_outreach_ready, false);
 
 const reconciliationExplicitBlockGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1821,10 +1821,12 @@ const docRaptorOnlyGate = buildDeliveryGateDecision({
 assert.equal(docRaptorOnlyGate.delivery_gate_status, "deliverable");
 assert.equal(docRaptorOnlyGate.customer_publish_eligible, true);
 assert.deepEqual(docRaptorOnlyGate.customer_publish_blockers, []);
-assert.equal(docRaptorOnlyGate.public_sample_ready, docRaptorOnlyGate.customer_publish_eligible);
-assert.equal(docRaptorOnlyGate.high_value_outreach_ready, docRaptorOnlyGate.customer_publish_eligible);
+assert.equal(docRaptorOnlyGate.public_sample_ready, false);
+assert.equal(docRaptorOnlyGate.high_value_outreach_ready, false);
 assert.equal(docRaptorOnlyGate.distribution_context?.non_authoritative_exposure_metadata, true);
 assert.equal(docRaptorOnlyGate.customer_publish_blockers.includes("DOCRAPTOR_NOT_PRODUCTION_MODE"), false);
+assert.equal((docRaptorOnlyGate.public_sample_blockers || []).length > 0, true);
+assert.equal((docRaptorOnlyGate.high_value_outreach_blockers || []).length > 0, true);
 
 const publicSampleOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1858,8 +1860,8 @@ const publicSampleOnlyGate = buildDeliveryGateDecision({
 assert.equal(publicSampleOnlyGate.delivery_gate_status, "deliverable");
 assert.equal(publicSampleOnlyGate.customer_publish_eligible, true);
 assert.deepEqual(publicSampleOnlyGate.customer_publish_blockers, []);
-assert.equal(publicSampleOnlyGate.public_sample_ready, publicSampleOnlyGate.customer_publish_eligible);
-assert.equal(publicSampleOnlyGate.high_value_outreach_ready, publicSampleOnlyGate.customer_publish_eligible);
+assert.equal(publicSampleOnlyGate.public_sample_ready, false);
+assert.equal(publicSampleOnlyGate.high_value_outreach_ready, false);
 assert.equal(publicSampleOnlyGate.customer_publish_blockers.includes("PUBLIC_SAMPLE_NOT_READY"), false);
 assert.equal((publicSampleOnlyGate.report_quality_blockers || []).includes("PUBLIC_SAMPLE_NOT_READY"), false);
 
@@ -1878,8 +1880,8 @@ const aiOnlyAdvisoryGate = buildDeliveryGateDecision({
 assert.equal(aiOnlyAdvisoryGate.delivery_gate_status, "deliverable");
 assert.equal(aiOnlyAdvisoryGate.customer_publish_eligible, true);
 assert.deepEqual(aiOnlyAdvisoryGate.customer_publish_blockers, []);
-assert.equal(aiOnlyAdvisoryGate.public_sample_ready, aiOnlyAdvisoryGate.customer_publish_eligible);
-assert.equal(aiOnlyAdvisoryGate.high_value_outreach_ready, aiOnlyAdvisoryGate.customer_publish_eligible);
+assert.equal(aiOnlyAdvisoryGate.public_sample_ready, true);
+assert.equal(aiOnlyAdvisoryGate.high_value_outreach_ready, true);
 
 const needsDocumentsGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {

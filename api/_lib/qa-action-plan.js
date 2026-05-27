@@ -1374,7 +1374,16 @@ function buildPublishEligibilitySummary({
       reportQualityBlockers.length === 0
   );
   const customerDeliveryReadyAlias = customerPublishEligible && reportPublishable;
-  const distributionReadyAlias = reportPublishable;
+  const publicSampleReady = Boolean(
+    reportPublishable &&
+    publicSampleBlockers.length === 0 &&
+    publicSampleImpact !== "block_until_review"
+  );
+  const highValueOutreachReady = Boolean(
+    reportPublishable &&
+    highValueOutreachBlockers.length === 0 &&
+    highValueOutreachImpact !== "block_until_review"
+  );
 
   return {
     delivery_authority: "delivery_gate",
@@ -1385,8 +1394,8 @@ function buildPublishEligibilitySummary({
     report_quality_decision_reason: publishDecisionReason,
     // Legacy alias for compatibility; canonical authority remains customer_publish_eligible.
     customer_delivery_ready: customerDeliveryReadyAlias,
-    public_sample_ready: distributionReadyAlias,
-    high_value_outreach_ready: distributionReadyAlias,
+    public_sample_ready: publicSampleReady,
+    high_value_outreach_ready: highValueOutreachReady,
     customer_publish_eligible: customerPublishEligible,
     customer_publish_blockers: customerPublishBlockers,
     public_sample_blockers: publicSampleBlockers,
@@ -1401,9 +1410,9 @@ function buildPublishEligibilitySummary({
       customer_publish_eligible: customerPublishEligible,
       customer_delivery_ready: customerDeliveryReadyAlias,
       customer_publish_blockers: customerPublishBlockers,
-      public_sample_ready: distributionReadyAlias,
+      public_sample_ready: publicSampleReady,
       public_sample_blockers: publicSampleBlockers,
-      high_value_outreach_ready: distributionReadyAlias,
+      high_value_outreach_ready: highValueOutreachReady,
       high_value_outreach_blockers: highValueOutreachBlockers,
       advisory_only_findings: advisoryOnlyFindings,
     },
@@ -1432,8 +1441,8 @@ function buildPublishEligibilitySummary({
     },
     distribution_context: {
       non_authoritative_exposure_metadata: true,
-      public_sample_ready: distributionReadyAlias,
-      high_value_outreach_ready: distributionReadyAlias,
+      public_sample_ready: publicSampleReady,
+      high_value_outreach_ready: highValueOutreachReady,
       public_sample_blockers: publicSampleBlockers,
       high_value_outreach_blockers: highValueOutreachBlockers,
     },
