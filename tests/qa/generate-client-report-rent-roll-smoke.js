@@ -73,6 +73,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const currentDebtAssessmentState =\s*underwritingState\?\.core\?\.currentDebt\?\.assessmentState \|\| canonicalCurrentDebtAssessmentState/
+);
+assert.match(
+  reportSource,
+  /const refiDebtRenderStateForScreeningBlock = sharedRefiDebtRenderState/
+);
+assert.match(
+  reportSource,
   /dealScoreState\.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml\([\s\S]{0,220}coverClassificationLabel/
 );
 assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);

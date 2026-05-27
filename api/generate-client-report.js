@@ -5565,10 +5565,11 @@ if (effectiveReportMode === "screening_v1") {
     }
     // 7. Inject ALL narrative sections (12)
     const {
-      currentDebtAssessmentState,
+      currentDebtAssessmentState: canonicalCurrentDebtAssessmentState,
       sourceReportCoverageQa,
       sourceReconciliationState,
       sectionEligibility,
+      underwritingState,
     } = buildRendererCanonicalState({
       computedRentRoll,
       rentRollPayload,
@@ -5580,6 +5581,17 @@ if (effectiveReportMode === "screening_v1") {
       reportMode: effectiveReportMode,
       reportType,
     });
+    const currentDebtAssessmentState =
+      underwritingState?.core?.currentDebt?.assessmentState || canonicalCurrentDebtAssessmentState;
+    const sharedRefiDebtRenderState =
+      underwritingState?.core?.currentDebt?.refiRenderState ||
+      buildRefiDebtRenderState({
+        currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        financials,
+        t12Payload,
+      });
     const rentRollAnnualTotals =
       sourceReconciliationState?.rent_roll_annual_totals ||
       resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
@@ -5798,13 +5810,15 @@ if (effectiveReportMode === "screening_v1") {
       ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     const rawFinancials = body?.financials || {};
-    const canonicalRefiDebtBasis = resolveCanonicalRefiDebtBasis({
-      currentDebtState: currentDebtAssessmentState,
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      financials: rawFinancials,
-      t12Payload,
-    });
+    const canonicalRefiDebtBasis =
+      sharedRefiDebtRenderState?.canonicalRefiDebtBasis ||
+      resolveCanonicalRefiDebtBasis({
+        currentDebtState: currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        financials: rawFinancials,
+        t12Payload,
+      });
     const refiFinancials = {
       ...rawFinancials,
       refi_debt_balance:
@@ -5962,13 +5976,7 @@ if (effectiveReportMode === "screening_v1") {
     }
     // For underwriting, override pressure point with DSCR-based language if mortgage available
     if (effectiveReportMode === "v1_core" && hasVerifiedCurrentDebtBalance) {
-      const currentDebtCoverage = resolveCanonicalRefiDebtBasis({
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-        financials: refiFinancials,
-        t12Payload,
-      });
+      const currentDebtCoverage = canonicalRefiDebtBasis;
       if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
         const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
         if (currentDebtCoverage.dscr < 1.25) {
@@ -6254,13 +6262,8 @@ if (effectiveReportMode === "screening_v1") {
         screeningClass = "Sensitized";
       }
     }
-    const currentDebtDscrForDisplay = resolveCanonicalRefiDebtBasis({
-      currentDebtState: currentDebtAssessmentState,
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      financials: refiFinancials,
-      t12Payload,
-    })?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
+    const currentDebtDscrForDisplay =
+      canonicalRefiDebtBasis?.dscr ?? currentDebtAssessmentState.current_debt_dscr;
     if (Number.isFinite(execUnits) && execUnits > 0) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(`Units: ${Math.round(execUnits)}`)}</p>`
@@ -6361,13 +6364,7 @@ if (effectiveReportMode === "screening_v1") {
           "Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation."
         );
       }
-      const canonicalRefiDebtBasisForBullets = resolveCanonicalRefiDebtBasis({
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-        financials: refiFinancials,
-        t12Payload,
-      });
+      const canonicalRefiDebtBasisForBullets = canonicalRefiDebtBasis;
       if (hasComputedCurrentDebtDscr && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
         const _ds = formatMultiple(canonicalRefiDebtBasisForBullets.dscr, 2);
         if (canonicalRefiDebtBasisForBullets.dscr >= 1.35) {
@@ -7106,13 +7103,7 @@ if (effectiveReportMode === "screening_v1") {
       effectiveReportMode === "screening_v1"
         ? ""
         : (() => {
-            const refiDebtRenderStateForScreeningBlock = buildRefiDebtRenderState({
-              currentDebtAssessmentState,
-              mortgagePayload,
-              loanTermSheetTermsPayload,
-              financials,
-              t12Payload,
-            });
+            const refiDebtRenderStateForScreeningBlock = sharedRefiDebtRenderState;
             const sufficiencyHtml = buildScreeningRefiSufficiencyTable({
               financials,
               t12Payload,
@@ -7353,13 +7344,7 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", "");
       finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", "");
     } else {
-      const canonicalRefiDebtBasisForRender = resolveCanonicalRefiDebtBasis({
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-        financials: refiFinancials,
-        t12Payload,
-      });
+      const canonicalRefiDebtBasisForRender = canonicalRefiDebtBasis;
       const hasCanonicalCurrentRefiDebtBasis =
         Boolean(canonicalRefiDebtBasisForRender?.hasTrueCurrentDebtBalance) &&
         !Boolean(canonicalRefiDebtBasisForRender?.isAcquisitionOnly) &&
@@ -7638,13 +7623,7 @@ if (effectiveReportMode === "screening_v1") {
     }
     // Build deterministic underwriting blocks from parsed supporting docs
     // Debt Capital Structure rows (from mortgage_statement_parsed)
-    const canonicalRefiDebtBasisForUnderwriting = resolveCanonicalRefiDebtBasis({
-      currentDebtState: currentDebtAssessmentState,
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      financials: refiFinancials,
-      t12Payload,
-    });
+    const canonicalRefiDebtBasisForUnderwriting = canonicalRefiDebtBasis;
     let debtCapitalRowsHtml = "";
     if (effectiveReportMode === "v1_core" && canonicalRefiDebtBasisForUnderwriting.hasTrueCurrentDebtBalance) {
       const dcRows = [];
@@ -8234,13 +8213,7 @@ if (effectiveReportMode === "screening_v1") {
           addRisk("Rent-to-Market Gap", formatPercent1(marketRentPremiumRatio) + " below market", "> 15% = meaningful upside | 5-15% = moderate | < 5% = minimal", flag, color);
         }
       {
-        const canonicalRefiDebtBasisForRiskRegister = resolveCanonicalRefiDebtBasis({
-          currentDebtState: currentDebtAssessmentState,
-          mortgagePayload,
-          loanTermSheetTermsPayload,
-          financials: refiFinancials,
-          t12Payload,
-        });
+        const canonicalRefiDebtBasisForRiskRegister = canonicalRefiDebtBasis;
         if (Number.isFinite(canonicalRefiDebtBasisForRiskRegister.dscr) && canonicalRefiDebtBasisForRiskRegister.dscr > 0) {
           const dscr = canonicalRefiDebtBasisForRiskRegister.dscr;
           const flag = dscr < 1.25 ? "STRESSED" : dscr < 1.35 ? "ADEQUATE" : "STRONG";
@@ -8282,13 +8255,7 @@ if (effectiveReportMode === "screening_v1") {
       // DSCR KPI card in exec summary
       {
         let execDscrText = null;
-        const execCurrentDebtCoverage = resolveCanonicalRefiDebtBasis({
-          currentDebtState: currentDebtAssessmentState,
-          mortgagePayload,
-          loanTermSheetTermsPayload,
-          financials: refiFinancials,
-          t12Payload,
-        });
+        const execCurrentDebtCoverage = canonicalRefiDebtBasis;
         if (Number.isFinite(execCurrentDebtCoverage.dscr) && execCurrentDebtCoverage.dscr > 0) {
           execDscrText = formatMultiple(execCurrentDebtCoverage.dscr, 2);
         }
