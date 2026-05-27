@@ -1344,6 +1344,7 @@ const needsDocumentsStatusGate = buildDeliveryGateDecision({
   }),
 });
 assert.equal(needsDocumentsStatusGate.delivery_gate_status, "user_needs_documents");
+assert.equal(needsDocumentsStatusGate.reason_code, "missing_required_source_documents");
 
 const missingRentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {

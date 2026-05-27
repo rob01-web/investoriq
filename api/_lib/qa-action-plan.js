@@ -1513,6 +1513,25 @@ function isOptionalSupportingOverblockAction(action, {
   return !isNonNegotiableCustomerHardDefect(code);
 }
 
+function resolveNeedsDocumentsReasonCode({
+  sourceDocumentAction = null,
+  coreInputSufficiencyState = null,
+  sourceLimitations = [],
+  sourceStatus = "",
+} = {}) {
+  return (
+    sourceDocumentAction?.code ||
+    coreInputSufficiencyState?.reason_code ||
+    sourceLimitations[0]?.code ||
+    (sourceStatus === "needs_documents"
+      ? "missing_required_source_documents"
+      : sourceStatus === "failed"
+      ? "source_document_validation_failed"
+      : sourceStatus) ||
+    "SOURCE_DOCUMENT_LIMITATION"
+  );
+}
+
 export function buildDeliveryGateDecision({
   sourceReportCoverageQa = null,
   reportContractQa = null,
@@ -1608,12 +1627,12 @@ export function buildDeliveryGateDecision({
     customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
   if (sourceNeedsDocs && !customerDeliveryBlockerAction && !customerBlockingReconciliationViolation) {
-    const gateReason =
-      sourceDocumentAction?.code ||
-      coreInputSufficiencyState?.reason_code ||
-      sourceLimitations[0]?.code ||
-      sourceStatus ||
-      "SOURCE_DOCUMENT_LIMITATION";
+    const gateReason = resolveNeedsDocumentsReasonCode({
+      sourceDocumentAction,
+      coreInputSufficiencyState,
+      sourceLimitations,
+      sourceStatus,
+    });
     const publishEligibility = buildPublishEligibilitySummary({
       deliveryGateStatus: "user_needs_documents",
       reasonCode: gateReason,
