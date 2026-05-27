@@ -7994,7 +7994,7 @@ if (effectiveReportMode === "screening_v1") {
       : "SECTION_S7_DATA_COVERAGE_GAPS";
     const dataCoverageBegin = `<!-- BEGIN ${dataCoverageToken} -->`;
     const dataCoverageEnd = `<!-- END ${dataCoverageToken} -->`;
-    if (finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
+    if (!isFullRenderHarness && finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
       const escapedCoverageToken = dataCoverageToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const coverageMatch = finalHtml.match(
         new RegExp(
@@ -8488,19 +8488,21 @@ if (effectiveReportMode === "screening_v1") {
             ? safeHtml.html
             : String(safeHtml || "");
       let htmlString = sanitizeTypography(htmlStringRaw);
+      const harnessDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+        documentSources,
+        currentDebtAssessmentState,
+        hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+        renovationDisplayMode,
+        renovationPayload,
+        propertyTaxPayload,
+      });
       if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-        const harnessDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
-          documentSources,
-          currentDebtAssessmentState,
-          hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
-          renovationDisplayMode,
-          renovationPayload,
-          propertyTaxPayload,
-        });
         htmlString = htmlString.replace(
           /\{\{DOCUMENT_TREATMENT_SUMMARY\}\}/g,
           harnessDocumentTreatmentHtml || ""
         );
+      } else if (harnessDocumentTreatmentHtml) {
+        htmlString += `\n<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->\n`;
       }
       return res.status(200).json({
         success: true,
@@ -9142,6 +9144,7 @@ try {
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
       renovationDisplayMode,
+      propertyTaxPayload,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,

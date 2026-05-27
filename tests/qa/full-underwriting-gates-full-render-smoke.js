@@ -158,8 +158,6 @@ assert.equal(
   /Zoning_Compliance_Memo\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathHtml),
   false
 );
-if (/Structured property tax input/i.test(fullPathHtml)) {
-  assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Structured property tax input/i);
-}
+assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Structured property tax input/i);
 
 console.log("full-underwriting-gates-full-render smoke PASS");
