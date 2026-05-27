@@ -110,6 +110,14 @@ const fullPathHtml = await renderUnderwritingHtml({
       uploaded_at: "2026-05-27T21:13:00.000Z",
       semantic_doc_role: "zoning_compliance",
     },
+    {
+      file_id: "purchase-assumptions-file",
+      original_filename: "purchase_assumptions_source.txt",
+      doc_type: "loan_term_sheet",
+      parse_status: "parsed",
+      uploaded_at: "2026-05-27T21:14:00.000Z",
+      semantic_doc_role: "purchase_assumptions",
+    },
   ],
 });
 
@@ -159,5 +167,15 @@ assert.equal(
   false
 );
 assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Structured property tax input/i);
+assert.match(
+  fullPathHtml,
+  /purchase_assumptions_source\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+);
+assert.equal(
+  /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]{0,700}purchase_assumptions_source\.txt/i.test(
+    fullPathHtml
+  ),
+  false
+);
 
 console.log("full-underwriting-gates-full-render smoke PASS");

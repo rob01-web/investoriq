@@ -223,6 +223,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /reason_code:\s*"lender_fee_percent_not_verified"/
+);
+assert.match(
+  reportSource,
+  /reason_code:\s*"stated_acquisition_loan_amount_not_verified"/
+);
+assert.match(
+  reportSource,
   /if \(marketSurveyLike\) \{[\s\S]{0,220}Market survey \/ rent context only; not used to override rent roll\./
 );
 assert.match(
@@ -1658,12 +1666,23 @@ assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendo
 assert.equal(/Forward-looking renovation support is document-backed/i.test(documentTreatmentHtml), false);
 const marketSurveyTaggedAsRentRollHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
-    { original_filename: "market_rent_survey_unstructured_source.txt", doc_type: "rent_roll", parse_status: "parsed" },
+    {
+      original_filename: "market_rent_survey_unstructured_source.txt",
+      doc_type: "rent_roll",
+      parse_status: "parsed_with_warnings",
+      parse_error: "unsupported_file_type_for_structured_parsing",
+    },
   ],
 });
 assert.match(marketSurveyTaggedAsRentRollHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
 assert.equal(/Structured rent roll input/i.test(marketSurveyTaggedAsRentRollHtml), false);
 assert.equal(/Rent-roll support is displayed only/i.test(marketSurveyTaggedAsRentRollHtml), false);
+assert.equal(
+  /<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]{0,260}market_rent_survey_unstructured_source\.txt/i.test(
+    marketSurveyTaggedAsRentRollHtml
+  ),
+  false
+);
 const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
@@ -1684,6 +1703,32 @@ assert.equal(
     purchaseAssumptionsLimitedUseHtml
   ),
   false
+);
+const acquisitionQaCalibrationRender = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 2100000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+  returnState: true,
+  acquisitionTriangleValidationState: {
+    status: "incomplete",
+    triangleConsistent: true,
+    verifiedFields: ["purchase_price"],
+    missingFields: ["ltv", "interest_rate", "amortization_years", "stated_acquisition_loan_amount"],
+    inconsistentFields: [],
+    disclosureReasonCode: "acq_triangle_missing_required_terms",
+    renderedBehavior: "collapse_to_disclosure",
+  },
+});
+assert.equal(acquisitionQaCalibrationRender.renderBehavior, "collapse_to_disclosure");
+assert.equal(acquisitionQaCalibrationRender.triangleValidationState.verifiedFields.includes("purchase_price"), true);
+assert.equal(acquisitionQaCalibrationRender.triangleValidationState.missingFields.includes("ltv"), true);
+assert.equal(acquisitionQaCalibrationRender.triangleValidationState.missingFields.includes("interest_rate"), true);
+assert.equal(acquisitionQaCalibrationRender.triangleValidationState.missingFields.includes("amortization_years"), true);
+assert.equal(
+  acquisitionQaCalibrationRender.triangleValidationState.missingFields.includes("stated_acquisition_loan_amount"),
+  true
 );
 const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
