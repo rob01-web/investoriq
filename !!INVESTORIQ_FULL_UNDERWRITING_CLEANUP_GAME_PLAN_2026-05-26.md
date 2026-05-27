@@ -1,3 +1,47 @@
+# May 27, 2026 (Late Night) Addendum - Current Controlling Status After PR5 + RF-1/2/3/4
+
+## A. Committed sequence status
+
+- PR5: complete/committed. UnderwritingState/render-boundary hardening is in place for current debt/refi, acquisition/proposed financing, property-tax/document treatment, visible classification, Data Coverage, and optional section eligibility.
+- Controlled clean Full Underwriting live retest: completed. Lifecycle reached published and report was customer-deliverable.
+- RF-1: complete/committed (RF-1A behavior fix + RF-1B contract/smoke lock).
+- RF-2: complete/committed (worker/publication lifecycle smoke hardening; test-only).
+- RF-3: complete/committed (core document routing/content-rescue smoke; test-only).
+- RF-4: complete/committed (Rendered Report Contract QA Gap Expansion).
+
+## B. RF-4 receipt summary
+
+- Files changed: `api/_lib/report-contract-qa.js`, `tests/qa/report-contract-qa-smoke.js`.
+- Production touched: yes, tiny deterministic contract-only addition.
+- Added violation: `DOCUMENT_TREATMENT_DUPLICATE_CATEGORY_CONFLICT` for same-file dual listing across modeled vs not-modeled treatment categories.
+- Expanded contract assertions for classification consistency, debt/refi not-assessed consistency, acquisition/current-debt separation, Data Coverage/document-treatment consistency, source reconciliation consistency, and public/customer copy guardrails.
+- Validation passed: report-contract QA smoke + full-underwriting gate smokes + rent-roll smoke + property-tax/acquisition/refi/core-routing smokes + `git diff --check` (CRLF warnings only).
+- Limitation: still QA-contract/smoke-level hardening, not full DB-backed publication workflow replay.
+
+## C. Next remaining families
+
+- RF-5: Dashboard Delivery Visibility / Report History Assumption Check
+- RF-6: Admin Diagnostics / Reason-Code Precision
+- RF-7: Remaining UnderwritingState Fallback Cleanup Audit
+- RF-8: Customer/Public Copy Doctrine Sweep
+
+## D. Current guidance
+
+- RF-4 was the last heavy report-quality/root-leak family.
+- RF-5 to RF-8 should be smaller audit/smoke/copy/diagnostic slices unless they expose a real issue.
+- RF-4 is now committed; proceed to RF-5 by default unless there is a strong reason to run another controlled clean live retest first.
+- Keep prompts small, direct, and scope-locked.
+- Keep Vercel Hobby constraints in force: no casual new API/serverless route files.
+- No broad refactors.
+- No public AI wording.
+- No BUY/SELL/HOLD recommendation language.
+- Customer-deliverable does not equal external/public-sample-ready.
+
+## E. Superseded note
+
+Older sections below that frame PR5 or early PR1/2/3 cleanup as upcoming are historical context and superseded by this addendum.
+
+---
 # May 27, 2026 (Night) Addendum - Current Controlling Status (Supersedes Earlier Sequence Notes)
 
 ## A. Completed sequence now recorded as committed
@@ -65,9 +109,9 @@ Older statements below indicating PR 1/2/3 are next, immediate live retesting, o
 # InvestorIQ Full Underwriting Cleanup Game Plan
 ## Canonical Consumption / UnderwritingState Migration Roadmap
 
-**Status date:** May 25/26, 2026  
-**Purpose:** Convert Full Underwriting from a fragile renderer-monolith into a reliable, canonical-state-driven underwriting engine.  
-**Controlling audit:** Emergent Canonical Consumption Audit (`CANONICAL_CONSUMPTION_AUDIT.md`)  
+**Status date:** May 25/26, 2026
+**Purpose:** Convert Full Underwriting from a fragile renderer-monolith into a reliable, canonical-state-driven underwriting engine.
+**Controlling audit:** Emergent Canonical Consumption Audit (`CANONICAL_CONSUMPTION_AUDIT.md`)
 **Operating doctrine:** No more whack-a-mole renderer patches. Audit before patch. Canonical truth before render. No report-specific hacks.
 
 ---
@@ -942,4 +986,3 @@ Current next-step status:
 - PR 1, PR 4, PR 2, PR 3 are complete.
 - PR 5 / UnderwritingState remains deferred unless the final checkpoint indicates it is necessary now.
 - Next likely step after this markdown update: small audit-only checkpoint to decide whether remaining micro patches are needed before the final Emergent audit.
-

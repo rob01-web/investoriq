@@ -1,41 +1,109 @@
-Ôªø# May 27, 2026 (Night) Addendum - Current Controlling Status (Supersedes Older Next-Step Notes)
+# May 27, 2026 (Late Night) Addendum - Full Underwriting Launch-Hardening Current Controlling Status
+
+## A. Current committed status
+
+1. PR5 complete/committed
+- Full UnderwritingState/render-boundary hardening completed.
+- Current debt/refi, acquisition/proposed financing, property-tax binding, visible classification, Data Coverage, and optional section eligibility are now centrally protected through the PR5 path.
+- Full-render/customer HTML smoke coverage exists for major PR5 gates.
+
+2. First controlled clean Full Underwriting live retest completed
+- Published successfully through queued/extracting/underwriting/scoring/rendering/pdf_generating/publishing/published.
+- Customer-deliverable result confirmed.
+- Not yet external/public-sample/Ken-ready at that checkpoint because second-layer label/QA consistency issues were still being closed in RF slices.
+
+3. RF-1 complete/committed
+- RF-1A fixed support-role label alignment and acquisition QA calibration.
+- Market/rent survey files render as market/rent context only (not rent-roll support).
+- Accepted purchase assumptions used for acquisition context render as Displayed / Limited Use (not Listed but Not Quantitatively Modeled).
+- `purchase_price_not_verified` no longer emits when acquisition triangle verification already verifies purchase price.
+- RF-1B added targeted smoke/contract hardening for those exact regression paths (test-only).
+
+4. RF-2 complete/committed (test-only)
+- Worker/publication lifecycle publication-guard smoke expanded.
+- Publish path now contract-locked to valid `.pdf` storage path + non-empty report type + deliverable gate + `holdDelivery=false`.
+- Missing/invalid path, missing report type, `admin_review_required`, `user_needs_documents`, and `holdDelivery=true` are contract-locked as blocked-before-publication.
+- Worker source-contract assertions confirm typed-gate outcomes do not proceed into published transition and restore-entitlement routing remains centralized.
+- Direct end-to-end Supabase credit-restoration replay intentionally deferred (would require broad mocking/refactor).
+
+5. RF-3 complete/committed (test-only)
+- Core document routing/content-rescue smoke added.
+- Filename/upload slot are contract-locked as hints only, not modeled authority.
+- Filename-only `Rent Roll.xlsx` / `T12.pdf` do not become Modeled Inputs.
+- Parser source contracts confirm deterministic content-based rescue paths exist for `rent_roll <-> t12` where validation supports it.
+- Unsafe rescue remains limited/fail-closed (market survey, broker email, Phase I/environmental/zoning do not contaminate modeled core surfaces).
+- No AI expansion.
+
+6. RF-4 complete/committed
+- **Files changed:** `api/_lib/report-contract-qa.js`, `tests/qa/report-contract-qa-smoke.js`.
+- **Production touched:** yes, tiny deterministic QA-contract addition only.
+- **Added contract check:** `DOCUMENT_TREATMENT_DUPLICATE_CATEGORY_CONFLICT` catches same-file dual listing under Modeled Inputs and Listed but Not Quantitatively Modeled.
+- **RF-4 invariant coverage strengthened:** classification consistency, debt/refi not-assessed consistency, acquisition/current-debt separation, Data Coverage/document-treatment consistency, source reconciliation consistency, and public/customer copy guardrails.
+- **Validation passed:** `node --check api/_lib/report-contract-qa.js`, `node --check api/generate-client-report.js`, `node tests/qa/report-contract-qa-smoke.js`, `node tests/qa/full-underwriting-gates-full-render-smoke.js`, `node tests/qa/generate-client-report-rent-roll-smoke.js`, `node tests/qa/property-tax-binding-finalhtml-smoke.js`, `node tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`, `node tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`, `node tests/qa/core-doc-routing-rescue-smoke.js`, `git diff --check` (CRLF warnings only).
+- **Remaining RF-4 limitation:** still QA-contract/smoke-level hardening, not a full DB-backed publication workflow simulator.
+
+## B. Remaining families after RF-4
+
+- RF-5: Dashboard Delivery Visibility / Report History Assumption Check
+- RF-6: Admin Diagnostics / Reason-Code Precision
+- RF-7: Remaining UnderwritingState Fallback Cleanup Audit
+- RF-8: Customer/Public Copy Doctrine Sweep
+
+## C. Current guidance
+
+- RF-4 was the last heavy report-quality/root-leak family in this sequence; RF-5..RF-8 should be smaller audit/smoke/copy/diagnostic slices unless a real issue is exposed.
+- RF-4 is now committed; proceed to RF-5 by default unless there is a strong reason to run another controlled clean live retest first.
+- Keep prompts small, direct, and scope-locked.
+- Continue Vercel Hobby constraint discipline: do not add API/serverless route files casually.
+- No broad refactors.
+- No public AI wording.
+- No BUY/SELL/HOLD recommendation language.
+- Customer-deliverable does not equal external/public-sample-ready.
+- Quality bar is universal: normal customers, Ken Dunn, and public samples require the same elite document-driven deterministic credibility.
+
+## D. Superseded note
+
+Older sections below that state PR5 is pending, RF slices are not started, or that next step is PR1/PR2/PR3/live retesting before RF closure are historical and superseded by this addendum.
+
+---
+# May 27, 2026 (Night) Addendum - Current Controlling Status (Supersedes Older Next-Step Notes)
 
 ## A. Completed launch-hardening sequence (committed)
 
-1. BLK-1 completed/committed  
-- Scorecard-facing current debt coverage no longer falls back to legacy/raw mortgage values when canonical current debt status is not computed.  
-- `resolveCanonicalCurrentDebtScoreInputs(...)` returns `currentDebtCoverage: null` and `usedCanonicalState: false` when canonical current debt is not computed.  
-- `buildCurrentDebtScorecardEntry(...)` treats null coverage as not assessed and does not render DSCR score rows from raw mortgage fallback.  
+1. BLK-1 completed/committed
+- Scorecard-facing current debt coverage no longer falls back to legacy/raw mortgage values when canonical current debt status is not computed.
+- `resolveCanonicalCurrentDebtScoreInputs(...)` returns `currentDebtCoverage: null` and `usedCanonicalState: false` when canonical current debt is not computed.
+- `buildCurrentDebtScorecardEntry(...)` treats null coverage as not assessed and does not render DSCR score rows from raw mortgage fallback.
 - This closes scorecard/body drift where body says current debt/refi is not assessed.
 
-2. BLK-3 Part 1 completed/committed  
-- Added `tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`.  
-- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.  
+2. BLK-3 Part 1 completed/committed
+- Added `tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
 - It proves not-assessed current debt/refi output does not include: Maximum Financing Envelope; Base Case Supportable Loan; Current loan balance / Interest rate / Amortization / Refinance cap rate rows; Refinance proceeds/debt-balance surfaces; Current Debt DSCR / DSCR (Current Debt) scorecard rows.
 
-3. BLK-3 Part 2 completed/committed  
-- Added `tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`.  
-- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.  
+3. BLK-3 Part 2 completed/committed
+- Added `tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
 - It proves unsafe/inconsistent acquisition triangle output collapses to disclosure, contradictory Proposed Acquisition Debt Sizing rows do not render, lender fee/closing costs do not render as bogus `0.0%` when unverified, and proposed acquisition financing remains separate from current outstanding debt.
 
-4. BLK-3 Part 3 completed/committed  
-- Added `tests/qa/property-tax-binding-finalhtml-smoke.js`.  
-- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.  
+4. BLK-3 Part 3 completed/committed
+- Added `tests/qa/property-tax-binding-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
 - It proves only the validated/bound property-tax source receives `Structured property tax input`; unbound tax-like support, Phase I/environmental, and zoning/compliance remain non-modeled/context-only.
 
-5. BLK-2 completed/committed  
-- Patched acquisition financing artifact provenance pollution.  
-- `normalizeAcquisitionFinancingArtifactPayload` no longer back-mutates parsed/source fields with recovered/derived renderer values.  
-- `purchase_price`, `stated_acquisition_loan_amount`, `loan_amount`, `lender_fee_percent`, and `derived_acquisition_loan_amount` are populated only from explicit payload/source fields/aliases.  
-- Recovered/derived values are separated under `_renderer_derived_fields` (including `purchase_price_from_text`, `stated_acquisition_loan_amount_from_text`, `lender_fee_percent_from_text`, `derived_acquisition_loan_amount_from_purchase_ltv`).  
+5. BLK-2 completed/committed
+- Patched acquisition financing artifact provenance pollution.
+- `normalizeAcquisitionFinancingArtifactPayload` no longer back-mutates parsed/source fields with recovered/derived renderer values.
+- `purchase_price`, `stated_acquisition_loan_amount`, `loan_amount`, `lender_fee_percent`, and `derived_acquisition_loan_amount` are populated only from explicit payload/source fields/aliases.
+- Recovered/derived values are separated under `_renderer_derived_fields` (including `purchase_price_from_text`, `stated_acquisition_loan_amount_from_text`, `lender_fee_percent_from_text`, `derived_acquisition_loan_amount_from_purchase_ltv`).
 - Existing acquisition collapse finalHtml-like smoke still passes.
 
 ## B. Critical caveats / tracked follow-up
 
-- BLK-3 caveat remains: the three finalHtml-like smokes are helper-assembly coverage, not true full-generator/full-render customer HTML regression coverage.  
-- Required pre-launch hardening item: add a dedicated true full-generator/full-render regression harness proving the actual customer-report path cannot bypass:  
-  1. refi/debt not-assessed gate  
-  2. acquisition triangle collapse gate  
+- BLK-3 caveat remains: the three finalHtml-like smokes are helper-assembly coverage, not true full-generator/full-render customer HTML regression coverage.
+- Required pre-launch hardening item: add a dedicated true full-generator/full-render regression harness proving the actual customer-report path cannot bypass:
+  1. refi/debt not-assessed gate
+  2. acquisition triangle collapse gate
   3. property-tax source-binding/document-treatment gate
 - Follow-up provenance cleanup: review whether `ltv`, `interest_rate`, and `amortization_years` should also be separated into explicit source fields vs `_renderer_derived_fields` when recovered only from free text. Do not patch ad hoc; handle under a future canonical acquisition/provenance cleanup pass.
 
@@ -43,26 +111,26 @@
 
 - Goal is not zero bugs forever; goal is to stop recurring root-class/sub-class contradictions from escaping into live testing.
 - Customer outcome model remains:
-  1. Whole report fails closed only when required core evidence is unusable/unreadable/unverifiable enough that no defensible report can be published.  
-  2. Otherwise, report publishes and unsupported/missing/contradictory section-level inputs collapse/omit/qualify/disclose affected sections/lines.  
+  1. Whole report fails closed only when required core evidence is unusable/unreadable/unverifiable enough that no defensible report can be published.
+  2. Otherwise, report publishes and unsupported/missing/contradictory section-level inputs collapse/omit/qualify/disclose affected sections/lines.
   3. Admin diagnostics capture recurring section-level limitations/bugs for product intelligence and deterministic follow-up patches.
 - Admin review is not a normal customer outcome. Diagnostics are product-learning intelligence, not routine manual review.
 
 ## D. Current status and next likely steps
 
-- BLK-1: done/committed.  
-- BLK-3 Part 1: done/committed.  
-- BLK-3 Part 2: done/committed.  
-- BLK-3 Part 3: done/committed.  
-- BLK-2: done/committed.  
-- Live testing: still paused.  
+- BLK-1: done/committed.
+- BLK-3 Part 1: done/committed.
+- BLK-3 Part 2: done/committed.
+- BLK-3 Part 3: done/committed.
+- BLK-2: done/committed.
+- Live testing: still paused.
 - PR 5 / UnderwritingState: deferred unless the final checkpoint says it is needed now.
 
 Likely sequence:
-1. Documentation update now (this addendum).  
-2. Consider a true full-generator/full-render regression harness PR.  
-3. Final Emergent repo-wide Full Underwriting audit.  
-4. Decide whether PR 5 is required before controlled live testing.  
+1. Documentation update now (this addendum).
+2. Consider a true full-generator/full-render regression harness PR.
+3. Final Emergent repo-wide Full Underwriting audit.
+4. Decide whether PR 5 is required before controlled live testing.
 5. Only then resume controlled live testing.
 
 Older references below that say PR 1/2/3 are next, that live retesting resumes immediately, or that launch-readiness is already confirmed are historical context and superseded by this May 27, 2026 controlling addendum.
@@ -72,12 +140,12 @@ Older references below that say PR 1/2/3 are next, that live retesting resumes i
 
 ## A. Architecture cleanup completed tonight
 
-1. PR 1 - Property-tax per-file binding  
-Status: completed and committed.  
+1. PR 1 - Property-tax per-file binding
+Status: completed and committed.
 Outcome: Renderer document-treatment property-tax modeled/support labels are now bound to the validated property-tax source file identity. Missing, unreliable, or mismatched binding fails safe to neutral non-modeled treatment. This prevents Phase I ESA, environmental, zoning/compliance, appraisal, market survey, or generic support docs from being labeled as property-tax support solely because propertyTaxPayload exists elsewhere.
 
-2. PR 4 micro - Renderer consumes support-doc taxonomy  
-Status: completed and committed.  
+2. PR 4 micro - Renderer consumes support-doc taxonomy
+Status: completed and committed.
 Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and uildDocumentTreatmentSummaryHtml uses canonical taxonomy semantic_doc_role as primary authority for support-doc role classification. Existing semantic_doc_role is fallback only when taxonomy role is absent/non-useful. Inline regex/filename logic remains fallback only. PR 1 property-tax per-file binding remains intact.
 
 ## B. Launch-strategy clarification (current)
@@ -114,7 +182,7 @@ Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and
 - AdminDashboard.jsx Slice 2A.2 completed/pass:
   - undefined `ai` expanded-row reference removed
   - AI Recovery fallback now deterministic: `None - deterministic only`
-  - compact Triage empty state: `{title} - 0 jobs ¬∑ all clear`
+  - compact Triage empty state: `{title} - 0 jobs ∑ all clear`
   - roadmap leak copy replaced with `No items today.`
   - Force-Fail confirmation modal added before executing existing forceFailJob call
   - no backend/API/doctrine/gating changes
@@ -258,60 +326,60 @@ Do not:
 
 ## A. Completed Root-Class + Admin Diagnostics Status (May 24/25)
 
-1. SUPPORT_DOC_TREATMENT_CONTRACT_GAP  
-Status: patched, committed, deployed/pass.  
+1. SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+Status: patched, committed, deployed/pass.
 Outcome: Environmental / Phase I / ESA / zoning / compliance docs cannot be rendered as property-tax support or structured property-tax inputs. Deterministic contract enforcement exists; advisory AI is not the authority.
 
-2. ACQUISITION_FINANCING_CANONICALIZATION_GAP  
-Status: patched, committed, deployed/pass.  
+2. ACQUISITION_FINANCING_CANONICALIZATION_GAP
+Status: patched, committed, deployed/pass.
 Outcome: Acquisition/proposed financing canonicalization now handles clean/messy/shorthand term-sheet formats generally, including purchase price, stated acquisition loan amount, derived acquisition loan amount, LTV/rate/amortization, lender/origination/financing fees, and unquantified legal/appraisal/closing notes. Acquisition/proposed financing remains separate from current outstanding debt unless true current debt balance evidence exists.
 
-3. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT  
-Status: patched, committed, deployed/pass.  
+3. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Clean core T12 + Rent Roll coverage should not be mislabeled as severe source limitation just because optional/support sections are constrained. Optional underwriting constraints should be disclosed separately from core input sufficiency.
 
-4. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP  
-Status: completed, committed, deployed/pass.  
+4. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
+Status: completed, committed, deployed/pass.
 Outcome: Final sweep expanded rendered contract coverage using tests-only/generalized coverage where appropriate. This was not a renderer rewrite.
 
-5. ROOT-FAMILY_TAXONOMY_AUDIT  
-Status: completed audit-only.  
+5. ROOT-FAMILY_TAXONOMY_AUDIT
+Status: completed audit-only.
 Outcome: Audit identified canonical-value/rendered-value drift as the next root family and recommended targeted QA contracts instead of broad refactors.
 
-6. SECTION_ELIGIBILITY_RENDER_DRIFT  
-Status: patched, committed, deployed/pass.  
+6. SECTION_ELIGIBILITY_RENDER_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: If canonical section eligibility says current debt/refi/renovation sections are source-constrained, rendered output should not show computed/numeric modeled surfaces for those sections. Unsupported optional sections should collapse/qualify/omit instead of inventing outputs.
 
-7. VERDICT_CAP_EXPLANATION_DRIFT  
-Status: patched, committed, deployed/pass.  
+7. VERDICT_CAP_EXPLANATION_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Visible classification and explanation language must align with canonical verdict caps. Stable language cannot appear when source reconciliation, insufficient core support, or debt coverage constraints cap the report to Review-class labels.
 
-8. CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT  
-Status: patched, committed, deployed/pass.  
+8. CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Rendered current-debt DSCR values across customer-facing surfaces must match canonical computed current-debt DSCR within tolerance. Proposed/acquisition DSCR is excluded from current-debt DSCR parity.
 
-9. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT  
-Status: patched, committed, deployed/pass.  
+9. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Rendered Annual In-Place Rent and Annual Market Rent totals must match canonical rent-roll annual totals when canonical trusted totals exist. Partial-sample rent rolls without trusted summary totals are skipped.
 
-10. OCCUPANCY_CANONICAL_VALUE_DRIFT  
-Status: patched, committed, deployed/pass.  
+10. OCCUPANCY_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Rendered current/rent-roll/physical occupancy must match canonical trusted occupancy within tolerance. Break-even, buffer, stress, sensitized, vacancy, and market occupancy contexts are excluded.
 
-11. ACQUISITION_CANONICAL_VALUE_DRIFT  
-Status: patched, committed, deployed/pass.  
+11. ACQUISITION_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: Rendered Proposed Acquisition Debt Sizing values must match same-label canonical acquisition payload values when both exist, including purchase price, stated acquisition loan amount, derived acquisition loan amount, and lender/origination/financing fee. Contract is scoped only to Proposed Acquisition Debt Sizing, not current debt/refi/scorecard/risk register.
 
-12. SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT  
-Status: patched, committed, deployed/pass.  
+12. SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
+Status: patched, committed, deployed/pass.
 Outcome: When canonical support-document role/treatment metadata exists, rendered document-treatment labels must not contradict canonical support role. Environmental, zoning/compliance, market survey, appraisal/background, qualitative, unmodeled, or limited-support docs cannot be rendered as property-tax support or modeled/structured underwriting inputs unless canonical metadata explicitly supports that class. Existing SUPPORT_DOC_TREATMENT_LABEL_CONTRACT remains active for obvious text leaks when canonical metadata is absent.
 
-13. Admin Diagnostics Intelligence Layer Slice 1  
-Status: patched, committed, deployed/pass.  
+13. Admin Diagnostics Intelligence Layer Slice 1
+Status: patched, committed, deployed/pass.
 Outcome: Admin dashboard now has a read-only diagnostics intelligence rollup using existing QA artifacts. Explicit blocker booleans from report_contract_qa and source_report_coverage_qa take precedence over severity-derived fallback, so high-severity disclose-only diagnostics are not mislabeled as customer blockers.
 
-14. Admin Diagnostics Slice 2A - Triage Workspace  
-Status: clean PR merged to main and Vercel production deployed green.  
+14. Admin Diagnostics Slice 2A - Triage Workspace
+Status: clean PR merged to main and Vercel production deployed green.
 Outcome: AdminDashboard.jsx frontend-only restructure:
 - "Admin Review / Fix Queue" renamed to "Triage Workspace"
 - rows bucketed into Published With Diagnostics, Fail-Closed Core, and Operational Health
@@ -506,7 +574,7 @@ Diagnostics reveal recurring sub-classes that can be patched into stronger deter
 
 ## C) Root-class patch standard tightened
 
-Every future ‚Äúroot-class‚Äù patch must prove it is system-level, not report-specific.
+Every future ìroot-classî patch must prove it is system-level, not report-specific.
 
 Required proof in Codex receipts:
 
