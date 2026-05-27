@@ -503,6 +503,55 @@ function buildRefiDebtRenderState({
     canonicalRefiDebtBasis,
   };
 }
+function resolveRefiNarrativeMode({
+  refiDebtRenderState = null,
+  hasComputedCurrentDebtDscr = false,
+  hasCanonicalCurrentRefiDebtBasis = false,
+  canRenderFullRefi = false,
+} = {}) {
+  if (canRenderFullRefi) {
+    return {
+      mode: "full_refi_assessed",
+      classification: "assessed",
+      copy: "Refinance stability and proceeds coverage were assessed from verified current debt inputs and deterministic refinance assumptions.",
+    };
+  }
+  const status = String(refiDebtRenderState?.status || "").trim().toLowerCase();
+  const disclosureReasonCode = String(refiDebtRenderState?.disclosureReasonCode || "").trim().toLowerCase();
+  const currentDebtAssessed = Boolean(
+    hasComputedCurrentDebtDscr ||
+      (hasCanonicalCurrentRefiDebtBasis && refiDebtRenderState?.allowDebtMath === true)
+  );
+  if (currentDebtAssessed) {
+    return {
+      mode: "current_debt_coverage_assessed_full_refi_limited",
+      classification: "source_limited",
+      copy: "Current debt coverage was assessed from verified current debt inputs; full refinance proceeds and stability classification were source-limited because forward refinance assumptions were incomplete.",
+    };
+  }
+  if (
+    status === "not_assessed" &&
+    (disclosureReasonCode === "acquisition_only_not_current_debt" || refiDebtRenderState?.isAcquisitionOnly)
+  ) {
+    return {
+      mode: "no_current_debt_acquisition_only",
+      classification: "not_assessed",
+      copy: "Proposed acquisition financing was identified but is not current outstanding debt; current debt and refinance coverage were not assessed.",
+    };
+  }
+  if (status === "source_limited") {
+    return {
+      mode: "source_limited_no_dscr",
+      classification: "source_limited",
+      copy: "Debt context was identified, but current debt coverage could not be assessed because verified current outstanding debt support was incomplete.",
+    };
+  }
+  return {
+    mode: "no_debt_inputs",
+    classification: "not_assessed",
+    copy: "Current debt and refinance analysis was omitted because no verified debt inputs were provided.",
+  };
+}
 function buildCurrentDebtScorecardEntry({
   currentDebtState = null,
   mortgagePayload = null,
@@ -7603,20 +7652,18 @@ if (effectiveReportMode === "screening_v1") {
       const refiHtml = String(refiResult?.html || "").trim();
       canRenderRefi =
         validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
+      const refiNarrativeMode = resolveRefiNarrativeMode({
+        refiDebtRenderState: sharedRefiDebtRenderState,
+        hasComputedCurrentDebtDscr,
+        hasCanonicalCurrentRefiDebtBasis,
+        canRenderFullRefi: canRenderRefi,
+      });
       const hasDebtButIncompleteRefiInputs =
         hasCanonicalCurrentRefiDebtBasis && !canRenderRefi;
       if (canRenderRefi) {
         finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
       } else if (hasDebtButIncompleteRefiInputs) {
-        const hasCompleteCurrentDebtTerms =
-          isFinitePositive(refiFinancials?.refi_debt_balance) &&
-          isFinitePositive(refiFinancials?.refi_interest_rate) &&
-          isFinitePositive(refiFinancials?.refi_amort_years);
-        const missingRefiCapRate = !isFinitePositive(refiFinancials?.refi_cap_rate_base);
-        const refiNotProducedCopy =
-          hasCompleteCurrentDebtTerms && missingRefiCapRate
-            ? "Debt terms were identified, but refinance stability was not assessed because required verified refinance cap-rate or valuation support was incomplete."
-            : "Debt was identified from uploaded documents, but refinance stability was not assessed because required verified refinance inputs were incomplete.";
+        const refiNotProducedCopy = refiNarrativeMode.copy;
         finalHtml = replaceAll(
           finalHtml,
           "{{REFI_STABILITY_BLOCK}}",

@@ -22,7 +22,8 @@ function buildMockRes() {
   return out;
 }
 
-async function renderUnderwritingHtml(testPayloads) {
+async function renderUnderwritingHtml(testPayloads, options = {}) {
+  const financialsOverride = options?.financials || {};
   const req = {
     headers: {
       "x-admin-run-key": process.env.ADMIN_RUN_KEY,
@@ -39,6 +40,7 @@ async function renderUnderwritingHtml(testPayloads) {
         refi_interest_rate: 0.064,
         refi_amort_years: 30,
         refi_cap_rate_base: 0.055,
+        ...financialsOverride,
       },
       __test_return_final_html: true,
       __test_payloads: testPayloads,
@@ -232,5 +234,6 @@ assert.match(
   debtBoundTreatmentHtml,
   /Purchase_Assumptions_Context\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
 );
+assert.equal(/refinance stability was not assessed/i.test(debtBoundTreatmentHtml), false);
 
 console.log("full-underwriting-gates-full-render smoke PASS");
