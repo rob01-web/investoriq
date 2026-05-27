@@ -2205,4 +2205,123 @@ assert.equal(
   true
 );
 
+const readinessAliasContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  qaFixRouting: {
+    public_sample_ready: true,
+    public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+    public_sample_impact: "block_until_review",
+    high_value_outreach_ready: true,
+    high_value_outreach_blockers: ["ACQUISITION_FINANCING_FIELD_LIMITED"],
+    high_value_outreach_impact: "block_until_review",
+  },
+  html: "<p>Clean baseline body.</p>",
+});
+assert.equal(
+  readinessAliasContradiction.violations.some((v) => v.code === "PUBLIC_SAMPLE_READY_WITH_BLOCKERS"),
+  true
+);
+assert.equal(
+  readinessAliasContradiction.violations.some((v) => v.code === "HIGH_VALUE_OUTREACH_READY_WITH_BLOCKERS"),
+  true
+);
+
+const refiNotAssessedContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Refinance stability was not assessed because required refinance inputs were incomplete.</p>",
+    "<p>Debt Structure Summary</p>",
+    "<p>Current Debt DSCR: 1.06x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  refiNotAssessedContradiction.violations.some(
+    (v) => v.code === "REFI_NOT_ASSESSED_COPY_CONTRADICTS_CURRENT_DEBT_RENDER"
+  ),
+  true
+);
+
+const refiNotAssessedNoDebtAllowed = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      has_true_current_debt_balance: false,
+    },
+  },
+  html: "<p>Refinance stability was not assessed because verified debt inputs were unavailable.</p>",
+});
+assert.equal(
+  refiNotAssessedNoDebtAllowed.violations.some(
+    (v) => v.code === "REFI_NOT_ASSESSED_COPY_CONTRADICTS_CURRENT_DEBT_RENDER"
+  ),
+  false
+);
+
+const dcfExitCapOverclaim = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Exit cap: 5.75% (document-derived exit cap)</p>",
+    "<p>Going-in cap reference only; not a verified exit cap.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  dcfExitCapOverclaim.violations.some((v) => v.code === "DCF_EXIT_CAP_SOURCE_OVERCLAIM"),
+  true
+);
+
+const propertyTaxStructuredBindingContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    property_tax_binding_state: {
+      hasReliableBinding: true,
+      allows_multiple_bound_sources: false,
+    },
+  },
+  html: [
+    '<p class="subsection-title">Modeled Inputs</p>',
+    '<ul><li>Phase_I_Environmental.pdf - Structured property tax input</li></ul>',
+  ].join("\n"),
+});
+assert.equal(
+  propertyTaxStructuredBindingContradiction.violations.some(
+    (v) => v.code === "PROPERTY_TAX_STRUCTURED_INPUT_BINDING_CONTRADICTION"
+  ),
+  true
+);
+
+const currentDebtDocumentTreatmentContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    '<p class="subsection-title">Modeled Inputs</p>',
+    '<ul><li>loan_terms_packet.pdf - Structured current debt input</li></ul>',
+    '<p class="subsection-title">Displayed / Limited Use</p>',
+    '<ul><li>loan_terms_packet.pdf - Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt.</li></ul>',
+  ].join("\n"),
+});
+assert.equal(
+  currentDebtDocumentTreatmentContradiction.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DOCUMENT_TREATMENT_CONTRADICTION"
+  ),
+  true
+);
+
 console.log("report-contract-qa smoke PASS");

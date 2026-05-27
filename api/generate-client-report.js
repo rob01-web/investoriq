@@ -9837,6 +9837,8 @@ try {
     artifacts: sourcePackageQaArtifacts,
     sourceReportCoverageQa: sourceCoverageQaResult,
     reportQaFlags,
+    qaFixRouting: qaFixRoutingResult || null,
+    deliveryGateDecision: deliveryGateDecisionResult || null,
   });
   reportContractQaResult = reportContractQa;
   const contractTimestamp = new Date().toISOString().replace(/:/g, "-");

@@ -423,6 +423,25 @@ function extractDocumentTreatmentFileNames(rawHtml, title) {
   return [...new Set(names)];
 }
 
+function extractDocumentTreatmentRows(rawHtml, title) {
+  const sectionHtml = extractDocumentTreatmentSection(rawHtml, title);
+  if (!sectionHtml) return [];
+  const liMatches = sectionHtml.match(/<li\b[\s\S]*?<\/li>/gi) || [];
+  const rows = [];
+  for (const li of liMatches) {
+    const text = stripHtml(li).replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const name = text.split(/\s+-\s+/)[0]?.trim() || "";
+    if (!name) continue;
+    rows.push({
+      name: name.toLowerCase(),
+      label: text.toLowerCase(),
+      raw: text,
+    });
+  }
+  return rows;
+}
+
 function reportTypeIsScreening(reportType, reportTier) {
   return String(reportType || "").toLowerCase() === "screening" || Number(reportTier) === 1;
 }
@@ -737,6 +756,8 @@ export function buildReportContractQa({
   artifacts = [],
   sourceReportCoverageQa = null,
   reportQaFlags = [],
+  qaFixRouting = null,
+  deliveryGateDecision = null,
 } = {}) {
   const rawHtml = String(html || "");
   const text = stripHtml(html);
@@ -973,6 +994,74 @@ export function buildReportContractQa({
     });
   }
   const canonicalVerdictCapState = inferCanonicalVerdictCapState(sourceReportCoverageQa);
+  const readinessPayloadCandidates = [
+    deliveryGateDecision,
+    qaFixRouting,
+    sourceReportCoverageQa?.delivery_gate_decision,
+  ].filter(Boolean);
+  for (const readinessPayload of readinessPayloadCandidates) {
+    const publicSampleReady = readinessPayload?.public_sample_ready;
+    const publicSampleBlockers = Array.isArray(readinessPayload?.public_sample_blockers)
+      ? readinessPayload.public_sample_blockers
+      : Array.isArray(readinessPayload?.readiness_hierarchy?.public_sample_blockers)
+        ? readinessPayload.readiness_hierarchy.public_sample_blockers
+        : Array.isArray(readinessPayload?.distribution_context?.public_sample_blockers)
+          ? readinessPayload.distribution_context.public_sample_blockers
+          : [];
+    const publicSampleImpact = String(
+      readinessPayload?.public_sample_impact ||
+      readinessPayload?.readiness_hierarchy?.public_sample_impact ||
+      readinessPayload?.distribution_context?.public_sample_impact ||
+      ""
+    ).toLowerCase();
+    if (publicSampleReady === true && (publicSampleBlockers.length > 0 || publicSampleImpact === "block_until_review")) {
+      addViolation(violations, {
+        code: "PUBLIC_SAMPLE_READY_WITH_BLOCKERS",
+        severity: "high",
+        category: "distribution_readiness_contract",
+        message: "Public-sample readiness is true while blockers or block-until-review impact are present.",
+        evidence: {
+          public_sample_ready: publicSampleReady,
+          public_sample_blockers: publicSampleBlockers,
+          public_sample_impact: publicSampleImpact || null,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+
+    const highValueReady = readinessPayload?.high_value_outreach_ready;
+    const highValueBlockers = Array.isArray(readinessPayload?.high_value_outreach_blockers)
+      ? readinessPayload.high_value_outreach_blockers
+      : Array.isArray(readinessPayload?.readiness_hierarchy?.high_value_outreach_blockers)
+        ? readinessPayload.readiness_hierarchy.high_value_outreach_blockers
+        : Array.isArray(readinessPayload?.distribution_context?.high_value_outreach_blockers)
+          ? readinessPayload.distribution_context.high_value_outreach_blockers
+          : [];
+    const highValueImpact = String(
+      readinessPayload?.high_value_outreach_impact ||
+      readinessPayload?.readiness_hierarchy?.high_value_outreach_impact ||
+      readinessPayload?.distribution_context?.high_value_outreach_impact ||
+      ""
+    ).toLowerCase();
+    if (highValueReady === true && (highValueBlockers.length > 0 || highValueImpact === "block_until_review")) {
+      addViolation(violations, {
+        code: "HIGH_VALUE_OUTREACH_READY_WITH_BLOCKERS",
+        severity: "high",
+        category: "distribution_readiness_contract",
+        message: "High-value-outreach readiness is true while blockers or block-until-review impact are present.",
+        evidence: {
+          high_value_outreach_ready: highValueReady,
+          high_value_outreach_blockers: highValueBlockers,
+          high_value_outreach_impact: highValueImpact || null,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
   const renderedStableClassification =
     /\b(?:Within Underwriting Parameters|Refinance Stability Classification\s*[:\n]\s*Stable|Capital Risk Profile\s*[:\n]\s*Stable)\b/i.test(text);
   const renderedReviewDebtConstraint = /Review\s*-\s*Debt Coverage Constraint/i.test(text);
@@ -1269,7 +1358,13 @@ export function buildReportContractQa({
     }
   }
   const modeledDocNames = extractDocumentTreatmentFileNames(rawHtml, "Modeled Inputs");
+  const modeledDocRows = extractDocumentTreatmentRows(rawHtml, "Modeled Inputs");
+  const displayedLimitedRows = extractDocumentTreatmentRows(rawHtml, "Displayed / Limited Use");
   const listedNotModeledDocNames = extractDocumentTreatmentFileNames(
+    rawHtml,
+    "Listed but Not Quantitatively Modeled"
+  );
+  const listedNotModeledRows = extractDocumentTreatmentRows(
     rawHtml,
     "Listed but Not Quantitatively Modeled"
   );
@@ -1287,6 +1382,131 @@ export function buildReportContractQa({
         duplicate_files: duplicateDocumentTreatmentNames,
       },
       customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const structuredCurrentDebtNames = modeledDocRows
+    .filter((row) => /structured current debt input/i.test(row.raw))
+    .map((row) => row.name);
+  const acquisitionOnlyNames = displayedLimitedRows
+    .filter((row) => /acquisition assumptions context only/i.test(row.raw))
+    .map((row) => row.name);
+  const listedOnlyNames = listedNotModeledRows.map((row) => row.name);
+  const contradictoryCurrentDebtFiles = [...new Set(
+    structuredCurrentDebtNames.filter((name) =>
+      acquisitionOnlyNames.includes(name) || listedOnlyNames.includes(name)
+    )
+  )];
+  if (contradictoryCurrentDebtFiles.length > 0) {
+    addViolation(violations, {
+      code: "CURRENT_DEBT_DOCUMENT_TREATMENT_CONTRADICTION",
+      severity: "high",
+      category: "support_document_treatment_contract",
+      message: "A file is labeled as structured current-debt input and also labeled acquisition-only or not-quantitatively-modeled.",
+      evidence: {
+        conflicting_files: contradictoryCurrentDebtFiles,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+
+  const propertyTaxStructuredRows = modeledDocRows.filter((row) =>
+    /structured property tax input/i.test(row.raw)
+  );
+  if (propertyTaxStructuredRows.length > 0) {
+    const bindingState =
+      sourceReportCoverageQa?.property_tax_binding_state ||
+      sourceReportCoverageQa?.document_treatment?.property_tax_binding_state ||
+      null;
+    const allowsMultipleStructuredPropertyTax = Boolean(
+      bindingState?.allows_multiple_bound_sources ||
+      bindingState?.allow_multiple_bound_sources ||
+      bindingState?.multiple_bound_sources_allowed ||
+      bindingState?.supports_multiple_bound_sources
+    );
+    const dangerPattern = /phase\s*i|phase\s*1|esa|environment(?:al)?|zoning|compliance|appraisal|market survey/i;
+    const dangerousStructuredRows = propertyTaxStructuredRows
+      .filter((row) => dangerPattern.test(row.raw))
+      .map((row) => row.raw);
+    if (propertyTaxStructuredRows.length > 1 && !allowsMultipleStructuredPropertyTax) {
+      addViolation(violations, {
+        code: "PROPERTY_TAX_STRUCTURED_INPUT_BINDING_CONTRADICTION",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Document Treatment Summary labels multiple files as structured property-tax input without explicit canonical multi-source binding support.",
+        evidence: {
+          structured_property_tax_rows: propertyTaxStructuredRows.map((row) => row.raw),
+          property_tax_binding_state: bindingState,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    } else if (dangerousStructuredRows.length > 0) {
+      addViolation(violations, {
+        code: "PROPERTY_TAX_STRUCTURED_INPUT_BINDING_CONTRADICTION",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Structured property-tax input labeling includes environmental/zoning/appraisal/market-survey style support docs.",
+        evidence: {
+          dangerous_structured_rows: dangerousStructuredRows,
+          property_tax_binding_state: bindingState,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
+
+  const hasRefiNotAssessedCopy =
+    /refinance stability was not assessed|refinance capacity was not assessed|current debt and refinance coverage were not assessed|current debt and refinance analysis was omitted/i.test(text);
+  const hasCurrentDebtAssessedEvidence =
+    /Current Debt DSCR\s*[:\n]\s*[0-9.]+x|Debt Structure Summary|Outstanding Balance|DSCR sensitivity|Current debt coverage was assessed/i.test(text);
+  if (hasRefiNotAssessedCopy && hasCurrentDebtAssessedEvidence) {
+    addViolation(violations, {
+      code: "REFI_NOT_ASSESSED_COPY_CONTRADICTS_CURRENT_DEBT_RENDER",
+      severity: "high",
+      category: "debt_contract",
+      message: "Rendered refinance not-assessed copy contradicts rendered current-debt assessed metrics/surfaces.",
+      evidence: {
+        excerpt:
+          firstPatternExcerpt(text, [
+            /refinance stability was not assessed/i,
+            /refinance capacity was not assessed/i,
+            /current debt and refinance coverage were not assessed/i,
+            /current debt and refinance analysis was omitted/i,
+          ]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+
+  if (
+    /document-derived exit cap|verified exit cap/i.test(text) &&
+    /going-in cap reference|acquisition cap-rate reference|not a verified exit cap|sensitivity anchor|framework sensitivity|standardized assumption/i.test(text)
+  ) {
+    addViolation(violations, {
+      code: "DCF_EXIT_CAP_SOURCE_OVERCLAIM",
+      severity: "high",
+      category: "dcf_source_attribution_contract",
+      message: "Rendered DCF cap-rate attribution overclaims verified/document-derived exit-cap support while also indicating going-in/framework-only support.",
+      evidence: {
+        excerpt:
+          firstPatternExcerpt(text, [
+            /document-derived exit cap/i,
+            /verified exit cap/i,
+            /going-in cap reference/i,
+            /acquisition cap-rate reference/i,
+            /not a verified exit cap/i,
+          ]) || leakProbeExcerpt,
+      },
       blocks_customer_delivery: false,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
