@@ -2092,4 +2092,117 @@ const visibleClassificationAligned = buildReportContractQa({
 });
 assert.equal(visibleClassificationAligned.violations.some((v) => v.code === "VISIBLE_CLASSIFICATION_CONFLICT"), false);
 
+const visibleClassificationDebtCapContradiction = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.06,
+    },
+    display_verdict_state: {
+      label: "Review - Debt Coverage Constraint",
+      cap_reason_code: "debt_coverage_constraint",
+    },
+  },
+  html: [
+    "<p>Review - Debt Coverage Constraint</p>",
+    "<p>Within Underwriting Parameters</p>",
+  ].join("\n"),
+});
+assert.equal(
+  visibleClassificationDebtCapContradiction.violations.some((v) => v.code === "VERDICT_CAP_RENDER_DRIFT"),
+  true
+);
+
+const unsupportedDebtConstrainedLanguage = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        debt_basis: "acquisition_financing_assumption",
+        purchase_price: 2840000,
+        derived_acquisition_loan_amount: 2130000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: acquisitionCoverage,
+  html: [
+    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance.</p>",
+    "<p>Current Debt DSCR: 1.06x</p>",
+    "<p>Primary Constraint: Current Debt DSCR of 1.06x constrains refinance capacity below standard lender coverage thresholds.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  unsupportedDebtConstrainedLanguage.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  true
+);
+
+const duplicatedDocumentTreatmentCategories = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    '<p class="subsection-title">Modeled Inputs</p>',
+    '<ul><li>same_file.pdf - Structured operating input</li></ul>',
+    '<p class="subsection-title">Displayed / Limited Use</p>',
+    '<ul><li>context_only.pdf - Context only</li></ul>',
+    '<p class="subsection-title">Listed but Not Quantitatively Modeled</p>',
+    '<ul><li>same_file.pdf - Listed for auditability only</li></ul>',
+  ].join("\n"),
+});
+assert.equal(
+  duplicatedDocumentTreatmentCategories.violations.some(
+    (v) => v.code === "DOCUMENT_TREATMENT_DUPLICATE_CATEGORY_CONFLICT"
+  ),
+  true
+);
+
+const marketSurveyAsRentRollSupportDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "market_rent_survey_context.txt", semantic_doc_role: "market_survey" },
+    ],
+  },
+  html: "<p>Market survey support (market_rent_survey_context.txt) - Structured input used as underwriting input.</p>",
+});
+assert.equal(
+  marketSurveyAsRentRollSupportDrift.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
+  true
+);
+
+const coreCoverageHeadlineConflict = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: {
+      publishability_bucket: "core_sufficient_publishable",
+    },
+    source_reconciliation_state: {
+      status: "aligned",
+    },
+  },
+  html: [
+    "<p>CORE INPUT COVERAGE CONFIRMED</p>",
+    "<p>CORE INPUTS EXTRACTED - SOURCE LIMITATIONS DISCLOSURE</p>",
+    "<p>Only optional support documents were constrained.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  coreCoverageHeadlineConflict.violations.some((v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"),
+  true
+);
+
 console.log("report-contract-qa smoke PASS");

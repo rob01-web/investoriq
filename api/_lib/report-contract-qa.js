@@ -394,6 +394,35 @@ function hasBadMoneyRow(section, { allowNegative = false } = {}) {
   });
 }
 
+function extractDocumentTreatmentSection(rawHtml, title) {
+  const source = String(rawHtml || "");
+  if (!source || !title) return "";
+  const headingPattern = new RegExp(
+    `<p[^>]*class=["']subsection-title["'][^>]*>\\s*${escapeRegExp(title)}\\s*<\\/p>`,
+    "i"
+  );
+  const headingMatch = headingPattern.exec(source);
+  if (!headingMatch) return "";
+  const after = source.slice(headingMatch.index + headingMatch[0].length);
+  const stopMatch = /<p[^>]*class=["']subsection-title["'][^>]*>/i.exec(after);
+  return stopMatch ? after.slice(0, stopMatch.index) : after;
+}
+
+function extractDocumentTreatmentFileNames(rawHtml, title) {
+  const sectionHtml = extractDocumentTreatmentSection(rawHtml, title);
+  if (!sectionHtml) return [];
+  const liMatches = sectionHtml.match(/<li\b[\s\S]*?<\/li>/gi) || [];
+  const names = [];
+  for (const li of liMatches) {
+    const text = stripHtml(li).replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const name = text.split(/\s+-\s+/)[0]?.trim() || "";
+    if (!name) continue;
+    names.push(name.toLowerCase());
+  }
+  return [...new Set(names)];
+}
+
 function reportTypeIsScreening(reportType, reportTier) {
   return String(reportType || "").toLowerCase() === "screening" || Number(reportTier) === 1;
 }
@@ -1238,6 +1267,30 @@ export function buildReportContractQa({
         blocks_high_value_outreach: true,
       });
     }
+  }
+  const modeledDocNames = extractDocumentTreatmentFileNames(rawHtml, "Modeled Inputs");
+  const listedNotModeledDocNames = extractDocumentTreatmentFileNames(
+    rawHtml,
+    "Listed but Not Quantitatively Modeled"
+  );
+  const duplicateDocumentTreatmentNames = modeledDocNames.filter((name) =>
+    listedNotModeledDocNames.includes(name)
+  );
+  if (duplicateDocumentTreatmentNames.length > 0) {
+    addViolation(violations, {
+      code: "DOCUMENT_TREATMENT_DUPLICATE_CATEGORY_CONFLICT",
+      severity: "high",
+      category: "support_document_treatment_contract",
+      message:
+        "Document Treatment Summary lists the same file under both modeled and not-quantitatively-modeled categories.",
+      evidence: {
+        duplicate_files: duplicateDocumentTreatmentNames,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
   }
   if (hasComputedCurrentDebtState && hasStaleMissingDebtCopy) {
     addRenderedLeakViolation(violations, {
