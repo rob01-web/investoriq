@@ -4923,6 +4923,7 @@ export default async function handler(req, res) {
   let effectiveUserId = null;
   try {
     const body = req.body || {};
+    const isFullRenderHarness = body?.__test_return_final_html === true;
     const isAdminRegen = body?.admin_regen === true;
     if (isAdminRegen) {
       const internalKey = (process.env.INTERNAL_REGEN_KEY || "").trim();
@@ -5024,7 +5025,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing userId" });
     }
     const sections = body.sections || {};
-    if (promptInstructions.length > 0) {
+    if (promptInstructions.length > 0 && !isFullRenderHarness) {
       const safeTimestamp = nowIso.replace(/:/g, "-");
       const { error: promptEventErr } = await supabase
         .from("analysis_artifacts")
@@ -6382,6 +6383,28 @@ if (effectiveReportMode === "screening_v1") {
         if (/^Base case Current Debt DSCR of .*?(coverage thresholds|refinance capacity)/i.test(riskBullets[i])) {
           riskBullets.splice(i, 1);
         }
+      }
+    }
+    if (isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object") {
+      const harnessPayloads = body.__test_payloads;
+      if (harnessPayloads.rentRollPayload !== undefined) rentRollPayload = harnessPayloads.rentRollPayload;
+      if (harnessPayloads.t12Payload !== undefined) t12Payload = harnessPayloads.t12Payload;
+      if (harnessPayloads.mortgagePayload !== undefined) mortgagePayload = harnessPayloads.mortgagePayload;
+      if (harnessPayloads.loanTermSheetTermsPayload !== undefined) loanTermSheetTermsPayload = harnessPayloads.loanTermSheetTermsPayload;
+      if (harnessPayloads.acquisitionTermsPayload !== undefined) acquisitionTermsPayload = harnessPayloads.acquisitionTermsPayload;
+      if (harnessPayloads.propertyTaxPayload !== undefined) propertyTaxPayload = harnessPayloads.propertyTaxPayload;
+      if (Array.isArray(harnessPayloads.documentSources)) {
+        documentSources = harnessPayloads.documentSources;
+        const items = harnessPayloads.documentSources
+          .map((row) => {
+            const name = escapeHtml(row?.original_filename || "Unnamed file");
+            const uploadedAt = row?.uploaded_at
+              ? new Date(row.uploaded_at).toLocaleString()
+              : "Unknown date";
+            return `<li>${name}  -  ${escapeHtml(uploadedAt)}</li>`;
+          })
+          .join("");
+        documentSourcesHtml = `<ul>${items}</ul>`;
       }
     }
     const upsideHtml = upsideBullets
@@ -8435,25 +8458,56 @@ if (effectiveReportMode === "screening_v1") {
     if (warnings.length > 0) {
       console.warn("WARN Sentence Integrity Warnings:");
       warnings.forEach((w) => console.warn(" - " + w));
-      const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
-      const { error: warnErr } = await supabase
-        .from("analysis_artifacts")
-        .insert([
-          {
-            job_id: jobId || null,
-            user_id: effectiveUserId || null,
-            type: "worker_event",
-            bucket: "internal",
-            object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/sentence_integrity_warning/${safeTimestamp}.json`,
-            payload: {
-              warnings,
-              timestamp: new Date().toISOString(),
+      if (!isFullRenderHarness) {
+        const safeTimestamp = new Date().toISOString().replace(/:/g, "-");
+        const { error: warnErr } = await supabase
+          .from("analysis_artifacts")
+          .insert([
+            {
+              job_id: jobId || null,
+              user_id: effectiveUserId || null,
+              type: "worker_event",
+              bucket: "internal",
+              object_path: `analysis_jobs/${jobId || "unknown"}/worker_event/sentence_integrity_warning/${safeTimestamp}.json`,
+              payload: {
+                warnings,
+                timestamp: new Date().toISOString(),
+              },
             },
-          },
-        ]);
-      if (warnErr) {
-        console.error("Failed to write sentence_integrity_warning artifact:", warnErr);
+          ]);
+        if (warnErr) {
+          console.error("Failed to write sentence_integrity_warning artifact:", warnErr);
+        }
       }
+    }
+    if (isFullRenderHarness) {
+      const htmlStringRaw =
+        typeof safeHtml === "string"
+          ? safeHtml
+          : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
+            ? safeHtml.html
+            : String(safeHtml || "");
+      let htmlString = sanitizeTypography(htmlStringRaw);
+      if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+        const harnessDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+          documentSources,
+          currentDebtAssessmentState,
+          hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+          renovationDisplayMode,
+          renovationPayload,
+          propertyTaxPayload,
+        });
+        htmlString = htmlString.replace(
+          /\{\{DOCUMENT_TREATMENT_SUMMARY\}\}/g,
+          harnessDocumentTreatmentHtml || ""
+        );
+      }
+      return res.status(200).json({
+        success: true,
+        report_type: reportType,
+        report_mode: effectiveReportMode,
+        final_html: htmlString,
+      });
     }
 // 9. Send to DocRaptor (STILL IN TEST MODE)
 const htmlStringRaw =
