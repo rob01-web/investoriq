@@ -12,6 +12,7 @@ const {
   buildSourceReconciliationRenderState,
   resolveCanonicalRentRollAnnualTotals,
 } = await import("../../api/_lib/report-surface-contracts.js");
+const { buildFullUnderwritingState } = await import("../../api/_lib/full-underwriting-state.js");
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
@@ -1003,6 +1004,42 @@ const sourceLimitedRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebt
   },
   t12Payload: { net_operating_income: 650000 },
 });
+const pr5BUnderwritingState = buildFullUnderwritingState({
+  reportMode: "v1_core",
+  reportType: "underwriting",
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "missing_current_debt_support",
+  },
+  refiDebtRenderState: sourceLimitedRenderStateForCombinedRefiBlock,
+  scorecardCoverageState: {
+    currentDebtCoverage: null,
+    usedCanonicalState: false,
+  },
+  acquisitionAssumptionState: null,
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+  },
+  sectionEligibility: {
+    sections: {
+      renovation_strategy: { source_constrained: true },
+      dcf: { source_constrained: false },
+    },
+  },
+  propertyTaxPayload: {
+    annual_tax: 24000,
+    source_file_id: "tax-bound-id",
+    original_filename: "Tax_Bound.pdf",
+  },
+});
+assert.equal(pr5BUnderwritingState?.meta?.version, "pr5-b-v1");
+assert.equal(pr5BUnderwritingState?.core?.currentDebt?.refiRenderState?.status, sourceLimitedRenderStateForCombinedRefiBlock.status);
+assert.equal(pr5BUnderwritingState?.core?.currentDebt?.refiRenderState?.allowDebtMath, false);
+assert.equal(pr5BUnderwritingState?.core?.acquisition?.assumptionState, null);
+assert.equal(pr5BUnderwritingState?.core?.acquisition?.triangleValidationState, null);
+assert.equal(pr5BUnderwritingState?.core?.documentTreatment?.propertyTaxBindingState?.hasValidatedAnnualTax, true);
 const sourceLimitedCombinedRefiBlockHtml =
   sourceLimitedRefiSufficiencyHtml +
   (sourceLimitedRenderStateForCombinedRefiBlock.allowDebtMath

@@ -35,6 +35,7 @@ import {
   buildSourceReconciliationNarrativeProminencePolicy,
   sanitizeFinalCustomerHtml,
 } from "./_lib/report-surface-contracts.js";
+import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -4840,6 +4841,8 @@ function buildRendererCanonicalState({
   t12Payload = null,
   appraisalPayload = null,
   propertyTaxPayload = null,
+  reportMode = null,
+  reportType = null,
 }) {
   const currentDebtAssessmentState = buildCurrentDebtAssessmentState({
     mortgagePayload,
@@ -4910,12 +4913,37 @@ function buildRendererCanonicalState({
     currentDebtState: currentDebtAssessmentState,
     sourceReconciliationState,
   });
+  const refiDebtRenderState = buildRefiDebtRenderState({
+    currentDebtAssessmentState,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    financials: null,
+    t12Payload,
+  });
+  const scorecardCoverageState = resolveCanonicalCurrentDebtScoreInputs({
+    currentDebtState: currentDebtAssessmentState,
+    mortgagePayload,
+    t12Payload,
+  });
+  const underwritingState = buildFullUnderwritingState({
+    reportMode,
+    reportType,
+    currentDebtAssessmentState,
+    refiDebtRenderState,
+    scorecardCoverageState,
+    acquisitionAssumptionState,
+    acquisitionTriangleValidationState: null,
+    sourceReconciliationState,
+    sectionEligibility,
+    propertyTaxPayload,
+  });
   return {
     currentDebtAssessmentState,
     sourceReportCoverageQa,
     sourceReconciliationState,
     acquisitionAssumptionState,
     sectionEligibility,
+    underwritingState,
   };
 }
 // ---------- Main Handler ----------
@@ -5549,6 +5577,8 @@ if (effectiveReportMode === "screening_v1") {
       t12Payload,
       appraisalPayload,
       propertyTaxPayload,
+      reportMode: effectiveReportMode,
+      reportType,
     });
     const rentRollAnnualTotals =
       sourceReconciliationState?.rent_roll_annual_totals ||
