@@ -3654,6 +3654,7 @@ function buildScreeningDataCoverageSummary({
   renovationDisplayMode = null,
   renovationPayload = null,
   propertyTaxPayload = null,
+  propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
@@ -3840,6 +3841,7 @@ function buildScreeningDataCoverageSummary({
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      propertyTaxBindingState,
       documentQuantitativeUsageMap,
     });
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>`;
@@ -3872,6 +3874,7 @@ function buildScreeningDataCoverageSummary({
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      propertyTaxBindingState,
       documentQuantitativeUsageMap,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
@@ -8508,6 +8511,7 @@ if (effectiveReportMode === "screening_v1") {
       renovationDisplayMode,
       renovationPayload,
       propertyTaxPayload,
+      propertyTaxBindingState,
       documentQuantitativeUsageMap,
     });
     finalHtml = replaceAll(
