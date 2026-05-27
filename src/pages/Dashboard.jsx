@@ -660,6 +660,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
       fetchInProgressJobs(),
       fetchLatestFailedJob(),
       fetchRecentJobs(),
+      fetchReports(),
     ]);
     setAcknowledged(false);
     setAckLocked(false);
@@ -1530,7 +1531,7 @@ useEffect(() => {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:3, marginBottom:20 }}>
                 <span style={{ ...bodySmall, fontSize:12 }}>T12 + Rent Roll + supporting due diligence documents</span>
-                <span style={{ ...bodySmall, fontSize:12 }}>Full institutional underwriting artifact.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Full institutional underwriting report.</span>
                 <span style={{ ...bodySmall, fontSize:12 }}>Investment committee-ready depth.</span>
               </div>
             )}
