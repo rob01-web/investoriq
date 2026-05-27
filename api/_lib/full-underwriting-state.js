@@ -64,6 +64,11 @@ export function buildFullUnderwritingState(input = {}) {
   const resolvedNarrativePolicy =
     sourceReconciliationNarrativePolicy ||
     buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState);
+  const sectionConstrainedCount = Number(sectionEligibility?.source_constrained_section_count || 0);
+  const sourceConstrainedSectionCodes = Object.entries(sectionEligibility?.sections || {})
+    .filter(([, value]) => Boolean(value?.source_constrained))
+    .map(([key]) => key);
+  const optionalSupportLimitationsPresent = sectionConstrainedCount > 0;
 
   return {
     meta: {
@@ -102,15 +107,17 @@ export function buildFullUnderwritingState(input = {}) {
         headlineMode: headlineMode || null, // PR5-E
         severityState: severityState || null, // PR5-E
         supportingDocsUsed: Boolean(supportingDocsUsed), // PR5-E
+        sectionConstrainedCount,
+        optionalSupportLimitationsPresent,
+        sourceConstrainedSectionCodes,
       },
       optionalSections: {
         renovationEligibility: sectionEligibility?.sections?.renovation_strategy || null,
         appraisalEligibility: sectionEligibility?.sections?.dcf || null,
-        marketSurveyEligibility: null, // PR5-E
-        environmentalEligibility: null, // PR5-E
-        zoningEligibility: null, // PR5-E
+        marketSurveyEligibility: sectionEligibility?.sections?.advanced_modeling || null,
+        environmentalEligibility: sectionEligibility?.sections?.risk_register || null,
+        zoningEligibility: sectionEligibility?.sections?.risk_register || null,
       },
     },
   };
 }
-

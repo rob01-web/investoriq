@@ -97,6 +97,14 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /const sectionEligibilityState =\s*underwritingState\?\.core\?\.sections\?\.eligibilityState \|\| sectionEligibility/
+);
+assert.match(
+  reportSource,
+  /buildScreeningDataCoverageSummary\(\{[\s\S]{0,1200}sectionEligibility:\s*sectionEligibilityState[\s\S]{0,1200}dataCoverageState[\s\S]{0,1200}optionalSectionState/
+);
+assert.match(
+  reportSource,
   /dealScoreState\.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml\([\s\S]{0,220}coverClassificationLabel/
 );
 assert.equal(/if \(screeningClass === "Fragile"\) return "High Risk"/.test(reportSource), false);

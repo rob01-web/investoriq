@@ -3395,6 +3395,8 @@ function buildScreeningDataCoverageSummary({
   currentDebtAssessmentState = null,
   sourceReconciliationState = null,
   sectionEligibility = null,
+  dataCoverageState = null,
+  optionalSectionState = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
   renovationPayload = null,
@@ -3521,7 +3523,11 @@ function buildScreeningDataCoverageSummary({
   const sourceReconciliationRequired = Boolean(
     buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
   );
-  const sourceConstrainedSectionCount = Number(sectionEligibility?.source_constrained_section_count || 0);
+  const sourceConstrainedSectionCount = Number(
+    dataCoverageState?.sectionConstrainedCount ??
+    sectionEligibility?.source_constrained_section_count ??
+    0
+  );
   const explicitScreeningSourceLimitedDisclosure =
     sectionEligibility?.source_limited_disclosure_required === true ||
     sectionEligibility?.screening_source_limited_disclosure_required === true;
@@ -3564,7 +3570,13 @@ function buildScreeningDataCoverageSummary({
           ? currentDebtCoverageState.explanation
           : "Core financial inputs (T12, Rent Roll, and available structured debt data) were extracted and incorporated into underwriting analysis. Supplemental documents that are not converted into structured report inputs are not used quantitatively. Unsupported or unstructured uploads remain excluded from modeled outputs.";
       const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
-  const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
+  const sectionEligibilityCopy = (
+    Number(optionalSectionState?.renovationEligibility?.source_constrained ? 1 : 0) +
+    Number(optionalSectionState?.appraisalEligibility?.source_constrained ? 1 : 0) +
+    Number(optionalSectionState?.marketSurveyEligibility?.source_constrained ? 1 : 0) +
+    Number(optionalSectionState?.environmentalEligibility?.source_constrained ? 1 : 0) +
+    Number(optionalSectionState?.zoningEligibility?.source_constrained ? 1 : 0)
+  ) > 0 || sourceConstrainedSectionCount > 0
       ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
     const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
@@ -3589,7 +3601,13 @@ function buildScreeningDataCoverageSummary({
         ? currentDebtCoverageState.explanation
         : `Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. ${currentDebtCoverageState.explanation}`;
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
-    const sectionEligibilityCopy = sectionEligibility?.source_constrained_section_count > 0
+    const sectionEligibilityCopy = (
+      Number(optionalSectionState?.renovationEligibility?.source_constrained ? 1 : 0) +
+      Number(optionalSectionState?.appraisalEligibility?.source_constrained ? 1 : 0) +
+      Number(optionalSectionState?.marketSurveyEligibility?.source_constrained ? 1 : 0) +
+      Number(optionalSectionState?.environmentalEligibility?.source_constrained ? 1 : 0) +
+      Number(optionalSectionState?.zoningEligibility?.source_constrained ? 1 : 0)
+    ) > 0 || sourceConstrainedSectionCount > 0
       ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
     const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
@@ -8177,6 +8195,29 @@ if (effectiveReportMode === "screening_v1") {
         String(dcfTableHtml || "").includes("(appraisal)") ||
         String(scenarioTableHtml || "").includes("(appraisal)")
       );
+    if (underwritingState?.core?.dataCoverage) {
+      underwritingState.core.dataCoverage.supportingDocsUsed = supportingUnderwritingDocsUsed;
+      underwritingState.core.dataCoverage.headlineMode = effectiveReportMode === "v1_core"
+        ? "underwriting_scope"
+        : "screening_notes";
+      const sectionConstrainedCount = Number(
+        underwritingState.core.dataCoverage.sectionConstrainedCount ??
+        sectionEligibility?.source_constrained_section_count ??
+        0
+      );
+      const reconciliationRequired = Boolean(
+        buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
+      );
+      underwritingState.core.dataCoverage.severityState = reconciliationRequired
+        ? "source_reconciliation_disclosure"
+        : sectionConstrainedCount > 0
+        ? "source_limitations_disclosure"
+        : "core_inputs_confirmed";
+    }
+    const dataCoverageState = underwritingState?.core?.dataCoverage || null;
+    const optionalSectionState = underwritingState?.core?.optionalSections || null;
+    const sectionEligibilityState =
+      underwritingState?.core?.sections?.eligibilityState || sectionEligibility;
     screeningCoverageHtml = buildScreeningDataCoverageSummary({
       t12Payload,
       computedRentRoll,
@@ -8190,7 +8231,9 @@ if (effectiveReportMode === "screening_v1") {
       documentSources,
       currentDebtAssessmentState,
       sourceReconciliationState,
-      sectionEligibility,
+      sectionEligibility: sectionEligibilityState,
+      dataCoverageState,
+      optionalSectionState,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
       renovationDisplayMode,
       renovationPayload,
