@@ -2282,6 +2282,57 @@ assert.equal(
   true
 );
 
+const dcfRefiAssumptionSafe = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Exit cap: 5.75% (refinance/underwriting cap assumption (not a verified exit cap))</p>",
+});
+assert.equal(
+  dcfRefiAssumptionSafe.violations.some((v) => v.code === "DCF_EXIT_CAP_SOURCE_OVERCLAIM"),
+  false
+);
+
+const dcfGoingInReferenceSafe = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Exit cap: 5.75% (document-stated going-in cap reference (sensitivity anchor only; not a verified exit cap))</p>",
+});
+assert.equal(
+  dcfGoingInReferenceSafe.violations.some((v) => v.code === "DCF_EXIT_CAP_SOURCE_OVERCLAIM"),
+  false
+);
+
+const dcfFrameworkAssumptionSafe = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Exit cap: 5.75% (standardized framework assumption)</p>",
+});
+assert.equal(
+  dcfFrameworkAssumptionSafe.violations.some((v) => v.code === "DCF_EXIT_CAP_SOURCE_OVERCLAIM"),
+  false
+);
+
+const dcfVerifiedExitCapOverclaim = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<p>Exit cap: 5.75% (verified exit cap)</p>",
+    "<p>Framework sensitivity, not an appraisal.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  dcfVerifiedExitCapOverclaim.violations.some((v) => v.code === "DCF_EXIT_CAP_SOURCE_OVERCLAIM"),
+  true
+);
+
 const propertyTaxStructuredBindingContradiction = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

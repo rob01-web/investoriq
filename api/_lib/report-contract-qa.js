@@ -1488,9 +1488,17 @@ export function buildReportContractQa({
     });
   }
 
+  const hasDocumentDerivedExitCapClaim = /\bdocument-derived exit cap\b/i.test(text);
+  const verifiedExitCapMentions = text.match(/\bverified exit cap\b/gi) || [];
+  const negatedVerifiedExitCapMentions = text.match(/\bnot\s+(?:a\s+)?verified exit cap\b/gi) || [];
+  const hasUnnegatedVerifiedExitCapClaim =
+    verifiedExitCapMentions.length > 0 &&
+    verifiedExitCapMentions.length > negatedVerifiedExitCapMentions.length;
+  const hasConservativeCapProvenanceDisclosure =
+    /going-in cap reference|acquisition cap-rate reference|sensitivity anchor only|framework sensitivity|standardized framework assumption|standardized assumption|not an appraisal|refinance\/underwriting cap assumption|not a verified exit cap|not verified exit cap/i.test(text);
   if (
-    /document-derived exit cap|verified exit cap/i.test(text) &&
-    /going-in cap reference|acquisition cap-rate reference|not a verified exit cap|sensitivity anchor|framework sensitivity|standardized assumption/i.test(text)
+    (hasDocumentDerivedExitCapClaim || hasUnnegatedVerifiedExitCapClaim) &&
+    hasConservativeCapProvenanceDisclosure
   ) {
     addViolation(violations, {
       code: "DCF_EXIT_CAP_SOURCE_OVERCLAIM",
