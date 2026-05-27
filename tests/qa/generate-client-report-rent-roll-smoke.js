@@ -3138,5 +3138,59 @@ assertPublicationGuardFailure(
     }),
   /Report publication blocked before storage insert/i
 );
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: publishedReportStoragePath,
+      reportType: "underwriting",
+      deliveryGateStatus: "user_needs_documents",
+      holdDelivery: false,
+      context: { jobId: "job-5" },
+    }),
+  /Report publication blocked before storage insert/i
+);
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: publishedReportStoragePath,
+      reportType: "underwriting",
+      deliveryGateStatus: "deliverable",
+      holdDelivery: true,
+      context: { jobId: "job-6" },
+    }),
+  /Report publication blocked before storage insert/i
+);
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: "user_123/report_456.txt",
+      reportType: "underwriting",
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
+      context: { jobId: "job-7" },
+    }),
+  /Missing valid report storage path/i
+);
+assertPublicationGuardFailure(
+  () =>
+    generatorTest.assertValidReportPublicationInsert({
+      storagePath: publishedReportStoragePath,
+      reportType: "",
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
+      context: { jobId: "job-8" },
+    }),
+  /Missing report type/i
+);
+assert.doesNotThrow(() => {
+  const validatedPath = generatorTest.assertValidReportPublicationInsert({
+    storagePath: publishedReportStoragePath,
+    reportType: "underwriting",
+    deliveryGateStatus: "deliverable",
+    holdDelivery: false,
+    context: { jobId: "job-9" },
+  });
+  assert.equal(validatedPath, publishedReportStoragePath);
+});
 
 console.log("generate-client-report rent-roll smoke PASS");

@@ -57,10 +57,33 @@ assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_stat
 assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
 assert.match(workerSource, /missing for deliverable path/);
 assert.match(workerSource, /error_code:\s*'REPORT_GENERATION_FAILED'/);
+assert.match(
+  workerSource,
+  /const isTypedGateOutcome =\s*deliveryGateStatus === 'user_needs_documents' \|\| deliveryGateStatus === 'admin_review_required';/
+);
+assert.match(typedGateWindow, /if \(isTypedGateOutcome\)\s*\{/);
+assert.match(typedGateWindow, /continue;/);
+assert.equal(
+  /if \(isTypedGateOutcome\)[\s\S]{0,2200}const completeUpdate = \{ status: 'published' \}/.test(workerSource),
+  false
+);
+assert.equal(
+  /deliveryGateStatus === 'user_needs_documents'[\s\S]{0,800}status:\s*'published'/.test(workerSource),
+  false
+);
+assert.equal(
+  /deliveryGateStatus === 'admin_review_required'[\s\S]{0,800}status:\s*'published'/.test(workerSource),
+  false
+);
 const publishedAnchor = workerSource.indexOf("const completeUpdate = { status: 'published' }");
 assert.notEqual(publishedAnchor, -1);
 const publishedWindow = workerSource.slice(publishedAnchor);
 assert.equal(/await restoreEntitlementForFailedJob\(/.test(publishedWindow), false);
+assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
+assert.match(
+  workerSource,
+  /await restoreEntitlementForFailedJob\(job, 'report_generation_failed', 'REPORT_GENERATION_FAILED'\)/
+);
 const forbiddenWorkerCopy = [
   "upload replacement " + "documents",
   "upload more " + "documents",
