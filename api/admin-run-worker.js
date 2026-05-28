@@ -320,18 +320,18 @@ export default async function handler(req, res) {
       const safeMessage =
         `Processing failed during ${stage}. ` +
         'Please log in to your InvestorIQ dashboard to review the job status.';
-      const update = { status: 'failed' };
-      if (supportsFailedAt) {
-        update.failed_at = nowIso;
-      }
-      if (supportsErrorCode) {
-        update.error_code = stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR';
-      }
-      if (supportsErrorMessage) {
-        update.error_message = safeMessage;
-      }
-
-      await supabaseAdmin.from('analysis_jobs').update(update).eq('id', job.id);
+      const failureErrorCode = stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR';
+      await applyTerminalFailureOutcome(job, {
+        errorCode: failureErrorCode,
+        errorMessage: safeMessage,
+        restore: {
+          enabled: true,
+          reason: `job_failed_${stage}`,
+          errorCode: failureErrorCode,
+          strict: false,
+          logContext: `job_failed_${stage}`,
+        },
+      });
 
       await supabaseAdmin.from('analysis_artifacts').insert([
         {
@@ -350,16 +350,6 @@ export default async function handler(req, res) {
         },
       ]);
 
-      // Best-effort entitlement restore — always return the credit on any hard failure
-      try {
-        await restoreEntitlementForFailedJob(
-          job,
-          `job_failed_${stage}`,
-          stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR'
-        );
-      } catch (restoreErr) {
-        console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
-      }
     };
 
     const hasCreditConsumed = async (jobId) => {
@@ -651,6 +641,74 @@ export default async function handler(req, res) {
       });
     }
 
+    const applyTerminalFailureOutcome = async (job, options = {}) => {
+      const {
+        fromStatus = null,
+        expectedCurrentStatus = null,
+        errorCode = null,
+        errorMessage = null,
+        failureReason = null,
+        transitionMeta = {},
+        restore = null,
+      } = options;
+
+      const failUpdate = { status: 'failed' };
+      if (supportsFailedAt) {
+        failUpdate.failed_at = nowIso;
+      }
+      if (supportsErrorCode && errorCode) {
+        failUpdate.error_code = errorCode;
+      }
+      if (supportsErrorMessage && errorMessage) {
+        failUpdate.error_message = errorMessage;
+      }
+      if (failureReason) {
+        failUpdate.failure_reason = failureReason;
+      }
+
+      let failQuery = supabaseAdmin
+        .from('analysis_jobs')
+        .update(failUpdate)
+        .eq('id', job.id);
+      if (expectedCurrentStatus) {
+        failQuery = failQuery.eq('status', expectedCurrentStatus);
+      }
+      const { error: failErr } = await failQuery;
+      if (failErr) {
+        throw new Error(`Failed to mark job failed: ${failErr.message}`);
+      }
+
+      if (fromStatus) {
+        const transitionErr = await writeStatusTransitionArtifact(
+          job.id,
+          fromStatus,
+          'failed',
+          { user_id: job.user_id, ...(transitionMeta || {}) }
+        );
+        if (transitionErr) {
+          throw new Error(`Failed to write ${fromStatus}->failed status transition artifact: ${transitionErr.message}`);
+        }
+      }
+
+      if (restore?.enabled) {
+        try {
+          await restoreEntitlementForFailedJob(
+            job,
+            restore.reason || 'terminal_failure',
+            restore.errorCode || errorCode || 'WORKER_ERROR'
+          );
+        } catch (restoreErr) {
+          if (restore.strict) {
+            throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
+          }
+          console.error(
+            `[worker] Failed to restore entitlement for ${restore.logContext || 'terminal-failure'} job ${job.id}:`,
+            restoreErr?.message
+          );
+        }
+      }
+    };
+
     const controlledAction = String(req.body?.action || '').trim();
     const controlledJobId = String(req.body?.job_id || '').trim();
     const controlledNote = String(req.body?.note || req.body?.message || '').trim().slice(0, 240);
@@ -890,47 +948,26 @@ export default async function handler(req, res) {
     });
 
     if (timedOutJobs.length > 0) {
-      const timedOutIds = timedOutJobs.map((job) => job.id);
-      const timeoutUpdate = { status: 'failed' };
-      if (supportsFailedAt) {
-        timeoutUpdate.failed_at = nowIso;
-      }
-      if (supportsErrorCode) {
-        timeoutUpdate.error_code = 'TIMEOUT';
-      }
-      if (supportsErrorMessage) {
-          timeoutUpdate.error_message =
-          'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.';
-      }
-      const { error: failErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .update(timeoutUpdate)
-        .in('id', timedOutIds);
-
-      if (failErr) {
-        return res.status(500).json({ error: 'Failed to mark timed-out jobs', details: failErr.message });
-      }
-
       for (const job of timedOutJobs) {
         try {
-          await restoreEntitlementForFailedJob(job, 'worker_timeout', 'TIMEOUT');
-        } catch (restoreErr) {
-          console.error(`[worker] Failed to restore entitlement for timed-out job ${job.id}:`, restoreErr?.message);
-        }
-      }
-
-      for (const job of timedOutJobs) {
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          job.status,
-          'failed',
-          { event: 'timeout', threshold_minutes: 60, user_id: job.user_id }
-        );
-
-        if (transitionErr) {
+          await applyTerminalFailureOutcome(job, {
+            fromStatus: job.status,
+            errorCode: 'TIMEOUT',
+            errorMessage:
+              'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
+            transitionMeta: { event: 'timeout', threshold_minutes: 60 },
+            restore: {
+              enabled: true,
+              reason: 'worker_timeout',
+              errorCode: 'TIMEOUT',
+              strict: false,
+              logContext: 'timeout',
+            },
+          });
+        } catch (err) {
           return res.status(500).json({
-            error: 'Failed to write timeout status transition artifact',
-            details: transitionErr.message,
+            error: 'Failed to apply timeout failure outcome',
+            details: err.message,
           });
         }
       }
@@ -1020,19 +1057,18 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             if (purchaseErr || !purchaseRow?.id) {
-              const failUpdate = {
-                status: 'failed',
-                error_code: 'PURCHASE_NOT_CONSUMED',
-                error_message: 'PURCHASE_NOT_CONSUMED',
-              };
-              if (supportsFailedAt) {
-                failUpdate.failed_at = nowIso;
-              }
-
-              await supabaseAdmin
-                .from('analysis_jobs')
-                .update(failUpdate)
-                .eq('id', job.id);
+              await applyTerminalFailureOutcome(job, {
+                fromStatus: 'extracting',
+                errorCode: 'PURCHASE_NOT_CONSUMED',
+                errorMessage: 'PURCHASE_NOT_CONSUMED',
+                restore: {
+                  enabled: true,
+                  reason: 'purchase_not_consumed',
+                  errorCode: 'PURCHASE_NOT_CONSUMED',
+                  strict: false,
+                  logContext: 'purchase_not_consumed queued',
+                },
+              });
 
               await supabaseAdmin.from('analysis_job_events').insert([
                 {
@@ -1048,15 +1084,6 @@ export default async function handler(req, res) {
                   },
                 },
               ]);
-
-              try {
-                await restoreEntitlementForFailedJob(job, 'purchase_not_consumed', 'PURCHASE_NOT_CONSUMED');
-              } catch (restoreErr) {
-                console.error(
-                  `[worker] Failed to restore entitlement for purchase_not_consumed queued job ${job.id}:`,
-                  restoreErr?.message
-                );
-              }
 
               continue;
             }
@@ -1130,19 +1157,18 @@ export default async function handler(req, res) {
             .maybeSingle();
 
           if (purchaseErr || !purchaseRow?.id) {
-            const failUpdate = {
-              status: 'failed',
-              error_code: 'PURCHASE_NOT_CONSUMED',
-              error_message: 'PURCHASE_NOT_CONSUMED',
-            };
-            if (supportsFailedAt) {
-              failUpdate.failed_at = nowIso;
-            }
-
-            await supabaseAdmin
-              .from('analysis_jobs')
-              .update(failUpdate)
-              .eq('id', job.id);
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'extracting',
+              errorCode: 'PURCHASE_NOT_CONSUMED',
+              errorMessage: 'PURCHASE_NOT_CONSUMED',
+              restore: {
+                enabled: true,
+                reason: 'purchase_not_consumed',
+                errorCode: 'PURCHASE_NOT_CONSUMED',
+                strict: false,
+                logContext: 'purchase_not_consumed extracting',
+              },
+            });
 
             await supabaseAdmin.from('analysis_job_events').insert([
               {
@@ -1158,15 +1184,6 @@ export default async function handler(req, res) {
                 },
               },
             ]);
-
-            try {
-              await restoreEntitlementForFailedJob(job, 'purchase_not_consumed', 'PURCHASE_NOT_CONSUMED');
-            } catch (restoreErr) {
-              console.error(
-                `[worker] Failed to restore entitlement for purchase_not_consumed extracting job ${job.id}:`,
-                restoreErr?.message
-              );
-            }
 
             continue;
           }
@@ -1402,42 +1419,22 @@ export default async function handler(req, res) {
                 }
 
                 const needsDocsUpdate = {
-                  status: 'failed',
                   failure_reason: `Missing structured financials: ${missingStructured.join(', ')}`,
                 };
-                if (supportsFailedAt) {
-                  needsDocsUpdate.failed_at = nowIso;
-                }
-                if (supportsErrorCode) {
-                  needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIALS';
-                }
-                if (supportsErrorMessage) {
-                  needsDocsUpdate.error_message =
-                    'Generation halted due to document integrity validation. Required structured Rent Roll and T12/Operating Statement inputs could not be validated.';
-                }
-
-                const { error: needsDocsErr } = await supabaseAdmin
-                  .from('analysis_jobs')
-                  .update(needsDocsUpdate)
-                  .eq('id', job.id)
-                  .eq('status', 'extracting');
-
-                if (needsDocsErr) {
-                  throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
-                }
-
-                const needsDocsTransitionErr = await writeStatusTransitionArtifact(
-                  job.id,
-                  'extracting',
-                  'failed',
-                  { user_id: job.user_id }
-                );
-
-                if (needsDocsTransitionErr) {
-                  throw new Error(
-                    `Failed to write extracting->failed status transition artifact: ${needsDocsTransitionErr.message}`
-                  );
-                }
+                await applyTerminalFailureOutcome(job, {
+                  fromStatus: 'extracting',
+                  expectedCurrentStatus: 'extracting',
+                  errorCode: 'MISSING_STRUCTURED_FINANCIALS',
+                  errorMessage:
+                    'Generation halted due to document integrity validation. Required structured Rent Roll and T12/Operating Statement inputs could not be validated.',
+                  failureReason: needsDocsUpdate.failure_reason,
+                  restore: {
+                    enabled: true,
+                    reason: 'missing_structured_financials',
+                    errorCode: 'MISSING_STRUCTURED_FINANCIALS',
+                    strict: true,
+                  },
+                });
 
                 if (!blockedJobIds.includes(job.id)) {
                   blockedJobIds.push(job.id);
@@ -1627,50 +1624,23 @@ export default async function handler(req, res) {
             }
 
             const needsDocsUpdate = {
-              status: 'failed',
               failure_reason:
                 'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.',
             };
-            if (supportsErrorCode) {
-              needsDocsUpdate.error_code = 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS';
-            }
-            if (supportsErrorMessage) {
-              needsDocsUpdate.error_message =
-                'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.';
-            }
-
-            const { error: needsDocsErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .update(needsDocsUpdate)
-              .eq('id', job.id)
-              .eq('status', 'extracting');
-
-            if (needsDocsErr) {
-              throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
-            }
-
-            try {
-              await restoreEntitlementForFailedJob(
-                job,
-                'missing_structured_financials',
-                'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS'
-              );
-            } catch (restoreErr) {
-              throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
-            }
-
-            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
-              job.id,
-              'extracting',
-              'failed',
-              { user_id: job.user_id }
-            );
-
-            if (needsDocsTransitionErr) {
-              throw new Error(
-                    `Failed to write extracting->failed status transition artifact: ${needsDocsTransitionErr.message}`
-              );
-            }
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'extracting',
+              expectedCurrentStatus: 'extracting',
+              errorCode: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
+              errorMessage:
+                'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.',
+              failureReason: needsDocsUpdate.failure_reason,
+              restore: {
+                enabled: true,
+                reason: 'missing_structured_financials',
+                errorCode: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
+                strict: true,
+              },
+            });
 
             if (!blockedJobIds.includes(job.id)) {
               blockedJobIds.push(job.id);
@@ -1951,38 +1921,17 @@ export default async function handler(req, res) {
             if (!hasRentRoll) missing.push('rent_roll');
             if (!hasT12) missing.push('t12');
 
-            const { error: needsDocsErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .update({ status: 'failed' })
-              .eq('id', job.id)
-              .eq('status', 'rendering');
-
-            if (needsDocsErr) {
-              throw new Error(`Failed to mark job failed: ${needsDocsErr.message}`);
-            }
-
-            try {
-              await restoreEntitlementForFailedJob(
-                job,
-                'rendering_integrity_validation_failed',
-                'MISSING_REQUIRED_SOURCE_DATA'
-              );
-            } catch (restoreErr) {
-              throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
-            }
-
-            const needsDocsTransitionErr = await writeStatusTransitionArtifact(
-              job.id,
-              'rendering',
-              'failed',
-              { user_id: job.user_id }
-            );
-
-            if (needsDocsTransitionErr) {
-              throw new Error(
-                `Failed to write rendering->failed status transition artifact: ${needsDocsTransitionErr.message}`
-              );
-            }
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'rendering',
+              expectedCurrentStatus: 'rendering',
+              errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+              restore: {
+                enabled: true,
+                reason: 'rendering_integrity_validation_failed',
+                errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+                strict: true,
+              },
+            });
 
             if (!blockedJobIds.includes(job.id)) {
               blockedJobIds.push(job.id);
@@ -2092,38 +2041,20 @@ export default async function handler(req, res) {
                 mismatchUpdate.error_message = mismatchMessage;
               }
 
-              const { error: mismatchUpdateErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .update(mismatchUpdate)
-                .eq('id', job.id)
-                .eq('status', 'rendering');
-
-              if (mismatchUpdateErr) {
-                throw new Error(`Failed to mark job failed for financial scale mismatch: ${mismatchUpdateErr.message}`);
-              }
-
-              try {
-                await restoreEntitlementForFailedJob(
-                  job,
-                  'document_financial_scale_mismatch',
-                  'DOCUMENT_FINANCIAL_SCALE_MISMATCH'
-                );
-              } catch (restoreErr) {
-                throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
-              }
-
-              const mismatchTransitionErr = await writeStatusTransitionArtifact(
-                job.id,
-                'rendering',
-                'failed',
-                { user_id: job.user_id, reason: 'document_financial_scale_mismatch' }
-              );
-
-              if (mismatchTransitionErr) {
-                throw new Error(
-                  `Failed to write rendering->failed status transition artifact: ${mismatchTransitionErr.message}`
-                );
-              }
+              await applyTerminalFailureOutcome(job, {
+                fromStatus: 'rendering',
+                expectedCurrentStatus: 'rendering',
+                errorCode: mismatchUpdate.error_code || null,
+                errorMessage: mismatchUpdate.error_message || null,
+                failureReason: mismatchUpdate.failure_reason || null,
+                transitionMeta: { reason: 'document_financial_scale_mismatch' },
+                restore: {
+                  enabled: true,
+                  reason: 'document_financial_scale_mismatch',
+                  errorCode: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH',
+                  strict: true,
+                },
+              });
 
               if (!blockedJobIds.includes(job.id)) {
                 blockedJobIds.push(job.id);
@@ -2268,24 +2199,19 @@ export default async function handler(req, res) {
           }
 
           if (generatorError) {
-            const failUpdate = { status: 'failed' };
-            if (supportsFailedAt) {
-              failUpdate.failed_at = nowIso;
-            }
-            if (supportsErrorCode) {
-              failUpdate.error_code = 'REPORT_GENERATION_FAILED';
-            }
-            if (supportsErrorMessage) {
-              failUpdate.error_message = generatorError;
-            }
-            const { error: failErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .update(failUpdate)
-              .eq('id', job.id);
-
-            if (failErr) {
-              throw new Error(`Failed to mark scoring job failed: ${failErr.message}`);
-            }
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'rendering',
+              errorCode: 'REPORT_GENERATION_FAILED',
+              errorMessage: generatorError,
+              transitionMeta: { error: generatorError },
+              restore: {
+                enabled: true,
+                reason: 'report_generation_failed',
+                errorCode: 'REPORT_GENERATION_FAILED',
+                strict: false,
+                logContext: 'report_generation_failed',
+              },
+            });
 
             transitions.push({
               job_id: job.id,
@@ -2295,19 +2221,6 @@ export default async function handler(req, res) {
             passTransitions += 1;
             if (!failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
-            }
-
-            const failedTransitionErr = await writeStatusTransitionArtifact(
-              job.id,
-              'rendering',
-              'failed',
-              { user_id: job.user_id, error: generatorError }
-            );
-
-            if (failedTransitionErr) {
-              throw new Error(
-                `Failed to write failed status transition artifact: ${failedTransitionErr.message}`
-              );
             }
 
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
@@ -2324,13 +2237,6 @@ export default async function handler(req, res) {
               );
             }
 
-            // Best-effort entitlement restore on report generation failure (system fault)
-            try {
-              await restoreEntitlementForFailedJob(job, 'report_generation_failed', 'REPORT_GENERATION_FAILED');
-            } catch (restoreErr) {
-              console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
-            }
-
             continue;
           }
 
@@ -2340,24 +2246,30 @@ export default async function handler(req, res) {
             deliveryGateStatus === 'user_needs_documents' || deliveryGateStatus === 'admin_review_required';
           if (isTypedGateOutcome) {
             if (deliveryGateStatus === 'user_needs_documents') {
-              const needsDocsUpdate = { status: 'failed' };
-              if (supportsFailedAt) {
-                needsDocsUpdate.failed_at = nowIso;
-              }
-              if (supportsErrorCode) {
-                needsDocsUpdate.error_code = 'MISSING_REQUIRED_SOURCE_DATA';
-              }
-              if (supportsErrorMessage) {
-                needsDocsUpdate.error_message =
-                  'Report could not be published because required core source documents or values were missing or invalid.';
-              }
-              const { error: needsDocsErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .update(needsDocsUpdate)
-                .eq('id', job.id);
-              if (needsDocsErr) {
-                throw new Error(`Failed to mark job failed for missing required source data: ${needsDocsErr.message}`);
-              }
+              await applyTerminalFailureOutcome(job, {
+                fromStatus: 'rendering',
+                errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+                errorMessage:
+                  'Report could not be published because required core source documents or values were missing or invalid.',
+                transitionMeta: {
+                  report_id: reportId,
+                  reason:
+                    resolvedDeliveryDecision.customerStatusReasonCode ||
+                    resolvedDeliveryDecision.failClosedReasonCode ||
+                    reportData?.delivery_gate_reason_code ||
+                    'source_documents_missing',
+                },
+                restore: {
+                  enabled: resolvedDeliveryDecision.creditRestoreRequired,
+                  reason:
+                    resolvedDeliveryDecision.failClosedReasonCode ||
+                    resolvedDeliveryDecision.customerStatusReasonCode ||
+                    'user_needs_documents',
+                  errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+                  strict: false,
+                  logContext: 'needs-documents',
+                },
+              });
               transitions.push({
                 job_id: job.id,
                 from_status: 'rendering',
@@ -2366,41 +2278,6 @@ export default async function handler(req, res) {
               passTransitions += 1;
               if (!failedJobIds.includes(job.id)) {
                 failedJobIds.push(job.id);
-              }
-              const needsDocsTransitionErr = await writeStatusTransitionArtifact(
-                job.id,
-                'rendering',
-                'failed',
-                {
-                  user_id: job.user_id,
-                  report_id: reportId,
-                  reason:
-                    resolvedDeliveryDecision.customerStatusReasonCode ||
-                    resolvedDeliveryDecision.failClosedReasonCode ||
-                    reportData?.delivery_gate_reason_code ||
-                    'source_documents_missing',
-                }
-              );
-              if (needsDocsTransitionErr) {
-                throw new Error(`Failed to write failed status transition artifact: ${needsDocsTransitionErr.message}`);
-              }
-              if (resolvedDeliveryDecision.creditRestoreRequired) {
-                try {
-                  const restoreReason =
-                    resolvedDeliveryDecision.failClosedReasonCode ||
-                    resolvedDeliveryDecision.customerStatusReasonCode ||
-                    'user_needs_documents';
-                  await restoreEntitlementForFailedJob(
-                    job,
-                    restoreReason,
-                    'MISSING_REQUIRED_SOURCE_DATA'
-                  );
-                } catch (restoreErr) {
-                  console.error(
-                    `[worker] Failed to restore entitlement for needs-documents job ${job.id}:`,
-                    restoreErr?.message
-                  );
-                }
               }
             } else {
               const heldUpdate = { status: 'publishing' };
@@ -2460,23 +2337,19 @@ export default async function handler(req, res) {
           if (!reportId || !storagePath) {
             const missingDeliverableArtifact = !reportId ? 'reportId' : 'storagePath';
             generatorError = `Report generation failed (${missingDeliverableArtifact} missing for deliverable path)`;
-            const failUpdate = { status: 'failed' };
-            if (supportsFailedAt) {
-              failUpdate.failed_at = nowIso;
-            }
-            if (supportsErrorCode) {
-              failUpdate.error_code = 'REPORT_GENERATION_FAILED';
-            }
-            if (supportsErrorMessage) {
-              failUpdate.error_message = generatorError;
-            }
-            const { error: failErr } = await supabaseAdmin
-              .from('analysis_jobs')
-              .update(failUpdate)
-              .eq('id', job.id);
-            if (failErr) {
-              throw new Error(`Failed to mark scoring job failed: ${failErr.message}`);
-            }
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'rendering',
+              errorCode: 'REPORT_GENERATION_FAILED',
+              errorMessage: generatorError,
+              transitionMeta: { error: generatorError },
+              restore: {
+                enabled: true,
+                reason: 'report_generation_failed',
+                errorCode: 'REPORT_GENERATION_FAILED',
+                strict: false,
+                logContext: 'deliverable-missing-artifact',
+              },
+            });
             transitions.push({
               job_id: job.id,
               from_status: 'rendering',
@@ -2485,17 +2358,6 @@ export default async function handler(req, res) {
             passTransitions += 1;
             if (!failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
-            }
-            const failedTransitionErr = await writeStatusTransitionArtifact(
-              job.id,
-              'rendering',
-              'failed',
-              { user_id: job.user_id, error: generatorError }
-            );
-            if (failedTransitionErr) {
-              throw new Error(
-                `Failed to write failed status transition artifact: ${failedTransitionErr.message}`
-              );
             }
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
               error: generatorError,
@@ -2507,11 +2369,6 @@ export default async function handler(req, res) {
                 `[worker] Failed to write report generation failure artifact for job ${job.id}:`,
                 workerEventErr.message
               );
-            }
-            try {
-              await restoreEntitlementForFailedJob(job, 'report_generation_failed', 'REPORT_GENERATION_FAILED');
-            } catch (restoreErr) {
-              console.error(`[worker] Failed to restore entitlement for failed job ${job.id}:`, restoreErr?.message);
             }
             continue;
           }
