@@ -418,6 +418,11 @@ function resolveCanonicalRefiDebtBasis({
   t12Payload = null,
 } = {}) {
   const f = financials && typeof financials === "object" ? financials : {};
+  const hasCanonicalDebtState = Boolean(
+    currentDebtState &&
+      (currentDebtState?.current_debt_dscr_status !== undefined ||
+        currentDebtState?.current_debt_assessed !== undefined)
+  );
   const canonicalHasTrueBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
   const canonicalReasonCode = String(
     currentDebtState?.current_debt_limitation_reason_code || ""
@@ -443,19 +448,17 @@ function resolveCanonicalRefiDebtBasis({
     null;
   const canonicalComputedDebtBasis =
     canonicalDscrStatus === "computed" &&
-    Number.isFinite(canonicalBalance ?? loanTermDebtBalance) &&
-    (canonicalBalance ?? loanTermDebtBalance) > 0 &&
+    Number.isFinite(canonicalBalance) &&
+    canonicalBalance > 0 &&
     canonicalReasonCode !== "acquisition_only_not_current_debt";
   const hasTrueCurrentDebtBalanceDerived = Boolean(
     (canonicalHasTrueBalance && Number.isFinite(canonicalBalance) && canonicalBalance > 0) ||
       canonicalComputedDebtBasis
   );
-  const debtBalance = hasTrueCurrentDebtBalanceDerived
-    ? canonicalBalance ?? loanTermDebtBalance
-    : coerceNumber(f.refi_debt_balance) ??
-      coerceNumber(mortgagePayload?.outstanding_balance) ??
-      loanTermDebtBalance ??
-      null;
+  const debtBalance =
+    hasTrueCurrentDebtBalanceDerived && canonicalDscrStatus === "computed"
+      ? canonicalBalance
+      : null;
   const interestRatePct =
     coerceNumber(f.refi_interest_rate) ??
     coerceNumber(mortgagePayload?.interest_rate) ??
@@ -472,16 +475,18 @@ function resolveCanonicalRefiDebtBasis({
     canonicalAnnualDebtService > 0
       ? canonicalAnnualDebtService
       : null;
+  const canonicalCurrentDebtNotComputed =
+    hasCanonicalDebtState && canonicalDscrStatus !== "computed";
   return {
     hasTrueCurrentDebtBalance:
-      hasTrueCurrentDebtBalanceDerived,
+      canonicalCurrentDebtNotComputed ? false : hasTrueCurrentDebtBalanceDerived,
     isAcquisitionOnly:
       canonicalReasonCode === "acquisition_only_not_current_debt" &&
       !canonicalHasTrueBalance,
-    debtBalance,
+    debtBalance: canonicalCurrentDebtNotComputed ? null : debtBalance,
     interestRatePct,
     amortYears,
-    annualDebtService,
+    annualDebtService: canonicalCurrentDebtNotComputed ? null : annualDebtService,
     dscr:
       canonicalDscrStatus === "computed" &&
       Number.isFinite(canonicalDscr) &&
@@ -508,6 +513,12 @@ function buildRefiDebtRenderState({
   });
   const hasVerifiedCurrentDebtBalance = Boolean(canonicalRefiDebtBasis?.hasTrueCurrentDebtBalance);
   const isAcquisitionOnly = Boolean(canonicalRefiDebtBasis?.isAcquisitionOnly);
+  const canonicalDebtStatus = String(
+    currentDebtAssessmentState?.current_debt_dscr_status || ""
+  ).trim().toLowerCase();
+  const canonicalRefiEligible =
+    currentDebtAssessmentState?.refi_basis_eligible === true ||
+    canonicalDebtStatus === "computed";
   const debtLikeSignalsPresent = [
     canonicalRefiDebtBasis?.debtBalance,
     canonicalRefiDebtBasis?.interestRatePct,
@@ -528,7 +539,7 @@ function buildRefiDebtRenderState({
   ].some((value) => Number.isFinite(coerceNumber(value)) && coerceNumber(value) > 0);
   let status = "valid";
   let disclosureReasonCode = "current_debt_verified";
-  if (hasVerifiedCurrentDebtBalance && !isAcquisitionOnly) {
+  if (hasVerifiedCurrentDebtBalance && !isAcquisitionOnly && canonicalRefiEligible) {
     status = "valid";
     disclosureReasonCode = "current_debt_verified";
   } else if (isAcquisitionOnly) {
@@ -545,7 +556,7 @@ function buildRefiDebtRenderState({
     status,
     hasVerifiedCurrentDebtBalance,
     isAcquisitionOnly,
-    allowDebtMath: status === "valid",
+    allowDebtMath: status === "valid" && canonicalRefiEligible === true,
     disclosureReasonCode,
     canonicalRefiDebtBasis,
   };
@@ -566,8 +577,9 @@ function resolveRefiNarrativeMode({
   const status = String(refiDebtRenderState?.status || "").trim().toLowerCase();
   const disclosureReasonCode = String(refiDebtRenderState?.disclosureReasonCode || "").trim().toLowerCase();
   const currentDebtAssessed = Boolean(
-    hasComputedCurrentDebtDscr ||
-      (hasCanonicalCurrentRefiDebtBasis && refiDebtRenderState?.allowDebtMath === true)
+    refiDebtRenderState?.status === "valid" &&
+      (hasComputedCurrentDebtDscr ||
+        (hasCanonicalCurrentRefiDebtBasis && refiDebtRenderState?.allowDebtMath === true))
   );
   if (currentDebtAssessed) {
     return {

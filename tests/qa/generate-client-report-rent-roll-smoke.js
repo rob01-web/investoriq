@@ -213,6 +213,10 @@ assert.match(
   reportSource,
   /const hasCanonicalCurrentRefiDebtBasis[\s\S]*hasCanonicalCurrentRefiDebtBasis && !canRenderRefi/
 );
+assert.match(
+  reportSource,
+  /const currentDebtAssessed = Boolean\(\s*refiDebtRenderState\?\.status === "valid"/
+);
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
@@ -861,6 +865,8 @@ const mixedDebtBasis = generatorTest.resolveCanonicalRefiDebtBasis({
 });
 assert.equal(mixedDebtBasis.isAcquisitionOnly, false);
 assert.equal(mixedDebtBasis.debtBalance, 1500000);
+assert.equal(mixedDebtBasis.annualDebtService, 579813.8872489922);
+assert.equal(mixedDebtBasis.dscr, 1.0551661722053094);
 const mixedRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
   financials: {
     refi_debt_balance: 2250000,
@@ -966,6 +972,8 @@ const mortgageOnlyNonCanonicalRefiBasis = generatorTest.resolveCanonicalRefiDebt
   financials: {},
   t12Payload: { net_operating_income: 650000 },
 });
+assert.equal(mortgageOnlyNonCanonicalRefiBasis.hasTrueCurrentDebtBalance, false);
+assert.equal(mortgageOnlyNonCanonicalRefiBasis.debtBalance, null);
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.annualDebtService, null);
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.dscr, null);
 assert.equal(acquisitionOnlyRefiBasis.isAcquisitionOnly, true);
@@ -1068,6 +1076,8 @@ const sourceLimitedRenderStateForCombinedRefiBlock = generatorTest.buildRefiDebt
   },
   t12Payload: { net_operating_income: 650000 },
 });
+assert.equal(sourceLimitedRenderStateForCombinedRefiBlock.status, "source_limited");
+assert.equal(sourceLimitedRenderStateForCombinedRefiBlock.allowDebtMath, false);
 const pr5BUnderwritingState = buildFullUnderwritingState({
   reportMode: "v1_core",
   reportType: "underwriting",
