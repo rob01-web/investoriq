@@ -116,6 +116,46 @@ export default async function handler(req, res) {
       return error;
     };
 
+    const resolveWorkerDeliveryDecision = (reportData = null) => {
+      const deliveryDecisionState =
+        reportData?.deliveryDecisionState && typeof reportData.deliveryDecisionState === 'object'
+          ? reportData.deliveryDecisionState
+          : null;
+      const deliveryGateStatus = String(
+        deliveryDecisionState?.delivery_gate_status || reportData?.delivery_gate_status || 'deliverable'
+      );
+      const customerDeliveryAllowed =
+        deliveryDecisionState?.customer_delivery_allowed ??
+        reportData?.customer_publish_eligible ??
+        reportData?.customer_delivery_ready ??
+        (deliveryGateStatus === 'deliverable');
+      const holdDelivery =
+        deliveryDecisionState?.hold_delivery ??
+        reportData?.hold_delivery ??
+        reportData?.holdDelivery ??
+        (deliveryGateStatus !== 'deliverable');
+      const customerStatusReasonCode =
+        deliveryDecisionState?.customer_status_reason_code ||
+        reportData?.delivery_gate_reason_code ||
+        null;
+      const failClosedReasonCode =
+        deliveryDecisionState?.fail_closed_reason_code ||
+        reportData?.delivery_gate_reason_code ||
+        null;
+      const creditRestoreRequired =
+        deliveryDecisionState?.credit_restore_required ??
+        (deliveryGateStatus === 'user_needs_documents');
+      return {
+        deliveryDecisionState,
+        deliveryGateStatus,
+        customerDeliveryAllowed: Boolean(customerDeliveryAllowed),
+        holdDelivery: Boolean(holdDelivery),
+        customerStatusReasonCode,
+        failClosedReasonCode,
+        creditRestoreRequired: Boolean(creditRestoreRequired),
+      };
+    };
+
     const hasWorkerEvent = async (jobId, eventName) => {
       const { data, error } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -2160,7 +2200,8 @@ export default async function handler(req, res) {
                 }
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
-                const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
+                const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
+                const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
                 if (deliveryGateStatus === 'admin_review_required' || deliveryGateStatus === 'user_needs_documents') {
                   reportId = reportData?.reportId || null;
                   storagePath = reportData?.storagePath || null;
@@ -2241,7 +2282,8 @@ export default async function handler(req, res) {
             continue;
           }
 
-          const deliveryGateStatus = String(reportData?.delivery_gate_status || 'deliverable');
+          const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
+          const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
           const isTypedGateOutcome =
             deliveryGateStatus === 'user_needs_documents' || deliveryGateStatus === 'admin_review_required';
           if (isTypedGateOutcome) {
@@ -2280,11 +2322,33 @@ export default async function handler(req, res) {
                 {
                   user_id: job.user_id,
                   report_id: reportId,
-                  reason: reportData?.delivery_gate_reason_code || 'source_documents_missing',
+                  reason:
+                    resolvedDeliveryDecision.customerStatusReasonCode ||
+                    resolvedDeliveryDecision.failClosedReasonCode ||
+                    reportData?.delivery_gate_reason_code ||
+                    'source_documents_missing',
                 }
               );
               if (needsDocsTransitionErr) {
                 throw new Error(`Failed to write failed status transition artifact: ${needsDocsTransitionErr.message}`);
+              }
+              if (resolvedDeliveryDecision.creditRestoreRequired) {
+                try {
+                  const restoreReason =
+                    resolvedDeliveryDecision.failClosedReasonCode ||
+                    resolvedDeliveryDecision.customerStatusReasonCode ||
+                    'user_needs_documents';
+                  await restoreEntitlementForFailedJob(
+                    job,
+                    restoreReason,
+                    'MISSING_REQUIRED_SOURCE_DATA'
+                  );
+                } catch (restoreErr) {
+                  console.error(
+                    `[worker] Failed to restore entitlement for needs-documents job ${job.id}:`,
+                    restoreErr?.message
+                  );
+                }
               }
             } else {
               const heldUpdate = { status: 'publishing' };
@@ -2314,7 +2378,11 @@ export default async function handler(req, res) {
                 {
                   user_id: job.user_id,
                   report_id: reportId,
-                  reason: reportData?.delivery_gate_reason_code || 'admin_review_required',
+                  reason:
+                    resolvedDeliveryDecision.customerStatusReasonCode ||
+                    resolvedDeliveryDecision.failClosedReasonCode ||
+                    reportData?.delivery_gate_reason_code ||
+                    'admin_review_required',
                 }
               );
               if (heldTransitionErr) {
@@ -2323,6 +2391,14 @@ export default async function handler(req, res) {
             }
             await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
               ...reportData,
+              resolved_delivery_decision: {
+                delivery_gate_status: resolvedDeliveryDecision.deliveryGateStatus,
+                customer_delivery_allowed: resolvedDeliveryDecision.customerDeliveryAllowed,
+                hold_delivery: resolvedDeliveryDecision.holdDelivery,
+                customer_status_reason_code: resolvedDeliveryDecision.customerStatusReasonCode,
+                fail_closed_reason_code: resolvedDeliveryDecision.failClosedReasonCode,
+                credit_restore_required: resolvedDeliveryDecision.creditRestoreRequired,
+              },
               timestamp: nowIso,
             });
             continue;
