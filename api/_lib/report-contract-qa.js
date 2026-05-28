@@ -522,6 +522,39 @@ function hasStructuredRenovation(artifacts) {
   );
 }
 
+function resolveCanonicalDeliveryDecisionForQa({
+  deliveryGateDecision = null,
+  sourceReportCoverageQa = null,
+} = {}) {
+  const sourceGate = sourceReportCoverageQa?.delivery_gate_decision || null;
+  const directCanonical = deliveryGateDecision?.deliveryDecisionState || null;
+  const sourceCanonical = sourceGate?.deliveryDecisionState || null;
+  const sourceResolved = sourceGate?.resolved_delivery_decision || null;
+  if (directCanonical && typeof directCanonical === "object") {
+    return { state: directCanonical, source: "deliveryDecisionState" };
+  }
+  if (sourceCanonical && typeof sourceCanonical === "object") {
+    return { state: sourceCanonical, source: "delivery_gate_decision.deliveryDecisionState" };
+  }
+  if (sourceResolved && typeof sourceResolved === "object") {
+    return { state: sourceResolved, source: "delivery_gate_decision.resolved_delivery_decision" };
+  }
+  if (deliveryGateDecision && typeof deliveryGateDecision === "object" && deliveryGateDecision.delivery_gate_status) {
+    return {
+      state: {
+        delivery_gate_status: String(deliveryGateDecision.delivery_gate_status),
+        customer_delivery_allowed: deliveryGateDecision.customer_publish_eligible ?? deliveryGateDecision.customer_delivery_ready ?? null,
+        hold_delivery:
+          deliveryGateDecision.hold_delivery ??
+          deliveryGateDecision.holdDelivery ??
+          (String(deliveryGateDecision.delivery_gate_status) !== "deliverable"),
+      },
+      source: "delivery_gate_decision_direct",
+    };
+  }
+  return { state: null, source: "legacy_fallback_only" };
+}
+
 function coreCoveragePresent(sourceReportCoverageQa) {
   const inv = sourceReportCoverageQa?.artifact_inventory || {};
   return Boolean(inv?.t12_parsed?.has_core_totals && inv?.rent_roll_parsed?.present);
@@ -1002,11 +1035,115 @@ export function buildReportContractQa({
     });
   }
   const canonicalVerdictCapState = inferCanonicalVerdictCapState(sourceReportCoverageQa);
-  const readinessPayloadCandidates = [
+  const canonicalDeliveryResolution = resolveCanonicalDeliveryDecisionForQa({
     deliveryGateDecision,
-    qaFixRouting,
-    sourceReportCoverageQa?.delivery_gate_decision,
-  ].filter(Boolean);
+    sourceReportCoverageQa,
+  });
+  const canonicalDeliveryState = canonicalDeliveryResolution.state;
+  const hasCanonicalDeliveryState = Boolean(canonicalDeliveryState && typeof canonicalDeliveryState === "object");
+  const readinessPayloadCandidates = hasCanonicalDeliveryState
+    ? [canonicalDeliveryState]
+    : [
+        deliveryGateDecision,
+        sourceReportCoverageQa?.delivery_gate_decision,
+        qaFixRouting,
+      ].filter(Boolean);
+
+  if (hasCanonicalDeliveryState) {
+    const canonicalDeliveryGateStatus = String(canonicalDeliveryState?.delivery_gate_status || "").trim().toLowerCase();
+    const canonicalDeliveryAllowed =
+      canonicalDeliveryState?.customer_delivery_allowed === null || canonicalDeliveryState?.customer_delivery_allowed === undefined
+        ? null
+        : Boolean(canonicalDeliveryState?.customer_delivery_allowed);
+    const canonicalHoldDelivery =
+      canonicalDeliveryState?.hold_delivery === null || canonicalDeliveryState?.hold_delivery === undefined
+        ? null
+        : Boolean(canonicalDeliveryState?.hold_delivery);
+
+    const legacyDeliveryGateStatusCandidates = [
+      deliveryGateDecision?.delivery_gate_status,
+      sourceReportCoverageQa?.delivery_gate_decision?.delivery_gate_status,
+      qaFixRouting?.delivery_gate_status,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+    if (
+      canonicalDeliveryGateStatus &&
+      legacyDeliveryGateStatusCandidates.some((value) => value !== canonicalDeliveryGateStatus)
+    ) {
+      addViolation(violations, {
+        code: "CANONICAL_DELIVERY_GATE_STATUS_CONFLICT",
+        severity: "high",
+        category: "delivery_conformance_contract",
+        message: "Canonical delivery gate status conflicts with legacy delivery gate status alias payloads.",
+        evidence: {
+          canonical_delivery_gate_status: canonicalDeliveryGateStatus,
+          legacy_delivery_gate_status_candidates: legacyDeliveryGateStatusCandidates,
+          canonical_delivery_source: canonicalDeliveryResolution.source,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+
+    const legacyDeliveryAllowedCandidates = [
+      deliveryGateDecision?.customer_publish_eligible,
+      deliveryGateDecision?.customer_delivery_ready,
+      sourceReportCoverageQa?.delivery_gate_decision?.customer_publish_eligible,
+      sourceReportCoverageQa?.delivery_gate_decision?.customer_delivery_ready,
+      qaFixRouting?.customer_publish_eligible,
+      qaFixRouting?.customer_delivery_ready,
+    ].filter((value) => value === true || value === false);
+    if (
+      canonicalDeliveryAllowed !== null &&
+      legacyDeliveryAllowedCandidates.some((value) => Boolean(value) !== canonicalDeliveryAllowed)
+    ) {
+      addViolation(violations, {
+        code: "CANONICAL_DELIVERY_ALIAS_CONFLICT",
+        severity: "high",
+        category: "delivery_conformance_contract",
+        message: "Canonical customer delivery eligibility conflicts with legacy readiness aliases.",
+        evidence: {
+          canonical_customer_delivery_allowed: canonicalDeliveryAllowed,
+          legacy_delivery_allowed_candidates: legacyDeliveryAllowedCandidates,
+          canonical_delivery_source: canonicalDeliveryResolution.source,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+
+    const legacyHoldCandidates = [
+      deliveryGateDecision?.hold_delivery,
+      deliveryGateDecision?.holdDelivery,
+      sourceReportCoverageQa?.delivery_gate_decision?.hold_delivery,
+      sourceReportCoverageQa?.delivery_gate_decision?.holdDelivery,
+      qaFixRouting?.hold_delivery,
+      qaFixRouting?.holdDelivery,
+    ].filter((value) => value === true || value === false);
+    if (
+      canonicalHoldDelivery !== null &&
+      legacyHoldCandidates.some((value) => Boolean(value) !== canonicalHoldDelivery)
+    ) {
+      addViolation(violations, {
+        code: "CANONICAL_DELIVERY_HOLD_ALIAS_CONFLICT",
+        severity: "high",
+        category: "delivery_conformance_contract",
+        message: "Canonical hold-delivery flag conflicts with legacy hold aliases.",
+        evidence: {
+          canonical_hold_delivery: canonicalHoldDelivery,
+          legacy_hold_candidates: legacyHoldCandidates,
+          canonical_delivery_source: canonicalDeliveryResolution.source,
+        },
+        blocks_customer_delivery: false,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      });
+    }
+  }
+
   for (const readinessPayload of readinessPayloadCandidates) {
     const publicSampleReady = readinessPayload?.public_sample_ready;
     const publicSampleBlockers = Array.isArray(readinessPayload?.public_sample_blockers)
@@ -2285,9 +2422,18 @@ export function buildReportContractQa({
 
   const counts = countBySeverity(violations);
   const contractStatus = counts.critical > 0 ? "block" : counts.total > 0 ? "warn" : "pass";
-  const customerDeliveryReady = !violations.some((violation) => violation.blocks_customer_delivery);
-  const publicSampleReady = !violations.some((violation) => violation.blocks_public_sample && ["medium", "high", "critical"].includes(violation.severity));
-  const highValueOutreachReady = !violations.some((violation) => violation.blocks_high_value_outreach && ["medium", "high", "critical"].includes(violation.severity));
+  const violationCustomerDeliveryReady = !violations.some((violation) => violation.blocks_customer_delivery);
+  const violationPublicSampleReady = !violations.some((violation) => violation.blocks_public_sample && ["medium", "high", "critical"].includes(violation.severity));
+  const violationHighValueOutreachReady = !violations.some((violation) => violation.blocks_high_value_outreach && ["medium", "high", "critical"].includes(violation.severity));
+  const customerDeliveryReady = hasCanonicalDeliveryState
+    ? Boolean(canonicalDeliveryState?.customer_delivery_allowed)
+    : violationCustomerDeliveryReady;
+  const publicSampleReady = hasCanonicalDeliveryState
+    ? Boolean(canonicalDeliveryState?.public_sample_ready)
+    : violationPublicSampleReady;
+  const highValueOutreachReady = hasCanonicalDeliveryState
+    ? Boolean(canonicalDeliveryState?.high_value_outreach_ready)
+    : violationHighValueOutreachReady;
 
   return {
     event: "report_contract_qa",
@@ -2305,6 +2451,8 @@ export function buildReportContractQa({
     high_value_outreach_ready: highValueOutreachReady,
     violations,
     counts,
+    delivery_conformance_source: canonicalDeliveryResolution.source,
+    canonical_delivery_state_present: hasCanonicalDeliveryState,
     timestamp: new Date().toISOString(),
   };
 }

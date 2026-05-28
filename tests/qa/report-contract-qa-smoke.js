@@ -2229,6 +2229,89 @@ assert.equal(
   true
 );
 
+const canonicalDeliveryWinsOverRouting = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    delivery_gate_decision: {
+      deliveryDecisionState: {
+        delivery_gate_status: "admin_review_required",
+        customer_delivery_allowed: false,
+        hold_delivery: true,
+        public_sample_ready: false,
+        high_value_outreach_ready: false,
+      },
+    },
+  },
+  qaFixRouting: {
+    customer_delivery_ready: true,
+    customer_publish_eligible: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+  deliveryGateDecision: {
+    delivery_gate_status: "deliverable",
+    customer_delivery_ready: true,
+    customer_publish_eligible: true,
+  },
+  html: "<p>Clean baseline body.</p>",
+});
+assert.equal(canonicalDeliveryWinsOverRouting.customer_delivery_ready, false);
+assert.equal(
+  canonicalDeliveryWinsOverRouting.violations.some((v) => v.code === "CANONICAL_DELIVERY_ALIAS_CONFLICT"),
+  true
+);
+assert.equal(
+  canonicalDeliveryWinsOverRouting.violations.some((v) => v.code === "CANONICAL_DELIVERY_GATE_STATUS_CONFLICT"),
+  true
+);
+
+const canonicalDeliveryHoldConflict = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    delivery_gate_decision: {
+      deliveryDecisionState: {
+        delivery_gate_status: "user_needs_documents",
+        customer_delivery_allowed: false,
+        hold_delivery: true,
+        public_sample_ready: false,
+        high_value_outreach_ready: false,
+      },
+      hold_delivery: false,
+    },
+  },
+  deliveryGateDecision: {
+    hold_delivery: false,
+  },
+  html: "<p>Clean baseline body.</p>",
+});
+assert.equal(
+  canonicalDeliveryHoldConflict.violations.some((v) => v.code === "CANONICAL_DELIVERY_HOLD_ALIAS_CONFLICT"),
+  true
+);
+
+const legacyReadinessFallbackNoCanonical = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  qaFixRouting: {
+    public_sample_ready: true,
+    public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+    public_sample_impact: "block_until_review",
+  },
+  html: "<p>Clean baseline body.</p>",
+});
+assert.equal(
+  legacyReadinessFallbackNoCanonical.violations.some((v) => v.code === "PUBLIC_SAMPLE_READY_WITH_BLOCKERS"),
+  true
+);
+
 const refiNotAssessedContradiction = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
