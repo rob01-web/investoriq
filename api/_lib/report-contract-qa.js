@@ -26,6 +26,10 @@ function stripHtml(html) {
     .trim();
 }
 
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function latestPayload(artifacts, type) {
   return (Array.isArray(artifacts) ? artifacts : []).find((row) => row?.type === type)?.payload || null;
 }
@@ -524,7 +528,11 @@ function coreCoveragePresent(sourceReportCoverageQa) {
 }
 
 function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
-  const verdictState = sourceReportCoverageQa?.display_verdict_state || sourceReportCoverageQa?.canonical_display_verdict_state || null;
+  const verdictState =
+    sourceReportCoverageQa?.visible_classification_state ||
+    sourceReportCoverageQa?.display_verdict_state ||
+    sourceReportCoverageQa?.canonical_display_verdict_state ||
+    null;
   const explicitCapReason = String(verdictState?.cap_reason_code || "").trim();
   if (explicitCapReason) {
     return {
@@ -1067,6 +1075,16 @@ export function buildReportContractQa({
   const renderedReviewDebtConstraint = /Review\s*-\s*Debt Coverage Constraint/i.test(text);
   const renderedReviewSourceReconciliation = /Review\s*-\s*Source Reconciliation Disclosure/i.test(text);
   const renderedReviewInsufficientCoreSupport = /Review\s*-\s*Insufficient Core Support/i.test(text);
+  const canonicalVisibleClassificationLabel = String(
+    sourceReportCoverageQa?.visible_classification_state?.label ||
+    sourceReportCoverageQa?.display_verdict_state?.label ||
+    sourceReportCoverageQa?.canonical_display_verdict_state?.label ||
+    canonicalVerdictCapState.expected_label ||
+    ""
+  ).trim();
+  const canonicalVisibleClassificationRegex = canonicalVisibleClassificationLabel
+    ? new RegExp(escapeRegex(canonicalVisibleClassificationLabel), "i")
+    : null;
   if (canonicalVerdictCapState.has_cap && renderedStableClassification) {
     addViolation(violations, {
       code: "VERDICT_CAP_RENDER_DRIFT",
@@ -1162,6 +1180,21 @@ export function buildReportContractQa({
       message: "Rendered report contains conflicting visible classification labels across sections.",
       evidence: {
         visible_classification_labels: uniqueVisibleLabels,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  if (canonicalVisibleClassificationRegex && !canonicalVisibleClassificationRegex.test(text)) {
+    addViolation(violations, {
+      code: "VISIBLE_CLASSIFICATION_CANONICAL_MISMATCH",
+      severity: "high",
+      category: "visible_classification_contract",
+      message: "Rendered report visible classification does not match canonical visible classification state.",
+      evidence: {
+        canonical_visible_classification_label: canonicalVisibleClassificationLabel,
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,

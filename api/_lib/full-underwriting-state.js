@@ -51,6 +51,7 @@ export function buildFullUnderwritingState(input = {}) {
     sectionEligibility = null,
     visibleLabelInputs = null,
     visibleLabel = null,
+    visibleClassificationState = null,
     verdictState = null,
     propertyTaxPayload = null,
     headlineMode = null,
@@ -98,6 +99,7 @@ export function buildFullUnderwritingState(input = {}) {
       classification: {
         visibleLabelInputs: visibleLabelInputs || null, // PR5-E
         visibleLabel: visibleLabel || null, // PR5-E
+        visibleClassificationState: visibleClassificationState || null,
         verdictState: verdictState || null, // PR5-E
       },
       documentTreatment: {

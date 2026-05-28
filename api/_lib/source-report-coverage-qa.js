@@ -417,6 +417,7 @@ export function buildSourceReportCoverageQa({
   uploadedFiles = [],
   artifacts = [],
   sourceReconciliationState = null,
+  visibleClassificationState = null,
 } = {}) {
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
@@ -749,6 +750,9 @@ export function buildSourceReportCoverageQa({
     current_debt_state: currentDebtState,
     acquisition_assumption_state: acquisitionAssumptionState,
     source_reconciliation_state: sourceReconciliationStateResolved,
+    visible_classification_state: visibleClassificationState || null,
+    canonical_display_verdict_state: visibleClassificationState || null,
+    display_verdict_state: visibleClassificationState || null,
     t12_sufficiency_state: t12SufficiencyState,
     rent_roll_sufficiency_state: rentRollSufficiencyState,
     core_input_sufficiency_state: coreInputSufficiencyState,

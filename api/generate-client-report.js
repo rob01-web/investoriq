@@ -22,6 +22,7 @@ import {
   buildAssumptionAttributionState,
   buildCurrentDebtAssessmentState,
   buildCanonicalDisplayVerdictState,
+  buildCanonicalVisibleClassificationState,
   buildFullUnderwritingSectionEligibility,
   dedupeRenovationMetricRows,
   formatAssumptionAttributionLabel,
@@ -141,7 +142,15 @@ function normalizeVisibleReportClassification({
   if (baseClass === "Stable" || baseClass === "Sensitized" || baseClass === "Fragile") {
     return baseClass;
   }
-  return "Review - Insufficient Core Support";
+  const state = buildCanonicalVisibleClassificationState({
+    reportType: "screening",
+    reportTier: 1,
+    baseLabel: baseClass,
+    sourceReconciliationCapActive,
+    coreSupportInsufficient,
+    debtCoverageConstraintActive,
+  });
+  return state.label;
 }
 function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visibleClassificationLabel) {
   if (typeof dealScoreTableHtml !== "string" || !dealScoreTableHtml.trim()) return dealScoreTableHtml || "";
@@ -6923,15 +6932,28 @@ if (effectiveReportMode === "screening_v1") {
       coreSupportInsufficient,
       debtCoverageConstraintActive,
     };
-    const computedCoverClassificationLabel = normalizeVisibleReportClassification(computedVisibleLabelInputs);
+    const canonicalVisibleClassificationState = buildCanonicalVisibleClassificationState({
+      reportType,
+      reportTier,
+      baseLabel: baseVisibleClass,
+      score: dealScoreState?.score,
+      hasDscrScore: dealScoreState?.hasDscrScore,
+      currentDebtDscr: dealScoreState?.computedDscrForVerdict,
+      sourceReconciliationState,
+      sourceReconciliationCapActive,
+      coreSupportInsufficient,
+      debtCoverageConstraintActive,
+    });
+    const computedCoverClassificationLabel = canonicalVisibleClassificationState.label;
     if (underwritingState?.core?.classification) {
       underwritingState.core.classification.visibleLabelInputs = computedVisibleLabelInputs;
       underwritingState.core.classification.visibleLabel = computedCoverClassificationLabel;
+      underwritingState.core.classification.visibleClassificationState = canonicalVisibleClassificationState;
       underwritingState.core.classification.verdictState = dealScoreState.displayVerdict || null;
     }
     const classificationState = underwritingState?.core?.classification || null;
     const coverClassificationLabel =
-      classificationState?.visibleLabel || computedCoverClassificationLabel;
+      classificationState?.visibleClassificationState?.label || classificationState?.visibleLabel || computedCoverClassificationLabel;
     if (effectiveReportMode === "v1_core") {
       dealScoreState.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml(
         dealScoreState.dealScoreTableHtml,
@@ -9535,6 +9557,7 @@ try {
     uploadedFiles: coverageFiles,
     artifacts: coverageArtifacts,
     sourceReconciliationState,
+    visibleClassificationState: underwritingState?.core?.classification?.visibleClassificationState || null,
   });
   sourceCoverageQaResult = sourceCoverageQa;
   if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {

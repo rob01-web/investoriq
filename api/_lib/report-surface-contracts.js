@@ -848,6 +848,22 @@ function normalizeVerdictLabel(score) {
   return "Outside Parameters";
 }
 
+function normalizeVisibleClassificationLabel(label) {
+  const raw = String(label || "").trim();
+  if (!raw) return "Review - Insufficient Core Support";
+  const normalized = raw.toLowerCase();
+  if (normalized === "stable") return "Stable";
+  if (normalized === "sensitized") return "Sensitized";
+  if (normalized === "fragile") return "Fragile";
+  if (normalized === "within underwriting parameters") return "Within Underwriting Parameters";
+  if (normalized === "outside parameters") return "Outside Parameters";
+  if (normalized === "review - source reconciliation disclosure") return "Review - Source Reconciliation Disclosure";
+  if (normalized === "review - debt coverage constraint") return "Review - Debt Coverage Constraint";
+  if (normalized === "review - insufficient core support") return "Review - Insufficient Core Support";
+  if (normalized === "review") return "Review";
+  return raw;
+}
+
 function hasSourceReconciliationDisclosureCap(sourceReconciliationState = null) {
   const policy = buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState);
   return policy.verdict_cap_allowed;
@@ -961,9 +977,132 @@ export function buildCanonicalDisplayVerdictState({
   }
 
   return {
-    label: scoreLabel,
+    label: normalizeVisibleClassificationLabel(scoreLabel),
     score_label: scoreLabel,
     cap_reason_code: null,
+    cap_explanation: null,
+  };
+}
+
+export function buildCanonicalVisibleClassificationState({
+  reportType = null,
+  reportTier = null,
+  baseLabel = null,
+  score = null,
+  hasDscrScore = null,
+  currentDebtDscr = null,
+  sourceReconciliationState = null,
+  sourceReconciliationCapActive = false,
+  coreSupportInsufficient = false,
+  debtCoverageConstraintActive = false,
+} = {}) {
+  const normalizedReportType = String(reportType || "").toLowerCase();
+  const numericReportTier = Number(reportTier);
+  const isUnderwriting = normalizedReportType === "underwriting" || numericReportTier === 2;
+  // Canonical cap priority for BOTH screening and underwriting:
+  // 1) source_reconciliation_disclosure
+  // 2) insufficient_core_support
+  // 3) debt_coverage_constraint / debt_coverage_not_assessed
+  // 4) base score classification (Stable/Sensitized/Fragile/Within/Review/Outside)
+  const sourceReconciliationCap = Boolean(sourceReconciliationCapActive) || hasSourceReconciliationDisclosureCap(sourceReconciliationState);
+  const insufficientCoreSupportCap = Boolean(coreSupportInsufficient);
+  const debtCoverageCap =
+    Boolean(debtCoverageConstraintActive) ||
+    hasDscrScore === false ||
+    (hasDscrScore === true && Number.isFinite(coerceNumber(currentDebtDscr)) && coerceNumber(currentDebtDscr) < 1.25);
+  const debtCoverageCapReason = hasDscrScore === false ? "debt_coverage_not_assessed" : "debt_coverage_constraint";
+
+  if (sourceReconciliationCap) {
+    const label = "Review - Source Reconciliation Disclosure";
+    return {
+      label,
+      normalized_label: label.toLowerCase(),
+      reason_code: "source_reconciliation_disclosure",
+      cap_reason_code: "source_reconciliation_disclosure",
+      source_family: "canonical_visible_classification_state",
+      report_type: normalizedReportType || null,
+      report_tier: Number.isFinite(numericReportTier) ? numericReportTier : null,
+      score_label: null,
+      cap_explanation: isUnderwriting
+        ? "Overall classification is capped at Review (risk classification) due to the rent-roll/T12 reconciliation variance described in Data Coverage."
+        : null,
+    };
+  }
+
+  if (insufficientCoreSupportCap) {
+    const label = "Review - Insufficient Core Support";
+    return {
+      label,
+      normalized_label: label.toLowerCase(),
+      reason_code: "insufficient_core_support",
+      cap_reason_code: "insufficient_core_support",
+      source_family: "canonical_visible_classification_state",
+      report_type: normalizedReportType || null,
+      report_tier: Number.isFinite(numericReportTier) ? numericReportTier : null,
+      score_label: null,
+      cap_explanation: null,
+    };
+  }
+
+  if (debtCoverageCap) {
+    const label = "Review - Debt Coverage Constraint";
+    return {
+      label,
+      normalized_label: label.toLowerCase(),
+      reason_code: debtCoverageCapReason,
+      cap_reason_code: debtCoverageCapReason,
+      source_family: "canonical_visible_classification_state",
+      report_type: normalizedReportType || null,
+      report_tier: Number.isFinite(numericReportTier) ? numericReportTier : null,
+      score_label: null,
+      cap_explanation: debtCoverageCapReason === "debt_coverage_not_assessed"
+        ? "Overall classification is capped at Review (risk classification) because current debt DSCR was not assessed."
+        : "Overall classification is capped at Review (risk classification) because current debt DSCR is below 1.25x.",
+    };
+  }
+
+  if (isUnderwriting) {
+    const verdict = buildCanonicalDisplayVerdictState({
+      score,
+      hasDscrScore,
+      currentDebtDscr,
+      sourceReconciliationState,
+    });
+    const label = normalizeVisibleClassificationLabel(verdict.label);
+    return {
+      label,
+      normalized_label: label.toLowerCase(),
+      reason_code: verdict.cap_reason_code || (label.toLowerCase().startsWith("review") ? "review" : "score_threshold"),
+      cap_reason_code: verdict.cap_reason_code || null,
+      source_family: "canonical_visible_classification_state",
+      report_type: normalizedReportType || null,
+      report_tier: Number.isFinite(numericReportTier) ? numericReportTier : null,
+      score_label: verdict.score_label || null,
+      cap_explanation: verdict.cap_explanation || null,
+    };
+  }
+
+  let label = normalizeVisibleClassificationLabel(baseLabel);
+  let capReason = null;
+  if (sourceReconciliationCapActive) {
+    label = "Review - Source Reconciliation Disclosure";
+    capReason = "source_reconciliation_disclosure";
+  } else if (coreSupportInsufficient) {
+    label = "Review - Insufficient Core Support";
+    capReason = "insufficient_core_support";
+  } else if (debtCoverageConstraintActive) {
+    label = "Review - Debt Coverage Constraint";
+    capReason = "debt_coverage_constraint";
+  }
+  return {
+    label,
+    normalized_label: label.toLowerCase(),
+    reason_code: capReason || (label.toLowerCase().startsWith("review") ? "review" : "screening_threshold"),
+    cap_reason_code: capReason,
+    source_family: "screening_visible_classification_state",
+    report_type: normalizedReportType || null,
+    report_tier: Number.isFinite(numericReportTier) ? numericReportTier : null,
+    score_label: null,
     cap_explanation: null,
   };
 }
