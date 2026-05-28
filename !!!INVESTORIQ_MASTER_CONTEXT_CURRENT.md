@@ -1,3 +1,109 @@
+# May 28, 2026 Addendum - Controlling Status: Decision-Source Audit Before Further Patches
+
+## A. Recent completed work
+
+1. PR5 enforcement sequence completed/committed.
+
+2. Slice 6 completed/committed.
+- `DCF_EXIT_CAP_SOURCE_OVERCLAIM` guard was calibrated.
+- Root cause was guard matching `verified exit cap` inside conservative negated wording such as `not a verified exit cap`.
+- Guard now catches true document-derived/verified exit-cap overclaims and does not flag conservative `not a verified exit cap` wording.
+
+3. Full Underwriting launch-certification matrix smoke completed/committed.
+- `tests/qa/full-underwriting-launch-certification-matrix-smoke.js`
+- Test-only.
+- Aggregates existing invariants across:
+  - clean current debt
+  - acquisition-only
+  - current debt + acquisition context
+  - messy support docs
+  - property-tax binding contamination
+  - DCF cap-rate provenance
+  - readiness blocker hierarchy
+- Does not replace live queue-to-published gauntlet testing.
+
+## B. Latest live gauntlet result
+
+- 124 Richmond MESSY Full Underwriting live report published and was customer-deliverable.
+- It was not public/sample/Ken/high-value-outreach ready.
+- Delivery gate correctly allowed customer delivery while blocking public/high-value readiness.
+- Support-doc contamination fixes mostly held:
+  - Phase I/environmental remained context-only.
+  - Zoning/compliance remained context-only.
+  - Market survey did not override rent roll.
+  - DCF/cap-rate provenance used standardized/framework-style wording, not unsupported document-derived exit-cap wording.
+- Recurring structural decision-sprawl still surfaced:
+  - rendered classification showed `Review - Insufficient Core Support` while contract QA expected `Review - Debt Coverage Constraint`;
+  - occupancy QA produced a likely false positive by treating a non-occupancy percentage as occupancy;
+  - messy acquisition source text still under-recovered purchase price/lender fee fields despite source text such as `Price ref: 1,250,000 -> Loan $937,500` and `Fees 1% lender fee + legal.`
+
+## C. Updated root diagnosis (controlling)
+
+- This is no longer treated as one more underwriting report bug.
+- Controlling diagnosis: duplicate truth-makers / decision-sprawl across report generation.
+- Contract QA improved but still often catches drift after render rather than preventing renderer drift.
+- Architecture must shift from contract-QA-after-render to contract-driven rendering with canonical decision authority.
+- Renderer, QA, action plan, delivery gate, dashboard, parsers, and report surfaces may still contain duplicate decision-makers.
+
+## D. New immediate next step (controlling)
+
+- Codex is now running an audit-only task:
+  - `InvestorIQ Report Decision-Source Audit - Screening + Underwriting`
+- Audit scope must cover both report types and produce full decision-path inventory for:
+  - report type/tier
+  - visible classification/verdict/risk profile
+  - scoring
+  - core document sufficiency
+  - T12 truth
+  - rent roll truth
+  - debt/refi truth
+  - acquisition financing truth
+  - DCF/cap-rate/valuation truth
+  - property tax truth
+  - support-doc treatment
+  - renovation/CapEx truth
+  - section eligibility/rendering
+  - Data Coverage
+  - QA systems
+  - delivery/readiness decisions
+  - dashboard/customer status decisions
+- Audit-only constraints remain strict: no file changes during that audit.
+- No new patches should start until that audit is reviewed.
+
+## E. Launch strategy / pricing discussion status
+
+- Screening-first launch remains a possible path.
+- Positioning discussion remains open: whether `Screening Report` undersells the product versus a `Deal Intelligence Memo` / `Acquisition Review Memo` framing.
+- Current honest pricing stance under discussion:
+  - Screening/Deal Intelligence likely viable around `$199-$299` launch pricing.
+  - `$499` Screening-only likely risky unless repositioned/bundled.
+  - Full Underwriting `$1,499` remains aspirational until public self-serve Full Underwriting is certified.
+- Full Underwriting public self-serve remains paused.
+- Full Underwriting may remain controlled beta / invite-only / operator-reviewed while architecture consolidation proceeds.
+- Do not change `src/pages/Pricing.jsx` from this documentation update alone.
+
+## F. Superseded older next-step notes
+
+- Older notes that state RF-5/RF-6/RF-7/RF-8 are next immediate build slices are superseded by this May 28 decision-source audit gate.
+- Older language that implies PR5/RF completion means Full Underwriting is near launch-ready is superseded.
+- Older language directing immediate continued controlled live retesting is superseded until audit review is complete.
+- Historical context remains intentionally preserved below.
+
+## G. Current working rules (controlling)
+
+- No more tactical symptom patches.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off values.
+- Audit before patch.
+- Identify duplicate truth-makers before creating canonical architecture.
+- Screening and Underwriting must both be audited.
+- Tests are not substitutes for production root-cause fixes.
+- Vercel Hobby constraint remains active; do not casually add new serverless/API route files.
+- No public AI wording.
+- No BUY/SELL/HOLD language.
+- Customer-deliverable does not equal public/sample/high-value ready.
+
+---
 # May 27, 2026 (Late Night) Addendum - Full Underwriting Launch-Hardening Current Controlling Status
 
 ## A. Current committed status
