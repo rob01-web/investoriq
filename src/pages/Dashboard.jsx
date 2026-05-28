@@ -916,6 +916,10 @@ useEffect(() => {
     activeJobForRuns,
     activeJobForRuns?.id ? deliveryGateDecisionEventsByJobId[String(activeJobForRuns.id)]?.payload : null
   );
+  const latestFailedDeliveryDecision = resolveDashboardCustomerStatus(
+    latestFailedJob,
+    latestFailedJob?.id ? deliveryGateDecisionEventsByJobId[String(latestFailedJob.id)]?.payload : null
+  );
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = false;
   const activeFailureCopy = activeJobForRuns?.status === 'failed'
@@ -1024,6 +1028,9 @@ useEffect(() => {
   }, [profile?.id, visibleLatestFailedJob?.id, visibleLatestFailedJob?.status, visibleLatestFailedJob?.error_code]);
 
   const visibleFailedJobGuidance =
+    latestFailedDeliveryDecision?.hasCanonicalDeliveryDecision && latestFailedDeliveryDecision?.customer_message
+      ? ''
+      :
     failedJobGuidance?.jobId && failedJobGuidance.jobId === visibleLatestFailedJob?.id
       ? failedJobGuidance.message
       : '';
@@ -1441,11 +1448,21 @@ useEffect(() => {
                 </div>
               ) : (
                 <div style={{ padding:'24px 0' }}>
-                  {inProgressJobs.map((j) => (
-                    <div key={j.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
-                      {j.property_name || 'Unnamed Property'} - {j.status}
-                    </div>
-                  ))}
+                  {inProgressJobs.map((j) => {
+                    const decision = resolveDashboardCustomerStatus(
+                      j,
+                      deliveryGateDecisionEventsByJobId[String(j.id)]?.payload
+                    );
+                    const canonicalStatusText = decision?.customer_status_label
+                      ? String(decision.customer_status_label).toLowerCase().replace(/_/g, ' ')
+                      : null;
+                    const visibleStatus = canonicalStatusText || String(j.status || '').toLowerCase();
+                    return (
+                      <div key={j.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
+                        {j.property_name || 'Unnamed Property'} - {visibleStatus}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1465,23 +1482,32 @@ useEffect(() => {
                       {latestFailedJob.property_name || 'Unnamed Property'}
                     </div>
                     {(() => {
+                      const canonicalDecision = latestFailedDeliveryDecision;
+                      const hasCanonicalMessage =
+                        canonicalDecision?.hasCanonicalDeliveryDecision &&
+                        Boolean(String(canonicalDecision?.customer_message || '').trim());
                       const copy = buildCustomerFailureMessage(latestFailedJob, {
                         creditRestored: failedJobCreditRestoredById[String(latestFailedJob.id)] === true,
                       });
+                      const statusLabel =
+                        formatDashboardCustomerStatusLabel(canonicalDecision?.customer_status_label, latestFailedJob?.report_type) ||
+                        (latestFailedJob.report_type
+                          ? `Publication held - ${String(latestFailedJob.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(latestFailedJob.report_type).toLowerCase() === 'screening' ? 'Screening' : String(latestFailedJob.report_type)}`
+                          : 'Publication held');
                       return (
                         <>
                           <div style={failedMessageStatusStyle}>
-                            {latestFailedJob.report_type
-                              ? `Publication held - ${String(latestFailedJob.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(latestFailedJob.report_type).toLowerCase() === 'screening' ? 'Screening' : String(latestFailedJob.report_type)}`
-                              : 'Publication held'}
+                            {statusLabel}
                           </div>
                           <div style={{ ...failedMessageLeadStyle, marginTop: 8 }}>
-                            {copy.body}
+                            {hasCanonicalMessage ? canonicalDecision.customer_message : copy.body}
                           </div>
-                          <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
-                            {copy.nextStep}
-                          </div>
-                          {copy.creditLine && (
+                          {!hasCanonicalMessage && (
+                            <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
+                              {copy.nextStep}
+                            </div>
+                          )}
+                          {!hasCanonicalMessage && copy.creditLine && (
                             <div style={{ ...failedMessageSupportStyle, marginTop: 8 }}>
                               {copy.creditLine}
                             </div>
