@@ -1265,6 +1265,21 @@ export function buildCurrentDebtAssessmentState({
       ? normalizedNoi / annualDebtService
       : null;
 
+  const canonicalDebtBalance =
+    Number.isFinite(coerceNumber(debtBalanceForComputation)) && coerceNumber(debtBalanceForComputation) > 0
+      ? coerceNumber(debtBalanceForComputation)
+      : null;
+  const canonicalAnnualDebtService =
+    Number.isFinite(annualDebtService) && annualDebtService > 0 ? annualDebtService : null;
+  const currentDebtServiceSource =
+    Number.isFinite(sourceAnnualDebtService) && sourceAnnualDebtService > 0
+      ? "source_payment"
+      : Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0
+      ? "source_payment"
+      : Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0
+      ? "computed_payment"
+      : null;
+
   let currentDebtLimitationReasonCode = null;
   if (!Number.isFinite(currentDebtDscr)) {
     if (hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance) {
@@ -1284,15 +1299,30 @@ export function buildCurrentDebtAssessmentState({
     }
   }
 
+  const currentDebtDscrStatus =
+    Number.isFinite(currentDebtDscr) && currentDebtDscr > 0 ? "computed" : "not_assessed";
+  const acquisitionOnlyExclusion =
+    currentDebtLimitationReasonCode === "acquisition_only_not_current_debt";
+  const refiBasisEligible =
+    currentDebtDscrStatus === "computed" &&
+    Boolean(hasTrueCurrentDebtBalance) &&
+    !acquisitionOnlyExclusion;
   return {
+    current_debt_assessed: currentDebtDscrStatus === "computed",
     has_true_current_debt_balance: Boolean(hasTrueCurrentDebtBalance),
     has_current_debt_service: Boolean(hasCurrentDebtService),
     has_proposed_acquisition_financing: Boolean(hasProposedAcquisitionFinancing),
     has_current_debt_document: Boolean(hasMortgageDocument || loanSupportsCurrentDebt),
-    current_debt_dscr_status: Number.isFinite(currentDebtDscr) && currentDebtDscr > 0 ? "computed" : "not_assessed",
+    current_debt_dscr_status: currentDebtDscrStatus,
     current_debt_dscr: Number.isFinite(currentDebtDscr) && currentDebtDscr > 0 ? currentDebtDscr : null,
+    current_debt_balance: canonicalDebtBalance,
+    current_debt_annual_debt_service: canonicalAnnualDebtService,
+    current_debt_service_source: currentDebtServiceSource,
     current_debt_limitation_reason_code: currentDebtLimitationReasonCode,
-    current_debt_service: Number.isFinite(annualDebtService) && annualDebtService > 0 ? annualDebtService : null,
+    acquisition_only_exclusion: acquisitionOnlyExclusion,
+    refi_basis_eligible: refiBasisEligible,
+    // Backward-compatible alias. Must match canonical annual debt service exactly.
+    current_debt_service: canonicalAnnualDebtService,
   };
 }
 

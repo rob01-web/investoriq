@@ -347,9 +347,12 @@ function resolveCanonicalCurrentDebtScoreInputs({
   mortgagePayload = null,
   t12Payload = null,
 } = {}) {
-  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
-    mortgagePayload,
-    coerceNumber(t12Payload?.net_operating_income)
+  const hasCanonicalDebtState = Boolean(
+    currentDebtState &&
+    (
+      currentDebtState?.current_debt_dscr_status !== undefined ||
+      currentDebtState?.current_debt_assessed !== undefined
+    )
   );
   const canonicalStatus = String(
     currentDebtState?.current_debt_dscr_status || ""
@@ -370,16 +373,36 @@ function resolveCanonicalCurrentDebtScoreInputs({
   ) {
     return {
       currentDebtCoverage: {
-        ...fallbackCoverage,
+        balance: coerceNumber(currentDebtState?.current_debt_balance),
+        hasVerifiedOutstandingBalance: Boolean(currentDebtState?.has_true_current_debt_balance),
         dscr: canonicalDscr,
         annualDebtService:
           Number.isFinite(canonicalAnnualDebtService) &&
           canonicalAnnualDebtService > 0
             ? canonicalAnnualDebtService
-            : fallbackCoverage.annualDebtService,
+            : null,
         hasSourcePayment: canonicalHasSourcePayment,
       },
       usedCanonicalState: true,
+    };
+  }
+  if (hasCanonicalDebtState) {
+    // Canonical debt state exists and is not computed: do not allow legacy mortgage fallback
+    // to produce rendered/customer DSCR truth.
+    return {
+      currentDebtCoverage: null,
+      usedCanonicalState: true,
+    };
+  }
+  // Legacy compatibility path for missing canonical state only.
+  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
+    mortgagePayload,
+    coerceNumber(t12Payload?.net_operating_income)
+  );
+  if (Number.isFinite(fallbackCoverage?.dscr) && fallbackCoverage.dscr > 0) {
+    return {
+      currentDebtCoverage: fallbackCoverage,
+      usedCanonicalState: false,
     };
   }
   return {
@@ -583,6 +606,13 @@ function buildCurrentDebtScorecardEntry({
   t12Payload = null,
 } = {}) {
   const canonicalStatus = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase();
+  const hasCanonicalDebtState = Boolean(
+    currentDebtState &&
+    (
+      currentDebtState?.current_debt_dscr_status !== undefined ||
+      currentDebtState?.current_debt_assessed !== undefined
+    )
+  );
   const canonicalDscr = coerceNumber(currentDebtState?.current_debt_dscr);
   const canonicalAnnualDebtService = coerceNumber(currentDebtState?.current_debt_annual_debt_service);
   const canonicalDscrDerivedFromService =
@@ -616,11 +646,13 @@ function buildCurrentDebtScorecardEntry({
       },
     };
   }
-  const { currentDebtCoverage } = resolveCanonicalCurrentDebtScoreInputs({
-    currentDebtState,
-    mortgagePayload,
-    t12Payload,
-  });
+  const { currentDebtCoverage } = hasCanonicalDebtState
+    ? { currentDebtCoverage: null }
+    : resolveCanonicalCurrentDebtScoreInputs({
+        currentDebtState,
+        mortgagePayload,
+        t12Payload,
+      });
   if (currentDebtCoverage && Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
     return {
       currentDebtCoverage,

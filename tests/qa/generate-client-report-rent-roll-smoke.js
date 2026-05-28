@@ -612,8 +612,20 @@ const loanTermOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
   },
   t12Noi: 650000,
 });
+assert.equal(loanTermOnlyCurrentDebtState.current_debt_assessed, true);
 assert.equal(loanTermOnlyCurrentDebtState.current_debt_dscr_status, "computed");
 assert.ok(Number.isFinite(loanTermOnlyCurrentDebtState.current_debt_dscr));
+assert.ok(Number.isFinite(loanTermOnlyCurrentDebtState.current_debt_annual_debt_service));
+assert.equal(
+  loanTermOnlyCurrentDebtState.current_debt_service,
+  loanTermOnlyCurrentDebtState.current_debt_annual_debt_service
+);
+assert.ok(
+  loanTermOnlyCurrentDebtState.current_debt_service_source === "computed_payment" ||
+  loanTermOnlyCurrentDebtState.current_debt_service_source === "source_payment"
+);
+assert.equal(loanTermOnlyCurrentDebtState.acquisition_only_exclusion, false);
+assert.equal(loanTermOnlyCurrentDebtState.refi_basis_eligible, true);
 const loanTermOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
   currentDebtState: loanTermOnlyCurrentDebtState,
   mortgagePayload: null,
@@ -1423,22 +1435,32 @@ assert.match(constrainedDealScoreState.dealScoreTableHtml, /Classification is ca
 assert.match(constrainedDealScoreState.dealScoreTableHtml, /should not be read as an unconstrained investment score/i);
 assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(constrainedDealScoreState.dealScoreTableHtml), false);
 
+const acquisitionOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
+  mortgagePayload: {
+    monthly_payment: 9250,
+    interest_rate: 0.0625,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Noi: 650000,
+});
+assert.equal(acquisitionOnlyCurrentDebtState.current_debt_assessed, false);
+assert.equal(acquisitionOnlyCurrentDebtState.current_debt_dscr_status, "not_assessed");
+assert.equal(acquisitionOnlyCurrentDebtState.current_debt_dscr, null);
+assert.equal(acquisitionOnlyCurrentDebtState.acquisition_only_exclusion, true);
+assert.equal(acquisitionOnlyCurrentDebtState.refi_basis_eligible, false);
+assert.equal(
+  acquisitionOnlyCurrentDebtState.current_debt_service,
+  acquisitionOnlyCurrentDebtState.current_debt_annual_debt_service
+);
 const acquisitionOnlyScorecardEntry = generatorTest.buildCurrentDebtScorecardEntry({
-  currentDebtState: buildCurrentDebtAssessmentState({
-    mortgagePayload: {
-      monthly_payment: 9250,
-      interest_rate: 0.0625,
-      amort_years: 25,
-    },
-    loanTermSheetTermsPayload: {
-      purchase_price: 2000000,
-      ltv: 0.75,
-      interest_rate: 0.065,
-      amortization_years: 30,
-      derived_acquisition_loan_amount: 1500000,
-    },
-    t12Noi: 650000,
-  }),
+  currentDebtState: acquisitionOnlyCurrentDebtState,
   mortgagePayload: {
     monthly_payment: 9250,
     interest_rate: 0.0625,
