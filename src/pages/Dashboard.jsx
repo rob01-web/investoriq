@@ -236,7 +236,7 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
 }
 
 function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
-  const decision = resolveDashboardDeliveryDecision(job, deliveryGateDecisionPayload);
+  const decision = resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
   if (decision.hasCanonicalDeliveryDecision && decision.customer_status_label) {
     const normalized = String(decision.customer_status_label).toLowerCase();
     if (normalized === 'under_review') return 'under review';
@@ -252,7 +252,7 @@ function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
 }
 
 function isAdminReviewHeldJob(job) {
-  const decision = resolveDashboardDeliveryDecision(job);
+  const decision = resolveDashboardCustomerStatus(job);
   if (decision.hasCanonicalDeliveryDecision && String(decision.customer_status_label || '').toLowerCase() === 'under_review') {
     return true;
   }
@@ -262,19 +262,37 @@ function isAdminReviewHeldJob(job) {
   );
 }
 
-function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload = null) {
+function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPayload = null) {
   const payload = deliveryGateDecisionPayload && typeof deliveryGateDecisionPayload === 'object'
     ? deliveryGateDecisionPayload
     : null;
   const workerPayloadDecision = payload?.deliveryDecisionState || payload?.resolved_delivery_decision || null;
+  const directPayloadCanonical =
+    payload && typeof payload === 'object' && (
+      payload.delivery_gate_status ||
+      payload.customer_status_label ||
+      payload.customer_message ||
+      Object.prototype.hasOwnProperty.call(payload, 'hold_delivery') ||
+      Object.prototype.hasOwnProperty.call(payload, 'customer_delivery_allowed')
+    )
+      ? payload
+      : null;
+  const latestWorkerPayload = job?.latest_worker_event?.payload && typeof job?.latest_worker_event?.payload === 'object'
+    ? job.latest_worker_event.payload
+    : null;
   const candidate =
     job?.deliveryDecisionState ||
     job?.delivery_gate_decision?.deliveryDecisionState ||
     job?.delivery_gate_decision?.resolved_delivery_decision ||
+    job?.delivery_gate_decision ||
     job?.latest_delivery_gate_decision?.deliveryDecisionState ||
+    job?.latest_delivery_gate_decision?.resolved_delivery_decision ||
+    latestWorkerPayload?.deliveryDecisionState ||
+    latestWorkerPayload?.resolved_delivery_decision ||
     job?.latest_worker_event?.deliveryDecisionState ||
     job?.latest_worker_event?.resolved_delivery_decision ||
     workerPayloadDecision ||
+    directPayloadCanonical ||
     null;
   if (candidate && typeof candidate === 'object') {
     return {
@@ -300,6 +318,25 @@ function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload 
     credit_restore_required: null,
     source: 'legacy_dashboard_fallback',
   };
+}
+
+function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload = null) {
+  return resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
+}
+
+function formatDashboardCustomerStatusLabel(label, reportType = null) {
+  const normalized = String(label || '').toLowerCase();
+  if (normalized === 'under_review') return 'Under review';
+  if (normalized === 'needs_documents') return 'Needs documents';
+  if (normalized === 'ready') return 'Ready';
+  if (normalized === 'publication_held') {
+    if (!reportType) return 'Publication held';
+    const rt = String(reportType).toLowerCase();
+    if (rt === 'underwriting') return 'Publication held - Underwriting';
+    if (rt === 'screening') return 'Publication held - Screening';
+    return `Publication held - ${String(reportType)}`;
+  }
+  return null;
 }
 
 // File row
@@ -875,7 +912,7 @@ useEffect(() => {
   const jobFromNeedsDocuments = null;
   const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
   const activeJobForRuns = jobFromInProgress || jobFromFailed || jobFromNeedsDocuments || null;
-  const activeDeliveryDecision = resolveDashboardDeliveryDecision(
+  const activeDeliveryDecision = resolveDashboardCustomerStatus(
     activeJobForRuns,
     activeJobForRuns?.id ? deliveryGateDecisionEventsByJobId[String(activeJobForRuns.id)]?.payload : null
   );
@@ -991,6 +1028,9 @@ useEffect(() => {
       ? failedJobGuidance.message
       : '';
   const activeFailedGuidance =
+    activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
+      ? ''
+      :
     failedJobGuidance?.jobId && failedJobGuidance.jobId === activeJobForRuns?.id
       ? failedJobGuidance.message
       : '';
@@ -1897,17 +1937,17 @@ useEffect(() => {
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
-                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.nextStep && (
+                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.nextStep && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailureCopy.nextStep}
                   </span>
                 )}
-                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.creditLine && (
+                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.creditLine && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailureCopy.creditLine}
                   </span>
                 )}
-                {activeJobForRuns?.status === 'failed' && activeFailureCopy?.referenceCode && (
+                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.referenceCode && (
                   <span style={{ ...labelMono, display:'block', marginTop: 6, color: T.ink4 }}>
                     Reference code: {activeFailureCopy.referenceCode}
                   </span>
@@ -1993,46 +2033,56 @@ useEffect(() => {
           <div data-dashboard-compartment="needs-attention" data-dashboard-action-surface="needs-attention">
             {/* Failed jobs */}
             {failedJobsForDisplay.map((job) => (
-              <NoticeBox key={job.id} type="error">
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-                  <div>
-                    <div style={failedMessageLeadStyle}>
-                      <strong style={{ fontWeight:500 }}>{buildCustomerFailureMessage(job, { creditRestored: failedJobCreditRestoredById[String(job.id)] === true }).title}</strong> - {job.property_name || 'Unknown property'}
-                    </div>
-                    <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
-                      {job.report_type
-                        ? `Publication held - ${String(job.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(job.report_type).toLowerCase() === 'screening' ? 'Screening' : String(job.report_type)}`
-                        : 'Publication held'}
-                    </div>
-                    {(() => {
-                      const copy = buildCustomerFailureMessage(job, {
-                        creditRestored: failedJobCreditRestoredById[String(job.id)] === true,
-                      });
-                      return (
-                        <>
-                          <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
-                            {copy.body}
-                          </div>
+              (() => {
+                const canonicalDecision = resolveDashboardCustomerStatus(
+                  job,
+                  deliveryGateDecisionEventsByJobId[String(job.id)]?.payload
+                );
+                const hasCanonicalCustomerMessage =
+                  canonicalDecision?.hasCanonicalDeliveryDecision &&
+                  Boolean(String(canonicalDecision?.customer_message || '').trim());
+                const fallbackCopy = buildCustomerFailureMessage(job, {
+                  creditRestored: failedJobCreditRestoredById[String(job.id)] === true,
+                });
+                const statusLabel =
+                  formatDashboardCustomerStatusLabel(canonicalDecision?.customer_status_label, job?.report_type) ||
+                  (job.report_type
+                    ? `Publication held - ${String(job.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(job.report_type).toLowerCase() === 'screening' ? 'Screening' : String(job.report_type)}`
+                    : 'Publication held');
+                return (
+                  <NoticeBox key={job.id} type="error">
+                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                      <div>
+                        <div style={failedMessageLeadStyle}>
+                          <strong style={{ fontWeight:500 }}>{hasCanonicalCustomerMessage ? 'Update available' : fallbackCopy.title}</strong> - {job.property_name || 'Unknown property'}
+                        </div>
+                        <div style={{ ...failedMessageStatusStyle, marginTop: 4 }}>
+                          {statusLabel}
+                        </div>
+                        <div style={{ ...failedMessageLeadStyle, marginTop:8 }}>
+                          {hasCanonicalCustomerMessage ? canonicalDecision.customer_message : fallbackCopy.body}
+                        </div>
+                        {!hasCanonicalCustomerMessage && (
                           <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
-                            {copy.nextStep}
+                            {fallbackCopy.nextStep}
                           </div>
-                          {copy.creditLine && (
-                            <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
-                              {copy.creditLine}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                    {failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
-                      <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
-                        {failedJobGuidance.message}
+                        )}
+                        {!hasCanonicalCustomerMessage && fallbackCopy.creditLine && (
+                          <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                            {fallbackCopy.creditLine}
+                          </div>
+                        )}
+                        {!hasCanonicalCustomerMessage && failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
+                          <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
+                            {failedJobGuidance.message}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
-                </div>
-              </NoticeBox>
+                      <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.errorRed, background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>Dismiss</button>
+                    </div>
+                  </NoticeBox>
+                );
+              })()
             ))}
 
             {/* Needs documents warning */}
