@@ -3,6 +3,20 @@
 
 Historical note: This file supersedes the prior Full Underwriting cleanup roadmap and is now the master decision-source elimination ledger for both Screening and Full Underwriting.
 
+## DS Row Closure Standard
+- A DS row may only be marked `CLOSED` if the old decision-maker can no longer override canonical truth.
+- Every touched row must have one disposition:
+- `DELETED`
+- `NEUTERED / READ-ONLY CONSUMER`
+- `CONVERTED TO QA CONTRACT`
+- `LEGACY FALLBACK ONLY`
+- `STILL OPEN`
+- Rules:
+- Adding a canonical helper is not enough to close a row.
+- If legacy fallback remains, mark `PARTIAL`, not `CLOSED`.
+- If renderer/worker/Dashboard can still override canonical state, row remains `OPEN` or `PARTIAL`.
+- If QA still infers truth instead of canonical-vs-render conformance checking, row remains `OPEN` or `PARTIAL`.
+
 ## Section 1 - Executive Doctrine
 - InvestorIQ must have ONE canonical decision authority per truth family.
 - Renderer must become a read-only consumer.
@@ -23,6 +37,39 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 - Canonical helpers are not sufficient unless every consumer surface is forced to obey canonical state.
 - The old root-class patch sequence improved quality but did not eliminate competing authorities.
 - Strategy is now strict: inventory -> assign authority -> migrate consumers -> quarantine/delete duplicates.
+
+## Section 2A - Today DS Status Update (May 28, 2026)
+
+### Batch 1 / 1A Classification
+- DS-004: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER` path not applicable (canonical helper retained), but family not fully closed until all renderer/QA override paths are eliminated.
+- DS-005: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER` downstream migration in progress; canonical owner exists but not all consumers are hard-locked.
+- DS-006: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; generator now routes toward canonical state, fallback path still exists.
+- DS-007: `PARTIAL` - disposition `LEGACY FALLBACK ONLY`; scorecard HTML alignment remains adaptation path.
+- DS-008: `PARTIAL` - disposition `CONVERTED TO QA CONTRACT`; conformance improved, regex fallback still present.
+- DS-009: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; scoring remains mixed path where visible classification interactions are only partially neutralized.
+- DS-010: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER` migration in progress; canonical metadata path exists, family still has fallback paths.
+
+### Batch 2A Delivery Decision State Shape
+- DS-047: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; mapped into canonical deliveryDecisionState, legacy readiness aliases still emitted for compatibility.
+- DS-048: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; canonical gate owner retained, but downstream consumer lock-in not complete.
+- DS-049: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; generator now emits/persists deliveryDecisionState, legacy top-level aliases remain.
+
+### Batch 2B / 2B.1 Worker Consumption
+- DS-050: `PARTIAL` - disposition `NEUTERED / READ-ONLY CONSUMER`; worker now prefers deliveryDecisionState with legacy fallback. Credit restore signal consumed for `user_needs_documents`.
+- DS-068: `PARTIAL` - disposition `STILL OPEN`; only deliveryDecisionState consumption slice addressed, broader worker status-machine cluster remains.
+
+### Batch 2C Dashboard Bridge
+- DS-059: `PARTIAL` - disposition `LEGACY FALLBACK ONLY`; Dashboard prefers canonical customer status label when delivery decision payload exists, but legacy job-status fallback remains.
+- DS-060: `PARTIAL` - disposition `LEGACY FALLBACK ONLY`; Dashboard prefers canonical customer message when present, but legacy needs-documents logic remains.
+- DS-061: `OPEN` - disposition `STILL OPEN`; `getFailedFileGuidance` remains legacy parse-file-based authority.
+- DS-069: `PARTIAL` - disposition `STILL OPEN`; canonical bridge exists, broader Dashboard/customer messaging consolidation remains open.
+
+## Remaining High-Risk Families
+1. Dashboard failed-file guidance / customer messaging fallback authority
+2. Current debt / refinance authority
+3. Acquisition vs current debt separation authority
+4. Section eligibility / Data Coverage authority
+5. QA rendered-text inference that should become conformance checks
 
 ## Section 3 - Master Decision-Maker Inventory
 
