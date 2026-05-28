@@ -1,3 +1,148 @@
+# May 29, 2026 Addendum - Decision-Source Elimination Progress: Batch 2 Complete / Batch 3 Current Debt-Refi Complete Pending Ledger Update
+
+## H. Fresh-chat continuation prompt update
+
+We are continuing InvestorIQ after a long May 28/29 Decision-Source Elimination session.
+
+Current state:
+- Decision-source audit found ~132 duplicate decision-making paths; ledger tracks 70 explicit DS rows/groups.
+- Batch 2 Delivery / Readiness Authority is completed and documented.
+- Batch 3 Current Debt / Refi Authority is code-complete through Batch 3F and needs consolidated ledger update.
+- Current strict Batch 3 status: DS-021 PARTIAL; DS-022 through DS-027 CLOSED.
+- Immediate next step: update `!!INVESTORIQ_DECISION_SOURCE_ELIMINATION_LEDGER_2026-05-28.md` for Batch 3, then begin Batch 4 Acquisition / Current Debt Separation Authority.
+- Do not start Batch 4 before Batch 3 ledger update.
+- Keep prompts small, scope-locked, and strict about canonical authority vs duplicate decision-makers.
+
+## A. Current controlling status
+
+- The Decision-Source Elimination project is now the controlling architecture cleanup path.
+- Original audit found approximately 132 decision-making paths / duplicate truth-makers across Screening + Full Underwriting.
+- The ledger tracks 70 explicit DS rows/groups, with grouped rows representing clusters from the broader ~132-source audit.
+- Closure standard remains strict:
+  - CLOSED only when the old decision-maker can no longer override canonical truth.
+  - PARTIAL when canonical authority exists but some broader/root/fallback architecture remains.
+  - Legacy fallback is acceptable only when canonical truth cannot be overridden.
+- The goal is not to add another helper layer; the goal is to retire, neutralize, quarantine, or convert duplicate authorities.
+
+## B. Batch 2 - Delivery / Readiness Authority status
+
+Batch 2 is consolidated and documented in the ledger.
+
+Completed Batch 2 items:
+- Stable canonical `deliveryDecisionState` shape created.
+- Generator emits compatibility aliases derived from canonical delivery state.
+- Worker consumes canonical delivery decision state.
+- Worker credit-restore behavior respects canonical `credit_restore_required`.
+- Worker terminal failure handling consolidated through `applyTerminalFailureOutcome(...)`.
+- `restoreEntitlementForFailedJob(...)` remains the sole entitlement restore authority.
+- `recordJobFailure(...)` routes through the terminal failure helper.
+- Dashboard customer-facing status/message/guidance uses canonical customer status/message where present.
+- Failed-file guidance is suppressed when canonical customer message exists.
+- Report-contract QA treats delivery readiness as canonical-vs-render/payload conformance, not independent truth.
+
+Batch 2 ledger result:
+- CLOSED:
+  - DS-049
+  - DS-050
+  - DS-051
+  - DS-052
+  - DS-059
+  - DS-060
+  - DS-061
+- PARTIAL:
+  - DS-068 broader worker lifecycle/status-machine cluster
+  - DS-069 broader Dashboard fallback/messaging architecture for older/non-canonical jobs
+
+Important interpretation:
+- Batch 2 customer-facing delivery/readiness override risk is materially reduced.
+- DS-068 and DS-069 remain broader architecture clusters, not active canonical override risks where canonical delivery/customer state exists.
+
+## C. Batch 3 - Current Debt / Refi Authority status
+
+Batch 3 code patches are complete through Batch 3F and now need a consolidated ledger update.
+
+Completed Batch 3 sequence:
+- Batch 3A audit-only mapped current debt/refi authority rows.
+- Batch 3B standardized canonical current-debt field contract and scorecard DSCR consumption.
+- Batch 3C hard-locked refi debt basis/render-state/narrative behavior to canonical current-debt state.
+- Batch 3D converted debt/refi QA from rendered-text truth inference into canonical-vs-render conformance.
+- Batch 3E closure audit found one final QA artifact/inventory inference blocker.
+- Batch 3F locked QA canonical-present precedence so artifact/inventory debt heuristics are fallback-only when canonical current-debt payload is absent.
+
+Batch 3 current strict status:
+- PARTIAL:
+  - DS-021
+- CLOSED:
+  - DS-022
+  - DS-023
+  - DS-024
+  - DS-025
+  - DS-026
+  - DS-027
+
+DS-021:
+- `buildCurrentDebtAssessmentState(...)` is now the canonical current-debt root authority / owner candidate with standardized field contract.
+- Keep DS-021 PARTIAL because it is the family root authority, not a duplicate to delete.
+- Downstream override risks are tracked and closed through DS-022 to DS-027.
+
+Closed-row interpretation:
+- DS-022: Scorecard DSCR consumes canonical current-debt state. If canonical debt exists and is not computed, no numeric DSCR is backfilled from legacy fallback.
+- DS-023: `resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(...)` is retained only as canonical-absent compatibility and cannot override canonical not-assessed state.
+- DS-024: `resolveCanonicalRefiDebtBasis(...)` obeys canonical current-debt state. Non-computed canonical state returns no true debt balance, annual debt service, or DSCR; computed state uses canonical balance/service/DSCR.
+- DS-025: `buildRefiDebtRenderState(...)` allows debt/refi math only when canonical debt is computed/eligible. Acquisition-only, source-limited, and not-assessed paths remain non-quantitative.
+- DS-026: `resolveRefiNarrativeMode(...)` is now a read-only wording adapter and cannot upgrade not-assessed/source-limited states into assessed current-debt/refi messaging.
+- DS-027: `extractCurrentDebtDscrValues(...)` is evidence-only. Report-contract QA resolves canonical current-debt state first, checks rendered DSCR/refi surfaces for conformance, and uses artifact/inventory debt heuristics only as canonical-absent fallback.
+
+## D. Current scoreboard
+
+- Total explicit DS rows/groups: 70
+- Fully closed before Batch 3: 7
+- Newly closed in Batch 3: 6
+- Fully closed now: 13 / 70
+- Partial/in progress includes at least:
+  - Batch 1 classification rows
+  - DS-021
+  - DS-047 / DS-048 if still partial
+  - DS-068 / DS-069
+- Do not treat this as final unless the ledger says otherwise; ledger remains source of truth for row counts/statuses.
+
+## E. Immediate next step
+
+1. First, update the decision-source ledger for Batch 3 consolidated completion.
+2. Then begin Batch 4.
+
+Batch 4 expected focus:
+- Acquisition / Current Debt Separation Authority.
+- This should handle acquisition/current-debt separation issues, not reopen Batch 3 unless a regression proves canonical debt/refi gates were bypassed.
+
+Do not start Batch 4 until the Batch 3 ledger update is done.
+
+## F. Still active working rules
+
+- Micro-prompts only.
+- Audit before patch.
+- No broad refactors.
+- No tactical symptom patches.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off production values.
+- Tests are not substitutes for production root-cause fixes.
+- Renderer should consume canonical state, not re-decide truth.
+- QA should be conformance/safety net, not primary truth-maker.
+- Legacy fallback is allowed only when canonical payload is absent or cannot be overridden.
+- Vercel Hobby constraint remains active; do not casually add new API/serverless routes.
+- No public AI wording.
+- No BUY/SELL/HOLD language.
+- Customer-deliverable does not equal public/sample/high-value ready.
+- Full Underwriting public self-serve remains paused until architecture consolidation and live retesting prove stability.
+
+## G. Supersession note
+
+- This May 29 addendum supersedes older "audit before further patches" language only to the extent that Batch 2 and Batch 3 have now been executed.
+- The broader decision-source audit doctrine remains controlling.
+- Older RF/PR/live-retest next-step notes remain historical unless reaffirmed later.
+- Current next action is Batch 3 ledger update, then Batch 4.
+
+---
 # May 28, 2026 Addendum - Controlling Status: Decision-Source Audit Before Further Patches
 
 ## A. Recent completed work
