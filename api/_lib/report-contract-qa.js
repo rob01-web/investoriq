@@ -219,6 +219,35 @@ function extractCurrentDebtDscrValues(text) {
   return values;
 }
 
+function resolveCanonicalCurrentDebtStateForQa({
+  sourceReportCoverageQa = null,
+  artifacts = [],
+} = {}) {
+  const candidates = [
+    sourceReportCoverageQa?.current_debt_state,
+    sourceReportCoverageQa?.currentDebtAssessmentState,
+    sourceReportCoverageQa?.underwritingState?.core?.currentDebt?.assessmentState,
+    sourceReportCoverageQa?.report_surface_contracts?.current_debt_state,
+    sourceReportCoverageQa?.rendered_contract?.current_debt_state,
+    sourceReportCoverageQa?.delivery_gate_decision?.current_debt_state,
+  ].filter((row) => row && typeof row === "object");
+  const selected = candidates[0] || null;
+  if (selected) {
+    return {
+      source: "canonical_payload",
+      state: selected,
+    };
+  }
+  return {
+    source: "fallback_inferred",
+    state: buildCurrentDebtAssessmentState({
+      artifacts,
+      sourceReportCoverageQa,
+      t12Noi: latestPayload(artifacts, "t12_parsed")?.net_operating_income,
+    }),
+  };
+}
+
 function extractSourceReconciliationVarianceValues(text) {
   const source = String(text || "");
   const values = [];
@@ -805,13 +834,11 @@ export function buildReportContractQa({
   const lower = text.toLowerCase();
   const violations = [];
   const t12Payload = latestPayload(artifacts, "t12_parsed") || null;
-  const currentDebtState =
-    sourceReportCoverageQa?.current_debt_state ||
-    buildCurrentDebtAssessmentState({
-      artifacts,
-      sourceReportCoverageQa,
-      t12Noi: t12Payload?.net_operating_income,
-    });
+  const canonicalCurrentDebtResolution = resolveCanonicalCurrentDebtStateForQa({
+    sourceReportCoverageQa,
+    artifacts,
+  });
+  const currentDebtState = canonicalCurrentDebtResolution.state;
   const sectionEligibilitySections = sourceReportCoverageQa?.section_eligibility?.sections || null;
   const debtStructureEligibility = sectionEligibilitySections?.debt_structure || null;
   const renovationEligibility = sectionEligibilitySections?.renovation_strategy || null;
@@ -922,6 +949,9 @@ export function buildReportContractQa({
     reportTypeIsScreeningReport &&
     /\b(?:Debt Structure|Current Debt Coverage|Refinance Stability Classification|Discounted Cash Flow|DCF|Deal Scorecard|Advanced Modeling|Final Recommendation|Renovation Strategy)\b/i.test(text);
   const hasComputedCurrentDebtState = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() === "computed";
+  const hasCanonicalCurrentDebtNotComputed =
+    String(currentDebtState?.current_debt_dscr_status || "").trim().length > 0 &&
+    String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() !== "computed";
   const hasStaleMissingDebtCopy =
     /SOURCE-CONSTRAINED DEBT NOT PROVIDED|DEBT NOT PROVIDED|No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed|no true current debt balance was verified/i.test(text);
   const coreInputBucket = String(sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket || "").toLowerCase();
@@ -959,6 +989,40 @@ export function buildReportContractQa({
   const hasCurrentDebtCoverageSurface =
     /Current Debt Coverage|DSCR Sensitivity|Full Refinance Sufficiency/i.test(text) &&
     !/current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text);
+  const hasRefiQuantitativeSurface =
+    /Refinance Proceeds\s*\/\s*Debt Balance|Base Case Supportable Loan|Maximum Financing Envelope|Refinance Stability Classification\s*[:\n]\s*(?:Stable|Review|Constrained|Sensitized|Fragile|High Risk|Refinance Shortfall)/i.test(text);
+  if (hasCanonicalCurrentDebtNotComputed && (hasCurrentDebtCoverageSurface || hasRefiQuantitativeSurface)) {
+    addViolation(violations, {
+      code: "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+      severity: "critical",
+      category: "section_eligibility_render_contract",
+      message: "Canonical current-debt state is not computed, but rendered output includes quantitative debt/refinance analysis surfaces.",
+      evidence: {
+        canonical_current_debt_state: {
+          current_debt_dscr_status: currentDebtState?.current_debt_dscr_status || null,
+          current_debt_assessed: currentDebtState?.current_debt_assessed ?? null,
+          has_true_current_debt_balance: currentDebtState?.has_true_current_debt_balance ?? null,
+          current_debt_limitation_reason_code: currentDebtState?.current_debt_limitation_reason_code || null,
+          refi_basis_eligible: currentDebtState?.refi_basis_eligible ?? null,
+          qa_canonical_source: canonicalCurrentDebtResolution.source,
+        },
+        has_current_debt_coverage_surface: hasCurrentDebtCoverageSurface,
+        has_refi_quantitative_surface: hasRefiQuantitativeSurface,
+        excerpt:
+          firstPatternExcerpt(text, [
+            /Current Debt Coverage/i,
+            /DSCR Sensitivity/i,
+            /Full Refinance Sufficiency/i,
+            /Refinance Proceeds\s*\/\s*Debt Balance/i,
+            /Maximum Financing Envelope/i,
+            /Refinance Stability Classification/i,
+          ]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: true,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
   if (
     !reportTypeIsScreeningReport &&
     debtStructureEligibility &&
@@ -1933,9 +1997,10 @@ export function buildReportContractQa({
     }
   }
 
+  // Rendered DSCR extraction is evidence-only for conformance checks.
   const currentDebtDscrValues = extractCurrentDebtDscrValues(text);
-  const canonicalCurrentDebtDscrStatus = String(sourceReportCoverageQa?.current_debt_state?.current_debt_dscr_status || "").toLowerCase();
-  const canonicalCurrentDebtDscr = Number(sourceReportCoverageQa?.current_debt_state?.current_debt_dscr);
+  const canonicalCurrentDebtDscrStatus = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase();
+  const canonicalCurrentDebtDscr = Number(currentDebtState?.current_debt_dscr);
   if (canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
     const tolerance = 0.02;
     const mismatchedValues = currentDebtDscrValues.filter((entry) =>
@@ -1961,8 +2026,13 @@ export function buildReportContractQa({
               /\bCurrent Debt Coverage\b/i,
             ]) || leakProbeExcerpt,
           current_debt_state: {
-            current_debt_dscr_status: sourceReportCoverageQa?.current_debt_state?.current_debt_dscr_status || null,
-            current_debt_dscr: sourceReportCoverageQa?.current_debt_state?.current_debt_dscr ?? null,
+            current_debt_dscr_status: currentDebtState?.current_debt_dscr_status || null,
+            current_debt_dscr: currentDebtState?.current_debt_dscr ?? null,
+            current_debt_assessed: currentDebtState?.current_debt_assessed ?? null,
+            has_true_current_debt_balance: currentDebtState?.has_true_current_debt_balance ?? null,
+            current_debt_limitation_reason_code: currentDebtState?.current_debt_limitation_reason_code || null,
+            refi_basis_eligible: currentDebtState?.refi_basis_eligible ?? null,
+            qa_canonical_source: canonicalCurrentDebtResolution.source,
           },
         },
         customer_delivery_impact: "disclose_only",
@@ -1971,6 +2041,36 @@ export function buildReportContractQa({
         blocks_high_value_outreach: true,
       });
     }
+  }
+  const canonicalDebtNotComputed = canonicalCurrentDebtDscrStatus && canonicalCurrentDebtDscrStatus !== "computed";
+  if (canonicalDebtNotComputed && currentDebtDscrValues.length > 0) {
+    addViolation(violations, {
+      code: "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
+      severity: "critical",
+      category: "source_report_reconciliation",
+      message: "Canonical current-debt state is not computed, but rendered report includes numeric current-debt DSCR evidence.",
+      evidence: {
+        canonical_current_debt_state: {
+          current_debt_dscr_status: currentDebtState?.current_debt_dscr_status || null,
+          current_debt_assessed: currentDebtState?.current_debt_assessed ?? null,
+          has_true_current_debt_balance: currentDebtState?.has_true_current_debt_balance ?? null,
+          current_debt_limitation_reason_code: currentDebtState?.current_debt_limitation_reason_code || null,
+          refi_basis_eligible: currentDebtState?.refi_basis_eligible ?? null,
+          qa_canonical_source: canonicalCurrentDebtResolution.source,
+        },
+        rendered_values: currentDebtDscrValues,
+        excerpt:
+          firstPatternExcerpt(text, [
+            /\bDSCR \(Computed\)\b/i,
+            /\bDSCR \(T12 NOI\)\b/i,
+            /\bDSCR \(Current Debt\)\b/i,
+            /\bCurrent Debt DSCR\b/i,
+          ]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: true,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
   }
   if (currentDebtDscrValues.length >= 2) {
     const numericValues = currentDebtDscrValues.map((entry) => entry.value).filter((value) => Number.isFinite(value));

@@ -1567,6 +1567,32 @@ assert.equal(
   canonicalCurrentDebtDscrSingleDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
   true
 );
+const canonicalCurrentDebtFromUnderwritingState = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: currentDebtArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    underwritingState: {
+      core: {
+        currentDebt: {
+          assessmentState: {
+            current_debt_dscr_status: "computed",
+            current_debt_dscr: 1.23,
+            current_debt_assessed: true,
+            has_true_current_debt_balance: true,
+            refi_basis_eligible: true,
+          },
+        },
+      },
+    },
+  },
+  html: "<p>Current Debt DSCR: 1.23x</p>",
+});
+assert.equal(
+  canonicalCurrentDebtFromUnderwritingState.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
+  false
+);
 const canonicalCurrentDebtDscrMultiAligned = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -1623,6 +1649,52 @@ assert.equal(
   canonicalCurrentDebtNotAssessedNoDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
   false
 );
+assert.equal(
+  canonicalCurrentDebtNotAssessedNoDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  false
+);
+const canonicalCurrentDebtNotAssessedNumericDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      current_debt_limitation_reason_code: "no_true_current_debt_source",
+      refi_basis_eligible: false,
+    },
+  },
+  html: "<p>Current Debt DSCR: 1.20x</p>",
+});
+assert.equal(
+  canonicalCurrentDebtNotAssessedNumericDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  true
+);
+const canonicalCurrentDebtNotAssessedRefiMathDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      current_debt_limitation_reason_code: "no_true_current_debt_source",
+      refi_basis_eligible: false,
+    },
+  },
+  html: "<h3>Full Refinance Sufficiency</h3><p>Refinance Proceeds / Debt Balance: 1.10x</p>",
+});
+assert.equal(
+  canonicalCurrentDebtNotAssessedRefiMathDrift.violations.some((v) => v.code === "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT"),
+  true
+);
 const proposedAcquisitionDscrNoDrift = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -1633,6 +1705,54 @@ const proposedAcquisitionDscrNoDrift = buildReportContractQa({
 assert.equal(
   proposedAcquisitionDscrNoDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
   false
+);
+const proposedAcquisitionContextSafe = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+      acquisition_only_exclusion: true,
+      refi_basis_eligible: false,
+    },
+  },
+  html: "<p>Proposed acquisition financing was identified but is not current outstanding debt; current debt and refinance coverage were not assessed.</p>",
+});
+assert.equal(
+  proposedAcquisitionContextSafe.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  false
+);
+assert.equal(
+  proposedAcquisitionContextSafe.violations.some((v) => v.code === "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT"),
+  false
+);
+const proposedAcquisitionContamination = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+      acquisition_only_exclusion: true,
+      refi_basis_eligible: false,
+    },
+  },
+  html: "<p>Proposed Acquisition DSCR: 1.20x</p><p>Current Debt DSCR: 1.20x</p>",
+});
+assert.equal(
+  proposedAcquisitionContamination.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  true
 );
 
 const currentDebtDscrScorecardComputed = buildReportContractQa({
