@@ -175,6 +175,21 @@ function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   if (!userPart || !seedPart) return "";
   return `${userPart}/${seedPart}.pdf`;
 }
+function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
+  const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
+  const deliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const customerDeliveryAllowed = Boolean(state.customer_delivery_allowed);
+  const holdDelivery = Boolean(state.hold_delivery);
+  return {
+    delivery_gate_status: deliveryGateStatus,
+    customer_delivery_ready: customerDeliveryAllowed,
+    customer_publish_eligible: customerDeliveryAllowed,
+    hold_delivery: holdDelivery,
+    holdDelivery,
+    public_sample_ready: Boolean(state.public_sample_ready),
+    high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+  };
+}
 function assertValidReportPublicationInsert({
   storagePath,
   reportType,
@@ -10039,6 +10054,7 @@ try {
     deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents"
   ) {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
+    const deliveryAliases = buildDeliveryResponseCompatibilityAliases(blockedDecisionState);
     return res.status(200).json({
       ok: true,
       success: true,
@@ -10046,17 +10062,11 @@ try {
     storagePath: null,
     url: null,
     deliveryDecisionState: blockedDecisionState,
-    hold_delivery: blockedDecisionState.hold_delivery,
-    holdDelivery: blockedDecisionState.hold_delivery,
-    delivery_gate_status: deliveryGateDecisionResult.delivery_gate_status,
+    ...deliveryAliases,
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
     delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
       delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
-      customer_delivery_ready: blockedDecisionState.customer_delivery_allowed,
-      public_sample_ready: blockedDecisionState.public_sample_ready,
-      high_value_outreach_ready: blockedDecisionState.high_value_outreach_ready,
-      customer_publish_eligible: blockedDecisionState.customer_delivery_allowed,
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],
@@ -10067,10 +10077,10 @@ try {
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
       admin_review_required:
         deliveryGateDecisionResult?.admin_review_required ??
-        blockedDecisionState.delivery_gate_status === "admin_review_required",
+        deliveryAliases.delivery_gate_status === "admin_review_required",
       user_needs_documents:
         deliveryGateDecisionResult?.user_needs_documents ??
-        blockedDecisionState.delivery_gate_status === "user_needs_documents",
+        deliveryAliases.delivery_gate_status === "user_needs_documents",
       publish_decision_reason: deliveryGateDecisionResult?.publish_decision_reason || null,
     });
   }
@@ -10224,22 +10234,17 @@ try {
       signedData = signedResult || signedData;
     }
     // 13. Return JSON with the report URL and report_id
+    const deliveryAliases = buildDeliveryResponseCompatibilityAliases(canonicalDeliveryDecisionState);
     res.status(200).json({
       success: true,
       reportId,
       url: signedData.signedUrl,
       deliveryDecisionState: canonicalDeliveryDecisionState,
-      hold_delivery: canonicalDeliveryDecisionState.hold_delivery,
-      holdDelivery: canonicalDeliveryDecisionState.hold_delivery,
-      delivery_gate_status: deliveryGateDecisionResult?.delivery_gate_status || "deliverable",
+      ...deliveryAliases,
       delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
       delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
       delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
       delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
-      customer_delivery_ready: canonicalDeliveryDecisionState.customer_delivery_allowed,
-      public_sample_ready: canonicalDeliveryDecisionState.public_sample_ready,
-      high_value_outreach_ready: canonicalDeliveryDecisionState.high_value_outreach_ready,
-      customer_publish_eligible: canonicalDeliveryDecisionState.customer_delivery_allowed,
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],
@@ -10296,4 +10301,5 @@ export const __test__ = {
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
+  buildDeliveryResponseCompatibilityAliases,
 };

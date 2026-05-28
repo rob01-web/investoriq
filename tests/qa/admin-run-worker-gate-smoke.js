@@ -57,6 +57,20 @@ assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_stat
 assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
 assert.match(workerSource, /missing for deliverable path/);
 assert.match(workerSource, /error_code:\s*'REPORT_GENERATION_FAILED'/);
+assert.match(workerSource, /const hasCanonical = Boolean\(deliveryDecisionState\);/);
+assert.match(
+  workerSource,
+  /const deliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);/
+);
+assert.match(
+  workerSource,
+  /const customerDeliveryAllowed = hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.customer_publish_eligible[\s\S]{0,220}reportData\?\.customer_delivery_ready/
+);
+assert.match(
+  workerSource,
+  /const holdDelivery = hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.hold_delivery\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.hold_delivery[\s\S]{0,220}reportData\?\.holdDelivery/
+);
+assert.match(workerSource, /legacy_alias_conflicts/);
 assert.match(
   workerSource,
   /const isTypedGateOutcome =\s*deliveryGateStatus === 'user_needs_documents' \|\| deliveryGateStatus === 'admin_review_required';/

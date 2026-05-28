@@ -121,19 +121,24 @@ export default async function handler(req, res) {
         reportData?.deliveryDecisionState && typeof reportData.deliveryDecisionState === 'object'
           ? reportData.deliveryDecisionState
           : null;
-      const deliveryGateStatus = String(
-        deliveryDecisionState?.delivery_gate_status || reportData?.delivery_gate_status || 'deliverable'
-      );
-      const customerDeliveryAllowed =
-        deliveryDecisionState?.customer_delivery_allowed ??
-        reportData?.customer_publish_eligible ??
-        reportData?.customer_delivery_ready ??
-        (deliveryGateStatus === 'deliverable');
-      const holdDelivery =
-        deliveryDecisionState?.hold_delivery ??
-        reportData?.hold_delivery ??
-        reportData?.holdDelivery ??
-        (deliveryGateStatus !== 'deliverable');
+      const hasCanonical = Boolean(deliveryDecisionState);
+      const deliveryGateStatus = hasCanonical
+        ? String(deliveryDecisionState?.delivery_gate_status || 'deliverable')
+        : String(reportData?.delivery_gate_status || 'deliverable');
+      const customerDeliveryAllowed = hasCanonical
+        ? Boolean(deliveryDecisionState?.customer_delivery_allowed)
+        : Boolean(
+            reportData?.customer_publish_eligible ??
+            reportData?.customer_delivery_ready ??
+            (deliveryGateStatus === 'deliverable')
+          );
+      const holdDelivery = hasCanonical
+        ? Boolean(deliveryDecisionState?.hold_delivery)
+        : Boolean(
+            reportData?.hold_delivery ??
+            reportData?.holdDelivery ??
+            (deliveryGateStatus !== 'deliverable')
+          );
       const customerStatusReasonCode =
         deliveryDecisionState?.customer_status_reason_code ||
         reportData?.delivery_gate_reason_code ||
@@ -142,17 +147,38 @@ export default async function handler(req, res) {
         deliveryDecisionState?.fail_closed_reason_code ||
         reportData?.delivery_gate_reason_code ||
         null;
-      const creditRestoreRequired =
-        deliveryDecisionState?.credit_restore_required ??
-        (deliveryGateStatus === 'user_needs_documents');
+      const creditRestoreRequired = hasCanonical
+        ? Boolean(deliveryDecisionState?.credit_restore_required)
+        : (deliveryGateStatus === 'user_needs_documents');
+      const legacyAliasConflicts = hasCanonical
+        ? {
+            delivery_gate_status:
+              reportData?.delivery_gate_status != null &&
+              String(reportData?.delivery_gate_status) !== String(deliveryDecisionState?.delivery_gate_status || ''),
+            customer_delivery_ready:
+              reportData?.customer_delivery_ready != null &&
+              Boolean(reportData?.customer_delivery_ready) !== Boolean(deliveryDecisionState?.customer_delivery_allowed),
+            customer_publish_eligible:
+              reportData?.customer_publish_eligible != null &&
+              Boolean(reportData?.customer_publish_eligible) !== Boolean(deliveryDecisionState?.customer_delivery_allowed),
+            hold_delivery:
+              reportData?.hold_delivery != null &&
+              Boolean(reportData?.hold_delivery) !== Boolean(deliveryDecisionState?.hold_delivery),
+            holdDelivery:
+              reportData?.holdDelivery != null &&
+              Boolean(reportData?.holdDelivery) !== Boolean(deliveryDecisionState?.hold_delivery),
+          }
+        : null;
       return {
         deliveryDecisionState,
+        hasCanonical,
         deliveryGateStatus,
         customerDeliveryAllowed: Boolean(customerDeliveryAllowed),
         holdDelivery: Boolean(holdDelivery),
         customerStatusReasonCode,
         failClosedReasonCode,
         creditRestoreRequired: Boolean(creditRestoreRequired),
+        legacyAliasConflicts,
       };
     };
 
@@ -2398,6 +2424,8 @@ export default async function handler(req, res) {
                 customer_status_reason_code: resolvedDeliveryDecision.customerStatusReasonCode,
                 fail_closed_reason_code: resolvedDeliveryDecision.failClosedReasonCode,
                 credit_restore_required: resolvedDeliveryDecision.creditRestoreRequired,
+                canonical_precedence_applied: resolvedDeliveryDecision.hasCanonical,
+                legacy_alias_conflicts: resolvedDeliveryDecision.legacyAliasConflicts,
               },
               timestamp: nowIso,
             });

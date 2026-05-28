@@ -67,6 +67,16 @@ assert.equal(adminReviewState.high_value_outreach_ready, false);
 const generatorSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 assert.match(generatorSource, /deliveryDecisionState:/);
 assert.match(generatorSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
+assert.match(generatorSource, /function buildDeliveryResponseCompatibilityAliases\(/);
+assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(blockedDecisionState\)/);
+assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(canonicalDeliveryDecisionState\)/);
+assert.match(generatorSource, /delivery_gate_status:\s*deliveryGateStatus/);
+assert.match(generatorSource, /customer_delivery_ready:\s*customerDeliveryAllowed/);
+assert.match(generatorSource, /customer_publish_eligible:\s*customerDeliveryAllowed/);
+assert.match(generatorSource, /hold_delivery:\s*holdDelivery/);
+assert.match(generatorSource, /holdDelivery,?\s*\n/);
+assert.match(generatorSource, /public_sample_ready:\s*Boolean\(state\.public_sample_ready\)/);
+assert.match(generatorSource, /high_value_outreach_ready:\s*Boolean\(state\.high_value_outreach_ready\)/);
 assert.match(generatorSource, /hold_delivery:/);
 assert.match(generatorSource, /holdDelivery:/);
 
