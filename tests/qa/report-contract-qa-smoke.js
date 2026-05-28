@@ -1556,6 +1556,39 @@ assert.equal(
   canonicalCurrentDebtDscrSingleAligned.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"),
   false
 );
+assert.equal(
+  canonicalCurrentDebtDscrSingleAligned.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"),
+  false
+);
+assert.equal(
+  canonicalCurrentDebtDscrSingleAligned.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  false
+);
+const canonicalComputedWithMissingDebtArtifacts = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.23,
+      current_debt_assessed: true,
+      has_true_current_debt_balance: true,
+      current_debt_limitation_reason_code: null,
+      refi_basis_eligible: true,
+    },
+  },
+  html: "<p>Current Debt DSCR: 1.23x</p>",
+});
+assert.equal(
+  canonicalComputedWithMissingDebtArtifacts.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"),
+  false
+);
+assert.equal(
+  canonicalComputedWithMissingDebtArtifacts.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  false
+);
 const canonicalCurrentDebtDscrSingleDrift = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -1674,6 +1707,14 @@ assert.equal(
   canonicalCurrentDebtNotAssessedNumericDrift.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
   true
 );
+assert.equal(
+  canonicalCurrentDebtNotAssessedNumericDrift.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"),
+  false
+);
+assert.equal(
+  canonicalCurrentDebtNotAssessedNumericDrift.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  false
+);
 const canonicalCurrentDebtNotAssessedRefiMathDrift = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -1732,6 +1773,14 @@ assert.equal(
   proposedAcquisitionContextSafe.violations.some((v) => v.code === "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT"),
   false
 );
+assert.equal(
+  proposedAcquisitionContextSafe.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"),
+  false
+);
+assert.equal(
+  proposedAcquisitionContextSafe.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"),
+  false
+);
 const proposedAcquisitionContamination = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -1752,6 +1801,17 @@ const proposedAcquisitionContamination = buildReportContractQa({
 });
 assert.equal(
   proposedAcquisitionContamination.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  true
+);
+const canonicalAbsentDebtUnsupportedFallback = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Current Debt DSCR: 1.20x</p>",
+});
+assert.equal(
+  canonicalAbsentDebtUnsupportedFallback.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED"),
   true
 );
 

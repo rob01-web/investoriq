@@ -839,6 +839,14 @@ export function buildReportContractQa({
     artifacts,
   });
   const currentDebtState = canonicalCurrentDebtResolution.state;
+  const hasCanonicalCurrentDebtState = Boolean(
+    canonicalCurrentDebtResolution.source === "canonical_payload" &&
+    currentDebtState &&
+      (
+        currentDebtState?.current_debt_dscr_status !== undefined ||
+        currentDebtState?.current_debt_assessed !== undefined
+      )
+  );
   const sectionEligibilitySections = sourceReportCoverageQa?.section_eligibility?.sections || null;
   const debtStructureEligibility = sectionEligibilitySections?.debt_structure || null;
   const renovationEligibility = sectionEligibilitySections?.renovation_strategy || null;
@@ -2188,12 +2196,18 @@ export function buildReportContractQa({
   }
 
   const derivedAcq = hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
-  const currentDebt = hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
+  const canonicalDebtComputed = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed";
+  const currentDebt = hasCanonicalCurrentDebtState
+    ? canonicalDebtComputed
+    : hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   const { acquisitionLoan } = resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa);
-  const hasCurrentDebtTermsSupport =
-    Boolean(sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed?.present) ||
-    hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) ||
-    Boolean(currentDebtState?.has_current_debt_document);
+  const hasCurrentDebtTermsSupport = hasCanonicalCurrentDebtState
+    ? canonicalDebtComputed
+    : (
+      Boolean(sourceReportCoverageQa?.artifact_inventory?.mortgage_statement_parsed?.present) ||
+      hasTrueCurrentDebt(artifacts, sourceReportCoverageQa) ||
+      Boolean(currentDebtState?.has_current_debt_document)
+    );
   if (derivedAcq && !currentDebt) {
     const cleanCurrentDebtLimitation =
       /Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance/i.test(text) ||
@@ -2422,7 +2436,7 @@ export function buildReportContractQa({
     }
   }
 
-  if (!currentDebt || !hasCurrentDebtTermsSupport) {
+  if (!hasCanonicalCurrentDebtState && (!currentDebt || !hasCurrentDebtTermsSupport)) {
     const numericCurrentDebtDscrRendered =
       /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current outstanding debt balance not provided|current debt service is not assessed)[0-9.]+x/i.test(text);
     const numericT12CurrentDebtDscrRendered =
