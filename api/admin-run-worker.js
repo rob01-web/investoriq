@@ -912,6 +912,14 @@ export default async function handler(req, res) {
       }
 
       for (const job of timedOutJobs) {
+        try {
+          await restoreEntitlementForFailedJob(job, 'worker_timeout', 'TIMEOUT');
+        } catch (restoreErr) {
+          console.error(`[worker] Failed to restore entitlement for timed-out job ${job.id}:`, restoreErr?.message);
+        }
+      }
+
+      for (const job of timedOutJobs) {
         const transitionErr = await writeStatusTransitionArtifact(
           job.id,
           job.status,
@@ -1041,6 +1049,15 @@ export default async function handler(req, res) {
                 },
               ]);
 
+              try {
+                await restoreEntitlementForFailedJob(job, 'purchase_not_consumed', 'PURCHASE_NOT_CONSUMED');
+              } catch (restoreErr) {
+                console.error(
+                  `[worker] Failed to restore entitlement for purchase_not_consumed queued job ${job.id}:`,
+                  restoreErr?.message
+                );
+              }
+
               continue;
             }
 
@@ -1141,6 +1158,15 @@ export default async function handler(req, res) {
                 },
               },
             ]);
+
+            try {
+              await restoreEntitlementForFailedJob(job, 'purchase_not_consumed', 'PURCHASE_NOT_CONSUMED');
+            } catch (restoreErr) {
+              console.error(
+                `[worker] Failed to restore entitlement for purchase_not_consumed extracting job ${job.id}:`,
+                restoreErr?.message
+              );
+            }
 
             continue;
           }

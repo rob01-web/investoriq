@@ -98,6 +98,24 @@ assert.match(
   workerSource,
   /await restoreEntitlementForFailedJob\(job, 'report_generation_failed', 'REPORT_GENERATION_FAILED'\)/
 );
+assert.match(
+  workerSource,
+  /await restoreEntitlementForFailedJob\(job, 'worker_timeout', 'TIMEOUT'\)/
+);
+assert.match(
+  workerSource,
+  /await restoreEntitlementForFailedJob\(job, 'purchase_not_consumed', 'PURCHASE_NOT_CONSUMED'\)/
+);
+assert.match(
+  typedGateWindow,
+  /if \(resolvedDeliveryDecision\.creditRestoreRequired\)\s*\{[\s\S]{0,600}await restoreEntitlementForFailedJob\([\s\S]{0,280}'MISSING_REQUIRED_SOURCE_DATA'/
+);
+assert.equal(
+  /if \(deliveryGateStatus === 'admin_review_required'\)[\s\S]{0,1000}restoreEntitlementForFailedJob\(/.test(
+    typedGateWindow
+  ),
+  false
+);
 const forbiddenWorkerCopy = [
   "upload replacement " + "documents",
   "upload more " + "documents",
