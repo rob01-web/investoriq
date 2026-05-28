@@ -173,7 +173,34 @@ function GhostBtn({ children, onClick, disabled, style = {} }) {
 }
 
 // Status badge
-function StatusBadge({ status, errorCode }) {
+function StatusBadge({ status, errorCode, deliveryDecision = null }) {
+  const canonicalLabel = String(deliveryDecision?.customer_status_label || '').toLowerCase();
+  if (canonicalLabel) {
+    const canonicalMap = {
+      ready: { bg: T.okBg, border: T.okBorder, color: T.okGreen, label: 'Ready' },
+      under_review: { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' },
+      needs_documents: { bg: T.errorBg, border: T.errorBorder, color: T.errorRed, label: 'Needs documents' },
+      publication_held: { bg: T.errorBg, border: T.errorBorder, color: T.errorRed, label: 'Publication held' },
+    };
+    const canonicalStatus = canonicalMap[canonicalLabel];
+    if (canonicalStatus) {
+      return (
+        <span style={{
+          fontFamily:   "'DM Mono', monospace",
+          fontSize:     9,
+          letterSpacing:'0.14em',
+          textTransform:'uppercase',
+          padding:      '2px 8px',
+          background:   canonicalStatus.bg,
+          border:       `1px solid ${canonicalStatus.border}`,
+          color:        canonicalStatus.color,
+          whiteSpace:   'nowrap',
+        }}>
+          {canonicalStatus.label}
+        </span>
+      );
+    }
+  }
   const adminReviewHeld =
     String(status || '').toLowerCase() === 'publishing' &&
     String(errorCode || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED';
@@ -208,7 +235,16 @@ function StatusBadge({ status, errorCode }) {
   );
 }
 
-function getCustomerFacingJobStatus(job) {
+function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
+  const decision = resolveDashboardDeliveryDecision(job, deliveryGateDecisionPayload);
+  if (decision.hasCanonicalDeliveryDecision && decision.customer_status_label) {
+    const normalized = String(decision.customer_status_label).toLowerCase();
+    if (normalized === 'under_review') return 'under review';
+    if (normalized === 'needs_documents') return 'needs documents';
+    if (normalized === 'ready') return 'ready';
+    if (normalized === 'publication_held') return 'publication held';
+    return normalized.replace(/_/g, ' ');
+  }
   if (isAdminReviewHeldJob(job)) {
     return 'under review';
   }
@@ -216,10 +252,54 @@ function getCustomerFacingJobStatus(job) {
 }
 
 function isAdminReviewHeldJob(job) {
+  const decision = resolveDashboardDeliveryDecision(job);
+  if (decision.hasCanonicalDeliveryDecision && String(decision.customer_status_label || '').toLowerCase() === 'under_review') {
+    return true;
+  }
   return (
     String(job?.status || '').toLowerCase() === 'publishing' &&
     String(job?.error_code || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED'
   );
+}
+
+function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload = null) {
+  const payload = deliveryGateDecisionPayload && typeof deliveryGateDecisionPayload === 'object'
+    ? deliveryGateDecisionPayload
+    : null;
+  const workerPayloadDecision = payload?.deliveryDecisionState || payload?.resolved_delivery_decision || null;
+  const candidate =
+    job?.deliveryDecisionState ||
+    job?.delivery_gate_decision?.deliveryDecisionState ||
+    job?.delivery_gate_decision?.resolved_delivery_decision ||
+    job?.latest_delivery_gate_decision?.deliveryDecisionState ||
+    job?.latest_worker_event?.deliveryDecisionState ||
+    job?.latest_worker_event?.resolved_delivery_decision ||
+    workerPayloadDecision ||
+    null;
+  if (candidate && typeof candidate === 'object') {
+    return {
+      hasCanonicalDeliveryDecision: true,
+      delivery_gate_status: candidate.delivery_gate_status || null,
+      customer_status_label: candidate.customer_status_label || null,
+      customer_status_reason_code: candidate.customer_status_reason_code || candidate.reason_code || null,
+      customer_message: candidate.customer_message || null,
+      customer_delivery_allowed: candidate.customer_delivery_allowed ?? null,
+      hold_delivery: candidate.hold_delivery ?? null,
+      credit_restore_required: candidate.credit_restore_required ?? null,
+      source: candidate.source === 'canonical_delivery_decision' ? 'canonical_delivery_decision' : 'worker_resolved_delivery_decision',
+    };
+  }
+  return {
+    hasCanonicalDeliveryDecision: false,
+    delivery_gate_status: job?.delivery_gate_status || null,
+    customer_status_label: null,
+    customer_status_reason_code: null,
+    customer_message: null,
+    customer_delivery_allowed: null,
+    hold_delivery: null,
+    credit_restore_required: null,
+    source: 'legacy_dashboard_fallback',
+  };
 }
 
 // File row
@@ -358,6 +438,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [jobEvents, setJobEvents] = useState({});
+  const [deliveryGateDecisionEventsByJobId, setDeliveryGateDecisionEventsByJobId] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
   const [failedJobGuidance, setFailedJobGuidance] = useState(null);
   const [failedJobCreditRestoredById, setFailedJobCreditRestoredById] = useState({});
@@ -490,6 +571,29 @@ const DASHBOARD_DIAG_MINIMAL = false;
     setJobEvents(nextEvents);
   };
 
+  const fetchDeliveryGateDecisionEvents = async (jobIds) => {
+    if (!jobIds || jobIds.length === 0) {
+      setDeliveryGateDecisionEventsByJobId({});
+      return;
+    }
+    const { data, error } = await supabase
+      .from('analysis_artifacts')
+      .select('id, job_id, payload, created_at')
+      .eq('type', 'worker_event')
+      .in('job_id', jobIds)
+      .eq('payload->>event', 'delivery_gate_decision')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Failed to fetch delivery gate decision events:', error);
+      return;
+    }
+    const nextEvents = {};
+    for (const row of data || []) {
+      if (!nextEvents[row.job_id]) nextEvents[row.job_id] = row;
+    }
+    setDeliveryGateDecisionEventsByJobId(nextEvents);
+  };
+
   const getNeedsDocumentsWorkerEvent = (jobEventsByJobId, activeJobId) => {
     if (!activeJobId || !jobEventsByJobId) return null;
     const row = jobEventsByJobId[activeJobId];
@@ -516,6 +620,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
         return serialize(prev) === serialize(rows) ? prev : rows;
       });
       await fetchJobEvents(rows.map((job) => job.id));
+      await fetchDeliveryGateDecisionEvents(rows.map((job) => job.id));
     } finally {
       inProgressFetchRef.current = false;
     }
@@ -535,6 +640,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
         const serialize = (items) => items.map((job) => `${job.id}|${job.property_name || ''}|${job.report_type || ''}|${job.status || ''}|${job.created_at || ''}|${job.failure_reason || ''}|${job.error_message || ''}|${job.error_code || ''}`).join('||');
         return serialize(prev) === serialize(rows) ? prev : rows;
       });
+      await fetchDeliveryGateDecisionEvents(rows.map((job) => job.id));
       return rows;
     } finally {
       recentJobsFetchRef.current = false;
@@ -769,6 +875,10 @@ useEffect(() => {
   const jobFromNeedsDocuments = null;
   const jobFromFailed = visibleLatestFailedJob?.id === jobId ? visibleLatestFailedJob : null;
   const activeJobForRuns = jobFromInProgress || jobFromFailed || jobFromNeedsDocuments || null;
+  const activeDeliveryDecision = resolveDashboardDeliveryDecision(
+    activeJobForRuns,
+    activeJobForRuns?.id ? deliveryGateDecisionEventsByJobId[String(activeJobForRuns.id)]?.payload : null
+  );
   const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = false;
   const activeFailureCopy = activeJobForRuns?.status === 'failed'
@@ -929,6 +1039,9 @@ useEffect(() => {
     opacity: 1,
   };
   const needsDocumentsMessage = (() => {
+    if (activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) {
+      return activeDeliveryDecision.customer_message;
+    }
     if (!(activeJobForRuns?.status === 'failed' && activeJobForRuns?.error_code === 'MISSING_REQUIRED_SOURCE_DATA')) {
       return defaultNeedsDocumentsMessage;
     }
@@ -1361,7 +1474,10 @@ useEffect(() => {
               <div style={{ padding:'24px 0' }}>
                 {activeJobForRuns ? (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
-                    {(activeJobForRuns.property_name || activeJobForRuns.id || 'Unnamed Property')} - {getCustomerFacingJobStatus(activeJobForRuns)}
+                    {(activeJobForRuns.property_name || activeJobForRuns.id || 'Unnamed Property')} - {getCustomerFacingJobStatus(
+                      activeJobForRuns,
+                      activeJobForRuns?.id ? deliveryGateDecisionEventsByJobId[String(activeJobForRuns.id)]?.payload : null
+                    )}
                   </div>
                 ) : (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
@@ -1770,6 +1886,8 @@ useEffect(() => {
                 >
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
+                    : activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
+                    ? activeDeliveryDecision.customer_message
                     : isAdminReviewHeldJob(activeJobForRuns)
                     ? 'Under review. InvestorIQ is verifying source-backed consistency before delivery.'
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
@@ -1853,7 +1971,14 @@ useEffect(() => {
                         )}
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <StatusBadge status={job.status} errorCode={job.error_code} />
+                        <StatusBadge
+                          status={job.status}
+                          errorCode={job.error_code}
+                          deliveryDecision={resolveDashboardDeliveryDecision(
+                            job,
+                            deliveryGateDecisionEventsByJobId[String(job.id)]?.payload
+                          )}
+                        />
                         <button type="button" onClick={() => dismissJob(job.id)} style={{ ...labelMono, color:T.ink4, background:'none', border:'none', cursor:'pointer' }}>Dismiss</button>
                       </div>
                     </div>
