@@ -16,7 +16,7 @@ import { buildQaDirectorReview } from "./_lib/qa-director-review.js";
 import { buildReportContractQa } from "./_lib/report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./_lib/source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
-import { buildQaActionPlan, buildDeliveryGateDecision } from "./_lib/qa-action-plan.js";
+import { buildQaActionPlan, buildDeliveryGateDecision, buildCanonicalDeliveryDecisionState } from "./_lib/qa-action-plan.js";
 import {
   buildAcquisitionAssumptionState,
   buildAssumptionAttributionState,
@@ -9512,6 +9512,7 @@ let reportContractQaResult = null;
 let qaActionPlanResult = null;
 let qaDirectorReviewResult = null;
 let deliveryGateDecisionResult = null;
+let deliveryDecisionStateResult = null;
 let sourcePackageQaResult = null;
 let sourcePackageQaFiles = [];
 let sourcePackageQaArtifacts = [];
@@ -10010,6 +10011,7 @@ try {
     qaDirectorReview: qaDirectorReviewResult,
   });
   deliveryGateDecisionResult = deliveryGateDecision;
+  deliveryDecisionStateResult = buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
   const gateTimestamp = new Date().toISOString().replace(/:/g, "-");
   if (jobId) {
     const { error: deliveryGateErr } = await supabase.from("analysis_artifacts").insert([
@@ -10019,7 +10021,10 @@ try {
         type: "delivery_gate_decision",
         bucket: "internal",
         object_path: `analysis_jobs/${jobId || "unknown"}/delivery_gate_decision/${gateTimestamp}.json`,
-        payload: deliveryGateDecision,
+        payload: {
+          ...deliveryGateDecision,
+          deliveryDecisionState: deliveryDecisionStateResult,
+        },
       },
     ]);
     if (deliveryGateErr) {
@@ -10033,21 +10038,25 @@ try {
     deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required" ||
     deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents"
   ) {
+    const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
     return res.status(200).json({
       ok: true,
       success: true,
       reportId: null,
     storagePath: null,
     url: null,
+    deliveryDecisionState: blockedDecisionState,
+    hold_delivery: blockedDecisionState.hold_delivery,
+    holdDelivery: blockedDecisionState.hold_delivery,
     delivery_gate_status: deliveryGateDecisionResult.delivery_gate_status,
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
     delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
       delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
-      customer_delivery_ready: false,
-      public_sample_ready: deliveryGateDecisionResult?.public_sample_ready ?? true,
-      high_value_outreach_ready: deliveryGateDecisionResult?.high_value_outreach_ready ?? true,
-      customer_publish_eligible: deliveryGateDecisionResult?.customer_publish_eligible ?? false,
+      customer_delivery_ready: blockedDecisionState.customer_delivery_allowed,
+      public_sample_ready: blockedDecisionState.public_sample_ready,
+      high_value_outreach_ready: blockedDecisionState.high_value_outreach_ready,
+      customer_publish_eligible: blockedDecisionState.customer_delivery_allowed,
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],
@@ -10058,10 +10067,10 @@ try {
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
       admin_review_required:
         deliveryGateDecisionResult?.admin_review_required ??
-        deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required",
+        blockedDecisionState.delivery_gate_status === "admin_review_required",
       user_needs_documents:
         deliveryGateDecisionResult?.user_needs_documents ??
-        deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents",
+        blockedDecisionState.delivery_gate_status === "user_needs_documents",
       publish_decision_reason: deliveryGateDecisionResult?.publish_decision_reason || null,
     });
   }
@@ -10141,9 +10150,8 @@ try {
   console.error(err.response?.data?.toString());
   throw err;
 }
-        const holdDelivery =
-      deliveryGateDecisionResult?.delivery_gate_status &&
-      deliveryGateDecisionResult.delivery_gate_status !== "deliverable";
+        const canonicalDeliveryDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
+        const holdDelivery = Boolean(canonicalDeliveryDecisionState.hold_delivery);
     const publicationSeed = jobId || crypto.randomUUID();
     const storagePath = buildReportStoragePath({
       effectiveUserId,
@@ -10220,15 +10228,18 @@ try {
       success: true,
       reportId,
       url: signedData.signedUrl,
+      deliveryDecisionState: canonicalDeliveryDecisionState,
+      hold_delivery: canonicalDeliveryDecisionState.hold_delivery,
+      holdDelivery: canonicalDeliveryDecisionState.hold_delivery,
       delivery_gate_status: deliveryGateDecisionResult?.delivery_gate_status || "deliverable",
       delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
       delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
       delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
       delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
-      customer_delivery_ready: deliveryGateDecisionResult?.customer_delivery_ready ?? true,
-      public_sample_ready: deliveryGateDecisionResult?.public_sample_ready ?? true,
-      high_value_outreach_ready: deliveryGateDecisionResult?.high_value_outreach_ready ?? true,
-      customer_publish_eligible: deliveryGateDecisionResult?.customer_publish_eligible ?? true,
+      customer_delivery_ready: canonicalDeliveryDecisionState.customer_delivery_allowed,
+      public_sample_ready: canonicalDeliveryDecisionState.public_sample_ready,
+      high_value_outreach_ready: canonicalDeliveryDecisionState.high_value_outreach_ready,
+      customer_publish_eligible: canonicalDeliveryDecisionState.customer_delivery_allowed,
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],

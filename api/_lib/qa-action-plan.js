@@ -1798,6 +1798,67 @@ export function buildDeliveryGateDecision({
   };
 }
 
+export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null) {
+  const state = deliveryGateDecision && typeof deliveryGateDecision === "object"
+    ? deliveryGateDecision
+    : {};
+  const deliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const customerDeliveryAllowed = Boolean(
+    state.customer_publish_eligible ?? state.customer_delivery_ready ?? (deliveryGateStatus === "deliverable")
+  );
+  const holdDelivery = deliveryGateStatus !== "deliverable";
+  const publicBlockers = Array.isArray(state.public_sample_blockers) ? state.public_sample_blockers : [];
+  const highValueBlockers = Array.isArray(state.high_value_outreach_blockers) ? state.high_value_outreach_blockers : [];
+  const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
+  const reasonCode = String(state.reason_code || state.publish_decision_reason || deliveryGateStatus || "").trim() || null;
+
+  const customerStatusLabel =
+    deliveryGateStatus === "deliverable" && customerDeliveryAllowed
+      ? "ready"
+      : deliveryGateStatus === "admin_review_required"
+        ? "under_review"
+        : deliveryGateStatus === "user_needs_documents"
+          ? "needs_documents"
+          : "publication_held";
+  const customerMessage =
+    customerStatusLabel === "ready"
+      ? "This report is eligible for customer delivery."
+      : customerStatusLabel === "under_review"
+        ? "This report is under internal review before delivery."
+        : customerStatusLabel === "needs_documents"
+          ? "Additional required documents are needed before this report can be delivered."
+          : "This report is currently held and cannot be delivered.";
+
+  return {
+    delivery_gate_status: deliveryGateStatus,
+    customer_delivery_allowed: customerDeliveryAllowed,
+    hold_delivery: holdDelivery,
+    customer_status_label: customerStatusLabel,
+    customer_status_reason_code: reasonCode,
+    customer_message: customerMessage,
+    public_sample_ready: Boolean(state.public_sample_ready),
+    high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+    public_blockers: publicBlockers,
+    high_value_blockers: highValueBlockers,
+    customer_blockers: customerBlockers,
+    credit_restore_required: deliveryGateStatus === "user_needs_documents",
+    fail_closed_reason_code: !customerDeliveryAllowed ? reasonCode : null,
+    diagnostics: {
+      owner_area: state.owner_area || null,
+      recommended_next_step: state.recommended_next_step || null,
+      reason_code: state.reason_code || null,
+      readiness_hierarchy: state.readiness_hierarchy || null,
+      customer_publish_eligible: state.customer_publish_eligible ?? null,
+      report_publishable: state.report_publishable ?? null,
+      report_blocked: state.report_blocked ?? null,
+      public_sample_blockers: publicBlockers,
+      high_value_outreach_blockers: highValueBlockers,
+      customer_publish_blockers: customerBlockers,
+    },
+    source: "canonical_delivery_decision",
+  };
+}
+
 export function buildQaActionPlan({
   reportQaFlags = [],
   sourceReportCoverageQa = null,
@@ -1909,4 +1970,5 @@ export function buildQaActionPlan({
 
 export const __test__ = {
   summarizeCounts,
+  buildCanonicalDeliveryDecisionState,
 };
