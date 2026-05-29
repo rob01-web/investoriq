@@ -288,6 +288,40 @@ const canonicalMarketContextVisibilityFallbackOnly = generatorTest.resolveMarket
 });
 assert.equal(canonicalMarketContextVisibilityFallbackOnly.keepNeighborhood, false);
 assert.equal(canonicalMarketContextVisibilityFallbackOnly.keepLocationTable, false);
+const canonicalFinalRecommendationEligible = generatorTest.resolveFinalRecommendationSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      final_recommendation: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  // Local narrative fallback would strip if canonical authority were ignored.
+  rendererDefault: false,
+});
+assert.equal(canonicalFinalRecommendationEligible, true);
+const canonicalFinalRecommendationConstrained = generatorTest.resolveFinalRecommendationSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      final_recommendation: {
+        eligible: true,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  rendererDefault: true,
+});
+assert.equal(canonicalFinalRecommendationConstrained, false);
+const canonicalFinalRecommendationAbsentFallback = generatorTest.resolveFinalRecommendationSectionVisibility({
+  sectionEligibility: null,
+  rendererDefault: false,
+});
+assert.equal(canonicalFinalRecommendationAbsentFallback, false);
 const dataCoverageDnaSection = [
   "<p>DATA NOT AVAILABLE</p>",
   "<p>DATA NOT AVAILABLE</p>",
@@ -310,6 +344,10 @@ assert.equal(
 assert.match(
   reportSource,
   /resolveMarketContextSectionVisibility\([\s\S]{0,260}sectionEligibility[\s\S]{0,260}rendererDefault/
+);
+assert.match(
+  reportSource,
+  /resolveFinalRecommendationSectionVisibility\([\s\S]{0,260}sectionEligibility[\s\S]{0,260}rendererDefault/
 );
 assert.match(
   reportSource,

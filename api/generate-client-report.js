@@ -1920,6 +1920,25 @@ function resolveMarketContextSectionVisibility({
     keepLocationTable: keepMarketContext,
   };
 }
+function resolveFinalRecommendationSectionVisibility({
+  sectionEligibility = null,
+  rendererDefault = false,
+} = {}) {
+  const sectionMap =
+    sectionEligibility?.sections && typeof sectionEligibility.sections === "object"
+      ? sectionEligibility.sections
+      : null;
+  if (!sectionMap) return Boolean(rendererDefault);
+  const canonicalKeys = ["final_recommendation", "final_recommendations", "final_recs"];
+  const canonicalKey =
+    canonicalKeys.find((key) => sectionMap?.[key] && typeof sectionMap[key] === "object") || null;
+  if (!canonicalKey) return Boolean(rendererDefault);
+  return shouldRenderCanonicalSection({
+    sectionEligibility,
+    sectionKey: canonicalKey,
+    rendererDefault,
+  });
+}
 function shouldStripDataCoverageSectionByRenderedCopy({
   coverageSectionHtml = "",
   hasCanonicalCoverageAuthority = false,
@@ -8529,7 +8548,10 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection10) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
     }
-    const showSection11 = hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation"));
+    const showSection11 = resolveFinalRecommendationSectionVisibility({
+      sectionEligibility: sectionEligibilityStateForRender,
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation")),
+    });
     if (!showSection11) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
@@ -10538,6 +10560,7 @@ export const __test__ = {
   resolveCanonicalDataCoverageHeadlineState,
   shouldRenderCanonicalSection,
   resolveMarketContextSectionVisibility,
+  resolveFinalRecommendationSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
   buildDeliveryResponseCompatibilityAliases,
 };
