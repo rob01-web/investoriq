@@ -1140,6 +1140,93 @@ assert.equal(
   acquisitionLenderFeeRenderedClean.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"),
   false
 );
+const canonicalLenderFeeArtifactDiffRenderedCanonicalFee = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        lender_fee_percent: 0.02,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+      lender_fee_percent: 0.0085,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr><tr><td>Lender Fee</td><td>0.85%</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(canonicalLenderFeeArtifactDiffRenderedCanonicalFee.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"), false);
+assert.equal(canonicalLenderFeeArtifactDiffRenderedCanonicalFee.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"), false);
+const canonicalLenderFeeOmittedRendered = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        lender_fee_percent: 0.02,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+      lender_fee_percent: 0.0085,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(canonicalLenderFeeOmittedRendered.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"), true);
+const canonicalStateNoLenderFeeNoOmissionViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        lender_fee_percent: 0.0085,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(canonicalStateNoLenderFeeNoOmissionViolation.violations.some((v) => v.code === "ACQUISITION_LENDER_FEE_OMITTED_RENDERED"), false);
 
 const acquisitionClosingCostZeroRendered = buildReportContractQa({
   reportType: "underwriting",
@@ -1165,6 +1252,37 @@ const acquisitionClosingCostZeroRendered = buildReportContractQa({
 assert.equal(
   acquisitionClosingCostZeroRendered.violations.some((v) => v.code === "ACQUISITION_CLOSING_COSTS_ZERO_RENDERED_WITH_UNQUANTIFIED_NOTES"),
   true
+);
+const canonicalStateNoClosingFieldsNoClosingZeroViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 2840000,
+        stated_acquisition_loan_amount: 2130000,
+        debt_basis: "acquisition_financing_assumption",
+        closing_cost_notes: "Fees 1% lender fee + legal/appraisal costs",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Closing Costs</td><td>0.0%</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalStateNoClosingFieldsNoClosingZeroViolation.violations.some((v) => v.code === "ACQUISITION_CLOSING_COSTS_ZERO_RENDERED_WITH_UNQUANTIFIED_NOTES"),
+  false
 );
 const acquisitionClosingCostRenderedClean = buildReportContractQa({
   reportType: "underwriting",

@@ -311,6 +311,7 @@ function resolveCanonicalAcquisitionValuesForQa({ sourceReportCoverageQa = null,
   const canonicalState = canonicalStateCandidates[0] || null;
   const canonicalSource = canonicalState ? "canonical_acquisition_state" : "legacy_artifact_fallback";
   const canonicalValues = {
+    hasCanonicalAcquisitionState: Boolean(canonicalState),
     hasCanonicalAcquisitionValues: false,
     source: canonicalSource,
     purchase_price: null,
@@ -2410,12 +2411,17 @@ export function buildReportContractQa({
         });
       }
     }
-    const lenderFeePercent = normalizePercentForComparison(
-      acquisitionLoan?.lender_fee_percent ?? acquisitionLoan?.origination_fee_percent ?? acquisitionLoan?.financing_fee_percent
-    );
+    const lenderFeePercent = normalizePercentForComparison(canonicalAcquisitionValues?.lender_fee_percent);
+    const canUseArtifactLenderFeeFallback = !canonicalAcquisitionValues?.hasCanonicalAcquisitionState;
+    const fallbackArtifactLenderFeePercent = canUseArtifactLenderFeeFallback
+      ? normalizePercentForComparison(
+        acquisitionLoan?.lender_fee_percent ?? acquisitionLoan?.origination_fee_percent ?? acquisitionLoan?.financing_fee_percent
+      )
+      : null;
+    const authoritativeLenderFeePercent = Number.isFinite(lenderFeePercent) ? lenderFeePercent : fallbackArtifactLenderFeePercent;
     if (
-      Number.isFinite(lenderFeePercent) &&
-      lenderFeePercent > 0 &&
+      Number.isFinite(authoritativeLenderFeePercent) &&
+      authoritativeLenderFeePercent > 0 &&
       /Proposed Acquisition Debt Sizing/i.test(text) &&
       !/Lender Fee/i.test(acquisitionSection)
     ) {
@@ -2424,13 +2430,18 @@ export function buildReportContractQa({
         severity: "high",
         category: "debt_contract",
         message: "Document-stated lender/origination fee was parsed but omitted in rendered acquisition section.",
-        evidence: { lender_fee_percent: lenderFeePercent, excerpt: acquisitionSection.slice(0, 400) },
+        evidence: {
+          lender_fee_percent: authoritativeLenderFeePercent,
+          qa_canonical_source: canonicalAcquisitionValues?.source || "legacy_artifact_fallback",
+          excerpt: acquisitionSection.slice(0, 400),
+        },
         blocks_customer_delivery: false,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });
     }
-    const closingCostNotes = String(acquisitionLoan?.closing_cost_notes || "").toLowerCase();
+    const canUseArtifactClosingFallback = !canonicalAcquisitionValues?.hasCanonicalAcquisitionState;
+    const closingCostNotes = canUseArtifactClosingFallback ? String(acquisitionLoan?.closing_cost_notes || "").toLowerCase() : "";
     const hasOnlyUnquantifiedClosingNotes =
       (closingCostNotes.includes("legal") || closingCostNotes.includes("appraisal") || closingCostNotes.includes("closing")) &&
       !positive(acquisitionLoan?.closing_costs_percent);
@@ -2440,7 +2451,10 @@ export function buildReportContractQa({
         severity: "high",
         category: "debt_contract",
         message: "Rendered acquisition section shows Closing Costs 0.0% despite only unquantified legal/appraisal/closing notes.",
-        evidence: { excerpt: firstPatternExcerpt(acquisitionSection, [/Closing Costs[^\n]{0,40}0\.0%/i]) },
+        evidence: {
+          qa_canonical_source: canonicalAcquisitionValues?.source || "legacy_artifact_fallback",
+          excerpt: firstPatternExcerpt(acquisitionSection, [/Closing Costs[^\n]{0,40}0\.0%/i]),
+        },
         blocks_customer_delivery: false,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
