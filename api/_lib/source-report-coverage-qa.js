@@ -407,6 +407,45 @@ function summarize(flags) {
   };
 }
 
+function hasCanonicalCurrentDebtState(currentDebtState) {
+  const hasSemanticState = Boolean(hasCurrentDebtSemanticState(currentDebtState));
+  const hasCanonicalEvidence = Boolean(
+    currentDebtState &&
+    (
+      String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed" ||
+      currentDebtState?.has_true_current_debt_balance === true ||
+      currentDebtState?.has_current_debt_document === true ||
+      currentDebtState?.has_proposed_acquisition_financing === true
+    )
+  );
+  return hasSemanticState && hasCanonicalEvidence;
+}
+
+function hasCanonicalAcquisitionAssumptionState(acquisitionAssumptionState) {
+  return Boolean(
+    acquisitionAssumptionState &&
+    typeof acquisitionAssumptionState === "object" &&
+    (
+      acquisitionAssumptionState.has_validated_acquisition_assumptions === true ||
+      acquisitionAssumptionState.has_proposed_acquisition_financing === true ||
+      acquisitionAssumptionState.acquisition_assumptions_supported === true
+    )
+  );
+}
+
+function isCanonicalAcquisitionSeparatedNoCurrentDebt(currentDebtState, acquisitionAssumptionState) {
+  const canonicalDebtNotComputed = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase() !== "computed";
+  const canonicalAcquisitionOnly = Boolean(
+    currentDebtState?.acquisition_only_exclusion === true ||
+    String(currentDebtState?.current_debt_limitation_reason_code || "").trim() === "acquisition_only_not_current_debt"
+  );
+  const canonicalAcquisitionPresent = Boolean(
+    acquisitionAssumptionState?.has_proposed_acquisition_financing === true ||
+    currentDebtState?.has_proposed_acquisition_financing === true
+  );
+  return canonicalDebtNotComputed && canonicalAcquisitionOnly && canonicalAcquisitionPresent;
+}
+
 export function buildSourceReportCoverageQa({
   jobId = null,
   userId = null,
@@ -448,6 +487,14 @@ export function buildSourceReportCoverageQa({
     validated_acquisition_assumptions: acquisitionAssumptionState.has_validated_acquisition_assumptions,
     acquisition_assumption_state: acquisitionAssumptionState,
   };
+  const canonicalCurrentDebtPresent = hasCanonicalCurrentDebtState(currentDebtState);
+  const canonicalAcquisitionPresent = hasCanonicalAcquisitionAssumptionState(acquisitionAssumptionState);
+  const canonicalDebtAcquisitionAuthorityPresent = canonicalCurrentDebtPresent || canonicalAcquisitionPresent;
+  const canonicalAcquisitionSeparatedNoCurrentDebt = isCanonicalAcquisitionSeparatedNoCurrentDebt(
+    currentDebtState,
+    acquisitionAssumptionState
+  );
+  const useLegacyDebtAcquisitionHeuristics = !canonicalDebtAcquisitionAuthorityPresent;
   const sourceReconciliationStateResolved =
     sourceReconciliationState && typeof sourceReconciliationState === "object"
       ? sourceReconciliationState
@@ -555,14 +602,20 @@ export function buildSourceReportCoverageQa({
   const debtFiles = findFiles(files, /(purchase|assumption|financ|loan|debt|term|cmhc|ltv|amort|rate|mortgage)/i);
   const loan = artifactInventory.loan_term_sheet_parsed;
   const mortgage = artifactInventory.mortgage_statement_parsed;
-  const hasAcquisitionFinancingAssumptions =
-    currentDebtState.has_proposed_acquisition_financing &&
-    renderedTextSignals.includes("acquisition_financing_assumptions");
+  const canonicalAcquisitionExpected = Boolean(
+    acquisitionAssumptionState?.has_proposed_acquisition_financing === true ||
+    currentDebtState?.has_proposed_acquisition_financing === true
+  );
+  const renderedAcquisitionSignal = renderedTextSignals.includes("acquisition_financing_assumptions");
+  const hasAcquisitionFinancingAssumptions = canonicalDebtAcquisitionAuthorityPresent
+    ? canonicalAcquisitionExpected
+    : (currentDebtState.has_proposed_acquisition_financing && renderedAcquisitionSignal);
   const acquisitionFinancingCoverage = {
-    required_inputs_present:
-      currentDebtState.has_proposed_acquisition_financing,
+    required_inputs_present: canonicalAcquisitionExpected,
     rendered: hasAcquisitionFinancingAssumptions,
+    rendered_conformance_signal: renderedAcquisitionSignal,
     current_debt_assessed: currentDebtState.current_debt_dscr_status === "computed",
+    canonical_authority_present: canonicalDebtAcquisitionAuthorityPresent,
   };
   const hasDebtSizing =
     loan.has_balance ||
@@ -578,7 +631,11 @@ export function buildSourceReportCoverageQa({
     !hasDebtSizing &&
     !hasAcquisitionFinancingAssumptions &&
     (!hasCurrentDebtSemanticState(currentDebtState) || !currentDebtSemanticSafe) &&
-    /Current Debt DSCR|current debt service|current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided|Debt terms incomplete/i.test(htmlText)
+    /Current Debt DSCR|current debt service|current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided|Debt terms incomplete/i.test(htmlText) &&
+    (
+      useLegacyDebtAcquisitionHeuristics ||
+      !canonicalAcquisitionSeparatedNoCurrentDebt
+    )
   ) {
     addFlag(flags, {
       code: "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
@@ -590,6 +647,8 @@ export function buildSourceReportCoverageQa({
         loan_term_sheet: loan,
         mortgage_statement: mortgage,
         acquisition_financing: acquisitionFinancingCoverage,
+        canonical_authority_present: canonicalDebtAcquisitionAuthorityPresent,
+        canonical_acquisition_separated_no_current_debt: canonicalAcquisitionSeparatedNoCurrentDebt,
         rendered_text_signals: renderedTextSignals.filter((signal) =>
           ["dscr_current_debt_not_assessed", "debt_sizing_balance_not_provided", "refinance_stability_not_produced"].includes(signal)
         ),
@@ -641,7 +700,7 @@ export function buildSourceReportCoverageQa({
   const supportPackageLooksBroad =
     files.length >= 4 ||
     renovationFiles.length > 0 ||
-    debtFiles.length > 0 ||
+    (useLegacyDebtAcquisitionHeuristics && debtFiles.length > 0) ||
     artifactPresent(artifacts, "appraisal_parsed") ||
     artifactPresent(artifacts, "property_tax_parsed");
   const minimumUnderwritingSectionCountMet = !isFullUnderwriting || renderedEligibleSections >= 5 || sourceConstrainedSections.length > 0;
@@ -689,7 +748,7 @@ export function buildSourceReportCoverageQa({
     minimumUnderwritingSectionCountMet &&
     onlyT12LineItemIssue;
   const optionalSupportArtifactPresent =
-    acquisitionFinancingCoverage.rendered ||
+    (canonicalDebtAcquisitionAuthorityPresent ? canonicalAcquisitionExpected : acquisitionFinancingCoverage.rendered) ||
     artifactInventory.renovation_parsed.present ||
     artifactInventory.appraisal_parsed.present ||
     artifactInventory.property_tax_parsed.present;

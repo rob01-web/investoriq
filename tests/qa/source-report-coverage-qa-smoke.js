@@ -916,4 +916,110 @@ if (rentRollTrulyUnusable.rent_roll_sufficiency_state?.reason_code !== "rent_rol
   process.exit(1);
 }
 
+const canonicalSeparatedNoisyDebtCues = buildSourceReportCoverageQa({
+  jobId: "canonical-separated-noisy-debt-cues",
+  userId: "user-smoke",
+  propertyName: "Canonical Separated",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "Noisy_Debt_Terms.pdf", doc_type: "loan_term_sheet", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "2", original_filename: "Purchase_Assumptions.pdf", doc_type: "purchase_assumptions", mime_type: "application/pdf", parse_status: "parsed" },
+    { id: "3", original_filename: "Core_T12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "4", original_filename: "Core_RentRoll.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    { type: "t12_parsed", payload: { effective_gross_income: 2500000, total_operating_expenses: 1200000, net_operating_income: 1300000 } },
+    { type: "rent_roll_parsed", payload: { total_units: 80, occupancy: 0.95 } },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 20000000,
+        ltv: 75,
+        interest_rate: 5.2,
+        amort_years: 30,
+        derived_acquisition_loan_amount: 15000000,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  html: [
+    "<h2>Debt Structure & Financing</h2>",
+    "<p>Current Debt DSCR: 1.25x</p>",
+    "<p>Current debt service is not assessed because no current outstanding debt balance was provided.</p>",
+    "<p>Proposed Acquisition Debt Sizing</p>",
+    "<p>Derived Acquisition Loan Amount $15,000,000</p>",
+  ].join("\n"),
+});
+if (canonicalSeparatedNoisyDebtCues.deterministic_flags.some((flag) => flag.code === "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT")) {
+  console.error("Canonical acquisition-separated state should prevent authoritative purchase-assumptions debt-structure flag.");
+  process.exit(1);
+}
+
+const canonicalComputedCurrentDebtNoisyHints = buildSourceReportCoverageQa({
+  jobId: "canonical-computed-current-debt-noisy-hints",
+  userId: "user-smoke",
+  propertyName: "Canonical Computed Debt",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "finance-note.txt", doc_type: "supporting_documents_unclassified", mime_type: "text/plain", parse_status: "parsed" },
+    { id: "2", original_filename: "ops-t12.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "3", original_filename: "rr.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    { type: "t12_parsed", payload: { effective_gross_income: 1800000, total_operating_expenses: 900000, net_operating_income: 900000 } },
+    { type: "rent_roll_parsed", payload: { total_units: 60, occupancy: 0.96 } },
+    {
+      type: "mortgage_statement_parsed",
+      payload: {
+        outstanding_balance: 7000000,
+        monthly_payment: 42000,
+        annual_debt_service: 504000,
+        interest_rate: 4.9,
+        amort_years: 25,
+      },
+    },
+  ],
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR 1.79x</p>",
+    "<p>Debt structure reviewed.</p>",
+  ].join("\n"),
+});
+if (canonicalComputedCurrentDebtNoisyHints.deterministic_flags.some((flag) => flag.code === "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT")) {
+  console.error("Canonical computed current debt with support present should not fail from weak filename/doc-type hints.");
+  process.exit(1);
+}
+
+const canonicalAbsentLegacyFallbackStillSignals = buildSourceReportCoverageQa({
+  jobId: "canonical-absent-legacy-fallback-signals",
+  userId: "user-smoke",
+  propertyName: "Fallback Property",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "Debt_Terms.docx", doc_type: "supporting_documents_unclassified", mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", parse_status: "parsed" },
+    { id: "2", original_filename: "T12_Fallback.xlsx", doc_type: "t12", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+    { id: "3", original_filename: "RentRoll_Fallback.xlsx", doc_type: "rent_roll", mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", parse_status: "parsed" },
+  ],
+  artifacts: [
+    { type: "t12_parsed", payload: { effective_gross_income: 900000, total_operating_expenses: 500000, net_operating_income: 400000 } },
+    { type: "rent_roll_parsed", payload: { total_units: 24, occupancy: 0.9 } },
+  ],
+  html: [
+    "<h2>Debt Structure</h2>",
+    "<p>Current Debt DSCR</p>",
+    "<p>current debt terms were not fully provided</p>",
+    "<p>No current debt document provided</p>",
+  ].join("\n"),
+});
+if (
+  !canonicalAbsentLegacyFallbackStillSignals.rendered_text_signals.includes("dscr_current_debt_not_assessed") &&
+  !canonicalAbsentLegacyFallbackStillSignals.rendered_text_signals.includes("debt_sizing_balance_not_provided")
+) {
+  console.error("Legacy fallback should still retain debt/acquisition diagnostics when canonical debt/acquisition state is absent.");
+  process.exit(1);
+}
+
 console.log("source-report-coverage-qa smoke PASS");
