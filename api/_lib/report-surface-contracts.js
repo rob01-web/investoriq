@@ -1177,14 +1177,34 @@ export function buildCurrentDebtAssessmentState({
   );
   const loanAcquisitionOnlySignal = Boolean(
     loanDebtBasis.includes("acquisition") ||
+    loanDebtBasis.includes("proposed") ||
+    loanDebtBasis.includes("purchase") ||
     loanSemanticRole === "purchase_assumptions" ||
+    loanSemanticRole.includes("acquisition") ||
     (
       Boolean(loanInventory.has_derived_acquisition_debt) &&
       Boolean(loanInventory.has_purchase_price) &&
       !positiveNumber(loanOutstandingBalance)
     )
   );
-  const loanSupportsCurrentDebt = loanCurrentDebtSignal && !loanAcquisitionOnlySignal;
+  const explicitCurrentDebtSemanticProof = Boolean(
+    loanSemanticRole === "current_mortgage_statement" ||
+    loanSemanticRole === "current_debt_terms" ||
+    loanSemanticRole === "mortgage_statement" ||
+    (
+      (loanSemanticRole === "loan_term_sheet" || loanSemanticRole === "") &&
+      !loanAcquisitionOnlySignal
+    ) ||
+    (
+      loanDebtBasis.length > 0 &&
+      /(current|existing|mortgage)/.test(loanDebtBasis) &&
+      !/(acquisition|proposed|purchase)/.test(loanDebtBasis)
+    )
+  );
+  const loanSupportsCurrentDebt =
+    loanCurrentDebtSignal &&
+    !loanAcquisitionOnlySignal &&
+    explicitCurrentDebtSemanticProof;
 
   const hasTrueCurrentDebtBalance =
     positiveNumber(resolvedMortgage?.outstanding_balance) ||

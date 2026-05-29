@@ -761,6 +761,52 @@ const canonicalLoanSelection = generatorTest.resolveCanonicalLoanTermSheetArtifa
   },
 ]);
 assert.equal(Number(canonicalLoanSelection.currentDebtPayload?.outstanding_balance), 8750000);
+const ambiguousAcquisitionLoanSelection = generatorTest.resolveCanonicalLoanTermSheetArtifacts([
+  {
+    payload: {
+      semantic_doc_role: "loan_term_sheet",
+      debt_basis: "proposed_acquisition_financing",
+      outstanding_balance: 2250000,
+      purchase_price: 3000000,
+      ltv: 0.75,
+      derived_acquisition_loan_amount: 2250000,
+      interest_rate: 0.071,
+      amortization_years: 30,
+    },
+  },
+]);
+assert.equal(ambiguousAcquisitionLoanSelection.currentDebtPayload, null);
+const ambiguousAcquisitionDebtState = buildCurrentDebtAssessmentState({
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: ambiguousAcquisitionLoanSelection.currentDebtPayload,
+  t12Noi: 611789.1838458668,
+});
+assert.equal(ambiguousAcquisitionDebtState.current_debt_dscr_status, "not_assessed");
+assert.equal(ambiguousAcquisitionDebtState.current_debt_dscr, null);
+const mixedExplicitCurrentDebtProofSelection = generatorTest.resolveCanonicalLoanTermSheetArtifacts([
+  {
+    payload: {
+      semantic_doc_role: "purchase_assumptions",
+      debt_basis: "acquisition_financing_assumption",
+      purchase_price: 12000000,
+      ltv: 0.7,
+      interest_rate: 0.0525,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 8400000,
+    },
+  },
+  {
+    payload: {
+      semantic_doc_role: "current_debt_terms",
+      debt_basis: "existing_mortgage_debt",
+      outstanding_balance: 8750000,
+      current_outstanding_balance: 8750000,
+      interest_rate: 0.0525,
+      amortization_years: 30,
+    },
+  },
+]);
+assert.equal(Number(mixedExplicitCurrentDebtProofSelection.currentDebtPayload?.outstanding_balance), 8750000);
 const canonicalLoanDebtState = buildCurrentDebtAssessmentState({
   mortgagePayload: null,
   loanTermSheetTermsPayload: canonicalLoanSelection.currentDebtPayload,

@@ -1149,6 +1149,41 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
       acquisitionPayload: null,
     };
   }
+  const hasExplicitCurrentDebtProof = (payload = {}) => {
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasCurrentBalance =
+      isFinitePositive(payload?.outstanding_balance) ||
+      isFinitePositive(payload?.current_outstanding_balance) ||
+      isFinitePositive(payload?.current_loan_balance);
+    const currentDebtRole = [
+      "current_mortgage_statement",
+      "current_debt_terms",
+      "mortgage_statement",
+    ].includes(role);
+    const neutralLoanTermRole = ["loan_term_sheet", ""].includes(role);
+    const currentDebtBasis = /(current|existing|mortgage)/.test(debtBasis) && !/acquisition|proposed|purchase/.test(debtBasis);
+    return Boolean(
+      (hasCurrentBalance && (currentDebtRole || currentDebtBasis || (neutralLoanTermRole && !/acquisition|proposed|purchase/.test(debtBasis)))) ||
+      currentDebtRole ||
+      currentDebtBasis
+    );
+  };
+  const hasAcquisitionOnlySignals = (payload = {}) => {
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasAcquisitionTerms =
+      isFinitePositive(payload?.purchase_price) ||
+      isFinitePositive(payload?.derived_acquisition_loan_amount) ||
+      isFinitePositive(payload?.ltv) ||
+      isFinitePositive(payload?.stated_acquisition_loan_amount) ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      debtBasis.includes("acquisition") ||
+      debtBasis.includes("proposed") ||
+      debtBasis.includes("purchase");
+    return Boolean(hasAcquisitionTerms && !hasExplicitCurrentDebtProof(payload));
+  };
   const scored = rows.map((row, index) => {
     const payload = normalizeAcquisitionFinancingArtifactPayload(
       row?.payload && typeof row.payload === "object" ? row.payload : {}
@@ -1181,25 +1216,37 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
       "loan_term_sheet",
       "",
     ].includes(role);
+    const explicitCurrentDebtProof = hasExplicitCurrentDebtProof(payload);
+    const acquisitionOnlySignals = hasAcquisitionOnlySignals(payload);
     const currentDebtScore =
       (hasBalance ? 400 : 0) +
       (supportsCurrentDebtRole ? 150 : 0) +
       (hasTerms ? 40 : 0) +
       (role ? 30 : 20) -
       (hasAcquisitionSignals && !hasBalance ? 80 : 0) -
-      (debtBasis.includes("acquisition") ? 80 : 0);
+      (debtBasis.includes("acquisition") ? 80 : 0) +
+      (explicitCurrentDebtProof ? 220 : 0) -
+      (acquisitionOnlySignals ? 500 : 0);
     const acquisitionScore =
       (hasAcquisitionSignals ? 240 : 0) +
       (role === "purchase_assumptions" || role.includes("acquisition") ? 120 : 0) +
       (isFinitePositive(payload?.derived_acquisition_loan_amount) ? 100 : 0) +
       (debtBasis.includes("acquisition") ? 100 : 0);
-    return { row, index, currentDebtScore, acquisitionScore };
+    return { row, index, currentDebtScore, acquisitionScore, payload, explicitCurrentDebtProof, acquisitionOnlySignals };
   });
+  const currentDebtCandidate = [...scored].sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0] || null;
   const currentDebtArtifact =
-    [...scored].sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0]?.row || null;
+    currentDebtCandidate &&
+    currentDebtCandidate.currentDebtScore > 0 &&
+    !currentDebtCandidate.acquisitionOnlySignals &&
+    currentDebtCandidate.explicitCurrentDebtProof
+      ? currentDebtCandidate.row
+      : null;
   const acquisitionArtifact =
     [...scored].sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)[0]?.row ||
-    currentDebtArtifact;
+    currentDebtArtifact ||
+    rows[0] ||
+    null;
   return {
     currentDebtArtifact,
     acquisitionArtifact,
