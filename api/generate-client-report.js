@@ -1864,6 +1864,48 @@ function stripChartBlockByAlt(html, altText) {
   );
   return html.replace(re, "");
 }
+
+function resolveCanonicalDataCoverageHeadlineState({
+  dataCoverageState = null,
+  sourceReconciliationState = null,
+  sectionEligibility = null,
+  effectiveReportMode = "screening_v1",
+} = {}) {
+  const canonicalHeadlineMode = typeof dataCoverageState?.headlineMode === "string"
+    ? dataCoverageState.headlineMode
+    : null;
+  const canonicalSeverityState = typeof dataCoverageState?.severityState === "string"
+    ? dataCoverageState.severityState
+    : null;
+  const fallbackHeadlineMode = effectiveReportMode === "v1_core" ? "underwriting_scope" : "screening_notes";
+  const sourceConstrainedSectionCount = Number(
+    dataCoverageState?.sectionConstrainedCount ??
+    sectionEligibility?.source_constrained_section_count ??
+    0
+  );
+  const fallbackSeverityState = buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
+    ? "source_reconciliation_disclosure"
+    : sourceConstrainedSectionCount > 0
+    ? "source_limitations_disclosure"
+    : "core_inputs_confirmed";
+  return {
+    headlineMode: canonicalHeadlineMode || fallbackHeadlineMode,
+    severityState: canonicalSeverityState || fallbackSeverityState,
+    source: canonicalHeadlineMode || canonicalSeverityState ? "canonical" : "fallback",
+  };
+}
+
+function shouldRenderCanonicalSection({
+  sectionEligibility = null,
+  sectionKey = "",
+  rendererDefault = true,
+} = {}) {
+  const entry = sectionEligibility?.sections?.[sectionKey];
+  if (!entry || typeof entry !== "object") return Boolean(rendererDefault);
+  if (entry.source_constrained === true || entry.omitted === true) return false;
+  if (entry.rendered === true || entry.eligible === true) return true;
+  return Boolean(rendererDefault);
+}
 function constantTimeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
   if (a.length !== b.length) return false;
@@ -8064,21 +8106,34 @@ if (effectiveReportMode === "screening_v1") {
             Number.isFinite(Number(row?.market_rent)) &&
             Number(row?.market_rent) > Number(row?.current_rent)
         )));
-    const showSection2 = hasRentRollData && hasTargetRentInputs && hasPositiveLiftSignal;
+    const sectionEligibilityStateForRender =
+      underwritingState?.core?.sections?.eligibilityState || sectionEligibility || null;
+    const showSection2 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "operating_profile",
+      rendererDefault: hasRentRollData && hasTargetRentInputs && hasPositiveLiftSignal,
+    });
     if (!showSection2) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_UNIT_VALUE_ADD");
     }
-    const showSection2Roi =
-      Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0;
+    const showSection2Roi = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "renovation_strategy",
+      rendererDefault: Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0,
+    });
     if (!showSection2Roi) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
     }
     let scenarioTableHtml = "";
     // Note: scenarioTableHtml is built later in the v1_core block (~line 4210+).
     // Do NOT check scenarioTableHtml.length here because it is always empty at this point.
-    const showSection3 =
-      (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
-      (effectiveReportMode === "v1_core" && hasT12Data); // v1_core always builds scenario table from T12
+    const showSection3 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "scenario_analysis",
+      rendererDefault:
+        (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
+        (effectiveReportMode === "v1_core" && hasT12Data), // v1_core always builds scenario table from T12
+    });
     if (!showSection3) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
     }
@@ -8094,7 +8149,11 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection4Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
     }
-    const showSection5 = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    const showSection5 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "risk_register",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("riskAssessment")),
+    });
     if (!showSection5) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
     }
@@ -8103,9 +8162,13 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection5Matrix) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
-    const showSection6 =
-      showRenovationSection ||
-      (Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0);
+    const showSection6 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "renovation_strategy",
+      rendererDefault:
+        showRenovationSection ||
+        (Array.isArray(tables.renovationSummary) && tables.renovationSummary.length > 0),
+    });
     if (!showSection6) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
@@ -8399,10 +8462,14 @@ if (effectiveReportMode === "screening_v1") {
       : "";
     const dealScoreRows = effectiveReportMode === "v1_core" ? dealScoreState.scoreRows : [];
 
-    const showSection7 =
-      hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) ||
-      debtCapitalRowsHtml.length > 0 ||
-      String(acquisitionFinancingAssumptionsHtml || "").trim().length > 0;
+    const showSection7 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "debt_structure",
+      rendererDefault:
+        hasMeaningfulNarrative(getNarrativeHtml("debtStructure")) ||
+        debtCapitalRowsHtml.length > 0 ||
+        String(acquisitionFinancingAssumptionsHtml || "").trim().length > 0,
+    });
     if (!showSection7) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
@@ -8413,16 +8480,24 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection7Tables) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
     }
-    const showSection8 =
-      (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
-      hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
-      hasMeaningfulNarrative(getNarrativeHtml("dealScoreInterpretation")) ||
-      dealScoreTableHtml.length > 0;
+    const showSection8 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "deal_scorecard",
+      rendererDefault:
+        (Array.isArray(tables.dealScore) && tables.dealScore.length > 0) ||
+        hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")) ||
+        hasMeaningfulNarrative(getNarrativeHtml("dealScoreInterpretation")) ||
+        dealScoreTableHtml.length > 0,
+    });
     if (!showSection8) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
     }
-    const showSection9 =
-      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0;
+    const showSection9 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "dcf",
+      rendererDefault:
+        (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0,
+    });
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
     }
@@ -8431,9 +8506,13 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection9Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
     }
-    const showSection10 =
-      (Array.isArray(tables.comps) && tables.comps.length > 0) ||
-      hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro"));
+    const showSection10 = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "advanced_modeling",
+      rendererDefault:
+        (Array.isArray(tables.comps) && tables.comps.length > 0) ||
+        hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro")),
+    });
     if (!showSection10) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
     }
@@ -8553,31 +8632,41 @@ if (effectiveReportMode === "screening_v1") {
       /RENT ROLL DISTRIBUTION\s*-\s*OCCUPANCY,\s*RENT DISPERSION,\s*AND UNIT MIX PROFILE/g,
       "Rent Roll Distribution - Occupancy, Rent Dispersion, and Unit Mix Profile"
     );
+    const sectionEligibilityState =
+      underwritingState?.core?.sections?.eligibilityState || sectionEligibility;
+    const dataCoverageState = underwritingState?.core?.dataCoverage || null;
+    const canonicalDataCoverageHeadlineState = resolveCanonicalDataCoverageHeadlineState({
+      dataCoverageState,
+      sourceReconciliationState,
+      sectionEligibility: sectionEligibilityState,
+      effectiveReportMode,
+    });
+    const isUnderwritingScopeHeadline = canonicalDataCoverageHeadlineState.headlineMode === "underwriting_scope";
     finalHtml = finalHtml.replace(
       /DATA COVERAGE\s*&\s*UNDERWRITING GAPS\s*-\s*MISSING INPUTS AND OMITTED SECTIONS/g,
-      effectiveReportMode === "v1_core"
+      isUnderwritingScopeHeadline
         ? "Data Coverage & Underwriting Scope - Source-Supported Inputs and Withheld Sections"
         : "Data Coverage & Screening Notes - Missing Inputs and Omitted Sections"
     );
     finalHtml = finalHtml.replace(
       /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,
-      effectiveReportMode === "v1_core"
+      isUnderwritingScopeHeadline
         ? '<span class="section-header-title">Data Coverage &amp; Underwriting Scope</span>'
         : '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
     );
     finalHtml = finalHtml.replace(
       /<span class="section-header-sub">Missing Inputs and Omitted Sections<\/span>/gi,
-      effectiveReportMode === "v1_core"
+      isUnderwritingScopeHeadline
         ? '<span class="section-header-sub">Source-Supported Inputs and Withheld Sections</span>'
         : '<span class="section-header-sub">Missing Inputs and Omitted Sections</span>'
     );
-    if (effectiveReportMode === "v1_core") {
+    if (isUnderwritingScopeHeadline) {
       finalHtml = finalHtml.replace(
         /Missing inputs and omitted sections/gi,
         "Source-Supported Inputs and Withheld Sections"
       );
     }
-    if (effectiveReportMode !== "v1_core") {
+    if (!isUnderwritingScopeHeadline) {
       finalHtml = finalHtml.replace(
         /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,
         '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
@@ -8598,27 +8687,14 @@ if (effectiveReportMode === "screening_v1") {
       );
     if (underwritingState?.core?.dataCoverage) {
       underwritingState.core.dataCoverage.supportingDocsUsed = supportingUnderwritingDocsUsed;
-      underwritingState.core.dataCoverage.headlineMode = effectiveReportMode === "v1_core"
-        ? "underwriting_scope"
-        : "screening_notes";
-      const sectionConstrainedCount = Number(
-        underwritingState.core.dataCoverage.sectionConstrainedCount ??
-        sectionEligibility?.source_constrained_section_count ??
-        0
-      );
-      const reconciliationRequired = Boolean(
-        buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
-      );
-      underwritingState.core.dataCoverage.severityState = reconciliationRequired
-        ? "source_reconciliation_disclosure"
-        : sectionConstrainedCount > 0
-        ? "source_limitations_disclosure"
-        : "core_inputs_confirmed";
+      if (!underwritingState.core.dataCoverage.headlineMode) {
+        underwritingState.core.dataCoverage.headlineMode = canonicalDataCoverageHeadlineState.headlineMode;
+      }
+      if (!underwritingState.core.dataCoverage.severityState) {
+        underwritingState.core.dataCoverage.severityState = canonicalDataCoverageHeadlineState.severityState;
+      }
     }
-    const dataCoverageState = underwritingState?.core?.dataCoverage || null;
     const optionalSectionState = underwritingState?.core?.optionalSections || null;
-    const sectionEligibilityState =
-      underwritingState?.core?.sections?.eligibilityState || sectionEligibility;
     screeningCoverageHtml = buildScreeningDataCoverageSummary({
       t12Payload,
       computedRentRoll,
@@ -10392,5 +10468,7 @@ export const __test__ = {
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
+  resolveCanonicalDataCoverageHeadlineState,
+  shouldRenderCanonicalSection,
   buildDeliveryResponseCompatibilityAliases,
 };

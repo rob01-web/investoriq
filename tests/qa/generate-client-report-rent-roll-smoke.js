@@ -49,6 +49,112 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /function resolveCanonicalDataCoverageHeadlineState\([\s\S]*?headlineMode[\s\S]*?severityState[\s\S]*?source/
+);
+assert.match(
+  reportSource,
+  /const canonicalDataCoverageHeadlineState = resolveCanonicalDataCoverageHeadlineState\([\s\S]*?dataCoverageState[\s\S]*?sourceReconciliationState[\s\S]*?sectionEligibility[\s\S]*?effectiveReportMode/
+);
+assert.match(
+  reportSource,
+  /const isUnderwritingScopeHeadline = canonicalDataCoverageHeadlineState\.headlineMode === "underwriting_scope"/
+);
+assert.match(
+  reportSource,
+  /function shouldRenderCanonicalSection\([\s\S]*?sectionEligibility\?\.sections\?\.\[sectionKey\][\s\S]*?source_constrained[\s\S]*?omitted[\s\S]*?rendered[\s\S]*?eligible/
+);
+assert.match(
+  reportSource,
+  /const showSection7 = shouldRenderCanonicalSection\([\s\S]*?sectionKey: "debt_structure"[\s\S]*?rendererDefault/
+);
+assert.match(
+  reportSource,
+  /const showSection8 = shouldRenderCanonicalSection\([\s\S]*?sectionKey: "deal_scorecard"[\s\S]*?rendererDefault/
+);
+assert.match(
+  reportSource,
+  /const showSection9 = shouldRenderCanonicalSection\([\s\S]*?sectionKey: "dcf"[\s\S]*?rendererDefault/
+);
+const canonicalHeadlineWins = generatorTest.resolveCanonicalDataCoverageHeadlineState({
+  dataCoverageState: {
+    headlineMode: "screening_notes",
+    severityState: "core_inputs_confirmed",
+    sectionConstrainedCount: 0,
+  },
+  sourceReconciliationState: { status: "source_reconciliation_required" },
+  sectionEligibility: { source_constrained_section_count: 4 },
+  effectiveReportMode: "v1_core",
+});
+assert.equal(canonicalHeadlineWins.headlineMode, "screening_notes");
+assert.equal(canonicalHeadlineWins.severityState, "core_inputs_confirmed");
+assert.equal(canonicalHeadlineWins.source, "canonical");
+
+const canonicalHeadlineFallback = generatorTest.resolveCanonicalDataCoverageHeadlineState({
+  dataCoverageState: null,
+  sourceReconciliationState: { status: "source_reconciliation_required" },
+  sectionEligibility: { source_constrained_section_count: 2 },
+  effectiveReportMode: "v1_core",
+});
+assert.equal(canonicalHeadlineFallback.headlineMode, "underwriting_scope");
+assert.equal(canonicalHeadlineFallback.severityState, "source_reconciliation_disclosure");
+assert.equal(canonicalHeadlineFallback.source, "fallback");
+
+const constrainedSectionBlocked = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      debt_structure: {
+        source_constrained: true,
+        omitted: false,
+        rendered: true,
+        eligible: true,
+      },
+    },
+  },
+  sectionKey: "debt_structure",
+  rendererDefault: true,
+});
+assert.equal(constrainedSectionBlocked, false);
+
+const omittedSectionBlocked = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      deal_scorecard: {
+        source_constrained: false,
+        omitted: true,
+        rendered: true,
+        eligible: true,
+      },
+    },
+  },
+  sectionKey: "deal_scorecard",
+  rendererDefault: true,
+});
+assert.equal(omittedSectionBlocked, false);
+
+const canonicalEligibleWins = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        source_constrained: false,
+        omitted: false,
+        rendered: true,
+        eligible: true,
+      },
+    },
+  },
+  sectionKey: "dcf",
+  rendererDefault: false,
+});
+assert.equal(canonicalEligibleWins, true);
+
+const canonicalAbsentFallback = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: null,
+  sectionKey: "dcf",
+  rendererDefault: false,
+});
+assert.equal(canonicalAbsentFallback, false);
+assert.match(
+  reportSource,
   /const canonicalExecOccupancy = coerceNumber\(resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)\)/
 );
 assert.match(
