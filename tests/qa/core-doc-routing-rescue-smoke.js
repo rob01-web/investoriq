@@ -5,6 +5,7 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
 const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const { inferSupportingDocTypeFromText } = await import("../../api/parse/parse-doc.js");
 
 const parseDocSource = fs.readFileSync("api/parse/parse-doc.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
@@ -95,6 +96,56 @@ assert.match(parseDocSource, /current_loan_balance:\s*shouldExposeCurrentDebtAli
 assert.match(parseDocSource, /debt_basis:\s*normalizedDebtBasis/);
 assert.match(parseDocSource, /outstanding_balance_not_promoted_without_explicit_current_debt_proof/);
 assert.match(parseDocSource, /acquisition_or_proposed_financing_not_current_debt/);
+assert.match(parseDocSource, /supporting_doc_financing_route_ambiguous/);
+
+// 4c) Supporting-doc financing classifier behavior is conservative on generic/mixed financing text.
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Loan Terms Summary",
+      "Term sheet excerpt",
+      "Rate 5.25%",
+      "Amortization 30 years",
+      "Estimated amount $2,500,000",
+    ].join("\n")
+  ),
+  "supporting_documents_unclassified"
+);
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Current Mortgage Statement",
+      "Current outstanding principal balance: $2,100,000",
+      "Current monthly debt service: $13,625",
+      "Existing lender: ABC Bank",
+      "Maturity date 2028-06-01",
+    ].join("\n")
+  ),
+  "mortgage_statement"
+);
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Indicative acquisition financing term sheet",
+      "Borrower to be determined by Purchaser",
+      "Loan amount at purchase price $3,500,000",
+      "Proposed LTV 65%",
+      "Not a financing commitment",
+    ].join("\n")
+  ),
+  "loan_term_sheet"
+);
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Acquisition financing overview",
+      "Purchase price $3,500,000 and proposed LTV 65%",
+      "Current balance references are preliminary and not certified",
+      "Loan terms provided for context only",
+    ].join("\n")
+  ),
+  "supporting_documents_unclassified"
+);
 
 // 5/6) Customer-copy regression guards.
 const combinedSource = `${parseDocSource}\n${workerSource}`;

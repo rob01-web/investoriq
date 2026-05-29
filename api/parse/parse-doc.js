@@ -379,6 +379,33 @@ const SUPPORTING_DOC_ALIASES = {
   ],
 };
 
+function evaluateSupportingDocFinancingRoute(text = "") {
+  const source = String(text || "");
+  const norm = source.toUpperCase().replace(/\s+/g, " ");
+  const has = (terms) => terms.some((t) => norm.includes(String(t || "").toUpperCase()));
+
+  const explicitCurrentDebtProof = /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|payoff\s+(?:statement|balance)|current\s+monthly\s+debt\s+service)\b/i.test(source);
+  const hasAcquisitionOrProposedFinancingText = /\b(?:acquisition\s+financing|indicative\s+acquisition\s+financing|proposed\s+loan(?:\s+amount)?|proposed\s+ltv|borrower\s+to\s+be\s+determined|purchaser|purchase\s+price|acquisition\s+price|loan\s+amount\s+at\s+purchase\s+price|not\s+a\s+financing\s+commitment)\b/i.test(source);
+  const hasGenericFinancingTerms =
+    has(["TERM SHEET", "LOAN TERMS", "REFI TERMS"]) ||
+    /\d+(?:\.\d+)?\s*%/.test(norm) ||
+    /\$\s*[\d,]+(?:\.\d{2})?/.test(norm) ||
+    /\b\d+\s*(?:YRS|YR|YEARS)\b/.test(norm);
+  const hasMortgageContextTerms =
+    has(["MORTGAGE", "PRINCIPAL", "LENDER", "MORTGAGEE", "PAYMENT", "MATURITY"]) ||
+    /\b(?:outstanding\s+balance|current\s+outstanding\s+balance|current\s+balance|principal\s+balance|unpaid\s+principal|current\s+debt|existing\s+debt)\b/i.test(source);
+  const mixedFinancingSignals = hasAcquisitionOrProposedFinancingText && (hasMortgageContextTerms || explicitCurrentDebtProof);
+  const ambiguousFinancingRoute = !explicitCurrentDebtProof && (mixedFinancingSignals || (!hasAcquisitionOrProposedFinancingText && hasGenericFinancingTerms));
+
+  return {
+    explicitCurrentDebtProof,
+    hasAcquisitionOrProposedFinancingText,
+    hasGenericFinancingTerms,
+    mixedFinancingSignals,
+    ambiguousFinancingRoute,
+  };
+}
+
 export function inferSupportingDocTypeFromText(text, options = {}) {
   const allowFilenameHint = options.allowFilenameHint !== false;
   const filename = options.filename || '';
@@ -399,27 +426,22 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
     has(['MARKET SURVEY', 'APPRAISAL SUMMARY', 'APPRAISAL EXCERPT', 'PHASE I ESA', 'ENVIRONMENTAL REPORT']);
   if (unsupportedSupportDoc) return 'supporting_documents_unclassified';
 
+  const financingRoute = evaluateSupportingDocFinancingRoute(text);
   const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
-  const explicitCurrentDebtContext =
-    /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|outstanding\s+principal\s+balance|current\s+loan\s+balance|mortgage\s+balance|current\s+monthly\s+debt\s+service)\b/i.test(text);
-  if (explicitCurrentDebtContext && currentDebtSignals >= 2) {
+  if (financingRoute.explicitCurrentDebtProof && currentDebtSignals >= 2) {
     return 'mortgage_statement';
   }
 
+  if (financingRoute.ambiguousFinancingRoute) {
+    return 'supporting_documents_unclassified';
+  }
+
   const acquisitionSignals = countMatches(SUPPORTING_DOC_ALIASES.loan_term_sheet);
-  const acquisitionOnlyContext = has([
-    'BORROWER TO BE DETERMINED',
-    'PURCHASER',
-    'ACQUISITION FINANCING',
-    'INDICATIVE ACQUISITION FINANCING',
-    'LOAN AMOUNT AT PURCHASE PRICE',
-    'NOT A FINANCING COMMITMENT',
-  ]);
-  if (acquisitionSignals >= 2 || has(['TERM SHEET', 'REFI TERMS', 'LOAN TERMS']) || (acquisitionSignals >= 1 && hasFinancingValuePattern)) {
+  if (financingRoute.hasAcquisitionOrProposedFinancingText || acquisitionSignals >= 2) {
     return 'loan_term_sheet';
   }
 
-  if (!acquisitionOnlyContext && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
+  if (!financingRoute.hasAcquisitionOrProposedFinancingText && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
     return 'mortgage_statement';
   }
 
@@ -2347,6 +2369,33 @@ export default async function handler(req, res) {
           effectiveDocType = inferred;
           detectedDocType = inferred;
           console.log('[parse-doc] supporting_documents inferred as', inferred);
+          const financingRoute = evaluateSupportingDocFinancingRoute(fullText);
+          if (financingRoute.ambiguousFinancingRoute) {
+            const { error: ambiguousRouteEventErr } = await supabaseAdmin.from('analysis_artifacts').insert([
+              {
+                job_id: jobId,
+                user_id: fileRow.user_id || null,
+                type: 'worker_event',
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/worker_event/supporting_doc_financing_route_ambiguous/${fileRow.id}/${safeTimestamp(nowIso)}.json`,
+                payload: {
+                  event: 'supporting_doc_financing_route_ambiguous',
+                  warning_code: 'supporting_doc_financing_route_ambiguous',
+                  file_id: fileRow.id,
+                  original_filename: fileRow.original_filename || null,
+                  inferred_doc_type: inferred,
+                  declared_doc_type: declaredDocType || null,
+                  explicit_current_debt_proof: financingRoute.explicitCurrentDebtProof,
+                  acquisition_or_proposed_signals: financingRoute.hasAcquisitionOrProposedFinancingText,
+                  mixed_financing_signals: financingRoute.mixedFinancingSignals,
+                  timestamp: nowIso,
+                },
+              },
+            ]);
+            if (ambiguousRouteEventErr) {
+              console.error('Failed to write supporting-doc financing ambiguity event:', ambiguousRouteEventErr.message);
+            }
+          }
         }
       } catch (_inferErr) {
         // fail-closed: leave effectiveDocType as 'supporting_documents'
