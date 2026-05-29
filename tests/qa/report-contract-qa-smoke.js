@@ -2887,4 +2887,105 @@ assert.equal(
   true
 );
 
+const canonicalCleanNoisyLimitationPhrases = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: { publishability_bucket: "core_sufficient_publishable" },
+    source_reconciliation_state: { status: "aligned" },
+    section_eligibility: { sections: {} },
+  },
+  html: [
+    "<h2>Data Coverage & Underwriting Scope</h2>",
+    "<p>Source limitation phrase appears in historical note context only.</p>",
+    "<p>Legacy wording reference for archive comparison.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalCleanNoisyLimitationPhrases.violations.some((v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"),
+  false
+);
+
+const canonicalConstrainedCleanCopyMissingLimitation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: { publishability_bucket: "disclose_only_publishable" },
+    source_reconciliation_state: { status: "source_reconciliation_required" },
+    section_eligibility: {
+      sections: {
+        debt_structure: { source_constrained: true, omitted: true, rendered: false },
+      },
+    },
+  },
+  html: [
+    "<h2>Data Coverage & Underwriting Scope</h2>",
+    "<p>All inputs are complete and fully aligned.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalConstrainedCleanCopyMissingLimitation.violations.some((v) => v.code === "DATA_COVERAGE_CANONICAL_LIMITATION_MISSING"),
+  true
+);
+
+const canonicalDebtOmittedButRenderedHeading = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    section_eligibility: {
+      sections: {
+        debt_structure: { source_constrained: true, omitted: true, rendered: false },
+      },
+    },
+  },
+  html: "<h2>Debt Structure & Financing</h2><p>Heading rendered despite canonical omit.</p>",
+});
+assert.equal(
+  canonicalDebtOmittedButRenderedHeading.violations.some((v) => v.code === "SECTION_ELIGIBILITY_DEBT_HEADING_CONFORMANCE_DRIFT"),
+  true
+);
+
+const canonicalDebtRenderedMissingHeading = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    section_eligibility: {
+      sections: {
+        debt_structure: { source_constrained: false, omitted: false, rendered: true, eligible: true },
+      },
+    },
+  },
+  html: "<h2>Operating Profile</h2><p>Debt heading intentionally missing for conformance test.</p>",
+});
+assert.equal(
+  canonicalDebtRenderedMissingHeading.violations.some((v) => v.code === "SECTION_ELIGIBILITY_DEBT_HEADING_MISSING"),
+  true
+);
+
+const canonicalAbsentLegacyFallbackStillActive = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: null,
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.35x</p>",
+    "<p>No current debt document provided.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalAbsentLegacyFallbackStillActive.violations.some(
+    (v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" || v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"
+  ),
+  true
+);
+
 console.log("report-contract-qa smoke PASS");

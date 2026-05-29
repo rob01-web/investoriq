@@ -47,6 +47,48 @@ function resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa = null) 
     return { currentDebtLoan: null, acquisitionLoan: null };
   }
 
+  const hasExplicitCurrentDebtProof = (loan = {}) => {
+    const role = String(loan?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(loan?.debt_basis || "").trim().toLowerCase();
+    const hasCurrentBalance =
+      positive(loan?.outstanding_balance) ||
+      positive(loan?.current_outstanding_balance) ||
+      positive(loan?.current_loan_balance);
+    const currentDebtRole = [
+      "current_mortgage_statement",
+      "current_debt_terms",
+      "mortgage_statement",
+    ].includes(role);
+    const neutralLoanTermRole = ["loan_term_sheet", ""].includes(role);
+    const currentDebtBasis =
+      /(current|existing|mortgage)/.test(debtBasis) &&
+      !/acquisition|proposed|purchase/.test(debtBasis);
+    return Boolean(
+      (hasCurrentBalance &&
+        (currentDebtRole ||
+          currentDebtBasis ||
+          (neutralLoanTermRole &&
+            !/acquisition|proposed|purchase/.test(debtBasis)))) ||
+        currentDebtRole ||
+        currentDebtBasis
+    );
+  };
+  const hasAcquisitionOnlySignals = (loan = {}) => {
+    const role = String(loan?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(loan?.debt_basis || "").trim().toLowerCase();
+    const hasAcquisitionTerms =
+      positive(loan?.purchase_price) ||
+      positive(loan?.derived_acquisition_loan_amount) ||
+      positive(loan?.ltv) ||
+      positive(loan?.stated_acquisition_loan_amount) ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      debtBasis.includes("acquisition") ||
+      debtBasis.includes("proposed") ||
+      debtBasis.includes("purchase");
+    return Boolean(hasAcquisitionTerms && !hasExplicitCurrentDebtProof(loan));
+  };
+
   const scored = allLoanPayloads.map((loan, index) => {
     const role = String(loan?.semantic_doc_role || "").trim().toLowerCase();
     const debtBasis = String(loan?.debt_basis || "").trim().toLowerCase();
@@ -70,23 +112,34 @@ function resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa = null) 
       role.includes("acquisition") ||
       role.includes("appraisal") ||
       debtBasis.includes("acquisition");
+    const explicitCurrentDebtProof = hasExplicitCurrentDebtProof(loan);
+    const acquisitionOnlySignals = hasAcquisitionOnlySignals(loan);
 
     const currentDebtScore =
       (hasCurrentBalance ? 400 : 0) +
       (currentDebtRole ? 150 : 0) +
       (hasCurrentDebtTerms ? 40 : 0) -
       (acquisitionSignal && !hasCurrentBalance ? 80 : 0) -
-      (debtBasis.includes("acquisition") ? 80 : 0);
+      (debtBasis.includes("acquisition") ? 80 : 0) +
+      (explicitCurrentDebtProof ? 220 : 0) -
+      (acquisitionOnlySignals ? 500 : 0);
     const acquisitionScore =
       (acquisitionSignal ? 260 : 0) +
       (positive(loan?.derived_acquisition_loan_amount) ? 100 : 0) +
       (role === "purchase_assumptions" ? 100 : 0) +
       (debtBasis.includes("acquisition") ? 100 : 0);
-    return { loan, index, currentDebtScore, acquisitionScore };
+    return { loan, index, currentDebtScore, acquisitionScore, explicitCurrentDebtProof, acquisitionOnlySignals };
   });
 
-  const currentDebtLoan = [...scored]
-    .sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0]?.loan || null;
+  const currentDebtCandidate =
+    [...scored].sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0] || null;
+  const currentDebtLoan =
+    currentDebtCandidate &&
+    currentDebtCandidate.currentDebtScore > 0 &&
+    currentDebtCandidate.explicitCurrentDebtProof &&
+    !currentDebtCandidate.acquisitionOnlySignals
+      ? currentDebtCandidate.loan
+      : null;
   const acquisitionLoan = [...scored]
     .sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)[0]?.loan || currentDebtLoan;
 
@@ -695,6 +748,24 @@ function coreCoveragePresent(sourceReportCoverageQa) {
   return Boolean(inv?.t12_parsed?.has_core_totals && inv?.rent_roll_parsed?.present);
 }
 
+function hasCanonicalCoverageAuthority(sourceReportCoverageQa = null) {
+  return Boolean(
+    sourceReportCoverageQa &&
+      (
+        (sourceReportCoverageQa.core_input_sufficiency_state &&
+          typeof sourceReportCoverageQa.core_input_sufficiency_state === "object") ||
+        (sourceReportCoverageQa.t12_sufficiency_state &&
+          typeof sourceReportCoverageQa.t12_sufficiency_state === "object") ||
+        (sourceReportCoverageQa.rent_roll_sufficiency_state &&
+          typeof sourceReportCoverageQa.rent_roll_sufficiency_state === "object") ||
+        (sourceReportCoverageQa.source_reconciliation_state &&
+          typeof sourceReportCoverageQa.source_reconciliation_state === "object") ||
+        (sourceReportCoverageQa.section_eligibility &&
+          typeof sourceReportCoverageQa.section_eligibility === "object")
+      )
+  );
+}
+
 function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
   const verdictState =
     sourceReportCoverageQa?.visible_classification_state ||
@@ -1070,6 +1141,7 @@ export function buildReportContractQa({
     /SOURCE-CONSTRAINED DEBT NOT PROVIDED|DEBT NOT PROVIDED|No verified current debt document was provided|No current debt document provided|Not assessed - no current debt document|current-debt DSCR and refinance capacity were not assessed|no true current debt balance was verified/i.test(text);
   const coreInputBucket = String(sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket || "").toLowerCase();
   const reconciliationStatus = String(sourceReportCoverageQa?.source_reconciliation_state?.status || "").toLowerCase();
+  const canonicalCoverageAuthorityPresent = hasCanonicalCoverageAuthority(sourceReportCoverageQa);
   const noMaterialReconciliationDisclosureActive =
     reconciliationStatus !== "source_reconciliation_required" &&
     reconciliationStatus !== "parser_suspected";
@@ -1078,6 +1150,7 @@ export function buildReportContractQa({
     /(?:^|\n)\s*SOURCE LIMITATIONS DISCLOSURE(?:\s|$)/i.test(text);
   if (
     !reportTypeIsScreeningReport &&
+    canonicalCoverageAuthorityPresent &&
     coreInputBucket === "core_sufficient_publishable" &&
     noMaterialReconciliationDisclosureActive &&
     sourceLimitationHeadlineShown
@@ -1091,6 +1164,83 @@ export function buildReportContractQa({
         core_input_publishability_bucket: coreInputBucket,
         source_reconciliation_status: reconciliationStatus || null,
         excerpt: firstPatternExcerpt(text, [/CORE INPUTS EXTRACTED\s*-\s*SOURCE LIMITATIONS DISCLOSURE/i, /SOURCE LIMITATIONS DISCLOSURE/i]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const hasDataCoverageHeading = /Data Coverage/i.test(text);
+  const canonicalSourceConstraintExpected =
+    canonicalCoverageAuthorityPresent &&
+    (
+      coreInputBucket === "disclose_only_publishable" ||
+      coreInputBucket === "section_constrained_publishable" ||
+      reconciliationStatus === "source_reconciliation_required" ||
+      reconciliationStatus === "parser_suspected" ||
+      Object.values(sectionEligibilitySections || {}).some((section) => section?.source_constrained === true)
+    );
+  const renderedSourceConstraintCopyPresent =
+    /SOURCE LIMITATIONS DISCLOSURE|SOURCE RECONCILIATION DISCLOSURE|source-constrained|withheld sections|not assessed|not produced due to insufficient/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    canonicalSourceConstraintExpected &&
+    hasDataCoverageHeading &&
+    !renderedSourceConstraintCopyPresent
+  ) {
+    addViolation(violations, {
+      code: "DATA_COVERAGE_CANONICAL_LIMITATION_MISSING",
+      severity: "high",
+      category: "data_coverage_taxonomy_contract",
+      message: "Canonical coverage state requires source-limitation disclosure, but rendered Data Coverage copy appears clean and omits limitation language.",
+      evidence: {
+        core_input_publishability_bucket: coreInputBucket || null,
+        source_reconciliation_status: reconciliationStatus || null,
+        canonical_source_constrained_sections: Object.entries(sectionEligibilitySections || {})
+          .filter(([, section]) => section?.source_constrained === true)
+          .map(([key]) => key),
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  const renderedDebtSectionHeadingPresent = /Debt Structure|Current Debt Coverage/i.test(text);
+  if (
+    !reportTypeIsScreeningReport &&
+    debtStructureEligibility &&
+    debtStructureEligibility.source_constrained === true &&
+    debtStructureEligibility.omitted === true &&
+    renderedDebtSectionHeadingPresent
+  ) {
+    addViolation(violations, {
+      code: "SECTION_ELIGIBILITY_DEBT_HEADING_CONFORMANCE_DRIFT",
+      severity: "high",
+      category: "section_eligibility_render_contract",
+      message: "Canonical section eligibility omits source-constrained debt section, but rendered output still includes debt section heading language.",
+      evidence: {
+        section_eligibility_debt_structure: debtStructureEligibility,
+        excerpt: firstPatternExcerpt(text, [/Debt Structure/i, /Current Debt Coverage/i]) || leakProbeExcerpt,
+      },
+      blocks_customer_delivery: false,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+    });
+  }
+  if (
+    !reportTypeIsScreeningReport &&
+    debtStructureEligibility &&
+    debtStructureEligibility.rendered === true &&
+    debtStructureEligibility.source_constrained !== true &&
+    !renderedDebtSectionHeadingPresent
+  ) {
+    addViolation(violations, {
+      code: "SECTION_ELIGIBILITY_DEBT_HEADING_MISSING",
+      severity: "medium",
+      category: "section_eligibility_render_contract",
+      message: "Canonical section eligibility expects rendered debt section, but rendered heading language is missing.",
+      evidence: {
+        section_eligibility_debt_structure: debtStructureEligibility,
       },
       blocks_customer_delivery: false,
       blocks_public_sample: true,
