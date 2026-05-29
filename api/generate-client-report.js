@@ -9749,6 +9749,35 @@ try {
     artifacts: coverageArtifacts,
     sourceReconciliationState,
     visibleClassificationState: underwritingState?.core?.classification?.visibleClassificationState || null,
+    currentDebtState:
+      underwritingState?.core?.currentDebt?.assessmentState ||
+      currentDebtAssessmentState ||
+      null,
+    acquisitionAssumptionState:
+      underwritingState?.core?.acquisition?.assumptionState ||
+      acquisitionAssumptionState ||
+      null,
+    coreInputSufficiencyState:
+      underwritingState?.core?.sufficiency?.coreInputState ||
+      coreInputSufficiencyState ||
+      null,
+    t12SufficiencyState:
+      underwritingState?.core?.sufficiency?.t12State ||
+      t12SufficiencyState ||
+      null,
+    rentRollSufficiencyState:
+      underwritingState?.core?.sufficiency?.rentRollState ||
+      rentRollSufficiencyState ||
+      null,
+    sectionEligibility:
+      underwritingState?.core?.sections?.eligibilityState ||
+      sectionEligibility ||
+      null,
+    dataCoverageState:
+      underwritingState?.core?.dataCoverage ||
+      dataCoverageState ||
+      null,
+    underwritingState,
   });
   sourceCoverageQaResult = sourceCoverageQa;
   if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {

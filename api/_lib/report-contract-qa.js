@@ -276,19 +276,49 @@ function resolveCanonicalCurrentDebtStateForQa({
   sourceReportCoverageQa = null,
   artifacts = [],
 } = {}) {
-  const candidates = [
-    sourceReportCoverageQa?.current_debt_state,
-    sourceReportCoverageQa?.currentDebtAssessmentState,
+  const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
+  const canonicalCurrentDebtAuthoritative =
+    coverageAuthority?.current_debt_state_authoritative === true ||
+    String(sourceReportCoverageQa?.current_debt_state_source || "").toLowerCase() === "canonical_input";
+  const canonicalStateCandidates = [
     sourceReportCoverageQa?.underwritingState?.core?.currentDebt?.assessmentState,
     sourceReportCoverageQa?.report_surface_contracts?.current_debt_state,
     sourceReportCoverageQa?.rendered_contract?.current_debt_state,
     sourceReportCoverageQa?.delivery_gate_decision?.current_debt_state,
   ].filter((row) => row && typeof row === "object");
-  const selected = candidates[0] || null;
-  if (selected) {
+  const explicitCanonicalState = canonicalStateCandidates[0] || null;
+  if (explicitCanonicalState) {
     return {
       source: "canonical_payload",
-      state: selected,
+      state: explicitCanonicalState,
+    };
+  }
+  const currentDebtStateSource = String(sourceReportCoverageQa?.current_debt_state_source || "").toLowerCase();
+  const currentDebtStateMarkedFallback = currentDebtStateSource === "fallback_reconstructed";
+  const currentDebtStateCandidate =
+    sourceReportCoverageQa?.current_debt_state && typeof sourceReportCoverageQa.current_debt_state === "object"
+      ? sourceReportCoverageQa.current_debt_state
+      : null;
+  if (
+    currentDebtStateCandidate &&
+    (
+      canonicalCurrentDebtAuthoritative ||
+      !currentDebtStateMarkedFallback
+    )
+  ) {
+    return {
+      source: "canonical_payload",
+      state: currentDebtStateCandidate,
+    };
+  }
+  if (
+    sourceReportCoverageQa?.currentDebtAssessmentState &&
+    typeof sourceReportCoverageQa.currentDebtAssessmentState === "object" &&
+    canonicalCurrentDebtAuthoritative
+  ) {
+    return {
+      source: "canonical_payload",
+      state: sourceReportCoverageQa.currentDebtAssessmentState,
     };
   }
   return {
@@ -749,6 +779,8 @@ function coreCoveragePresent(sourceReportCoverageQa) {
 }
 
 function hasCanonicalCoverageAuthority(sourceReportCoverageQa = null) {
+  const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
+  if (coverageAuthority?.coverage_authoritative === true) return true;
   return Boolean(
     sourceReportCoverageQa &&
       (
@@ -2265,7 +2297,7 @@ export function buildReportContractQa({
   const currentDebtDscrValues = extractCurrentDebtDscrValues(text);
   const canonicalCurrentDebtDscrStatus = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase();
   const canonicalCurrentDebtDscr = Number(currentDebtState?.current_debt_dscr);
-  if (canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
+  if (hasCanonicalCurrentDebtState && canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
     const tolerance = 0.02;
     const mismatchedValues = currentDebtDscrValues.filter((entry) =>
       Math.abs(entry.value - canonicalCurrentDebtDscr) > tolerance
@@ -2307,7 +2339,7 @@ export function buildReportContractQa({
     }
   }
   const canonicalDebtNotComputed = canonicalCurrentDebtDscrStatus && canonicalCurrentDebtDscrStatus !== "computed";
-  if (canonicalDebtNotComputed && currentDebtDscrValues.length > 0) {
+  if (hasCanonicalCurrentDebtState && canonicalDebtNotComputed && currentDebtDscrValues.length > 0) {
     addViolation(violations, {
       code: "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
       severity: "critical",

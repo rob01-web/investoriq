@@ -75,6 +75,68 @@ assert.match(
   reportSource,
   /const showSection9 = shouldRenderCanonicalSection\([\s\S]*?sectionKey: "dcf"[\s\S]*?rendererDefault/
 );
+// Backup source-level check: keep one light guard that source coverage QA call still exists.
+assert.match(reportSource, /const sourceCoverageQa = buildSourceReportCoverageQa\(/);
+
+// Primary runtime proof: generator canonical-state builder includes the canonical keys that must be
+// propagated downstream into source coverage QA in production flow.
+const canonicalRenderStateForPropagation = generatorTest.buildRendererCanonicalState({
+  reportMode: "v1_core",
+  reportType: "underwriting",
+  mortgagePayload: {
+    outstanding_balance: 8250000,
+    annual_debt_service: 540000,
+    interest_rate: 5.25,
+    amort_years: 25,
+  },
+  loanTermSheetTermsPayload: {
+    purchase_price: 12500000,
+    stated_acquisition_loan_amount: 8500000,
+    derived_acquisition_loan_amount: 8125000,
+    debt_basis: "acquisition_financing_assumption",
+  },
+  t12Payload: {
+    gross_potential_rent: 1800000,
+    effective_gross_income: 1700000,
+    net_operating_income: 960000,
+  },
+  computedRentRoll: {
+    total_units: 24,
+  },
+  rentRollPayload: {
+    total_units: 24,
+  },
+});
+assert.equal(
+  canonicalRenderStateForPropagation &&
+    typeof canonicalRenderStateForPropagation === "object",
+  true
+);
+assert.equal(
+  canonicalRenderStateForPropagation.currentDebtAssessmentState &&
+    typeof canonicalRenderStateForPropagation.currentDebtAssessmentState === "object",
+  true
+);
+assert.equal(
+  canonicalRenderStateForPropagation.acquisitionAssumptionState &&
+    typeof canonicalRenderStateForPropagation.acquisitionAssumptionState === "object",
+  true
+);
+assert.equal(
+  canonicalRenderStateForPropagation.sourceReconciliationState &&
+    typeof canonicalRenderStateForPropagation.sourceReconciliationState === "object",
+  true
+);
+assert.equal(
+  canonicalRenderStateForPropagation.sectionEligibility &&
+    typeof canonicalRenderStateForPropagation.sectionEligibility === "object",
+  true
+);
+assert.equal(
+  canonicalRenderStateForPropagation.underwritingState?.core?.dataCoverage &&
+    typeof canonicalRenderStateForPropagation.underwritingState.core.dataCoverage === "object",
+  true
+);
 const canonicalHeadlineWins = generatorTest.resolveCanonicalDataCoverageHeadlineState({
   dataCoverageState: {
     headlineMode: "screening_notes",

@@ -528,6 +528,8 @@ export function buildSourceReportCoverageQa({
   artifacts = [],
   sourceReconciliationState = null,
   visibleClassificationState = null,
+  currentDebtState: canonicalCurrentDebtState = null,
+  acquisitionAssumptionState: canonicalAcquisitionAssumptionState = null,
   coreInputSufficiencyState: canonicalCoreInputSufficiencyState = null,
   t12SufficiencyState: canonicalT12SufficiencyState = null,
   rentRollSufficiencyState: canonicalRentRollSufficiencyState = null,
@@ -544,13 +546,22 @@ export function buildSourceReportCoverageQa({
   const t12Payload = latestArtifact(artifacts, "t12_parsed")?.payload || null;
   const mortgagePayload = latestArtifact(artifacts, "mortgage_statement_parsed")?.payload || null;
   const loanTermSheetTermsPayload = loanResolution.currentDebtPayload || null;
-  const currentDebtState = buildCurrentDebtAssessmentState({
+  const fallbackCurrentDebtState = buildCurrentDebtAssessmentState({
     mortgagePayload,
     loanTermSheetTermsPayload,
     t12Noi: t12Payload?.net_operating_income,
     sourceReportCoverageQa: { artifact_inventory: artifactInventory },
   });
-  const acquisitionAssumptionState = buildAcquisitionAssumptionState({
+  const currentDebtStateCanonicalCandidate =
+    (canonicalCurrentDebtState && typeof canonicalCurrentDebtState === "object" && hasCanonicalCurrentDebtState(canonicalCurrentDebtState))
+      ? canonicalCurrentDebtState
+      : (underwritingState?.core?.currentDebt?.assessmentState &&
+        typeof underwritingState.core.currentDebt.assessmentState === "object" &&
+        hasCanonicalCurrentDebtState(underwritingState.core.currentDebt.assessmentState))
+        ? underwritingState.core.currentDebt.assessmentState
+        : null;
+  const currentDebtState = currentDebtStateCanonicalCandidate || fallbackCurrentDebtState;
+  const fallbackAcquisitionAssumptionState = buildAcquisitionAssumptionState({
     loanTermSheetTermsPayload: loanResolution.acquisitionPayload || loanTermSheetTermsPayload,
     currentDebtState,
     sourceReportCoverageQa: {
@@ -559,13 +570,25 @@ export function buildSourceReportCoverageQa({
       deterministic_flags: [],
     },
   });
+  const acquisitionAssumptionStateCanonicalCandidate =
+    (canonicalAcquisitionAssumptionState &&
+      typeof canonicalAcquisitionAssumptionState === "object" &&
+      hasCanonicalAcquisitionAssumptionState(canonicalAcquisitionAssumptionState))
+      ? canonicalAcquisitionAssumptionState
+      : (underwritingState?.core?.acquisition?.assumptionState &&
+        typeof underwritingState.core.acquisition.assumptionState === "object" &&
+        hasCanonicalAcquisitionAssumptionState(underwritingState.core.acquisition.assumptionState))
+        ? underwritingState.core.acquisition.assumptionState
+        : null;
+  const acquisitionAssumptionState =
+    acquisitionAssumptionStateCanonicalCandidate || fallbackAcquisitionAssumptionState;
   artifactInventory.loan_term_sheet_parsed = {
     ...artifactInventory.loan_term_sheet_parsed,
     validated_acquisition_assumptions: acquisitionAssumptionState.has_validated_acquisition_assumptions,
     acquisition_assumption_state: acquisitionAssumptionState,
   };
-  const canonicalCurrentDebtPresent = hasCanonicalCurrentDebtState(currentDebtState);
-  const canonicalAcquisitionPresent = hasCanonicalAcquisitionAssumptionState(acquisitionAssumptionState);
+  const canonicalCurrentDebtPresent = Boolean(currentDebtStateCanonicalCandidate);
+  const canonicalAcquisitionPresent = Boolean(acquisitionAssumptionStateCanonicalCandidate);
   const canonicalDebtAcquisitionAuthorityPresent = canonicalCurrentDebtPresent || canonicalAcquisitionPresent;
   const canonicalAcquisitionSeparatedNoCurrentDebt = isCanonicalAcquisitionSeparatedNoCurrentDebt(
     currentDebtState,
@@ -617,6 +640,17 @@ export function buildSourceReportCoverageQa({
   });
   const canonicalCoverageAuthorityPresent =
     canonicalSectionAuthorityPresent || canonicalSufficiencyAuthorityPresent;
+  const authorityProvenance = {
+    coverage_authoritative: canonicalCoverageAuthorityPresent,
+    section_eligibility_authoritative: canonicalSectionAuthorityPresent,
+    sufficiency_authoritative: canonicalSufficiencyAuthorityPresent,
+    debt_acquisition_authoritative: canonicalDebtAcquisitionAuthorityPresent,
+    current_debt_state_source: canonicalCurrentDebtPresent ? "canonical_input" : "fallback_reconstructed",
+    current_debt_state_authoritative: canonicalCurrentDebtPresent,
+    acquisition_assumption_state_source: canonicalAcquisitionPresent ? "canonical_input" : "fallback_reconstructed",
+    acquisition_assumption_state_authoritative: canonicalAcquisitionPresent,
+    legacy_fallback_active: !canonicalCoverageAuthorityPresent || !canonicalDebtAcquisitionAuthorityPresent,
+  };
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericReportTier = Number(reportTier);
@@ -842,8 +876,6 @@ export function buildSourceReportCoverageQa({
     materialIssueCodes.every((code) => code === "T12_LINE_ITEM_DETAIL_MISSING");
   const supportPackageUsedExceptT12LineItems =
     acquisitionFinancingCoverage.rendered &&
-    artifactInventory.renovation_parsed.present &&
-    minimumUnderwritingSectionCountMet &&
     onlyT12LineItemIssue;
   const optionalSupportArtifactPresent =
     (canonicalDebtAcquisitionAuthorityPresent ? canonicalAcquisitionExpected : acquisitionFinancingCoverage.rendered) ||
@@ -915,6 +947,7 @@ export function buildSourceReportCoverageQa({
     rent_roll_sufficiency_state: rentRollSufficiencyState,
     core_input_sufficiency_state: coreInputSufficiencyState,
     section_eligibility: sectionEligibility,
+    authority_provenance: authorityProvenance,
     rendered_sections: renderedSections,
     rendered_text_signals: renderedTextSignals,
     deterministic_flags: flags,

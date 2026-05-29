@@ -1789,6 +1789,12 @@ assert.equal(
 );
 const canonicalCurrentDebtDscrCoverage = {
   ...baseCoverage,
+  authority_provenance: {
+    coverage_authoritative: true,
+    current_debt_state_authoritative: true,
+    current_debt_state_source: "canonical_input",
+  },
+  current_debt_state_source: "canonical_input",
   current_debt_state: {
     current_debt_dscr_status: "computed",
     current_debt_dscr: 1.23,
@@ -2986,6 +2992,37 @@ assert.equal(
     (v) => v.code === "UNSUPPORTED_CURRENT_DEBT_RENDERED" || v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"
   ),
   true
+);
+
+const fallbackDerivedCurrentDebtStateNotCanonicalAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: false,
+      current_debt_state_authoritative: false,
+      current_debt_state_source: "fallback_reconstructed",
+    },
+    current_debt_state_source: "fallback_reconstructed",
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.42,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.10x</p>",
+    "<p>DSCR (T12 NOI) 1.10x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  fallbackDerivedCurrentDebtStateNotCanonicalAuthority.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
+  ),
+  false
 );
 
 console.log("report-contract-qa smoke PASS");

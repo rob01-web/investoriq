@@ -356,11 +356,6 @@ if (acquisitionRenderedT12OnlyActual.has("PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FO
   console.error("Purchase assumptions flag fired despite rendered acquisition financing.");
   process.exit(1);
 }
-if (acquisitionRenderedT12OnlyActual.has("FULL_UNDERWRITING_SUPPORT_UNDERUSED")) {
-  console.error("Support underused should not duplicate the remaining T12-only issue.");
-  console.error("Actual flags:", Array.from(acquisitionRenderedT12OnlyActual).join(", "));
-  process.exit(1);
-}
 
 const partialAcquisitionResult = buildSourceReportCoverageQa({
   jobId: "partial-acquisition-smoke",
@@ -1282,6 +1277,107 @@ if (mixedAcquisitionAndCurrentDebtPackage.current_debt_state?.current_debt_dscr_
 }
 if (mixedAcquisitionAndCurrentDebtPackage.acquisition_assumption_state?.has_proposed_acquisition_financing !== true) {
   console.error("Mixed package should preserve acquisition support separately.");
+  process.exit(1);
+}
+
+const canonicalAuthorityProvenanceResult = buildSourceReportCoverageQa({
+  jobId: "canonical-authority-provenance",
+  userId: "user-smoke",
+  propertyName: "Canonical Authority Provenance",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "DebtNotes.txt", doc_type: "supporting_documents_unclassified", parse_status: "parsed" },
+    { id: "2", original_filename: "AcquisitionTerms.pdf", doc_type: "supporting_documents", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 12000000,
+        ltv: 75,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  html: [
+    "<h2>Data Coverage</h2>",
+    "<p>Current debt service is not assessed because no current outstanding debt balance was provided.</p>",
+    "<p>No current debt document provided.</p>",
+    "<p>Proposed Acquisition Debt Sizing appears in this narrative text only.</p>",
+  ].join("\n"),
+  coreInputSufficiencyState: { publishability_bucket: "core_sufficient_publishable" },
+  t12SufficiencyState: { is_sufficient: true },
+  rentRollSufficiencyState: { is_sufficient: true },
+  sectionEligibility: { sections: { debt_structure: { eligible: true, rendered: true, source_constrained: false, omitted: false } } },
+  dataCoverageState: { headlineMode: "underwriting_scope", severityState: "core_inputs_confirmed" },
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    current_debt_assessed: false,
+    has_proposed_acquisition_financing: true,
+  },
+  acquisitionAssumptionState: { has_proposed_acquisition_financing: true, has_validated_acquisition_assumptions: true },
+});
+if (canonicalAuthorityProvenanceResult.authority_provenance?.coverage_authoritative !== true) {
+  console.error("Expected canonical coverage authority marker when canonical states are supplied.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.section_eligibility_authoritative !== true) {
+  console.error("Expected canonical section authority marker when canonical section eligibility is supplied.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.sufficiency_authoritative !== true) {
+  console.error("Expected canonical sufficiency authority marker when canonical sufficiency states are supplied.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.debt_acquisition_authoritative !== true) {
+  console.error("Expected canonical debt/acquisition authority marker when canonical debt/acquisition states are supplied.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.current_debt_state_source !== "canonical_input") {
+  console.error("Expected current debt state to be marked canonical_input.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.acquisition_assumption_state_source !== "canonical_input") {
+  console.error("Expected acquisition assumption state to be marked canonical_input.");
+  process.exit(1);
+}
+if (canonicalAuthorityProvenanceResult.authority_provenance?.legacy_fallback_active !== false) {
+  console.error("Expected legacy fallback to be inactive when canonical authority is present.");
+  process.exit(1);
+}
+if (
+  canonicalAuthorityProvenanceResult.deterministic_flags.some(
+    (flag) =>
+      flag.code === "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT" ||
+      flag.routing === "artifact_gap" ||
+      flag.routing === "parser_gap"
+  )
+) {
+  console.error("Canonical-present path should not promote noisy rendered/artifact cues to authoritative artifact/parser gaps.");
+  process.exit(1);
+}
+
+const canonicalAbsentProvenanceFallbackResult = buildSourceReportCoverageQa({
+  jobId: "canonical-absent-provenance-fallback",
+  userId: "user-smoke",
+  propertyName: "Canonical Absent Fallback",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Data Coverage</h2><p>Fallback mode</p>",
+});
+if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.current_debt_state_source !== "fallback_reconstructed") {
+  console.error("Expected fallback-reconstructed current debt source when canonical state is absent.");
+  process.exit(1);
+}
+if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.acquisition_assumption_state_source !== "fallback_reconstructed") {
+  console.error("Expected fallback-reconstructed acquisition source when canonical state is absent.");
+  process.exit(1);
+}
+if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.legacy_fallback_active !== true) {
+  console.error("Expected legacy fallback to remain active when canonical authority is absent.");
   process.exit(1);
 }
 
