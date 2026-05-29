@@ -267,13 +267,13 @@ if (acquisitionRenderedResult.acquisition_assumption_state?.has_validated_acquis
   console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
   process.exit(1);
 }
-if (acquisitionRenderedResult.acquisition_assumption_state?.acquisition_assumptions_supported !== true) {
-  console.error("Expected acquisition assumptions to be marked supported.");
+if (!["validated", "validated_partial"].includes(String(acquisitionRenderedResult.acquisition_assumption_state?.acquisition_support_status || ""))) {
+  console.error("Expected acquisition assumptions to remain validated or validated-partial.");
   console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
   process.exit(1);
 }
-if (acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state?.acquisition_assumptions_supported !== true) {
-  console.error("Expected loan term sheet artifact inventory to carry supported acquisition state.");
+if (!["validated", "validated_partial"].includes(String(acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state?.acquisition_support_status || ""))) {
+  console.error("Expected loan term sheet artifact inventory to carry validated acquisition state.");
   console.error("Actual inventory:", acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed);
   process.exit(1);
 }
@@ -1019,6 +1019,269 @@ if (
   !canonicalAbsentLegacyFallbackStillSignals.rendered_text_signals.includes("debt_sizing_balance_not_provided")
 ) {
   console.error("Legacy fallback should still retain debt/acquisition diagnostics when canonical debt/acquisition state is absent.");
+  process.exit(1);
+}
+
+const canonicalSectionOmittedWithRenderedHeading = buildSourceReportCoverageQa({
+  jobId: "canonical-section-omitted-rendered-heading",
+  userId: "user-smoke",
+  propertyName: "Canonical Omitted Section",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Debt Structure & Financing</h2><p>Rendered debt section marker appears.</p>",
+  sectionEligibility: {
+    sections: {
+      debt_structure: {
+        eligible: false,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  coreInputSufficiencyState: { status: "core_sufficient_publishable", publishability_bucket: "core_sufficient_publishable" },
+  t12SufficiencyState: { status: "core_sufficient_publishable" },
+  rentRollSufficiencyState: { status: "core_sufficient_publishable" },
+  dataCoverageState: { headlineMode: "underwriting_scope", severityState: "core_inputs_confirmed" },
+});
+if (canonicalSectionOmittedWithRenderedHeading.section_eligibility?.sections?.debt_structure?.omitted !== true) {
+  console.error("Canonical omitted debt section should remain authoritative despite rendered heading.");
+  process.exit(1);
+}
+if (canonicalSectionOmittedWithRenderedHeading.section_eligibility?.sections?.debt_structure?.source_constrained !== true) {
+  console.error("Canonical source-constrained debt section should remain authoritative.");
+  process.exit(1);
+}
+
+const canonicalSectionEligibleMissingHeading = buildSourceReportCoverageQa({
+  jobId: "canonical-section-eligible-missing-heading",
+  userId: "user-smoke",
+  propertyName: "Canonical Eligible Section",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Operating Profile</h2><p>No explicit DCF heading rendered in this snippet.</p>",
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  coreInputSufficiencyState: { status: "core_sufficient_publishable", publishability_bucket: "core_sufficient_publishable" },
+  t12SufficiencyState: { status: "core_sufficient_publishable" },
+  rentRollSufficiencyState: { status: "core_sufficient_publishable" },
+  dataCoverageState: { headlineMode: "underwriting_scope", severityState: "core_inputs_confirmed" },
+});
+if (canonicalSectionEligibleMissingHeading.section_eligibility?.sections?.dcf?.eligible !== true) {
+  console.error("Canonical eligible DCF section should not be downgraded by missing rendered heading.");
+  process.exit(1);
+}
+if (canonicalSectionEligibleMissingHeading.section_eligibility?.sections?.dcf?.omitted !== false) {
+  console.error("Canonical rendered DCF section should not be marked omitted from rendered-heading inference.");
+  process.exit(1);
+}
+
+const canonicalCleanNoisyRenderedPhrases = buildSourceReportCoverageQa({
+  jobId: "canonical-clean-noisy-rendered-phrases",
+  userId: "user-smoke",
+  propertyName: "Canonical Clean Coverage",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: [
+    "<h2>Data Coverage & Underwriting Scope</h2>",
+    "<p>No line-item detail available for this T12 format.</p>",
+    "<p>Current debt terms were not fully provided.</p>",
+    "<p>No current debt document provided.</p>",
+  ].join("\n"),
+  sectionEligibility: {
+    sections: {
+      operating_profile: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+  coreInputSufficiencyState: { status: "core_sufficient_publishable", publishability_bucket: "core_sufficient_publishable" },
+  t12SufficiencyState: { status: "core_sufficient_publishable" },
+  rentRollSufficiencyState: { status: "core_sufficient_publishable" },
+  dataCoverageState: { headlineMode: "underwriting_scope", severityState: "core_inputs_confirmed" },
+});
+const canonicalCleanNoisyCodes = new Set(canonicalCleanNoisyRenderedPhrases.deterministic_flags.map((flag) => flag.code));
+if (canonicalCleanNoisyCodes.has("T12_LINE_ITEM_DETAIL_MISSING") || canonicalCleanNoisyCodes.has("PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT")) {
+  console.error("Rendered noisy phrases should not create authoritative parser/artifact gaps when canonical sufficiency/eligibility states exist.");
+  console.error("Actual flags:", Array.from(canonicalCleanNoisyCodes).join(", "));
+  process.exit(1);
+}
+if (canonicalCleanNoisyRenderedPhrases.deterministic_flags.some((flag) => flag.routing === "public_sample_blocker" || flag.routing === "artifact_gap" || flag.routing === "parser_gap")) {
+  console.error("Canonical clean state should not produce readiness-style blockers from rendered phrases alone.");
+  console.error("Actual flags:", canonicalCleanNoisyRenderedPhrases.deterministic_flags);
+  process.exit(1);
+}
+
+const canonicalConstrainedCleanRendered = buildSourceReportCoverageQa({
+  jobId: "canonical-constrained-clean-rendered",
+  userId: "user-smoke",
+  propertyName: "Canonical Constrained Coverage",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Data Coverage & Underwriting Scope</h2><p>All inputs appear complete.</p>",
+  sectionEligibility: {
+    sections: {
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: true },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: true },
+    },
+    source_constrained: true,
+    source_constrained_section_count: 2,
+  },
+  coreInputSufficiencyState: { status: "disclose_only_publishable", publishability_bucket: "disclose_only_publishable" },
+  t12SufficiencyState: { status: "core_sufficient_publishable" },
+  rentRollSufficiencyState: { status: "core_sufficient_publishable" },
+  dataCoverageState: { headlineMode: "underwriting_scope", severityState: "source_limitations_disclosure" },
+});
+if (canonicalConstrainedCleanRendered.section_eligibility?.sections?.debt_structure?.source_constrained !== true) {
+  console.error("Canonical constrained section should remain authoritative even when rendered text appears clean.");
+  process.exit(1);
+}
+if (canonicalConstrainedCleanRendered.section_eligibility?.sections?.debt_structure?.omitted !== true) {
+  console.error("Canonical omitted debt section should remain omitted despite clean rendered copy.");
+  process.exit(1);
+}
+
+const acquisitionOnlyLoanTermNotCurrentDebt = buildSourceReportCoverageQa({
+  jobId: "acquisition-only-loan-term-not-current-debt",
+  userId: "user-smoke",
+  propertyName: "Acquisition Only Loan Term",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 1800000,
+        total_operating_expenses: 900000,
+        net_operating_income: 900000,
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        outstanding_balance: 15000000,
+        purchase_price: 20000000,
+        ltv: 75,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  html: "<h2>Debt Structure</h2><p>Acquisition assumptions only.</p>",
+});
+if (acquisitionOnlyLoanTermNotCurrentDebt.current_debt_state?.current_debt_dscr_status !== "not_assessed") {
+  console.error("Acquisition/proposed loan term should not become assessed current debt.");
+  process.exit(1);
+}
+if (acquisitionOnlyLoanTermNotCurrentDebt.current_debt_state?.has_true_current_debt_balance === true) {
+  console.error("Acquisition/proposed loan term should not produce true current debt balance.");
+  process.exit(1);
+}
+if (acquisitionOnlyLoanTermNotCurrentDebt.artifact_inventory?.loan_term_sheet_parsed?.present !== true) {
+  console.error("Loan term artifact should remain present for acquisition support context.");
+  process.exit(1);
+}
+
+const explicitCurrentDebtLoanTermAccepted = buildSourceReportCoverageQa({
+  jobId: "explicit-current-debt-loan-term-accepted",
+  userId: "user-smoke",
+  propertyName: "Explicit Current Debt Loan Term",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 2200000,
+        total_operating_expenses: 1000000,
+        net_operating_income: 1200000,
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        semantic_doc_role: "current_debt_terms",
+        debt_basis: "existing_mortgage_debt",
+        current_outstanding_balance: 8000000,
+        interest_rate: 5.5,
+        amort_years: 25,
+        annual_debt_service: 560000,
+      },
+    },
+  ],
+  html: "<h2>Current Debt Coverage</h2>",
+});
+if (explicitCurrentDebtLoanTermAccepted.current_debt_state?.current_debt_dscr_status !== "computed") {
+  console.error("Explicit current-debt loan term should be accepted for computed current debt.");
+  process.exit(1);
+}
+if (explicitCurrentDebtLoanTermAccepted.current_debt_state?.has_true_current_debt_balance !== true) {
+  console.error("Explicit current-debt loan term should produce true current debt balance.");
+  process.exit(1);
+}
+
+const mixedAcquisitionAndCurrentDebtPackage = buildSourceReportCoverageQa({
+  jobId: "mixed-acquisition-and-current-debt-package",
+  userId: "user-smoke",
+  propertyName: "Mixed Debt Package",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 2000000,
+        total_operating_expenses: 900000,
+        net_operating_income: 1100000,
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 25000000,
+        ltv: 70,
+        derived_acquisition_loan_amount: 17500000,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        semantic_doc_role: "current_debt_terms",
+        debt_basis: "existing_mortgage_debt",
+        current_outstanding_balance: 9000000,
+        interest_rate: 5.25,
+        amort_years: 30,
+        annual_debt_service: 600000,
+      },
+    },
+  ],
+  html: "<h2>Debt Structure & Financing</h2><p>Includes current debt and acquisition assumptions.</p>",
+});
+if (mixedAcquisitionAndCurrentDebtPackage.current_debt_state?.current_debt_dscr_status !== "computed") {
+  console.error("Mixed package should select explicit current-debt row for current debt assessment.");
+  process.exit(1);
+}
+if (mixedAcquisitionAndCurrentDebtPackage.acquisition_assumption_state?.has_proposed_acquisition_financing !== true) {
+  console.error("Mixed package should preserve acquisition support separately.");
   process.exit(1);
 }
 

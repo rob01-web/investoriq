@@ -100,6 +100,42 @@ function resolveCanonicalLoanTermSheetArtifacts(artifacts) {
     };
   }
 
+  const hasExplicitCurrentDebtProof = (payload = {}) => {
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasCurrentBalance =
+      hasPositive(payload?.outstanding_balance) ||
+      hasPositive(payload?.current_outstanding_balance) ||
+      hasPositive(payload?.current_loan_balance);
+    const currentDebtRole = [
+      "current_mortgage_statement",
+      "current_debt_terms",
+      "mortgage_statement",
+    ].includes(role);
+    const neutralLoanTermRole = ["loan_term_sheet", ""].includes(role);
+    const currentDebtBasis = /(current|existing|mortgage)/.test(debtBasis) && !/acquisition|proposed|purchase/.test(debtBasis);
+    return Boolean(
+      (hasCurrentBalance && (currentDebtRole || currentDebtBasis || (neutralLoanTermRole && !/acquisition|proposed|purchase/.test(debtBasis)))) ||
+      currentDebtRole ||
+      currentDebtBasis
+    );
+  };
+  const hasAcquisitionOnlySignals = (payload = {}) => {
+    const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
+    const debtBasis = String(payload?.debt_basis || "").trim().toLowerCase();
+    const hasAcquisitionTerms =
+      hasPositive(payload?.purchase_price) ||
+      hasPositive(payload?.derived_acquisition_loan_amount) ||
+      hasPositive(payload?.ltv) ||
+      hasPositive(payload?.stated_acquisition_loan_amount) ||
+      role === "purchase_assumptions" ||
+      role.includes("acquisition") ||
+      debtBasis.includes("acquisition") ||
+      debtBasis.includes("proposed") ||
+      debtBasis.includes("purchase");
+    return Boolean(hasAcquisitionTerms && !hasExplicitCurrentDebtProof(payload));
+  };
+
   const scored = loanRows.map((row, index) => {
     const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
     const role = String(payload?.semantic_doc_role || "").trim().toLowerCase();
@@ -124,13 +160,17 @@ function resolveCanonicalLoanTermSheetArtifacts(artifacts) {
       role.includes("acquisition") ||
       role.includes("appraisal");
     const supportsCurrentDebtRole = ["current_mortgage_statement", "current_debt_terms", "mortgage_statement", "loan_term_sheet", ""].includes(role);
+    const explicitCurrentDebtProof = hasExplicitCurrentDebtProof(payload);
+    const acquisitionOnlySignals = hasAcquisitionOnlySignals(payload);
     const currentDebtScore =
       (hasBalance ? 400 : 0) +
       (supportsCurrentDebtRole ? 150 : 0) +
       (hasTerms ? 40 : 0) +
       debtRoleWeight(role) -
       (hasAcquisitionSignals && !hasBalance ? 80 : 0) -
-      (debtBasis.includes("acquisition") ? 80 : 0);
+      (debtBasis.includes("acquisition") ? 80 : 0) +
+      (explicitCurrentDebtProof ? 220 : 0) -
+      (acquisitionOnlySignals ? 500 : 0);
     const acquisitionScore =
       (hasAcquisitionSignals ? 240 : 0) +
       (role === "purchase_assumptions" || role.includes("acquisition") ? 120 : 0) +
@@ -142,12 +182,20 @@ function resolveCanonicalLoanTermSheetArtifacts(artifacts) {
       payload,
       currentDebtScore,
       acquisitionScore,
+      explicitCurrentDebtProof,
+      acquisitionOnlySignals,
     };
   });
 
-  const currentDebtArtifact = [...scored]
-    .sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)
-    .map((entry) => entry.row)[0] || null;
+  const currentDebtCandidate =
+    [...scored].sort((a, b) => b.currentDebtScore - a.currentDebtScore || a.index - b.index)[0] || null;
+  const currentDebtArtifact =
+    currentDebtCandidate &&
+    currentDebtCandidate.currentDebtScore > 0 &&
+    !currentDebtCandidate.acquisitionOnlySignals &&
+    currentDebtCandidate.explicitCurrentDebtProof
+      ? currentDebtCandidate.row
+      : null;
   const acquisitionArtifact = [...scored]
     .sort((a, b) => b.acquisitionScore - a.acquisitionScore || a.index - b.index)
     .map((entry) => entry.row)[0] || currentDebtArtifact;
@@ -242,6 +290,29 @@ function findRenderedSignals(html) {
     .map(([code]) => code);
 }
 
+function hasCanonicalSectionEligibility(sectionEligibilityState) {
+  return Boolean(
+    sectionEligibilityState &&
+    typeof sectionEligibilityState === "object" &&
+    sectionEligibilityState.sections &&
+    typeof sectionEligibilityState.sections === "object"
+  );
+}
+
+function hasCanonicalSufficiencyOrCoverageState({
+  coreInputSufficiencyState = null,
+  t12SufficiencyState = null,
+  rentRollSufficiencyState = null,
+  dataCoverageState = null,
+} = {}) {
+  return Boolean(
+    (coreInputSufficiencyState && typeof coreInputSufficiencyState === "object") ||
+    (t12SufficiencyState && typeof t12SufficiencyState === "object") ||
+    (rentRollSufficiencyState && typeof rentRollSufficiencyState === "object") ||
+    (dataCoverageState && typeof dataCoverageState === "object")
+  );
+}
+
 function buildArtifactInventory(artifacts) {
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const supportTaxonomyFor = (row, fallbackDocType = null) => {
@@ -290,7 +361,7 @@ function buildArtifactInventory(artifacts) {
       method: t12?.method || null,
     },
     loan_term_sheet_parsed: {
-      present: Boolean(loan),
+      present: Boolean(loan || acquisitionLoan),
       has_balance:
         hasPositive(loan?.outstanding_balance) ||
         hasPositive(loan?.current_outstanding_balance) ||
@@ -457,6 +528,12 @@ export function buildSourceReportCoverageQa({
   artifacts = [],
   sourceReconciliationState = null,
   visibleClassificationState = null,
+  coreInputSufficiencyState: canonicalCoreInputSufficiencyState = null,
+  t12SufficiencyState: canonicalT12SufficiencyState = null,
+  rentRollSufficiencyState: canonicalRentRollSufficiencyState = null,
+  sectionEligibility: canonicalSectionEligibilityState = null,
+  dataCoverageState: canonicalDataCoverageState = null,
+  underwritingState = null,
 } = {}) {
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
@@ -504,7 +581,7 @@ export function buildSourceReportCoverageQa({
           t12Payload,
           sourceReportCoverageQa: { artifact_inventory: artifactInventory, rendered_text_signals: renderedTextSignals, deterministic_flags: [] },
         });
-  const sectionEligibility = buildFullUnderwritingSectionEligibility({
+  const sectionEligibilityComputed = buildFullUnderwritingSectionEligibility({
     sourceReportCoverageQa: {
       artifact_inventory: artifactInventory,
       rendered_sections: renderedSections,
@@ -512,17 +589,34 @@ export function buildSourceReportCoverageQa({
     currentDebtState,
     sourceReconciliationState: sourceReconciliationStateResolved,
   });
-  const t12SufficiencyState = buildT12SufficiencyState({ t12Payload });
-  const rentRollSufficiencyState = buildRentRollSufficiencyState({
+  const sectionEligibilityCanonicalCandidate =
+    canonicalSectionEligibilityState ||
+    underwritingState?.core?.sections?.eligibilityState ||
+    null;
+  const sectionEligibility = hasCanonicalSectionEligibility(sectionEligibilityCanonicalCandidate)
+    ? sectionEligibilityCanonicalCandidate
+    : sectionEligibilityComputed;
+  const t12SufficiencyState = canonicalT12SufficiencyState || buildT12SufficiencyState({ t12Payload });
+  const rentRollSufficiencyState = canonicalRentRollSufficiencyState || buildRentRollSufficiencyState({
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
   });
-  const coreInputSufficiencyState = buildCoreInputSufficiencyState({
+  const coreInputSufficiencyState = canonicalCoreInputSufficiencyState || buildCoreInputSufficiencyState({
     t12Payload,
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     sourceReconciliationState: sourceReconciliationStateResolved,
   });
+  const dataCoverageState = canonicalDataCoverageState || underwritingState?.core?.dataCoverage || null;
+  const canonicalSectionAuthorityPresent = hasCanonicalSectionEligibility(sectionEligibilityCanonicalCandidate);
+  const canonicalSufficiencyAuthorityPresent = hasCanonicalSufficiencyOrCoverageState({
+    coreInputSufficiencyState: canonicalCoreInputSufficiencyState,
+    t12SufficiencyState: canonicalT12SufficiencyState,
+    rentRollSufficiencyState: canonicalRentRollSufficiencyState,
+    dataCoverageState: canonicalDataCoverageState || underwritingState?.core?.dataCoverage || null,
+  });
+  const canonicalCoverageAuthorityPresent =
+    canonicalSectionAuthorityPresent || canonicalSufficiencyAuthorityPresent;
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
   const numericReportTier = Number(reportTier);
@@ -555,6 +649,7 @@ export function buildSourceReportCoverageQa({
   }
   const hasUsefulT12LineItems = t12.income_line_count >= 3 || t12.expense_line_count >= 3;
   if (
+    !canonicalSufficiencyAuthorityPresent &&
     t12.present &&
     t12.has_core_totals &&
     !hasUsefulT12LineItems &&
@@ -579,6 +674,7 @@ export function buildSourceReportCoverageQa({
 
   const renovationFiles = findFiles(files, /(renov|capex|cap ex|capital|budget)/i);
   if (
+    !canonicalCoverageAuthorityPresent &&
     renovationFiles.length > 0 &&
     !artifactInventory.renovation_parsed.present &&
     /Uploaded Renovation|CapEx Document|no structured CapEx modeling|not converted into verified structured renovation inputs/i.test(htmlText)
@@ -627,6 +723,7 @@ export function buildSourceReportCoverageQa({
     Boolean(currentDebtState?.current_debt_limitation_reason_code);
   if (
     isFullUnderwriting &&
+    !canonicalCoverageAuthorityPresent &&
     debtFiles.length > 0 &&
     !hasDebtSizing &&
     !hasAcquisitionFinancingAssumptions &&
@@ -706,6 +803,7 @@ export function buildSourceReportCoverageQa({
   const minimumUnderwritingSectionCountMet = !isFullUnderwriting || renderedEligibleSections >= 5 || sourceConstrainedSections.length > 0;
   if (
     isFullUnderwriting &&
+    !canonicalSectionAuthorityPresent &&
     supportPackageLooksBroad &&
     eligibleSections.length >= 5 &&
     renderedEligibleSections < 5 &&
@@ -754,6 +852,7 @@ export function buildSourceReportCoverageQa({
     artifactInventory.property_tax_parsed.present;
   if (
     isFullUnderwriting &&
+    !canonicalSectionAuthorityPresent &&
     materialSupportFiles.length >= 2 &&
     supportPackageLooksBroad &&
     optionalSupportArtifactPresent &&
