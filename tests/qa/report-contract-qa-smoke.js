@@ -826,6 +826,71 @@ const contaminatedAcquisition = buildReportContractQa({
 });
 assert.equal(contaminatedAcquisition.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), true);
 assert.equal(contaminatedAcquisition.customer_delivery_ready, false);
+const canonicalSeparatedNoisyArtifactsCleanRender = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...acquisitionArtifacts,
+    {
+      type: "mortgage_statement_parsed",
+      payload: {
+        outstanding_balance: 2500000,
+        interest_rate: 0.065,
+        amort_years: 30,
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      has_proposed_acquisition_financing: true,
+      current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+      acquisition_only_exclusion: true,
+    },
+    acquisition_assumption_state: {
+      has_proposed_acquisition_financing: true,
+      current_debt_separated: true,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p>",
+    "<table><tr><td>Derived Acquisition Loan Amount</td><td>$7,000,000</td></tr>",
+    "<tr><td>Proposed Acquisition DSCR</td><td>1.20x</td></tr></table>",
+    "<p>Current debt coverage and refinance sufficiency were not produced because no uploaded source provided a true current outstanding debt balance. Proposed acquisition financing is shown separately and is not treated as current debt.</p>",
+  ].join("\n"),
+});
+assert.equal(canonicalSeparatedNoisyArtifactsCleanRender.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
+const canonicalSeparatedRenderContamination = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: acquisitionArtifacts,
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_assessed: false,
+      has_true_current_debt_balance: false,
+      has_proposed_acquisition_financing: true,
+      current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+      acquisition_only_exclusion: true,
+    },
+    acquisition_assumption_state: {
+      has_proposed_acquisition_financing: true,
+      current_debt_separated: true,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<p>Derived from uploaded purchase assumptions. This is not current outstanding debt and is not used as a current refinance debt balance.</p>",
+    "<p>Current Debt DSCR: 1.20x</p>",
+    "<p>Refinance Stability Classification: Stable</p>",
+  ].join("\n"),
+});
+assert.equal(canonicalSeparatedRenderContamination.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), true);
 const supportDocTreatmentLeak = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

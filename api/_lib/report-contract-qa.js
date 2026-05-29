@@ -248,6 +248,59 @@ function resolveCanonicalCurrentDebtStateForQa({
   };
 }
 
+function resolveCanonicalAcquisitionDebtSeparationTruth({
+  sourceReportCoverageQa = null,
+  currentDebtState = null,
+} = {}) {
+  const acquisitionState =
+    sourceReportCoverageQa?.acquisition_assumption_state ||
+    sourceReportCoverageQa?.acquisitionAssumptionState ||
+    sourceReportCoverageQa?.underwritingState?.core?.acquisition?.assumptionState ||
+    sourceReportCoverageQa?.report_surface_contracts?.acquisition_assumption_state ||
+    null;
+  const hasCanonicalAcquisitionState = Boolean(acquisitionState && typeof acquisitionState === "object");
+  const hasCanonicalCurrentDebtState = Boolean(
+    currentDebtState &&
+      (
+        currentDebtState?.current_debt_dscr_status !== undefined ||
+        currentDebtState?.current_debt_assessed !== undefined
+      )
+  );
+  if (hasCanonicalAcquisitionState || hasCanonicalCurrentDebtState) {
+    const canonicalCurrentDebtComputed = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed";
+    const hasProposedAcquisitionFinancing = Boolean(
+      acquisitionState?.has_proposed_acquisition_financing ??
+      currentDebtState?.has_proposed_acquisition_financing ??
+      false
+    );
+    const hasTrueCurrentDebtBalance = Boolean(
+      currentDebtState?.has_true_current_debt_balance ??
+      (canonicalCurrentDebtComputed ? true : false)
+    );
+    const acquisitionOnlyExclusion = Boolean(
+      currentDebtState?.acquisition_only_exclusion === true ||
+      String(currentDebtState?.current_debt_limitation_reason_code || "").trim() === "acquisition_only_not_current_debt"
+    );
+    return {
+      hasCanonicalTruth: true,
+      hasProposedAcquisitionFinancing,
+      hasTrueCurrentDebtBalance,
+      currentDebtSeparated:
+        acquisitionState?.current_debt_separated === true ||
+        (hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance) ||
+        acquisitionOnlyExclusion,
+      source: hasCanonicalAcquisitionState ? "acquisition_assumption_state" : "current_debt_state",
+    };
+  }
+  return {
+    hasCanonicalTruth: false,
+    hasProposedAcquisitionFinancing: false,
+    hasTrueCurrentDebtBalance: false,
+    currentDebtSeparated: false,
+    source: "legacy_fallback_only",
+  };
+}
+
 function extractSourceReconciliationVarianceValues(text) {
   const source = String(text || "");
   const values = [];
@@ -2195,9 +2248,17 @@ export function buildReportContractQa({
     }
   }
 
-  const derivedAcq = hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
+  const canonicalAcquisitionDebtTruth = resolveCanonicalAcquisitionDebtSeparationTruth({
+    sourceReportCoverageQa,
+    currentDebtState,
+  });
+  const derivedAcq = canonicalAcquisitionDebtTruth.hasCanonicalTruth
+    ? canonicalAcquisitionDebtTruth.hasProposedAcquisitionFinancing
+    : hasDerivedAcquisitionDebt(artifacts, sourceReportCoverageQa);
   const canonicalDebtComputed = String(currentDebtState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed";
-  const currentDebt = hasCanonicalCurrentDebtState
+  const currentDebt = canonicalAcquisitionDebtTruth.hasCanonicalTruth
+    ? canonicalAcquisitionDebtTruth.hasTrueCurrentDebtBalance
+    : hasCanonicalCurrentDebtState
     ? canonicalDebtComputed
     : hasTrueCurrentDebt(artifacts, sourceReportCoverageQa);
   const { acquisitionLoan } = resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa);
@@ -2234,7 +2295,13 @@ export function buildReportContractQa({
         severity: contaminated ? "critical" : "high",
         category: "debt_contract",
         message: "Derived acquisition financing is not clearly separated from current debt/refi treatment.",
-        evidence: { has_separation: hasSeparation, contaminated_current_debt_language: contaminated },
+        evidence: {
+          has_separation: hasSeparation,
+          contaminated_current_debt_language: contaminated,
+          canonical_truth_source: canonicalAcquisitionDebtTruth.source,
+          canonical_truth_present: canonicalAcquisitionDebtTruth.hasCanonicalTruth,
+          canonical_current_debt_separated: canonicalAcquisitionDebtTruth.currentDebtSeparated,
+        },
         blocks_customer_delivery: contaminated,
       });
     }
