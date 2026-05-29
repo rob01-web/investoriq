@@ -1216,6 +1216,72 @@ assert.equal(
   acquisitionPurchasePriceMismatchRenderedClean.violations.some((v) => v.code === "ACQUISITION_PURCHASE_PRICE_LOAN_AMOUNT_MISMATCH_RENDERED"),
   false
 );
+const canonicalAcquisitionValuesOverrideArtifactBaseline = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 3200000,
+        stated_acquisition_loan_amount: 2600000,
+        derived_acquisition_loan_amount: 2500000,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+      derived_acquisition_loan_amount: 2000000,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr><tr><td>Derived Acquisition Loan Amount</td><td>$2,000,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalAcquisitionValuesOverrideArtifactBaseline.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"),
+  false
+);
+assert.equal(
+  canonicalAcquisitionValuesOverrideArtifactBaseline.violations.some((v) => v.code === "ACQUISITION_PURCHASE_PRICE_LOAN_AMOUNT_MISMATCH_RENDERED"),
+  false
+);
+const canonicalAcquisitionPurchasePriceDriftViolation = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        purchase_price: 3200000,
+        stated_acquisition_loan_amount: 2600000,
+        debt_basis: "acquisition_financing_assumption",
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...acquisitionCoverage,
+    acquisition_assumption_state: {
+      purchase_price: 2840000,
+      stated_acquisition_loan_amount: 2130000,
+    },
+  },
+  html: [
+    "<h2>Proposed Acquisition Debt Sizing</h2>",
+    "<table><tr><td>Purchase Price</td><td>$2,600,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr></table>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalAcquisitionPurchasePriceDriftViolation.violations.some((v) => v.code === "ACQUISITION_CANONICAL_VALUE_DRIFT"),
+  true
+);
 
 const acquisitionCanonicalPurchasePriceAligned = buildReportContractQa({
   reportType: "underwriting",

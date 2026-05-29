@@ -301,6 +301,58 @@ function resolveCanonicalAcquisitionDebtSeparationTruth({
   };
 }
 
+function resolveCanonicalAcquisitionValuesForQa({ sourceReportCoverageQa = null, fallbackLoan = null } = {}) {
+  const canonicalStateCandidates = [
+    sourceReportCoverageQa?.acquisition_assumption_state,
+    sourceReportCoverageQa?.acquisitionAssumptionState,
+    sourceReportCoverageQa?.underwritingState?.core?.acquisition?.assumptionState,
+    sourceReportCoverageQa?.report_surface_contracts?.acquisition_assumption_state,
+  ].filter((row) => row && typeof row === "object");
+  const canonicalState = canonicalStateCandidates[0] || null;
+  const canonicalSource = canonicalState ? "canonical_acquisition_state" : "legacy_artifact_fallback";
+  const canonicalValues = {
+    hasCanonicalAcquisitionValues: false,
+    source: canonicalSource,
+    purchase_price: null,
+    stated_acquisition_loan_amount: null,
+    derived_acquisition_loan_amount: null,
+    lender_fee_percent: null,
+    validated_fields: Array.isArray(canonicalState?.validated_fields) ? canonicalState.validated_fields : null,
+    verified_fields: Array.isArray(canonicalState?.verified_fields) ? canonicalState.verified_fields : null,
+  };
+
+  if (canonicalState) {
+    canonicalValues.purchase_price = coerceNumber(canonicalState?.purchase_price);
+    canonicalValues.stated_acquisition_loan_amount = coerceNumber(
+      canonicalState?.stated_acquisition_loan_amount ?? canonicalState?.loan_amount
+    );
+    canonicalValues.derived_acquisition_loan_amount = coerceNumber(canonicalState?.derived_acquisition_loan_amount);
+    canonicalValues.lender_fee_percent = normalizePercentForComparison(
+      canonicalState?.lender_fee_percent ?? canonicalState?.origination_fee_percent ?? canonicalState?.financing_fee_percent
+    );
+    canonicalValues.hasCanonicalAcquisitionValues = (
+      Number.isFinite(canonicalValues.purchase_price) ||
+      Number.isFinite(canonicalValues.stated_acquisition_loan_amount) ||
+      Number.isFinite(canonicalValues.derived_acquisition_loan_amount) ||
+      Number.isFinite(canonicalValues.lender_fee_percent)
+    );
+  }
+
+  if (!canonicalValues.hasCanonicalAcquisitionValues) {
+    canonicalValues.source = "legacy_artifact_fallback";
+    canonicalValues.purchase_price = coerceNumber(fallbackLoan?.purchase_price);
+    canonicalValues.stated_acquisition_loan_amount = coerceNumber(
+      fallbackLoan?.stated_acquisition_loan_amount ?? fallbackLoan?.loan_amount
+    );
+    canonicalValues.derived_acquisition_loan_amount = coerceNumber(fallbackLoan?.derived_acquisition_loan_amount);
+    canonicalValues.lender_fee_percent = normalizePercentForComparison(
+      fallbackLoan?.lender_fee_percent ?? fallbackLoan?.origination_fee_percent ?? fallbackLoan?.financing_fee_percent
+    );
+  }
+
+  return canonicalValues;
+}
+
 function extractSourceReconciliationVarianceValues(text) {
   const source = String(text || "");
   const values = [];
@@ -2307,6 +2359,10 @@ export function buildReportContractQa({
     }
   }
   if (acquisitionLoan && typeof acquisitionLoan === "object") {
+    const canonicalAcquisitionValues = resolveCanonicalAcquisitionValuesForQa({
+      sourceReportCoverageQa,
+      fallbackLoan: acquisitionLoan,
+    });
     const acquisitionSection = subsectionAfter(
       text,
       /Proposed Acquisition Debt Sizing/i,
@@ -2314,8 +2370,8 @@ export function buildReportContractQa({
       2400
     );
     const hasAcquisitionSection = /Proposed Acquisition Debt Sizing/i.test(text) && String(acquisitionSection || "").trim().length > 0;
-    const purchasePrice = Number(acquisitionLoan?.purchase_price);
-    const statedLoan = Number(acquisitionLoan?.stated_acquisition_loan_amount ?? acquisitionLoan?.loan_amount);
+    const purchasePrice = Number(canonicalAcquisitionValues?.purchase_price);
+    const statedLoan = Number(canonicalAcquisitionValues?.stated_acquisition_loan_amount);
     if (
       Number.isFinite(purchasePrice) &&
       purchasePrice > 0 &&
@@ -2393,24 +2449,10 @@ export function buildReportContractQa({
     if (hasAcquisitionSection) {
       const invLoan = sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed || null;
       const invAcq = invLoan?.acquisition_support || null;
-      const canonicalPurchasePrice = coerceNumber(
-        acquisitionLoan?.purchase_price ??
-        invAcq?.purchase_price
-      );
-      const canonicalStatedLoanAmount = coerceNumber(
-        acquisitionLoan?.stated_acquisition_loan_amount ??
-        acquisitionLoan?.loan_amount ??
-        invAcq?.stated_acquisition_loan_amount
-      );
-      const canonicalDerivedLoanAmount = coerceNumber(
-        acquisitionLoan?.derived_acquisition_loan_amount ??
-        invAcq?.derived_acquisition_loan_amount
-      );
-      const canonicalLenderFeePercent = normalizePercentForComparison(
-        acquisitionLoan?.lender_fee_percent ??
-        acquisitionLoan?.origination_fee_percent ??
-        acquisitionLoan?.financing_fee_percent
-      );
+      const canonicalPurchasePrice = coerceNumber(canonicalAcquisitionValues?.purchase_price);
+      const canonicalStatedLoanAmount = coerceNumber(canonicalAcquisitionValues?.stated_acquisition_loan_amount);
+      const canonicalDerivedLoanAmount = coerceNumber(canonicalAcquisitionValues?.derived_acquisition_loan_amount);
+      const canonicalLenderFeePercent = normalizePercentForComparison(canonicalAcquisitionValues?.lender_fee_percent);
 
       const renderedPurchasePrice = extractLabeledNumber(acquisitionSection, ["Purchase Price"]);
       const renderedStatedLoanAmount = extractLabeledNumber(acquisitionSection, ["Stated Acquisition Loan Amount"]);
@@ -2476,6 +2518,7 @@ export function buildReportContractQa({
               money_relative_difference: moneyRelTolerance,
               percent_absolute_difference_percentage_points: feeTolerancePercentagePoints,
             },
+            qa_canonical_source: canonicalAcquisitionValues?.source || "legacy_artifact_fallback",
             excerpt: acquisitionSection.slice(0, 500),
             acquisition_inventory_summary: invAcq || null,
           },
