@@ -4723,6 +4723,32 @@ export default async function handler(req, res) {
           if (maybeAiAcquisitionRecovery && maybeAiAcquisitionRecovery.parse_warnings) {
             parse_warnings.push(...maybeAiAcquisitionRecovery.parse_warnings);
           }
+
+          const explicitCurrentDebtProof = /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|payoff\s+(?:statement|balance)|mortgage\s+statement|current\s+debt\s+terms?)\b/i
+            .test(rawText);
+          const hasAcquisitionOrProposedSignals = Boolean(
+            Number.isFinite(validatedPurchasePrice) ||
+            Number.isFinite(validatedDerivedAcquisitionLoanAmount) ||
+            (Number.isFinite(validatedLtv) && validatedLtv > 0 && validatedLtv <= 100) ||
+            /\b(?:acquisition\s+financing|indicative\s+acquisition\s+financing|purchase\s+price|acquisition\s+price|loan\s+amount\s+at\s+purchase\s+price|proposed\s+loan|proposed\s+ltv|borrower\s+to\s+be\s+determined|not\s+a\s+financing\s+commitment|purchase\s+assumptions?)\b/i.test(rawText)
+          );
+          const hasCurrentDebtBalanceCandidate = Number.isFinite(outstanding_balance) && outstanding_balance >= 10000;
+          const shouldExposeCurrentDebtAliases = explicitCurrentDebtProof && hasCurrentDebtBalanceCandidate;
+          const normalizedDebtBasis = shouldExposeCurrentDebtAliases
+            ? 'existing_mortgage_debt'
+            : hasAcquisitionOrProposedSignals
+            ? 'acquisition_financing_assumption'
+            : null;
+          if (hasCurrentDebtBalanceCandidate && !explicitCurrentDebtProof) {
+            parse_warnings.push('outstanding_balance_not_promoted_without_explicit_current_debt_proof');
+          }
+          if (hasAcquisitionOrProposedSignals && !explicitCurrentDebtProof) {
+            parse_warnings.push('acquisition_or_proposed_financing_not_current_debt');
+          }
+          if (hasAcquisitionOrProposedSignals && explicitCurrentDebtProof) {
+            parse_warnings.push('mixed_acquisition_and_current_debt_signals_explicit_current_proof_present');
+          }
+
           payload = attachSupportDocTaxonomy({
             file_id: fileRow.id,
             original_filename: fileRow.original_filename,
@@ -4730,12 +4756,12 @@ export default async function handler(req, res) {
             ai_assisted: Boolean(maybeAiAcquisitionRecovery),
             validated: Boolean(maybeAiAcquisitionRecovery),
             outstanding_balance,
-            current_outstanding_balance: outstanding_balance,
-            current_loan_balance: outstanding_balance,
+            current_outstanding_balance: shouldExposeCurrentDebtAliases ? outstanding_balance : null,
+            current_loan_balance: shouldExposeCurrentDebtAliases ? outstanding_balance : null,
             loan_amount,
             purchase_price: validatedPurchasePrice,
             derived_acquisition_loan_amount: validatedDerivedAcquisitionLoanAmount,
-            debt_basis: validatedDerivedAcquisitionLoanAmount ? 'acquisition_financing_assumption' : null,
+            debt_basis: normalizedDebtBasis,
             interest_rate: validatedInterestRate,
             ltv: validatedLtv,
             amortization_years: validatedAmortYears,

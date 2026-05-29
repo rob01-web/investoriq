@@ -86,6 +86,16 @@ assert.match(parseDocSource, /unsupported_file_type_for_structured_parsing/);
 assert.match(parseDocSource, /has_minimum_t12_coverage/);
 assert.equal(/classified from the uploaded file names/i.test(parseDocSource), false);
 
+// 4b) Loan term semantics guard: acquisition/proposed must not become current debt aliases without explicit proof.
+assert.match(parseDocSource, /explicitCurrentDebtProof/);
+assert.match(parseDocSource, /hasAcquisitionOrProposedSignals/);
+assert.match(parseDocSource, /shouldExposeCurrentDebtAliases/);
+assert.match(parseDocSource, /current_outstanding_balance:\s*shouldExposeCurrentDebtAliases\s*\?\s*outstanding_balance\s*:\s*null/);
+assert.match(parseDocSource, /current_loan_balance:\s*shouldExposeCurrentDebtAliases\s*\?\s*outstanding_balance\s*:\s*null/);
+assert.match(parseDocSource, /debt_basis:\s*normalizedDebtBasis/);
+assert.match(parseDocSource, /outstanding_balance_not_promoted_without_explicit_current_debt_proof/);
+assert.match(parseDocSource, /acquisition_or_proposed_financing_not_current_debt/);
+
 // 5/6) Customer-copy regression guards.
 const combinedSource = `${parseDocSource}\n${workerSource}`;
 assert.equal(/BUY|SELL|HOLD recommendation/i.test(combinedSource), false);
@@ -93,4 +103,3 @@ assert.equal(/classified from the uploaded file names/i.test(combinedSource), fa
 assert.equal(/upload more documents|upload replacement documents|\bresume\b/i.test(combinedSource), false);
 
 console.log("core-doc-routing-rescue smoke PASS");
-
