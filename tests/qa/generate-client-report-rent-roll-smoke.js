@@ -153,6 +153,50 @@ const canonicalAbsentFallback = generatorTest.shouldRenderCanonicalSection({
   rendererDefault: false,
 });
 assert.equal(canonicalAbsentFallback, false);
+const canonicalNeighborhoodEligible = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      market_context: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  sectionKey: "market_context",
+  rendererDefault: false,
+});
+assert.equal(canonicalNeighborhoodEligible, true);
+const canonicalNeighborhoodConstrained = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      market_context: {
+        eligible: true,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  sectionKey: "market_context",
+  rendererDefault: true,
+});
+assert.equal(canonicalNeighborhoodConstrained, false);
+const canonicalNeighborhoodAbsentFallback = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: null,
+  sectionKey: "market_context",
+  rendererDefault: false,
+});
+assert.equal(canonicalNeighborhoodAbsentFallback, false);
+assert.equal(
+  /showSection11[\s\S]{0,250}stripMarkedSection\(finalHtml, \"SECTION_4_NEIGHBORHOOD\"\)/.test(reportSource),
+  false
+);
+assert.match(
+  reportSource,
+  /const keepSection4Neighborhood = shouldRenderCanonicalSection\([\s\S]{0,260}sectionKey:\s*\"market_context\"[\s\S]{0,260}rendererDefault:\s*false/
+);
 assert.match(
   reportSource,
   /const canonicalExecOccupancy = coerceNumber\(resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)\)/

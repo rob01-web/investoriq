@@ -8520,7 +8520,15 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection11) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
-    finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+    const keepSection4Neighborhood = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "market_context",
+      // Preserve legacy fallback behavior (strip) when canonical section state is absent.
+      rendererDefault: false,
+    });
+    if (!keepSection4Neighborhood) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+    }
     const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
     const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!hasRiskMatrixRows && !hasRiskNarrative) {
