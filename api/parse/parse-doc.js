@@ -386,6 +386,14 @@ function evaluateSupportingDocFinancingRoute(text = "") {
 
   const explicitCurrentDebtProof = /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|payoff\s+(?:statement|balance)|current\s+monthly\s+debt\s+service)\b/i.test(source);
   const hasAcquisitionOrProposedFinancingText = /\b(?:acquisition\s+financing|indicative\s+acquisition\s+financing|proposed\s+loan(?:\s+amount)?|proposed\s+ltv|borrower\s+to\s+be\s+determined|purchaser|purchase\s+price|acquisition\s+price|loan\s+amount\s+at\s+purchase\s+price|not\s+a\s+financing\s+commitment)\b/i.test(source);
+  const hasCurrentDebtBalancePhrase = /\b(?:outstanding\s+loan\s+balance|outstanding\s+balance|existing\s+debt\s+balance|current\s+loan\s+balance|current\s+outstanding\s+balance|current\s+mortgage\s+balance|unpaid\s+principal\s+balance)\b/i.test(source);
+  const hasRateSignal = /\b(?:interest\s*rate|note\s*rate|coupon\s*rate|fixed\s*rate|loan\s*rate)\b/i.test(source);
+  const hasAmortizationSignal = /\b(?:amortization|amort(?:\s+remaining)?|amort\s*[:\-]?)\b/i.test(source);
+  const hasLtvSignal = /\b(?:ltv|loan(?:[\s-]*to[\s-]*value|[\s-]*to[\s-]*value))\b/i.test(source);
+  const explicitDebtTermsProof =
+    hasCurrentDebtBalancePhrase &&
+    !hasAcquisitionOrProposedFinancingText &&
+    ((hasRateSignal && hasAmortizationSignal) || (hasRateSignal && hasLtvSignal) || (hasAmortizationSignal && hasLtvSignal));
   const hasGenericFinancingTerms =
     has(["TERM SHEET", "LOAN TERMS", "REFI TERMS"]) ||
     /\d+(?:\.\d+)?\s*%/.test(norm) ||
@@ -395,14 +403,46 @@ function evaluateSupportingDocFinancingRoute(text = "") {
     has(["MORTGAGE", "PRINCIPAL", "LENDER", "MORTGAGEE", "PAYMENT", "MATURITY"]) ||
     /\b(?:outstanding\s+balance|current\s+outstanding\s+balance|current\s+balance|principal\s+balance|unpaid\s+principal|current\s+debt|existing\s+debt)\b/i.test(source);
   const mixedFinancingSignals = hasAcquisitionOrProposedFinancingText && (hasMortgageContextTerms || explicitCurrentDebtProof);
-  const ambiguousFinancingRoute = !explicitCurrentDebtProof && (mixedFinancingSignals || (!hasAcquisitionOrProposedFinancingText && hasGenericFinancingTerms));
+  const ambiguousFinancingRoute =
+    !explicitCurrentDebtProof &&
+    !explicitDebtTermsProof &&
+    (mixedFinancingSignals || (!hasAcquisitionOrProposedFinancingText && hasGenericFinancingTerms));
 
   return {
     explicitCurrentDebtProof,
+    explicitDebtTermsProof,
     hasAcquisitionOrProposedFinancingText,
     hasGenericFinancingTerms,
     mixedFinancingSignals,
     ambiguousFinancingRoute,
+  };
+}
+
+export function resolveLoanTermCurrentDebtPromotion({
+  rawText = "",
+  outstandingBalance = null,
+  purchasePrice = null,
+  derivedAcquisitionLoanAmount = null,
+  ltv = null,
+} = {}) {
+  const financingRoute = evaluateSupportingDocFinancingRoute(rawText);
+  const explicitCurrentDebtProof = Boolean(
+    financingRoute.explicitCurrentDebtProof || financingRoute.explicitDebtTermsProof
+  );
+  const hasAcquisitionOrProposedSignals = Boolean(
+    Number.isFinite(purchasePrice) ||
+      Number.isFinite(derivedAcquisitionLoanAmount) ||
+      financingRoute.hasAcquisitionOrProposedFinancingText
+  );
+  const hasCurrentDebtBalanceCandidate =
+    Number.isFinite(outstandingBalance) && outstandingBalance >= 10000;
+  return {
+    explicitCurrentDebtProof,
+    explicitDebtTermsProof: Boolean(financingRoute.explicitDebtTermsProof),
+    hasAcquisitionOrProposedSignals,
+    hasCurrentDebtBalanceCandidate,
+    shouldExposeCurrentDebtAliases:
+      explicitCurrentDebtProof && hasCurrentDebtBalanceCandidate,
   };
 }
 
@@ -428,6 +468,9 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
 
   const financingRoute = evaluateSupportingDocFinancingRoute(text);
   const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
+  if (financingRoute.explicitDebtTermsProof) {
+    return 'loan_term_sheet';
+  }
   if (financingRoute.explicitCurrentDebtProof && currentDebtSignals >= 2) {
     return 'mortgage_statement';
   }
@@ -4773,16 +4816,17 @@ export default async function handler(req, res) {
             parse_warnings.push(...maybeAiAcquisitionRecovery.parse_warnings);
           }
 
-          const explicitCurrentDebtProof = /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|payoff\s+(?:statement|balance)|mortgage\s+statement|current\s+debt\s+terms?)\b/i
-            .test(rawText);
-          const hasAcquisitionOrProposedSignals = Boolean(
-            Number.isFinite(validatedPurchasePrice) ||
-            Number.isFinite(validatedDerivedAcquisitionLoanAmount) ||
-            (Number.isFinite(validatedLtv) && validatedLtv > 0 && validatedLtv <= 100) ||
-            /\b(?:acquisition\s+financing|indicative\s+acquisition\s+financing|purchase\s+price|acquisition\s+price|loan\s+amount\s+at\s+purchase\s+price|proposed\s+loan|proposed\s+ltv|borrower\s+to\s+be\s+determined|not\s+a\s+financing\s+commitment|purchase\s+assumptions?)\b/i.test(rawText)
-          );
-          const hasCurrentDebtBalanceCandidate = Number.isFinite(outstanding_balance) && outstanding_balance >= 10000;
-          const shouldExposeCurrentDebtAliases = explicitCurrentDebtProof && hasCurrentDebtBalanceCandidate;
+          const promotionState = resolveLoanTermCurrentDebtPromotion({
+            rawText,
+            outstandingBalance: outstanding_balance,
+            purchasePrice: validatedPurchasePrice,
+            derivedAcquisitionLoanAmount: validatedDerivedAcquisitionLoanAmount,
+            ltv: validatedLtv,
+          });
+          const explicitCurrentDebtProof = promotionState.explicitCurrentDebtProof;
+          const hasAcquisitionOrProposedSignals = promotionState.hasAcquisitionOrProposedSignals;
+          const hasCurrentDebtBalanceCandidate = promotionState.hasCurrentDebtBalanceCandidate;
+          const shouldExposeCurrentDebtAliases = promotionState.shouldExposeCurrentDebtAliases;
           const normalizedDebtBasis = shouldExposeCurrentDebtAliases
             ? 'existing_mortgage_debt'
             : hasAcquisitionOrProposedSignals
