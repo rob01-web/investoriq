@@ -304,12 +304,14 @@ function hasCanonicalSufficiencyOrCoverageState({
   t12SufficiencyState = null,
   rentRollSufficiencyState = null,
   dataCoverageState = null,
+  sectionEligibilityState = null,
 } = {}) {
   return Boolean(
     (coreInputSufficiencyState && typeof coreInputSufficiencyState === "object") ||
     (t12SufficiencyState && typeof t12SufficiencyState === "object") ||
     (rentRollSufficiencyState && typeof rentRollSufficiencyState === "object") ||
-    (dataCoverageState && typeof dataCoverageState === "object")
+    (dataCoverageState && typeof dataCoverageState === "object") ||
+    hasCanonicalSectionEligibility(sectionEligibilityState)
   );
 }
 
@@ -637,6 +639,7 @@ export function buildSourceReportCoverageQa({
     t12SufficiencyState: canonicalT12SufficiencyState,
     rentRollSufficiencyState: canonicalRentRollSufficiencyState,
     dataCoverageState: canonicalDataCoverageState || underwritingState?.core?.dataCoverage || null,
+    sectionEligibilityState: sectionEligibilityCanonicalCandidate,
   });
   const canonicalCoverageAuthorityPresent =
     canonicalSectionAuthorityPresent || canonicalSufficiencyAuthorityPresent;

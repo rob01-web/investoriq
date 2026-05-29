@@ -592,6 +592,11 @@ assert.equal(sourceReconciliationMismatchBlockingViolation.customer_delivery_imp
 
 const cleanCoreCoverageState = {
   ...baseCoverage,
+  authority_provenance: {
+    coverage_authoritative: true,
+    section_eligibility_authoritative: true,
+    sufficiency_authoritative: true,
+  },
   core_input_sufficiency_state: {
     publishability_bucket: "core_sufficient_publishable",
   },
@@ -1825,6 +1830,7 @@ const canonicalComputedWithMissingDebtArtifacts = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "computed",
       current_debt_dscr: 1.23,
@@ -1925,6 +1931,7 @@ const canonicalCurrentDebtNotAssessedNoDrift = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "not_assessed",
       current_debt_dscr: null,
@@ -1947,6 +1954,7 @@ const canonicalCurrentDebtNotAssessedNumericDrift = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "not_assessed",
       current_debt_dscr: null,
@@ -1976,6 +1984,7 @@ const canonicalCurrentDebtNotAssessedRefiMathDrift = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "not_assessed",
       current_debt_dscr: null,
@@ -2008,6 +2017,7 @@ const proposedAcquisitionContextSafe = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "not_assessed",
       current_debt_dscr: null,
@@ -2042,6 +2052,7 @@ const proposedAcquisitionContamination = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    current_debt_state_source: "canonical_input",
     current_debt_state: {
       current_debt_dscr_status: "not_assessed",
       current_debt_dscr: null,
@@ -2622,6 +2633,11 @@ const coreCoverageHeadlineConflict = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      section_eligibility_authoritative: false,
+      sufficiency_authoritative: true,
+    },
     core_input_sufficiency_state: {
       publishability_bucket: "core_sufficient_publishable",
     },
@@ -2920,6 +2936,11 @@ const canonicalConstrainedCleanCopyMissingLimitation = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      section_eligibility_authoritative: true,
+      sufficiency_authoritative: true,
+    },
     core_input_sufficiency_state: { publishability_bucket: "disclose_only_publishable" },
     source_reconciliation_state: { status: "source_reconciliation_required" },
     section_eligibility: {
@@ -2944,6 +2965,11 @@ const canonicalDebtOmittedButRenderedHeading = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      section_eligibility_authoritative: true,
+      sufficiency_authoritative: false,
+    },
     section_eligibility: {
       sections: {
         debt_structure: { source_constrained: true, omitted: true, rendered: false },
@@ -2963,6 +2989,11 @@ const canonicalDebtRenderedMissingHeading = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      section_eligibility_authoritative: true,
+      sufficiency_authoritative: false,
+    },
     section_eligibility: {
       sections: {
         debt_structure: { source_constrained: false, omitted: false, rendered: true, eligible: true },
@@ -3023,6 +3054,130 @@ assert.equal(
     (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
   ),
   false
+);
+
+const unprovenancedCurrentDebtStateNotCanonicalAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.42,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.10x</p>",
+    "<p>DSCR (T12 NOI) 1.10x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  unprovenancedCurrentDebtStateNotCanonicalAuthority.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
+  ),
+  false
+);
+
+const canonicalInputCurrentDebtStateTriggersCanonicalDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state_source: "canonical_input",
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.42,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.10x</p>",
+    "<p>DSCR (T12 NOI) 1.10x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  canonicalInputCurrentDebtStateTriggersCanonicalDrift.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
+  ),
+  true
+);
+
+const authoritativeCurrentDebtStateTriggersCanonicalDrift = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: false,
+      current_debt_state_authoritative: true,
+      current_debt_state_source: "canonical_input",
+    },
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.42,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.10x</p>",
+    "<p>DSCR (T12 NOI) 1.10x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  authoritativeCurrentDebtStateTriggersCanonicalDrift.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
+  ),
+  true
+);
+
+const coverageObjectsOnlyDoNotCreateCanonicalCoverageAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: { publishability_bucket: "core_sufficient_publishable" },
+    source_reconciliation_state: { status: "clear" },
+    section_eligibility: { sections: {} },
+  },
+  html: "<h2>Data Coverage</h2><p>CORE INPUTS EXTRACTED - SOURCE LIMITATIONS DISCLOSURE</p>",
+});
+assert.equal(
+  coverageObjectsOnlyDoNotCreateCanonicalCoverageAuthority.violations.some(
+    (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
+  ),
+  false
+);
+
+const explicitCoverageAuthorityDoesCreateCanonicalCoverageAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      section_eligibility_authoritative: false,
+      sufficiency_authoritative: false,
+    },
+    core_input_sufficiency_state: { publishability_bucket: "core_sufficient_publishable" },
+    source_reconciliation_state: { status: "clear" },
+    section_eligibility: { sections: {} },
+  },
+  html: "<h2>Data Coverage</h2><p>CORE INPUTS EXTRACTED - SOURCE LIMITATIONS DISCLOSURE</p>",
+});
+assert.equal(
+  explicitCoverageAuthorityDoesCreateCanonicalCoverageAuthority.violations.some(
+    (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
+  ),
+  true
 );
 
 console.log("report-contract-qa smoke PASS");

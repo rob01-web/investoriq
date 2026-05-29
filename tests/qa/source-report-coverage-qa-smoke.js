@@ -1358,6 +1358,50 @@ if (
   process.exit(1);
 }
 
+const canonicalSectionEligibilityOnlyAuthorityResult = buildSourceReportCoverageQa({
+  jobId: "canonical-section-eligibility-only-authority",
+  userId: "user-smoke",
+  propertyName: "Canonical Section Eligibility Only",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [
+    { id: "1", original_filename: "DebtNotes.txt", doc_type: "supporting_documents_unclassified", parse_status: "parsed" },
+  ],
+  artifacts: [],
+  html: [
+    "<h2>Data Coverage</h2>",
+    "<p>No line-item detail available.</p>",
+    "<p>Current debt service not assessed.</p>",
+    "<p>Current debt balance not provided.</p>",
+  ].join("\n"),
+  sectionEligibility: {
+    sections: {
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: true },
+    },
+  },
+});
+if (canonicalSectionEligibilityOnlyAuthorityResult.authority_provenance?.section_eligibility_authoritative !== true) {
+  console.error("Expected canonical section eligibility authority when explicit sectionEligibility input is provided.");
+  process.exit(1);
+}
+if (canonicalSectionEligibilityOnlyAuthorityResult.authority_provenance?.coverage_authoritative !== true) {
+  console.error("Expected canonical coverage authority to be active when explicit sectionEligibility input is provided.");
+  process.exit(1);
+}
+if (
+  canonicalSectionEligibilityOnlyAuthorityResult.deterministic_flags.some(
+    (flag) =>
+      flag.code === "T12_LINE_ITEM_DETAIL_MISSING" ||
+      flag.code === "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT" ||
+      flag.routing === "artifact_gap" ||
+      flag.routing === "parser_gap"
+  )
+) {
+  console.error("Section-eligibility canonical authority should suppress legacy sufficiency truth-making flags.");
+  process.exit(1);
+}
+
 const canonicalAbsentProvenanceFallbackResult = buildSourceReportCoverageQa({
   jobId: "canonical-absent-provenance-fallback",
   userId: "user-smoke",

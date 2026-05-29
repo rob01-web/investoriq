@@ -301,10 +301,8 @@ function resolveCanonicalCurrentDebtStateForQa({
       : null;
   if (
     currentDebtStateCandidate &&
-    (
-      canonicalCurrentDebtAuthoritative ||
-      !currentDebtStateMarkedFallback
-    )
+    canonicalCurrentDebtAuthoritative &&
+    !currentDebtStateMarkedFallback
   ) {
     return {
       source: "canonical_payload",
@@ -780,21 +778,10 @@ function coreCoveragePresent(sourceReportCoverageQa) {
 
 function hasCanonicalCoverageAuthority(sourceReportCoverageQa = null) {
   const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
-  if (coverageAuthority?.coverage_authoritative === true) return true;
   return Boolean(
-    sourceReportCoverageQa &&
-      (
-        (sourceReportCoverageQa.core_input_sufficiency_state &&
-          typeof sourceReportCoverageQa.core_input_sufficiency_state === "object") ||
-        (sourceReportCoverageQa.t12_sufficiency_state &&
-          typeof sourceReportCoverageQa.t12_sufficiency_state === "object") ||
-        (sourceReportCoverageQa.rent_roll_sufficiency_state &&
-          typeof sourceReportCoverageQa.rent_roll_sufficiency_state === "object") ||
-        (sourceReportCoverageQa.source_reconciliation_state &&
-          typeof sourceReportCoverageQa.source_reconciliation_state === "object") ||
-        (sourceReportCoverageQa.section_eligibility &&
-          typeof sourceReportCoverageQa.section_eligibility === "object")
-      )
+    coverageAuthority?.coverage_authoritative === true ||
+    coverageAuthority?.section_eligibility_authoritative === true ||
+    coverageAuthority?.sufficiency_authoritative === true
   );
 }
 
