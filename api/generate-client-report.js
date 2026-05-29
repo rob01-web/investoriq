@@ -1906,6 +1906,28 @@ function shouldRenderCanonicalSection({
   if (entry.rendered === true || entry.eligible === true) return true;
   return Boolean(rendererDefault);
 }
+function resolveMarketContextSectionVisibility({
+  sectionEligibility = null,
+  rendererDefault = false,
+} = {}) {
+  const keepMarketContext = shouldRenderCanonicalSection({
+    sectionEligibility,
+    sectionKey: "market_context",
+    rendererDefault,
+  });
+  return {
+    keepNeighborhood: keepMarketContext,
+    keepLocationTable: keepMarketContext,
+  };
+}
+function shouldStripDataCoverageSectionByRenderedCopy({
+  coverageSectionHtml = "",
+  hasCanonicalCoverageAuthority = false,
+} = {}) {
+  if (hasCanonicalCoverageAuthority) return false;
+  const dnaCount = (String(coverageSectionHtml || "").match(/DATA NOT AVAILABLE/g) || []).length;
+  return dnaCount >= 3;
+}
 function constantTimeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string") return false;
   if (a.length !== b.length) return false;
@@ -8137,18 +8159,9 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection3) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
     }
-    const showSection4 =
+    const section4FallbackRenderDefault =
       hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis")) ||
       hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
-    if (!showSection4) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
-    }
-    const showSection4Table = hasMeaningfulNarrative(
-      getNarrativeHtml("neighborhoodAnalysis")
-    );
-    if (!showSection4Table) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
-    }
     const showSection5 = shouldRenderCanonicalSection({
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "risk_register",
@@ -8520,14 +8533,15 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection11) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
-    const keepSection4Neighborhood = shouldRenderCanonicalSection({
+    const marketContextVisibility = resolveMarketContextSectionVisibility({
       sectionEligibility: sectionEligibilityStateForRender,
-      sectionKey: "market_context",
-      // Preserve legacy fallback behavior (strip) when canonical section state is absent.
-      rendererDefault: false,
+      rendererDefault: section4FallbackRenderDefault,
     });
-    if (!keepSection4Neighborhood) {
+    if (!marketContextVisibility.keepNeighborhood) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+    }
+    if (!marketContextVisibility.keepLocationTable) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
     }
     const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
     const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
@@ -8584,7 +8598,21 @@ if (effectiveReportMode === "screening_v1") {
       : "SECTION_S7_DATA_COVERAGE_GAPS";
     const dataCoverageBegin = `<!-- BEGIN ${dataCoverageToken} -->`;
     const dataCoverageEnd = `<!-- END ${dataCoverageToken} -->`;
-    if (!isFullRenderHarness && finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
+    const canonicalDataCoverageAuthorityPresent = Boolean(
+      (sectionEligibilityStateForRender?.sections?.data_coverage &&
+        typeof sectionEligibilityStateForRender.sections.data_coverage === "object") ||
+      (underwritingState?.core?.dataCoverage &&
+        typeof underwritingState.core.dataCoverage === "object") ||
+      (dataCoverageState && typeof dataCoverageState === "object")
+    );
+    const keepDataCoverageSection = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "data_coverage",
+      rendererDefault: true,
+    });
+    if (!keepDataCoverageSection) {
+      finalHtml = stripMarkedSection(finalHtml, dataCoverageToken);
+    } else if (!isFullRenderHarness && finalHtml.includes(dataCoverageBegin) && finalHtml.includes(dataCoverageEnd)) {
       const escapedCoverageToken = dataCoverageToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const coverageMatch = finalHtml.match(
         new RegExp(
@@ -8592,8 +8620,10 @@ if (effectiveReportMode === "screening_v1") {
         )
       );
       const coverageSection = coverageMatch?.[1] || "";
-      const dnaCount = (coverageSection.match(/DATA NOT AVAILABLE/g) || []).length;
-      if (dnaCount >= 3) {
+      if (shouldStripDataCoverageSectionByRenderedCopy({
+        coverageSectionHtml: coverageSection,
+        hasCanonicalCoverageAuthority: canonicalDataCoverageAuthorityPresent,
+      })) {
         finalHtml = stripMarkedSection(finalHtml, dataCoverageToken);
       }
     }
@@ -10507,5 +10537,7 @@ export const __test__ = {
   resolveCanonicalLoanTermSheetArtifacts,
   resolveCanonicalDataCoverageHeadlineState,
   shouldRenderCanonicalSection,
+  resolveMarketContextSectionVisibility,
+  shouldStripDataCoverageSectionByRenderedCopy,
   buildDeliveryResponseCompatibilityAliases,
 };

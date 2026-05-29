@@ -251,13 +251,69 @@ const canonicalNeighborhoodAbsentFallback = generatorTest.shouldRenderCanonicalS
   rendererDefault: false,
 });
 assert.equal(canonicalNeighborhoodAbsentFallback, false);
+const canonicalMarketContextVisibilityEligible = generatorTest.resolveMarketContextSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      market_context: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  // Local narrative fallback would strip if canonical authority were ignored.
+  rendererDefault: false,
+});
+assert.equal(canonicalMarketContextVisibilityEligible.keepNeighborhood, true);
+assert.equal(canonicalMarketContextVisibilityEligible.keepLocationTable, true);
+const canonicalMarketContextVisibilityConstrained = generatorTest.resolveMarketContextSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      market_context: {
+        eligible: true,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  rendererDefault: true,
+});
+assert.equal(canonicalMarketContextVisibilityConstrained.keepNeighborhood, false);
+assert.equal(canonicalMarketContextVisibilityConstrained.keepLocationTable, false);
+const canonicalMarketContextVisibilityFallbackOnly = generatorTest.resolveMarketContextSectionVisibility({
+  sectionEligibility: null,
+  rendererDefault: false,
+});
+assert.equal(canonicalMarketContextVisibilityFallbackOnly.keepNeighborhood, false);
+assert.equal(canonicalMarketContextVisibilityFallbackOnly.keepLocationTable, false);
+const dataCoverageDnaSection = [
+  "<p>DATA NOT AVAILABLE</p>",
+  "<p>DATA NOT AVAILABLE</p>",
+  "<p>DATA NOT AVAILABLE</p>",
+].join("");
+const canonicalCoverageRetainedDespiteDna = generatorTest.shouldStripDataCoverageSectionByRenderedCopy({
+  coverageSectionHtml: dataCoverageDnaSection,
+  hasCanonicalCoverageAuthority: true,
+});
+assert.equal(canonicalCoverageRetainedDespiteDna, false);
+const canonicalCoverageAbsentUsesDnaFallback = generatorTest.shouldStripDataCoverageSectionByRenderedCopy({
+  coverageSectionHtml: dataCoverageDnaSection,
+  hasCanonicalCoverageAuthority: false,
+});
+assert.equal(canonicalCoverageAbsentUsesDnaFallback, true);
 assert.equal(
   /showSection11[\s\S]{0,250}stripMarkedSection\(finalHtml, \"SECTION_4_NEIGHBORHOOD\"\)/.test(reportSource),
   false
 );
 assert.match(
   reportSource,
-  /const keepSection4Neighborhood = shouldRenderCanonicalSection\([\s\S]{0,260}sectionKey:\s*\"market_context\"[\s\S]{0,260}rendererDefault:\s*false/
+  /resolveMarketContextSectionVisibility\([\s\S]{0,260}sectionEligibility[\s\S]{0,260}rendererDefault/
+);
+assert.match(
+  reportSource,
+  /shouldStripDataCoverageSectionByRenderedCopy\([\s\S]{0,220}hasCanonicalCoverageAuthority/
 );
 assert.match(
   reportSource,
