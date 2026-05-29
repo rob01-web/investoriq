@@ -40,6 +40,125 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 
 ## Section 2A - Today DS Status Update (May 28, 2026)
 
+### May 30, 2026 Addendum - Batch 6 DS-064/065/066 Launch-Risk Compression Complete / Controlled Launch Acceptable With Monitoring
+- Batch 6 status: `CLOSED WITH KNOWN BROADER FOLLOW-UP`.
+- Batch 6 materially hardened the DS-064 / DS-065 / DS-066 generator/rendered-regex/QA provenance cluster.
+- Full DS-064/DS-065/DS-066 ledger closure is not required before controlled launch.
+- Remaining DS-064/DS-065/DS-066 work is P1/P2 hardening unless live regression exposes a launch-blocking issue.
+- The next launch gate is live regression, not full ledger closure.
+
+#### Batch 6B - Canonical State Propagation + Provenance Guard Hard-Lock
+- Addressed: `B6A-064-03`, `B6A-066-01`, `B6A-066-02`, and partially tightened `B6A-065-01` / `B6A-065-02`.
+- Files changed:
+  - `api/generate-client-report.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/report-contract-qa.js`
+  - `tests/qa/source-report-coverage-qa-smoke.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Result:
+  - generator now passes canonical states into source-report-coverage QA.
+  - source-report-coverage QA now emits `authority_provenance` and canonical/fallback state source markers.
+  - report-contract QA no longer treats fallback-derived current debt state as canonical authority.
+
+#### Batch 6B-Proof - Runtime Behavioral Proof Hardening
+- Source-level assertions were supplemented with runtime behavioral proof.
+- Proven:
+  - canonical-present source coverage behavior.
+  - canonical-absent fallback behavior.
+  - report-contract canonical/fallback current-debt DSCR provenance behavior.
+  - generator canonical-state helper propagation behavior.
+- Note: one lightweight generator source-level backup assertion remains acceptable because full runtime interception of the internal call path would require broader harness instrumentation.
+
+#### Batch 6C - DS-064 Residual Renderer Strip/Mutation Cleanup
+- Addressed: `B6A-064-01`, `B6A-064-02`.
+- Files changed:
+  - `api/generate-client-report.js`
+  - `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Result:
+  - `SECTION_4_NEIGHBORHOOD` and `SECTION_4_LOCATION_TABLE` now route through canonical `market_context` section visibility when canonical state exists.
+  - Data Coverage `DATA NOT AVAILABLE` phrase-count suppression is now legacy fallback only and cannot override canonical Data Coverage authority.
+  - Runtime/helper behavioral proof was added.
+
+#### Batch 6D - Closure Audit
+- Audit-only.
+- Verdict: `CLOSED WITH KNOWN BROADER FOLLOW-UP`.
+- Found:
+  - `B6D-065-01`: report-contract QA coverage authority could still be object-presence based.
+  - `B6D-065-02`: report-contract QA current_debt_state promotion still needed stricter provenance.
+  - `B6D-066-01`: source-report-coverage QA sufficiency authority needed to include explicit sectionEligibility.
+  - `B6D-064-01`: `SECTION_11_FINAL_RECS` final recommendation section was still local-narrative gated.
+- Recommendation: split QA provenance hardening from final recommendation section guard.
+
+#### Batch 6E - QA Provenance Guard Tightening
+- Addressed: `B6D-065-01`, `B6D-065-02`, `B6D-066-01`.
+- Files changed:
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/source-report-coverage-qa-smoke.js`
+- Result:
+  - `hasCanonicalCoverageAuthority(...)` now requires explicit provenance authority flags.
+  - `resolveCanonicalCurrentDebtStateForQa(...)` no longer promotes fallback/unprovenanced `current_debt_state` to canonical truth.
+  - `fallback_reconstructed` current debt is explicitly non-canonical.
+  - explicit `sectionEligibility` now participates in source-report-coverage canonical coverage/sufficiency authority.
+  - Runtime behavioral tests prove canonical/provenanced vs fallback/unprovenanced behavior.
+
+#### Batch 6F - DS-064 Final Recommendation Canonical Guard
+- Addressed: `B6D-064-01` and DS-064 residual renderer mutation hardening sub-scope for `SECTION_11_FINAL_RECS`.
+- Files changed:
+  - `api/generate-client-report.js`
+  - `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Result:
+  - `SECTION_11_FINAL_RECS` is no longer gated only by local `finalRecommendation` narrative presence.
+  - Added canonical-first resolver `resolveFinalRecommendationSectionVisibility(...)`.
+  - Supported canonical keys: `final_recommendation`, `final_recommendations`, `final_recs`.
+  - Canonical eligible/rendered keeps the section even when local fallback would strip.
+  - Canonical omitted/source_constrained strips the section even when local fallback would keep.
+  - Canonical absent preserves legacy local narrative fallback.
+  - Runtime helper-level behavioral tests were added.
+
+#### Launch-Risk Compression Audit
+- Current launch-readiness summary: `Controlled launch acceptable now with monitoring`.
+- No clear P0 remaining from the sweep.
+- No current canonical-present path was found that plausibly reintroduces false debt/refi math, acquisition-as-current-debt contamination, or wrong customer delivery decision.
+- Full ledger closure is no longer required before controlled launch.
+- Remaining DS-064/DS-065/DS-066 work is P1/P2 hardening unless live regression proves otherwise.
+- Live regression is now the launch gate.
+
+#### Supersession Note
+- Older notes saying Full Underwriting must wait for full decision-source closure are superseded to the extent that the latest launch-risk compression audit says controlled launch is acceptable with monitoring if live regression passes.
+- This does not mean Full Underwriting is fully public self-serve launch-ready before live regression passes.
+- This does not mean all DS rows are closed.
+- Historical caution remains preserved as history.
+
+#### Current Next Step
+- Run live regression set:
+  1. Clean Screening
+  2. Messy Screening
+  3. Clean Underwriting
+  4. Messy Underwriting
+  5. Acquisition/current-debt edge case
+- For each regression, capture:
+  - PDF/report output
+  - analysis artifacts
+  - report_contract_qa
+  - source_report_coverage_qa
+  - qa_action_plan
+  - Dashboard/Admin Diagnostics evidence if relevant
+- Validation checklist:
+  - no false limitation headline
+  - Screening does not leak underwriting sections
+  - acquisition/proposed financing never treated as current debt
+  - DSCR/refi suppressed when current debt is not assessed
+  - current-debt/refi math only appears with verified current debt basis
+  - Data Coverage headline/severity obeys canonical state
+  - support docs are not used quantitatively unless canonical state supports it
+  - visible classification aligned across surfaces
+  - no prohibited public language
+  - no internal parser/admin/vendor artifacts
+  - no unresolved tokens, `DATA NOT AVAILABLE` placeholders, mojibake, or awkward N/A metric leaks
+
 ### May 29, 2026 Addendum - Batch 5 Section Eligibility / Data Coverage / QA Conformance Authority Closed With Broader Cluster Follow-Up
 - Batch 5 status: `CLOSED WITH KNOWN BROADER CLUSTER FOLLOW-UP`.
 - Batch 5B hard-locked generator rendering to canonical-first authority for Data Coverage headline/severity and section eligibility gating.
@@ -131,10 +250,12 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 2. Acquisition vs current debt separation authority
 3. Broader DS-064/DS-065/DS-066 rendered/regex/generator mutation cluster closure sweep
 4. QA rendered-text inference that should become conformance checks
+5. Broader parser-cluster fallback/semantic consistency follow-up (DS-067)
 
 Delivery/readiness note: Generator aliasing, worker delivery consumption, worker terminal failure/restore mechanics, Dashboard customer messaging, and report-contract QA delivery conformance are now hard-locked to canonical delivery decision state where canonical payload exists. Remaining Batch 2 risk is DS-068/DS-069 broader architecture only.
 Batch 2 risk note: Batch 2 customer-facing override risk is materially reduced; DS-069 remains a broader fallback architecture cluster, not an active canonical override when `deliveryDecisionState`/`customer_message` exists.
 Batch 3 risk note: Batch 3 customer-facing current-debt/refi override risk is materially reduced. Remaining acquisition/current-debt separation issues should be handled in Batch 4, not reopened under Batch 3 unless a regression proves the Batch 3 canonical gate was bypassed.
+Launch-risk note: The latest launch-risk compression audit found no clear P0 launch-blocking canonical-present risk. Remaining DS-064/DS-065/DS-066 work is mostly P1/P2 hardening unless live regression proves otherwise. The next launch gate is live regression, not full decision-source ledger closure.
 
 ## Section 3 - Master Decision-Maker Inventory
 
@@ -205,9 +326,9 @@ Coverage note: The completed audit estimated ~132 decision-makers. This ledger c
 | DS-061 | dashboard/customer status | Both | src/pages/Dashboard.jsx | getFailedFileGuidance | generate failure guidance narratives | file metadata + status heuristics | customer failed-state guidance | dashboard-local | high | Dashboard Layer consuming Decision Layer | make read-only consumer | B2 | closed | Failed-file guidance is suppressed when canonical `customer_message` exists; legacy parse/file guidance is fallback-only. |
 | DS-062 | dashboard/customer status | Both | src/pages/Dashboard.jsx | underwriting support-doc preflight checks | block submit on doc mix | client-side upload set | launch-time UX gate | dashboard-local | medium | Coverage/Eligibility Layer | make read-only consumer | B5 | open | should mirror server canonical requirements |
 | DS-063 | launch positioning context | Both | src/pages/Pricing.jsx | static policy/pricing/disclaimer copy | hardcoded policy text | customer messaging | renderer-local | low | Product policy docs | make read-only consumer | N/A | open | no change approved in this ledger stage |
-| DS-064 | AUDIT EXPANSION REQUIRED - generator decision cluster | Both | api/generate-client-report.js | multiple helpers exported in __test__ (state/render/math/copy gates) | mixed | many report surfaces | duplicate cluster | critical | Family-specific canonical owners | AUDIT EXPANSION REQUIRED - enumerate remaining individual call sites before migration | B1-B5 | partial | Batch 5 closed concrete section/Data Coverage renderer authority sub-scope (including final neighborhood strip leak), but broader generator mutation cluster remains partial. |
-| DS-065 | AUDIT EXPANSION REQUIRED - contract QA regex cluster | Both | api/_lib/report-contract-qa.js | additional regex-based inference sites | rendered text | violation severity/block flags | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate regex truth-inference call sites | B1-B5 | partial | Canonical-first report-contract conformance sub-scope is hardened and behaviorally proven; broader regex/taxonomy cluster remains partial pending closure sweep. |
-| DS-066 | AUDIT EXPANSION REQUIRED - source coverage QA cluster | Both | api/_lib/source-report-coverage-qa.js | additional rendered depth and file-signal checks | files + rendered text | deterministic flags/routing | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate all flag producers by family | B1-B5 | partial | Rendered text/regex/artifact-signal authority has been reduced with canonical-first guards and behavioral proof; broader cluster-level conformance cleanup remains partial. |
+| DS-064 | AUDIT EXPANSION REQUIRED - generator decision cluster | Both | api/generate-client-report.js | multiple helpers exported in __test__ (state/render/math/copy gates) | mixed | many report surfaces | duplicate cluster | critical | Family-specific canonical owners | AUDIT EXPANSION REQUIRED - enumerate remaining individual call sites before migration | B1-B5 | partial | Batch 6C closed known market_context/Data Coverage renderer strip leaks. Batch 6F closed `SECTION_11_FINAL_RECS` final recommendation canonical guard. Known P0/P1 canonical-present renderer strip leaks from Batch 6 are closed. Broader generator mutation cluster remains partial/post-launch unless live regression exposes launch-blocking behavior. |
+| DS-065 | AUDIT EXPANSION REQUIRED - contract QA regex cluster | Both | api/_lib/report-contract-qa.js | additional regex-based inference sites | rendered text | violation severity/block flags | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate regex truth-inference call sites | B1-B5 | partial | Batch 6E tightened report-contract QA provenance gates. Object presence alone no longer creates canonical coverage/current-debt authority, and fallback/unprovenanced `current_debt_state` is not promoted to canonical truth. Broader regex/taxonomy cluster remains partial/post-launch unless live regression exposes launch-blocking behavior. |
+| DS-066 | AUDIT EXPANSION REQUIRED - source coverage QA cluster | Both | api/_lib/source-report-coverage-qa.js | additional rendered depth and file-signal checks | files + rendered text | deterministic flags/routing | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate all flag producers by family | B1-B5 | partial | Batch 6E tightened source-report-coverage QA authority provenance. Explicit `sectionEligibility` now participates in unified coverage/sufficiency authority. Rendered/file/artifact signals are reduced to canonical-absent fallback or conformance/evidence in covered paths. Broader deterministic-flag cluster remains partial/post-launch unless live regression exposes launch-blocking behavior. |
 | DS-067 | AUDIT EXPANSION REQUIRED - parser recovery cluster | Both | api/parse/parse-doc.js | AI fallback + deterministic fallback branch points | extracted text/tables | parser artifacts and diagnostics | duplicate cluster | medium | Parser Canonical Layer | AUDIT EXPANSION REQUIRED - enumerate per-doc recovery authority points | B5 | partial | Closed sub-scopes: loan_term_sheet current-debt alias gating; loan_term_sheet debt_basis normalization for acquisition/proposed context; supporting-doc financing route ambiguity hardening; mixed ambiguous financing diagnostics. Remaining open: broader parser-cluster fallback/semantic consistency outside Batch 4 financing-route and loan-term payload sub-scopes. |
 | DS-068 | AUDIT EXPANSION REQUIRED - worker status machine cluster | Both | api/admin-run-worker.js | repeated status transition paths and branch checks | job state + response payload | published/failed/publishing transitions | worker-local cluster | high | Worker Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all status branch decision sites | B2 | partial | `deliveryDecisionState` consumption and terminal failure helper sub-scopes are hard-locked; broader worker status-machine lifecycle cluster remains partial. |
 | DS-069 | AUDIT EXPANSION REQUIRED - dashboard messaging cluster | Both | src/pages/Dashboard.jsx | failed-state and guidance copy branches | error/status/events | customer messaging | dashboard-local cluster | high | Dashboard Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all customer state recompute branches | B2 | partial | customer-facing canonical message/status hard-lock complete; broader Dashboard fallback/messaging cluster remains partial for older/non-canonical jobs. |

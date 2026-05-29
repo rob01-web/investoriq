@@ -1,3 +1,147 @@
+# May 30, 2026 Addendum - Batch 6 Decision-Source Compression Complete / Batch 6F Final Recommendation Guard Complete / Live Regression Next
+
+## G. Fresh-chat continuation prompt
+
+We are continuing InvestorIQ after Batch 6 Decision-Source Compression on May 30, 2026.
+
+Current status:
+- Batch 6B/6B-Proof/6C/6D/6E/6F are complete.
+- DS-064/065/066 launch-risk compression is complete with known broader follow-up.
+- Launch-Risk Compression Audit found no clear P0 canonical-present launch blocker.
+- Controlled launch is acceptable with monitoring if live regression passes.
+- Full ledger closure is no longer required before controlled launch.
+- Next step is live regression set:
+  1. Clean Screening
+  2. Messy Screening
+  3. Clean Underwriting
+  4. Messy Underwriting
+  5. Acquisition/current-debt edge case
+- Do not start broad DS-065/066 cleanup before live regression unless a regression exposes a launch-blocking issue.
+- Do not overclaim public self-serve readiness until live regression passes.
+
+## A. Current controlling status
+
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- The original audit estimated approximately 132 duplicate decision-making paths / truth-makers.
+- The ledger tracks 70 explicit DS rows/groups plus grouped expansion clusters.
+- We are no longer treating closure of every DS row as a pre-launch requirement.
+- Latest launch-risk compression audit says: controlled launch acceptable now with monitoring.
+- No clear P0 launch-blocking canonical-present risk was found.
+- Live regression is now the launch gate.
+- Full ledger closure is not required before controlled launch.
+- Do not state Full Underwriting is fully public self-serve launch-ready until live regression passes.
+
+## B. Today’s completed Batch 6 work
+
+Batch 6B - Canonical State Propagation + Provenance Guard Hard-Lock
+- generator now passes canonical states into source-report-coverage QA.
+- source-report-coverage QA emits authority_provenance and canonical/fallback state source markers.
+- report-contract QA no longer treats fallback-derived current debt state as canonical authority.
+
+Batch 6B-Proof - Runtime Behavioral Proof Hardening
+- runtime behavioral proof now covers canonical-present, canonical-absent fallback, report-contract provenance behavior, and generator canonical-state helper propagation.
+- source-level assertions reduced to backup where practical.
+
+Batch 6C - DS-064 Residual Renderer Strip/Mutation Cleanup
+- SECTION_4_NEIGHBORHOOD and SECTION_4_LOCATION_TABLE now obey canonical market_context visibility when canonical state exists.
+- Data Coverage phrase-count stripping is legacy fallback only and cannot override canonical Data Coverage authority.
+
+Batch 6D - Closure Audit
+- audit-only.
+- verdict: CLOSED WITH KNOWN BROADER FOLLOW-UP.
+- found the remaining QA provenance tightening items and the final recommendation section guard.
+
+Batch 6E - QA Provenance Guard Tightening
+- report-contract QA provenance gates tightened.
+- hasCanonicalCoverageAuthority(...) now requires explicit provenance authority flags.
+- resolveCanonicalCurrentDebtStateForQa(...) no longer promotes fallback/unprovenanced current_debt_state to canonical truth.
+- source-report-coverage QA treats explicit sectionEligibility as part of unified coverage/sufficiency authority.
+- fallback_reconstructed current debt remains explicitly non-canonical.
+
+Batch 6F - DS-064 Final Recommendation Canonical Guard
+- SECTION_11_FINAL_RECS is now canonical-first.
+- Added resolveFinalRecommendationSectionVisibility(...).
+- Supports section eligibility keys:
+  - final_recommendation
+  - final_recommendations
+  - final_recs
+- canonical eligible/rendered keeps the section.
+- canonical omitted/source_constrained strips the section.
+- canonical absent preserves local narrative fallback.
+- runtime helper-level tests added.
+
+## C. Launch-risk compression result
+
+- Controlled launch acceptable now with monitoring.
+- No clear P0 remaining from the sweep.
+- No current canonical-present path found that plausibly reintroduces false debt/refi math, acquisition-as-current-debt contamination, or wrong customer delivery decision.
+- Remaining DS-064/065/066 work is P1/P2 hardening unless live regression proves otherwise.
+- Live regression replaces full ledger closure as the next launch gate.
+
+## D. Current next action
+
+Current next action: run live regression set.
+
+Regression set:
+1. Clean Screening
+2. Messy Screening
+3. Clean Underwriting
+4. Messy Underwriting
+5. Acquisition/current-debt edge case
+
+For each live regression, capture:
+- PDF/report output
+- analysis artifacts
+- report_contract_qa
+- source_report_coverage_qa
+- qa_action_plan
+- Dashboard/Admin Diagnostics evidence if relevant
+
+Regression checklist:
+- no false limitation headline
+- Screening does not leak underwriting sections
+- acquisition/proposed financing never treated as current debt
+- DSCR/refi suppressed when current debt is not assessed
+- current-debt/refi math only appears with verified current debt basis
+- Data Coverage headline/severity obeys canonical state
+- support docs are not used quantitatively unless canonical state supports it
+- visible classification aligned across cover/executive/scorecard/risk surfaces
+- no prohibited public language
+- no internal parser/admin/vendor artifacts
+- no unresolved tokens
+- no DATA NOT AVAILABLE placeholders
+- no mojibake
+- no awkward N/A metric leaks
+
+## E. Current working doctrine
+
+- The launch goal is not a perfect codebase.
+- The launch goal is safe, honest, deterministic, commercially credible reports.
+- Launch-blocking risk means a plausible path to:
+  - false financial conclusions
+  - unsupported current debt / DSCR / refinance math
+  - acquisition financing treated as current debt
+  - wrong publish/fail/customer delivery decision
+  - hidden material source limitation
+  - visible trust-breaking contradictions
+  - support-doc quantitative misuse
+  - prohibited public/customer copy
+- Launch-hardening/post-launch work can remain open if:
+  - canonical authority wins
+  - fallback is canonical-absent only
+  - QA catches contradictions
+  - unsafe sections collapse/omit/qualify
+  - delivery gate prevents unsafe publication
+
+## F. Supersession note
+
+- Older notes saying Screening-first only or Full Underwriting must remain paused until full decision-source closure are superseded to the extent that the latest launch-risk compression audit says controlled launch is acceptable with monitoring if live regression passes.
+- Historical caution remains relevant, but the current next step is live regression, not more blind patching.
+- Do not state Full Underwriting public self-serve is approved until live regression passes.
+- Do not state all decision-source rows are closed.
+- Do not state Ken/public samples are ready.
+
+---
 # May 29, 2026 Addendum - Decision-Source Elimination Progress: Batch 2 Complete / Batch 3 Current Debt-Refi Complete Pending Ledger Update
 
 ## H. Fresh-chat continuation prompt update
