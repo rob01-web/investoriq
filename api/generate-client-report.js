@@ -154,6 +154,27 @@ function normalizeVisibleReportClassification({
   });
   return state.label;
 }
+function resolveScreeningClassificationConsumerLabel({
+  canonicalVisibleLabel = "",
+  localVisibleLabel = "",
+  screeningClass = "",
+} = {}) {
+  const approvedLabels = new Set([
+    "Stable",
+    "Sensitized",
+    "Fragile",
+    "Review - Source Reconciliation Disclosure",
+    "Review - Insufficient Core Support",
+    "Review - Debt Coverage Constraint",
+  ]);
+  const canonical = String(canonicalVisibleLabel || "").trim();
+  if (approvedLabels.has(canonical)) return canonical;
+  const local = String(localVisibleLabel || "").trim();
+  if (approvedLabels.has(local)) return local;
+  const screening = String(screeningClass || "").trim();
+  if (approvedLabels.has(screening)) return screening;
+  return "";
+}
 function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visibleClassificationLabel) {
   if (typeof dealScoreTableHtml !== "string" || !dealScoreTableHtml.trim()) return dealScoreTableHtml || "";
   if (typeof visibleClassificationLabel !== "string" || !visibleClassificationLabel.trim()) return dealScoreTableHtml;
@@ -6564,6 +6585,7 @@ if (effectiveReportMode === "screening_v1") {
     const execNarrativeHtml = effectiveReportMode === "screening_v1" ? "" : getNarrativeHtml("execSummary");
     const execScreeningLines = [];
     let screeningClass = null;
+    let screeningVisibleClassificationLabel = null;
     let screeningExplanation = null;
     const driverCandidates = [];
     if (Number.isFinite(expenseRatioR)) {
@@ -6726,7 +6748,7 @@ if (effectiveReportMode === "screening_v1") {
         "Operating margins remain within a stable range based on uploaded operating results.";
     }
     if (effectiveReportMode === "screening_v1") {
-      const screeningVisibleLabel = normalizeVisibleReportClassification({
+      screeningVisibleClassificationLabel = normalizeVisibleReportClassification({
         baseClass: screeningClass,
         effectiveReportMode,
         sourceReconciliationCapActive: Boolean(
@@ -6736,7 +6758,7 @@ if (effectiveReportMode === "screening_v1") {
         debtCoverageConstraintActive: false,
       });
       execScreeningLines.push(
-        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningVisibleLabel}`)}</p>`
+        `<p class="exec-classification">${escapeHtml(`Operating Profile: ${screeningVisibleClassificationLabel}`)}</p>`
       );
       execScreeningLines.push(
         `<p class="exec-classification-note">${escapeHtml(screeningExplanation)}</p>`
@@ -6895,7 +6917,7 @@ if (effectiveReportMode === "screening_v1") {
           (row) =>
             `<tr><td>${escapeHtml(row.label)}</td><td>${formatPercent1(row.margin)}</td><td>${escapeHtml(
               row.label === "Base"
-                ? screeningClass || DATA_NOT_AVAILABLE
+                ? screeningVisibleClassificationLabel || screeningClass || DATA_NOT_AVAILABLE
                 : Number.isFinite(row.margin) && row.margin <= 0.3
                 ? "Fragile"
                 : Number.isFinite(row.margin) && row.margin > 0.4
@@ -6918,19 +6940,6 @@ if (effectiveReportMode === "screening_v1") {
             ? `<p class="exec-signal-line">Modest operating deterioration would materially compress margin.</p>`
             : ""
         }</div>`;
-      }
-    }
-    if (
-      effectiveReportMode === "screening_v1" &&
-      screeningHasSufficientData &&
-      decisionContextInputs.some((v) => Number.isFinite(v))
-    ) {
-      if (anyHardDisq) {
-        screeningClass = "Fragile";
-      } else if (allPass) {
-        screeningClass = "Stable";
-      } else {
-        screeningClass = "Sensitized";
       }
     }
     const currentDebtDscrForDisplay =
@@ -7288,6 +7297,14 @@ if (effectiveReportMode === "screening_v1") {
     const classificationState = underwritingState?.core?.classification || null;
     const coverClassificationLabel =
       classificationState?.visibleClassificationState?.label || classificationState?.visibleLabel || computedCoverClassificationLabel;
+    const screeningVisibleClassificationForConsumers =
+      effectiveReportMode === "screening_v1"
+        ? resolveScreeningClassificationConsumerLabel({
+            canonicalVisibleLabel: coverClassificationLabel,
+            localVisibleLabel: screeningVisibleClassificationLabel,
+            screeningClass,
+          })
+        : "";
     if (effectiveReportMode === "v1_core") {
       dealScoreState.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml(
         dealScoreState.dealScoreTableHtml,
@@ -7399,19 +7416,23 @@ if (effectiveReportMode === "screening_v1") {
     }
     // Build exec verdict expansion: classification framework + investment thesis
     let execVerdictExpansionHtml = "";
-    if (effectiveReportMode === "screening_v1" && screeningClass && screeningClass !== "Insufficient Data") {
+    if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
         { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
         { name: "Sensitized", er: "55\u201365%", nm: "35\u201345%", beo: "75\u201385%" },
         { name: "Fragile",    er: "> 65%",   nm: "< 35%",  beo: "> 85%" },
       ];
       const tierRows = tierDefs.map((t) => {
-        const isCurrent = t.name === screeningClass;
+        const isCurrent = t.name === screeningVisibleClassificationForConsumers;
         const rowStyle = isCurrent ? ` style="font-weight:600;background:#f0f9ff;"` : "";
         const marker = isCurrent ? " \u25B6" : "";
         return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
       }).join("");
-      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p></div>`;
+      const screeningClassificationDisclosure =
+        /^(Stable|Sensitized|Fragile)$/i.test(screeningVisibleClassificationForConsumers)
+          ? ""
+          : `<p class="small" style="color:#64748b;margin-top:6px;">Current classification: ${escapeHtml(screeningVisibleClassificationForConsumers)}.</p>`;
+      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p>${screeningClassificationDisclosure}</div>`;
       // Investment thesis: fully deterministic
       const rrOccNow = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
       const rrInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value);
@@ -7425,11 +7446,11 @@ if (effectiveReportMode === "screening_v1") {
       if (Number.isFinite(rrOccNow)) parts.push(`The property is ${formatPercent1(rrOccNow)} occupied`);
       if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries reported rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
       let thesisText = parts.length > 0 ? parts.join(" and ") + ". " : "";
-      if (screeningClass === "Sensitized" && erPctStr && nmPctStr) {
+      if (screeningVisibleClassificationForConsumers === "Sensitized" && erPctStr && nmPctStr) {
         thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Operating improvement sensitivity is tied to expense-ratio reduction and the observed rent-to-market gap.`;
-      } else if (screeningClass === "Fragile" && erPctStr) {
+      } else if (screeningVisibleClassificationForConsumers === "Fragile" && erPctStr) {
         thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
-      } else if (screeningClass === "Stable") {
+      } else if (screeningVisibleClassificationForConsumers === "Stable") {
         thesisText += `Operating results remain stable based on uploaded operating data.`;
       }
       const thesisCard = thesisText
@@ -9249,11 +9270,11 @@ if (effectiveReportMode === "screening_v1") {
     let execRationale = "";
     if (effectiveReportMode === "v1_core" && dealScoreState.displayVerdict?.cap_explanation) {
       execRationale = dealScoreState.displayVerdict.cap_explanation;
-    } else if (screeningClass && screeningClass !== "Insufficient Data" && effectiveReportMode === "screening_v1") {
+    } else if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const erStr  = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
       const nmStr  = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
       const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
-      if (screeningClass === "Stable") {
+      if (screeningVisibleClassificationForConsumers === "Stable") {
         const parts = [];
         if (erStr)  parts.push(`expense ratio of ${erStr}`);
         if (nmStr)  parts.push(`NOI margin of ${nmStr}`);
@@ -9261,7 +9282,7 @@ if (effectiveReportMode === "screening_v1") {
         execRationale = parts.length > 0
           ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
           : "Classified STABLE: operating metrics remain within defined screening thresholds.";
-      } else if (screeningClass === "Sensitized") {
+      } else if (screeningVisibleClassificationForConsumers === "Sensitized") {
         const breaches = [];
         if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr)
           breaches.push(`elevated operating expense burden (${erStr}) breaches the sensitized threshold`);
@@ -9272,7 +9293,7 @@ if (effectiveReportMode === "screening_v1") {
         execRationale = breaches.length > 0
           ? `Operating profile classified as SENSITIZED: ${breaches.join("; ")}.`
           : `Operating profile classified as SENSITIZED: ${screeningExplanation}`;
-      } else if (screeningClass === "Fragile") {
+      } else if (screeningVisibleClassificationForConsumers === "Fragile") {
         const breaches = [];
         if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65 && erStr)
           breaches.push(`expense ratio of ${erStr} breaches the 65.0% fragile threshold`);
@@ -9283,6 +9304,10 @@ if (effectiveReportMode === "screening_v1") {
         execRationale = breaches.length > 0
           ? `Classified FRAGILE: ${breaches.join("; ")}.`
           : `Classified FRAGILE: ${screeningExplanation}`;
+      } else if (screeningVisibleClassificationForConsumers === "Review - Source Reconciliation Disclosure") {
+        execRationale = "Classification is capped by source reconciliation disclosure pending reconciliation of rent roll and T12 evidence.";
+      } else if (screeningVisibleClassificationForConsumers === "Review - Insufficient Core Support") {
+        execRationale = "Classification is capped by insufficient core support. Required core operating evidence remains incomplete.";
       }
     } else if (screeningClass === "Insufficient Data") {
       execRationale = "Insufficient operating data to determine classification.";
@@ -10769,6 +10794,7 @@ export const __test__ = {
   resolveCanonicalLoanTermSheetArtifacts,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
+  resolveScreeningClassificationConsumerLabel,
   shouldRenderCanonicalSection,
   shouldApplyTierOneStripCascade,
   resolveMarketContextSectionVisibility,

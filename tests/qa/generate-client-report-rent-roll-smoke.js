@@ -588,6 +588,30 @@ const approvedVisibleLabels = new Set([
 ].forEach((label) => {
   assert.equal(approvedVisibleLabels.has(label), true);
 });
+const screeningConsumerPrefersCanonicalLabel = generatorTest.resolveScreeningClassificationConsumerLabel({
+  canonicalVisibleLabel: "Review - Source Reconciliation Disclosure",
+  localVisibleLabel: "Stable",
+  screeningClass: "Fragile",
+});
+assert.equal(screeningConsumerPrefersCanonicalLabel, "Review - Source Reconciliation Disclosure");
+const screeningConsumerFallsBackToLocalVisibleLabel = generatorTest.resolveScreeningClassificationConsumerLabel({
+  canonicalVisibleLabel: "",
+  localVisibleLabel: "Sensitized",
+  screeningClass: "Stable",
+});
+assert.equal(screeningConsumerFallsBackToLocalVisibleLabel, "Sensitized");
+const screeningConsumerFallsBackToScreeningClass = generatorTest.resolveScreeningClassificationConsumerLabel({
+  canonicalVisibleLabel: "",
+  localVisibleLabel: "",
+  screeningClass: "Fragile",
+});
+assert.equal(screeningConsumerFallsBackToScreeningClass, "Fragile");
+const screeningConsumerRejectsUnapprovedLabel = generatorTest.resolveScreeningClassificationConsumerLabel({
+  canonicalVisibleLabel: "High Risk",
+  localVisibleLabel: "Outside Parameters",
+  screeningClass: "Insufficient Data",
+});
+assert.equal(screeningConsumerRejectsUnapprovedLabel, "");
 assert.equal(
   /showSection11[\s\S]{0,250}stripMarkedSection\(finalHtml, \"SECTION_4_NEIGHBORHOOD\"\)/.test(reportSource),
   false
