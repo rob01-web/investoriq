@@ -3080,6 +3080,32 @@ assert.equal(
   ),
   false
 );
+const renderedContractCurrentDebtStateNotCanonicalAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    rendered_contract: {
+      current_debt_state: {
+        current_debt_dscr_status: "computed",
+        current_debt_dscr: 1.42,
+        has_true_current_debt_balance: true,
+      },
+    },
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.10x</p>",
+    "<p>DSCR (T12 NOI) 1.10x</p>",
+  ].join("\n"),
+});
+assert.equal(
+  renderedContractCurrentDebtStateNotCanonicalAuthority.violations.some(
+    (v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT"
+  ),
+  false
+);
 
 const canonicalInputCurrentDebtStateTriggersCanonicalDrift = buildReportContractQa({
   reportType: "underwriting",
@@ -3175,6 +3201,25 @@ const explicitCoverageAuthorityDoesCreateCanonicalCoverageAuthority = buildRepor
 });
 assert.equal(
   explicitCoverageAuthorityDoesCreateCanonicalCoverageAuthority.violations.some(
+    (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
+  ),
+  true
+);
+const explicitCoverageSourceCanonicalInputCreatesCanonicalCoverageAuthority = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    coverage_state_source: "canonical_input",
+    core_input_sufficiency_state: { publishability_bucket: "core_sufficient_publishable" },
+    source_reconciliation_state: { status: "clear" },
+    section_eligibility: { sections: {} },
+  },
+  html: "<h2>Data Coverage</h2><p>CORE INPUTS EXTRACTED - SOURCE LIMITATIONS DISCLOSURE</p>",
+});
+assert.equal(
+  explicitCoverageSourceCanonicalInputCreatesCanonicalCoverageAuthority.violations.some(
     (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
   ),
   true

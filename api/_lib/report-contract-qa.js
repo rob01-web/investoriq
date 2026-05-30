@@ -277,14 +277,17 @@ function resolveCanonicalCurrentDebtStateForQa({
   artifacts = [],
 } = {}) {
   const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
+  const canonicalCurrentDebtSource = String(
+    coverageAuthority?.current_debt_state_source ||
+    sourceReportCoverageQa?.current_debt_state_source ||
+    ""
+  ).toLowerCase();
   const canonicalCurrentDebtAuthoritative =
     coverageAuthority?.current_debt_state_authoritative === true ||
-    String(sourceReportCoverageQa?.current_debt_state_source || "").toLowerCase() === "canonical_input";
+    canonicalCurrentDebtSource === "canonical_input";
   const canonicalStateCandidates = [
     sourceReportCoverageQa?.underwritingState?.core?.currentDebt?.assessmentState,
     sourceReportCoverageQa?.report_surface_contracts?.current_debt_state,
-    sourceReportCoverageQa?.rendered_contract?.current_debt_state,
-    sourceReportCoverageQa?.delivery_gate_decision?.current_debt_state,
   ].filter((row) => row && typeof row === "object");
   const explicitCanonicalState = canonicalStateCandidates[0] || null;
   if (explicitCanonicalState) {
@@ -293,8 +296,7 @@ function resolveCanonicalCurrentDebtStateForQa({
       state: explicitCanonicalState,
     };
   }
-  const currentDebtStateSource = String(sourceReportCoverageQa?.current_debt_state_source || "").toLowerCase();
-  const currentDebtStateMarkedFallback = currentDebtStateSource === "fallback_reconstructed";
+  const currentDebtStateMarkedFallback = canonicalCurrentDebtSource === "fallback_reconstructed";
   const currentDebtStateCandidate =
     sourceReportCoverageQa?.current_debt_state && typeof sourceReportCoverageQa.current_debt_state === "object"
       ? sourceReportCoverageQa.current_debt_state
@@ -778,10 +780,16 @@ function coreCoveragePresent(sourceReportCoverageQa) {
 
 function hasCanonicalCoverageAuthority(sourceReportCoverageQa = null) {
   const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
+  const coverageSource = String(
+    coverageAuthority?.coverage_state_source ||
+    sourceReportCoverageQa?.coverage_state_source ||
+    ""
+  ).toLowerCase();
   return Boolean(
     coverageAuthority?.coverage_authoritative === true ||
     coverageAuthority?.section_eligibility_authoritative === true ||
-    coverageAuthority?.sufficiency_authoritative === true
+    coverageAuthority?.sufficiency_authoritative === true ||
+    coverageSource === "canonical_input"
   );
 }
 
