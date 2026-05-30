@@ -322,6 +322,87 @@ const canonicalFinalRecommendationAbsentFallback = generatorTest.resolveFinalRec
   rendererDefault: false,
 });
 assert.equal(canonicalFinalRecommendationAbsentFallback, false);
+const canonicalDebtTablesEligible = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      debt_structure: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  sectionKey: "debt_structure",
+  rendererDefault: false,
+});
+assert.equal(canonicalDebtTablesEligible, true);
+const canonicalDebtTablesConstrained = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      debt_structure: {
+        eligible: false,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  sectionKey: "debt_structure",
+  rendererDefault: true,
+});
+assert.equal(canonicalDebtTablesConstrained, false);
+const canonicalRiskMatrixEligible = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      risk_register: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  sectionKey: "risk_register",
+  rendererDefault: false,
+});
+assert.equal(canonicalRiskMatrixEligible, true);
+const canonicalDcfSummaryEligible = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  sectionKey: "dcf",
+  rendererDefault: false,
+});
+assert.equal(canonicalDcfSummaryEligible, true);
+const canonicalDcfSummaryConstrained = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        eligible: false,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  sectionKey: "dcf",
+  rendererDefault: true,
+});
+assert.equal(canonicalDcfSummaryConstrained, false);
+const canonicalDebtAbsentFallback = generatorTest.shouldRenderCanonicalSection({
+  sectionEligibility: null,
+  sectionKey: "debt_structure",
+  rendererDefault: false,
+});
+assert.equal(canonicalDebtAbsentFallback, false);
 const canonicalDocumentSourcesRequiredNoDocs = generatorTest.resolveDocumentSourcesSectionVisibility({
   sectionEligibility: {
     sections: {

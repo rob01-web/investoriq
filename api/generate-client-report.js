@@ -8156,7 +8156,11 @@ if (effectiveReportMode === "screening_v1") {
     if (false) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_SUMMARY");
     }
-    const showUnitValueAdd = hasMeaningfulNarrative(getNarrativeHtml("unitValueAdd"));
+    const showUnitValueAdd = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "operating_profile",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("unitValueAdd")),
+    });
     if (!showUnitValueAdd) {
       finalHtml = stripMarkedSection(finalHtml, "UNIT_VALUE_ADD");
     }
@@ -8168,7 +8172,11 @@ if (effectiveReportMode === "screening_v1") {
     if (!showNeighborhood) {
       finalHtml = stripMarkedSection(finalHtml, "NEIGHBORHOOD_ANALYSIS");
     }
-    const showRisk = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
+    const showRisk = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "risk_register",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("riskAssessment")),
+    });
     if (!showRisk) {
       finalHtml = stripMarkedSection(finalHtml, "RISK_ASSESSMENT");
     }
@@ -8176,36 +8184,53 @@ if (effectiveReportMode === "screening_v1") {
     if (!showRenovation) {
       finalHtml = stripMarkedSection(finalHtml, "RENOVATION_NARRATIVE");
     }
-    const showDebt = hasMeaningfulNarrative(getNarrativeHtml("debtStructure"));
+    const showDebt = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "debt_structure",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("debtStructure")),
+    });
     if (!showDebt) {
       finalHtml = stripMarkedSection(finalHtml, "DEBT_STRUCTURE");
     }
-    const showDealScoreSummary = hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary"));
+    const showDealScoreSummary = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "deal_scorecard",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("dealScoreSummary")),
+    });
     if (!showDealScoreSummary) {
       finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_SUMMARY");
     }
-    const showDealScoreInterpretation = hasMeaningfulNarrative(
-      getNarrativeHtml("dealScoreInterpretation")
-    );
+    const showDealScoreInterpretation = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "deal_scorecard",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("dealScoreInterpretation")),
+    });
     if (!showDealScoreInterpretation) {
       finalHtml = stripMarkedSection(finalHtml, "DEAL_SCORE_INTERPRETATION");
     }
     // SECTION_8_INTERPRETATION strip is deferred to the v1_core block
     // For screening mode, the token is already cleared (empty string) by the early replacement,
     // so the section will be stripped by the DNA safety pass and section strip cascade.
-    const showAdvancedModeling = hasMeaningfulNarrative(
-      getNarrativeHtml("advancedModelingIntro")
-    );
+    const showAdvancedModeling = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "advanced_modeling",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro")),
+    });
     if (!showAdvancedModeling) {
       finalHtml = stripMarkedSection(finalHtml, "ADVANCED_MODELING_INTRO");
     }
-    const showDcf = hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation"));
+    const showDcf = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "dcf",
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("dcfInterpretation")),
+    });
     if (!showDcf) {
       finalHtml = stripMarkedSection(finalHtml, "DCF_INTERPRETATION");
     }
-    const showFinalRecommendation = hasMeaningfulNarrative(
-      getNarrativeHtml("finalRecommendation")
-    );
+    const showFinalRecommendation = resolveFinalRecommendationSectionVisibility({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      rendererDefault: hasMeaningfulNarrative(getNarrativeHtml("finalRecommendation")),
+    });
     if (!showFinalRecommendation) {
       finalHtml = stripMarkedSection(finalHtml, "FINAL_RECOMMENDATION");
     }
@@ -8313,8 +8338,11 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection5) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
     }
-    const showSection5Matrix =
-      Array.isArray(tables.riskMatrix) && tables.riskMatrix.length > 0;
+    const showSection5Matrix = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "risk_register",
+      rendererDefault: Array.isArray(tables.riskMatrix) && tables.riskMatrix.length > 0,
+    });
     if (!showSection5Matrix) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
@@ -8629,10 +8657,14 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection7) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
-    const showSection7Tables =
-      (Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0) ||
-      debtCapitalRowsHtml.length > 0 ||
-      refiCollapseGridHtml.length > 0;
+    const showSection7Tables = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "debt_structure",
+      rendererDefault:
+        (Array.isArray(tables.debtStructure) && tables.debtStructure.length > 0) ||
+        debtCapitalRowsHtml.length > 0 ||
+        refiCollapseGridHtml.length > 0,
+    });
     if (!showSection7Tables) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
     }
@@ -8657,8 +8689,12 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
     }
-    const showSection9Table =
-      (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0;
+    const showSection9Table = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "dcf",
+      rendererDefault:
+        (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0,
+    });
     if (!showSection9Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
     }
@@ -8691,7 +8727,7 @@ if (effectiveReportMode === "screening_v1") {
     }
     const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
     const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
-    if (!hasRiskMatrixRows && !hasRiskNarrative) {
+    if (!showSection5Matrix && !hasRiskNarrative) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
     }
     const dcfRow =
@@ -8703,7 +8739,12 @@ if (effectiveReportMode === "screening_v1") {
       Number.isFinite(coerceNumber(dcfRow?.equityMultiple)) ||
       Number.isFinite(coerceNumber(dcfRow?.salePrice)) ||
       (typeof dcfRow?.salePriceText === "string" && dcfRow.salePriceText.trim().length > 0);
-    if (!hasDcfMetric) {
+    const showSection10DcfSummary = shouldRenderCanonicalSection({
+      sectionEligibility: sectionEligibilityStateForRender,
+      sectionKey: "dcf",
+      rendererDefault: hasDcfMetric,
+    });
+    if (!showSection10DcfSummary) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
     }
     if (reportTier === 1) {
