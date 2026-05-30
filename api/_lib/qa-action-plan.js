@@ -1177,6 +1177,10 @@ function buildPublishEligibilitySummary({
   managerContradictionBlocksCustomer = false,
   reconciliationViolation = null,
   publicOrOutreachOnlyAction = null,
+  deliveryDecisionState = null,
+  canonicalDeliveryDecisionState = null,
+  delivery_gate_decision = null,
+  deliveryGateDecision = null,
 }) {
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
@@ -1370,7 +1374,7 @@ function buildPublishEligibilitySummary({
     ? (sourceReconciliationIsDiscloseOnly ? "source_reconciliation" : "source_limited")
     : "none";
 
-  const customerPublishEligible = Boolean(
+  const customerPublishEligibleComputed = Boolean(
     deliveryGateStatus === "deliverable" &&
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
@@ -1385,7 +1389,7 @@ function buildPublishEligibilitySummary({
     customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
 
-  const publishDecisionReason = customerPublishEligible
+  const publishDecisionReason = customerPublishEligibleComputed
     ? "customer_publish_eligible"
     : adminReviewBlockingAction
     ? `admin_review_required:${reasonCode || adminReviewBlockingAction?.code || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
@@ -1404,24 +1408,68 @@ function buildPublishEligibilitySummary({
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
   ]);
-  // Canonical customer publication authority: delivery gate + core sufficiency + canonical customer blockers.
-  const reportPublishable = Boolean(
+  // Legacy readiness synthesis. Canonical override may replace these truth fields below.
+  const reportPublishableLegacy = Boolean(
     deliveryGateStatus === "deliverable" &&
       requiredCoreCoverageReady &&
       !sourceNeedsDocs &&
       reportQualityBlockers.length === 0
   );
-  const customerDeliveryReadyAlias = customerPublishEligible && reportPublishable;
-  const publicSampleReady = Boolean(
-    reportPublishable &&
+  const customerPublishEligibleLegacy = customerPublishEligibleComputed;
+  const customerDeliveryReadyAliasLegacy = customerPublishEligibleLegacy && reportPublishableLegacy;
+  const publicSampleReadyLegacy = Boolean(
+    reportPublishableLegacy &&
     publicSampleBlockers.length === 0 &&
     publicSampleImpact !== "block_until_review"
   );
-  const highValueOutreachReady = Boolean(
-    reportPublishable &&
+  const highValueOutreachReadyLegacy = Boolean(
+    reportPublishableLegacy &&
     highValueOutreachBlockers.length === 0 &&
     highValueOutreachImpact !== "block_until_review"
   );
+  const readinessOverride = resolveCanonicalReadinessOverride({
+    deliveryDecisionState,
+    canonicalDeliveryDecisionState,
+    deliveryGateDecision,
+    delivery_gate_decision,
+  });
+  const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
+  const canonicalCustomerDeliveryAllowed = Boolean(readinessOverride.normalized?.customer_delivery_allowed);
+  const customerPublishEligible = readinessOverride.present
+    ? canonicalCustomerDeliveryAllowed
+    : customerPublishEligibleLegacy;
+  const reportPublishable = readinessOverride.present
+    ? canonicalCustomerDeliveryAllowed
+    : reportPublishableLegacy;
+  const customerDeliveryReadyAlias = readinessOverride.present
+    ? canonicalCustomerDeliveryAllowed
+    : customerDeliveryReadyAliasLegacy;
+  const publicSampleReady = readinessOverride.present && readinessOverride.has_public_sample_ready
+    ? Boolean(readinessOverride.normalized?.public_sample_ready)
+    : publicSampleReadyLegacy;
+  const highValueOutreachReady = readinessOverride.present && readinessOverride.has_high_value_outreach_ready
+    ? Boolean(readinessOverride.normalized?.high_value_outreach_ready)
+    : highValueOutreachReadyLegacy;
+  const adminReviewRequired = readinessOverride.present
+    ? canonicalDeliveryGateStatus === "admin_review_required"
+    : deliveryGateStatus === "admin_review_required";
+  const userNeedsDocuments = readinessOverride.present
+    ? canonicalDeliveryGateStatus === "user_needs_documents"
+    : deliveryGateStatus === "user_needs_documents";
+  const readinessSource = readinessOverride.present
+    ? "canonical_delivery_state"
+    : "legacy_publish_eligibility_fallback";
+  const readinessFallbackUsed = !readinessOverride.present;
+  const publishDecisionReasonFinal = readinessOverride.present
+    ? canonicalDeliveryGateStatus === "deliverable"
+      ? "customer_publish_eligible"
+      : `${canonicalDeliveryGateStatus || "delivery_gate_status_unknown"}:${String(
+          readinessOverride.normalized?.customer_status_reason_code ||
+            reasonCode ||
+            canonicalDeliveryGateStatus ||
+            "canonical_delivery_gate_state"
+        )}`
+    : publishDecisionReason;
 
   return {
     delivery_authority: "delivery_gate",
@@ -1429,7 +1477,10 @@ function buildPublishEligibilitySummary({
     report_quality_advisories: reportQualityAdvisories,
     report_publishable: reportPublishable,
     report_blocked: !reportPublishable,
-    report_quality_decision_reason: publishDecisionReason,
+    report_quality_decision_reason: publishDecisionReasonFinal,
+    readiness_source: readinessSource,
+    readiness_fallback_used: readinessFallbackUsed,
+    canonical_delivery_gate_status: canonicalDeliveryGateStatus,
     // Legacy alias for compatibility; canonical authority remains customer_publish_eligible.
     customer_delivery_ready: customerDeliveryReadyAlias,
     public_sample_ready: publicSampleReady,
@@ -1440,7 +1491,7 @@ function buildPublishEligibilitySummary({
     high_value_outreach_blockers: highValueOutreachBlockers,
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
-      final_delivery_status: deliveryGateStatus,
+      final_delivery_status: readinessOverride.present ? (canonicalDeliveryGateStatus || deliveryGateStatus) : deliveryGateStatus,
       report_publishable: reportPublishable,
       report_blocked: !reportPublishable,
       report_quality_blockers: reportQualityBlockers,
@@ -1468,9 +1519,9 @@ function buildPublishEligibilitySummary({
     system_bug_reason_codes: systemBugReasonCodes,
     display_disclosure_level: displayDisclosureLevel,
     owner_areas: ownerAreas,
-    admin_review_required: deliveryGateStatus === "admin_review_required",
-    user_needs_documents: deliveryGateStatus === "user_needs_documents",
-    publish_decision_reason: publishDecisionReason,
+    admin_review_required: adminReviewRequired,
+    user_needs_documents: userNeedsDocuments,
+    publish_decision_reason: publishDecisionReasonFinal,
     legacy_readiness_aliases: {
       customer_delivery_ready_alias_of_customer_publish_eligible: true,
       report_publishable_authority: "delivery_gate_and_canonical_customer_blockers",
@@ -2053,4 +2104,6 @@ export function buildQaActionPlan({
 export const __test__ = {
   summarizeCounts,
   buildCanonicalDeliveryDecisionState,
+  buildPublishEligibilitySummary,
+  resolveCanonicalReadinessOverride,
 };

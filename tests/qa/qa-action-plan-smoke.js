@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { buildQaActionPlan, buildDeliveryGateDecision } from "../../api/_lib/qa-action-plan.js";
 import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
 import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
+const qaActionPlanTest = (await import("../../api/_lib/qa-action-plan.js")).__test__;
 
 const sourceReportCoverageQa = {
   deterministic_flags: [
@@ -195,6 +196,92 @@ assert.equal(actionsByCode.DSCR_NOT_ASSESSED_WITH_DEBT_CONTEXT.action_type, "sou
 assert.equal(actionsByCode.DOCRAPTOR_NOT_PRODUCTION_MODE.action_type, "production_config_only");
 assert.equal(Boolean(actionsByCode.PUBLIC_SAMPLE_NOT_READY), false);
 assert.equal(/OpenAI|LLM|vendor/i.test(serialized), false);
+
+const canonicalPublishEligibilityMirror = qaActionPlanTest.buildPublishEligibilitySummary({
+  deliveryGateStatus: "deliverable",
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
+  prioritizedActions: [
+    {
+      code: "HARD_PUBLIC_LANGUAGE_CONTRACT",
+      action_type: "code_patch_required",
+      owner_area: "report_renderer",
+      blocks_customer_delivery: true,
+      blocks_public_sample: true,
+      blocks_high_value_outreach: true,
+      requires_regeneration: true,
+    },
+  ],
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "deliverable",
+    customer_delivery_allowed: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+  },
+});
+assert.equal(canonicalPublishEligibilityMirror.customer_publish_eligible, true);
+assert.equal(canonicalPublishEligibilityMirror.report_publishable, true);
+assert.equal(canonicalPublishEligibilityMirror.customer_delivery_ready, true);
+assert.equal(canonicalPublishEligibilityMirror.report_blocked, false);
+assert.equal(canonicalPublishEligibilityMirror.readiness_source, "canonical_delivery_state");
+assert.equal(canonicalPublishEligibilityMirror.readiness_fallback_used, false);
+assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_blockers), true);
+assert.equal(
+  canonicalPublishEligibilityMirror.report_quality_blockers.length > 0 ||
+    (canonicalPublishEligibilityMirror.report_quality_advisories || []).length > 0,
+  true
+);
+assert.equal(canonicalPublishEligibilityMirror.public_sample_ready, false);
+assert.equal(canonicalPublishEligibilityMirror.high_value_outreach_ready, false);
+
+const canonicalPublishEligibilityHeld = qaActionPlanTest.buildPublishEligibilitySummary({
+  deliveryGateStatus: "deliverable",
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
+  prioritizedActions: [],
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "admin_review_required",
+    customer_delivery_allowed: false,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+});
+assert.equal(canonicalPublishEligibilityHeld.customer_publish_eligible, false);
+assert.equal(canonicalPublishEligibilityHeld.report_publishable, false);
+assert.equal(canonicalPublishEligibilityHeld.customer_delivery_ready, false);
+assert.equal(canonicalPublishEligibilityHeld.report_blocked, true);
+assert.equal(canonicalPublishEligibilityHeld.admin_review_required, true);
+assert.equal(canonicalPublishEligibilityHeld.user_needs_documents, false);
+assert.equal(
+  String(canonicalPublishEligibilityHeld.publish_decision_reason || "").startsWith("admin_review_required:"),
+  true
+);
+
+const legacyPublishEligibilityFallback = qaActionPlanTest.buildPublishEligibilitySummary({
+  deliveryGateStatus: "deliverable",
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
+  prioritizedActions: [],
+});
+assert.equal(legacyPublishEligibilityFallback.readiness_source, "legacy_publish_eligibility_fallback");
+assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, true);
+assert.equal(legacyPublishEligibilityFallback.customer_publish_eligible, true);
+assert.equal(legacyPublishEligibilityFallback.report_publishable, true);
+assert.equal(legacyPublishEligibilityFallback.customer_delivery_ready, true);
 
 const sparsePlan = buildQaActionPlan({
   reportQaFlags: [],
