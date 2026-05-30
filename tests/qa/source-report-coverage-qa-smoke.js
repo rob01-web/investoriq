@@ -1548,4 +1548,133 @@ if (underwritingDebtAssessedPassResult.deterministic_flags.some((flag) => flag.c
   process.exit(1);
 }
 
+const canonicalDebtComputedRenderedWeakPhraseResult = buildSourceReportCoverageQa({
+  jobId: "canonical-debt-computed-rendered-weak-phrase",
+  userId: "user-smoke",
+  propertyName: "Canonical Debt Computed",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<p>No current debt document provided.</p>",
+  currentDebtState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 1.22,
+  },
+  acquisitionAssumptionState: {
+    has_proposed_acquisition_financing: false,
+  },
+  sectionEligibility: {
+    sections: {
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+});
+if (canonicalDebtComputedRenderedWeakPhraseResult.current_debt_state?.current_debt_dscr_status !== "computed") {
+  console.error("Canonical computed debt state should remain authoritative despite rendered weak phrase.");
+  process.exit(1);
+}
+if (!canonicalDebtComputedRenderedWeakPhraseResult.deterministic_flags.some((flag) => flag.code === "CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT")) {
+  console.error("Expected canonical-vs-render debt state drift flag for computed canonical debt with not-assessed rendered phrase.");
+  process.exit(1);
+}
+
+const canonicalDebtNotAssessedRenderedDebtPhraseResult = buildSourceReportCoverageQa({
+  jobId: "canonical-debt-not-assessed-rendered-debt-phrase",
+  userId: "user-smoke",
+  propertyName: "Canonical Debt Not Assessed",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<p>Current debt terms were not fully provided.</p>",
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    current_debt_assessed: false,
+    has_true_current_debt_balance: false,
+    current_debt_limitation_reason_code: "no_current_debt_document",
+  },
+  acquisitionAssumptionState: {
+    has_proposed_acquisition_financing: false,
+  },
+  sectionEligibility: {
+    sections: {
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: true },
+    },
+  },
+});
+if (canonicalDebtNotAssessedRenderedDebtPhraseResult.current_debt_state?.current_debt_dscr_status !== "not_assessed") {
+  console.error("Rendered debt-like phrase must not promote canonical not-assessed debt state.");
+  process.exit(1);
+}
+if (canonicalDebtNotAssessedRenderedDebtPhraseResult.current_debt_state?.has_true_current_debt_balance === true) {
+  console.error("Rendered debt-like phrase must not set canonical true current debt balance.");
+  process.exit(1);
+}
+
+const canonicalAcquisitionOnlyRenderedDebtLookingPhraseResult = buildSourceReportCoverageQa({
+  jobId: "canonical-acquisition-only-rendered-debt-looking-phrase",
+  userId: "user-smoke",
+  propertyName: "Canonical Acquisition Only",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<p>Proposed Acquisition Debt Sizing</p><p>Current debt terms were not fully provided.</p>",
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    current_debt_assessed: false,
+    has_true_current_debt_balance: false,
+    has_proposed_acquisition_financing: true,
+    current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+  },
+  acquisitionAssumptionState: {
+    has_proposed_acquisition_financing: true,
+    has_validated_acquisition_assumptions: true,
+    current_debt_separated: true,
+  },
+  sectionEligibility: {
+    sections: {
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: true },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: true },
+    },
+  },
+});
+if (canonicalAcquisitionOnlyRenderedDebtLookingPhraseResult.current_debt_state?.has_true_current_debt_balance === true) {
+  console.error("Canonical acquisition-only state must not be promoted to true current debt by rendered debt-looking phrases.");
+  process.exit(1);
+}
+
+const canonicalSectionMissingHeadingConformanceResult = buildSourceReportCoverageQa({
+  jobId: "canonical-section-missing-heading-conformance",
+  userId: "user-smoke",
+  propertyName: "Canonical Missing Heading",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Operating Statement</h2><h2>Data Coverage</h2>",
+  sectionEligibility: {
+    sections: {
+      operating_statement: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      operating_profile: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      expense_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      noi_stability: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      methodology: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+});
+if (!canonicalSectionMissingHeadingConformanceResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Expected conformance mismatch flag when canonical section eligibility is broad but rendered section families are missing.");
+  process.exit(1);
+}
+if (canonicalSectionMissingHeadingConformanceResult.section_eligibility?.sections?.operating_profile?.eligible !== true) {
+  console.error("Missing rendered heading should not mutate canonical section eligibility truth.");
+  process.exit(1);
+}
+
 console.log("source-report-coverage-qa smoke PASS");

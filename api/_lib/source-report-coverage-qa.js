@@ -750,6 +750,44 @@ export function buildSourceReportCoverageQa({
     current_debt_assessed: currentDebtState.current_debt_dscr_status === "computed",
     canonical_authority_present: canonicalDebtAcquisitionAuthorityPresent,
   };
+  const renderedDebtNotAssessedSignal = renderedTextSignals.includes("dscr_current_debt_not_assessed");
+  if (isFullUnderwriting && canonicalDebtAcquisitionAuthorityPresent) {
+    const canonicalDebtComputed = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() === "computed";
+    const canonicalDebtNotComputed =
+      String(currentDebtState?.current_debt_dscr_status || "").trim().length > 0 &&
+      String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() !== "computed";
+    if (canonicalDebtComputed && renderedDebtNotAssessedSignal) {
+      addFlag(flags, {
+        code: "CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT",
+        severity: "high",
+        category: "source_to_report_coverage",
+        message: "Rendered debt wording indicates not-assessed debt despite canonical computed current debt state.",
+        evidence: {
+          canonical_current_debt_status: currentDebtState?.current_debt_dscr_status || null,
+          rendered_text_signals: renderedTextSignals.filter((signal) =>
+            ["dscr_current_debt_not_assessed", "debt_sizing_balance_not_provided"].includes(signal)
+          ),
+          canonical_authority_present: canonicalDebtAcquisitionAuthorityPresent,
+        },
+        routing: "render_gating_gap",
+      });
+    }
+    if (canonicalDebtNotComputed && renderedAcquisitionSignal && !canonicalAcquisitionExpected) {
+      addFlag(flags, {
+        code: "ACQUISITION_CURRENT_DEBT_CANONICAL_CONFORMANCE_DRIFT",
+        severity: "medium",
+        category: "source_to_report_coverage",
+        message: "Rendered acquisition/debt phrasing appears to imply acquisition financing context that canonical states do not confirm.",
+        evidence: {
+          canonical_current_debt_status: currentDebtState?.current_debt_dscr_status || null,
+          canonical_acquisition_expected: canonicalAcquisitionExpected,
+          rendered_text_signals: renderedTextSignals.filter((signal) => signal === "acquisition_financing_assumptions"),
+          canonical_authority_present: canonicalDebtAcquisitionAuthorityPresent,
+        },
+        routing: "render_gating_gap",
+      });
+    }
+  }
   const hasDebtSizing =
     loan.has_balance ||
     loan.has_payment ||
