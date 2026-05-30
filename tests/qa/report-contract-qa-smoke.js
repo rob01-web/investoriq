@@ -2477,6 +2477,10 @@ const canonicalSourceReconciliationStableDrift = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      source_reconciliation_state_authoritative: true,
+    },
     source_reconciliation_state: {
       status: "source_reconciliation_required",
       publishability_bucket: "disclose_only_publishable",
@@ -2492,6 +2496,10 @@ const canonicalSourceReconciliationAligned = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: {
     ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      source_reconciliation_state_authoritative: true,
+    },
     source_reconciliation_state: {
       status: "source_reconciliation_required",
       publishability_bucket: "disclose_only_publishable",
@@ -3221,6 +3229,146 @@ const explicitCoverageSourceCanonicalInputCreatesCanonicalCoverageAuthority = bu
 assert.equal(
   explicitCoverageSourceCanonicalInputCreatesCanonicalCoverageAuthority.violations.some(
     (v) => v.code === "DATA_COVERAGE_OPTIONAL_LIMITATION_HEADLINE_DRIFT"
+  ),
+  true
+);
+const explicitDisplayVerdictCapStillWinsWithoutProvenance = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    display_verdict_state: {
+      cap_reason_code: "source_reconciliation_disclosure",
+      label: "Review - Source Reconciliation Disclosure",
+    },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  explicitDisplayVerdictCapStillWinsWithoutProvenance.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT"
+  ),
+  true
+);
+const unprovenancedDebtComputedDoesNotForceVerdictCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.1,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  unprovenancedDebtComputedDoesNotForceVerdictCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT" || v.code === "VERDICT_CAP_EXPLANATION_CONTRADICTION"
+  ),
+  false
+);
+const provenancedDebtComputedDoesForceVerdictCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state_source: "canonical_input",
+    current_debt_state: {
+      current_debt_dscr_status: "computed",
+      current_debt_dscr: 1.1,
+      has_true_current_debt_balance: true,
+    },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  provenancedDebtComputedDoesForceVerdictCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT"
+  ),
+  true
+);
+const unprovenancedDebtNotAssessedDoesNotForceVerdictCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      has_true_current_debt_balance: false,
+    },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  unprovenancedDebtNotAssessedDoesNotForceVerdictCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT" || v.code === "VERDICT_CAP_EXPLANATION_CONTRADICTION"
+  ),
+  false
+);
+const provenancedDebtNotAssessedDoesForceVerdictCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    authority_provenance: {
+      current_debt_state_authoritative: true,
+      current_debt_state_source: "canonical_input",
+    },
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      current_debt_dscr: null,
+      has_true_current_debt_balance: false,
+    },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  provenancedDebtNotAssessedDoesForceVerdictCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT"
+  ),
+  true
+);
+const unprovenancedCoreBucketDoesNotForceInsufficientCoreCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    core_input_sufficiency_state: { publishability_bucket: "user_needs_documents" },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  unprovenancedCoreBucketDoesNotForceInsufficientCoreCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT" || v.code === "VERDICT_CAP_EXPLANATION_CONTRADICTION"
+  ),
+  false
+);
+const provenancedCoreBucketDoesForceInsufficientCoreCap = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    authority_provenance: {
+      coverage_authoritative: true,
+      sufficiency_authoritative: true,
+    },
+    core_input_sufficiency_state: { publishability_bucket: "user_needs_documents" },
+  },
+  html: "<h2>Executive Summary</h2><p>Within Underwriting Parameters</p>",
+});
+assert.equal(
+  provenancedCoreBucketDoesForceInsufficientCoreCap.violations.some(
+    (v) => v.code === "VERDICT_CAP_RENDER_DRIFT"
   ),
   true
 );

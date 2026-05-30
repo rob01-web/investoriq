@@ -794,6 +794,26 @@ function hasCanonicalCoverageAuthority(sourceReportCoverageQa = null) {
 }
 
 function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
+  const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
+  const coverageAuthorityPresent = hasCanonicalCoverageAuthority(sourceReportCoverageQa);
+  const reconciliationStateSource = String(
+    coverageAuthority?.source_reconciliation_state_source ||
+    sourceReportCoverageQa?.source_reconciliation_state_source ||
+    ""
+  ).toLowerCase();
+  const reconciliationAuthoritative =
+    coverageAuthority?.source_reconciliation_state_authoritative === true ||
+    reconciliationStateSource === "canonical_input" ||
+    coverageAuthorityPresent;
+  const currentDebtStateSource = String(
+    coverageAuthority?.current_debt_state_source ||
+    sourceReportCoverageQa?.current_debt_state_source ||
+    ""
+  ).toLowerCase();
+  const currentDebtAuthoritative =
+    coverageAuthority?.current_debt_state_authoritative === true ||
+    currentDebtStateSource === "canonical_input";
+  const currentDebtMarkedFallback = currentDebtStateSource === "fallback_reconstructed";
   const verdictState =
     sourceReportCoverageQa?.visible_classification_state ||
     sourceReportCoverageQa?.display_verdict_state ||
@@ -808,7 +828,10 @@ function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
     };
   }
   const reconciliationStatus = String(sourceReportCoverageQa?.source_reconciliation_state?.status || "").toLowerCase();
-  if (reconciliationStatus === "source_reconciliation_required" || reconciliationStatus === "parser_suspected") {
+  if (
+    reconciliationAuthoritative &&
+    (reconciliationStatus === "source_reconciliation_required" || reconciliationStatus === "parser_suspected")
+  ) {
     return {
       has_cap: true,
       cap_reason_code: "source_reconciliation_disclosure",
@@ -817,14 +840,24 @@ function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
   }
   const currentDebtState = sourceReportCoverageQa?.current_debt_state || null;
   const debtDscr = Number(currentDebtState?.current_debt_dscr);
-  if (currentDebtState?.current_debt_dscr_status === "computed" && Number.isFinite(debtDscr) && debtDscr < 1.25) {
+  if (
+    currentDebtAuthoritative &&
+    !currentDebtMarkedFallback &&
+    currentDebtState?.current_debt_dscr_status === "computed" &&
+    Number.isFinite(debtDscr) &&
+    debtDscr < 1.25
+  ) {
     return {
       has_cap: true,
       cap_reason_code: "debt_coverage_constraint",
       expected_label: "Review - Debt Coverage Constraint",
     };
   }
-  if (currentDebtState?.current_debt_dscr_status === "not_assessed") {
+  if (
+    currentDebtAuthoritative &&
+    !currentDebtMarkedFallback &&
+    currentDebtState?.current_debt_dscr_status === "not_assessed"
+  ) {
     return {
       has_cap: true,
       cap_reason_code: "debt_coverage_not_assessed",
@@ -832,7 +865,10 @@ function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
     };
   }
   const coreBucket = String(sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket || "").toLowerCase();
-  if (["user_needs_documents", "admin_review_required", "system_contract_failure"].includes(coreBucket)) {
+  if (
+    coverageAuthorityPresent &&
+    ["user_needs_documents", "admin_review_required", "system_contract_failure"].includes(coreBucket)
+  ) {
     return {
       has_cap: true,
       cap_reason_code: "insufficient_core_support",
