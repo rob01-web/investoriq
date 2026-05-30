@@ -766,6 +766,44 @@ function deliveryRecommendation({ actions, publicSampleReady, customerReady }) {
   return "customer_deliverable";
 }
 
+function resolveCanonicalReadinessOverride({
+  deliveryDecisionState = null,
+  canonicalDeliveryDecisionState = null,
+  deliveryGateDecision = null,
+  delivery_gate_decision = null,
+} = {}) {
+  const candidates = [
+    canonicalDeliveryDecisionState,
+    deliveryDecisionState,
+    deliveryGateDecision,
+    delivery_gate_decision,
+  ];
+  for (const raw of candidates) {
+    if (!raw || typeof raw !== "object") continue;
+    const hasCanonicalShape =
+      raw.delivery_gate_status !== undefined ||
+      raw.customer_delivery_allowed !== undefined ||
+      raw.customer_publish_eligible !== undefined ||
+      raw.customer_delivery_ready !== undefined;
+    if (!hasCanonicalShape) continue;
+    const normalized = raw?.source === "canonical_delivery_decision"
+      ? raw
+      : buildCanonicalDeliveryDecisionState(raw);
+    return {
+      present: true,
+      normalized,
+      has_public_sample_ready: raw.public_sample_ready !== undefined,
+      has_high_value_outreach_ready: raw.high_value_outreach_ready !== undefined,
+    };
+  }
+  return {
+    present: false,
+    normalized: null,
+    has_public_sample_ready: false,
+    has_high_value_outreach_ready: false,
+  };
+}
+
 function reasonCodeForAction(action) {
   return String(action?.code || "");
 }
@@ -1871,6 +1909,10 @@ export function buildQaActionPlan({
   propertyName = null,
   reportType = null,
   reportTier = null,
+  deliveryDecisionState = null,
+  canonicalDeliveryDecisionState = null,
+  delivery_gate_decision = null,
+  deliveryGateDecision = null,
 } = {}) {
   const actions = [];
   const debtContext = collectDebtContext({ sourceReportCoverageQa, qaFixRouting });
@@ -1903,20 +1945,61 @@ export function buildQaActionPlan({
 
   const prioritizedActions = sortActions(dedupeActions(actions));
   const counts = summarizeCounts(prioritizedActions);
-  const publicSampleReady =
+  const publicSampleReadyLegacy =
     (qaFixRouting ? Boolean(qaFixRouting.public_sample_ready) : true) &&
     (reportContractQa ? Boolean(reportContractQa.public_sample_ready) : true) &&
     !prioritizedActions.some((action) => action.blocks_public_sample);
-  const highValueOutreachReady =
-    publicSampleReady &&
+  const highValueOutreachReadyLegacy =
+    publicSampleReadyLegacy &&
     !prioritizedActions.some((action) => action.blocks_high_value_outreach);
-  const customerReady = !hasCriticalCompliance(prioritizedActions);
+  const customerReadyLegacy = !hasCriticalCompliance(prioritizedActions);
   const regenerateRecommended = prioritizedActions.some((action) => action.requires_regeneration);
   const unsafeToAutoFixCount = prioritizedActions.filter((action) => !action.safe_to_auto_fix).length;
-  const finalDeliveryStatus = customerReady ? "delivery_gate_ready" : "delivery_gate_blocked";
-  const launchPathRecommendation = customerReady
-    ? (publicSampleReady && highValueOutreachReady ? "customer_deliverable" : "customer_deliverable_with_internal_advisory")
+  const legacyDeliveryRecommendation = deliveryRecommendation({
+    actions: prioritizedActions,
+    publicSampleReady: publicSampleReadyLegacy,
+    customerReady: customerReadyLegacy,
+  });
+  const legacyLaunchPathRecommendation = customerReadyLegacy
+    ? (publicSampleReadyLegacy && highValueOutreachReadyLegacy ? "customer_deliverable" : "customer_deliverable_with_internal_advisory")
     : "internal_review_recommended";
+  const readinessOverride = resolveCanonicalReadinessOverride({
+    deliveryDecisionState,
+    canonicalDeliveryDecisionState,
+    deliveryGateDecision,
+    delivery_gate_decision,
+  });
+  const customerReady = readinessOverride.present
+    ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
+    : customerReadyLegacy;
+  const publicSampleReady = readinessOverride.present && readinessOverride.has_public_sample_ready
+    ? Boolean(readinessOverride.normalized?.public_sample_ready)
+    : publicSampleReadyLegacy;
+  const highValueOutreachReady = readinessOverride.present && readinessOverride.has_high_value_outreach_ready
+    ? Boolean(readinessOverride.normalized?.high_value_outreach_ready)
+    : highValueOutreachReadyLegacy;
+  const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
+  const finalDeliveryStatus = readinessOverride.present
+    ? canonicalDeliveryGateStatus || (customerReady ? "delivery_gate_ready" : "delivery_gate_blocked")
+    : customerReady ? "delivery_gate_ready" : "delivery_gate_blocked";
+  const launchPathRecommendation = readinessOverride.present
+    ? canonicalDeliveryGateStatus === "admin_review_required"
+      ? "admin_review_required"
+      : canonicalDeliveryGateStatus === "user_needs_documents"
+      ? "user_needs_documents"
+      : legacyLaunchPathRecommendation
+    : legacyLaunchPathRecommendation;
+  const resolvedDeliveryRecommendation = readinessOverride.present
+    ? canonicalDeliveryGateStatus === "user_needs_documents"
+      ? "source_package_insufficient"
+      : canonicalDeliveryGateStatus === "admin_review_required"
+      ? "regenerate_after_code_or_mapping_fix"
+      : legacyDeliveryRecommendation
+    : legacyDeliveryRecommendation;
+  const readinessSource = readinessOverride.present
+    ? "canonical_delivery_state"
+    : "legacy_action_plan_fallback";
+  const readinessFallbackUsed = !readinessOverride.present;
 
   return {
     event: "qa_action_plan",
@@ -1929,15 +2012,14 @@ export function buildQaActionPlan({
     report_type: reportType,
     report_tier: reportTier,
     timestamp: new Date().toISOString(),
-    delivery_recommendation: deliveryRecommendation({
-      actions: prioritizedActions,
-      publicSampleReady,
-      customerReady,
-    }),
+    delivery_recommendation: resolvedDeliveryRecommendation,
     customer_delivery_ready: customerReady,
     public_sample_ready: publicSampleReady,
     high_value_outreach_ready: highValueOutreachReady,
     launch_path_recommendation: launchPathRecommendation,
+    readiness_source: readinessSource,
+    readiness_fallback_used: readinessFallbackUsed,
+    canonical_delivery_gate_status: canonicalDeliveryGateStatus,
     core_input_sufficiency_state: sourceReportCoverageQa?.core_input_sufficiency_state || null,
     t12_sufficiency_state: sourceReportCoverageQa?.t12_sufficiency_state || null,
     rent_roll_sufficiency_state: sourceReportCoverageQa?.rent_roll_sufficiency_state || null,

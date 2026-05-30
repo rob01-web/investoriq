@@ -98,6 +98,76 @@ const plan = buildQaActionPlan({
   propertyName: "Forest City Manor",
 });
 
+const canonicalMirrorPlan = buildQaActionPlan({
+  reportQaFlags: [
+    {
+      code: "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW",
+      severity: "critical",
+      message: "Hard compliance warning for advisory action continuity.",
+    },
+  ],
+  sourceReportCoverageQa: {
+    deterministic_flags: [],
+  },
+  renderedReportQa: { findings: [] },
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "deliverable",
+    customer_delivery_allowed: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+  },
+});
+assert.equal(canonicalMirrorPlan.customer_delivery_ready, true);
+assert.equal(canonicalMirrorPlan.public_sample_ready, false);
+assert.equal(canonicalMirrorPlan.high_value_outreach_ready, false);
+assert.equal(canonicalMirrorPlan.readiness_source, "canonical_delivery_state");
+assert.equal(canonicalMirrorPlan.readiness_fallback_used, false);
+
+const canonicalConflictPlan = buildQaActionPlan({
+  reportQaFlags: [
+    {
+      code: "PUBLIC_LANGUAGE_COMPLIANCE_REVIEW",
+      severity: "critical",
+      message: "Would normally block from local action synthesis.",
+    },
+  ],
+  sourceReportCoverageQa: {
+    deterministic_flags: [
+      {
+        code: "PUBLIC_SAMPLE_NOT_READY",
+        severity: "high",
+      },
+    ],
+  },
+  renderedReportQa: { findings: [] },
+  deliveryGateDecision: {
+    delivery_gate_status: "deliverable",
+    customer_publish_eligible: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+});
+assert.equal(canonicalConflictPlan.customer_delivery_ready, true);
+assert.equal(canonicalConflictPlan.public_sample_ready, true);
+assert.equal(canonicalConflictPlan.high_value_outreach_ready, true);
+assert.equal(canonicalConflictPlan.canonical_delivery_gate_status, "deliverable");
+assert.equal(canonicalConflictPlan.readiness_source, "canonical_delivery_state");
+
+const legacyFallbackPlan = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: null,
+  renderedReportQa: null,
+  qaFixRouting: null,
+});
+assert.equal(legacyFallbackPlan.readiness_source, "legacy_action_plan_fallback");
+assert.equal(legacyFallbackPlan.readiness_fallback_used, true);
+assert.equal(legacyFallbackPlan.customer_delivery_ready, true);
+assert.equal(legacyFallbackPlan.public_sample_ready, true);
+assert.equal(legacyFallbackPlan.high_value_outreach_ready, true);
+assert.equal(Array.isArray(legacyFallbackPlan.prioritized_actions), true);
+assert.equal(typeof legacyFallbackPlan.action_counts?.total, "number");
+
 const actionsByCode = Object.fromEntries(plan.prioritized_actions.map((action) => [action.code, action]));
 const serialized = JSON.stringify(plan);
 
