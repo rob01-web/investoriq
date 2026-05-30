@@ -540,6 +540,54 @@ const canonicalCoverageAbsentUsesDnaFallback = generatorTest.shouldStripDataCove
   hasCanonicalCoverageAuthority: false,
 });
 assert.equal(canonicalCoverageAbsentUsesDnaFallback, true);
+const screeningIgnoresDebtCoverageConstraintLabel = generatorTest.normalizeVisibleReportClassification({
+  baseClass: "Stable",
+  effectiveReportMode: "screening_v1",
+  sourceReconciliationCapActive: false,
+  coreSupportInsufficient: false,
+  debtCoverageConstraintActive: true,
+});
+assert.equal(screeningIgnoresDebtCoverageConstraintLabel, "Stable");
+const underwritingAppliesDebtCoverageConstraintLabel = generatorTest.normalizeVisibleReportClassification({
+  baseClass: "Stable",
+  effectiveReportMode: "v1_core",
+  sourceReconciliationCapActive: false,
+  coreSupportInsufficient: false,
+  debtCoverageConstraintActive: true,
+});
+assert.equal(underwritingAppliesDebtCoverageConstraintLabel, "Review - Debt Coverage Constraint");
+const sourceReconciliationPrecedenceLabel = generatorTest.normalizeVisibleReportClassification({
+  baseClass: "Fragile",
+  effectiveReportMode: "v1_core",
+  sourceReconciliationCapActive: true,
+  coreSupportInsufficient: false,
+  debtCoverageConstraintActive: true,
+});
+assert.equal(sourceReconciliationPrecedenceLabel, "Review - Source Reconciliation Disclosure");
+const coreInsufficientPrecedenceLabel = generatorTest.normalizeVisibleReportClassification({
+  baseClass: "Sensitized",
+  effectiveReportMode: "v1_core",
+  sourceReconciliationCapActive: false,
+  coreSupportInsufficient: true,
+  debtCoverageConstraintActive: true,
+});
+assert.equal(coreInsufficientPrecedenceLabel, "Review - Insufficient Core Support");
+const approvedVisibleLabels = new Set([
+  "Stable",
+  "Sensitized",
+  "Fragile",
+  "Review - Source Reconciliation Disclosure",
+  "Review - Insufficient Core Support",
+  "Review - Debt Coverage Constraint",
+]);
+[
+  screeningIgnoresDebtCoverageConstraintLabel,
+  underwritingAppliesDebtCoverageConstraintLabel,
+  sourceReconciliationPrecedenceLabel,
+  coreInsufficientPrecedenceLabel,
+].forEach((label) => {
+  assert.equal(approvedVisibleLabels.has(label), true);
+});
 assert.equal(
   /showSection11[\s\S]{0,250}stripMarkedSection\(finalHtml, \"SECTION_4_NEIGHBORHOOD\"\)/.test(reportSource),
   false

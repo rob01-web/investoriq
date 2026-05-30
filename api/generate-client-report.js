@@ -126,29 +126,31 @@ function formatDistanceKm(value) {
 }
 function normalizeVisibleReportClassification({
   baseClass = null,
+  effectiveReportMode = "screening_v1",
   sourceReconciliationCapActive = false,
   coreSupportInsufficient = false,
   debtCoverageConstraintActive = false,
 } = {}) {
+  const underwritingMode = String(effectiveReportMode || "").toLowerCase() === "v1_core";
   if (sourceReconciliationCapActive) {
     return "Review - Source Reconciliation Disclosure";
   }
   if (coreSupportInsufficient) {
     return "Review - Insufficient Core Support";
   }
-  if (debtCoverageConstraintActive) {
+  if (underwritingMode && debtCoverageConstraintActive) {
     return "Review - Debt Coverage Constraint";
   }
   if (baseClass === "Stable" || baseClass === "Sensitized" || baseClass === "Fragile") {
     return baseClass;
   }
   const state = buildCanonicalVisibleClassificationState({
-    reportType: "screening",
-    reportTier: 1,
+    reportType: underwritingMode ? "underwriting" : "screening",
+    reportTier: underwritingMode ? 2 : 1,
     baseLabel: baseClass,
     sourceReconciliationCapActive,
     coreSupportInsufficient,
-    debtCoverageConstraintActive,
+    debtCoverageConstraintActive: underwritingMode && Boolean(debtCoverageConstraintActive),
   });
   return state.label;
 }
@@ -6723,14 +6725,10 @@ if (effectiveReportMode === "screening_v1") {
       screeningExplanation =
         "Operating margins remain within a stable range based on uploaded operating results.";
     }
-    if (effectiveReportMode === "v1_core" && hasCoreUnderwritingOperatingMetrics && screeningClass === "Stable") {
-      screeningClass = "Review - Insufficient Core Support";
-      screeningExplanation =
-        "Core operating metrics are present, while debt/refinance conclusions remain constrained by uploaded source coverage.";
-    }
     if (effectiveReportMode === "screening_v1") {
       const screeningVisibleLabel = normalizeVisibleReportClassification({
         baseClass: screeningClass,
+        effectiveReportMode,
         sourceReconciliationCapActive: Boolean(
           sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
         ),
@@ -7060,6 +7058,7 @@ if (effectiveReportMode === "screening_v1") {
       }
       const visibleRefiClass = normalizeVisibleReportClassification({
         baseClass: screeningClass === "Fragile" ? "Fragile" : screeningClass,
+        effectiveReportMode,
         sourceReconciliationCapActive: Boolean(
           sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
         ),
@@ -7246,8 +7245,11 @@ if (effectiveReportMode === "screening_v1") {
       hasSourceReconciliationVariance
     );
     const debtCoverageConstraintActive = Boolean(
-      dealScoreState?.displayVerdict?.cap_reason_code === "debt_coverage_constraint" ||
-      (Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay > 0 && currentDebtDscrForDisplay < 1.25)
+      effectiveReportMode === "v1_core" &&
+      (
+        dealScoreState?.displayVerdict?.cap_reason_code === "debt_coverage_constraint" ||
+        (Number.isFinite(currentDebtDscrForDisplay) && currentDebtDscrForDisplay > 0 && currentDebtDscrForDisplay < 1.25)
+      )
     );
     const coreSupportInsufficient = Boolean(
       !screeningHasSufficientData ||
@@ -10766,6 +10768,7 @@ export const __test__ = {
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
   resolveCanonicalDataCoverageHeadlineState,
+  normalizeVisibleReportClassification,
   shouldRenderCanonicalSection,
   shouldApplyTierOneStripCascade,
   resolveMarketContextSectionVisibility,
