@@ -1,3 +1,53 @@
+# May 30, 2026 Addendum - G8 Delivery/UI Lifecycle Authority Materially Closed / Grouped Campaign Checkpoint
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- G8 is materially closed after worker publish-path hold guard hardening and closure audit.
+- Completed/materially closed grouped sequence: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7, G8.
+- Remaining grouped batches in the current G1-G8 sequence: none.
+- Do not claim all DS rows are globally closed unless row closure standards are satisfied.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public samples are ready.
+
+## G8 closure status
+- G8A-02 seam in `api/admin-run-worker.js` is closed.
+- Worker publish path now requires resolved delivery permission:
+  - `holdDelivery === false`
+  - `customerDeliveryAllowed === true`
+- Typed outcomes remain preserved:
+  - `user_needs_documents` fail-closed/restore path
+  - `admin_review_required` held publishing/admin-held path
+- Fail-closed and credit-restore safety behavior remains preserved.
+
+## Post-patch audit verdict
+- Audit-only verification completed.
+- No material remaining delivery/UI duplicate truth-maker was found across:
+  - worker lifecycle
+  - Dashboard customer status/message surfaces
+  - AdminDashboard triage surfaces
+  - generator delivery compatibility aliases
+- Dashboard remains canonical-first for `customer_status_label`/`customer_message` when canonical state exists.
+- Legacy display/copy fallback remains canonical-absent compatibility only.
+- AdminDashboard remains display/diagnostic/emergency-action only, not customer delivery authority.
+- `public_sample_ready` and `high_value_outreach_ready` remain distribution metadata, not ordinary customer delivery authority.
+
+## Fresh-chat continuation prompt
+We resume after G8 material closure.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7, G8.
+
+Next step: either controlled live regression checkpoint or targeted post-launch polish selection.
+
+Guardrails unchanged:
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded IDs/filenames
+- no new API/serverless routes casually
+- renderer consumes canonical state
+- QA conformance only
+
+---
 # May 30, 2026 Addendum - G7 Action-Plan Consumer Demotion Materially Closed / G8 Remains Next
 
 ## Current controlling status

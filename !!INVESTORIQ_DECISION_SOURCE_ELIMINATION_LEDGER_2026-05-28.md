@@ -40,6 +40,59 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 
 ## Section 2A - Today DS Status Update (May 28, 2026)
 
+### May 30, 2026 Addendum - G8 Delivery/UI Lifecycle Authority Materially Closed / Grouped Campaign Checkpoint
+- G8 is materially closed.
+- G8A-02 seam in `api/admin-run-worker.js` is closed.
+- Worker publish path now requires resolved delivery permission:
+  - `holdDelivery === false`
+  - `customerDeliveryAllowed === true`
+- Typed outcomes remain preserved:
+  - `user_needs_documents` fail-closed/restore path
+  - `admin_review_required` held publishing/admin-held path
+- Fail-closed and credit-restore safety behavior remains preserved.
+
+#### Post-patch audit verdict
+- Audit-only verification completed.
+- No material remaining delivery/UI duplicate truth-maker was found across worker lifecycle, Dashboard customer status/message surfaces, AdminDashboard triage surfaces, and generator delivery compatibility aliases.
+- Dashboard remains canonical-first for `customer_status_label`/`customer_message` when canonical state exists.
+- Legacy display/copy fallback remains canonical-absent compatibility only.
+- AdminDashboard remains display/diagnostic/emergency-action only, not customer delivery authority.
+- `public_sample_ready` and `high_value_outreach_ready` remain distribution metadata, not ordinary customer delivery authority.
+
+#### Grouped campaign status update
+- Completed/materially closed:
+  - Patch 1/1B
+  - Patch 2
+  - G4
+  - G1
+  - G2
+  - G5
+  - G6
+  - G7
+  - G8
+- Remaining grouped batches in current G1-G8 sequence:
+  - None
+
+#### Fresh-Chat Continuation Prompt
+We resume after G8 material closure.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7, G8.
+
+Next step: either controlled live regression checkpoint or targeted post-launch polish selection.
+
+Guardrails unchanged:
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded IDs/filenames
+- no new API/serverless routes casually
+- renderer consumes canonical state
+- QA conformance only
+
+#### Do not overclaim
+- Do not claim all DS rows globally closed unless row closure standards are satisfied.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public samples are ready.
 ### May 30, 2026 Addendum - G7 Action-Plan Consumer Demotion Materially Closed / G8 Remains Next
 - Campaign status update: G7 is now materially closed after Slices 1, 2A, 2B, and Slice 3 closure audit.
 - Completed/materially closed grouped sequence:
@@ -552,8 +605,8 @@ Coverage note: The completed audit estimated ~132 decision-makers. This ledger c
 | DS-065 | AUDIT EXPANSION REQUIRED - contract QA regex cluster | Both | api/_lib/report-contract-qa.js | additional regex-based inference sites | rendered text | violation severity/block flags | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate regex truth-inference call sites | B1-B5 | partial | G5 materially closed provenance/cap authority: coverage/current-debt/verdict-cap inference requires explicit provenance, and fallback/unprovenanced states no longer force canonical expected caps. Broader regex/taxonomy polish remains partial. |
 | DS-066 | AUDIT EXPANSION REQUIRED - source coverage QA cluster | Both | api/_lib/source-report-coverage-qa.js | additional rendered depth and file-signal checks | files + rendered text | deterministic flags/routing | QA-only cluster | high | QA Layer | AUDIT EXPANSION REQUIRED - enumerate all flag producers by family | B1-B5 | partial | Batch 6E tightened provenance authority. G4 materially hardened canonical-first depth/signal behavior with `CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT`, `ACQUISITION_CURRENT_DEBT_CANONICAL_CONFORMANCE_DRIFT`, and `UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE`. Rendered/file/artifact signals are conformance/evidence when canonical authority exists, with legacy fallback retained for canonical-absent paths. Broader deterministic-flag cluster remains partial. |
 | DS-067 | AUDIT EXPANSION REQUIRED - parser recovery cluster | Both | api/parse/parse-doc.js | AI fallback + deterministic fallback branch points | extracted text/tables | parser artifacts and diagnostics | duplicate cluster | medium | Parser Canonical Layer | AUDIT EXPANSION REQUIRED - enumerate per-doc recovery authority points | B5 | partial | Closed sub-scopes include prior Batch 4 hardening plus Patch 1/1B current-debt support routing/promotion alignment: explicit non-acquisition debt terms route to `loan_term_sheet` and promote current-debt aliases via `resolveLoanTermCurrentDebtPromotion(...)`, while acquisition/proposed support remains separated. Broader parser-cluster fallback/semantic consistency remains open. |
-| DS-068 | AUDIT EXPANSION REQUIRED - worker status machine cluster | Both | api/admin-run-worker.js | repeated status transition paths and branch checks | job state + response payload | published/failed/publishing transitions | worker-local cluster | high | Worker Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all status branch decision sites | B2 | partial | `deliveryDecisionState` consumption and terminal failure helper sub-scopes are hard-locked; broader worker status-machine lifecycle cluster remains partial. |
-| DS-069 | AUDIT EXPANSION REQUIRED - dashboard messaging cluster | Both | src/pages/Dashboard.jsx | failed-state and guidance copy branches | error/status/events | customer messaging | dashboard-local cluster | high | Dashboard Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all customer state recompute branches | B2 | partial | customer-facing canonical message/status hard-lock complete; broader Dashboard fallback/messaging cluster remains partial for older/non-canonical jobs. |
+| DS-068 | AUDIT EXPANSION REQUIRED - worker status machine cluster | Both | api/admin-run-worker.js | repeated status transition paths and branch checks | job state + response payload | published/failed/publishing transitions | worker-local cluster | high | Worker Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all status branch decision sites | B2 | partial | G8 materially closed delivery authority sub-scope: publish path now requires resolved permission (`holdDelivery === false` and `customerDeliveryAllowed === true`), typed hold outcomes remain preserved, and fail-closed/credit-restore safety remains intact. Broader worker lifecycle architecture remains partial. |
+| DS-069 | AUDIT EXPANSION REQUIRED - dashboard messaging cluster | Both | src/pages/Dashboard.jsx | failed-state and guidance copy branches | error/status/events | customer messaging | dashboard-local cluster | high | Dashboard Layer consuming Decision Layer | AUDIT EXPANSION REQUIRED - enumerate all customer state recompute branches | B2 | partial | G8 closure audit confirmed canonical-first customer status/message behavior where canonical state exists. Legacy dashboard fallback remains canonical-absent compatibility for older jobs. Broader dashboard messaging architecture remains partial. |
 | DS-070 | AUDIT EXPANSION REQUIRED - test-driven implicit decision clusters | Both | tests/qa/* | invariant clusters implying production decisions | tests + fixture assumptions | regression expectations | legacy reference cluster | low | N/A (tests) | quarantine (reference-only) | N/A | open | Use as map only; not authority |
 
 Inventory count note: Explicit rows above: 70 row entries/groups. Combined with grouped expansion clusters, this ledger currently maps the audit-estimated ~132 decision-makers at family and call-site-cluster level. Remaining atomization is explicitly tracked as `AUDIT EXPANSION REQUIRED` rows.
