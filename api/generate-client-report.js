@@ -190,6 +190,72 @@ function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null)
     high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
   };
 }
+
+function resolveReportTypeAndTier({
+  bodyReportType = null,
+  jobReportType = null,
+} = {}) {
+  const normalizeToken = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+  const hasExplicitBodyType = String(bodyReportType || "").trim().length > 0;
+  const hasExplicitJobType = String(jobReportType || "").trim().length > 0;
+  const explicitRawToken = hasExplicitBodyType ? bodyReportType : hasExplicitJobType ? jobReportType : null;
+  const normalizedExplicitToken = normalizeToken(explicitRawToken);
+  const canonicalByToken = new Map([
+    ["screening", "screening"],
+    ["underwriting", "underwriting"],
+    ["ic", "ic"],
+    ["full_underwriting", "underwriting"],
+    ["underwriting_report", "underwriting"],
+    ["underwriting_v1", "underwriting"],
+    ["tier_2", "underwriting"],
+    ["tier2", "underwriting"],
+  ]);
+  const hasExplicitType = hasExplicitBodyType || hasExplicitJobType;
+  if (!hasExplicitType) {
+    return {
+      ok: true,
+      reportType: "screening",
+      reportTier: 1,
+      effectiveReportMode: "screening_v1",
+      usedDefault: true,
+      explicitUnknown: false,
+      providedToken: null,
+      normalizedToken: "",
+    };
+  }
+  const canonicalType = canonicalByToken.get(normalizedExplicitToken) || null;
+  if (!canonicalType) {
+    return {
+      ok: false,
+      explicitUnknown: true,
+      providedToken: String(explicitRawToken || ""),
+      normalizedToken: normalizedExplicitToken,
+      allowedTypes: ["screening", "underwriting", "ic"],
+      supportedAliases: [
+        "full_underwriting",
+        "underwriting_report",
+        "underwriting_v1",
+        "tier_2",
+        "tier2",
+      ],
+    };
+  }
+  const reportTier = canonicalType === "underwriting" ? 2 : canonicalType === "ic" ? 3 : 1;
+  return {
+    ok: true,
+    reportType: canonicalType,
+    reportTier,
+    effectiveReportMode: canonicalType === "screening" ? "screening_v1" : "v1_core",
+    usedDefault: false,
+    explicitUnknown: false,
+    providedToken: String(explicitRawToken || ""),
+    normalizedToken: normalizedExplicitToken,
+  };
+}
 function assertValidReportPublicationInsert({
   storagePath,
   reportType,
@@ -5522,7 +5588,6 @@ export default async function handler(req, res) {
     } = body;
     const jobId = body?.job_id || body?.jobId;
     effectiveUserId = bodyUserId || null;
-    const allowedReportTypes = ["screening", "underwriting", "ic"];
     let jobReportType = null;
     let jobUserId = null;
     let jobPropertyName = null;
@@ -5556,16 +5621,22 @@ export default async function handler(req, res) {
         effectiveUserId = jobUserId;
       }
     }
-    const rawReportType = String(
-      body?.report_type || jobReportType || "screening"
-    ).toLowerCase();
-    const reportType = allowedReportTypes.includes(rawReportType)
-      ? rawReportType
-      : "screening";
-    const effectiveReportMode =
-      reportType === "screening" ? "screening_v1" : "v1_core";
-    const reportTier =
-      reportType === "underwriting" ? 2 : reportType === "ic" ? 3 : 1;
+    const reportTypeResolution = resolveReportTypeAndTier({
+      bodyReportType: body?.report_type ?? null,
+      jobReportType: jobReportType ?? null,
+    });
+    if (!reportTypeResolution.ok) {
+      return res.status(400).json({
+        error: "Invalid report_type",
+        report_type: reportTypeResolution.providedToken,
+        normalized_report_type: reportTypeResolution.normalizedToken,
+        allowed_report_types: reportTypeResolution.allowedTypes,
+        supported_aliases: reportTypeResolution.supportedAliases,
+      });
+    }
+    const reportType = reportTypeResolution.reportType;
+    const effectiveReportMode = reportTypeResolution.effectiveReportMode;
+    const reportTier = reportTypeResolution.reportTier;
     const allowAssumptions = reportTier >= 2;
     const nowIso = new Date().toISOString();
     const promptInstructions = [
@@ -10563,4 +10634,5 @@ export const __test__ = {
   resolveFinalRecommendationSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
   buildDeliveryResponseCompatibilityAliases,
+  resolveReportTypeAndTier,
 };
