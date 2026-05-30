@@ -1,3 +1,93 @@
+# May 30, 2026 Addendum - G1/G2/G5/G6 Materially Closed / Pause Before G7-G8
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- The original audit estimated approximately 132 duplicate decision-making paths/truth-makers.
+- The ledger tracks 70 explicit DS rows/groups plus grouped expansion clusters.
+- We are not requiring closure of every DS row before controlled launch/regression decisions.
+- Work is intentionally paused after G6 Final Sweep due to low Codex usage.
+- Full Underwriting is not declared public self-serve ready until controlled live regression passes.
+
+## Completed grouped sequence (committed)
+- Patch 1/1B
+  - Parser current-debt support routing and loan-term promotion aligned.
+  - Explicit non-acquisition current-debt terms route/promote as current debt.
+  - Acquisition/proposed financing remains separated.
+  - Standalone LTV no longer creates acquisition/proposed classification by itself.
+- Patch 2
+  - `resolveReportTypeAndTier(...)` added.
+  - Explicit unknown `report_type` fails closed with `400 Invalid report_type`.
+  - Underwriting aliases normalize to underwriting/tier 2/v1_core.
+  - Screening default remains only when no explicit type is provided.
+- G4
+  - Source-report-coverage QA canonical-first depth/signal guard sweep completed.
+  - Rendered/file/artifact signals are conformance/evidence only when canonical state exists.
+  - Full Underwriting depth conformance uses canonical section-family expectations, not raw page count.
+- G1 materially closed
+  - Slice 1: operating statement, renovation, document sources canonicalization.
+  - Slice 2: debt tables, DCF table, risk matrix, DCF summary, narrative strip canonicalization.
+  - Slice 3: late `reportTier === 1` strip cascade canonical guard.
+  - Residual `G1C-02` early screening cascade is contained/watch-only unless live regression proves a real mismatch.
+- G2 materially closed
+  - Mode-aware visible classification/coverage consumers.
+  - Screening cannot leak debt-coverage classification.
+  - Screening stress-summary/framework/rationale now consume canonical/final visible label.
+  - Deferred polish only: CSS stale aliases, Data Coverage wording nuance, historical Deal Scorecard threshold note.
+- G5 materially closed
+  - Report-contract QA provenance/conformance authority hardened.
+  - `resolveCanonicalCurrentDebtStateForQa(...)` and `hasCanonicalCoverageAuthority(...)` provenance-locked.
+  - `inferCanonicalVerdictCapState(...)` provenance-gated.
+  - Remaining G5 scope is non-authority regex/taxonomy polish.
+- G6 materially closed
+  - `buildAcquisitionAssumptionState(...)` no longer uses rendered acquisition phrase as canonical support authority.
+  - `buildFullUnderwritingSectionEligibility(...)` no longer uses rendered section headings as eligibility authority.
+  - Final sweep removed QA inventory-boolean authority from debt truth, demoted deterministic-flag reconciliation escalation, and mode-gated debt-cap classification to underwriting/tier 2.
+
+## Launch-risk compression status at this pause
+- Major Full Underwriting collapse root families were materially compressed:
+  - parser current-debt support routing
+  - report-type downgrade
+  - generator strip/mutation authority
+  - visible classification leakage
+  - QA provenance leaks
+  - surface-contract canonical-owner rendered/inventory/flag authority leaks
+- Do not overclaim all DS rows are closed.
+- Do not overclaim Ken/public samples are ready.
+
+## Remaining grouped batches
+- `G7 - Action-Plan Consumer Demotion`
+- `G8 - Delivery/UI Lifecycle Follow-up`
+- G8 remains micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby constraints.
+- Because this checkpoint is paused, do not start G7/G8 until resumed.
+
+## Current next action when resumed
+1. G7 audit only.
+2. If Rob decides cleanup is sufficient for now, checkpoint and run controlled live regression.
+
+## Fresh-chat continuation prompt
+We resume after G6 Final Sweep.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6.
+
+Remaining: G7 and G8.
+
+Codex usage was low, so work paused intentionally.
+
+Next recommended task: G7 audit only.
+
+Guardrails remain:
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property names/filenames/report IDs
+- no public AI wording
+- no BUY/SELL/HOLD
+- no new Vercel API/serverless routes casually
+- renderer consumes canonical state
+- QA is conformance only
+- action plan and lifecycle consumers must not re-infer truth
+
+---
 # May 30, 2026 Addendum - Batch 6 Decision-Source Compression Complete / Batch 6F Final Recommendation Guard Complete / Live Regression Next
 
 ## G. Fresh-chat continuation prompt
