@@ -7,6 +7,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
 const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
 const {
   buildCurrentDebtAssessmentState,
+  buildAcquisitionAssumptionState,
+  buildFullUnderwritingSectionEligibility,
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationState,
   buildSourceReconciliationRenderState,
@@ -160,6 +162,110 @@ const canonicalHeadlineFallback = generatorTest.resolveCanonicalDataCoverageHead
 assert.equal(canonicalHeadlineFallback.headlineMode, "underwriting_scope");
 assert.equal(canonicalHeadlineFallback.severityState, "source_reconciliation_disclosure");
 assert.equal(canonicalHeadlineFallback.source, "fallback");
+
+const acquisitionSupportWithoutRenderedSignal = buildAcquisitionAssumptionState({
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: "purchase_assumptions",
+    debt_basis: "acquisition_financing_assumption",
+    purchase_price: 14000000,
+    ltv: 70,
+    interest_rate: 5.4,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 9800000,
+  },
+  currentDebtState: {
+    has_proposed_acquisition_financing: true,
+    has_true_current_debt_balance: false,
+  },
+  sourceReportCoverageQa: {
+    rendered_text_signals: [],
+    artifact_inventory: {
+      loan_term_sheet_parsed: {
+        present: true,
+      },
+    },
+  },
+});
+assert.equal(acquisitionSupportWithoutRenderedSignal.acquisition_assumptions_supported, true);
+assert.equal(acquisitionSupportWithoutRenderedSignal.acquisition_support_status, "validated_supported");
+
+const acquisitionPhraseOnlyDoesNotCreateCanonicalSupport = buildAcquisitionAssumptionState({
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: null,
+    debt_basis: "",
+    purchase_price: null,
+    ltv: null,
+    interest_rate: null,
+    amortization_years: null,
+    derived_acquisition_loan_amount: null,
+  },
+  currentDebtState: {
+    has_proposed_acquisition_financing: false,
+    has_true_current_debt_balance: false,
+  },
+  sourceReportCoverageQa: {
+    rendered_text_signals: ["acquisition_financing_assumptions"],
+    artifact_inventory: {
+      loan_term_sheet_parsed: {
+        present: false,
+      },
+    },
+  },
+});
+assert.equal(acquisitionPhraseOnlyDoesNotCreateCanonicalSupport.acquisition_assumptions_supported, false);
+
+const canonicalEligibleWithoutRenderedHeading = buildFullUnderwritingSectionEligibility({
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 1200000,
+        total_operating_expenses: 700000,
+        net_operating_income: 500000,
+      },
+    },
+    {
+      type: "rent_roll_parsed",
+      payload: { total_units: 24 },
+    },
+  ],
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+  },
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    rendered_sections: {
+      has_operating_statement_section: false,
+    },
+  },
+});
+assert.equal(canonicalEligibleWithoutRenderedHeading.sections.operating_statement.eligible, true);
+assert.equal(canonicalEligibleWithoutRenderedHeading.sections.operating_statement.omitted, false);
+assert.equal(canonicalEligibleWithoutRenderedHeading.sections.operating_statement.rendered, true);
+assert.equal(canonicalEligibleWithoutRenderedHeading.sections.operating_statement.rendered_observed, false);
+
+const renderedHeadingOnlyCannotPromoteUnsupported = buildFullUnderwritingSectionEligibility({
+  artifacts: [],
+  currentDebtState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+  },
+  sourceReportCoverageQa: {
+    rendered_sections: {
+      has_operating_profile_section: true,
+      has_renovation_section: true,
+    },
+  },
+});
+assert.equal(renderedHeadingOnlyCannotPromoteUnsupported.sections.operating_profile.eligible, false);
+assert.equal(renderedHeadingOnlyCannotPromoteUnsupported.sections.operating_profile.source_constrained, true);
+assert.equal(renderedHeadingOnlyCannotPromoteUnsupported.sections.operating_profile.rendered_observed, true);
+assert.equal(renderedHeadingOnlyCannotPromoteUnsupported.sections.renovation_strategy.eligible, false);
+assert.equal(renderedHeadingOnlyCannotPromoteUnsupported.sections.renovation_strategy.source_constrained, true);
 
 const constrainedSectionBlocked = generatorTest.shouldRenderCanonicalSection({
   sectionEligibility: {

@@ -1410,14 +1410,22 @@ export function buildAcquisitionAssumptionState({
     ? sourceReportCoverageQa.rendered_text_signals.includes("acquisition_financing_assumptions")
     : false;
   const currentDebtSeparated = hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
+  const debtBasis = String(resolvedLoan?.debt_basis || "").trim().toLowerCase();
+  const acquisitionDebtBasisSignal =
+    debtBasis.includes("acquisition") ||
+    debtBasis.includes("purchase") ||
+    debtBasis.includes("proposed");
   const semanticRoleSupported =
     semanticDocRole === "purchase_assumptions" ||
     semanticDocDisplayLabel === "purchase_assumptions";
+  const acquisitionSemanticSupported =
+    semanticRoleSupported ||
+    acquisitionDebtBasisSignal ||
+    hasProposedAcquisitionFinancing;
   const acquisitionAssumptionsSupported =
-    semanticRoleSupported &&
+    acquisitionSemanticSupported &&
     hasValidatedAcquisitionAssumptions &&
-    currentDebtSeparated &&
-    acquisitionFinancingRendered;
+    currentDebtSeparated;
   const acquisitionSupportStatus = acquisitionAssumptionsSupported
     ? "validated_supported"
     : hasValidatedAcquisitionAssumptions
@@ -2204,6 +2212,7 @@ export function buildFullUnderwritingSectionEligibility({
     const optionalSourceRoles = Array.isArray(blueprint.optional_source_roles) ? blueprint.optional_source_roles : [];
     const requiredSourcesPresent = allRolesPresent(requiredSourceRoles, inventory, currentDebtState);
     const optionalSourcesPresent = anyRolePresent(optionalSourceRoles, inventory, currentDebtState);
+    const hasCanonicalSourceSupport = requiredSourcesPresent || optionalSourcesPresent;
     const sourceReconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
     const currentDebtSourceConstrained =
       sectionKey === "debt_structure" &&
@@ -2212,15 +2221,15 @@ export function buildFullUnderwritingSectionEligibility({
     const sourceConstrained =
       !requiredSourcesPresent ||
       currentDebtSourceConstrained ||
-      (sectionKey === "renovation_strategy" && !optionalSourcesPresent && !rendered);
+      (sectionKey === "renovation_strategy" && !optionalSourcesPresent);
     let publishabilityBucket =
       !requiredSourcesPresent
         ? "user_needs_documents"
         : sourceConstrained
         ? "section_constrained_publishable"
-        : rendered
+        : requiredSourcesPresent
         ? "core_sufficient_publishable"
-        : optionalSourcesPresent
+        : hasCanonicalSourceSupport
         ? "section_constrained_publishable"
         : "section_constrained_publishable";
     if (sectionKey === "data_coverage" && sourceReconciliationStatus === "source_reconciliation_required") {
@@ -2251,10 +2260,11 @@ export function buildFullUnderwritingSectionEligibility({
         (sectionKey === "noi_stability" && (Boolean(inventory?.t12_parsed?.present) || Boolean(inventory?.rent_roll_parsed?.present)))
       );
     sections[sectionKey] = {
-      eligible: Boolean(requiredSourcesPresent || optionalSourcesPresent || rendered || sourceConstrained),
-      omitted: !rendered,
+      eligible: Boolean(requiredSourcesPresent || optionalSourcesPresent),
+      omitted: Boolean(sourceConstrained),
       source_constrained: Boolean(sourceConstrained),
-      rendered,
+      rendered: Boolean(!sourceConstrained),
+      rendered_observed: Boolean(rendered),
       underused: Boolean(underused && !sourceConstrained),
       publishability_bucket: publishabilityBucket,
       public_publishability_bucket: publicPublishabilityBucket,
