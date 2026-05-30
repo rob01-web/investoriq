@@ -470,6 +470,61 @@ const screeningDocumentSourcesAlwaysStrip = generatorTest.resolveDocumentSources
   hasDocSources: true,
 });
 assert.equal(screeningDocumentSourcesAlwaysStrip, false);
+const tierOneCascadeScreening = generatorTest.shouldApplyTierOneStripCascade({
+  effectiveReportMode: "screening_v1",
+  reportType: "screening",
+  reportTier: 1,
+  sectionEligibility: null,
+});
+assert.equal(tierOneCascadeScreening, true);
+const tierOneCascadeUnderwritingProtected = generatorTest.shouldApplyTierOneStripCascade({
+  effectiveReportMode: "v1_core",
+  reportType: "underwriting",
+  reportTier: 1,
+  sectionEligibility: {
+    sections: {
+      debt_structure: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+});
+assert.equal(tierOneCascadeUnderwritingProtected, false);
+const tierOneCascadeInconsistentScreeningBlockedByCanonical = generatorTest.shouldApplyTierOneStripCascade({
+  effectiveReportMode: "screening_v1",
+  reportType: "screening",
+  reportTier: 1,
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+});
+assert.equal(tierOneCascadeInconsistentScreeningBlockedByCanonical, false);
+const tierOneCascadeCanonicalConstrainedStillApplies = generatorTest.shouldApplyTierOneStripCascade({
+  effectiveReportMode: "screening_v1",
+  reportType: "screening",
+  reportTier: 1,
+  sectionEligibility: {
+    sections: {
+      dcf: {
+        eligible: false,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+});
+assert.equal(tierOneCascadeCanonicalConstrainedStillApplies, true);
 const dataCoverageDnaSection = [
   "<p>DATA NOT AVAILABLE</p>",
   "<p>DATA NOT AVAILABLE</p>",

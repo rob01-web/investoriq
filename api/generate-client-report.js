@@ -2039,6 +2039,44 @@ function resolveDocumentSourcesSectionVisibility({
     Boolean(reconciliationPolicy?.data_coverage_required);
   return Boolean(methodologyVisible || canonicalTransparencyRequired);
 }
+function shouldApplyTierOneStripCascade({
+  effectiveReportMode = "screening_v1",
+  reportType = null,
+  reportTier = 1,
+  sectionEligibility = null,
+} = {}) {
+  if (Number(reportTier) !== 1) return false;
+  const normalizedMode = String(effectiveReportMode || "").trim().toLowerCase();
+  const normalizedType = String(reportType || "").trim().toLowerCase();
+  const screeningIntent = normalizedMode === "screening_v1" || normalizedType === "screening";
+  if (!screeningIntent) return false;
+  const sectionMap =
+    sectionEligibility?.sections && typeof sectionEligibility.sections === "object"
+      ? sectionEligibility.sections
+      : null;
+  if (!sectionMap) return true;
+  const underwritingSectionKeys = [
+    "scenario_analysis",
+    "market_context",
+    "risk_register",
+    "renovation_strategy",
+    "debt_structure",
+    "deal_scorecard",
+    "dcf",
+    "advanced_modeling",
+    "final_recommendation",
+    "final_recommendations",
+    "final_recs",
+  ];
+  const canonicalUnderwritingSectionVisible = underwritingSectionKeys.some((sectionKey) =>
+    shouldRenderCanonicalSection({
+      sectionEligibility,
+      sectionKey,
+      rendererDefault: false,
+    })
+  );
+  return !canonicalUnderwritingSectionVisible;
+}
 function shouldStripDataCoverageSectionByRenderedCopy({
   coverageSectionHtml = "",
   hasCanonicalCoverageAuthority = false,
@@ -8747,7 +8785,12 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection10DcfSummary) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
     }
-    if (reportTier === 1) {
+    if (shouldApplyTierOneStripCascade({
+      effectiveReportMode,
+      reportType,
+      reportTier,
+      sectionEligibility: sectionEligibilityStateForRender,
+    })) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
@@ -10724,6 +10767,7 @@ export const __test__ = {
   resolveCanonicalLoanTermSheetArtifacts,
   resolveCanonicalDataCoverageHeadlineState,
   shouldRenderCanonicalSection,
+  shouldApplyTierOneStripCascade,
   resolveMarketContextSectionVisibility,
   resolveFinalRecommendationSectionVisibility,
   resolveDocumentSourcesSectionVisibility,
