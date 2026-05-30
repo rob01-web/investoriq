@@ -9,6 +9,7 @@ const {
   buildCurrentDebtAssessmentState,
   buildAcquisitionAssumptionState,
   buildFullUnderwritingSectionEligibility,
+  buildCanonicalVisibleClassificationState,
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationState,
   buildSourceReconciliationRenderState,
@@ -662,6 +663,28 @@ const underwritingAppliesDebtCoverageConstraintLabel = generatorTest.normalizeVi
   debtCoverageConstraintActive: true,
 });
 assert.equal(underwritingAppliesDebtCoverageConstraintLabel, "Review - Debt Coverage Constraint");
+const screeningCanonicalClassificationIgnoresDebtNotAssessed = buildCanonicalVisibleClassificationState({
+  reportType: "screening",
+  reportTier: 1,
+  baseLabel: "Stable",
+  hasDscrScore: false,
+  currentDebtDscr: null,
+  debtCoverageConstraintActive: true,
+  sourceReconciliationCapActive: false,
+  coreSupportInsufficient: false,
+});
+assert.equal(screeningCanonicalClassificationIgnoresDebtNotAssessed.label, "Stable");
+const underwritingCanonicalClassificationAppliesDebtNotAssessed = buildCanonicalVisibleClassificationState({
+  reportType: "underwriting",
+  reportTier: 2,
+  baseLabel: "Stable",
+  hasDscrScore: false,
+  currentDebtDscr: null,
+  debtCoverageConstraintActive: true,
+  sourceReconciliationCapActive: false,
+  coreSupportInsufficient: false,
+});
+assert.equal(underwritingCanonicalClassificationAppliesDebtNotAssessed.label, "Review - Debt Coverage Constraint");
 const sourceReconciliationPrecedenceLabel = generatorTest.normalizeVisibleReportClassification({
   baseClass: "Fragile",
   effectiveReportMode: "v1_core",
@@ -1474,6 +1497,44 @@ const ambiguousAcquisitionDebtState = buildCurrentDebtAssessmentState({
 });
 assert.equal(ambiguousAcquisitionDebtState.current_debt_dscr_status, "not_assessed");
 assert.equal(ambiguousAcquisitionDebtState.current_debt_dscr, null);
+const inventoryOnlyMortgageDebtState = buildCurrentDebtAssessmentState({
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      mortgage_statement_parsed: {
+        present: true,
+        has_balance: true,
+        has_payment: true,
+        has_rate: true,
+        has_amortization: true,
+      },
+    },
+  },
+  t12Noi: 700000,
+});
+assert.equal(inventoryOnlyMortgageDebtState.current_debt_dscr_status, "not_assessed");
+assert.equal(inventoryOnlyMortgageDebtState.has_true_current_debt_balance, false);
+assert.equal(inventoryOnlyMortgageDebtState.current_debt_dscr, null);
+assert.equal(inventoryOnlyMortgageDebtState.refi_basis_eligible, false);
+const inventoryOnlyLoanTermDebtState = buildCurrentDebtAssessmentState({
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      loan_term_sheet_parsed: {
+        present: true,
+        has_balance: true,
+        has_payment: true,
+        has_rate: true,
+        has_amortization: true,
+        semantic_doc_role: "current_debt_terms",
+        debt_basis: "existing_mortgage_debt",
+      },
+    },
+  },
+  t12Noi: 700000,
+});
+assert.equal(inventoryOnlyLoanTermDebtState.current_debt_dscr_status, "not_assessed");
+assert.equal(inventoryOnlyLoanTermDebtState.has_true_current_debt_balance, false);
+assert.equal(inventoryOnlyLoanTermDebtState.current_debt_dscr, null);
+assert.equal(inventoryOnlyLoanTermDebtState.refi_basis_eligible, false);
 const mixedExplicitCurrentDebtProofSelection = generatorTest.resolveCanonicalLoanTermSheetArtifacts([
   {
     payload: {
@@ -3584,6 +3645,42 @@ assert.equal(
   conflictSourceReconciliationState.source_selection?.rr_annual_in_place?.suppressed_values?.some((entry) => entry.value === 1962456),
   true
 );
+const parserSignalReconciliationState = buildSourceReconciliationState({
+  computedRentRoll: {
+    total_units: 20,
+    total_in_place_annual: 1260000,
+  },
+  rentRollPayload: {
+    total_units: 20,
+    total_in_place_annual: 1260000,
+  },
+  t12Payload: {
+    gross_potential_rent: 1000000,
+  },
+  sourceReportCoverageQa: {
+    deterministic_flags: [
+      { code: "RENT_ROLL_T12_VARIANCE", routing: "parser_gap" },
+      { code: "RENT_ROLL_T12_VARIANCE", routing: "artifact_gap" },
+    ],
+  },
+});
+assert.equal(parserSignalReconciliationState.status, "source_reconciliation_required");
+assert.equal(parserSignalReconciliationState.customer_delivery_impact, "disclose_only");
+assert.equal(parserSignalReconciliationState.public_outreach_impact, "block_until_review");
+assert.equal(parserSignalReconciliationState.parser_suspected, false);
+assert.equal(parserSignalReconciliationState.parser_signal_observed, true);
+const insufficientInputReconciliationState = buildSourceReconciliationState({
+  computedRentRoll: { total_units: 20, total_in_place_annual: null },
+  rentRollPayload: { total_units: 20, total_in_place_annual: null },
+  t12Payload: { gross_potential_rent: null },
+});
+assert.equal(insufficientInputReconciliationState.status, "insufficient_inputs");
+const alignedReconciliationState = buildSourceReconciliationState({
+  computedRentRoll: { total_units: 20, total_in_place_annual: 1000000 },
+  rentRollPayload: { total_units: 20, total_in_place_annual: 1000000 },
+  t12Payload: { gross_potential_rent: 1000000 },
+});
+assert.equal(alignedReconciliationState.status, "aligned");
 
 const conflictSourceReconciliationRenderState = buildSourceReconciliationRenderState({
   sourceReconciliationState: conflictSourceReconciliationState,

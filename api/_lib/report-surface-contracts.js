@@ -1006,10 +1006,11 @@ export function buildCanonicalVisibleClassificationState({
   // 4) base score classification (Stable/Sensitized/Fragile/Within/Review/Outside)
   const sourceReconciliationCap = Boolean(sourceReconciliationCapActive) || hasSourceReconciliationDisclosureCap(sourceReconciliationState);
   const insufficientCoreSupportCap = Boolean(coreSupportInsufficient);
-  const debtCoverageCap =
+  const debtCoverageCap = isUnderwriting && (
     Boolean(debtCoverageConstraintActive) ||
     hasDscrScore === false ||
-    (hasDscrScore === true && Number.isFinite(coerceNumber(currentDebtDscr)) && coerceNumber(currentDebtDscr) < 1.25);
+    (hasDscrScore === true && Number.isFinite(coerceNumber(currentDebtDscr)) && coerceNumber(currentDebtDscr) < 1.25)
+  );
   const debtCoverageCapReason = hasDscrScore === false ? "debt_coverage_not_assessed" : "debt_coverage_constraint";
 
   if (sourceReconciliationCap) {
@@ -1090,7 +1091,7 @@ export function buildCanonicalVisibleClassificationState({
   } else if (coreSupportInsufficient) {
     label = "Review - Insufficient Core Support";
     capReason = "insufficient_core_support";
-  } else if (debtCoverageConstraintActive) {
+  } else if (debtCoverageConstraintActive && isUnderwriting) {
     label = "Review - Debt Coverage Constraint";
     capReason = "debt_coverage_constraint";
   }
@@ -1150,18 +1151,10 @@ export function buildCurrentDebtAssessmentState({
 
   const hasMortgageDocument =
     Boolean(resolvedMortgage) ||
-    Boolean(mortgageInventory.present) ||
-    Boolean(mortgageInventory.has_balance) ||
-    Boolean(mortgageInventory.has_payment) ||
-    Boolean(mortgageInventory.has_rate) ||
-    Boolean(mortgageInventory.has_amortization);
+    Boolean(mortgageInventory.present);
   const hasLoanDocument =
     Boolean(resolvedLoan) ||
-    Boolean(loanInventory.present) ||
-    Boolean(loanInventory.has_derived_acquisition_debt) ||
-    Boolean(loanInventory.has_purchase_price) ||
-    Boolean(loanInventory.has_rate) ||
-    Boolean(loanInventory.has_amortization);
+    Boolean(loanInventory.present);
 
   const loanOutstandingBalance = coerceNumber(
     resolvedLoan?.outstanding_balance ??
@@ -1169,11 +1162,7 @@ export function buildCurrentDebtAssessmentState({
     resolvedLoan?.current_loan_balance
   );
   const loanCurrentDebtSignal = Boolean(
-    positiveNumber(loanOutstandingBalance) ||
-    (
-      Boolean(loanInventory.has_balance) &&
-      ["loan_term_sheet", "mortgage_statement", "current_mortgage_statement", "current_debt_terms", ""].includes(loanSemanticRole)
-    )
+    positiveNumber(loanOutstandingBalance)
   );
   const loanAcquisitionOnlySignal = Boolean(
     loanDebtBasis.includes("acquisition") ||
@@ -1208,7 +1197,6 @@ export function buildCurrentDebtAssessmentState({
 
   const hasTrueCurrentDebtBalance =
     positiveNumber(resolvedMortgage?.outstanding_balance) ||
-    Boolean(mortgageInventory.has_balance) ||
     (loanSupportsCurrentDebt && positiveNumber(loanOutstandingBalance));
 
   const debtBalanceForComputation =
@@ -1257,9 +1245,7 @@ export function buildCurrentDebtAssessmentState({
   const hasCurrentDebtService =
     Number.isFinite(sourceAnnualDebtService) && sourceAnnualDebtService > 0 ||
     Number.isFinite(sourceMonthlyPayment) && sourceMonthlyPayment > 0 ||
-    Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0 ||
-    Boolean(mortgageInventory.has_payment) ||
-    (loanSupportsCurrentDebt && Boolean(loanInventory.has_payment));
+    Number.isFinite(computedMonthlyPayment) && computedMonthlyPayment > 0;
 
   const hasProposedAcquisitionFinancing =
     (
@@ -1268,12 +1254,6 @@ export function buildCurrentDebtAssessmentState({
       positiveNumber(resolvedLoan?.interest_rate) &&
       positiveNumber(resolvedLoan?.amortization_years ?? resolvedLoan?.amort_years) &&
       positiveNumber(resolvedLoan?.derived_acquisition_loan_amount)
-    ) ||
-    (
-      Boolean(loanInventory.has_derived_acquisition_debt) &&
-      Boolean(loanInventory.has_purchase_price) &&
-      Boolean(loanInventory.has_rate) &&
-      Boolean(loanInventory.has_amortization)
     );
 
   const currentDebtDscr =
@@ -1900,13 +1880,11 @@ function normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa =
   const status = !Number.isFinite(rrAnnual) || !Number.isFinite(gpr)
     ? "insufficient_inputs"
     : materialVariance
-    ? (parserSignals ? "parser_suspected" : "source_reconciliation_required")
+    ? "source_reconciliation_required"
     : "aligned";
   const customerDeliveryImpact =
     status === "aligned" || status === "insufficient_inputs"
       ? "none"
-      : status === "parser_suspected"
-      ? "block"
       : "disclose_only";
   const publicOutreachImpact =
     status === "aligned" || status === "insufficient_inputs" ? "none" : "block_until_review";
@@ -1917,7 +1895,8 @@ function normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa =
     status,
     customer_delivery_impact: customerDeliveryImpact,
     public_outreach_impact: publicOutreachImpact,
-    parser_suspected: status === "parser_suspected",
+    parser_suspected: false,
+    parser_signal_observed: parserSignals,
     source_reconciliation_required: status === "source_reconciliation_required",
     has_material_variance: materialVariance,
   };
