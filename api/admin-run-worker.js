@@ -2185,7 +2185,12 @@ export default async function handler(req, res) {
                 reportData = await reportRes.json().catch(() => ({}));
                 const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
                 const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-                if (deliveryGateStatus === 'admin_review_required' || deliveryGateStatus === 'user_needs_documents') {
+                const shouldHoldDeliveryOutcome =
+                  deliveryGateStatus === 'admin_review_required' ||
+                  deliveryGateStatus === 'user_needs_documents' ||
+                  resolvedDeliveryDecision.holdDelivery === true ||
+                  resolvedDeliveryDecision.customerDeliveryAllowed === false;
+                if (shouldHoldDeliveryOutcome) {
                   reportId = reportData?.reportId || null;
                   storagePath = reportData?.storagePath || null;
                 } else if (!reportData?.reportId) {
@@ -2244,8 +2249,15 @@ export default async function handler(req, res) {
           const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
           const isTypedGateOutcome =
             deliveryGateStatus === 'user_needs_documents' || deliveryGateStatus === 'admin_review_required';
-          if (isTypedGateOutcome) {
-            if (deliveryGateStatus === 'user_needs_documents') {
+          const isResolvedHoldBlockedOutcome =
+            resolvedDeliveryDecision.holdDelivery === true ||
+            resolvedDeliveryDecision.customerDeliveryAllowed === false;
+          const shouldHoldDeliveryOutcome = isTypedGateOutcome || isResolvedHoldBlockedOutcome;
+          const holdOutcomeStatus = isTypedGateOutcome
+            ? deliveryGateStatus
+            : (resolvedDeliveryDecision.creditRestoreRequired ? 'user_needs_documents' : 'admin_review_required');
+          if (shouldHoldDeliveryOutcome) {
+            if (holdOutcomeStatus === 'user_needs_documents') {
               await applyTerminalFailureOutcome(job, {
                 fromStatus: 'rendering',
                 errorCode: 'MISSING_REQUIRED_SOURCE_DATA',

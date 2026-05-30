@@ -5,7 +5,7 @@ const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 assert.match(
   workerSource,
-  /if \(deliveryGateStatus === 'admin_review_required' \|\| deliveryGateStatus === 'user_needs_documents'\)\s*\{[\s\S]{0,240}reportId = reportData\?\.reportId \|\| null;[\s\S]{0,240}storagePath = reportData\?\.storagePath \|\| null;[\s\S]{0,240}\} else if \(!reportData\?\.reportId\)\s*\{[\s\S]{0,160}generatorError = `Report generation failed/
+  /const shouldHoldDeliveryOutcome =[\s\S]{0,260}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,260}resolvedDeliveryDecision\.customerDeliveryAllowed === false[\s\S]{0,260}if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,260}reportId = reportData\?\.reportId \|\| null;[\s\S]{0,260}storagePath = reportData\?\.storagePath \|\| null;[\s\S]{0,260}\} else if \(!reportData\?\.reportId\)\s*\{[\s\S]{0,160}generatorError = `Report generation failed/
 );
 
 assert.equal(
@@ -80,7 +80,16 @@ assert.match(
   workerSource,
   /const isTypedGateOutcome =\s*deliveryGateStatus === 'user_needs_documents' \|\| deliveryGateStatus === 'admin_review_required';/
 );
-assert.match(typedGateWindow, /if \(isTypedGateOutcome\)\s*\{/);
+assert.match(
+  workerSource,
+  /const isResolvedHoldBlockedOutcome =[\s\S]{0,120}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,120}\|\|[\s\S]{0,120}resolvedDeliveryDecision\.customerDeliveryAllowed === false;/
+);
+assert.match(
+  workerSource,
+  /const holdOutcomeStatus = isTypedGateOutcome[\s\S]{0,160}\?\s*deliveryGateStatus[\s\S]{0,200}resolvedDeliveryDecision\.creditRestoreRequired \? 'user_needs_documents' : 'admin_review_required'/
+);
+assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
+assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
 assert.match(typedGateWindow, /continue;/);
 assert.equal(
   /if \(isTypedGateOutcome\)[\s\S]{0,2200}const completeUpdate = \{ status: 'published' \}/.test(workerSource),
