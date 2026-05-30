@@ -826,6 +826,22 @@ export function buildSourceReportCoverageQa({
   ];
   const presentUnderwritingSections = keyUnderwritingSections.filter((key) => renderedSections[key]).length;
   const missingKeySections = keyUnderwritingSections.filter((key) => !renderedSections[key]);
+  const sectionRenderSignalByFamily = {
+    executive_summary: "has_executive_summary_section",
+    operating_statement: "has_operating_statement_section",
+    operating_profile: "has_operating_profile_section",
+    expense_structure: "has_expense_structure_section",
+    noi_stability: "has_noi_stability_section",
+    data_coverage: "has_data_coverage_section",
+    scenario_analysis: "has_scenario_section",
+    renovation_strategy: "has_renovation_section",
+    risk_register: "has_risk_section",
+    debt_structure: "has_debt_section",
+    deal_scorecard: "has_deal_score_section",
+    dcf: "has_dcf_section",
+    advanced_modeling: "has_advanced_modeling_section",
+    methodology: "has_methodology_section",
+  };
   const sectionStates = Object.values(sectionEligibility.sections || {});
   const renderedEligibleSections = sectionStates.filter((entry) => entry.rendered && entry.eligible).length;
   const eligibleSections = sectionStates.filter((entry) => entry.eligible);
@@ -838,6 +854,64 @@ export function buildSourceReportCoverageQa({
     artifactPresent(artifacts, "appraisal_parsed") ||
     artifactPresent(artifacts, "property_tax_parsed");
   const minimumUnderwritingSectionCountMet = !isFullUnderwriting || renderedEligibleSections >= 5 || sourceConstrainedSections.length > 0;
+  const underwritingCoreFamilies = [
+    "operating_statement",
+    "operating_profile",
+    "expense_structure",
+    "noi_stability",
+    "data_coverage",
+    "methodology",
+  ];
+  const canonicalCoreFamilyCoverageCount = underwritingCoreFamilies.filter(
+    (familyKey) => sectionEligibility?.sections?.[familyKey] && typeof sectionEligibility.sections[familyKey] === "object"
+  ).length;
+  const hasBroadCanonicalUnderwritingEligibility = canonicalCoreFamilyCoverageCount >= 4;
+  const canonicalDepthFamiliesMissing = underwritingCoreFamilies.filter((familyKey) => {
+    const sectionState = sectionEligibility?.sections?.[familyKey];
+    if (!sectionState || sectionState.eligible !== true || sectionState.source_constrained === true) {
+      return false;
+    }
+    const renderSignalKey = sectionRenderSignalByFamily[familyKey];
+    return !renderedSections?.[renderSignalKey];
+  });
+  const debtSectionState = sectionEligibility?.sections?.debt_structure || null;
+  const renderedDebtLimitationCopyPresent =
+    /No current debt document provided|current-debt DSCR and refinance capacity were not assessed|no true current debt balance was verified|Not assessed\s*-\s*no current debt document/i.test(htmlText);
+  const debtConformanceGap =
+    debtSectionState?.eligible === true &&
+    debtSectionState?.source_constrained === false &&
+    !renderedSections?.has_debt_section;
+  const constrainedDebtLimitationGap =
+    debtSectionState?.source_constrained === true &&
+    !renderedSections?.has_debt_section &&
+    !renderedDebtLimitationCopyPresent;
+  if (
+    isFullUnderwriting &&
+    canonicalSectionAuthorityPresent &&
+    hasBroadCanonicalUnderwritingEligibility &&
+    (
+      canonicalDepthFamiliesMissing.length > 0 ||
+      debtConformanceGap ||
+      constrainedDebtLimitationGap
+    )
+  ) {
+    addFlag(flags, {
+      code: "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE",
+      severity: "high",
+      category: "tier_depth",
+      message: "Rendered Full Underwriting depth does not conform to canonical section eligibility and limitation expectations.",
+      evidence: {
+        missing_core_families: canonicalDepthFamiliesMissing,
+        debt_conformance_gap: debtConformanceGap,
+        constrained_debt_limitation_gap: constrainedDebtLimitationGap,
+        rendered_debt_limitation_copy_present: renderedDebtLimitationCopyPresent,
+        present_underwriting_sections: presentUnderwritingSections,
+        missing_key_sections: missingKeySections,
+        section_eligibility: sectionEligibility,
+      },
+      routing: "public_sample_blocker",
+    });
+  }
   if (
     isFullUnderwriting &&
     !canonicalSectionAuthorityPresent &&

@@ -1425,4 +1425,127 @@ if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.legacy_fallbac
   process.exit(1);
 }
 
+const underwritingScreeningLikeDepthMismatchResult = buildSourceReportCoverageQa({
+  jobId: "underwriting-screening-like-depth-mismatch",
+  userId: "user-smoke",
+  propertyName: "Depth Mismatch",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: [
+    "<h2>Operating Statement</h2>",
+    "<p>Limited operating summary only.</p>",
+  ].join("\n"),
+  sectionEligibility: {
+    sections: {
+      operating_statement: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      operating_profile: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      expense_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      noi_stability: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      methodology: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+});
+if (!underwritingScreeningLikeDepthMismatchResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Expected UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE for underwriting rendered with screening-like depth.");
+  process.exit(1);
+}
+
+const underwritingDebtNotAssessedAllowedResult = buildSourceReportCoverageQa({
+  jobId: "underwriting-debt-not-assessed-allowed",
+  userId: "user-smoke",
+  propertyName: "Debt Limitation Allowed",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: [
+    "<h2>Operating Statement</h2>",
+    "<h2>Operating Profile</h2>",
+    "<h2>Expense Structure</h2>",
+    "<h2>NOI Stability</h2>",
+    "<h2>Data Coverage</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+    "<p>No current debt document provided. Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.</p>",
+  ].join("\n"),
+  sectionEligibility: {
+    sections: {
+      operating_statement: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      operating_profile: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      expense_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      noi_stability: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      methodology: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: true },
+    },
+  },
+});
+if (underwritingDebtNotAssessedAllowedResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Did not expect depth conformance failure when underwriting debt is canonically source-constrained with clear limitation copy.");
+  process.exit(1);
+}
+
+const screeningDoesNotTriggerDepthConformanceResult = buildSourceReportCoverageQa({
+  jobId: "screening-depth-guard-not-triggered",
+  userId: "user-smoke",
+  propertyName: "Screening Depth",
+  reportType: "screening",
+  reportTier: 1,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<h2>Operating Statement</h2><p>Screening summary</p>",
+  sectionEligibility: {
+    sections: {
+      operating_statement: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      operating_profile: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+      expense_structure: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+      noi_stability: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+      data_coverage: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+      methodology: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+      debt_structure: { eligible: true, rendered: false, omitted: true, source_constrained: false },
+    },
+  },
+});
+if (screeningDoesNotTriggerDepthConformanceResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Screening report must not trigger underwriting depth conformance flag.");
+  process.exit(1);
+}
+
+const underwritingDebtAssessedPassResult = buildSourceReportCoverageQa({
+  jobId: "underwriting-debt-assessed-pass",
+  userId: "user-smoke",
+  propertyName: "Debt Assessed",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: [
+    "<h2>Operating Statement</h2>",
+    "<h2>Operating Profile</h2>",
+    "<h2>Expense Structure</h2>",
+    "<h2>NOI Stability</h2>",
+    "<h2>Debt Structure & Financing</h2>",
+    "<h2>Data Coverage</h2>",
+    "<h2>Methodology & Data Transparency</h2>",
+  ].join("\n"),
+  sectionEligibility: {
+    sections: {
+      operating_statement: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      operating_profile: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      expense_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      noi_stability: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      data_coverage: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      methodology: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+});
+if (underwritingDebtAssessedPassResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Did not expect depth conformance failure for underwriting with canonical debt assessed and debt section rendered.");
+  process.exit(1);
+}
+
 console.log("source-report-coverage-qa smoke PASS");
