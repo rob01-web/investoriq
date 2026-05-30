@@ -40,6 +40,32 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 
 ## Section 2A - Today DS Status Update (May 28, 2026)
 
+### May 30, 2026 Addendum - G7 Action-Plan Consumer Demotion Materially Closed / G8 Remains Next
+- Campaign status update: G7 is now materially closed after Slices 1, 2A, 2B, and Slice 3 closure audit.
+- Completed/materially closed grouped sequence:
+  - Patch 1/1B
+  - Patch 2
+  - G4
+  - G1
+  - G2
+  - G5
+  - G6
+  - G7
+- G7 closure details:
+  - Slice 1: `buildQaActionPlan(...)` now consumes canonical delivery state when present; legacy synthesis is canonical-absent fallback only.
+  - Slice 2A: `buildPublishEligibilitySummary(...)` now consumes canonical delivery state when present; local blockers/advisories/regeneration/source-limitation fields remain diagnostic metadata under canonical-present authority.
+  - Slice 2B: `buildDeliveryGateDecision(...)` now accepts `deliveryDecisionState`, `canonicalDeliveryDecisionState`, `delivery_gate_decision`, and `deliveryGateDecision`; canonical-present paths mirror canonical truth for delivery/readiness fields.
+  - `public_sample_ready` and `high_value_outreach_ready` mirror canonical only when explicitly present; otherwise safe distribution metadata fallback remains.
+  - Legacy gate-owner behavior remains only when canonical delivery state is absent.
+  - Slice 3 closure audit: audit-only, no files changed, no material residual duplicate-authority leak in G7 scope.
+- Remaining grouped batch:
+  - `G8 - Delivery/UI Lifecycle Follow-up`
+- Next recommended task:
+  - G8 audit only, unless Rob explicitly chooses controlled live regression first.
+- G8 must remain micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby constraints.
+- Supersession note: prior top-note guidance that G7 remained next/open is superseded by this G7 closure update.
+- Do not claim all DS rows are closed.
+- Do not claim Full Underwriting public self-serve launch-ready.
 ### May 30, 2026 Addendum - G1/G2/G5/G6 Materially Closed / Pause Before G7-G8
 - Campaign checkpoint status: grouped cleanup is paused intentionally due to low Codex usage.
 - Completed/materially closed sequence in this campaign:
@@ -101,19 +127,20 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 - `G2` status: materially closed; polish deferred.
 - `G5` status: materially closed; non-authority polish deferred.
 - `G6` status: materially closed.
-- `G7` and `G8` remain.
+- `G7` status: materially closed after Slices 1, 2A, 2B, and Slice 3 closure audit.
+- `G8` remains.
 - `G8` must remain micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby constraints.
 
 #### Fresh-Chat Continuation Prompt
-We resume after G6 Final Sweep.
+We resume after G7 material closure.
 
-Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6.
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7.
 
-Remaining: G7 and G8.
+Remaining: G8 - Delivery/UI Lifecycle Follow-up.
 
 Codex usage was low, so work paused intentionally.
 
-Next recommended task: G7 audit only.
+Next recommended task: G8 audit only, unless Rob explicitly chooses controlled live regression first.
 
 Guardrails remain:
 - micro-prompts
@@ -125,7 +152,8 @@ Guardrails remain:
 - no new Vercel API/serverless routes casually
 - renderer consumes canonical state
 - QA is conformance only
-- action plan and lifecycle consumers must not re-infer truth
+- action plan consumers must not re-infer truth
+- lifecycle/UI consumers in G8 must not reinterpret canonical delivery state
 
 ### May 30, 2026 Addendum - Grouped Decision-Source Elimination Process Adopted / Patch 1B + Patch 2 + G4 Complete
 - InvestorIQ is no longer patching individual test reports or isolated symptoms.
@@ -215,7 +243,7 @@ Guardrails remain:
   - `ACQUISITION_CURRENT_DEBT_CANONICAL_CONFORMANCE_DRIFT`
   - `UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE`
 - Canonical-present underwriting paths now treat rendered debt/acquisition signals as conformance evidence only.
-- Rendered “not assessed” debt wording can flag drift but cannot downgrade canonical computed debt.
+- Rendered "not assessed" debt wording can flag drift but cannot downgrade canonical computed debt.
 - Rendered debt/acquisition phrasing can flag drift but cannot promote/redefine acquisition/current-debt truth.
 - Fallback artifact/rendered truth-making remains only in canonical-absent branches.
 - Full Underwriting thin-depth detection uses canonical section-family expectations plus rendered section-family evidence, not raw page count.
@@ -228,7 +256,7 @@ Guardrails remain:
 - Reason: G4 installed the alarm/conformance layer; G1 now addresses the generator strip/mutation machinery that can still physically collapse/remove sections despite canonical state.
 
 #### Supersession / Launch Gate Note
-- The prior “live regression is next” note is superseded by the grouped decision-source process until at least G1 is addressed.
+- The prior "live regression is next" note is superseded by the grouped decision-source process until at least G1 is addressed.
 - Live regression remains required before Full Underwriting launch readiness.
 - Immediate next step is G1 because grouped audit sequencing identified generator strip/mutation authority as the next safest/highest-impact batch.
 - Full Underwriting public self-serve remains paused.
@@ -502,9 +530,9 @@ Coverage note: The completed audit estimated ~132 decision-makers. This ledger c
 | DS-043 | Data Coverage | Both | api/generate-client-report.js | data coverage headline/severity assignment | mode + reconciliation + section counts | Data Coverage customer copy/headline | renderer-local | high | Coverage/Eligibility Layer + Decision Layer | make read-only consumer | B5 | closed | Data Coverage headline/severity uses canonical-first bridge; behavioral tests prove canonical beats fallback and fallback applies only when canonical is absent. |
 | DS-044 | Data Coverage | Both | api/_lib/report-contract-qa.js | data coverage taxonomy drift checks | rendered text + coverage state | violations | QA-only | medium | Coverage/Eligibility Layer | convert to QA conformance only | B5 | open | retain as conformance check |
 | DS-045 | QA systems | Both | api/generate-client-report.js | QA orchestration chain | rendered qa + source coverage + contract + director + action plan | analysis artifacts + gate seed | duplicate | critical | Decision Canonical Layer | make read-only consumer | B2 | open | orchestration should consume single decision_state |
-| DS-046 | QA systems | Both | api/_lib/qa-action-plan.js | buildQaActionPlan | route actions + summary readiness | multiple QA artifacts | action plan/readiness summary | duplicate | critical | Decision Canonical Layer | make read-only consumer | B2 | open | currently secondary authority |
-| DS-047 | delivery/readiness | Both | api/_lib/qa-action-plan.js | buildPublishEligibilitySummary | customer/public/outreach readiness + blockers | deterministic flags + violations + actions | publishability/readiness flags | canonical | critical | Decision Canonical Layer | keep as canonical | B2 | open | selected canonical readiness owner |
-| DS-048 | delivery/readiness | Both | api/_lib/qa-action-plan.js | buildDeliveryGateDecision | deliverable/admin_review/user_needs_documents | canonical publish summary + sufficiency | delivery_gate_decision artifact | canonical | critical | Decision Canonical Layer | keep as canonical | B2 | open | selected canonical gate owner |
+| DS-046 | QA systems | Both | api/_lib/qa-action-plan.js | buildQaActionPlan | route actions + summary readiness | multiple QA artifacts | action plan/readiness summary | duplicate | critical | Decision Canonical Layer | make read-only consumer | B2 | partial | G7 Slice 1 materially closed consumer demotion: canonical-present paths now mirror canonical delivery state; local readiness synthesis is canonical-absent fallback only. |
+| DS-047 | delivery/readiness | Both | api/_lib/qa-action-plan.js | buildPublishEligibilitySummary | customer/public/outreach readiness + blockers | deterministic flags + violations + actions | publishability/readiness flags | canonical | critical | Decision Canonical Layer | keep as canonical | B2 | partial | G7 Slice 2A materially closed canonical-consumer boundary: canonical-present readiness mirrors canonical delivery state; blocker/advisory/regeneration/source-limitation outputs remain diagnostic metadata under canonical-present authority. |
+| DS-048 | delivery/readiness | Both | api/_lib/qa-action-plan.js | buildDeliveryGateDecision | deliverable/admin_review/user_needs_documents | canonical publish summary + sufficiency | delivery_gate_decision artifact | canonical | critical | Decision Canonical Layer | keep as canonical | B2 | partial | G7 Slice 2B + Slice 3 audit materially closed canonical-present consumer boundary: accepts canonical delivery state shapes and mirrors canonical gate truth fields when present; legacy gate-owner behavior is preserved only for canonical-absent artifacts. |
 | DS-049 | delivery/readiness | Both | api/generate-client-report.js | gate response + hold delivery handling | delivery_gate_decision + local checks | API response, publication hold | duplicate | high | Decision Canonical Layer | make read-only consumer | B2 | closed | compatibility aliases derived from canonical deliveryDecisionState |
 | DS-050 | delivery/readiness | Both | api/admin-run-worker.js | status transitions by generator response | reportData + statuses | analysis_jobs lifecycle | worker-local | critical | Decision Canonical Layer | make read-only consumer | B2 | closed | canonical-first resolver; legacy fields fallback-only when canonical absent |
 | DS-051 | fail closed / restore credit | Both | api/admin-run-worker.js | restoreEntitlementForFailedJob / failure handling | worker events + status + purchase rows | credit restoration behavior | canonical | high | Worker Layer | keep as canonical | B2 | closed | `applyTerminalFailureOutcome(...)` centralizes terminal failure updates; `restoreEntitlementForFailedJob(...)` remains sole entitlement restore authority; `recordJobFailure(...)` routes through terminal helper. |

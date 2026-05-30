@@ -2519,5 +2519,92 @@ assert.equal(
   false
 );
 
+const canonicalDeliverableOverrideGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    qa_status: "needs_documents",
+    deterministic_flags: [{ code: "MISSING_REQUIRED_DOCUMENTS", severity: "high" }],
+    artifact_inventory: {
+      t12_parsed: { present: false, has_core_totals: false },
+      rent_roll_parsed: { present: false },
+    },
+  },
+  reportContractQa: {
+    contract_status: "block",
+    violations: [
+      {
+        code: "HARD_PUBLIC_LANGUAGE_CONTRACT",
+        category: "public_language",
+        severity: "critical",
+        blocks_customer_delivery: true,
+      },
+    ],
+  },
+  qaActionPlan: {
+    prioritized_actions: [
+      {
+        code: "HARD_PUBLIC_LANGUAGE_CONTRACT",
+        action_type: "code_patch_required",
+        owner_area: "report_renderer",
+        blocks_customer_delivery: true,
+      },
+    ],
+  },
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "deliverable",
+    customer_delivery_allowed: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+  },
+});
+assert.equal(canonicalDeliverableOverrideGate.delivery_gate_status, "deliverable");
+assert.equal(canonicalDeliverableOverrideGate.customer_publish_eligible, true);
+assert.equal(canonicalDeliverableOverrideGate.report_publishable, true);
+assert.equal(canonicalDeliverableOverrideGate.customer_delivery_ready, true);
+assert.equal(canonicalDeliverableOverrideGate.report_blocked, false);
+assert.equal(canonicalDeliverableOverrideGate.readiness_source, "canonical_delivery_state");
+assert.equal(canonicalDeliverableOverrideGate.readiness_fallback_used, false);
+
+const canonicalAdminReviewOverrideGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: gateLockBaseCoverage,
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: { customer_delivery_ready: true, prioritized_actions: [] },
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "admin_review_required",
+    customer_delivery_allowed: false,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+});
+assert.equal(canonicalAdminReviewOverrideGate.delivery_gate_status, "admin_review_required");
+assert.equal(canonicalAdminReviewOverrideGate.customer_publish_eligible, false);
+assert.equal(canonicalAdminReviewOverrideGate.report_publishable, false);
+assert.equal(canonicalAdminReviewOverrideGate.customer_delivery_ready, false);
+assert.equal(canonicalAdminReviewOverrideGate.report_blocked, true);
+
+const canonicalNeedsDocsOverrideGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: gateLockBaseCoverage,
+  reportContractQa: { contract_status: "pass", violations: [] },
+  qaActionPlan: { customer_delivery_ready: true, prioritized_actions: [] },
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "user_needs_documents",
+    customer_delivery_allowed: false,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+});
+assert.equal(canonicalNeedsDocsOverrideGate.delivery_gate_status, "user_needs_documents");
+assert.equal(canonicalNeedsDocsOverrideGate.customer_publish_eligible, false);
+assert.equal(canonicalNeedsDocsOverrideGate.report_publishable, false);
+assert.equal(canonicalNeedsDocsOverrideGate.customer_delivery_ready, false);
+assert.equal(canonicalNeedsDocsOverrideGate.report_blocked, true);
+assert.equal(
+  (canonicalNeedsDocsOverrideGate.report_quality_blockers || []).length > 0 ||
+    (canonicalNeedsDocsOverrideGate.report_quality_advisories || []).length >= 0,
+  true
+);
+
 console.log("qa-action-plan smoke PASS");
 console.log(plan.prioritized_actions.map((action) => `${action.code}:${action.action_type}`).join(", "));

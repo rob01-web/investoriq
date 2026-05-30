@@ -1,3 +1,68 @@
+# May 30, 2026 Addendum - G7 Action-Plan Consumer Demotion Materially Closed / G8 Remains Next
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- Completed/materially closed grouped sequence: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7.
+- G7 is materially closed after Slices 1, 2A, 2B, and the Slice 3 closure audit.
+- Remaining grouped batch: `G8 - Delivery/UI Lifecycle Follow-up`.
+- Do not claim all DS rows are closed.
+- Do not claim Full Underwriting public self-serve launch-ready until controlled live regression passes.
+
+## G7 completion record
+- Slice 1:
+  - `buildQaActionPlan(...)` now consumes canonical delivery state when present.
+  - Legacy action-plan readiness synthesis is canonical-absent fallback only.
+- Slice 2A:
+  - `buildPublishEligibilitySummary(...)` now consumes canonical delivery state when present.
+  - Local blockers/advisories/regeneration/source-limitation fields remain diagnostic metadata when canonical state is present.
+- Slice 2B:
+  - `buildDeliveryGateDecision(...)` now consumes canonical delivery state when present across accepted shapes:
+    - `deliveryDecisionState`
+    - `canonicalDeliveryDecisionState`
+    - `delivery_gate_decision`
+    - `deliveryGateDecision`
+  - Canonical-present paths mirror canonical gate truth for delivery/readiness fields.
+  - `public_sample_ready` and `high_value_outreach_ready` mirror canonical only when explicitly present; otherwise safe fallback metadata remains.
+  - Legacy gate-owner behavior remains only for canonical-absent artifacts.
+- Slice 3 closure audit:
+  - Audit-only; no files changed.
+  - No material duplicate-authority leak remains in G7 scope.
+  - Optional future hardening (non-blocking): defensive overwrite-proofing in `buildDeliveryGateDecision(...)` return ordering.
+
+## Remaining work and next task
+- Remaining grouped batch: `G8 - Delivery/UI Lifecycle Follow-up`.
+- Next recommended task: G8 audit only, unless Rob explicitly chooses controlled live regression first.
+- G8 must remain micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby function-count constraints.
+
+## Fresh-chat continuation prompt
+We resume after G7 material closure.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7.
+
+Remaining: G8 - Delivery/UI Lifecycle Follow-up.
+
+Next recommended task: G8 audit only, unless Rob explicitly chooses controlled live regression first.
+
+G8 must remain micro-sliced because it touches worker/dashboard lifecycle behavior and Vercel Hobby function-count constraints.
+
+Guardrails:
+- Do not start broad worker/dashboard refactors.
+- Do not add new API/serverless routes.
+- Do not alter customer delivery doctrine.
+- Do not loosen fail-closed/credit-restore behavior.
+- Audit first, patch only after the residual lifecycle/UI authority path is identified.
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property names/filenames/report IDs
+- no public AI wording
+- no BUY/SELL/HOLD
+- renderer consumes canonical state
+- QA is conformance only
+- action plan consumers must not re-infer truth
+- lifecycle/UI consumers in G8 must not reinterpret canonical delivery state
+
+---
 # May 30, 2026 Addendum - G1/G2/G5/G6 Materially Closed / Pause Before G7-G8
 
 ## Current controlling status
@@ -121,7 +186,7 @@ Current status:
 - Full ledger closure is not required before controlled launch.
 - Do not state Full Underwriting is fully public self-serve launch-ready until live regression passes.
 
-## B. Today’s completed Batch 6 work
+## B. Today's completed Batch 6 work
 
 Batch 6B - Canonical State Propagation + Provenance Guard Hard-Lock
 - generator now passes canonical states into source-report-coverage QA.
@@ -667,7 +732,7 @@ Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and
 - AdminDashboard.jsx Slice 2A.2 completed/pass:
   - undefined `ai` expanded-row reference removed
   - AI Recovery fallback now deterministic: `None - deterministic only`
-  - compact Triage empty state: `{title} - 0 jobs · all clear`
+  - compact Triage empty state: `{title} - 0 jobs - all clear`
   - roadmap leak copy replaced with `No items today.`
   - Force-Fail confirmation modal added before executing existing forceFailJob call
   - no backend/API/doctrine/gating changes
@@ -1059,7 +1124,7 @@ Diagnostics reveal recurring sub-classes that can be patched into stronger deter
 
 ## C) Root-class patch standard tightened
 
-Every future “root-class” patch must prove it is system-level, not report-specific.
+Every future "root-class" patch must prove it is system-level, not report-specific.
 
 Required proof in Codex receipts:
 

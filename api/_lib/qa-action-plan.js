@@ -1635,6 +1635,10 @@ export function buildDeliveryGateDecision({
   reportContractQa = null,
   qaActionPlan = null,
   qaDirectorReview = null,
+  deliveryDecisionState = null,
+  canonicalDeliveryDecisionState = null,
+  delivery_gate_decision = null,
+  deliveryGateDecision = null,
 } = {}) {
   const prioritizedActions = Array.isArray(qaActionPlan?.prioritized_actions) ? qaActionPlan.prioritized_actions : [];
   const actionImpactRows = prioritizedActions.map((action) => ({
@@ -1651,6 +1655,13 @@ export function buildDeliveryGateDecision({
   const coreInputCustomerFailClosed = isCoreInputCustomerFailClosed(coreInputSufficiencyState);
   const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
+  const readinessOverride = resolveCanonicalReadinessOverride({
+    deliveryDecisionState,
+    canonicalDeliveryDecisionState,
+    deliveryGateDecision,
+    delivery_gate_decision,
+  });
+  const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
   const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
   const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
   const sourceBlockingFlags = deterministicFlags.filter((flag) => {
@@ -1724,6 +1735,77 @@ export function buildDeliveryGateDecision({
     customerDeliveryBlockerAction ||
     customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
+  if (readinessOverride.present) {
+    const publishEligibility = buildPublishEligibilitySummary({
+      deliveryGateStatus: canonicalDeliveryGateStatus || "deliverable",
+      reasonCode: String(
+        readinessOverride.normalized?.customer_status_reason_code ||
+        readinessOverride.normalized?.reason_code ||
+        canonicalDeliveryGateStatus ||
+        ""
+      ) || null,
+      sourceReportCoverageQa,
+      reportContractQa,
+      qaActionPlan,
+      prioritizedActions,
+      contractViolations,
+      deterministicFlags,
+      sourceNeedsDocs,
+      customerDeliveryBlockerAction,
+      managerContradictionAction,
+      managerContradictionBlocksCustomer,
+      reconciliationViolation,
+      publicOrOutreachOnlyAction,
+      adminReviewAction: customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null,
+      deliveryDecisionState,
+      canonicalDeliveryDecisionState,
+      delivery_gate_decision,
+      deliveryGateDecision,
+    });
+    const canonicalCustomerAllowed = Boolean(readinessOverride.normalized?.customer_delivery_allowed);
+    const publicReady = readinessOverride.has_public_sample_ready
+      ? Boolean(readinessOverride.normalized?.public_sample_ready)
+      : publishEligibility.public_sample_ready;
+    const outreachReady = readinessOverride.has_high_value_outreach_ready
+      ? Boolean(readinessOverride.normalized?.high_value_outreach_ready)
+      : publishEligibility.high_value_outreach_ready;
+    return {
+      final_delivery_authority: "delivery_gate",
+      delivery_gate_status: canonicalDeliveryGateStatus || "deliverable",
+      reason_code: readinessOverride.normalized?.customer_status_reason_code || readinessOverride.normalized?.reason_code || null,
+      top_action_code: prioritizedActions[0]?.code || null,
+      owner_area: prioritizedActions[0]?.owner_area || null,
+      recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
+      customer_delivery_ready: canonicalCustomerAllowed,
+      customer_publish_eligible: canonicalCustomerAllowed,
+      report_publishable: canonicalCustomerAllowed,
+      report_blocked: !canonicalCustomerAllowed,
+      public_sample_ready: publicReady,
+      high_value_outreach_ready: outreachReady,
+      admin_review_required: canonicalDeliveryGateStatus === "admin_review_required",
+      user_needs_documents: canonicalDeliveryGateStatus === "user_needs_documents",
+      launch_path_recommendation:
+        canonicalDeliveryGateStatus === "admin_review_required"
+          ? "admin_review_required"
+          : canonicalDeliveryGateStatus === "user_needs_documents"
+          ? "user_needs_documents"
+          : "customer_deliverable",
+      readiness_source: "canonical_delivery_state",
+      readiness_fallback_used: false,
+      canonical_delivery_gate_status: canonicalDeliveryGateStatus,
+      readiness_hierarchy: {
+        final_delivery_authority: "delivery_gate",
+        final_delivery_status: canonicalDeliveryGateStatus || "deliverable",
+        customer_delivery_ready: canonicalCustomerAllowed,
+        public_sample_ready: publicReady,
+        high_value_outreach_ready: outreachReady,
+        advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
+      },
+      ...publishEligibility,
+      customer_delivery_ready_legacy: canonicalCustomerAllowed,
+    };
+  }
+
   if (sourceNeedsDocs && !customerDeliveryBlockerAction && !customerBlockingReconciliationViolation) {
     const gateReason = resolveNeedsDocumentsReasonCode({
       sourceDocumentAction,
@@ -1747,6 +1829,10 @@ export function buildDeliveryGateDecision({
       reconciliationViolation,
       publicOrOutreachOnlyAction,
       adminReviewAction: null,
+      deliveryDecisionState,
+      canonicalDeliveryDecisionState,
+      delivery_gate_decision,
+      deliveryGateDecision,
     });
     return {
       delivery_gate_status: "user_needs_documents",
@@ -1782,6 +1868,10 @@ export function buildDeliveryGateDecision({
       reconciliationViolation,
       publicOrOutreachOnlyAction,
       adminReviewAction: null,
+      deliveryDecisionState,
+      canonicalDeliveryDecisionState,
+      delivery_gate_decision,
+      deliveryGateDecision,
     });
     return {
       final_delivery_authority: "delivery_gate",
@@ -1822,6 +1912,10 @@ export function buildDeliveryGateDecision({
       reconciliationViolation,
       publicOrOutreachOnlyAction,
       adminReviewAction: customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null,
+      deliveryDecisionState,
+      canonicalDeliveryDecisionState,
+      delivery_gate_decision,
+      deliveryGateDecision,
     });
     return {
       final_delivery_authority: "delivery_gate",
@@ -1862,6 +1956,10 @@ export function buildDeliveryGateDecision({
     reconciliationViolation,
     publicOrOutreachOnlyAction,
     adminReviewAction: null,
+    deliveryDecisionState,
+    canonicalDeliveryDecisionState,
+    delivery_gate_decision,
+    deliveryGateDecision,
   });
 
   return {
