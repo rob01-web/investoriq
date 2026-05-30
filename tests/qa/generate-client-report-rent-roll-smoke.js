@@ -322,6 +322,73 @@ const canonicalFinalRecommendationAbsentFallback = generatorTest.resolveFinalRec
   rendererDefault: false,
 });
 assert.equal(canonicalFinalRecommendationAbsentFallback, false);
+const canonicalDocumentSourcesRequiredNoDocs = generatorTest.resolveDocumentSourcesSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      methodology: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+      data_coverage: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: true,
+      },
+    },
+  },
+  sourceReconciliationState: { status: "source_reconciliation_required" },
+  effectiveReportMode: "v1_core",
+  hasDocSources: false,
+});
+assert.equal(canonicalDocumentSourcesRequiredNoDocs, true);
+const canonicalDocumentSourcesOmitted = generatorTest.resolveDocumentSourcesSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      methodology: {
+        eligible: true,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+      data_coverage: {
+        eligible: true,
+        rendered: false,
+        omitted: true,
+        source_constrained: true,
+      },
+    },
+  },
+  sourceReconciliationState: { status: "core_inputs_confirmed" },
+  effectiveReportMode: "v1_core",
+  hasDocSources: true,
+});
+assert.equal(canonicalDocumentSourcesOmitted, false);
+const canonicalAbsentDocumentSourcesFallback = generatorTest.resolveDocumentSourcesSectionVisibility({
+  sectionEligibility: null,
+  sourceReconciliationState: null,
+  effectiveReportMode: "v1_core",
+  hasDocSources: false,
+});
+assert.equal(canonicalAbsentDocumentSourcesFallback, false);
+const screeningDocumentSourcesAlwaysStrip = generatorTest.resolveDocumentSourcesSectionVisibility({
+  sectionEligibility: {
+    sections: {
+      methodology: {
+        eligible: true,
+        rendered: true,
+        omitted: false,
+        source_constrained: false,
+      },
+    },
+  },
+  sourceReconciliationState: { status: "source_reconciliation_required" },
+  effectiveReportMode: "screening_v1",
+  hasDocSources: true,
+});
+assert.equal(screeningDocumentSourcesAlwaysStrip, false);
 const dataCoverageDnaSection = [
   "<p>DATA NOT AVAILABLE</p>",
   "<p>DATA NOT AVAILABLE</p>",
@@ -348,6 +415,10 @@ assert.match(
 assert.match(
   reportSource,
   /resolveFinalRecommendationSectionVisibility\([\s\S]{0,260}sectionEligibility[\s\S]{0,260}rendererDefault/
+);
+assert.match(
+  reportSource,
+  /resolveDocumentSourcesSectionVisibility\([\s\S]{0,260}sectionEligibility[\s\S]{0,260}sourceReconciliationState[\s\S]{0,260}effectiveReportMode/
 );
 assert.match(
   reportSource,

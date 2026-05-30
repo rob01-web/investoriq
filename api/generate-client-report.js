@@ -2005,6 +2005,40 @@ function resolveFinalRecommendationSectionVisibility({
     rendererDefault,
   });
 }
+
+function resolveDocumentSourcesSectionVisibility({
+  sectionEligibility = null,
+  sourceReconciliationState = null,
+  effectiveReportMode = "screening_v1",
+  hasDocSources = false,
+} = {}) {
+  if (effectiveReportMode === "screening_v1") return false;
+  const hasCanonicalSectionEligibility = Boolean(
+    sectionEligibility &&
+      typeof sectionEligibility === "object" &&
+      sectionEligibility.sections &&
+      typeof sectionEligibility.sections === "object"
+  );
+  if (!hasCanonicalSectionEligibility) {
+    return Boolean(hasDocSources);
+  }
+  const methodologyVisible = shouldRenderCanonicalSection({
+    sectionEligibility,
+    sectionKey: "methodology",
+    rendererDefault: Boolean(hasDocSources),
+  });
+  const dataCoverageVisible = shouldRenderCanonicalSection({
+    sectionEligibility,
+    sectionKey: "data_coverage",
+    rendererDefault: true,
+  });
+  const reconciliationPolicy =
+    buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState);
+  const canonicalTransparencyRequired =
+    Boolean(dataCoverageVisible) ||
+    Boolean(reconciliationPolicy?.data_coverage_required);
+  return Boolean(methodologyVisible || canonicalTransparencyRequired);
+}
 function shouldStripDataCoverageSectionByRenderedCopy({
   coverageSectionHtml = "",
   hasCanonicalCoverageAuthority = false,
@@ -8065,13 +8099,20 @@ if (effectiveReportMode === "screening_v1") {
       }
       }
     }
+    const earlySectionEligibilityStateForRender =
+      underwritingState?.core?.sections?.eligibilityState || sectionEligibility || null;
     const showOperatingStatement = Boolean(
       t12IncomeRows ||
         t12ExpenseRows ||
         (Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue)) ||
         Number.isFinite(t12NoiValue)
     );
-    if (!showOperatingStatement) {
+    const keepOperatingStatement = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "operating_statement",
+      rendererDefault: showOperatingStatement,
+    });
+    if (!keepOperatingStatement) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_OPERATING_STATEMENT");
     }
     const renovationStrategyHtml = getNarrativeHtml("renovationNarrative");
@@ -8081,21 +8122,33 @@ if (effectiveReportMode === "screening_v1") {
         renovationInterpretation !== DATA_NOT_AVAILABLE ||
         (renovationStrategyHtml && renovationStrategyHtml !== DATA_NOT_AVAILABLE)
     );
-    if (!showRenovationSection) {
+    const keepRenovationEarly = shouldRenderCanonicalSection({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sectionKey: "renovation_strategy",
+      rendererDefault: showRenovationSection,
+    });
+    if (!keepRenovationEarly) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
     }
-    if (!documentSourcesHtml) {
-      finalHtml = finalHtml.replace(
-        /<div class="section">[\s\S]*?<div class="section-number">0\.5 Document Sources<\/div>[\s\S]*?\{\{DOCUMENT_SOURCES_TABLE\}\}[\s\S]*?<\/div>\s*/m,
-        ""
-      );
-    }
-    finalHtml = replaceAll(finalHtml, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesHtml);
     const hasDocSources =
       Array.isArray(documentSources) &&
       documentSources.length > 0 &&
       Boolean(documentSourcesHtml);
-    if (!hasDocSources || effectiveReportMode === "screening_v1") {
+    const keepDocumentSourcesSection = resolveDocumentSourcesSectionVisibility({
+      sectionEligibility: earlySectionEligibilityStateForRender,
+      sourceReconciliationState,
+      effectiveReportMode,
+      hasDocSources,
+    });
+    const fallbackDocumentSourcesHtml = keepDocumentSourcesSection
+      ? '<p class="small">Document source transparency is required for this report scope. Structured source-treatment details were not available at render time.</p>'
+      : "";
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{DOCUMENT_SOURCES_TABLE}}",
+      hasDocSources ? documentSourcesHtml : fallbackDocumentSourcesHtml
+    );
+    if (!keepDocumentSourcesSection) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_DOC_SOURCES");
     }
     // Exec summary always shows because both modes have computed KPI grid and verdict block
@@ -10632,6 +10685,7 @@ export const __test__ = {
   shouldRenderCanonicalSection,
   resolveMarketContextSectionVisibility,
   resolveFinalRecommendationSectionVisibility,
+  resolveDocumentSourcesSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
   buildDeliveryResponseCompatibilityAliases,
   resolveReportTypeAndTier,
