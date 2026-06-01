@@ -1190,12 +1190,29 @@ export function buildReportContractQa({
     /\binternal artifact\b/i.test(text) ||
     /\bworker_event\b/i.test(text) ||
     /\bdelivery_gate\b/i.test(text);
-  const hasScreeningLeakInUnderwriting =
-    !reportTypeIsScreeningReport &&
-    /\b(?:Screening|Insufficient Data)\b/i.test(text);
-  const hasUnderwritingLeakInScreening =
-    reportTypeIsScreeningReport &&
-    /\b(?:Debt Structure|Current Debt Coverage|Refinance Stability Classification|Discounted Cash Flow|DCF|Deal Scorecard|Advanced Modeling|Final Recommendation|Renovation Strategy)\b/i.test(text);
+  const screeningLeakPatternsForUnderwriting = [
+    /\bDocument-Backed Screening Outputs\b/i,
+    /\bInvestorIQ screening outputs are document-backed\b/i,
+    /\bUnit-Level Rent Positioning\b/i,
+  ];
+  const underwritingLeakPatternsForScreening = [
+    /\bDebt Structure\b/i,
+    /\bCurrent Debt Coverage\b/i,
+    /\bRefinance Stability Classification\b/i,
+    /\bDiscounted Cash Flow\b/i,
+    /\bDeal Scorecard\b/i,
+    /\bAdvanced Modeling\b/i,
+    /\bFinal Recommendation\b/i,
+    /\bRenovation Strategy\b/i,
+  ];
+  const screeningLeakExcerptInUnderwriting = !reportTypeIsScreeningReport
+    ? firstPatternExcerpt(text, screeningLeakPatternsForUnderwriting)
+    : "";
+  const underwritingLeakExcerptInScreening = reportTypeIsScreeningReport
+    ? firstPatternExcerpt(text, underwritingLeakPatternsForScreening)
+    : "";
+  const hasScreeningLeakInUnderwriting = !reportTypeIsScreeningReport && Boolean(screeningLeakExcerptInUnderwriting);
+  const hasUnderwritingLeakInScreening = reportTypeIsScreeningReport && Boolean(underwritingLeakExcerptInScreening);
   const hasComputedCurrentDebtState = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase() === "computed";
   const hasCanonicalCurrentDebtNotComputed =
     String(currentDebtState?.current_debt_dscr_status || "").trim().length > 0 &&
@@ -1814,7 +1831,12 @@ export function buildReportContractQa({
       code: "REPORT_TYPE_SECTION_LEAK",
       severity: "high",
       message: "Rendered report contains section labels that conflict with the report type.",
-      evidence: { report_type: reportTypeLabel, excerpt: leakProbeExcerpt },
+      evidence: {
+        report_type: reportTypeLabel,
+        excerpt: hasScreeningLeakInUnderwriting
+          ? screeningLeakExcerptInUnderwriting
+          : underwritingLeakExcerptInScreening || leakProbeExcerpt,
+      },
     });
   }
   const supportDocPropertyTaxLeakMatch = /(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,180}(?:property tax support|structured property tax input|modeled property tax input)|(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,180}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)/i.exec(text);

@@ -1,3 +1,89 @@
+# June 1/2, 2026 Addendum - Publish-or-Fail Doctrine Locked / Admin Review Removed as Customer Outcome
+
+## Current controlling doctrine - supersedes all older contradictory implementation notes
+
+InvestorIQ has **no normal customer-facing admin-review outcome**.
+
+The only ordinary customer outcomes are:
+
+1. **PUBLISH**
+   - Required core T12 + Rent Roll evidence is usable enough to produce a defensible, document-driven report.
+   - Any non-core, optional, support-document, section-specific, wording, rendering, report-surface, DocRaptor/test-mode, OpenAI/advisory, acquisition-support, current-debt, property-tax, market-survey, appraisal, environmental, zoning, renovation/CapEx, or public-copy issue must be handled by deterministic self-heal, sanitize, collapse, omit, qualify, disclose, or render Not Assessed where appropriate.
+   - These issues may emit internal diagnostics and may block external/public/sample/high-value distribution, but they must not create ordinary customer limbo.
+
+2. **FAIL CLOSED + RESTORE CREDIT**
+   - Only when required core T12 or Rent Roll evidence is missing, unreadable, unparseable, materially invalid, incoherent, contradictory beyond defensible use, or otherwise so unusable that producing any report would be dishonest.
+   - True runtime/system/storage failure that prevents generation may also fail closed with credit restored.
+
+There is no third ordinary outcome.
+
+## Explicitly superseded / removed from active doctrine
+
+Any older language in this file or the codebase implying ordinary customer outcomes such as:
+
+- `admin_review_required`
+- `under_review`
+- "admin-held publishing"
+- "send to review"
+- "manual/operator-reviewed customer delivery"
+- "24 business hours review"
+- customer-facing "under internal review"
+
+is superseded and must be treated as legacy/internal/emergency-only terminology, not a normal product state.
+
+If code still emits those states for ordinary customer jobs, that code is out of alignment with doctrine and must be audited/demoted.
+
+## Required system behavior by issue class
+
+- Report-type wording leak, stale heading, wrong methodology label, public copy issue:
+  - self-heal/sanitize/replace/collapse the affected text or block, then publish if core docs are usable.
+  - Do not fail the whole report.
+  - Do not send to review.
+
+- Unsupported optional/support document:
+  - omit, list as unmodeled context, or qualify affected section.
+  - Do not block whole-report publication.
+
+- Missing or ambiguous acquisition/proposed-financing support:
+  - omit/qualify acquisition financing rows or show only verified fields.
+  - Keep acquisition/proposed financing separate from current debt.
+  - Do not block whole-report publication.
+
+- Missing or ambiguous current-debt support:
+  - mark current debt/refi/DSCR sections Not Assessed or collapse/omit them.
+  - Do not block whole-report publication.
+
+- Property-tax support missing/unverified:
+  - omit/qualify property-tax modeling.
+  - Do not allow unrelated support docs to become property-tax authority.
+  - Do not block whole-report publication.
+
+- DocRaptor test mode:
+  - ordinary customer delivery blocker: no.
+  - external/public/sample/high-value distribution blocker: yes until production mode is verified.
+
+- OpenAI quota/advisory/QA failure:
+  - ordinary customer delivery blocker: no, when deterministic core artifacts are valid.
+  - diagnostic/platform-infrastructure issue only.
+
+## Immediate architecture priority
+
+Before more live Underwriting testing, run an **Admin Review Outcome Demotion Audit** across worker, delivery gate, QA/action-plan, report-contract QA, generator, Dashboard, and AdminDashboard paths.
+
+Goal:
+- find every remaining path that can turn an ordinary customer report into `admin_review_required`, `under_review`, admin-held, or review-limbo;
+- classify whether it should become publish, self-heal/collapse/omit/qualify then publish, fail-closed + credit restored, or internal diagnostic only;
+- patch in small slices until ordinary customer flow obeys Publish-or-Fail doctrine.
+
+## Guardrail
+
+Do not loosen QA to make unsafe reports publish. Instead:
+- prevent unsafe surfaces before render,
+- self-heal deterministic surface issues,
+- collapse/omit/qualify unsupported sections,
+- fail closed only for unusable core T12/Rent Roll or true generation failure.
+
+---
 ﻿# June 1, 2026 Addendum - Clean Screening Regression Root Fixes / Parser Fallback / Delivery Gate Correction / Summary-Only Surface Patch / Core Parser Rejection Audit Installed
 
 ## Current controlling status
@@ -145,7 +231,7 @@
   - `customerDeliveryAllowed === true`
 - Typed outcomes remain preserved:
   - `user_needs_documents` fail-closed/restore path
-  - `admin_review_required` held publishing/admin-held path
+  - Superseded legacy note: `admin_review_required` / admin-held publishing must not remain an ordinary customer outcome; remaining paths must be demoted to publish/self-heal/collapse/fail-closed according to Publish-or-Fail doctrine
 - Fail-closed and credit-restore safety behavior remains preserved.
 
 ## Post-patch audit verdict
@@ -702,7 +788,7 @@ Do not start Batch 4 until the Batch 3 ledger update is done.
   - `$499` Screening-only likely risky unless repositioned/bundled.
   - Full Underwriting `$1,499` remains aspirational until public self-serve Full Underwriting is certified.
 - Full Underwriting public self-serve remains paused.
-- Full Underwriting may remain controlled beta / invite-only / operator-reviewed while architecture consolidation proceeds.
+- Full Underwriting may remain controlled beta / not public self-serve while architecture consolidation proceeds; this must not create an ordinary customer admin-review/manual-review outcome.
 - Do not change `src/pages/Pricing.jsx` from this documentation update alone.
 
 ## F. Superseded older next-step notes
@@ -751,7 +837,7 @@ Do not start Batch 4 until the Batch 3 ledger update is done.
 4. RF-2 complete/committed (test-only)
 - Worker/publication lifecycle publication-guard smoke expanded.
 - Publish path now contract-locked to valid `.pdf` storage path + non-empty report type + deliverable gate + `holdDelivery=false`.
-- Missing/invalid path, missing report type, `admin_review_required`, `user_needs_documents`, and `holdDelivery=true` are contract-locked as blocked-before-publication.
+- Historical RF-2 note superseded in part: missing/invalid path and `user_needs_documents` remain blocked/fail-closed paths; legacy `admin_review_required` must be audited/demoted and must not remain an ordinary customer outcome.
 - Worker source-contract assertions confirm typed-gate outcomes do not proceed into published transition and restore-entitlement routing remains centralized.
 - Direct end-to-end Supabase credit-restoration replay intentionally deferred (would require broad mocking/refactor).
 
@@ -904,7 +990,7 @@ Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and
 - The issue is not one remaining bug; it is fragmented underwriting truth architecture.
 - Full Underwriting is not public self-serve launch-ready.
 - Screening remains the safer public launch path.
-- Full Underwriting should be beta/invite-only/operator-reviewed until canonical-state consolidation is completed.
+- Full Underwriting should be beta/invite-only/not public self-serve until canonical-state consolidation is completed; this must not create an ordinary customer admin-review/manual-review outcome.
 
 ## B. Safe UI/customer/admin patches completed
 
@@ -917,8 +1003,8 @@ Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and
   - no backend/API/doctrine/gating changes
 
 - Dashboard.jsx customer launch copy cleanup completed/pass:
-  - internal status labels collapsed to customer labels: Preparing, Ready, Publication held
-  - failed-job header changed from raw FAILED / ERROR_CODE style to Publication held - Screening/Underwriting
+  - historical note: internal status labels were collapsed to customer labels; current doctrine should avoid customer review-limbo language and use Ready or Fail Closed/Unable to Publish as appropriate
+  - historical note: failed-job header cleanup reduced raw error-code leakage; current doctrine should use fail-closed/credit-restored copy, not review-limbo copy
   - muted reference code remains for support
   - upload overlay changed to Submitting your documents
   - checkout toast changed to Your report credit has been added
@@ -976,7 +1062,7 @@ Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and
   - patch this exact visible label
   - add another post-render QA detector as primary fix
 - Screening-first public launch is the recommended path.
-- Full Underwriting may remain visible only as invite-only/beta/operator-reviewed or unavailable for self-serve until consolidation.
+- Full Underwriting may remain visible only as invite-only/beta/not public self-serve or unavailable for self-serve until consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
 - Public sample assets should use Screening first unless/until Full Underwriting passes sample-grade QA.
 - Do not flip DocRaptor production mode or create underwriting sample assets from flawed PDFs.
 
@@ -1029,7 +1115,7 @@ Current controlling status:
 - May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
 - Full Underwriting is not public self-serve launch-ready.
 - Screening is the recommended public launch path.
-- Full Underwriting should be invite-only/beta/operator-reviewed until canonical-state consolidation.
+- Full Underwriting should be invite-only/beta/not public self-serve until canonical-state consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
 - AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
 - Customer launch audit found missing sample assets as the remaining major public launch blocker.
 - Do not create underwriting sample assets from flawed underwriting PDFs.
@@ -1113,7 +1199,7 @@ Outcome: AdminDashboard.jsx frontend-only restructure:
 - "Admin Review / Fix Queue" renamed to "Triage Workspace"
 - rows bucketed into Published With Diagnostics, Fail-Closed Core, and Operational Health
 - delivery_gate_status underlying values unchanged
-- "admin_review_required" display renamed to "Fail-Closed Core" only in UI
+- Historical UI note superseded in part: legacy `admin_review_required` display work must not imply a normal customer review state; current doctrine requires Publish or Fail Closed + Restore Credit.
 - operational recovery controls remain scoped
 - emergency override controls remain locked and reframed as emergency-only, not report approval
 - no backend/API/schema/customer-dashboard/package/env changes
@@ -1609,7 +1695,7 @@ Current controlling status:
 - May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
 - Full Underwriting is not public self-serve launch-ready.
 - Screening is the recommended public launch path.
-- Full Underwriting should be invite-only/beta/operator-reviewed until canonical-state consolidation.
+- Full Underwriting should be invite-only/beta/not public self-serve until canonical-state consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
 - AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
 - Customer launch audit found missing sample assets as the remaining major public launch blocker.
 - Do not create underwriting sample assets from flawed underwriting PDFs.

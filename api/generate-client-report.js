@@ -6171,14 +6171,21 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(
       finalHtml,
       "{{ESTIMATES_DISCLOSURE}}",
-      "InvestorIQ screening outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
+      effectiveReportMode === "screening_v1"
+        ? "InvestorIQ screening outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
+        : "InvestorIQ underwriting outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
     );
     finalHtml = replaceAll(
       finalHtml,
       "{{METHODOLOGY_NOTES}}",
       "Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing source data is not gap-filled."
     );
-    finalHtml = finalHtml.replace(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/g, "<h3>Document-Backed Screening Outputs</h3>");
+    finalHtml = finalHtml.replace(
+      /<h3>\s*InvestorIQ Estimates\s*<\/h3>/g,
+      effectiveReportMode === "screening_v1"
+        ? "<h3>Document-Backed Screening Outputs</h3>"
+        : "<h3>Document-Backed Underwriting Outputs</h3>"
+    );
     finalHtml = replaceAll(
       finalHtml,
       "{{LIMITATIONS_NOTES}}",

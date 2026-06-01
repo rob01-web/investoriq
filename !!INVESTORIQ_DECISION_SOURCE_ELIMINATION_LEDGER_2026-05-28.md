@@ -40,6 +40,52 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 
 ## Section 2A - Today DS Status Update (May 28, 2026)
 
+### June 1, 2026 Addendum - Clean Screening 7 Green Checkpoint / Live Validation Update
+- Final Motherload Screening 7 (CLEAN) rerun passed and published.
+- Clean Screening is GREEN for ordinary customer delivery.
+- Report Contract QA passed with zero violations.
+
+#### Live validation checkpoints recorded
+1. Summary-only rent-roll surface behavior is validated live.
+- `Summary Rent Positioning` no longer duplicates.
+- Implied-average labels remain for summary-only mode.
+- No weighted/rent-band row-level framing leaks in summary-only mode.
+- `InvestorIQ estimates are document-backed...` wording is removed.
+
+2. Deterministic text-summary rent-roll fallback validated live.
+- `method: deterministic_text_summary`
+- `total_units: 48`, `occupied_units: 46`, `vacant_units: 2`, `occupancy: 95.83%`
+- `in_place_rent_annual: 1,036,800`, `market_rent_annual: 1,137,600`
+- `ai_assisted: false`
+
+3. T12 parsing validated live.
+- `effective_gross_income: 1,036,800`
+- `total_operating_expenses: 425,000`
+- `net_operating_income: 611,800`
+- `core_t12_validation.ok: true`
+
+4. OpenAI/provider diagnostics taxonomy validated live.
+- 429 quota failures normalize to `provider_error_class: insufficient_quota`.
+- Validator rollup maps `insufficient_quota` under `platform_infrastructure_issue_codes`.
+- Advisory/recovery provider failure does not block deterministic customer delivery when required core deterministic artifacts validate.
+
+5. Delivery/readiness doctrine status unchanged.
+- Customer delivery remains allowed for deliverable reports.
+- DocRaptor test mode remains the current external/public/Ken/sample blocker only.
+- `public_sample_ready` and `high_value_outreach_ready` remain blocked until DocRaptor production mode is enabled and verified.
+
+#### DS sub-scope status notes (no broad over-closure)
+- `DS-067`: deterministic rent-roll text-summary fallback sub-scope validated live; broader DS-067 remains `PARTIAL`.
+- `DS-064`: Screening summary-only rent-roll render/surface sub-scope validated live; broader DS-064 remains `PARTIAL`.
+- Delivery/readiness DocRaptor distribution-only behavior validated live as targeted sub-scope; broader delivery clusters remain governed by row closure standards.
+- OpenAI/provider diagnostics taxonomy validated live as diagnostic/platform-infrastructure sub-scope; no broader DS-068/DS-069 over-closure implied.
+
+#### Continuation point
+1. Proceed to Messy Screening controlled live regression.
+2. Handle DocRaptor production/public-sample config before external distribution readiness claims.
+
+---
+
 ### June 1, 2026 Addendum - Clean Screening Regression Root Fixes / Parser Fallback / Delivery Gate Correction / Summary-Only Surface Patch / Core Parser Rejection Audit Installed
 - Post-G8 controlled live regression surfaced a real parser->delivery->surface chain.
 - Clean Screening initially failed closed because narrative rent-roll summary totals were usable but not accepted by deterministic non-tabular path; AI recovery returned non-OK/429.

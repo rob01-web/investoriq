@@ -3232,6 +3232,59 @@ assert.equal(
   ),
   true
 );
+
+const underwritingNeutralMethodologyNoLeak = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h3>Document-Backed Underwriting Outputs</h3>",
+    "<p>InvestorIQ underwriting outputs are document-backed and framework-constrained.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  underwritingNeutralMethodologyNoLeak.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  false
+);
+
+const underwritingScreeningLeakDetected = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h3>Document-Backed Screening Outputs</h3>",
+    "<p>InvestorIQ screening outputs are document-backed and framework-constrained.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  underwritingScreeningLeakDetected.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  true
+);
+const underwritingScreeningLeakViolation = underwritingScreeningLeakDetected.violations.find(
+  (v) => v.code === "REPORT_TYPE_SECTION_LEAK"
+);
+assert.equal(
+  typeof underwritingScreeningLeakViolation?.evidence?.excerpt === "string" &&
+    underwritingScreeningLeakViolation.evidence.excerpt.trim().length > 0,
+  true
+);
+
+const screeningWordingNoFalseLeak = buildReportContractQa({
+  reportType: "screening",
+  reportTier: 1,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h3>Document-Backed Screening Outputs</h3>",
+    "<p>InvestorIQ screening outputs are document-backed and framework-constrained.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  screeningWordingNoFalseLeak.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  false
+);
 const explicitDisplayVerdictCapStillWinsWithoutProvenance = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
