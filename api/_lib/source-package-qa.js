@@ -5,6 +5,7 @@ import {
   isAllowedMethodologyOnlyText,
   isFilenameHintOnlyText,
 } from "./investoriq-qa-doctrine.js";
+import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
 import {
   buildAcquisitionAssumptionState,
   buildSupportDocTaxonomyState,
@@ -481,8 +482,15 @@ async function callSourcePackageReviewModel({ apiKey, model, userContent, timeou
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
+      const provider = classifyOpenAiError(response.status, text, null, response.headers);
       const err = new Error(`source package review request failed (${response.status}): ${text.slice(0, 500)}`);
       err.status = response.status;
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
       throw err;
     }
 
@@ -496,6 +504,17 @@ async function callSourcePackageReviewModel({ apiKey, model, userContent, timeou
       model: data?.model || model,
       usage: data?.usage || null,
     };
+  } catch (err) {
+    if (!err?.provider_error_class) {
+      const provider = classifyOpenAiError(null, null, err?.name || "exception", null);
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }

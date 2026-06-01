@@ -30,6 +30,7 @@ const artifacts = [
       validation_diagnostics: {
         validation_reasons: ["row_evidence_unmatched"],
       },
+      provider_error_class: "insufficient_quota",
     },
   },
   {
@@ -73,6 +74,7 @@ assert.equal(rollup.job_id, "job_123");
 assert.equal(rollup.report_type, "underwriting");
 assert.equal(rollup.reason_code_counts.vague_rent_roll_no_reliable_totals, 1);
 assert.equal(rollup.reason_code_counts.row_evidence_unmatched, 1);
+assert.equal(rollup.reason_code_counts.insufficient_quota, 1);
 assert.equal(rollup.reason_code_counts.DOCRAPTOR_NOT_PRODUCTION_MODE, 1);
 assert.equal(rollup.reason_code_counts.DOCUMENT_FINANCIAL_SCALE_MISMATCH, 1);
 assert.equal(rollup.derived_field_counts.net_operating_income_derived_from_egi_minus_opex, 1);
@@ -80,6 +82,10 @@ assert.equal(rollup.accepted_validators.includes("t12_parsed"), true);
 assert.equal(rollup.rejected_validators.includes("derived_signal_artifact"), false);
 assert.equal(
   rollup.parser_validator_issue_codes.includes("row_evidence_unmatched"),
+  true
+);
+assert.equal(
+  rollup.platform_infrastructure_issue_codes.includes("insufficient_quota"),
   true
 );
 assert.equal(

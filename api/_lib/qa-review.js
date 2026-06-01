@@ -3,6 +3,7 @@ import {
   INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   isAllowedMethodologyOnlyText,
 } from "./investoriq-qa-doctrine.js";
+import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
 
 const REVIEW_VERSION = "2026.05.05.1";
 // Fallback follows the existing project convention used by extraction-recovery helpers.
@@ -237,8 +238,15 @@ async function callReviewModel({ apiKey, model, userContent, timeoutMs = DEFAULT
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
+      const provider = classifyOpenAiError(response.status, text, null, response.headers);
       const err = new Error(`review request failed (${response.status}): ${text.slice(0, 500)}`);
       err.status = response.status;
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
       throw err;
     }
 
@@ -262,6 +270,17 @@ async function callReviewModel({ apiKey, model, userContent, timeoutMs = DEFAULT
       model: data?.model || model,
       usage: data?.usage || null,
     };
+  } catch (err) {
+    if (!err?.provider_error_class) {
+      const provider = classifyOpenAiError(null, null, err?.name || "exception", null);
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }

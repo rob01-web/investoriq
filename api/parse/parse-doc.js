@@ -66,6 +66,15 @@ const writeAiRentRollRecoveryDiagnostic = async ({
     openai_response_status: Number.isFinite(diagnostics.openai_response_status)
       ? diagnostics.openai_response_status
       : null,
+    provider_error_class: diagnostics.provider_error_class || null,
+    provider_error_code: diagnostics.provider_error_code || null,
+    provider_error_type: diagnostics.provider_error_type || null,
+    provider_error_message: diagnostics.provider_error_message || null,
+    provider_response_status: Number.isFinite(diagnostics.provider_response_status)
+      ? diagnostics.provider_response_status
+      : null,
+    provider_request_id: diagnostics.provider_request_id || null,
+    provider_error_body: diagnostics.provider_error_body || null,
     json_parse_success:
       typeof diagnostics.json_parse_success === 'boolean' ? diagnostics.json_parse_success : null,
     candidate_present: diagnostics.candidate_present === true,
@@ -123,6 +132,15 @@ const writeAiT12RecoveryDiagnostic = async ({
     openai_response_status: Number.isFinite(diagnostics.openai_response_status)
       ? diagnostics.openai_response_status
       : null,
+    provider_error_class: diagnostics.provider_error_class || null,
+    provider_error_code: diagnostics.provider_error_code || null,
+    provider_error_type: diagnostics.provider_error_type || null,
+    provider_error_message: diagnostics.provider_error_message || null,
+    provider_response_status: Number.isFinite(diagnostics.provider_response_status)
+      ? diagnostics.provider_response_status
+      : null,
+    provider_request_id: diagnostics.provider_request_id || null,
+    provider_error_body: diagnostics.provider_error_body || null,
     json_parse_success:
       typeof diagnostics.json_parse_success === 'boolean' ? diagnostics.json_parse_success : null,
     candidate_present: diagnostics.candidate_present === true,
@@ -190,6 +208,15 @@ const writeAiSupportDocRecoveryDiagnostic = async ({
     openai_response_status: Number.isFinite(diagnostics.openai_response_status)
       ? diagnostics.openai_response_status
       : null,
+    provider_error_class: diagnostics.provider_error_class || null,
+    provider_error_code: diagnostics.provider_error_code || null,
+    provider_error_type: diagnostics.provider_error_type || null,
+    provider_error_message: diagnostics.provider_error_message || null,
+    provider_response_status: Number.isFinite(diagnostics.provider_response_status)
+      ? diagnostics.provider_response_status
+      : null,
+    provider_request_id: diagnostics.provider_request_id || null,
+    provider_error_body: diagnostics.provider_error_body || null,
     openai_error_message: diagnostics.openai_error_message || null,
     openai_error_body: diagnostics.openai_error_body || null,
     candidate_present: diagnostics.candidate_present === true,

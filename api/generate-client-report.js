@@ -10236,6 +10236,16 @@ try {
           no_public_surface: true,
           error: err?.message || String(err),
           error_code: err?.code || null,
+          provider_error_class: err?.provider_error_class || null,
+          provider_error_code: err?.provider_error_code || null,
+          provider_error_type: err?.provider_error_type || null,
+          provider_error_message: err?.provider_error_message || null,
+          provider_response_status: Number.isFinite(err?.provider_response_status)
+            ? err.provider_response_status
+            : Number.isFinite(err?.status)
+            ? err.status
+            : null,
+          provider_request_id: err?.provider_request_id || null,
           report_type: reportType,
           report_tier: reportTier,
           html_length: qaHtml.length,
@@ -10299,6 +10309,16 @@ try {
           no_public_surface: true,
           error: err?.message || String(err),
           error_code: err?.code || null,
+          provider_error_class: err?.provider_error_class || null,
+          provider_error_code: err?.provider_error_code || null,
+          provider_error_type: err?.provider_error_type || null,
+          provider_error_message: err?.provider_error_message || null,
+          provider_response_status: Number.isFinite(err?.provider_response_status)
+            ? err.provider_response_status
+            : Number.isFinite(err?.status)
+            ? err.status
+            : null,
+          provider_request_id: err?.provider_request_id || null,
           report_type: reportType,
           report_tier: reportTier,
           timestamp: new Date().toISOString(),
@@ -10390,6 +10410,16 @@ try {
           no_public_surface: true,
           error: err?.message || String(err),
           error_code: err?.code || null,
+          provider_error_class: err?.provider_error_class || null,
+          provider_error_code: err?.provider_error_code || null,
+          provider_error_type: err?.provider_error_type || null,
+          provider_error_message: err?.provider_error_message || null,
+          provider_response_status: Number.isFinite(err?.provider_response_status)
+            ? err.provider_response_status
+            : Number.isFinite(err?.status)
+            ? err.status
+            : null,
+          provider_request_id: err?.provider_request_id || null,
           report_type: reportType,
           report_tier: reportTier,
           timestamp: new Date().toISOString(),

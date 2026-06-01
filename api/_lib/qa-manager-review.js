@@ -3,6 +3,7 @@ import {
   INVESTORIQ_INSTITUTIONAL_REPORT_QA_CHECKLIST,
   containsProhibitedPublicLanguage,
 } from "./investoriq-qa-doctrine.js";
+import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
 import { buildAcquisitionAssumptionState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
 
 const QA_MANAGER_REVIEW_VERSION = "2026.05.07.1";
@@ -413,8 +414,15 @@ async function callManagerModel({ apiKey, model, timeoutMs, userContent }) {
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
+      const provider = classifyOpenAiError(response.status, text, null, response.headers);
       const err = new Error(`qa manager review request failed (${response.status}): ${text.slice(0, 500)}`);
       err.status = response.status;
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
       throw err;
     }
 
@@ -428,6 +436,17 @@ async function callManagerModel({ apiKey, model, timeoutMs, userContent }) {
       model: data?.model || model,
       usage: data?.usage || null,
     };
+  } catch (err) {
+    if (!err?.provider_error_class) {
+      const provider = classifyOpenAiError(null, null, err?.name || "exception", null);
+      err.provider_error_class = provider.provider_error_class;
+      err.provider_error_code = provider.provider_error_code;
+      err.provider_error_type = provider.provider_error_type;
+      err.provider_error_message = provider.provider_error_message;
+      err.provider_response_status = provider.provider_response_status;
+      err.provider_request_id = provider.provider_request_id;
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
