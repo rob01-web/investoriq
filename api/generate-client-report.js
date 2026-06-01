@@ -4974,6 +4974,10 @@ function buildScreeningRentRollDistributionHtml({
       : null;
   if (!source) return "";
   if (isPartialRentRollSample) return "";
+  const payloadUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : [];
+  const payloadUnitMix = Array.isArray(rentRollPayload?.unit_mix) ? rentRollPayload.unit_mix : [];
+  const computedUnitMix = Array.isArray(computedRentRoll?.unit_mix) ? computedRentRoll.unit_mix : [];
+  const hasRowLevelSupport = payloadUnits.length > 0 || payloadUnitMix.length > 0 || computedUnitMix.length > 0;
   const canonicalAnnualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
   const totalUnits = coerceNumber(source.total_units);
   const occupiedUnits = coerceNumber(source.occupied_units);
@@ -5056,14 +5060,14 @@ function buildScreeningRentRollDistributionHtml({
   }
   if (Number.isFinite(weightedInPlace)) {
     metricsRows.push(
-      `<tr><td>Weighted Avg In-Place Rent</td><td>${formatCurrency(
+      `<tr><td>${hasRowLevelSupport ? "Weighted Avg In-Place Rent" : "Implied Avg In-Place Rent"}</td><td>${formatCurrency(
         weightedInPlace
       )}</td></tr>`
     );
   }
   if (Number.isFinite(weightedMarket)) {
     metricsRows.push(
-      `<tr><td>Weighted Avg Market Rent</td><td>${formatCurrency(
+      `<tr><td>${hasRowLevelSupport ? "Weighted Avg Market Rent" : "Implied Avg Market Rent"}</td><td>${formatCurrency(
         weightedMarket
       )}</td></tr>`
     );
@@ -5093,6 +5097,18 @@ function buildScreeningRentRollDistributionHtml({
       `<tr><td>Annual Market Rent (Total)</td><td>${formatCurrency(
         totalMarketAnnual
       )}</td></tr>`
+    );
+  }
+  const totalInPlaceMonthly = Number.isFinite(totalInPlaceAnnual) ? totalInPlaceAnnual / 12 : null;
+  const totalMarketMonthly = Number.isFinite(totalMarketAnnual) ? totalMarketAnnual / 12 : null;
+  if (Number.isFinite(totalInPlaceMonthly)) {
+    metricsRows.push(
+      `<tr><td>Monthly In-Place Rent (Total)</td><td>${formatCurrency(totalInPlaceMonthly)}</td></tr>`
+    );
+  }
+  if (Number.isFinite(totalMarketMonthly)) {
+    metricsRows.push(
+      `<tr><td>Monthly Market Rent (Total)</td><td>${formatCurrency(totalMarketMonthly)}</td></tr>`
     );
   }
   const rentBandRows = unitMix
@@ -5151,7 +5167,7 @@ function buildScreeningRentRollDistributionHtml({
           ""
         )}</tbody></table>`
       : "";
-  const bandsHtml = rentBandRows
+  const bandsHtml = rentBandRows && hasRowLevelSupport
     ? `<p class="subsection-title" style="margin-top:6px;">Rent Bands (In-Place)</p><table><thead><tr><th>Unit Type</th><th>Units</th><th>Avg In-Place</th><th>Avg Market</th><th>Gap ($)</th><th>Gap (%)</th></tr></thead><tbody>${rentBandRows}</tbody></table>`
     : "";
   return `<div class="card no-break">${metricsHtml}${bandsHtml}</div>`;
@@ -6075,6 +6091,18 @@ export default async function handler(req, res) {
             targetRent: row.market_rent,
           }))
         : null;
+    const payloadUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : [];
+    const payloadUnitMix = Array.isArray(rentRollPayload?.unit_mix) ? rentRollPayload.unit_mix : [];
+    const computedUnitMix = Array.isArray(computedRentRoll?.unit_mix) ? computedRentRoll.unit_mix : [];
+    const hasRentRollRowLevelSupport =
+      payloadUnits.length > 0 || payloadUnitMix.length > 0 || computedUnitMix.length > 0;
+    const summaryTotals = rentRollPayload?.totals && typeof rentRollPayload.totals === "object"
+      ? rentRollPayload.totals
+      : null;
+    const summaryOnlyRentRollSurface =
+      hasRentRollRowLevelSupport === false &&
+      Number.isFinite(coerceNumber(summaryTotals?.in_place_rent_annual ?? summaryTotals?.in_place_rent_monthly)) &&
+      Number.isFinite(coerceNumber(summaryTotals?.market_rent_annual ?? summaryTotals?.market_rent_monthly));
     // 2. Load the HTML template (SACRED MASTER COPY)
     const templatePath = path.join(__dirname, "report-template-runtime.html");
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
@@ -6150,6 +6178,7 @@ export default async function handler(req, res) {
       "{{METHODOLOGY_NOTES}}",
       "Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing source data is not gap-filled."
     );
+    finalHtml = finalHtml.replace(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/g, "<h3>Document-Backed Screening Outputs</h3>");
     finalHtml = replaceAll(
       finalHtml,
       "{{LIMITATIONS_NOTES}}",
@@ -6166,14 +6195,18 @@ finalHtml = replaceAll(
   finalHtml,
   "{{UNIT_POSITIONING_SECTION_TITLE}}",
   effectiveReportMode === "screening_v1"
-    ? "Unit-Level Rent Positioning"
+    ? summaryOnlyRentRollSurface
+      ? "Summary Rent Positioning"
+      : "Unit-Level Rent Positioning"
     : "Unit-Level Rent Positioning & Value Sensitivity"
 );
 finalHtml = replaceAll(
   finalHtml,
   "{{UNIT_POSITIONING_SECTION_SUBTITLE}}",
   effectiveReportMode === "screening_v1"
-    ? "Market-rent gap based on uploaded rent roll"
+    ? summaryOnlyRentRollSurface
+      ? "Rent positioning based on verified rent-roll summary totals"
+      : "Market-rent gap based on uploaded rent roll"
     : "Market-rent gap and implied value sensitivity"
 );
 if (effectiveReportMode === "screening_v1") {
@@ -7625,6 +7658,12 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
+    if (effectiveReportMode === "screening_v1" && summaryOnlyRentRollSurface) {
+      finalHtml = finalHtml.replace(
+        /<p class="subsection-title">Unit Mix and Rent Positioning<\/p>[\s\S]*?<table class="unit-mix-table">[\s\S]*?<\/table>/,
+        '<p class="subsection-title">Summary Rent Positioning</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Summary totals indicate in-place rent is below documented market rent.</p>'
+      );
+    }
     finalHtml = replaceAll(
       finalHtml,
       "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}",
@@ -7635,7 +7674,7 @@ if (effectiveReportMode === "screening_v1") {
             const annualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
             const annualMarket = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
             if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
-              return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates in-place rents are below market across the current unit mix.</p></div>`;
+              return `<div class="card no-break"><p class="subsection-title">${summaryOnlyRentRollSurface ? "Summary Rent Positioning" : "Rent Positioning Summary"}</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${summaryOnlyRentRollSurface ? "Summary totals indicate in-place rent is below documented market rent." : "Rent roll data indicates in-place rents are below market across the current unit mix."}</p></div>`;
             }
             return "";
           })()
@@ -7777,7 +7816,11 @@ if (effectiveReportMode === "screening_v1") {
             if (noiParts.length > 0) operatingSummaryLines.push(`${noiParts[0].charAt(0).toUpperCase() + noiParts[0].slice(1)}${noiParts.length > 1 ? `, reflecting ${noiParts.slice(1).join(" and ")}` : ""}.`);
           }
           if (Number.isFinite(screeningAvgInPlace) && Number.isFinite(screeningAvgMarket) && screeningAvgInPlace > 0 && screeningAvgMarket > screeningAvgInPlace) {
-            operatingSummaryLines.push("Rent roll data supports below-market in-place rents across the current unit mix.");
+            operatingSummaryLines.push(
+              summaryOnlyRentRollSurface
+                ? "Verified rent-roll summary totals indicate below-market in-place rent levels."
+                : "Rent roll data supports below-market in-place rents across the current unit mix."
+            );
           }
           return operatingSummaryLines.length > 0
             ? `<div class="card no-break"><p class="subsection-title">Operating Profile Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(operatingSummaryLines.join(" "))}</p></div>`

@@ -20,6 +20,8 @@ const { buildReportContractQa } = await import("../../api/_lib/report-contract-q
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
+assert.match(reportSource, /Document-Backed Screening Outputs/);
 const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
 assert.equal(legacyFallbackCallCount, 2);
 assert.match(
@@ -3846,6 +3848,53 @@ const partialPayloadRentRollDistributionHtml = generatorTest.buildScreeningRentR
   formatCurrency,
 });
 assert.equal(partialPayloadRentRollDistributionHtml, "");
+
+const summaryOnlyRentRollDistributionHtml = generatorTest.buildScreeningRentRollDistributionHtml({
+  computedRentRoll: null,
+  rentRollPayload: {
+    method: "deterministic_text_summary",
+    parse_branch: "rent_roll_text_summary_fallback",
+    validated: true,
+    units: [],
+    unit_mix: [],
+    total_units: 48,
+    occupied_units: 46,
+    occupancy: 0.9583,
+    totals: {
+      in_place_rent_monthly: 86400,
+      in_place_rent_annual: 1036800,
+      market_rent_monthly: 94800,
+      market_rent_annual: 1137600,
+      summary_row_detected: true,
+    },
+  },
+  formatCurrency,
+});
+assert.match(summaryOnlyRentRollDistributionHtml, /Implied Avg In-Place Rent/);
+assert.match(summaryOnlyRentRollDistributionHtml, /Implied Avg Market Rent/);
+assert.match(summaryOnlyRentRollDistributionHtml, /Annual In-Place Rent \(Total\).*1,036,800/s);
+assert.match(summaryOnlyRentRollDistributionHtml, /Annual Market Rent \(Total\).*1,137,600/s);
+assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg In-Place Rent"), false);
+assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg Market Rent"), false);
+assert.equal(summaryOnlyRentRollDistributionHtml.includes("Rent Bands (In-Place)"), false);
+
+const rowLevelRentRollDistributionHtml = generatorTest.buildScreeningRentRollDistributionHtml({
+  computedRentRoll: {
+    total_units: 48,
+    unit_mix: [{ unit_type: "1BR", count: 48, current_rent: 1668.75, market_rent: 1888 }],
+    total_in_place_annual: 961200,
+    total_market_annual: 1087488,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    units: [{ unit: "101", in_place_rent: 1600, market_rent: 1850 }],
+    unit_mix: [{ unit_type: "1BR", count: 48, current_rent: 1668.75, market_rent: 1888 }],
+  },
+  formatCurrency,
+});
+assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg In-Place Rent/);
+assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg Market Rent/);
+assert.match(rowLevelRentRollDistributionHtml, /Rent Bands \(In-Place\)/);
 
 const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {
