@@ -2,6 +2,83 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
 
+const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
+const normalizeAuditText = (value) => String(value || '').toLowerCase();
+const hasPattern = (text, pattern) => pattern.test(text);
+
+export const analyzeCoreParserRejectionTextSignals = ({ docType, text, parseError, providerUnavailable = false }) => {
+  const source = normalizeAuditText(text);
+  const normalizedDocType = String(docType || '').toLowerCase();
+  const findings = ['parser_rejection_confirmed'];
+  const signals = {};
+  const hasRepresentativeLanguage =
+    hasPattern(source, /\brepresentative\b|\bsample unit\b|\bunit observation\b|\bunit notes?\b/) ||
+    hasPattern(source, /\bunit\s+\d+\b/);
+  signals.representative_language = hasRepresentativeLanguage;
+
+  if (!source.trim()) {
+    findings.push('insufficient_readable_text');
+  }
+
+  if (providerUnavailable || hasPattern(String(parseError || '').toLowerCase(), /\bopenai_non_ok\b|\b429\b|\b500\b|\b503\b/)) {
+    findings.push('provider_unavailable');
+  }
+
+  if (normalizedDocType === 'rent_roll') {
+    const hasTotalUnits = hasPattern(source, /\btotal\s*units?\b|\bunits?\s*total\b|\bbuilding\s*units?\b/);
+    const hasOccupied = hasPattern(source, /\boccupied\s*units?\b|\boccupied\b/);
+    const hasVacant = hasPattern(source, /\bvacant\s*units?\b|\bvacancy\s*units?\b|\bvacant\b/);
+    const hasOccupancy = hasPattern(source, /\boccupancy\b|\boccupied\s*%\b|\boccupancy\s*%/);
+    const hasInPlaceTotal = hasPattern(source, /\b(in[\s-]?place|current)\b.*\brent\b.*\btotal\b|\bannual\b.*\b(in[\s-]?place|current)\b.*\brent\b/);
+    const hasMarketTotal = hasPattern(source, /\bmarket\b.*\brent\b.*\btotal\b|\bannual\b.*\bmarket\b.*\brent\b/);
+    const hasSummaryControl = hasPattern(source, /\bsummary\b|\bcontrolling\b|\bproperty total\b|\bportfolio total\b|\bacross all\b|\btotal\b/);
+    signals.total_units = hasTotalUnits;
+    signals.occupied_units = hasOccupied;
+    signals.vacant_units = hasVacant;
+    signals.occupancy = hasOccupancy;
+    signals.in_place_total = hasInPlaceTotal;
+    signals.market_total = hasMarketTotal;
+    signals.summary_control_language = hasSummaryControl;
+    const hasCoreSummaryTotals =
+      hasTotalUnits && hasOccupied && hasVacant && hasOccupancy && hasInPlaceTotal && hasMarketTotal && hasSummaryControl;
+    if (hasCoreSummaryTotals) {
+      findings.push('source_text_contains_core_summary_totals');
+      findings.push('parser_missed_usable_core_evidence');
+      findings.push('deterministic_recovery_needed');
+    } else if (hasRepresentativeLanguage) {
+      findings.push('representative_values_confused_with_summary_totals');
+    }
+  }
+
+  if (normalizedDocType === 't12') {
+    const hasGpr = hasPattern(source, /\bgross potential rent\b|\bgpr\b|\bgross rental income\b/);
+    const hasEgi = hasPattern(source, /\beffective gross income\b|\begi\b/);
+    const hasOpex = hasPattern(source, /\boperating expenses?\b|\bopex\b|\btotal expenses?\b/);
+    const hasNoi = hasPattern(source, /\bnet operating income\b|\bnoi\b/);
+    const hasPeriod = hasPattern(source, /\bttm\b|\btrailing\b|\bannual\b|\byear\b|\bperiod\b/);
+    signals.gpr = hasGpr;
+    signals.egi = hasEgi;
+    signals.opex = hasOpex;
+    signals.noi = hasNoi;
+    signals.period_context = hasPeriod;
+    const t12CorePresent = hasGpr && hasEgi && hasOpex && hasNoi;
+    if (t12CorePresent) {
+      findings.push('source_text_contains_core_summary_totals');
+      findings.push('parser_missed_usable_core_evidence');
+      findings.push('deterministic_recovery_needed');
+    }
+  }
+
+  if (!findings.includes('source_text_contains_core_summary_totals') && !findings.includes('insufficient_readable_text')) {
+    findings.push('core_evidence_incoherent');
+  }
+
+  return {
+    findings: [...new Set(findings)],
+    text_signal_snapshot: signals,
+  };
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -74,8 +151,6 @@ export default async function handler(req, res) {
       'pdf_generating',
       'publishing',
     ];
-
-    const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 
     const writeStatusTransitionArtifact = async (jobId, fromStatus, toStatus, meta) => {
       const { error } = await supabaseAdmin.from('analysis_artifacts').insert([
@@ -1662,6 +1737,61 @@ export default async function handler(req, res) {
             const missingStructuredArtifacts = [];
             if (!hasRentRollParsed) missingStructuredArtifacts.push('rent_roll');
             if (!hasT12Parsed) missingStructuredArtifacts.push('t12_or_operating_statement');
+
+            const rejectionAuditDocTypes = [];
+            if (!hasRentRollParsed) rejectionAuditDocTypes.push('rent_roll');
+            if (!hasT12Parsed) rejectionAuditDocTypes.push('t12');
+            const relevantCoreFiles = (jobFiles || []).filter((file) => {
+              const dt = String(file.doc_type || '').toLowerCase();
+              return rejectionAuditDocTypes.includes(dt);
+            });
+            for (const coreFile of relevantCoreFiles) {
+              try {
+                const { data: textArtifact } = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .select('payload')
+                  .eq('job_id', job.id)
+                  .eq('type', 'document_text_extracted')
+                  .eq('payload->>file_id', String(coreFile.id))
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                const extractedText = String(textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '');
+                if (!extractedText.trim()) continue;
+                const parseError = String(coreFile.parse_error || '');
+                const providerUnavailable = /\b429\b|\b500\b|\b503\b|\bopenai_non_ok\b/i.test(parseError);
+                const audit = analyzeCoreParserRejectionTextSignals({
+                  docType: coreFile.doc_type,
+                  text: extractedText,
+                  parseError,
+                  providerUnavailable,
+                });
+                await supabaseAdmin.from('analysis_artifacts').insert([
+                  {
+                    job_id: job.id,
+                    user_id: job.user_id || null,
+                    type: 'core_parser_rejection_audit',
+                    bucket: 'internal',
+                    object_path: `analysis_jobs/${job.id}/core_parser_rejection_audit/${coreFile.id}/${safeTimestamp(nowIso)}.json`,
+                    payload: {
+                      event: 'core_parser_rejection_audit',
+                      file_id: coreFile.id,
+                      doc_type: coreFile.doc_type,
+                      parse_status: coreFile.parse_status || null,
+                      parse_error: parseError || null,
+                      findings: audit.findings,
+                      text_signal_snapshot: audit.text_signal_snapshot,
+                      text_length: extractedText.length,
+                      deterministic_only: true,
+                      ai_used: false,
+                      timestamp: nowIso,
+                    },
+                  },
+                ]);
+              } catch (auditErr) {
+                console.error('Failed to write core_parser_rejection_audit:', auditErr?.message || auditErr);
+              }
+            }
 
             const { data: existingEvent } = await supabaseAdmin
               .from('analysis_artifacts')
