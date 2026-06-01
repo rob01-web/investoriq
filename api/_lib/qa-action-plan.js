@@ -1365,9 +1365,8 @@ function buildPublishEligibilitySummary({
   const customerDeliveryImpact = customerPublishBlockers.length > 0
     ? "block"
     : (sourceReconciliationIsDiscloseOnly || sourceLimitationReasonCodes.length > 0 ? "disclose_only" : "allow");
-  const adminReviewImpact = deliveryGateStatus === "admin_review_required"
-    ? (customerPublishBlockers.length > 0 || systemBugReasonCodes.length > 0 ? "required" : "recommended")
-    : (publicSampleBlockers.length > 0 || highValueOutreachBlockers.length > 0 ? "recommended" : "none");
+  const normalizedDeliveryGateStatus = normalizeCustomerDeliveryGateStatus(deliveryGateStatus);
+  const adminReviewImpact = "none";
   const publicSampleImpact = publicSampleBlockers.length > 0 ? "block_until_review" : "allow";
   const highValueOutreachImpact = highValueOutreachBlockers.length > 0 ? "block_until_review" : "allow";
   const displayDisclosureLevel = customerDeliveryImpact === "disclose_only"
@@ -1375,7 +1374,7 @@ function buildPublishEligibilitySummary({
     : "none";
 
   const customerPublishEligibleComputed = Boolean(
-    deliveryGateStatus === "deliverable" &&
+    normalizedDeliveryGateStatus === "deliverable" &&
     requiredCoreCoverageReady &&
     !sourceNeedsDocs &&
     customerPublishBlockers.length === 0
@@ -1392,7 +1391,7 @@ function buildPublishEligibilitySummary({
   const publishDecisionReason = customerPublishEligibleComputed
     ? "customer_publish_eligible"
     : adminReviewBlockingAction
-    ? `admin_review_required:${reasonCode || adminReviewBlockingAction?.code || customerPublishBlockers[0] || "ADMIN_REVIEW_REQUIRED"}`
+    ? `user_needs_documents:${reasonCode || adminReviewBlockingAction?.code || customerPublishBlockers[0] || "CUSTOMER_DELIVERY_BLOCKED"}`
     : sourceNeedsDocs
     ? `user_needs_documents:${reasonCode || customerPublishBlockers[0] || "SOURCE_DOCUMENT_LIMITATION"}`
     : customerPublishBlockers.length > 0
@@ -1401,16 +1400,35 @@ function buildPublishEligibilitySummary({
     ? "customer_publish_eligible"
     : "customer_publish_not_ready";
   const reportQualityBlockers = customerPublishBlockers;
+  const readinessOverride = resolveCanonicalReadinessOverride({
+    deliveryDecisionState,
+    canonicalDeliveryDecisionState,
+    deliveryGateDecision,
+    delivery_gate_decision,
+  });
+  const canonicalReasonCodeRaw =
+    readinessOverride.normalized?.customer_status_reason_code ||
+    readinessOverride.normalized?.reason_code ||
+    reasonCode ||
+    null;
+  const deprecatedAdminReviewResolution = resolveDeprecatedAdminReviewGateStatus({
+    statusValue: readinessOverride.normalized?.delivery_gate_status || null,
+    reasonCode: canonicalReasonCodeRaw,
+    explicitCoreFailure: !requiredCoreCoverageReady || sourceNeedsDocs,
+  });
   const reportQualityAdvisories = uniqueCodes([
     ...advisoryOnlyFindings,
     ...unclassifiedCustomerBlockersMissingRationale,
     ...optionalSupportingContractAdvisories,
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
+    ...(deprecatedAdminReviewResolution.inject_diagnostic_code
+      ? [deprecatedAdminReviewResolution.inject_diagnostic_code]
+      : []),
   ]);
   // Legacy readiness synthesis. Canonical override may replace these truth fields below.
   const reportPublishableLegacy = Boolean(
-    deliveryGateStatus === "deliverable" &&
+    normalizedDeliveryGateStatus === "deliverable" &&
       requiredCoreCoverageReady &&
       !sourceNeedsDocs &&
       reportQualityBlockers.length === 0
@@ -1427,14 +1445,29 @@ function buildPublishEligibilitySummary({
     highValueOutreachBlockers.length === 0 &&
     highValueOutreachImpact !== "block_until_review"
   );
-  const readinessOverride = resolveCanonicalReadinessOverride({
-    deliveryDecisionState,
-    canonicalDeliveryDecisionState,
-    deliveryGateDecision,
-    delivery_gate_decision,
-  });
-  const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
-  const canonicalCustomerDeliveryAllowed = Boolean(readinessOverride.normalized?.customer_delivery_allowed);
+  const canonicalDeliveryGateStatusRaw = readinessOverride.normalized?.delivery_gate_status || null;
+  const canonicalDeliveryGateStatus = normalizeCustomerDeliveryGateStatus(
+    deprecatedAdminReviewResolution.gate_status || canonicalDeliveryGateStatusRaw
+  );
+  const canonicalHasExplicitCustomerAllowed =
+    readinessOverride.normalized?.customer_delivery_allowed !== undefined &&
+    readinessOverride.normalized?.customer_delivery_allowed !== null;
+  const canonicalCustomerDeliveryAllowed =
+    String(canonicalDeliveryGateStatusRaw || "").toLowerCase() === "admin_review_required"
+      ? (
+        canonicalDeliveryGateStatus === "deliverable" &&
+        requiredCoreCoverageReady &&
+        !sourceNeedsDocs &&
+        customerPublishBlockers.length === 0
+      )
+      : canonicalHasExplicitCustomerAllowed
+        ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
+        : (
+          canonicalDeliveryGateStatus === "deliverable" &&
+          requiredCoreCoverageReady &&
+          !sourceNeedsDocs &&
+          customerPublishBlockers.length === 0
+        );
   const customerPublishEligible = readinessOverride.present
     ? canonicalCustomerDeliveryAllowed
     : customerPublishEligibleLegacy;
@@ -1450,23 +1483,20 @@ function buildPublishEligibilitySummary({
   const highValueOutreachReady = readinessOverride.present && readinessOverride.has_high_value_outreach_ready
     ? Boolean(readinessOverride.normalized?.high_value_outreach_ready)
     : highValueOutreachReadyLegacy;
-  const adminReviewRequired = readinessOverride.present
-    ? canonicalDeliveryGateStatus === "admin_review_required"
-    : deliveryGateStatus === "admin_review_required";
   const userNeedsDocuments = readinessOverride.present
-    ? canonicalDeliveryGateStatus === "user_needs_documents"
-    : deliveryGateStatus === "user_needs_documents";
+    ? normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) === "user_needs_documents"
+    : normalizedDeliveryGateStatus === "user_needs_documents";
   const readinessSource = readinessOverride.present
     ? "canonical_delivery_state"
     : "legacy_publish_eligibility_fallback";
   const readinessFallbackUsed = !readinessOverride.present;
   const publishDecisionReasonFinal = readinessOverride.present
-    ? canonicalDeliveryGateStatus === "deliverable"
+    ? normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) === "deliverable"
       ? "customer_publish_eligible"
-      : `${canonicalDeliveryGateStatus || "delivery_gate_status_unknown"}:${String(
-          readinessOverride.normalized?.customer_status_reason_code ||
+      : `${normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) || "delivery_gate_status_unknown"}:${String(
+          canonicalReasonCodeRaw ||
             reasonCode ||
-            canonicalDeliveryGateStatus ||
+            normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) ||
             "canonical_delivery_gate_state"
         )}`
     : publishDecisionReason;
@@ -1491,7 +1521,9 @@ function buildPublishEligibilitySummary({
     high_value_outreach_blockers: highValueOutreachBlockers,
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
-      final_delivery_status: readinessOverride.present ? (canonicalDeliveryGateStatus || deliveryGateStatus) : deliveryGateStatus,
+      final_delivery_status: readinessOverride.present
+        ? (normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) || normalizedDeliveryGateStatus)
+        : normalizedDeliveryGateStatus,
       report_publishable: reportPublishable,
       report_blocked: !reportPublishable,
       report_quality_blockers: reportQualityBlockers,
@@ -1519,7 +1551,7 @@ function buildPublishEligibilitySummary({
     system_bug_reason_codes: systemBugReasonCodes,
     display_disclosure_level: displayDisclosureLevel,
     owner_areas: ownerAreas,
-    admin_review_required: adminReviewRequired,
+    admin_review_required: false,
     user_needs_documents: userNeedsDocuments,
     publish_decision_reason: publishDecisionReasonFinal,
     legacy_readiness_aliases: {
@@ -1600,6 +1632,71 @@ function isCoreSufficiencyPublishableBucket(bucketValue) {
   );
 }
 
+function normalizeCustomerDeliveryGateStatus(statusValue) {
+  const normalized = String(statusValue || "deliverable").toLowerCase();
+  return normalized;
+}
+
+const DEPRECATED_ADMIN_REVIEW_CORE_FAIL_REASON_PATTERNS = [
+  /missing_required_t12/i,
+  /missing_required_rent_roll/i,
+  /missing_required_source_documents/i,
+  /core_input_verification_inconsistency/i,
+  /rent_roll_unusable/i,
+  /t12_unusable/i,
+  /system_contract_failure/i,
+];
+
+const DEPRECATED_ADMIN_REVIEW_NON_CORE_REASON_PATTERNS = [
+  /report_type_section_leak/i,
+  /rendered_data_not_available_placeholder/i,
+  /deal_scorecard_stale_dscr_placeholder/i,
+  /rendered_placeholder_metric_value/i,
+  /rendered_placeholder_value_leak/i,
+  /internal_rent_roll_total_contradiction/i,
+];
+
+function classifyDeprecatedAdminReviewReason(reasonCode = "") {
+  const reason = String(reasonCode || "").trim();
+  if (!reason) return "unknown";
+  if (DEPRECATED_ADMIN_REVIEW_CORE_FAIL_REASON_PATTERNS.some((pattern) => pattern.test(reason))) {
+    return "core_fail";
+  }
+  if (DEPRECATED_ADMIN_REVIEW_NON_CORE_REASON_PATTERNS.some((pattern) => pattern.test(reason))) {
+    return "non_core_diagnostic";
+  }
+  return "unknown";
+}
+
+function resolveDeprecatedAdminReviewGateStatus({
+  statusValue = "",
+  reasonCode = "",
+  explicitCoreFailure = false,
+} = {}) {
+  const normalized = String(statusValue || "deliverable").toLowerCase();
+  if (normalized !== "admin_review_required") {
+    return {
+      gate_status: normalized,
+      classification: null,
+      inject_diagnostic_code: null,
+    };
+  }
+  const classification = classifyDeprecatedAdminReviewReason(reasonCode);
+  if (classification === "core_fail" || explicitCoreFailure) {
+    return {
+      gate_status: "user_needs_documents",
+      classification,
+      inject_diagnostic_code: null,
+    };
+  }
+  return {
+    gate_status: "deliverable",
+    classification,
+    inject_diagnostic_code:
+      classification === "unknown" ? "DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION" : null,
+  };
+}
+
 function isOptionalSupportingOverblockAction(action, {
   coreSufficiencyPublishable = false,
 } = {}) {
@@ -1661,7 +1758,17 @@ export function buildDeliveryGateDecision({
     deliveryGateDecision,
     delivery_gate_decision,
   });
-  const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
+  const deprecatedAdminReviewResolution = resolveDeprecatedAdminReviewGateStatus({
+    statusValue: readinessOverride.normalized?.delivery_gate_status || null,
+    reasonCode:
+      readinessOverride.normalized?.customer_status_reason_code ||
+      readinessOverride.normalized?.reason_code ||
+      null,
+    explicitCoreFailure: coreInputRequiredCoreDocsMissing || coreInputCustomerFailClosed || coreInputSystemContractFailureTyped,
+  });
+  const canonicalDeliveryGateStatus = normalizeCustomerDeliveryGateStatus(
+    deprecatedAdminReviewResolution.gate_status || readinessOverride.normalized?.delivery_gate_status || null
+  );
   const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
   const sourceLimitations = deterministicFlags.filter((flag) => classifySourceFlagDeliveryImpact(flag));
   const sourceBlockingFlags = deterministicFlags.filter((flag) => {
@@ -1762,7 +1869,15 @@ export function buildDeliveryGateDecision({
       delivery_gate_decision,
       deliveryGateDecision,
     });
-    const canonicalCustomerAllowed = Boolean(readinessOverride.normalized?.customer_delivery_allowed);
+    const canonicalHasExplicitCustomerAllowed =
+      readinessOverride.normalized?.customer_delivery_allowed !== undefined &&
+      readinessOverride.normalized?.customer_delivery_allowed !== null;
+    const canonicalCustomerAllowed =
+      String(readinessOverride.normalized?.delivery_gate_status || "").toLowerCase() === "admin_review_required"
+        ? canonicalDeliveryGateStatus === "deliverable"
+        : canonicalHasExplicitCustomerAllowed
+          ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
+          : canonicalDeliveryGateStatus === "deliverable";
     const publicReady = readinessOverride.has_public_sample_ready
       ? Boolean(readinessOverride.normalized?.public_sample_ready)
       : publishEligibility.public_sample_ready;
@@ -1782,12 +1897,10 @@ export function buildDeliveryGateDecision({
       report_blocked: !canonicalCustomerAllowed,
       public_sample_ready: publicReady,
       high_value_outreach_ready: outreachReady,
-      admin_review_required: canonicalDeliveryGateStatus === "admin_review_required",
+      admin_review_required: false,
       user_needs_documents: canonicalDeliveryGateStatus === "user_needs_documents",
       launch_path_recommendation:
-        canonicalDeliveryGateStatus === "admin_review_required"
-          ? "admin_review_required"
-          : canonicalDeliveryGateStatus === "user_needs_documents"
+        canonicalDeliveryGateStatus === "user_needs_documents"
           ? "user_needs_documents"
           : "customer_deliverable",
       readiness_source: "canonical_delivery_state",
@@ -1802,6 +1915,9 @@ export function buildDeliveryGateDecision({
         advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
       },
       ...publishEligibility,
+      deprecated_admin_review_reason_classification: deprecatedAdminReviewResolution.classification,
+      deprecated_admin_review_reason_requires_classification:
+        deprecatedAdminReviewResolution.inject_diagnostic_code === "DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION",
       customer_delivery_ready_legacy: canonicalCustomerAllowed,
     };
   }
@@ -1853,7 +1969,7 @@ export function buildDeliveryGateDecision({
       sourceLimitations[0]?.code ||
       "SYSTEM_CONTRACT_FAILURE";
     const publishEligibility = buildPublishEligibilitySummary({
-      deliveryGateStatus: "admin_review_required",
+      deliveryGateStatus: "user_needs_documents",
       reasonCode: gateReason,
       sourceReportCoverageQa,
       reportContractQa,
@@ -1875,11 +1991,11 @@ export function buildDeliveryGateDecision({
     });
     return {
       final_delivery_authority: "delivery_gate",
-      delivery_gate_status: "admin_review_required",
+      delivery_gate_status: "user_needs_documents",
       reason_code: gateReason,
       top_action_code: sourceDocumentAction?.code || sourceLimitations[0]?.code || null,
       owner_area: "report_renderer",
-      recommended_next_step: "Hold delivery for system contract review.",
+      recommended_next_step: "Fail closed and capture system contract diagnostics before regeneration.",
       customer_delivery_ready: false,
       public_sample_ready: publishEligibility.public_sample_ready,
       high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
@@ -1897,7 +2013,7 @@ export function buildDeliveryGateDecision({
       reasonCodeForAction(managerContradictionAction) ||
       String(qaDirectorReview?.findings?.[0]?.code || "ADMIN_REVIEW_REQUIRED");
     const publishEligibility = buildPublishEligibilitySummary({
-      deliveryGateStatus: "admin_review_required",
+      deliveryGateStatus: "user_needs_documents",
       reasonCode,
       sourceReportCoverageQa,
       reportContractQa,
@@ -1919,18 +2035,18 @@ export function buildDeliveryGateDecision({
     });
     return {
       final_delivery_authority: "delivery_gate",
-      delivery_gate_status: "admin_review_required",
+      delivery_gate_status: "user_needs_documents",
       reason_code: reasonCode,
       top_action_code: topAction?.code || null,
       owner_area: topAction?.owner_area || "report_renderer",
-      recommended_next_step: topAction?.recommended_next_step || "Hold delivery for Admin Fix Queue review.",
+      recommended_next_step: topAction?.recommended_next_step || "Fail closed and resolve customer-delivery blocker before regeneration.",
       customer_delivery_ready: false,
       public_sample_ready: publishEligibility.public_sample_ready,
       high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
-      launch_path_recommendation: "admin_review_required",
+      launch_path_recommendation: "user_needs_documents",
       readiness_hierarchy: {
         final_delivery_authority: "delivery_gate",
-        final_delivery_status: "admin_review_required",
+        final_delivery_status: "user_needs_documents",
         customer_delivery_ready: false,
         public_sample_ready: publishEligibility.public_sample_ready,
         high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
@@ -1972,7 +2088,7 @@ export function buildDeliveryGateDecision({
     customer_delivery_ready: publishEligibility.report_publishable,
     public_sample_ready: publishEligibility.public_sample_ready,
     high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
-    launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "admin_review_required",
+    launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "user_needs_documents",
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: "deliverable",
@@ -1989,12 +2105,27 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
   const state = deliveryGateDecision && typeof deliveryGateDecision === "object"
     ? deliveryGateDecision
     : {};
-  const deliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const deprecatedAdminReviewResolution = resolveDeprecatedAdminReviewGateStatus({
+    statusValue: state.delivery_gate_status || "deliverable",
+    reasonCode: state.reason_code || state.publish_decision_reason || null,
+    explicitCoreFailure: false,
+  });
+  const deliveryGateStatus = normalizeCustomerDeliveryGateStatus(
+    deprecatedAdminReviewResolution.gate_status || state.delivery_gate_status || "deliverable"
+  );
+  const wasDeprecatedAdminReviewStatus =
+    String(state.delivery_gate_status || "").toLowerCase() === "admin_review_required";
   const hasExplicitCanonicalCustomerAllowed =
     state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null;
   const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
   const customerDeliveryAllowed = hasExplicitCanonicalCustomerAllowed
-    ? Boolean(state.customer_delivery_allowed)
+    ? (
+      wasDeprecatedAdminReviewStatus && deprecatedAdminReviewResolution.classification === "core_fail"
+        ? false
+        : wasDeprecatedAdminReviewStatus && deliveryGateStatus === "deliverable"
+          ? true
+          : Boolean(state.customer_delivery_allowed)
+    )
     : Boolean(deliveryGateStatus === "deliverable" && customerBlockers.length === 0);
   const holdDelivery = deliveryGateStatus !== "deliverable";
   const publicBlockers = Array.isArray(state.public_sample_blockers) ? state.public_sample_blockers : [];
@@ -2004,17 +2135,13 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
   const customerStatusLabel =
     deliveryGateStatus === "deliverable" && customerDeliveryAllowed
       ? "ready"
-      : deliveryGateStatus === "admin_review_required"
-        ? "under_review"
-        : deliveryGateStatus === "user_needs_documents"
+      : deliveryGateStatus === "user_needs_documents"
           ? "needs_documents"
           : "publication_held";
   const customerMessage =
     customerStatusLabel === "ready"
       ? "This report is eligible for customer delivery."
-      : customerStatusLabel === "under_review"
-        ? "This report is under internal review before delivery."
-        : customerStatusLabel === "needs_documents"
+      : customerStatusLabel === "needs_documents"
           ? "Additional required documents are needed before this report can be delivered."
           : "This report is currently held and cannot be delivered.";
 
@@ -2043,6 +2170,9 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
       public_sample_blockers: publicBlockers,
       high_value_outreach_blockers: highValueBlockers,
       customer_publish_blockers: customerBlockers,
+      deprecated_admin_review_reason_classification: deprecatedAdminReviewResolution.classification,
+      deprecated_admin_review_reason_requires_classification:
+        deprecatedAdminReviewResolution.inject_diagnostic_code === "DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION",
     },
     source: "canonical_delivery_decision",
   };
@@ -2134,17 +2264,13 @@ export function buildQaActionPlan({
     ? canonicalDeliveryGateStatus || (customerReady ? "delivery_gate_ready" : "delivery_gate_blocked")
     : customerReady ? "delivery_gate_ready" : "delivery_gate_blocked";
   const launchPathRecommendation = readinessOverride.present
-    ? canonicalDeliveryGateStatus === "admin_review_required"
-      ? "admin_review_required"
-      : canonicalDeliveryGateStatus === "user_needs_documents"
+    ? canonicalDeliveryGateStatus === "user_needs_documents"
       ? "user_needs_documents"
       : legacyLaunchPathRecommendation
     : legacyLaunchPathRecommendation;
   const resolvedDeliveryRecommendation = readinessOverride.present
     ? canonicalDeliveryGateStatus === "user_needs_documents"
       ? "source_package_insufficient"
-      : canonicalDeliveryGateStatus === "admin_review_required"
-      ? "regenerate_after_code_or_mapping_fix"
       : legacyDeliveryRecommendation
     : legacyDeliveryRecommendation;
   const readinessSource = readinessOverride.present

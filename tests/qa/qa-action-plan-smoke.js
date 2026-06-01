@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildQaActionPlan, buildDeliveryGateDecision } from "../../api/_lib/qa-action-plan.js";
+import { buildQaActionPlan, buildDeliveryGateDecision, buildCanonicalDeliveryDecisionState } from "../../api/_lib/qa-action-plan.js";
 import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
 import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
 const qaActionPlanTest = (await import("../../api/_lib/qa-action-plan.js")).__test__;
@@ -256,14 +256,15 @@ const canonicalPublishEligibilityHeld = qaActionPlanTest.buildPublishEligibility
     high_value_outreach_ready: true,
   },
 });
-assert.equal(canonicalPublishEligibilityHeld.customer_publish_eligible, false);
-assert.equal(canonicalPublishEligibilityHeld.report_publishable, false);
-assert.equal(canonicalPublishEligibilityHeld.customer_delivery_ready, false);
-assert.equal(canonicalPublishEligibilityHeld.report_blocked, true);
-assert.equal(canonicalPublishEligibilityHeld.admin_review_required, true);
+assert.equal(canonicalPublishEligibilityHeld.customer_publish_eligible, true);
+assert.equal(canonicalPublishEligibilityHeld.report_publishable, true);
+assert.equal(canonicalPublishEligibilityHeld.customer_delivery_ready, true);
+assert.equal(canonicalPublishEligibilityHeld.report_blocked, false);
+assert.equal(canonicalPublishEligibilityHeld.admin_review_required, false);
 assert.equal(canonicalPublishEligibilityHeld.user_needs_documents, false);
+assert.equal(canonicalPublishEligibilityHeld.publish_decision_reason, "customer_publish_eligible");
 assert.equal(
-  String(canonicalPublishEligibilityHeld.publish_decision_reason || "").startsWith("admin_review_required:"),
+  (canonicalPublishEligibilityHeld.report_quality_advisories || []).includes("DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION"),
   true
 );
 
@@ -760,17 +761,17 @@ const adminReviewGate = buildDeliveryGateDecision({
   },
   qaDirectorReview: { overall_director_decision: "advisory_attention" },
 });
-assert.equal(adminReviewGate.delivery_gate_status, "admin_review_required");
+assert.equal(adminReviewGate.delivery_gate_status, "user_needs_documents");
 assert.equal(adminReviewGate.customer_publish_eligible, false);
 assert.equal(adminReviewGate.customer_delivery_ready, adminReviewGate.customer_publish_eligible);
 assert.equal(adminReviewGate.report_publishable, adminReviewGate.customer_publish_eligible);
 assert.equal(adminReviewGate.report_blocked, !adminReviewGate.report_publishable);
 assert.equal(adminReviewGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
-assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
-assert.equal(adminReviewGate.launch_path_recommendation, "admin_review_required");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "user_needs_documents");
+assert.equal(adminReviewGate.launch_path_recommendation, "user_needs_documents");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
-assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "admin_review_required");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "user_needs_documents");
 
 const rentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -915,7 +916,7 @@ const renderedRentRollGate = buildDeliveryGateDecision({
     ],
   },
 });
-assert.equal(renderedRentRollGate.delivery_gate_status, "admin_review_required");
+assert.equal(renderedRentRollGate.delivery_gate_status, "user_needs_documents");
 assert.equal(renderedRentRollGate.customer_delivery_ready, false);
 assert.equal(renderedRentRollGate.report_publishable, false);
 assert.equal(renderedRentRollGate.report_blocked, true);
@@ -1585,7 +1586,7 @@ const adminReviewSufficiencyGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(adminReviewSufficiencyGate.delivery_gate_status, "admin_review_required");
+assert.equal(adminReviewSufficiencyGate.delivery_gate_status, "user_needs_documents");
 
 const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1643,8 +1644,8 @@ const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
     },
   }),
 });
-assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "admin_review_required");
-assert.match(renderedReconciliationMismatchGate.publish_decision_reason, /^admin_review_required:/i);
+assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "user_needs_documents");
+assert.match(renderedReconciliationMismatchGate.publish_decision_reason, /^user_needs_documents:/i);
 
 const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1722,7 +1723,7 @@ const systemContractFailureSufficiencyGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(systemContractFailureSufficiencyGate.delivery_gate_status, "admin_review_required");
+assert.equal(systemContractFailureSufficiencyGate.delivery_gate_status, "user_needs_documents");
 
 const dealScorecardViolationPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -1943,7 +1944,7 @@ const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "admin_review_required");
+assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "user_needs_documents");
 assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, false);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
@@ -2170,10 +2171,10 @@ const hardContractDefectGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(hardContractDefectGate.delivery_gate_status, "admin_review_required");
+assert.equal(hardContractDefectGate.delivery_gate_status, "user_needs_documents");
 assert.equal(hardContractDefectGate.customer_publish_eligible, false);
 assert.equal(
-  String(hardContractDefectGate.publish_decision_reason || "").startsWith("admin_review_required:HARD_PUBLIC_LANGUAGE_CONTRACT"),
+  String(hardContractDefectGate.publish_decision_reason || "").startsWith("user_needs_documents:HARD_PUBLIC_LANGUAGE_CONTRACT"),
   true
 );
 
@@ -2415,7 +2416,7 @@ const gateLockHardDefect = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockHardDefect.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockHardDefect.delivery_gate_status, "user_needs_documents");
 assert.equal(gateLockHardDefect.customer_publish_eligible, false);
 
 const gateLockMissingCoreDoc = gateLockScenario({
@@ -2481,7 +2482,7 @@ const gateLockUnknownExplicitContractBlock = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "user_needs_documents");
 assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, false);
 assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, false);
 assert.equal(
@@ -2511,7 +2512,7 @@ const gateLockUnknownExplicitContractBlockWithRationale = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "admin_review_required");
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "user_needs_documents");
 assert.equal(gateLockUnknownExplicitContractBlockWithRationale.customer_publish_eligible, false);
 assert.equal(gateLockUnknownExplicitContractBlockWithRationale.report_publishable, false);
 assert.equal(
@@ -2572,16 +2573,38 @@ const canonicalAdminReviewOverrideGate = buildDeliveryGateDecision({
   canonicalDeliveryDecisionState: {
     source: "canonical_delivery_decision",
     delivery_gate_status: "admin_review_required",
+    reason_code: "REPORT_TYPE_SECTION_LEAK",
     customer_delivery_allowed: false,
     public_sample_ready: true,
     high_value_outreach_ready: true,
   },
 });
-assert.equal(canonicalAdminReviewOverrideGate.delivery_gate_status, "admin_review_required");
-assert.equal(canonicalAdminReviewOverrideGate.customer_publish_eligible, false);
-assert.equal(canonicalAdminReviewOverrideGate.report_publishable, false);
-assert.equal(canonicalAdminReviewOverrideGate.customer_delivery_ready, false);
-assert.equal(canonicalAdminReviewOverrideGate.report_blocked, true);
+assert.equal(canonicalAdminReviewOverrideGate.delivery_gate_status, "deliverable");
+assert.equal(canonicalAdminReviewOverrideGate.customer_publish_eligible, true);
+assert.equal(canonicalAdminReviewOverrideGate.report_publishable, true);
+assert.equal(canonicalAdminReviewOverrideGate.customer_delivery_ready, true);
+assert.equal(canonicalAdminReviewOverrideGate.report_blocked, false);
+
+const canonicalAdminReviewRenderedPlaceholderGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: gateLockBaseCoverage,
+  reportContractQa: { contract_status: "warn", violations: [] },
+  qaActionPlan: { customer_delivery_ready: true, prioritized_actions: [] },
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    delivery_gate_status: "admin_review_required",
+    reason_code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+    customer_delivery_allowed: false,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+  },
+});
+assert.equal(canonicalAdminReviewRenderedPlaceholderGate.delivery_gate_status, "deliverable");
+assert.equal(canonicalAdminReviewRenderedPlaceholderGate.customer_publish_eligible, true);
+assert.equal(canonicalAdminReviewRenderedPlaceholderGate.report_publishable, true);
+assert.equal(
+  Array.isArray(canonicalAdminReviewRenderedPlaceholderGate.report_quality_advisories),
+  true
+);
 
 const canonicalNeedsDocsOverrideGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: gateLockBaseCoverage,
@@ -2604,6 +2627,45 @@ assert.equal(
   (canonicalNeedsDocsOverrideGate.report_quality_blockers || []).length > 0 ||
     (canonicalNeedsDocsOverrideGate.report_quality_advisories || []).length >= 0,
   true
+);
+
+const canonicalDeprecatedAdminMissingT12Gate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "admin_review_required",
+  customer_delivery_allowed: false,
+  reason_code: "missing_required_t12",
+});
+assert.equal(canonicalDeprecatedAdminMissingT12Gate.delivery_gate_status, "user_needs_documents");
+
+const canonicalDeprecatedAdminMissingRentRollGate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "admin_review_required",
+  customer_delivery_allowed: false,
+  reason_code: "missing_required_rent_roll",
+});
+assert.equal(canonicalDeprecatedAdminMissingRentRollGate.delivery_gate_status, "user_needs_documents");
+
+const canonicalDeprecatedAdminUnknownGate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "admin_review_required",
+  customer_delivery_allowed: false,
+  reason_code: "FUTURE_UNKNOWN_REASON",
+});
+assert.equal(canonicalDeprecatedAdminUnknownGate.delivery_gate_status, "deliverable");
+assert.equal(
+  canonicalDeprecatedAdminUnknownGate.diagnostics?.deprecated_admin_review_reason_requires_classification,
+  true
+);
+assert.equal(String(canonicalDeprecatedAdminUnknownGate.customer_status_label || "").toLowerCase(), "ready");
+
+const canonicalFromDeprecatedAdminGate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "admin_review_required",
+  customer_delivery_allowed: false,
+  reason_code: "REPORT_TYPE_SECTION_LEAK",
+});
+assert.equal(canonicalFromDeprecatedAdminGate.delivery_gate_status, "deliverable");
+assert.notEqual(String(canonicalFromDeprecatedAdminGate.customer_status_label || "").toLowerCase(), "under_review");
+assert.notEqual(String(canonicalFromDeprecatedAdminGate.customer_status_label || "").toLowerCase(), "needs_documents");
+assert.equal(
+  /under internal review/i.test(String(canonicalFromDeprecatedAdminGate.customer_message || "")),
+  false
 );
 
 console.log("qa-action-plan smoke PASS");
