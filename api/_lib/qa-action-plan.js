@@ -1990,13 +1990,15 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
     ? deliveryGateDecision
     : {};
   const deliveryGateStatus = String(state.delivery_gate_status || "deliverable");
-  const customerDeliveryAllowed = Boolean(
-    state.customer_publish_eligible ?? state.customer_delivery_ready ?? (deliveryGateStatus === "deliverable")
-  );
+  const hasExplicitCanonicalCustomerAllowed =
+    state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null;
+  const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
+  const customerDeliveryAllowed = hasExplicitCanonicalCustomerAllowed
+    ? Boolean(state.customer_delivery_allowed)
+    : Boolean(deliveryGateStatus === "deliverable" && customerBlockers.length === 0);
   const holdDelivery = deliveryGateStatus !== "deliverable";
   const publicBlockers = Array.isArray(state.public_sample_blockers) ? state.public_sample_blockers : [];
   const highValueBlockers = Array.isArray(state.high_value_outreach_blockers) ? state.high_value_outreach_blockers : [];
-  const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
   const reasonCode = String(state.reason_code || state.publish_decision_reason || deliveryGateStatus || "").trim() || null;
 
   const customerStatusLabel =

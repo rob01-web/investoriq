@@ -64,6 +64,52 @@ assert.equal(adminReviewState.customer_delivery_allowed, false);
 assert.equal(adminReviewState.public_sample_ready, false);
 assert.equal(adminReviewState.high_value_outreach_ready, false);
 
+const docraptorOnlyGate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "deliverable",
+  customer_publish_eligible: false,
+  customer_delivery_ready: false,
+  customer_publish_blockers: [],
+  public_sample_ready: false,
+  public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+  high_value_outreach_ready: false,
+  high_value_outreach_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+  reason_code: "customer_publish_not_ready",
+});
+assert.equal(docraptorOnlyGate.customer_delivery_allowed, true);
+assert.equal(docraptorOnlyGate.customer_status_label, "ready");
+assert.equal(docraptorOnlyGate.hold_delivery, false);
+assert.equal(docraptorOnlyGate.public_sample_ready, false);
+assert.equal(docraptorOnlyGate.high_value_outreach_ready, false);
+
+const docraptorWithCustomerBlockerGate = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "deliverable",
+  customer_publish_eligible: true,
+  customer_delivery_ready: true,
+  customer_publish_blockers: ["RENDERED_TEMPLATE_TOKEN_LEAK"],
+  public_sample_ready: false,
+  public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+  high_value_outreach_ready: false,
+  high_value_outreach_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+  reason_code: "customer_blocked:RENDERED_TEMPLATE_TOKEN_LEAK",
+});
+assert.equal(docraptorWithCustomerBlockerGate.customer_delivery_allowed, false);
+assert.equal(docraptorWithCustomerBlockerGate.customer_status_label, "publication_held");
+
+const canonicalPrecedenceOverLegacyAliases = buildCanonicalDeliveryDecisionState({
+  source: "canonical_delivery_decision",
+  delivery_gate_status: "deliverable",
+  customer_delivery_allowed: true,
+  hold_delivery: false,
+  customer_publish_eligible: false,
+  customer_delivery_ready: false,
+  customer_publish_blockers: [],
+  public_sample_ready: false,
+  high_value_outreach_ready: false,
+  reason_code: "customer_publish_eligible",
+});
+assert.equal(canonicalPrecedenceOverLegacyAliases.customer_delivery_allowed, true);
+assert.equal(canonicalPrecedenceOverLegacyAliases.customer_status_label, "ready");
+
 const generatorSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 assert.match(generatorSource, /deliveryDecisionState:/);
 assert.match(generatorSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
