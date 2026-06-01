@@ -1709,6 +1709,215 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
   return includeDiagnostics ? { payload: null, diagnostics } : null;
 };
 
+const approxEqual = (a, b, tolerance = 0.03, floor = 1) => {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+  const scale = Math.max(floor, Math.abs(a), Math.abs(b));
+  return Math.abs(a - b) <= scale * tolerance;
+};
+
+const findSummaryNumeric = (text, patterns, parser = parseMoneyLike) => {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const parsed = parser(match[1]);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+const parseUnitsCount = (value) => {
+  const parsed = parseMoneyLike(value);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0) return null;
+  return Math.round(parsed);
+};
+
+const parsePercentRatio = (value) => {
+  const parsed = parseMoneyLike(value);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0) return null;
+  if (parsed > 1 && parsed <= 100) return parsed / 100;
+  if (parsed <= 1) return parsed;
+  return null;
+};
+
+export const parseRentRollFromTextSummary = (rawText, options = {}) => {
+  const includeDiagnostics = options?.includeDiagnostics === true;
+  const text = String(rawText || '');
+  const diagnostics = {
+    validation_reasons: [],
+    accepted_fields: [],
+    derived_fields: [],
+    field_diagnostics: [],
+  };
+
+  if (!text.trim()) {
+    diagnostics.validation_reasons.push('missing_row_matrices');
+    return includeDiagnostics ? { payload: null, diagnostics } : null;
+  }
+
+  const totalUnits = findSummaryNumeric(
+    text,
+    [
+      /\b(?:total\s*units?|units?\s*total|building\s*units?)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
+      /([\d,]+(?:\.\d+)?)\s*(?:total\s*units?|units?\s*total|building\s*units?)\b/i,
+    ],
+    parseUnitsCount
+  );
+  const occupiedUnits = findSummaryNumeric(
+    text,
+    [
+      /\b(?:occupied\s*units?|occupied)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
+      /([\d,]+(?:\.\d+)?)\s*(?:occupied\s*units?|occupied)\b/i,
+    ],
+    parseUnitsCount
+  );
+  const vacantUnits = findSummaryNumeric(
+    text,
+    [
+      /\b(?:vacant\s*units?|vacancy\s*units?|vacant)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
+      /([\d,]+(?:\.\d+)?)\s*(?:vacant\s*units?|vacancy\s*units?|vacant)\b/i,
+    ],
+    parseUnitsCount
+  );
+  const occupancy = findSummaryNumeric(
+    text,
+    [
+      /\b(?:occupancy|occupancy\s*percentage|occupied\s*percentage)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)\s*%/i,
+      /([\d,]+(?:\.\d+)?)\s*%\s*(?:occupancy|occupied)\b/i,
+      /\b(?:occupancy|occupancy\s*percentage|occupied\s*percentage)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
+    ],
+    parsePercentRatio
+  );
+
+  const inPlaceMonthly = findSummaryNumeric(
+    text,
+    [
+      /\b(?:in[\s-]?place|current|occupied\s*units?)\s*monthly\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+      /\b(?:monthly)\s*(?:in[\s-]?place|current)\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+    ]
+  );
+  const inPlaceAnnual = findSummaryNumeric(
+    text,
+    [
+      /\b(?:in[\s-]?place|current|occupied\s*units?)\s*annual\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+      /\bannual\s*(?:in[\s-]?place|current)\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+    ]
+  );
+  const marketMonthly = findSummaryNumeric(
+    text,
+    [
+      /\bmarket\s*monthly\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+      /\bmonthly\s*market\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+    ]
+  );
+  const marketAnnual = findSummaryNumeric(
+    text,
+    [
+      /\bmarket\s*annual\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+      /\bannual\s*market\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
+    ]
+  );
+
+  if (!(Number.isFinite(totalUnits) && totalUnits > 0)) diagnostics.validation_reasons.push('missing_total_units');
+  if (!(Number.isFinite(occupiedUnits) && occupiedUnits >= 0)) diagnostics.validation_reasons.push('missing_occupied_units');
+  if (!(Number.isFinite(vacantUnits) && vacantUnits >= 0)) diagnostics.validation_reasons.push('missing_vacant_units');
+  if (!(Number.isFinite(occupancy) && occupancy >= 0 && occupancy <= 1)) diagnostics.validation_reasons.push('missing_occupancy_percentage');
+
+  const hasInPlaceMonthly = Number.isFinite(inPlaceMonthly) && inPlaceMonthly > 0;
+  const hasInPlaceAnnual = Number.isFinite(inPlaceAnnual) && inPlaceAnnual > 0;
+  const hasMarketMonthly = Number.isFinite(marketMonthly) && marketMonthly > 0;
+  const hasMarketAnnual = Number.isFinite(marketAnnual) && marketAnnual > 0;
+  if (!(hasInPlaceMonthly || hasInPlaceAnnual)) {
+    diagnostics.validation_reasons.push('missing_in_place_rent_totals');
+  }
+  if (!(hasMarketMonthly || hasMarketAnnual)) {
+    diagnostics.validation_reasons.push('missing_market_rent_totals');
+  }
+  if (!(hasInPlaceMonthly || hasInPlaceAnnual) || !(hasMarketMonthly || hasMarketAnnual)) {
+    diagnostics.validation_reasons.push('missing_required_rent_totals');
+  }
+
+  if (Number.isFinite(totalUnits) && Number.isFinite(occupiedUnits) && Number.isFinite(vacantUnits)) {
+    if (occupiedUnits + vacantUnits !== totalUnits) diagnostics.validation_reasons.push('occupied_vacant_total_mismatch');
+  }
+  if (Number.isFinite(totalUnits) && totalUnits > 0 && Number.isFinite(occupiedUnits) && Number.isFinite(occupancy)) {
+    const implied = occupiedUnits / totalUnits;
+    if (!approxEqual(implied, occupancy, 0.03, 0.01)) diagnostics.validation_reasons.push('occupancy_mismatch');
+  }
+  if (hasInPlaceMonthly && hasInPlaceAnnual && !approxEqual(inPlaceAnnual, inPlaceMonthly * 12, 0.05, 10)) {
+    diagnostics.validation_reasons.push('in_place_monthly_annual_mismatch');
+  }
+  if (hasMarketMonthly && hasMarketAnnual && !approxEqual(marketAnnual, marketMonthly * 12, 0.05, 10)) {
+    diagnostics.validation_reasons.push('market_monthly_annual_mismatch');
+  }
+
+  diagnostics.validation_reasons = [...new Set(diagnostics.validation_reasons)];
+  if (diagnostics.validation_reasons.length > 0) {
+    return includeDiagnostics ? { payload: null, diagnostics } : null;
+  }
+
+  let inPlaceMonthlyFinal = hasInPlaceMonthly ? inPlaceMonthly : null;
+  let inPlaceAnnualFinal = hasInPlaceAnnual ? inPlaceAnnual : null;
+  let marketMonthlyFinal = hasMarketMonthly ? marketMonthly : null;
+  let marketAnnualFinal = hasMarketAnnual ? marketAnnual : null;
+
+  if (!hasInPlaceMonthly && hasInPlaceAnnual) {
+    inPlaceMonthlyFinal = inPlaceAnnual / 12;
+    diagnostics.derived_fields.push('in_place_rent_monthly_derived_from_annual');
+  }
+  if (!hasInPlaceAnnual && hasInPlaceMonthly) {
+    inPlaceAnnualFinal = inPlaceMonthly * 12;
+    diagnostics.derived_fields.push('in_place_rent_annual_derived_from_monthly');
+  }
+  if (!hasMarketMonthly && hasMarketAnnual) {
+    marketMonthlyFinal = marketAnnual / 12;
+    diagnostics.derived_fields.push('market_rent_monthly_derived_from_annual');
+  }
+  if (!hasMarketAnnual && hasMarketMonthly) {
+    marketAnnualFinal = marketMonthly * 12;
+    diagnostics.derived_fields.push('market_rent_annual_derived_from_monthly');
+  }
+
+  diagnostics.accepted_fields.push(
+    'total_units',
+    'occupied_units',
+    'vacant_units',
+    'occupancy',
+    'totals',
+    'coherence'
+  );
+
+  const payload = {
+    method: 'deterministic_text_summary',
+    parse_branch: 'rent_roll_text_summary_fallback',
+    confidence: 0.9,
+    total_units: totalUnits,
+    occupied_units: occupiedUnits,
+    vacant_units: vacantUnits,
+    occupancy,
+    totals: {
+      in_place_rent_monthly: inPlaceMonthlyFinal,
+      in_place_rent_annual: inPlaceAnnualFinal,
+      market_rent_monthly: marketMonthlyFinal,
+      market_rent_annual: marketAnnualFinal,
+      derived_allowed: diagnostics.derived_fields.length > 0,
+    },
+    unit_mix: [],
+    units: [],
+    column_map: null,
+    parser_diagnostics: diagnostics,
+    coherence: {
+      occupied_plus_vacant_equals_total: occupiedUnits + vacantUnits === totalUnits,
+      occupancy_matches_units: true,
+      in_place_monthly_annual_consistent: true,
+      market_monthly_annual_consistent: true,
+    },
+  };
+
+  return includeDiagnostics ? { payload, diagnostics } : payload;
+};
+
 export const parseT12FromRowMatrices = (rowMatrices, options = {}) => {
   const includeDiagnostics = options?.includeDiagnostics === true;
   const matrices = Array.isArray(rowMatrices) ? rowMatrices : [];
@@ -2623,6 +2832,8 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             if (!tablesArtifact?.bucket || !tablesArtifact?.object_path) {
+              let deterministicTextSummary = null;
+              let deterministicDiagnostics = null;
               let aiRecoveredRentRoll = null;
               let aiRecoveryDiagnostics = null;
               try {
@@ -2635,8 +2846,17 @@ export default async function handler(req, res) {
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .maybeSingle();
+                const extractedText = textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '';
+                const deterministicResult = parseRentRollFromTextSummary(extractedText, {
+                  includeDiagnostics: true,
+                });
+                deterministicTextSummary = deterministicResult?.payload || null;
+                deterministicDiagnostics = deterministicResult?.diagnostics || null;
+                if (deterministicTextSummary && Array.isArray(deterministicDiagnostics?.validation_reasons)) {
+                  deterministicTextSummary.parser_diagnostics = deterministicDiagnostics;
+                }
                 const aiRecoveryResult = await recoverRentRollWithAI({
-                  text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
+                  text: extractedText,
                   tables: [],
                   filename: file.original_filename,
                   jobId,
@@ -2656,7 +2876,8 @@ export default async function handler(req, res) {
                 aiRecoveredRentRoll = null;
               }
 
-              if (aiRecoveredRentRoll) {
+              const acceptedFallbackPayload = deterministicTextSummary || aiRecoveredRentRoll;
+              if (acceptedFallbackPayload) {
                 const { error: aiArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
                   {
                     job_id: jobId,
@@ -2671,19 +2892,24 @@ export default async function handler(req, res) {
                       detected_doc_type: detectedDocType,
                       classifier_score: classifierScore,
                       classifier_signals: classifierSignals,
-                      method: aiRecoveredRentRoll.method,
-                      ai_assisted: aiRecoveredRentRoll.ai_assisted === true,
-                      validated: aiRecoveredRentRoll.validated === true,
-                      confidence: aiRecoveredRentRoll.confidence,
-                      total_units: aiRecoveredRentRoll.total_units,
-                      totals: aiRecoveredRentRoll.totals || null,
-                      unit_mix: Array.isArray(aiRecoveredRentRoll.unit_mix) ? aiRecoveredRentRoll.unit_mix : [],
-                      occupancy: Number.isFinite(aiRecoveredRentRoll.occupancy) ? aiRecoveredRentRoll.occupancy : null,
-                      units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
-                      column_map: aiRecoveredRentRoll.column_map || null,
-                      parse_warnings: Array.isArray(aiRecoveredRentRoll.parse_warnings)
-                        ? aiRecoveredRentRoll.parse_warnings
+                      method: acceptedFallbackPayload.method,
+                      parse_branch: acceptedFallbackPayload.parse_branch || null,
+                      ai_assisted: acceptedFallbackPayload.ai_assisted === true,
+                      validated: deterministicTextSummary ? true : acceptedFallbackPayload.validated === true,
+                      confidence: acceptedFallbackPayload.confidence,
+                      total_units: acceptedFallbackPayload.total_units,
+                      occupied_units: acceptedFallbackPayload.occupied_units ?? null,
+                      vacant_units: acceptedFallbackPayload.vacant_units ?? null,
+                      totals: acceptedFallbackPayload.totals || null,
+                      unit_mix: Array.isArray(acceptedFallbackPayload.unit_mix) ? acceptedFallbackPayload.unit_mix : [],
+                      occupancy: Number.isFinite(acceptedFallbackPayload.occupancy) ? acceptedFallbackPayload.occupancy : null,
+                      units: Array.isArray(acceptedFallbackPayload.units) ? acceptedFallbackPayload.units : [],
+                      column_map: acceptedFallbackPayload.column_map || null,
+                      coherence: acceptedFallbackPayload.coherence || null,
+                      parse_warnings: Array.isArray(acceptedFallbackPayload.parse_warnings)
+                        ? acceptedFallbackPayload.parse_warnings
                         : [],
+                      parser_diagnostics: deterministicDiagnostics || acceptedFallbackPayload.parser_diagnostics || null,
                       ai_recovery_diagnostics: aiRecoveryDiagnostics,
                     },
                   },
@@ -2725,11 +2951,41 @@ export default async function handler(req, res) {
                 continue;
               }
 
+              const deterministicReasons = Array.isArray(deterministicDiagnostics?.validation_reasons)
+                ? deterministicDiagnostics.validation_reasons
+                : [];
+              await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 'rent_roll_parse_error',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${jobId}/rent_roll_error/${file.id}/${safeTimestamp(nowIso)}.json`,
+                  payload: {
+                    file_id: file.id,
+                    original_filename: file.original_filename,
+                    error_message: deterministicReasons.length
+                      ? deterministicReasons.join('|')
+                      : 'insufficient_rent_roll_text_coverage',
+                    parser_diagnostics: deterministicDiagnostics
+                      ? {
+                          validation_reasons: deterministicReasons,
+                          accepted_fields: Array.isArray(deterministicDiagnostics.accepted_fields)
+                            ? deterministicDiagnostics.accepted_fields
+                            : [],
+                          derived_fields: Array.isArray(deterministicDiagnostics.derived_fields)
+                            ? deterministicDiagnostics.derived_fields
+                            : [],
+                        }
+                      : null,
+                  },
+                },
+              ]);
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({
                   parse_status: 'failed',
-                  parse_error: 'unsupported_file_type_for_structured_parsing',
+                  parse_error: deterministicReasons[0] || 'unsupported_file_type_for_structured_parsing',
                 })
                 .eq('id', file.id);
               return res.status(200).json({ ok: true, skipped: 1 });
@@ -2790,6 +3046,8 @@ export default async function handler(req, res) {
             }
 
             if (!(hasMinimumRentRoll && hasSecondarySignal)) {
+              let deterministicTextSummary = null;
+              let deterministicDiagnostics = null;
               let aiRecoveredRentRoll = null;
               let aiRecoveryDiagnostics = null;
               try {
@@ -2802,8 +3060,17 @@ export default async function handler(req, res) {
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .maybeSingle();
+                const extractedText = textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '';
+                const deterministicResult = parseRentRollFromTextSummary(extractedText, {
+                  includeDiagnostics: true,
+                });
+                deterministicTextSummary = deterministicResult?.payload || null;
+                deterministicDiagnostics = deterministicResult?.diagnostics || null;
+                if (deterministicTextSummary && Array.isArray(deterministicDiagnostics?.validation_reasons)) {
+                  deterministicTextSummary.parser_diagnostics = deterministicDiagnostics;
+                }
                 const aiRecoveryResult = await recoverRentRollWithAI({
-                  text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
+                  text: extractedText,
                   tables: tablesPayload?.tables,
                   filename: file.original_filename,
                   jobId,
@@ -2823,12 +3090,13 @@ export default async function handler(req, res) {
                 aiRecoveredRentRoll = null;
               }
 
-              if (aiRecoveredRentRoll) {
+              const acceptedFallbackPayload = deterministicTextSummary || aiRecoveredRentRoll;
+              if (acceptedFallbackPayload) {
                 const aiParseWarnings = [
                   ...new Set([
                     ...parseWarnings,
-                    ...(Array.isArray(aiRecoveredRentRoll.parse_warnings)
-                      ? aiRecoveredRentRoll.parse_warnings
+                    ...(Array.isArray(acceptedFallbackPayload.parse_warnings)
+                      ? acceptedFallbackPayload.parse_warnings
                       : []),
                   ]),
                 ];
@@ -2846,17 +3114,22 @@ export default async function handler(req, res) {
                       detected_doc_type: detectedDocType,
                       classifier_score: classifierScore,
                       classifier_signals: classifierSignals,
-                      method: aiRecoveredRentRoll.method,
-                      ai_assisted: aiRecoveredRentRoll.ai_assisted === true,
-                      validated: aiRecoveredRentRoll.validated === true,
-                      confidence: aiRecoveredRentRoll.confidence,
-                      total_units: aiRecoveredRentRoll.total_units,
-                      totals: aiRecoveredRentRoll.totals || null,
-                      unit_mix: Array.isArray(aiRecoveredRentRoll.unit_mix) ? aiRecoveredRentRoll.unit_mix : [],
-                      occupancy: Number.isFinite(aiRecoveredRentRoll.occupancy) ? aiRecoveredRentRoll.occupancy : null,
-                      units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
-                      column_map: aiRecoveredRentRoll.column_map || null,
+                      method: acceptedFallbackPayload.method,
+                      parse_branch: acceptedFallbackPayload.parse_branch || null,
+                      ai_assisted: acceptedFallbackPayload.ai_assisted === true,
+                      validated: deterministicTextSummary ? true : acceptedFallbackPayload.validated === true,
+                      confidence: acceptedFallbackPayload.confidence,
+                      total_units: acceptedFallbackPayload.total_units,
+                      occupied_units: acceptedFallbackPayload.occupied_units ?? null,
+                      vacant_units: acceptedFallbackPayload.vacant_units ?? null,
+                      totals: acceptedFallbackPayload.totals || null,
+                      unit_mix: Array.isArray(acceptedFallbackPayload.unit_mix) ? acceptedFallbackPayload.unit_mix : [],
+                      occupancy: Number.isFinite(acceptedFallbackPayload.occupancy) ? acceptedFallbackPayload.occupancy : null,
+                      units: Array.isArray(acceptedFallbackPayload.units) ? acceptedFallbackPayload.units : [],
+                      column_map: acceptedFallbackPayload.column_map || null,
+                      coherence: acceptedFallbackPayload.coherence || null,
                       parse_warnings: aiParseWarnings,
+                      parser_diagnostics: deterministicDiagnostics || acceptedFallbackPayload.parser_diagnostics || parserDiagnostics || null,
                       ai_recovery_diagnostics: aiRecoveryDiagnostics,
                     },
                   },
@@ -2898,11 +3171,41 @@ export default async function handler(req, res) {
                 continue;
               }
 
+              const deterministicReasons = Array.isArray(deterministicDiagnostics?.validation_reasons)
+                ? deterministicDiagnostics.validation_reasons
+                : [];
+              await supabaseAdmin.from('analysis_artifacts').insert([
+                {
+                  job_id: jobId,
+                  user_id: file.user_id || null,
+                  type: 'rent_roll_parse_error',
+                  bucket: 'system',
+                  object_path: `analysis_jobs/${jobId}/rent_roll_error/${file.id}/${safeTimestamp(nowIso)}.json`,
+                  payload: {
+                    file_id: file.id,
+                    original_filename: file.original_filename,
+                    error_message: deterministicReasons.length
+                      ? deterministicReasons.join('|')
+                      : 'insufficient_rent_roll_text_coverage',
+                    parser_diagnostics: deterministicDiagnostics
+                      ? {
+                          validation_reasons: deterministicReasons,
+                          accepted_fields: Array.isArray(deterministicDiagnostics.accepted_fields)
+                            ? deterministicDiagnostics.accepted_fields
+                            : [],
+                          derived_fields: Array.isArray(deterministicDiagnostics.derived_fields)
+                            ? deterministicDiagnostics.derived_fields
+                            : [],
+                        }
+                      : null,
+                  },
+                },
+              ]);
               await supabaseAdmin
                 .from('analysis_job_files')
                 .update({
                   parse_status: 'failed',
-                  parse_error: 'insufficient_rent_roll_text_coverage',
+                  parse_error: deterministicReasons[0] || 'insufficient_rent_roll_text_coverage',
                 })
                 .eq('id', file.id);
               return res.status(200).json({ ok: true, skipped: 1 });
