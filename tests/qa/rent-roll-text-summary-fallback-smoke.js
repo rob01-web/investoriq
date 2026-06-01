@@ -32,6 +32,65 @@ assert.equal(coherent.payload.totals.market_rent_monthly, 94800);
 assert.equal(coherent.payload.totals.market_rent_annual, 1137600);
 assert.deepEqual(coherent.payload.units, []);
 
+const representativeBeforeSummary = parseRentRollFromTextSummary(
+  [
+    "Unit 101 current monthly rent is 1650",
+    "Unit 101 market monthly rent is 1800",
+    "Representative unit observations only",
+    "In-place monthly rent total from occupied units only: 86400",
+    "In-place annual rent total: 1036800",
+    "Market monthly rent total across all 48 units: 94800",
+    "Market annual rent total across all 48 units: 1137600",
+    "Occupied units: 46",
+    "Vacant units: 2",
+    "Total units: 48",
+    "Occupancy: 95.83%",
+    "These summary totals are the controlling property totals for this rent roll.",
+  ].join("\n"),
+  { includeDiagnostics: true }
+);
+assert.ok(representativeBeforeSummary.payload, "expected summary totals to win over representative unit observations");
+assert.equal(representativeBeforeSummary.payload.totals.in_place_rent_monthly, 86400);
+assert.equal(representativeBeforeSummary.payload.totals.market_rent_monthly, 94800);
+
+const representativeOnlyRejected = parseRentRollFromTextSummary(
+  [
+    "Unit 101 current monthly rent is 1650",
+    "Unit 102 market monthly rent is 1800",
+    "Representative unit observations only",
+    "sample unit notes",
+    "occupied units: 46",
+    "vacant units: 2",
+    "total units: 48",
+    "occupancy: 95.83%",
+  ].join("\n"),
+  { includeDiagnostics: true }
+);
+assert.equal(representativeOnlyRejected.payload, null);
+assert.equal(
+  representativeOnlyRejected.diagnostics.validation_reasons.includes("missing_required_rent_totals"),
+  true
+);
+
+const summaryBeforeRepresentative = parseRentRollFromTextSummary(
+  [
+    "In-place monthly rent total from occupied units only: 86400",
+    "In-place annual rent total: 1036800",
+    "Market monthly rent total across all 48 units: 94800",
+    "Market annual rent total across all 48 units: 1137600",
+    "Occupied units: 46",
+    "Vacant units: 2",
+    "Total units: 48",
+    "Occupancy: 95.83%",
+    "Unit 101 current monthly rent is 1650",
+    "Unit 102 market monthly rent is 1800",
+  ].join("\n"),
+  { includeDiagnostics: true }
+);
+assert.ok(summaryBeforeRepresentative.payload, "expected summary totals accepted even with representative observations later");
+assert.equal(summaryBeforeRepresentative.payload.totals.in_place_rent_annual, 1036800);
+assert.equal(summaryBeforeRepresentative.payload.totals.market_rent_annual, 1137600);
+
 const monthlyAnnualMismatch = parseRentRollFromTextSummary(
   coherentText.replace("In-place annual rent total: 1036800", "In-place annual rent total: 1111111"),
   { includeDiagnostics: true }

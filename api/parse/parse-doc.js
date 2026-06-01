@@ -1756,68 +1756,68 @@ export const parseRentRollFromTextSummary = (rawText, options = {}) => {
     return includeDiagnostics ? { payload: null, diagnostics } : null;
   }
 
-  const totalUnits = findSummaryNumeric(
-    text,
-    [
-      /\b(?:total\s*units?|units?\s*total|building\s*units?)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
-      /([\d,]+(?:\.\d+)?)\s*(?:total\s*units?|units?\s*total|building\s*units?)\b/i,
-    ],
-    parseUnitsCount
-  );
-  const occupiedUnits = findSummaryNumeric(
-    text,
-    [
-      /\b(?:occupied\s*units?|occupied)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
-      /([\d,]+(?:\.\d+)?)\s*(?:occupied\s*units?|occupied)\b/i,
-    ],
-    parseUnitsCount
-  );
-  const vacantUnits = findSummaryNumeric(
-    text,
-    [
-      /\b(?:vacant\s*units?|vacancy\s*units?|vacant)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
-      /([\d,]+(?:\.\d+)?)\s*(?:vacant\s*units?|vacancy\s*units?|vacant)\b/i,
-    ],
-    parseUnitsCount
-  );
-  const occupancy = findSummaryNumeric(
-    text,
-    [
-      /\b(?:occupancy|occupancy\s*percentage|occupied\s*percentage)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)\s*%/i,
-      /([\d,]+(?:\.\d+)?)\s*%\s*(?:occupancy|occupied)\b/i,
-      /\b(?:occupancy|occupancy\s*percentage|occupied\s*percentage)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i,
-    ],
-    parsePercentRatio
-  );
+  const lines = text.split(/\r?\n/).map((line) => String(line || '').trim()).filter(Boolean);
+  const summarySignalRegex = /\b(total|summary|controlling|property\s+total|portfolio\s+total|across\s+all)\b/i;
+  const representativeSignalRegex = /\b(unit\s+\d+|representative|sample\s+unit|unit\s+observation|unit\s+note)\b/i;
+  const countLineDisallowRentRegex = /\brent\b/i;
+  const pickStatusCountFromLines = (labelRegex) => {
+    for (const line of lines) {
+      if (countLineDisallowRentRegex.test(line)) continue;
+      if (!labelRegex.test(line)) continue;
+      const inline = line.match(new RegExp(`${labelRegex.source}[^\\d]{0,24}([\\d,]+(?:\\.\\d+)?)`, 'i'));
+      if (inline && Number.isFinite(parseUnitsCount(inline[1]))) return parseUnitsCount(inline[1]);
+      const numericMatches = line.match(/\d[\d,]*(?:\.\d+)?/g) || [];
+      const candidate = numericMatches.length ? numericMatches[numericMatches.length - 1] : null;
+      const parsed = parseUnitsCount(candidate);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return null;
+  };
+  const pickOccupancyFromLines = () => {
+    for (const line of lines) {
+      if (!/\b(occupancy|occupancy\s*percentage|occupied\s*percentage)\b/i.test(line)) continue;
+      const pct = line.match(/([\d,]+(?:\.\d+)?)\s*%/i);
+      if (pct && Number.isFinite(parsePercentRatio(pct[1]))) return parsePercentRatio(pct[1]);
+      const raw = line.match(/\b(occupancy|occupancy\s*percentage|occupied\s*percentage)\b[^\d]{0,24}([\d,]+(?:\.\d+)?)/i);
+      if (raw && Number.isFinite(parsePercentRatio(raw[2]))) return parsePercentRatio(raw[2]);
+    }
+    return null;
+  };
+  const totalUnits = pickStatusCountFromLines(/\b(total\s*units?|units?\s*total|building\s*units?)\b/i);
+  const occupiedUnits = pickStatusCountFromLines(/\b(occupied\s*units?|occupied)\b/i);
+  const vacantUnits = pickStatusCountFromLines(/\b(vacant\s*units?|vacancy\s*units?|vacant)\b/i);
+  const occupancy = pickOccupancyFromLines();
+  const pickRentTotalFromSummaryLines = (lineMatchers) => {
+    for (const line of lines) {
+      if (!summarySignalRegex.test(line)) continue;
+      if (representativeSignalRegex.test(line) && !/\btotal\b/i.test(line)) continue;
+      for (const matcher of lineMatchers) {
+        if (!matcher.test(line)) continue;
+        const valueMatches = line.match(/[$]?\d[\d,]*(?:\.\d+)?/g) || [];
+        const candidate = valueMatches.length ? valueMatches[valueMatches.length - 1] : null;
+        const parsed = parseMoneyLike(candidate);
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+      }
+    }
+    return null;
+  };
 
-  const inPlaceMonthly = findSummaryNumeric(
-    text,
-    [
-      /\b(?:in[\s-]?place|current|occupied\s*units?)\s*monthly\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-      /\b(?:monthly)\s*(?:in[\s-]?place|current)\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-    ]
-  );
-  const inPlaceAnnual = findSummaryNumeric(
-    text,
-    [
-      /\b(?:in[\s-]?place|current|occupied\s*units?)\s*annual\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-      /\bannual\s*(?:in[\s-]?place|current)\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-    ]
-  );
-  const marketMonthly = findSummaryNumeric(
-    text,
-    [
-      /\bmarket\s*monthly\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-      /\bmonthly\s*market\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-    ]
-  );
-  const marketAnnual = findSummaryNumeric(
-    text,
-    [
-      /\bmarket\s*annual\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-      /\bannual\s*market\s*rent(?:\s*total)?\b[^\d]{0,24}([$\d,]+(?:\.\d+)?)/i,
-    ]
-  );
+  const inPlaceMonthly = pickRentTotalFromSummaryLines([
+    /\b(in[\s-]?place|current|occupied\s*units?)\b.*\bmonthly\b.*\brent\b/i,
+    /\bmonthly\b.*\b(in[\s-]?place|current)\b.*\brent\b/i,
+  ]);
+  const inPlaceAnnual = pickRentTotalFromSummaryLines([
+    /\b(in[\s-]?place|current|occupied\s*units?)\b.*\bannual\b.*\brent\b/i,
+    /\bannual\b.*\b(in[\s-]?place|current)\b.*\brent\b/i,
+  ]);
+  const marketMonthly = pickRentTotalFromSummaryLines([
+    /\bmarket\b.*\bmonthly\b.*\brent\b/i,
+    /\bmonthly\b.*\bmarket\b.*\brent\b/i,
+  ]);
+  const marketAnnual = pickRentTotalFromSummaryLines([
+    /\bmarket\b.*\bannual\b.*\brent\b/i,
+    /\bannual\b.*\bmarket\b.*\brent\b/i,
+  ]);
 
   if (!(Number.isFinite(totalUnits) && totalUnits > 0)) diagnostics.validation_reasons.push('missing_total_units');
   if (!(Number.isFinite(occupiedUnits) && occupiedUnits >= 0)) diagnostics.validation_reasons.push('missing_occupied_units');
