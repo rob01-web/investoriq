@@ -197,9 +197,11 @@ export default async function handler(req, res) {
           ? reportData.deliveryDecisionState
           : null;
       const hasCanonical = Boolean(deliveryDecisionState);
-      const deliveryGateStatus = hasCanonical
+      const rawDeliveryGateStatus = hasCanonical
         ? String(deliveryDecisionState?.delivery_gate_status || 'deliverable')
         : String(reportData?.delivery_gate_status || 'deliverable');
+      const deliveryGateStatus =
+        rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus;
       const customerDeliveryAllowed = hasCanonical
         ? Boolean(deliveryDecisionState?.customer_delivery_allowed)
         : Boolean(
@@ -2316,7 +2318,6 @@ export default async function handler(req, res) {
                 const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
                 const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
                 const shouldHoldDeliveryOutcome =
-                  deliveryGateStatus === 'admin_review_required' ||
                   deliveryGateStatus === 'user_needs_documents' ||
                   resolvedDeliveryDecision.holdDelivery === true ||
                   resolvedDeliveryDecision.customerDeliveryAllowed === false;
@@ -2377,88 +2378,45 @@ export default async function handler(req, res) {
 
           const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
           const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-          const isTypedGateOutcome =
-            deliveryGateStatus === 'user_needs_documents' || deliveryGateStatus === 'admin_review_required';
+          const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents';
           const isResolvedHoldBlockedOutcome =
             resolvedDeliveryDecision.holdDelivery === true ||
             resolvedDeliveryDecision.customerDeliveryAllowed === false;
           const shouldHoldDeliveryOutcome = isTypedGateOutcome || isResolvedHoldBlockedOutcome;
-          const holdOutcomeStatus = isTypedGateOutcome
-            ? deliveryGateStatus
-            : (resolvedDeliveryDecision.creditRestoreRequired ? 'user_needs_documents' : 'admin_review_required');
+          const holdOutcomeStatus = 'user_needs_documents';
           if (shouldHoldDeliveryOutcome) {
-            if (holdOutcomeStatus === 'user_needs_documents') {
-              await applyTerminalFailureOutcome(job, {
-                fromStatus: 'rendering',
+            await applyTerminalFailureOutcome(job, {
+              fromStatus: 'rendering',
+              errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+              errorMessage:
+                'Report could not be generated. InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.',
+              transitionMeta: {
+                report_id: reportId,
+                reason:
+                  resolvedDeliveryDecision.customerStatusReasonCode ||
+                  resolvedDeliveryDecision.failClosedReasonCode ||
+                  reportData?.delivery_gate_reason_code ||
+                  'source_documents_missing',
+              },
+              restore: {
+                enabled: resolvedDeliveryDecision.creditRestoreRequired || holdOutcomeStatus === 'user_needs_documents',
+                reason:
+                  resolvedDeliveryDecision.failClosedReasonCode ||
+                  resolvedDeliveryDecision.customerStatusReasonCode ||
+                  'user_needs_documents',
                 errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
-                errorMessage:
-                  'Report could not be published because required core source documents or values were missing or invalid.',
-                transitionMeta: {
-                  report_id: reportId,
-                  reason:
-                    resolvedDeliveryDecision.customerStatusReasonCode ||
-                    resolvedDeliveryDecision.failClosedReasonCode ||
-                    reportData?.delivery_gate_reason_code ||
-                    'source_documents_missing',
-                },
-                restore: {
-                  enabled: resolvedDeliveryDecision.creditRestoreRequired,
-                  reason:
-                    resolvedDeliveryDecision.failClosedReasonCode ||
-                    resolvedDeliveryDecision.customerStatusReasonCode ||
-                    'user_needs_documents',
-                  errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
-                  strict: false,
-                  logContext: 'needs-documents',
-                },
-              });
-              transitions.push({
-                job_id: job.id,
-                from_status: 'rendering',
-                to_status: 'failed',
-              });
-              passTransitions += 1;
-              if (!failedJobIds.includes(job.id)) {
-                failedJobIds.push(job.id);
-              }
-            } else {
-              const heldUpdate = { status: 'publishing' };
-              if (supportsErrorCode) {
-                heldUpdate.error_code = 'ADMIN_REVIEW_REQUIRED';
-              }
-              if (supportsErrorMessage) {
-                heldUpdate.error_message = 'Report held for admin review before delivery.';
-              }
-              const { error: heldErr } = await supabaseAdmin
-                .from('analysis_jobs')
-                .update(heldUpdate)
-                .eq('id', job.id);
-              if (heldErr) {
-                throw new Error(`Failed to mark job held for admin review: ${heldErr.message}`);
-              }
-              transitions.push({
-                job_id: job.id,
-                from_status: 'rendering',
-                to_status: 'publishing',
-              });
-              passTransitions += 1;
-              const heldTransitionErr = await writeStatusTransitionArtifact(
-                job.id,
-                'rendering',
-                'publishing',
-                {
-                  user_id: job.user_id,
-                  report_id: reportId,
-                  reason:
-                    resolvedDeliveryDecision.customerStatusReasonCode ||
-                    resolvedDeliveryDecision.failClosedReasonCode ||
-                    reportData?.delivery_gate_reason_code ||
-                    'admin_review_required',
-                }
-              );
-              if (heldTransitionErr) {
-                throw new Error(`Failed to write held publishing status transition artifact: ${heldTransitionErr.message}`);
-              }
+                strict: false,
+                logContext: 'needs-documents',
+              },
+            });
+            transitions.push({
+              job_id: job.id,
+              from_status: 'rendering',
+              to_status: 'failed',
+            });
+            passTransitions += 1;
+            if (!failedJobIds.includes(job.id)) {
+              failedJobIds.push(job.id);
             }
             await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
               ...reportData,

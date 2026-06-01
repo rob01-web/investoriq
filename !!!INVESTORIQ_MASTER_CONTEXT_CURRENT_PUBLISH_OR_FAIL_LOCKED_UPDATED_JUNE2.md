@@ -1,3 +1,200 @@
+# June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Progress / `user_needs_documents` Demotion Doctrine Added
+
+## Current controlling status
+
+- Publish-or-Fail doctrine remains the controlling customer-outcome doctrine.
+- Ordinary customer outcomes are only:
+  1. **PUBLISH**
+  2. **FAIL CLOSED + RESTORE CREDIT**
+- There is no normal customer-facing admin-review outcome.
+- There is no normal customer-facing under-review limbo.
+- There is no normal customer-facing upload-more-documents loop for an active job.
+
+## Slice 1 and Slice 1B completed in `api/_lib/qa-action-plan.js`
+
+### Slice 1 - admin-review / under-review emitter demotion
+
+Files changed:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/qa-action-plan-smoke.js`
+
+Completed behavior:
+- `qa-action-plan` no longer preserves `admin_review_required` as a canonical ordinary customer delivery state.
+- `under_review` customer label/message path was removed from canonical delivery state construction.
+- Customer-facing "under internal review" language was removed from this canonical/action-plan layer.
+- `admin_review_required` output is forced false in publish-eligibility output.
+- Canonical override paths normalize legacy review states before downstream delivery/readiness synthesis.
+
+Important correction:
+- Slice 1 initially risked over-demoting deprecated `admin_review_required` into `user_needs_documents`, which could have converted non-core/report-surface issues into fail-closed outcomes. That was not acceptable under current doctrine.
+
+### Slice 1B - reason-aware deprecated-admin-review normalization
+
+Files changed:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/qa-action-plan-smoke.js`
+
+Completed behavior:
+- Blanket `admin_review_required -> user_needs_documents` normalization was replaced with reason-aware classification.
+- Deprecated `admin_review_required` now resolves by cause:
+  - `core_fail` reasons -> fail-closed path / legacy `user_needs_documents` internal status.
+  - known non-core/report-surface reasons -> `deliverable`.
+  - unknown deprecated reasons -> `deliverable` plus diagnostic code `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION`.
+- No `under_review` customer label/message path was reintroduced.
+
+Examples now deliverable when core T12 + Rent Roll are usable:
+- `REPORT_TYPE_SECTION_LEAK`
+- `RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER`
+- placeholder/render leak classes
+- other known non-core/report-surface classes
+
+Examples still fail-closed:
+- `missing_required_t12`
+- `missing_required_rent_roll`
+- `missing_required_source_documents`
+- `rent_roll_unusable`
+- `t12_unusable`
+- `core_input_verification_inconsistency`
+- `system_contract_failure` only where it has true core-fail/generation-failure semantics
+
+Validation reported:
+- `node --check api/_lib/qa-action-plan.js`
+- `node tests/qa/qa-action-plan-smoke.js`
+- `git diff --check`
+- All passed, with CRLF warnings only.
+
+## New doctrine clarification - `user_needs_documents` is not a customer workflow state
+
+`user_needs_documents` is legacy/internal terminology from an earlier product concept where a user might upload additional documents into the same active job.
+
+That workflow does **not** currently exist.
+
+Therefore:
+
+- `user_needs_documents` must not be presented as a normal customer-facing "add more documents to this job" state.
+- It may remain temporarily as an internal/legacy fail-closed alias for required-core-source failure.
+- Customer-facing copy must describe the actual product outcome:
+  - **Report could not be generated from the required uploaded documents.**
+  - **Report credit has been restored.**
+  - **User may start a new report with corrected source documents.**
+
+Correct conceptual replacement:
+- Internal old label: `user_needs_documents`
+- Current meaning: `fail_closed_core_documents` / `required_source_data_unusable`
+- Customer outcome: `FAIL CLOSED + RESTORE CREDIT`
+
+Correct mapping:
+- Missing/unusable T12 -> fail closed + restore credit.
+- Missing/unusable Rent Roll -> fail closed + restore credit.
+- Both required core docs unusable -> fail closed + restore credit.
+- Parser/provider failure where required core docs cannot be validated -> fail closed + restore credit.
+- Optional/support docs missing or ambiguous -> publish with affected section collapsed/omitted/qualified/disclosed.
+- Report-surface/copy/rendering issue -> self-heal/sanitize/replace/collapse/omit/qualify, then publish.
+- DocRaptor test mode -> customer delivery allowed if otherwise safe; external/public/sample/high-value distribution blocked only.
+- OpenAI quota/advisory failure -> diagnostic only if deterministic core artifacts are valid.
+
+Customer-facing language target:
+```text
+Report could not be generated.
+
+InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.
+```
+
+Do not use customer-facing language implying:
+- "under review"
+- "internal review"
+- "24 business hours review"
+- "additional documents are needed before this report can be delivered"
+- "upload more documents to this job"
+
+unless/until the product actually supports adding documents to an active job.
+
+## Current remaining Publish-or-Fail doctrine-lock work
+
+Do not run more live Underwriting tests until the remaining downstream doctrine-lock slices are handled or intentionally deferred with a clear risk note.
+
+Remaining slices:
+
+1. **Generator hold branch demotion**
+   - File likely: `api/generate-client-report.js`
+   - Remove ordinary customer hold behavior keyed to `admin_review_required`.
+   - Demote `user_needs_documents` customer wording into fail-closed/credit-restored semantics.
+   - Preserve true fail-closed behavior for unusable required core docs and true system/runtime/storage failure.
+
+2. **Worker lifecycle demotion**
+   - File likely: `api/admin-run-worker.js`
+   - Remove admin-review held transition as ordinary customer state.
+   - Ensure publish path proceeds when canonical customer delivery is allowed.
+   - Ensure true core fail/system fail restores credit.
+   - Ensure legacy `user_needs_documents` maps to fail-closed/credit-restored, not upload-more-docs limbo.
+
+3. **Dashboard customer display cleanup**
+   - File likely: `src/pages/Dashboard.jsx`
+   - Remove customer-visible `under_review` and upload-more-docs style messaging.
+   - Display published/ready reports normally.
+   - Display fail-closed reports with credit-restored language.
+   - Avoid implying the user can add more documents to the same job.
+
+4. **AdminDashboard display/diagnostics cleanup**
+   - File likely: `src/pages/AdminDashboard.jsx`
+   - Keep internal diagnostics/triage visible.
+   - Ensure labels do not imply ordinary customer admin approval/review.
+   - Preserve emergency/admin tooling as internal-only.
+
+5. **Final doctrine-lock smoke/audit**
+   - Add/maintain tests proving:
+     - no customer-facing `under_review`;
+     - no customer-facing `admin_review_required`;
+     - no customer-facing "under internal review";
+     - `user_needs_documents` is not a customer workflow state;
+     - required-core failures fail closed + restore credit;
+     - optional/support/render/copy issues publish with collapse/omit/qualify/self-heal/disclosure;
+     - public/sample/high-value blockers cannot block ordinary customer delivery.
+
+## Fresh-chat continuation prompt
+
+We are continuing InvestorIQ immediately after updating the master context for Publish-or-Fail doctrine lock progress.
+
+Current status:
+- `.MD` doctrine has been updated again.
+- Slice 1 and Slice 1B are complete/pass in `api/_lib/qa-action-plan.js`.
+- Slice 1 removed/demoted admin-review and under-review emitters in qa-action-plan.
+- Slice 1B fixed the over-demotion mistake by making deprecated `admin_review_required` reason-aware:
+  - core-fail reasons -> fail-closed path / legacy internal `user_needs_documents`;
+  - non-core/report-surface reasons -> deliverable;
+  - unknown deprecated reasons -> deliverable + `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION` diagnostic.
+- `user_needs_documents` doctrine is now clarified:
+  - it is not a customer workflow state because InvestorIQ currently has no upload-more-documents flow for an active job;
+  - it may remain temporarily as an internal/legacy fail-closed alias only;
+  - customer-facing copy must say the report could not be generated from required uploaded documents and the credit was restored.
+
+Next work:
+1. Continue Publish-or-Fail doctrine-lock downstream slices.
+2. Recommended next slice: `generate-client-report.js` hold-branch demotion and customer wording correction.
+3. Then worker lifecycle.
+4. Then Dashboard customer display.
+5. Then AdminDashboard/internal diagnostics wording.
+6. Then final doctrine-lock smoke/audit.
+
+Guardrails:
+- Do not run more live Underwriting tests yet.
+- Do not loosen QA.
+- Do not publish unsafe rendered surfaces.
+- Do not fail whole reports for wording/render/optional-support issues.
+- Fail closed only for unusable required core T12/Rent Roll or true generation failure.
+- No normal admin review.
+- No normal customer under-review.
+- No customer upload-more-documents limbo.
+- No broad refactors.
+- No new Vercel/serverless routes casually.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off fixture values.
+- Renderer consumes canonical state.
+- QA is conformance/diagnostics only.
+- Public/sample/high-value readiness remains distribution metadata, not ordinary customer delivery authority.
+
+---
+
 # June 1/2, 2026 Addendum - Publish-or-Fail Doctrine Locked / Admin Review Removed as Customer Outcome
 
 ## Current controlling doctrine - supersedes all older contradictory implementation notes

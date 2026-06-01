@@ -200,7 +200,9 @@ function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
 }
 function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
-  const deliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const deliveryGateStatus =
+    rawDeliveryGateStatus === "admin_review_required" ? "deliverable" : rawDeliveryGateStatus;
   const customerDeliveryAllowed = Boolean(state.customer_delivery_allowed);
   const holdDelivery = Boolean(state.hold_delivery);
   return {
@@ -287,13 +289,20 @@ function assertValidReportPublicationInsert({
   context = {},
 } = {}) {
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
-  if (holdDelivery || (typeof deliveryGateStatus === "string" && deliveryGateStatus !== "deliverable")) {
+  const normalizedDeliveryGateStatus =
+    String(deliveryGateStatus || "deliverable") === "admin_review_required"
+      ? "deliverable"
+      : deliveryGateStatus;
+  if (
+    holdDelivery ||
+    (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
+  ) {
     const err = new Error("Report publication blocked before storage insert");
     err.code = "REPORT_GENERATION_FAILED";
     err.context = {
       ...context,
       storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: deliveryGateStatus || null,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
       holdDelivery: Boolean(holdDelivery),
     };
     throw err;
@@ -304,7 +313,7 @@ function assertValidReportPublicationInsert({
     err.context = {
       ...context,
       storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: deliveryGateStatus || null,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
       holdDelivery: Boolean(holdDelivery),
     };
     throw err;
@@ -315,7 +324,7 @@ function assertValidReportPublicationInsert({
     err.context = {
       ...context,
       storagePath: normalizedStoragePath,
-      deliveryGateStatus: deliveryGateStatus || null,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
       holdDelivery: Boolean(holdDelivery),
     };
     throw err;
@@ -10621,11 +10630,14 @@ try {
 } catch (err) {
   console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
 }
-  if (
-    deliveryGateDecisionResult?.delivery_gate_status === "admin_review_required" ||
-    deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents"
-  ) {
+  if (deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents") {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
+    const failClosedDecisionState = {
+      ...blockedDecisionState,
+      customer_status_label: "publication_held",
+      customer_message:
+        "Report could not be generated. InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.",
+    };
     const deliveryAliases = buildDeliveryResponseCompatibilityAliases(blockedDecisionState);
     return res.status(200).json({
       ok: true,
@@ -10633,7 +10645,7 @@ try {
       reportId: null,
     storagePath: null,
     url: null,
-    deliveryDecisionState: blockedDecisionState,
+    deliveryDecisionState: failClosedDecisionState,
     ...deliveryAliases,
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
@@ -10647,9 +10659,7 @@ try {
       regeneration_required_for_customer_delivery: deliveryGateDecisionResult?.regeneration_required_for_customer_delivery ?? false,
       regeneration_required_for_public_sample: deliveryGateDecisionResult?.regeneration_required_for_public_sample ?? false,
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
-      admin_review_required:
-        deliveryGateDecisionResult?.admin_review_required ??
-        deliveryAliases.delivery_gate_status === "admin_review_required",
+      admin_review_required: false,
       user_needs_documents:
         deliveryGateDecisionResult?.user_needs_documents ??
         deliveryAliases.delivery_gate_status === "user_needs_documents",

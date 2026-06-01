@@ -47,8 +47,8 @@ assert.match(typedGateWindow, /to_status:\s*'failed'/);
 assert.match(typedGateWindow, /errorCode:\s*'MISSING_REQUIRED_SOURCE_DATA'/);
 assert.equal(/status:\s*'needs_documents'/.test(typedGateWindow), false);
 assert.match(typedGateWindow, /failedJobIds\.push\(job\.id\)/);
-assert.match(typedGateWindow, /deliveryGateStatus === 'admin_review_required'/);
-assert.match(typedGateWindow, /to_status:\s*'publishing'/);
+assert.equal(/deliveryGateStatus === 'admin_review_required'/.test(typedGateWindow), false);
+assert.equal(/to_status:\s*'publishing'/.test(typedGateWindow), false);
 assert.match(typedGateWindow, /'delivery_gate_decision'/);
 assert.equal(
   /deliveryGateStatus === 'admin_review_required'[\s\S]{0,600}await restoreEntitlementForFailedJob\(/.test(
@@ -65,7 +65,7 @@ assert.match(workerSource, /errorCode:\s*'REPORT_GENERATION_FAILED'/);
 assert.match(workerSource, /const hasCanonical = Boolean\(deliveryDecisionState\);/);
 assert.match(
   workerSource,
-  /const deliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);/
+  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,220}const deliveryGateStatus =[\s\S]{0,120}rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus;/
 );
 assert.match(
   workerSource,
@@ -78,16 +78,13 @@ assert.match(
 assert.match(workerSource, /legacy_alias_conflicts/);
 assert.match(
   workerSource,
-  /const isTypedGateOutcome =\s*deliveryGateStatus === 'user_needs_documents' \|\| deliveryGateStatus === 'admin_review_required';/
+  /const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents';/
 );
 assert.match(
   workerSource,
   /const isResolvedHoldBlockedOutcome =[\s\S]{0,120}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,120}\|\|[\s\S]{0,120}resolvedDeliveryDecision\.customerDeliveryAllowed === false;/
 );
-assert.match(
-  workerSource,
-  /const holdOutcomeStatus = isTypedGateOutcome[\s\S]{0,160}\?\s*deliveryGateStatus[\s\S]{0,200}resolvedDeliveryDecision\.creditRestoreRequired \? 'user_needs_documents' : 'admin_review_required'/
-);
+assert.match(workerSource, /const holdOutcomeStatus = 'user_needs_documents';/);
 assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
 assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
 assert.match(typedGateWindow, /continue;/);
@@ -99,10 +96,7 @@ assert.equal(
   /deliveryGateStatus === 'user_needs_documents'[\s\S]{0,800}status:\s*'published'/.test(workerSource),
   false
 );
-assert.equal(
-  /deliveryGateStatus === 'admin_review_required'[\s\S]{0,800}status:\s*'published'/.test(workerSource),
-  false
-);
+assert.equal(/deliveryGateStatus === 'admin_review_required'/.test(workerSource), false);
 const publishedAnchor = workerSource.indexOf("const completeUpdate = { status: 'published' }");
 assert.notEqual(publishedAnchor, -1);
 const publishedWindow = workerSource.slice(publishedAnchor);
@@ -140,12 +134,7 @@ assert.match(
   typedGateWindow,
   /creditRestoreRequired[\s\S]{0,360}errorCode:\s*'MISSING_REQUIRED_SOURCE_DATA'/
 );
-assert.equal(
-  /if \(deliveryGateStatus === 'admin_review_required'\)[\s\S]{0,1000}restoreEntitlementForFailedJob\(/.test(
-    typedGateWindow
-  ),
-  false
-);
+assert.equal(/Report held for admin review before delivery\./.test(workerSource), false);
 const forbiddenWorkerCopy = [
   "upload replacement " + "documents",
   "upload more " + "documents",
