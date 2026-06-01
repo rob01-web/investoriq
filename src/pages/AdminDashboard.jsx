@@ -70,12 +70,20 @@ function SectionHeader({ eyebrow, title, action }) {
 }
 
 function StatusBadge({ status }) {
+  const normalizedStatus = String(status || '').toLowerCase();
+  const displayStatus =
+    normalizedStatus === 'admin_review_required' ||
+    normalizedStatus === 'under_review' ||
+    normalizedStatus === 'publication_held' ||
+    normalizedStatus === 'needs_documents'
+      ? 'failed'
+      : status;
   const map = {
     published:       { bg:T.okBg,    border:T.okBorder,   color:T.okGreen   },
     queued:          { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     in_progress:     { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     failed:          { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
-    needs_documents: { bg:T.infoBg,  border:T.infoBorder,  color:T.infoBlue  },
+    needs_documents: { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
     open:            { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
     reviewing:       { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     resolved:        { bg:T.okBg,    border:T.okBorder,    color:T.okGreen   },
@@ -83,10 +91,10 @@ function StatusBadge({ status }) {
     Processing:      { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     stuck:           { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
   };
-  const s = map[status] || { bg:T.warm, border:T.hairline, color:T.ink4 };
+  const s = map[displayStatus] || { bg:T.warm, border:T.hairline, color:T.ink4 };
   return (
     <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', padding:'2px 8px', background:s.bg, border:`1px solid ${s.border}`, color:s.color, whiteSpace:'nowrap' }}>
-      {status || '-'}
+      {displayStatus || '-'}
     </span>
   );
 }
@@ -510,7 +518,7 @@ export default function AdminDashboard() {
       }
       setFixQueueActionMessage(
         action === 'mark_still_reviewing'
-          ? 'Still reviewing logged. Admin hold remains active.'
+          ? 'Legacy review signal logged for internal diagnostics only.'
           : data?.message || 'Action completed.'
       );
       await fetchFixQueue();
@@ -909,7 +917,7 @@ export default function AdminDashboard() {
                     <TblTd style={{ maxWidth:320 }}>
                       <div style={{ fontSize:11, color:T.ink2, lineHeight:1.55 }}>{displayReason}</div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                        <StatusPill label={isCustomerHold ? 'Customer Hold' : 'Customer Ready'} tone={isCustomerHold ? 'warn' : 'success'} />
+                        <StatusPill label={isCustomerHold ? 'Customer Fail-Closed' : 'Customer Ready'} tone={isCustomerHold ? 'warn' : 'success'} />
                         <StatusPill label={isPublicBlocked ? 'Public Blocked' : 'Public Ready'} tone={isPublicBlocked ? 'warn' : 'success'} />
                         <StatusPill label={isOutreachBlocked ? 'Outreach Blocked' : 'Outreach Ready'} tone={isOutreachBlocked ? 'warn' : 'success'} />
                         {item.requires_code_patch && <StatusPill label="Patch Required" tone="danger" />}
@@ -1096,7 +1104,7 @@ export default function AdminDashboard() {
                     </div>
                     <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
                       <Btn
-                        title="Mark still reviewing"
+                        title="Mark legacy review signal"
                         onClick={() => runControlledFixQueueAction('mark_still_reviewing')}
                         disabled={
                           !!fixQueueActionLoading ||
@@ -1108,10 +1116,10 @@ export default function AdminDashboard() {
                         variant="ghost"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        {controlledActionLabel('mark_still_reviewing', 'Mark still reviewing')}
+                        {controlledActionLabel('mark_still_reviewing', 'Mark legacy review signal')}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Only enabled for admin-held publishing jobs.
+                        Internal legacy diagnostic control only.
                       </div>
                     </div>
                   </div>
@@ -1620,7 +1628,7 @@ export default function AdminDashboard() {
                     value={issueFilter} onChange={e => { setIssueFilter(e.target.value); fetchIssues(e.target.value); }}
                     style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
                     <option value="open">Open</option>
-                    <option value="reviewing">Reviewing</option>
+                    <option value="reviewing">Legacy review signal</option>
                     <option value="resolved">Resolved</option>
                     <option value="all">All</option>
                   </select>
@@ -1663,7 +1671,7 @@ export default function AdminDashboard() {
                           <TblTd right>
                             <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
                               {issue.status !== 'reviewing' && (
-                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Reviewing</Btn>
+                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Legacy review signal</Btn>
                               )}
                               {issue.status !== 'resolved' && (
                                 <Btn onClick={() => updateIssue(issue.id, 'resolved')} disabled={isUpdating} variant="success">
