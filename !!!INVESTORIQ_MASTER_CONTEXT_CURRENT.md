@@ -1,3 +1,132 @@
+﻿# June 1, 2026 Addendum - Clean Screening Regression Root Fixes / Parser Fallback / Delivery Gate Correction / Summary-Only Surface Patch / Core Parser Rejection Audit Installed
+
+## Current controlling status
+- Controlled live regression started after G8 material closure.
+- Clean Screening pipeline materially improved, but one more red-pen PDF review is still required after the latest surface patch rerun.
+- Do not claim all DS rows are globally closed.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public samples are ready.
+
+## Doctrine reaffirmed
+- Whole-report fail-closed is only for unusable/missing/unreadable/materially invalid required core docs, severe core contradiction, or true runtime/system/storage failure.
+- Messy but usable core T12/Rent Roll evidence should publish when defensible.
+- Optional/support/section-specific issues must collapse/omit/qualify/disclose at section/line level, not fail the whole report.
+- Admin review is not a normal customer outcome.
+- AI is not the boss; deterministic validation remains authority.
+
+## June 1 regression sequence
+1. Clean Screening initially failed closed.
+- Root cause: rent roll was plain-text narrative with explicit coherent summary totals.
+- Deterministic rent-roll parsing was gated to tabular flows.
+- AI recovery attempted; provider returned non-OK (429/openai_non_ok); no accepted candidate.
+- Worker fail-closed/credit-restore behavior was correct.
+
+2. Deterministic text-summary rent-roll fallback added.
+- Files:
+- `api/parse/parse-doc.js`
+- `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+- Added `parseRentRollFromTextSummary(...)`.
+- Non-tabular rent roll can now produce `rent_roll_parsed` when explicit coherent summary totals exist.
+- Requires: total units, occupied, vacant, occupancy, in-place/current total family, market total family.
+- Coherence checks added (occupied+vacant=total, occupancy approx occupied/total, monthly/annual consistency).
+- No fabricated unit rows.
+- No summing representative observations.
+- Specific rejection diagnostics added.
+
+3. Fallback tightened.
+- Initial version was too permissive (accepted any one rent-total family).
+- Fixed to require both in-place/current family and market family.
+- Added in-place-only and market-only rejection tests.
+
+4. Summary-total precedence fixed.
+- Parser now prefers controlling summary-total semantics over representative unit narrative values.
+- Representative-only observations reject.
+- Trailing numeric extraction avoids “across all 48 units” collisions.
+- No parser hardcoding.
+
+5. Delivery leak fixed after parse succeeded.
+- Root cause: `DOCRAPTOR_NOT_PRODUCTION_MODE` leaked from distribution readiness into ordinary customer delivery.
+- Files:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/delivery-decision-state-smoke.js`
+- Canonical `customer_delivery_allowed` now wins when present.
+- Otherwise customer delivery derives from canonical delivery authority:
+- `delivery_gate_status === "deliverable"`
+- `customer_publish_blockers.length === 0`
+- DocRaptor test mode still blocks `public_sample_ready` and `high_value_outreach_ready`.
+- True holds/fails remain unchanged.
+
+6. Post-publish red-pen found summary-only surface defects.
+- Empty unit-level framing visible for summary-only rent roll.
+- “Weighted Avg” labels shown without row-level support.
+- Stale heading “InvestorIQ Estimates” remained.
+
+7. Screening summary-only rent-roll surface patch completed.
+- Files:
+- `api/generate-client-report.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Detects summary-only surface (`units/unit_mix/computed unit_mix` empty with verified totals).
+- Collapses empty unit-level/unit-mix surface in Screening.
+- Replaces with summary-positioning language.
+- Uses implied-average labels for summary-only:
+- `Implied Avg In-Place Rent`
+- `Implied Avg Market Rent`
+- Adds monthly/annual total metrics.
+- Preserves weighted/rent-band row-level rendering when row support exists.
+- Replaced stale heading with `Document-Backed Screening Outputs`.
+- No parser/delivery/DocRaptor changes.
+
+8. Core parser rejection audit layer installed (diagnostic-only safeguard).
+- Files:
+- `api/admin-run-worker.js`
+- `tests/qa/core-parser-rejection-audit-smoke.js`
+- New artifact type: `core_parser_rejection_audit`.
+- Trigger: extracting-stage fail path before/around `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` when required core parsed artifact is missing, core file exists, and `document_text_extracted` exists.
+- Deterministic-only signal findings include:
+- `parser_rejection_confirmed`
+- `parser_missed_usable_core_evidence`
+- `representative_values_confused_with_summary_totals`
+- `source_text_contains_core_summary_totals`
+- `provider_unavailable`
+- `deterministic_recovery_needed`
+- `insufficient_readable_text`
+- `core_evidence_incoherent`
+- No publish effect, no parsed artifact creation, no AI value authority, no credit-restore behavior change, no Dashboard copy change.
+
+## Validation receipts recorded
+- `rent-roll-text-summary-fallback-smoke` passed.
+- `t12-rent-roll-diagnostics-regression` passed when run.
+- `delivery-decision-state-smoke` passed.
+- `admin-run-worker-gate-smoke` passed.
+- `generate-client-report-rent-roll-smoke` passed.
+- `core-parser-rejection-audit-smoke` passed.
+- `git diff --check` passed with CRLF warnings only.
+
+## Immediate continuation point
+- Pause live testing until this doc update checkpoint is committed and a fresh chat starts.
+- Next:
+1. Rerun the same Clean Screening and red-pen the new PDF surface.
+2. Investigate OpenAI 429/insufficient_quota diagnostics as separate launch-readiness/config work.
+
+## OpenAI quota/config investigation note
+- Codex should inspect code-side OpenAI diagnostics capture only.
+- Identify error-body capture gaps, model selection, retry/backoff behavior, and clarity of rate-limit vs quota vs billing/project/model-limit diagnostics.
+- Do not print secrets or expose API keys.
+- Account-side billing/project limits still require Rob dashboard verification.
+
+## Guardrails unchanged
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property/job/file IDs
+- no casual new API/serverless routes
+- no public AI wording
+- no BUY/SELL/HOLD
+- renderer consumes canonical state
+- QA/conformance/diagnostics only
+- deterministic validation remains authority
+
+---
 # May 30, 2026 Addendum - G8 Delivery/UI Lifecycle Authority Materially Closed / Grouped Campaign Checkpoint
 
 ## Current controlling status

@@ -40,6 +40,78 @@ Historical note: This file supersedes the prior Full Underwriting cleanup roadma
 
 ## Section 2A - Today DS Status Update (May 28, 2026)
 
+### June 1, 2026 Addendum - Clean Screening Regression Root Fixes / Parser Fallback / Delivery Gate Correction / Summary-Only Surface Patch / Core Parser Rejection Audit Installed
+- Post-G8 controlled live regression surfaced a real parser->delivery->surface chain.
+- Clean Screening initially failed closed because narrative rent-roll summary totals were usable but not accepted by deterministic non-tabular path; AI recovery returned non-OK/429.
+- Worker fail-closed/credit-restore doctrine behaved correctly.
+
+#### Completed June 1 root-fix sequence (post-G8 live-regression)
+1. Deterministic rent-roll text-summary fallback added and hardened.
+- Files: `api/parse/parse-doc.js`, `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+- Added deterministic summary-total acceptance for non-tabular rent roll text with strict coherence.
+- Requires both rent-total families (in-place/current and market).
+- Representative-only text rejects; no fabricated rows; no representative-row summation.
+- Summary-total precedence fixed so controlling totals win over representative unit narrative values.
+
+2. Delivery/readiness leakage correction.
+- Files: `api/_lib/qa-action-plan.js`, `tests/qa/delivery-decision-state-smoke.js`
+- Fixed canonical-vs-legacy alias precedence so `DOCRAPTOR_NOT_PRODUCTION_MODE` remains distribution-only.
+- Ordinary customer delivery is not held when canonical gate says deliverable and no customer blockers exist.
+- Public sample/high-value outreach can remain blocked in test mode.
+- True customer blockers and typed gate holds remain unchanged.
+
+3. Screening summary-only rent-roll surface eligibility/render patch.
+- Files: `api/generate-client-report.js`, `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Summary-only rent roll (no verified unit rows/unit_mix) now suppresses empty unit-level framing.
+- Replaced with summary-total positioning language and implied-average labels.
+- Weighted labels/rent-band table preserved only for row-level support.
+- Replaced stale heading `InvestorIQ Estimates` -> `Document-Backed Screening Outputs`.
+
+4. Diagnostic safeguard in worker fail path.
+- Files: `api/admin-run-worker.js`, `tests/qa/core-parser-rejection-audit-smoke.js`
+- Added diagnostic-only `core_parser_rejection_audit` artifact when required core structured artifact is missing but extracted text exists.
+- Deterministic text-signal findings identify likely parser miss vs insufficient evidence vs provider unavailable.
+- No publish behavior change, no parsed artifact creation, no delivery doctrine change.
+
+#### DS cluster status notes (closure nuance)
+- `DS-067 parser recovery cluster`:
+- Deterministic rent-roll text-summary fallback and summary-precedence sub-scopes are closed.
+- Core parser rejection diagnostic safeguard sub-scope is closed.
+- Broader DS-067 remains `PARTIAL` unless full cluster closure standard is met.
+
+- `DS-068 worker status-machine cluster`:
+- Diagnostic-only core parser rejection audit in fail path is added and closed as a sub-scope.
+- No change to fail-closed doctrine, typed outcomes, or credit-restore semantics.
+- Broader DS-068 remains governed by closure standard.
+
+- `DS-047/DS-048/DS-050 delivery/readiness`:
+- Canonical-over-legacy precedence fix for DocRaptor distribution-only blocker leakage is completed.
+- Do not auto-mark broader rows `CLOSED` unless all row closure criteria are met; treat as targeted sub-scope closure where applicable.
+
+- `DS-064 generator/render cluster`:
+- Screening summary-only rent-roll surface eligibility/render sub-scope is closed.
+- Broader DS-064 remains `PARTIAL` unless complete closure standard is satisfied.
+
+#### Validation receipts (June 1)
+- `rent-roll-text-summary-fallback-smoke` passed.
+- `t12-rent-roll-diagnostics-regression` passed where run.
+- `delivery-decision-state-smoke` passed.
+- `admin-run-worker-gate-smoke` passed.
+- `generate-client-report-rent-roll-smoke` passed.
+- `core-parser-rejection-audit-smoke` passed.
+- `git diff --check` passed with CRLF warnings only.
+
+#### Immediate continuation point
+- Pause live testing until doc checkpoint + fresh chat reset.
+- Next:
+1. rerun same Clean Screening and red-pen latest PDF surface;
+2. separate OpenAI 429/insufficient_quota diagnostics readiness pass (error-body capture clarity, model/retry/backoff diagnostics, no secret exposure).
+
+#### Do not overclaim
+- Do not claim all DS rows globally closed.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public sample readiness.
+
 ### May 30, 2026 Addendum - G8 Delivery/UI Lifecycle Authority Materially Closed / Grouped Campaign Checkpoint
 - G8 is materially closed.
 - G8A-02 seam in `api/admin-run-worker.js` is closed.
