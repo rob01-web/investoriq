@@ -3877,6 +3877,10 @@ assert.match(summaryOnlyRentRollDistributionHtml, /Annual Market Rent \(Total\).
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg In-Place Rent"), false);
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg Market Rent"), false);
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Rent Bands (In-Place)"), false);
+assert.match(
+  reportSource,
+  /effectiveReportMode === "screening_v1"[\s\S]{0,400}if \(summaryOnlyRentRollSurface\) return ""/
+);
 
 const rowLevelRentRollDistributionHtml = generatorTest.buildScreeningRentRollDistributionHtml({
   computedRentRoll: {
@@ -3895,6 +3899,8 @@ const rowLevelRentRollDistributionHtml = generatorTest.buildScreeningRentRollDis
 assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg In-Place Rent/);
 assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg Market Rent/);
 assert.match(rowLevelRentRollDistributionHtml, /Rent Bands \(In-Place\)/);
+assert.match(reportSource, /Rent Positioning Summary/);
+assert.equal(/InvestorIQ estimates are document-backed/i.test(reportSource), false);
 
 const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
   t12Payload: {

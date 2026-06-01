@@ -6171,7 +6171,7 @@ export default async function handler(req, res) {
     finalHtml = replaceAll(
       finalHtml,
       "{{ESTIMATES_DISCLOSURE}}",
-      "InvestorIQ estimates are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those estimates are omitted rather than inferred."
+      "InvestorIQ screening outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -7035,7 +7035,7 @@ if (effectiveReportMode === "screening_v1") {
     }
     if (Number.isFinite(execOccupancy) && execOccupancy >= 0.95) {
       upsideBullets.push(
-        `Occupancy is ${formatPercent1(execOccupancy)}, reflecting fully stabilized in-place tenancy.`
+        `Occupancy is ${formatPercent1(execOccupancy)}, reflecting near-stabilized in-place tenancy.`
       );
     }
     if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
@@ -7671,10 +7671,11 @@ if (effectiveReportMode === "screening_v1") {
         ? ""
         : effectiveReportMode === "screening_v1"
         ? (() => {
+            if (summaryOnlyRentRollSurface) return "";
             const annualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
             const annualMarket = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
             if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
-              return `<div class="card no-break"><p class="subsection-title">${summaryOnlyRentRollSurface ? "Summary Rent Positioning" : "Rent Positioning Summary"}</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${summaryOnlyRentRollSurface ? "Summary totals indicate in-place rent is below documented market rent." : "Rent roll data indicates in-place rents are below market across the current unit mix."}</p></div>`;
+              return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates in-place rents are below market across the current unit mix.</p></div>`;
             }
             return "";
           })()
