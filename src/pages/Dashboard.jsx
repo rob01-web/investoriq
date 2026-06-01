@@ -105,6 +105,37 @@ const hairlineRule = {
   margin:     '20px 0',
 };
 
+const FAIL_CLOSED_CUSTOMER_MESSAGE =
+  'Report could not be generated.\n\nInvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.';
+
+const FAIL_CLOSED_REASON_OR_ERROR_PATTERN =
+  /(user_needs_documents|missing_required_source_data|missing_structured_financials|missing_structured_financial_artifacts|missing_required_t12|missing_required_rent_roll|t12_unusable|rent_roll_unusable|missing_required_documents)/i;
+
+function normalizeDashboardCustomerStatusLabel(label) {
+  const normalized = String(label || '').toLowerCase();
+  if (
+    normalized === 'under_review' ||
+    normalized === 'needs_documents' ||
+    normalized === 'publication_held' ||
+    normalized === 'admin_review_required'
+  ) return 'failed';
+  return normalized;
+}
+
+function resolveDoctrineCustomerMessage(job = {}, decision = null) {
+  const message = String(decision?.customer_message || '').trim();
+  const reason = String(decision?.customer_status_reason_code || '').trim();
+  const errorCode = String(job?.error_code || '').trim();
+  if (FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) || FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode)) {
+    return FAIL_CLOSED_CUSTOMER_MESSAGE;
+  }
+  if (!message) return '';
+  if (/under review|internal review|needs documents|additional required documents/i.test(message)) {
+    return FAIL_CLOSED_CUSTOMER_MESSAGE;
+  }
+  return message;
+}
+
 // Primary button - Forest Green / Gold hover
 function PrimaryBtn({ children, onClick, disabled, style = {}, loading = false }) {
   const [hov, setHov] = useState(false);
@@ -174,13 +205,11 @@ function GhostBtn({ children, onClick, disabled, style = {} }) {
 
 // Status badge
 function StatusBadge({ status, errorCode, deliveryDecision = null }) {
-  const canonicalLabel = String(deliveryDecision?.customer_status_label || '').toLowerCase();
+  const canonicalLabel = normalizeDashboardCustomerStatusLabel(deliveryDecision?.customer_status_label);
   if (canonicalLabel) {
     const canonicalMap = {
       ready: { bg: T.okBg, border: T.okBorder, color: T.okGreen, label: 'Ready' },
-      under_review: { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' },
-      needs_documents: { bg: T.errorBg, border: T.errorBorder, color: T.errorRed, label: 'Needs documents' },
-      publication_held: { bg: T.errorBg, border: T.errorBorder, color: T.errorRed, label: 'Publication held' },
+      failed: { bg: T.errorBg, border: T.errorBorder, color: T.errorRed, label: 'Failed' },
     };
     const canonicalStatus = canonicalMap[canonicalLabel];
     if (canonicalStatus) {
@@ -201,9 +230,6 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
       );
     }
   }
-  const adminReviewHeld =
-    String(status || '').toLowerCase() === 'publishing' &&
-    String(errorCode || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED';
   const map = {
     published:     { bg: T.okBg,      border: T.okBorder,    color: T.okGreen,   label: 'Ready'        },
     queued:        { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Queued'       },
@@ -212,10 +238,8 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
     scoring:       { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
     rendering:     { bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
     pdf_generating:{ bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
-    publishing:    adminReviewHeld
-      ? { bg: '#F0F4FF', border: '#B8C8F0', color: '#1A3A7A', label: 'Under review' }
-      : { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Preparing' },
-    failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Publication held' },
+    publishing:    { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Preparing' },
+    failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Failed' },
   };
   const s = map[status] || { bg: T.warm, border: T.hairline, color: T.ink4, label: status };
   return (
@@ -238,28 +262,17 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
 function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
   const decision = resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
   if (decision.hasCanonicalDeliveryDecision && decision.customer_status_label) {
-    const normalized = String(decision.customer_status_label).toLowerCase();
-    if (normalized === 'under_review') return 'under review';
-    if (normalized === 'needs_documents') return 'needs documents';
+    const normalized = normalizeDashboardCustomerStatusLabel(decision.customer_status_label);
     if (normalized === 'ready') return 'ready';
-    if (normalized === 'publication_held') return 'publication held';
+    if (normalized === 'failed') return 'failed';
     return normalized.replace(/_/g, ' ');
-  }
-  if (isAdminReviewHeldJob(job)) {
-    return 'under review';
   }
   return String(job?.status || '').toLowerCase();
 }
 
 function isAdminReviewHeldJob(job) {
-  const decision = resolveDashboardCustomerStatus(job);
-  if (decision.hasCanonicalDeliveryDecision && String(decision.customer_status_label || '').toLowerCase() === 'under_review') {
-    return true;
-  }
-  return (
-    String(job?.status || '').toLowerCase() === 'publishing' &&
-    String(job?.error_code || '').toUpperCase() === 'ADMIN_REVIEW_REQUIRED'
-  );
+  void job;
+  return false;
 }
 
 function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPayload = null) {
@@ -298,9 +311,9 @@ function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPayload = 
     return {
       hasCanonicalDeliveryDecision: true,
       delivery_gate_status: candidate.delivery_gate_status || null,
-      customer_status_label: candidate.customer_status_label || null,
+      customer_status_label: normalizeDashboardCustomerStatusLabel(candidate.customer_status_label || null) || null,
       customer_status_reason_code: candidate.customer_status_reason_code || candidate.reason_code || null,
-      customer_message: candidate.customer_message || null,
+      customer_message: resolveDoctrineCustomerMessage(job, candidate) || null,
       customer_delivery_allowed: candidate.customer_delivery_allowed ?? null,
       hold_delivery: candidate.hold_delivery ?? null,
       credit_restore_required: candidate.credit_restore_required ?? null,
@@ -325,17 +338,10 @@ function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload 
 }
 
 function formatDashboardCustomerStatusLabel(label, reportType = null) {
-  const normalized = String(label || '').toLowerCase();
-  if (normalized === 'under_review') return 'Under review';
-  if (normalized === 'needs_documents') return 'Needs documents';
+  const normalized = normalizeDashboardCustomerStatusLabel(label);
+  void reportType;
   if (normalized === 'ready') return 'Ready';
-  if (normalized === 'publication_held') {
-    if (!reportType) return 'Publication held';
-    const rt = String(reportType).toLowerCase();
-    if (rt === 'underwriting') return 'Publication held - Underwriting';
-    if (rt === 'screening') return 'Publication held - Screening';
-    return `Publication held - ${String(reportType)}`;
-  }
+  if (normalized === 'failed') return 'Failed';
   return null;
 }
 
@@ -959,7 +965,7 @@ useEffect(() => {
     if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
     return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
   };
-  const defaultNeedsDocumentsMessage = 'Generation halted due to document integrity validation. Processing stopped before report publication because required financial values could not be validated.';
+  const defaultNeedsDocumentsMessage = FAIL_CLOSED_CUSTOMER_MESSAGE;
   const getFailedFileGuidance = (files) => {
     const rows = Array.isArray(files) ? files : [];
     const normalized = rows.map((row) => ({
@@ -1456,7 +1462,10 @@ useEffect(() => {
                     const canonicalStatusText = decision?.customer_status_label
                       ? String(decision.customer_status_label).toLowerCase().replace(/_/g, ' ')
                       : null;
-                    const visibleStatus = canonicalStatusText || String(j.status || '').toLowerCase();
+                    const visibleStatus = ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing']
+                      .includes(String(j.status || '').toLowerCase())
+                      ? String(j.status || '').toLowerCase()
+                      : (canonicalStatusText || String(j.status || '').toLowerCase());
                     return (
                       <div key={j.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
                         {j.property_name || 'Unnamed Property'} - {visibleStatus}
@@ -1491,9 +1500,7 @@ useEffect(() => {
                       });
                       const statusLabel =
                         formatDashboardCustomerStatusLabel(canonicalDecision?.customer_status_label, latestFailedJob?.report_type) ||
-                        (latestFailedJob.report_type
-                          ? `Publication held - ${String(latestFailedJob.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(latestFailedJob.report_type).toLowerCase() === 'screening' ? 'Screening' : String(latestFailedJob.report_type)}`
-                          : 'Publication held');
+                        'Failed';
                       return (
                         <>
                           <div style={failedMessageStatusStyle}>
@@ -1954,8 +1961,6 @@ useEffect(() => {
                     ? needsDocumentsMessage
                     : activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
                     ? activeDeliveryDecision.customer_message
-                    : isAdminReviewHeldJob(activeJobForRuns)
-                    ? 'Under review. InvestorIQ is verifying source-backed consistency before delivery.'
                     : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
@@ -2072,9 +2077,7 @@ useEffect(() => {
                 });
                 const statusLabel =
                   formatDashboardCustomerStatusLabel(canonicalDecision?.customer_status_label, job?.report_type) ||
-                  (job.report_type
-                    ? `Publication held - ${String(job.report_type).toLowerCase() === 'underwriting' ? 'Underwriting' : String(job.report_type).toLowerCase() === 'screening' ? 'Screening' : String(job.report_type)}`
-                    : 'Publication held');
+                  'Failed';
                 return (
                   <NoticeBox key={job.id} type="error">
                     <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
