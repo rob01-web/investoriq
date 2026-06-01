@@ -1948,3 +1948,40 @@ Next-step status:
 - PR 1, PR 4, PR 2, PR 3 are complete.
 - PR 5 / UnderwritingState remains deferred unless the final checkpoint indicates it is necessary now.
 - Next likely step after this context update: small audit-only checkpoint to decide whether any remaining micro patches are needed before the final Emergent audit.
+# June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Completed (Closed)
+
+## Status
+- Publish-or-Fail Doctrine Lock: `CLOSED / PASS WITH KNOWN SAFE INTERNAL LEGACY`.
+- Ordinary customer outcomes are now locked to:
+1. `PUBLISH / READY`
+2. `FAIL CLOSED + CREDIT RESTORED`
+3. Normal processing states while running: `queued`, `extracting`, `underwriting`, `scoring`, `rendering`, `pdf_generating`, `publishing`
+
+## Completed Slices
+1. `qa-action-plan` Slice 1: ordinary `admin_review_required` / `under_review` customer emitters removed/demoted.
+2. `qa-action-plan` Slice 1B: deprecated `admin_review_required` made reason-aware:
+   - core-fail reasons -> fail-closed / legacy internal `user_needs_documents`
+   - known non-core/report-surface reasons -> deliverable
+   - unknown deprecated reasons -> deliverable + `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION`
+3. `generate-client-report` Slice 2: hold-return now only for `delivery_gate_status === user_needs_documents`; deprecated `admin_review_required` treated as deliverable for ordinary generator behavior; fail-closed copy aligned.
+4. `admin-run-worker` Slice 3: deprecated `admin_review_required` normalized to deliverable lifecycle behavior; admin-held publishing path removed; non-deliverable required-core/source outcomes fail closed via `applyTerminalFailureOutcome`; entitlement restore preserved.
+5. `Dashboard` Slice 4/4B: customer-visible review/held/needs-doc/publication-held lifecycle labels removed; customer labels now `Ready`, `Failed`, or processing states; fail-closed wording aligned.
+6. `AdminDashboard` Slice 5: legacy review/held semantics relabeled as internal/legacy diagnostics; admin emergency/diagnostic controls preserved.
+7. Final repo search audit: remaining terms classified as safe internal/backend, admin-only legacy, tests, or docs; one unsafe Dashboard review-language leak removed.
+8. Dashboard timing correction: restored acceptable processing-only timing copy:
+   - `Report generation may take up to 24 business hours. You'll be notified when your report is ready.`
+   - no review/held/needs-doc/manual-review framing reintroduced.
+
+## Doctrine Clarifications
+- `user_needs_documents` may remain only as internal/legacy fail-closed alias for required core-document failure.
+- `admin_review_required` may remain only as deprecated/internal/legacy/admin diagnostic metadata.
+- Public/sample/high-value blockers remain distribution metadata and must not block ordinary customer delivery.
+
+## Next Step (Controlled Live Retesting)
+1. Clean Screening lifecycle retest.
+2. Confirm Dashboard processing copy/status behavior.
+3. Confirm published report appears and downloads normally.
+4. Confirm no customer-facing review/hold/needs-doc limbo wording.
+5. Then run controlled Underwriting lifecycle retest.
+
+If live retesting reveals a new issue, start the next hardening family from evidence only.

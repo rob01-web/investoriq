@@ -2035,11 +2035,9 @@ useEffect(() => {
                           <span style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2 }}>{String(job.property_name || '').trim() || (job.id === jobId ? propertyName.trim() : '') || 'Unnamed property'}</span>
                           <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
                         </div>
-                        {isAdminReviewHeldJob(job) && (
-                          <div style={{ color:T.ink2, fontSize:12, lineHeight:1.6, fontWeight:400, marginTop:6 }}>
-                            InvestorIQ is verifying the uploaded source documents before delivery. This can take up to 24 business hours.
-                          </div>
-                        )}
+                        <div style={{ color:T.ink2, fontSize:12, lineHeight:1.6, fontWeight:400, marginTop:6 }}>
+                          Report generation may take up to 24 business hours. You'll be notified when your report is ready.
+                        </div>
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                         <StatusBadge

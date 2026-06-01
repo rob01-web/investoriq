@@ -1020,3 +1020,35 @@ Inventory count note: Explicit rows above: 70 row entries/groups. Combined with 
 - I. Anti-hardcode proof
 - J. Anything intentionally not touched
 - K. Remaining ledger rows in this family
+# June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Completed
+
+## Checkpoint
+- Batch status: `CLOSED / PASS WITH KNOWN SAFE INTERNAL LEGACY`.
+- Scope completed: qa-action-plan (Slice 1/1B), generate-client-report (Slice 2), admin-run-worker (Slice 3), Dashboard (Slice 4/4B), AdminDashboard (Slice 5), final repo-search audit.
+
+## Locked Customer Outcome Doctrine
+- Ordinary customer outcomes only:
+1. `PUBLISH / READY`
+2. `FAIL CLOSED + CREDIT RESTORED`
+3. Normal processing lifecycle states while generation runs (`queued`, `extracting`, `underwriting`, `scoring`, `rendering`, `pdf_generating`, `publishing`)
+- Forbidden as ordinary customer lifecycle outcomes:
+  - admin/under/internal review
+  - held/review limbo
+  - needs-documents limbo
+  - publication-held lifecycle framing
+  - upload-more-documents/resume messaging on active jobs
+
+## Sub-scope Validation Notes
+- Deprecated `admin_review_required` is no longer an ordinary customer lifecycle endpoint; normalization is reason-aware.
+- `user_needs_documents` retained only as internal legacy fail-closed alias for required core-document failures.
+- Generator/worker/dashboard/admin surfaces now align to publish-or-fail for ordinary customer-facing lifecycle behavior.
+- One late Dashboard review-language leak (`24 business hours` framed as review) was removed and replaced with processing-only timing copy.
+
+## Next Recommended Action
+1. Controlled clean Screening live lifecycle retest.
+2. Verify Dashboard processing copy and statuses.
+3. Verify published report appears and downloads normally.
+4. Verify no customer-facing review/hold/needs-doc limbo wording.
+5. Then controlled Underwriting lifecycle retest.
+
+If new issues appear, open the next hardening family from concrete evidence only.
