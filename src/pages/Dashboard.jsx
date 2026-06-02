@@ -2036,7 +2036,7 @@ useEffect(() => {
                           <span style={{ ...labelMono, marginLeft:10 }}>{new Date(job.created_at).toLocaleDateString()}</span>
                         </div>
                         <div style={{ color:T.ink2, fontSize:12, lineHeight:1.6, fontWeight:400, marginTop:6 }}>
-                          Report generation may take up to 24 business hours. You'll be notified when your report is ready.
+                          Report generation may take up to 24 business hours. You will be notified when your report is ready.
                         </div>
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
