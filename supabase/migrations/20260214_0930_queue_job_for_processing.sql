@@ -41,8 +41,8 @@ begin
     raise exception 'MISSING_REQUIRED_SUPPORTING_DOCUMENT';
   end if;
 
-  -- Only allow queueing from needs_documents (fail-closed)
-  if v_prev_status <> 'needs_documents' then
+  -- Allow queueing from queued for new jobs; keep needs_documents only for historical compatibility.
+  if v_prev_status not in ('queued', 'needs_documents') then
     raise exception 'Job not eligible to queue (status=%)', v_prev_status;
   end if;
 
@@ -53,7 +53,7 @@ begin
     error_message = null
   where id = p_job_id
     and user_id = v_user_id
-    and status = 'needs_documents';
+    and status in ('queued', 'needs_documents');
 
   if not found then
     raise exception 'Failed to queue job (concurrent update?)';
@@ -70,7 +70,7 @@ begin
     p_job_id,
     'user',
     'status_transition',
-    'needs_documents',
+    v_prev_status,
     'queued',
     jsonb_build_object('source', 'dashboard', 'note', 'User initiated generation')
   );

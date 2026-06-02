@@ -99,7 +99,7 @@ begin
     v_product_type,
     v_purchase_id,
     nullif(p_job_payload->>'property_name',''),
-    'needs_documents',
+    'queued',
     null
   )
   returning id into v_job_id;

@@ -76,6 +76,8 @@ assert.match(consumeSql, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
 assert.match(consumeSql, /v_has_supporting_docs/);
 assert.match(consumeSql, /p_report_type = 'underwriting' and not v_has_supporting_docs/);
 assert.match(consumeSql, /v_payload_doc_type in \('supporting', 'supporting_documents', 'supporting_documents_ui'\)/);
+assert.match(consumeSql, /'queued'/);
+assert.equal(/'needs_documents'/.test(consumeSql), false);
 
 const queueSql = await fs.readFile("supabase/migrations/20260214_0930_queue_job_for_processing.sql", "utf8");
 assert.match(queueSql, /MISSING_REQUIRED_CORE_DOCUMENTS/);
@@ -83,5 +85,7 @@ assert.match(queueSql, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
 assert.match(queueSql, /analysis_job_files/);
 assert.match(queueSql, /v_has_supporting_docs/);
 assert.match(queueSql, /v_report_type = 'underwriting' and not coalesce\(v_has_supporting_docs, false\)/);
+assert.match(queueSql, /v_prev_status not in \('queued', 'needs_documents'\)/);
+assert.match(queueSql, /status in \('queued', 'needs_documents'\)/);
 
 console.log("report upload gate smoke PASS");
