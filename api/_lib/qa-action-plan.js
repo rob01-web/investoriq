@@ -1185,6 +1185,7 @@ function buildPublishEligibilitySummary({
   const sourceReconciliationState = sourceReportCoverageQa?.source_reconciliation_state || null;
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputSufficiencyState?.publishability_bucket);
+  const coreValidRequiredCoverage = isCoreValidRequiredCoverageState(sourceReportCoverageQa);
   const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
   const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
   const t12Ready = Boolean(sourceInventory?.t12_parsed?.present && sourceInventory?.t12_parsed?.has_core_totals);
@@ -1200,6 +1201,7 @@ function buildPublishEligibilitySummary({
   const customerActionBlockers = actionRows
     .filter((action) => {
       if (isOptionalSupportingOverblockAction(action, { coreSufficiencyPublishable })) return false;
+      if (coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(action?.code)) return false;
       return isManagerContradictionAction(action)
         ? managerContradictionBlocksCustomer
         : classifyActionDeliveryImpact(action) === "customer_delivery_blocker";
@@ -1222,7 +1224,10 @@ function buildPublishEligibilitySummary({
 
   const contractCustomerBlockingViolations = uniqueCodes(
     (Array.isArray(contractViolations) ? contractViolations : [])
-      .filter((violation) => isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }))
+      .filter((violation) =>
+        isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }) &&
+        !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(violation?.code))
+      )
       .map((violation) => violation?.code)
   );
   const contractPublicSampleBlockers = uniqueCodes(
@@ -1300,6 +1305,7 @@ function buildPublishEligibilitySummary({
   const customerPublishBlockers = customerPublishBlockerCandidates.filter((code) => {
     const normalized = String(code || "").toUpperCase();
     if (!normalized) return false;
+    if (coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(normalized)) return false;
     if (publicSampleBlockerSet.has(normalized)) return false;
     if (highValueOutreachBlockerSet.has(normalized)) return false;
     if (optionalLimitationCodes.has(normalized)) return false;
@@ -1554,6 +1560,7 @@ function buildPublishEligibilitySummary({
     admin_review_required: false,
     user_needs_documents: userNeedsDocuments,
     publish_decision_reason: publishDecisionReasonFinal,
+    core_valid_required_coverage: coreValidRequiredCoverage,
     legacy_readiness_aliases: {
       customer_delivery_ready_alias_of_customer_publish_eligible: true,
       report_publishable_authority: "delivery_gate_and_canonical_customer_blockers",
@@ -1630,6 +1637,44 @@ function isCoreSufficiencyPublishableBucket(bucketValue) {
     bucket === "section_constrained_publishable" ||
     bucket === "disclose_only_publishable"
   );
+}
+
+const CORE_VALID_NON_BLOCKING_ISSUE_CODES = new Set([
+  "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+  "REPORT_TYPE_SECTION_LEAK",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+]);
+
+function isValidatedSufficiencyState(state = null) {
+  if (!state || typeof state !== "object") return false;
+  const bucket = normalizeImpactValue(state?.publishability_bucket);
+  const status = String(state?.status || "").toLowerCase();
+  return (
+    status === "validated" &&
+    bucket !== "user_needs_documents" &&
+    bucket !== "admin_review_required" &&
+    bucket !== "system_contract_failure"
+  );
+}
+
+export function isCoreValidRequiredCoverageState(sourceReportCoverageQa = null) {
+  const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
+  const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
+  const t12State = sourceReportCoverageQa?.t12_sufficiency_state || coreInputSufficiencyState?.evidence?.t12_state || null;
+  const rentRollState = sourceReportCoverageQa?.rent_roll_sufficiency_state || coreInputSufficiencyState?.evidence?.rent_roll_state || null;
+  return Boolean(
+    sourceInventory?.t12_parsed?.present &&
+    sourceInventory?.rent_roll_parsed?.present &&
+    isValidatedSufficiencyState(t12State) &&
+    isValidatedSufficiencyState(rentRollState) &&
+    isValidatedSufficiencyState(coreInputSufficiencyState)
+  );
+}
+
+function isCoreValidNonBlockingIssueCode(code = "") {
+  return CORE_VALID_NON_BLOCKING_ISSUE_CODES.has(String(code || "").toUpperCase());
 }
 
 function normalizeCustomerDeliveryGateStatus(statusValue) {
@@ -1748,6 +1793,7 @@ export function buildDeliveryGateDecision({
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const coreInputBucket = String(coreInputSufficiencyState?.publishability_bucket || "").toLowerCase();
   const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputBucket);
+  const coreValidRequiredCoverage = isCoreValidRequiredCoverageState(sourceReportCoverageQa);
   const coreInputRequiredCoreDocsMissing = coreInputSufficiencyState?.required_core_docs_missing === true;
   const coreInputCustomerFailClosed = isCoreInputCustomerFailClosed(coreInputSufficiencyState);
   const coreInputSystemContractFailureTyped = coreInputSufficiencyState?.system_contract_failure === true;
@@ -1798,12 +1844,15 @@ export function buildDeliveryGateDecision({
     /source_report_reconciliation|report_contradiction/i.test(String(violation?.category || ""))
   ) || null;
   const managerContradictionAction = prioritizedActions.find(isManagerContradictionAction) || null;
-  const managerContradictionBlocksCustomer = isManagerContradictionCustomerBlocking(managerContradictionAction, {
+  const managerContradictionBlocksCustomer = !coreValidRequiredCoverage && isManagerContradictionCustomerBlocking(managerContradictionAction, {
     contractViolations,
     deterministicFlags,
   });
   const contractCustomerBlockingViolation =
-    contractViolations.find((violation) => isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable })) || null;
+    contractViolations.find((violation) =>
+      isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }) &&
+      !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(violation?.code))
+    ) || null;
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
   const sourceDocumentActionBlocksCustomer = Boolean(sourceDocumentAction?.blocks_customer_delivery);
   const sourceDocumentActionIsOptionalOverblock = isOptionalSupportingOverblockAction(sourceDocumentAction, {
@@ -1814,7 +1863,8 @@ export function buildDeliveryGateDecision({
     actionImpactRows.find((row) =>
       row.impact === "customer_delivery_blocker" &&
       !isManagerContradictionAction(row.action) &&
-      !isOptionalSupportingOverblockAction(row.action, { coreSufficiencyPublishable })
+      !isOptionalSupportingOverblockAction(row.action, { coreSufficiencyPublishable }) &&
+      !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(row.action?.code))
     )?.action ||
     contractCustomerBlockingViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
@@ -1828,12 +1878,14 @@ export function buildDeliveryGateDecision({
     Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable })));
 
   const sourceNeedsDocs =
-    (!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
-    sourceDocumentActionIsCustomerBlocking;
+    !coreValidRequiredCoverage &&
+    ((!sourceReconciliationIsDiscloseOnly && (missingRequiredSource || sourceBlockingFlags.length > 0)) ||
+    sourceDocumentActionIsCustomerBlocking);
   const sourceNeedsReview =
-    coreInputBucket === "system_contract_failure" ||
+    !coreValidRequiredCoverage &&
+    (coreInputBucket === "system_contract_failure" ||
     coreInputSystemContractFailureTyped ||
-    (coreInputBucket === "admin_review_required" && coreInputCustomerFailClosed);
+    (coreInputBucket === "admin_review_required" && coreInputCustomerFailClosed));
   const customerBlockingReconciliationViolation =
     reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable })
       ? reconciliationViolation
@@ -2002,7 +2054,10 @@ export function buildDeliveryGateDecision({
       ...publishEligibility,
     };
   }
-  const customerDeliveryBlocked = Boolean(customerDeliveryBlockerAction || customerBlockingReconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null));
+  const customerDeliveryBlocked = Boolean(
+    !coreValidRequiredCoverage &&
+    (customerDeliveryBlockerAction || customerBlockingReconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null))
+  );
 
   if (customerDeliveryBlocked) {
     const topAction = customerDeliveryBlockerAction || customerBlockingReconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
@@ -2105,20 +2160,25 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
   const state = deliveryGateDecision && typeof deliveryGateDecision === "object"
     ? deliveryGateDecision
     : {};
+  const coreValidRequiredCoverage = state.core_valid_required_coverage === true;
   const deprecatedAdminReviewResolution = resolveDeprecatedAdminReviewGateStatus({
     statusValue: state.delivery_gate_status || "deliverable",
     reasonCode: state.reason_code || state.publish_decision_reason || null,
     explicitCoreFailure: false,
   });
-  const deliveryGateStatus = normalizeCustomerDeliveryGateStatus(
-    deprecatedAdminReviewResolution.gate_status || state.delivery_gate_status || "deliverable"
-  );
+  const deliveryGateStatus = coreValidRequiredCoverage
+    ? "deliverable"
+    : normalizeCustomerDeliveryGateStatus(
+      deprecatedAdminReviewResolution.gate_status || state.delivery_gate_status || "deliverable"
+    );
   const wasDeprecatedAdminReviewStatus =
     String(state.delivery_gate_status || "").toLowerCase() === "admin_review_required";
   const hasExplicitCanonicalCustomerAllowed =
     state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null;
   const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
-  const customerDeliveryAllowed = hasExplicitCanonicalCustomerAllowed
+  const customerDeliveryAllowed = coreValidRequiredCoverage
+    ? true
+    : hasExplicitCanonicalCustomerAllowed
     ? (
       wasDeprecatedAdminReviewStatus && deprecatedAdminReviewResolution.classification === "core_fail"
         ? false
@@ -2127,13 +2187,13 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
           : Boolean(state.customer_delivery_allowed)
     )
     : Boolean(deliveryGateStatus === "deliverable" && customerBlockers.length === 0);
-  const holdDelivery = deliveryGateStatus !== "deliverable";
+  const holdDelivery = !coreValidRequiredCoverage && deliveryGateStatus !== "deliverable";
   const publicBlockers = Array.isArray(state.public_sample_blockers) ? state.public_sample_blockers : [];
   const highValueBlockers = Array.isArray(state.high_value_outreach_blockers) ? state.high_value_outreach_blockers : [];
   const reasonCode = String(state.reason_code || state.publish_decision_reason || deliveryGateStatus || "").trim() || null;
 
   const customerStatusLabel =
-    deliveryGateStatus === "deliverable" && customerDeliveryAllowed
+    coreValidRequiredCoverage || (deliveryGateStatus === "deliverable" && customerDeliveryAllowed)
       ? "ready"
       : deliveryGateStatus === "user_needs_documents"
           ? "needs_documents"
@@ -2157,8 +2217,9 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
     public_blockers: publicBlockers,
     high_value_blockers: highValueBlockers,
     customer_blockers: customerBlockers,
-    credit_restore_required: deliveryGateStatus === "user_needs_documents",
-    fail_closed_reason_code: !customerDeliveryAllowed ? reasonCode : null,
+    credit_restore_required: !coreValidRequiredCoverage && deliveryGateStatus === "user_needs_documents",
+    fail_closed_reason_code: !customerDeliveryAllowed && !coreValidRequiredCoverage ? reasonCode : null,
+    core_valid_required_coverage: coreValidRequiredCoverage,
     diagnostics: {
       owner_area: state.owner_area || null,
       recommended_next_step: state.recommended_next_step || null,
@@ -2170,6 +2231,7 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
       public_sample_blockers: publicBlockers,
       high_value_outreach_blockers: highValueBlockers,
       customer_publish_blockers: customerBlockers,
+      core_valid_required_coverage: coreValidRequiredCoverage,
       deprecated_admin_review_reason_classification: deprecatedAdminReviewResolution.classification,
       deprecated_admin_review_reason_requires_classification:
         deprecatedAdminReviewResolution.inject_diagnostic_code === "DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION",

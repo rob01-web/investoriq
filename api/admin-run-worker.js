@@ -197,19 +197,28 @@ export default async function handler(req, res) {
           ? reportData.deliveryDecisionState
           : null;
       const hasCanonical = Boolean(deliveryDecisionState);
+      const coreValidRequiredCoverage = hasCanonical
+        ? Boolean(deliveryDecisionState?.core_valid_required_coverage)
+        : Boolean(reportData?.core_valid_required_coverage);
       const rawDeliveryGateStatus = hasCanonical
         ? String(deliveryDecisionState?.delivery_gate_status || 'deliverable')
         : String(reportData?.delivery_gate_status || 'deliverable');
       const deliveryGateStatus =
-        rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus;
-      const customerDeliveryAllowed = hasCanonical
-        ? Boolean(deliveryDecisionState?.customer_delivery_allowed)
-        : Boolean(
-            reportData?.customer_publish_eligible ??
-            reportData?.customer_delivery_ready ??
-            (deliveryGateStatus === 'deliverable')
-          );
-      const holdDelivery = hasCanonical
+        coreValidRequiredCoverage
+          ? 'deliverable'
+          : rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus;
+      const customerDeliveryAllowed = coreValidRequiredCoverage
+        ? true
+        : hasCanonical
+          ? Boolean(deliveryDecisionState?.customer_delivery_allowed)
+          : Boolean(
+              reportData?.customer_publish_eligible ??
+              reportData?.customer_delivery_ready ??
+              (deliveryGateStatus === 'deliverable')
+            );
+      const holdDelivery = coreValidRequiredCoverage
+        ? false
+        : hasCanonical
         ? Boolean(deliveryDecisionState?.hold_delivery)
         : Boolean(
             reportData?.hold_delivery ??
@@ -224,7 +233,9 @@ export default async function handler(req, res) {
         deliveryDecisionState?.fail_closed_reason_code ||
         reportData?.delivery_gate_reason_code ||
         null;
-      const creditRestoreRequired = hasCanonical
+      const creditRestoreRequired = coreValidRequiredCoverage
+        ? false
+        : hasCanonical
         ? Boolean(deliveryDecisionState?.credit_restore_required)
         : (deliveryGateStatus === 'user_needs_documents');
       const legacyAliasConflicts = hasCanonical
@@ -255,6 +266,7 @@ export default async function handler(req, res) {
         customerStatusReasonCode,
         failClosedReasonCode,
         creditRestoreRequired: Boolean(creditRestoreRequired),
+        coreValidRequiredCoverage,
         legacyAliasConflicts,
       };
     };
@@ -2315,10 +2327,10 @@ export default async function handler(req, res) {
                 }
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
-                const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
-                const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-                const shouldHoldDeliveryOutcome =
-                  deliveryGateStatus === 'user_needs_documents' ||
+              const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
+              const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
+              const shouldHoldDeliveryOutcome =
+                  (deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage) ||
                   resolvedDeliveryDecision.holdDelivery === true ||
                   resolvedDeliveryDecision.customerDeliveryAllowed === false;
                 if (shouldHoldDeliveryOutcome) {
@@ -2378,7 +2390,7 @@ export default async function handler(req, res) {
 
           const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
           const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-          const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents';
+          const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage;
           const isResolvedHoldBlockedOutcome =
             resolvedDeliveryDecision.holdDelivery === true ||
             resolvedDeliveryDecision.customerDeliveryAllowed === false;
@@ -2399,7 +2411,8 @@ export default async function handler(req, res) {
                   'source_documents_missing',
               },
               restore: {
-                enabled: resolvedDeliveryDecision.creditRestoreRequired || holdOutcomeStatus === 'user_needs_documents',
+                enabled: !resolvedDeliveryDecision.coreValidRequiredCoverage &&
+                  (resolvedDeliveryDecision.creditRestoreRequired || holdOutcomeStatus === 'user_needs_documents'),
                 reason:
                   resolvedDeliveryDecision.failClosedReasonCode ||
                   resolvedDeliveryDecision.customerStatusReasonCode ||

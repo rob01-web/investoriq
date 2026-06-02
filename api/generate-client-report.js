@@ -286,6 +286,7 @@ function assertValidReportPublicationInsert({
   reportType,
   deliveryGateStatus = null,
   holdDelivery = false,
+  coreValidRequiredCoverage = false,
   context = {},
 } = {}) {
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
@@ -294,8 +295,11 @@ function assertValidReportPublicationInsert({
       ? "deliverable"
       : deliveryGateStatus;
   if (
-    holdDelivery ||
-    (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
+    !coreValidRequiredCoverage &&
+    (
+      holdDelivery ||
+      (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
+    )
   ) {
     const err = new Error("Report publication blocked before storage insert");
     err.code = "REPORT_GENERATION_FAILED";
@@ -304,6 +308,7 @@ function assertValidReportPublicationInsert({
       storagePath: normalizedStoragePath || null,
       deliveryGateStatus: normalizedDeliveryGateStatus || null,
       holdDelivery: Boolean(holdDelivery),
+      coreValidRequiredCoverage: Boolean(coreValidRequiredCoverage),
     };
     throw err;
   }
@@ -10630,7 +10635,10 @@ try {
 } catch (err) {
   console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
 }
-  if (deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents") {
+  if (
+    deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents" &&
+    deliveryDecisionStateResult?.core_valid_required_coverage !== true
+  ) {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
     const failClosedDecisionState = {
       ...blockedDecisionState,
@@ -10755,17 +10763,19 @@ try {
       reportType: reportType || null,
       deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
       holdDelivery: Boolean(holdDelivery),
+      coreValidRequiredCoverage: Boolean(canonicalDeliveryDecisionState?.core_valid_required_coverage),
       publicationSeed,
     };
     let validatedStoragePath;
     try {
       validatedStoragePath = assertValidReportPublicationInsert({
-        storagePath,
-        reportType,
-        deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
-        holdDelivery,
-        context: publicationContext,
-      });
+      storagePath,
+      reportType,
+      deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
+      holdDelivery,
+      coreValidRequiredCoverage: Boolean(canonicalDeliveryDecisionState?.core_valid_required_coverage),
+      context: publicationContext,
+    });
     } catch (err) {
       console.error("Report publication invariant failed:", err?.context || publicationContext, err?.message || err);
       throw err;

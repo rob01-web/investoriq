@@ -65,20 +65,24 @@ assert.match(workerSource, /errorCode:\s*'REPORT_GENERATION_FAILED'/);
 assert.match(workerSource, /const hasCanonical = Boolean\(deliveryDecisionState\);/);
 assert.match(
   workerSource,
-  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,220}const deliveryGateStatus =[\s\S]{0,120}rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus;/
+  /const coreValidRequiredCoverage = hasCanonical[\s\S]{0,180}\? Boolean\(deliveryDecisionState\?\.core_valid_required_coverage\)[\s\S]{0,180}: Boolean\(reportData\?\.core_valid_required_coverage\);/
 );
 assert.match(
   workerSource,
-  /const customerDeliveryAllowed = hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.customer_publish_eligible[\s\S]{0,220}reportData\?\.customer_delivery_ready/
+  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,260}const deliveryGateStatus =[\s\S]{0,160}coreValidRequiredCoverage[\s\S]{0,120}\? 'deliverable'[\s\S]{0,120}: rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus;/
 );
 assert.match(
   workerSource,
-  /const holdDelivery = hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.hold_delivery\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.hold_delivery[\s\S]{0,220}reportData\?\.holdDelivery/
+  /const customerDeliveryAllowed = coreValidRequiredCoverage[\s\S]{0,120}\? true[\s\S]{0,120}: hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.customer_publish_eligible[\s\S]{0,220}reportData\?\.customer_delivery_ready/
+);
+assert.match(
+  workerSource,
+  /const holdDelivery = coreValidRequiredCoverage[\s\S]{0,120}\? false[\s\S]{0,120}: hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.hold_delivery\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.hold_delivery[\s\S]{0,220}reportData\?\.holdDelivery/
 );
 assert.match(workerSource, /legacy_alias_conflicts/);
 assert.match(
   workerSource,
-  /const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents';/
+  /const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision\.coreValidRequiredCoverage;/
 );
 assert.match(
   workerSource,
