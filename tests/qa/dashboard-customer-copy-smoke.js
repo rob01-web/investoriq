@@ -8,6 +8,7 @@ const {
   getFailedFileGuidance,
   normalizeDashboardCustomerStatusLabel,
   resolveDashboardCustomerStatus,
+  resolveDoctrineCustomerMessage,
 } = await import("../../src/lib/dashboardCustomerCopy.js");
 
 assert.equal(normalizeDashboardCustomerStatusLabel("under_review"), "failed");
@@ -22,6 +23,14 @@ assert.equal(
     { customer_status_label: "publication_held", core_valid_required_coverage: true, customer_message: "Source package could not be verified." }
   ),
   "failed"
+);
+
+assert.equal(
+  resolveDoctrineCustomerMessage(
+    { status: "failed", core_valid_required_coverage: true },
+    { customer_message: "Submission under review", core_valid_required_coverage: true }
+  ),
+  "Report could not be generated.\n\nInvestorIQ encountered a processing issue while preparing this report. Please try again or contact support if it repeats."
 );
 
 const coreValidDecision = resolveDashboardCustomerStatus(

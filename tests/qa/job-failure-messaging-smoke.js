@@ -113,8 +113,10 @@ const reviewCopy = buildCustomerFailureMessage({
   error_code: 'ADMIN_REVIEW_REQUIRED',
   failure_reason: 'Admin review required.',
 });
-assert.equal(reviewCopy.title, 'Submission under review');
+assert.equal(reviewCopy.title, 'Generation failed');
+assert.match(reviewCopy.body, /Generation failed before publication/i);
 assert.equal(reviewCopy.creditLine, null);
+assert.equal(/under review|admin review|needs documents/i.test(JSON.stringify(reviewCopy)), false);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(reviewCopy)), false);
 
 console.log('job-failure-messaging-smoke: ok');

@@ -27,6 +27,7 @@ const SCALE_MISMATCH_HINTS = [
 
 const ADMIN_REVIEW_HINTS = [
   /admin review required/i,
+  /under review/i,
 ];
 
 function matchesAny(text, regexes) {
@@ -63,10 +64,7 @@ export function classifyFailure(job = {}, options = {}) {
   const coreValidRequiredCoverage = options.coreValidRequiredCoverage === true;
 
   if (code === 'ADMIN_REVIEW_REQUIRED' || matchesAny(reason, ADMIN_REVIEW_HINTS)) {
-    if (coreValidRequiredCoverage) {
-      return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
-    }
-    return { kind: 'admin_review', referenceCode: 'ADMIN_REVIEW_REQUIRED' };
+    return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
   }
 
   if (
@@ -126,16 +124,6 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
   const pendingSystemFailureBody =
     'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.';
-  if (classification.kind === 'admin_review') {
-    return {
-      title: 'Submission under review',
-      body: 'InvestorIQ needs to review this submission before a report can be published. No additional action is required from you right now unless updated documents are requested.',
-      nextStep: 'We will review the submission and follow up if more information is needed.',
-      referenceCode,
-      creditLine: null,
-    };
-  }
-
   if (coreValidRequiredCoverage && classification.kind !== 'system_failure') {
     return buildNeutralSystemFailureCopy({ creditRestored });
   }

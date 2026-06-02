@@ -1,4 +1,7 @@
-const FAIL_CLOSED_CUSTOMER_MESSAGE =
+const CORE_VALID_NEUTRAL_FAILURE_MESSAGE =
+  'Report could not be generated.\n\nInvestorIQ encountered a processing issue while preparing this report. Please try again or contact support if it repeats.';
+
+const CORE_INVALID_DOCUMENT_FAILURE_MESSAGE =
   'Report could not be generated.\n\nInvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.';
 
 const FAIL_CLOSED_REASON_OR_ERROR_PATTERN =
@@ -36,21 +39,31 @@ export function resolveDoctrineCustomerMessage(job = {}, decision = null) {
   const message = String(decision?.customer_message || '').trim();
   const reason = String(decision?.customer_status_reason_code || '').trim();
   const errorCode = String(job?.error_code || '').trim();
+  const statusLabel = normalizeDashboardCustomerStatusLabel(decision?.customer_status_label || null);
   const coreValidRequiredCoverage =
     isCoreValidRequiredCoverageState(decision?.core_valid_required_coverage) ||
     isCoreValidRequiredCoverageState(job?.core_valid_required_coverage);
+  const isLegacyFailureState =
+    statusLabel === 'failed' ||
+    FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) ||
+    FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode) ||
+    isDocumentBlameMessage(message);
+
+  if (coreValidRequiredCoverage && isLegacyFailureState) {
+    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
+  }
+  if (!message) return '';
+  if (/under review|internal review|admin review|needs documents|additional required documents/i.test(message)) {
+    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
+  }
+  if (FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) || FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode)) {
+    return CORE_INVALID_DOCUMENT_FAILURE_MESSAGE;
+  }
   if (message && !(coreValidRequiredCoverage && isDocumentBlameMessage(message))) {
     return message;
   }
-  if (FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) || FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode)) {
-    return FAIL_CLOSED_CUSTOMER_MESSAGE;
-  }
   if (coreValidRequiredCoverage && message && isDocumentBlameMessage(message)) {
-    return FAIL_CLOSED_CUSTOMER_MESSAGE;
-  }
-  if (!message) return '';
-  if (/under review|internal review|needs documents|additional required documents/i.test(message)) {
-    return FAIL_CLOSED_CUSTOMER_MESSAGE;
+    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
   }
   return message;
 }
