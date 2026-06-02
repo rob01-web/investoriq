@@ -98,6 +98,90 @@ assert.equal(coreValidSectionLeakState.hold_delivery, false);
 assert.equal(coreValidSectionLeakState.credit_restore_required, false);
 assert.equal(coreValidSectionLeakState.fail_closed_reason_code, null);
 
+const coreValidSupportDepthDecision = buildDeliveryGateDecision({
+  sourceReportCoverageQa: {
+    ...coreValidCoverage,
+    deterministic_flags: [
+      {
+        code: "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+        routing: "public_sample_blocker",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+  },
+  reportContractQa: { violations: [] },
+  qaActionPlan: {
+    prioritized_actions: [
+      {
+        code: "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
+        action_type: "render_gating_fix_required",
+        owner_area: "report_renderer",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
+        action_type: "render_gating_fix_required",
+        owner_area: "report_renderer",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
+        action_type: "render_gating_fix_required",
+        owner_area: "report_renderer",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+      {
+        code: "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+        action_type: "render_gating_fix_required",
+        owner_area: "report_renderer",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      },
+    ],
+    customer_delivery_ready: true,
+    public_sample_ready: false,
+    high_value_outreach_ready: false,
+  },
+});
+assert.equal(coreValidSupportDepthDecision.core_valid_required_coverage, true);
+assert.equal(coreValidSupportDepthDecision.delivery_gate_status, "deliverable");
+assert.equal(coreValidSupportDepthDecision.customer_delivery_ready, true);
+assert.equal(coreValidSupportDepthDecision.customer_publish_eligible, true);
+assert.equal(coreValidSupportDepthDecision.user_needs_documents, false);
+assert.equal(coreValidSupportDepthDecision.customer_publish_blockers.length, 0);
+assert.equal(coreValidSupportDepthDecision.public_sample_ready, false);
+assert.equal(coreValidSupportDepthDecision.high_value_outreach_ready, false);
+
 const distributionOnlyDecision = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
     ...coreValidCoverage,

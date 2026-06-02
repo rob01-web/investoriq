@@ -1,3 +1,172 @@
+# June 2, 2026 Addendum - Doctrine Completion Checklist / Remaining Work To Make InvestorIQ Obey Doctrine End-to-End
+
+## Current controlling decision
+
+Yes: update the `.MD` files before this gets lost.
+
+The P0 Core-Valid Failure Path families were closed by Slices 1-3, but InvestorIQ should not stop at "P0 closed" while known P1 doctrine edges remain mapped. The next work is doctrine-completion hardening, not random patching.
+
+## Current doctrine target
+
+InvestorIQ must obey this end-to-end:
+
+```text
+Bad uploads cannot generate.
+Valid core jobs publish.
+Unsupported sections self-heal.
+Worker cannot resurrect old fail states.
+Dashboard cannot blame usable docs.
+Support/advisory/distribution issues stay internal.
+Only true core failure or true runtime/PDF/storage failure can kill the report.
+```
+
+## Remaining work sequence from this checkpoint
+
+### 1. Doctrine-completion patch: hard upload/server gate + P1 CVF cleanup
+
+Patch before live retest:
+
+- Screening Generate gate:
+  - require valid/usable T12;
+  - require valid/usable Rent Roll.
+- Underwriting Generate gate:
+  - require valid/usable T12;
+  - require valid/usable Rent Roll;
+  - require at least one supporting/deal document outside the required core docs.
+- Server-side generate gate:
+  - re-check the same rule so UI bypass cannot generate invalid jobs;
+  - reject before report generation and before credit consumption wherever safely possible;
+  - do not create failed-report lifecycle limbo for attempts that never satisfied the upload gate.
+- CVF-07 cleanup:
+  - optional/full-underwriting support-depth constraints must stay internal/distribution-only or section-level;
+  - they must not block ordinary customer delivery when `core_valid_required_coverage === true`.
+- CVF-15 cleanup:
+  - optional-support/source-package/admin-op paths must stay diagnostic/internal/distribution-only;
+  - they must not feed customer lifecycle, fail closed, or restore credit for core-valid jobs.
+
+Important support-doc nuance:
+
+```text
+For Underwriting, at least one support doc is required to start generation.
+But support docs are not quantitatively mandatory after that.
+Bad or unsupported support docs after the gate is satisfied are section-level/internal/distribution-only issues.
+They must not become required-core blockers once T12 + Rent Roll are valid.
+```
+
+### 2. Final no-code doctrine closure audit
+
+After the doctrine-completion patch passes, run an audit-only confirmation.
+
+Audit must prove:
+
+- CVF-07 is closed or safe internal/distribution-only;
+- CVF-15 is closed or safe internal/distribution-only;
+- upload/server gate is enforced for Screening and Underwriting;
+- `core_valid_required_coverage === true` cannot be overridden by optional/support/advisory/distribution issues;
+- no known non-legitimate CVF remains open before live retest.
+
+No code changes during this audit unless a real remaining P0/P1 doctrine edge is found.
+
+### 3. Controlled live retests
+
+Run in this order:
+
+1. valid Screening job with T12 + Rent Roll;
+2. valid Underwriting job with T12 + Rent Roll + support doc;
+3. deliberate invalid-core case;
+4. optional deliberate runtime/PDF/system failure case only if safe.
+
+Live retest must prove:
+
+- valid core jobs publish;
+- invalid core docs fail closed or are blocked at the gate;
+- runtime fatal shows neutral system-failure copy;
+- no core-valid job shows source-package/rent-roll/missing-doc blame;
+- no unsupported debt/refi/report-type surfaces leak into the PDF.
+
+### 4. Artifact and PDF inspection after live tests
+
+For valid Screening and Underwriting jobs, confirm artifacts show:
+
+```text
+core_valid_required_coverage: true
+customer_delivery_allowed: true
+hold_delivery: false
+delivery_gate_status: deliverable / ready
+no MISSING_REQUIRED_SOURCE_DATA
+no entitlement_restored
+no user_needs_documents customer lifecycle
+no publication_held customer lifecycle
+```
+
+PDF inspection must confirm:
+
+- no unsupported Current Debt DSCR leak;
+- no unsupported refinance stress/proceeds table leak;
+- no wrong report-type section leak;
+- unsupported sections are omitted, qualified, disclosed, or Not Assessed.
+
+### 5. Ledger/master-context update after live retest
+
+If live retest passes, update statuses:
+
+- `CVF-01`, `CVF-02`, `CVF-03`, `CVF-13` = legitimate failure paths preserved;
+- `CVF-04`, `CVF-05`, `CVF-06` = closed + live-confirmed;
+- `CVF-07` = closed or safe internal/distribution-only after doctrine-completion patch;
+- `CVF-08`, `CVF-09`, `CVF-10` = closed + live-confirmed;
+- `CVF-11`, `CVF-12` = closed + live-confirmed;
+- `CVF-14` = safe internal/distribution-only;
+- `CVF-15` = closed or safe internal/distribution-only after doctrine-completion patch.
+
+### 6. Final public/customer polish sweep
+
+Only after doctrine behavior is proven:
+
+- replace contraction wording where touched, especially `You'll` -> `You will`;
+- verify no customer-visible admin-review / under-review / publication-held wording;
+- verify no stale upload-clearer-docs copy except true invalid core-doc cases;
+- verify no weird report labels, unresolved tokens, mojibake, stale N/A blocks, public AI wording, or BUY/SELL/HOLD language;
+- resolve DocRaptor production/public-sample distribution readiness separately from ordinary customer delivery.
+
+### 7. Launch-readiness smoke
+
+Final short run:
+
+- `npm run build`;
+- all targeted QA smokes touched by the doctrine-completion sequence;
+- one Screening report;
+- one Underwriting report;
+- Dashboard customer card review;
+- Admin artifacts/diagnostics review;
+- PDF visual review.
+
+## Definition of Done
+
+InvestorIQ obeys doctrine when all of the following are true:
+
+```text
+1. Bad uploads cannot start generation.
+2. Valid T12 + Rent Roll jobs publish.
+3. Underwriting requires at least one support doc to start, but optional/support docs cannot later kill a core-valid report.
+4. Unsupported current-debt/refi/report-type/support sections self-heal before delivery.
+5. Worker cannot map core-valid section/support/advisory issues to MISSING_REQUIRED_SOURCE_DATA or entitlement restore.
+6. Dashboard and failure-message copy cannot blame usable core docs.
+7. Public-sample/high-value/DocRaptor/OpenAI/advisory issues stay internal or distribution-only.
+8. Only true core failure or true runtime/storage/PDF/catastrophic failure can kill the whole report.
+```
+
+## Immediate next action
+
+Give Codex the doctrine-completion patch prompt:
+
+```text
+Hard upload/server gate + remaining P1 CVF-07/CVF-15 cleanup.
+```
+
+Do not run controlled live retest until that patch and the follow-up no-code closure audit pass.
+
+---
+
 # June 2, 2026 Addendum - Core-Valid Failure Path Families Ledger / 15 P0-P1 Paths To Destroy
 
 ## Current controlling status

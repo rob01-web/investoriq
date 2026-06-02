@@ -20,6 +20,9 @@ declare
   v_size bigint;
   v_doc_type text;
   v_payload_doc_type text;
+  v_has_t12 boolean := false;
+  v_has_rent_roll boolean := false;
+  v_has_supporting_docs boolean := false;
 begin
   if p_report_type is null or p_report_type not in ('screening','underwriting') then
     raise exception 'INVALID_REPORT_TYPE';
@@ -27,6 +30,42 @@ begin
 
   if p_staged_files is null or jsonb_typeof(p_staged_files) <> 'array' or jsonb_array_length(p_staged_files) = 0 then
     raise exception 'INVALID_STAGED_FILES';
+  end if;
+
+  for v_file in select * from jsonb_array_elements(p_staged_files) loop
+    v_storage_path := nullif(trim(v_file->>'storage_path'), '');
+    v_original_name := nullif(trim(v_file->>'original_name'), '');
+    v_payload_doc_type := lower(trim(v_file->>'doc_type'));
+
+    if v_storage_path is null or v_original_name is null or nullif(trim(v_file->>'content_type'), '') is null or nullif(v_file->>'size','')::bigint is null then
+      raise exception 'INVALID_STAGED_FILES';
+    end if;
+
+    if v_payload_doc_type in ('rent_roll', 't12', 't12_or_operating_statement') then
+      if v_payload_doc_type = 'rent_roll' then
+        v_has_rent_roll := true;
+      else
+        v_has_t12 := true;
+      end if;
+    elsif v_payload_doc_type in ('supporting', 'supporting_documents', 'supporting_documents_ui') then
+      v_has_supporting_docs := true;
+    else
+      if lower(v_original_name) like '%rent%' then
+        v_has_rent_roll := true;
+      elsif lower(v_original_name) like '%t12%' then
+        v_has_t12 := true;
+      else
+        v_has_supporting_docs := true;
+      end if;
+    end if;
+  end loop;
+
+  if not v_has_t12 or not v_has_rent_roll then
+    raise exception 'MISSING_REQUIRED_CORE_DOCUMENTS';
+  end if;
+
+  if p_report_type = 'underwriting' and not v_has_supporting_docs then
+    raise exception 'MISSING_REQUIRED_SUPPORTING_DOCUMENT';
   end if;
 
   select id, product_type
@@ -80,8 +119,13 @@ begin
     end if;
 
     v_payload_doc_type := lower(trim(v_file->>'doc_type'));
-    if v_payload_doc_type in ('rent_roll', 't12', 'supporting') then
-      v_doc_type := v_payload_doc_type;
+    if v_payload_doc_type in ('rent_roll', 't12', 't12_or_operating_statement') then
+      v_doc_type := case
+        when v_payload_doc_type = 't12_or_operating_statement' then 't12'
+        else v_payload_doc_type
+      end;
+    elsif v_payload_doc_type in ('supporting', 'supporting_documents', 'supporting_documents_ui') then
+      v_doc_type := 'supporting';
     else
       v_doc_type := case
         when lower(v_original_name) like '%rent%' then 'rent_roll'

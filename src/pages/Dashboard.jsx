@@ -7,6 +7,7 @@ import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
+import { formatReportUploadGateErrorMessage, resolveReportUploadGate } from '@/lib/reportUploadGate';
 
 // DESIGN TOKENS
 const T = {
@@ -948,14 +949,15 @@ useEffect(() => {
     () => uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement'),
     [uploadedFiles]
   );
-  const hasRentRoll = rentRollFiles.length > 0;
-  const hasT12 = t12Files.length > 0;
-  const requiredDocsReady = hasRentRoll && hasT12;
-  const hasUnderwritingSupportDocs = useMemo(
-    () => uploadedFiles.some((f) => f.docType === 'supporting_documents' || f.docType === 'supporting_documents_ui' || supportingDocTypes.some((t) => t.docType === f.docType)),
-    [uploadedFiles]
+  const reportUploadGate = useMemo(
+    () => resolveReportUploadGate({ reportType: selectedReportType, uploadedFiles }),
+    [selectedReportType, uploadedFiles]
   );
-  const hasRequiredUploads = selectedReportType === 'underwriting' ? requiredDocsReady && hasUnderwritingSupportDocs : requiredDocsReady;
+  const hasRentRoll = reportUploadGate.hasRentRoll;
+  const hasT12 = reportUploadGate.hasT12;
+  const requiredDocsReady = reportUploadGate.hasCoreDocs;
+  const hasUnderwritingSupportDocs = reportUploadGate.hasSupportDocs;
+  const hasRequiredUploads = reportUploadGate.canGenerate;
   const preflightDebtTerms = useMemo(() => (
     uploadedFiles.some((f) => {
       if (f.docType !== 'supporting_documents' && f.docType !== 'supporting_documents_ui') return false;
@@ -975,7 +977,7 @@ useEffect(() => {
       return String(f.original_name || f.file?.name || '').toLowerCase().includes('appraisal');
     })
   ), [uploadedFiles]);
-  const preflightHardMissing = selectedReportType === 'underwriting' && (!hasRentRoll || !hasT12 || !hasUnderwritingSupportDocs);
+  const preflightHardMissing = !reportUploadGate.canGenerate;
   const visibleLatestFailedJob = latestFailedJob && !dismissedJobIds.has(String(latestFailedJob.id)) ? latestFailedJob : null;
   const jobFromInProgress = inProgressJobs.find((job) => job.id === jobId) || null;
   const jobFromNeedsDocuments = null;
@@ -1247,7 +1249,16 @@ useEffect(() => {
       const rentRolls = uploadedFiles.filter((f) => f.docType === 'rent_roll');
       const t12s = uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement');
       if (rentRolls.length === 0 || t12s.length === 0) { toast({ title: 'Required documents missing', description: 'Upload a Rent Roll and T12 to proceed.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
-      if (selectedReportType === 'underwriting' && !hasUnderwritingSupportDocs) { toast({ title: 'Supporting documents required', description: 'Underwriting reports require at least one supporting document.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
+      if (!reportUploadGate.canGenerate) {
+        toast({
+          title: 'Upload requirements not met',
+          description: reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        analyzeInFlightRef.current = false;
+        return;
+      }
 
       const batchId = stagedBatchId || crypto.randomUUID();
       if (!stagedBatchId) setStagedBatchId(batchId);
@@ -1280,7 +1291,17 @@ useEffect(() => {
         p_staged_files: stagedFiles,
       });
 
-      if (rpcError) { toast({ title: 'Unable to start analysis', description: rpcError.message, variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
+      if (rpcError) {
+        const gateMessage = formatReportUploadGateErrorMessage(rpcError.message, selectedReportType);
+        toast({
+          title: 'Unable to start analysis',
+          description: gateMessage || rpcError.message,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        analyzeInFlightRef.current = false;
+        return;
+      }
       const newJobId = extractJobId(rpcData);
       if (!newJobId) {
         console.error('consume_purchase_and_create_job returned unexpected shape:', rpcData);
@@ -1293,7 +1314,12 @@ useEffect(() => {
 
       const { data: queueData, error: queueErr } = await supabase.rpc('queue_job_for_processing', { p_job_id: newJobId });
       if (queueErr && !String(queueErr.message || '').includes('status=queued')) {
-        toast({ title: 'Unable to start analysis', description: `queue_job_for_processing: ${queueErr.message}`, variant: 'destructive' });
+        const gateMessage = formatReportUploadGateErrorMessage(queueErr.message, selectedReportType);
+        toast({
+          title: 'Unable to start analysis',
+          description: gateMessage || `queue_job_for_processing: ${queueErr.message}`,
+          variant: 'destructive',
+        });
         setLoading(false);
         return;
       }
@@ -1953,7 +1979,12 @@ useEffect(() => {
                   {[
                     { label:'Rent Roll', val: hasRentRoll ? 'Present' : 'Missing', ok: hasRentRoll, required: true },
                     { label:'T12 (Operating Statement)', val: hasT12 ? 'Present' : 'Missing', ok: hasT12, required: true },
-                    { label:'Supporting Docs', val: hasUnderwritingSupportDocs ? 'Present' : 'Missing', ok: hasUnderwritingSupportDocs, required: true },
+                    {
+                      label:'Supporting Docs',
+                      val: hasUnderwritingSupportDocs ? 'Present' : (selectedReportType === 'underwriting' ? 'Missing' : 'Optional'),
+                      ok: selectedReportType === 'underwriting' ? hasUnderwritingSupportDocs : true,
+                      required: selectedReportType === 'underwriting',
+                    },
                     { label:'Debt Terms', val: preflightDebtTerms ? 'Found' : 'Recommended', ok: preflightDebtTerms, required: false },
                     { label:'Property Tax', val: preflightPropertyTax ? 'Found' : 'Optional', ok: preflightPropertyTax, required: false },
                     { label:'Appraisal', val: preflightAppraisal ? 'Found' : 'Optional', ok: preflightAppraisal, required: false },
@@ -1963,8 +1994,16 @@ useEffect(() => {
                       <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color: ok ? T.okGreen : required ? T.errorRed : T.warnAmber }}>{val}</span>
                     </div>
                   ))}
-                  {preflightHardMissing && <div style={{ ...bodySmall, fontSize:12, color:T.errorRed, fontWeight:500, marginTop:10 }}>Missing required documents. Generation is blocked until all required items are uploaded.</div>}
-                  {!preflightHardMissing && !preflightDebtTerms && <div style={{ ...bodySmall, fontSize:12, color:T.warnAmber, marginTop:10 }}>Some optional inputs are missing. Related sections may be omitted and shown as unavailable in the report.</div>}
+                  {preflightHardMissing && (
+                    <div style={{ ...bodySmall, fontSize:12, color:T.errorRed, fontWeight:500, marginTop:10 }}>
+                      {reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.'}
+                    </div>
+                  )}
+                  {!preflightHardMissing && !preflightDebtTerms && (
+                    <div style={{ ...bodySmall, fontSize:12, color:T.warnAmber, marginTop:10 }}>
+                      Some optional inputs are missing. Related sections may be omitted and shown as unavailable in the report.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1997,6 +2036,8 @@ useEffect(() => {
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
+                    : !reportUploadGate.canGenerate
+                    ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
                 {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.nextStep && (

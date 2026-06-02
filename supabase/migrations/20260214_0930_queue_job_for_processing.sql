@@ -7,18 +7,38 @@ AS $function$
 declare
   v_user_id uuid;
   v_prev_status text;
+  v_report_type text;
+  v_has_t12 boolean := false;
+  v_has_rent_roll boolean := false;
+  v_has_supporting_docs boolean := false;
 begin
   v_user_id := auth.uid();
   if v_user_id is null then
     raise exception 'Not authenticated';
   end if;
 
-  select status into v_prev_status
+  select status, report_type into v_prev_status, v_report_type
   from public.analysis_jobs
   where id = p_job_id and user_id = v_user_id;
 
   if v_prev_status is null then
     raise exception 'Job not found';
+  end if;
+
+  select
+    bool_or(lower(coalesce(doc_type, '')) = 'rent_roll'),
+    bool_or(lower(coalesce(doc_type, '')) in ('t12', 't12_or_operating_statement')),
+    bool_or(lower(coalesce(doc_type, '')) not in ('rent_roll', 't12', 't12_or_operating_statement'))
+  into v_has_rent_roll, v_has_t12, v_has_supporting_docs
+  from public.analysis_job_files
+  where job_id = p_job_id and user_id = v_user_id;
+
+  if not coalesce(v_has_t12, false) or not coalesce(v_has_rent_roll, false) then
+    raise exception 'MISSING_REQUIRED_CORE_DOCUMENTS';
+  end if;
+
+  if v_report_type = 'underwriting' and not coalesce(v_has_supporting_docs, false) then
+    raise exception 'MISSING_REQUIRED_SUPPORTING_DOCUMENT';
   end if;
 
   -- Only allow queueing from needs_documents (fail-closed)

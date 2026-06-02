@@ -267,12 +267,12 @@ if (acquisitionRenderedResult.acquisition_assumption_state?.has_validated_acquis
   console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
   process.exit(1);
 }
-if (!["validated", "validated_partial"].includes(String(acquisitionRenderedResult.acquisition_assumption_state?.acquisition_support_status || ""))) {
-  console.error("Expected acquisition assumptions to remain validated or validated-partial.");
+if (!["validated", "validated_partial", "validated_supported"].includes(String(acquisitionRenderedResult.acquisition_assumption_state?.acquisition_support_status || ""))) {
+  console.error("Expected acquisition assumptions to remain validated, validated-partial, or validated-supported.");
   console.error("Actual state:", acquisitionRenderedResult.acquisition_assumption_state);
   process.exit(1);
 }
-if (!["validated", "validated_partial"].includes(String(acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state?.acquisition_support_status || ""))) {
+if (!["validated", "validated_partial", "validated_supported"].includes(String(acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed?.acquisition_assumption_state?.acquisition_support_status || ""))) {
   console.error("Expected loan term sheet artifact inventory to carry validated acquisition state.");
   console.error("Actual inventory:", acquisitionRenderedResult.artifact_inventory?.loan_term_sheet_parsed);
   process.exit(1);
