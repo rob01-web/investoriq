@@ -1,3 +1,228 @@
+# June 2, 2026 Addendum - Repo-Wide Legacy Residue Audit Converted Into Cleanup Map
+
+## Purpose
+
+Record that the June 2 controlled 124 Richmond Screening + Underwriting test moved the project from "controlled live testing next" into a new cleanup-map checkpoint.
+
+This does not mean the customer-delivery doctrine is broken. Both reports published and customer delivery was allowed. But the audit proved legacy residue still exists in live artifacts, PDF renderer/template paths, Dashboard/customer copy, worker/queue/admin metrics, parser/source coverage, tests, and sample/preview assets.
+
+## Controlling interpretation
+
+1. Customer-delivery doctrine:
+   - materially working better;
+   - valid core jobs published;
+   - no needs_documents customer outcome;
+   - no publication_held customer outcome;
+   - no MISSING_REQUIRED_SOURCE_DATA customer failure;
+   - no credit restore for section-only/support/advisory issues.
+
+2. Remaining issue:
+   - repo still contains active legacy residue and old template/render paths;
+   - contradictions in artifacts are caused by legacy/fallback compatibility aliases and duplicate readiness fields still being emitted beside canonical delivery state;
+   - advanced modeling / DCF / waterfall surfaces are caused by old reachable renderer/template sections and weak canonical render gates.
+
+3. Do not run this broad audit again unless a future patch invalidates this map.
+   This audit is now the working inventory.
+
+## Cleanup map
+
+### Slice 0 - Documentation checkpoint
+- Files:
+  - `!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_JUNE2_UPDATED_PRETEST_CHECKPOINT.md`
+  - `!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_2026-06-02_UPDATED_PRETEST_CHECKPOINT.md`
+- Purpose: lock this audit into docs before patching.
+- Status: in progress / do first.
+
+### Slice 1 - Delivery/artifact legacy alias cleanup
+- Audit IDs: L-01, L-14, L-15, L-16, L-20, L-23, L-24, L-25 inspect-only.
+- Files:
+  - `api/generate-client-report.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/_lib/qa-fix-routing.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/admin-run-worker.js`
+  - `api/admin/queue-metrics.js`
+  - `supabase/migrations/20260214_0930_queue_job_for_processing.sql` inspect only
+- Invariant:
+  When canonical delivery state exists, live/new-job artifacts must not emit contradictory legacy/fallback fields as live authority.
+- Target fields to remove/rename/isolate when canonical-present:
+  - `readiness_source: legacy_publish_eligibility_fallback`
+  - `readiness_fallback_used: true`
+  - `report_blocked: true`
+  - `report_publishable: false`
+  - `customer_publish_eligible: false`
+  - `customer_delivery_ready: false`
+  - `launch_path_recommendation: user_needs_documents`
+  - `customer_status_reason_code: customer_publish_not_ready`
+- Disposition:
+  historical compatibility may remain only if clearly isolated as non-authoritative.
+- Priority: highest.
+
+### Slice 2 - Advanced modeling / DCF / waterfall render gates
+- Audit IDs: L-02, L-03, L-17, L-18, L-19.
+- Files:
+  - `api/generate-client-report.js`
+  - `api/report-template-runtime.html`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/full-underwriting-state.js`
+- Invariant:
+  DCF, advanced modeling, debt-service mix, refinance, waterfall, comparables, and relative-positioning surfaces render only when canonical support exists.
+- Surfaces:
+  - Advanced Financial Modeling
+  - Operating Expense, Debt Service, and Cash Flow Mix
+  - Equity Cash Flow Waterfall
+  - Initial Equity / Cash Flow / Refinance / Sale
+  - DCF Framework Sensitivity Summary
+  - Comparable Transaction Context
+  - Relative Positioning
+- Priority: highest after Slice 1.
+
+### Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup
+- Audit IDs: L-18, L-21, L-22.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/source-report-coverage-qa.js`
+- Invariant:
+  Proposed acquisition/refinance financing can be recognized as proposed/acquisition support without becoming true current debt.
+- 124 Richmond source proof:
+  Clean term sheet contains loan amount at purchase price, 5.85% rate, 30-year amortization, and 1.00% lender fee.
+- Required behavior:
+  recognize fields as proposed/acquisition support, not current outstanding debt.
+- Priority: high.
+
+### Slice 4 - Property-tax corroborating support path
+- Audit IDs: L-18, L-22 support-doc/property-tax portions.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/full-underwriting-state.js`
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+- Invariant:
+  A property tax document that matches the T12 tax line should render as limited corroborating support, not generic auditability-only and not modeled override.
+- 124 Richmond source proof:
+  Property tax bill contains 2025 Municipal Property Taxes $38,400, matching the T12 property tax line.
+- Priority: high.
+
+### Slice 5 - Dashboard/customer/Admin copy cleanup
+- Audit IDs: L-10, L-11, L-12, L-24 if relevant.
+- Files:
+  - `src/lib/dashboardCustomerCopy.js`
+  - `src/pages/Dashboard.jsx`
+  - `src/pages/AdminDashboard.jsx`
+  - `api/admin/queue-metrics.js`
+- Invariant:
+  Customer-facing status/copy must come from canonical customer state, not old job.status, old readiness aliases, needs-doc, or publication-held fallbacks.
+- Must not show for core-valid jobs:
+  - `needs_documents`
+  - `user_needs_documents`
+  - `publication_held`
+  - `under_review`
+  - `admin_review_required`
+  - `upload more documents`
+  - `source package blame`
+  - `T12/Rent Roll blame when usable`
+- Priority: high after Slice 1.
+
+### Slice 6 - Parser/source-coverage fallback rationalization
+- Audit IDs: L-17, L-18, L-22.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/report-surface-contracts.js`
+- Invariant:
+  Parser fallback/recovery paths may recover usable deterministic core evidence, but fallback provenance cannot become live customer-blocking authority or silent financial truth.
+- Nuance:
+  Do not delete useful deterministic fallback blindly. Separate safe deterministic recovery from legacy fallback authority.
+- Priority: medium-high.
+
+### Slice 7 - Preview/sample/dead asset isolation
+- Audit IDs: L-04, L-05, L-06, L-07, L-08, L-09, L-26, L-27, L-28.
+- Files:
+  - `api/report-template.html`
+  - `api/html/sample-report.html`
+  - `src/lib/pdfSections.js`
+  - `src/lib/generatePDF.js`
+  - `public/reports/sample-report.html`
+  - `scripts/generate-sample-pdf.js`
+  - `src/pages/SampleReport.jsx`
+  - `src/components/UploadModal.jsx`
+  - `src/lib/sampleReportPages.js`
+- Invariant:
+  Legacy sample/demo/preview paths must not feed live customer PDFs or public trust surfaces.
+- Priority:
+  medium/low unless proven reachable.
+
+### Slice 8 - Test-suite doctrine split
+- Files:
+  - `tests/qa/qa-action-plan-smoke.js`
+  - `tests/qa/delivery-decision-state-smoke.js`
+  - `tests/qa/source-report-coverage-qa-smoke.js`
+  - `tests/qa/admin-run-worker-gate-smoke.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/dashboard-customer-copy-smoke.js`
+  - `tests/qa/job-failure-messaging-smoke.js`
+  - `tests/qa/report-upload-gate-smoke.js`
+  - `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+  - `tests/qa/rent-roll-alias-smoke.js`
+  - `tests/qa/t12-core-summary-smoke.js`
+- Invariant:
+  Tests may preserve historical compatibility only when explicitly named as historical/read-only compatibility. No test should protect legacy fallback as expected live/new-job behavior.
+- Priority:
+  update alongside each slice, finalize after Slices 1-6.
+
+### Slice 9 - SQL/RPC lifecycle review only
+- Audit ID: L-25.
+- File:
+  - `supabase/migrations/20260214_0930_queue_job_for_processing.sql`
+- Invariant:
+  New jobs must not create or queue through needs_documents.
+- Current note:
+  Production Supabase was already manually fixed so active consume_purchase_and_create_job creates queued and queue_job_for_processing queues from queued.
+- Disposition:
+  inspect/document only unless repo source-of-truth would reintroduce old behavior.
+- Priority:
+  after code authority slices; no casual SQL patch.
+
+## Recommended execution order
+
+0. Update docs.
+1. Slice 1 - Delivery/artifact legacy alias cleanup.
+2. Slice 2 - Advanced modeling / DCF / waterfall render gates.
+3. Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup.
+4. Slice 4 - Property-tax corroborating support rendering.
+5. Slice 5 - Dashboard/customer/Admin copy cleanup.
+6. Slice 6 - Parser/source-coverage fallback rationalization.
+7. Slice 8 - Test-suite doctrine split finalization.
+8. Slice 9 - SQL/RPC inspect-only source-of-truth check.
+9. Slice 7 - dead/sample/preview cleanup later unless reachable sooner.
+
+## Guardrails
+
+- Do not patch yet from this documentation update.
+- Do not run more live testing until the map is committed and the next patch slice is chosen.
+- Do not flip DocRaptor.
+- Do not create public samples.
+- Do not change pricing/Stripe.
+- Do not add new API/serverless routes.
+- Do not hardcode 124 Richmond, filenames, job IDs, report IDs, or fixture-only values.
+- Do not delete parser fallback blindly.
+- Do not casually patch SQL/RPC.
+- Do not treat customer-deliverable as Ken/public-sample ready.
+
+## Required receipt
+
+A. Files changed
+B. Addendum title added to each file
+C. Confirm all 10 slices/Slice 0-9 were recorded
+D. Confirm execution order recorded
+E. Confirm guardrails recorded
+F. Confirm no code files changed
+G. Validation: `git diff --check`
+
 # June 2, 2026 Addendum - Pre-Test Checkpoint / Universal Report-Quality Cleanup Verified / Controlled Live Testing Next
 
 ## Current controlling status
