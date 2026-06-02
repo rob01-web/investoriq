@@ -19,6 +19,31 @@ const { buildFullUnderwritingState } = await import("../../api/_lib/full-underwr
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
+const healQaArtifacts = [
+  {
+    type: "t12_parsed",
+    payload: {
+      effective_gross_income: 1000000,
+      total_operating_expenses: 400000,
+      net_operating_income: 600000,
+    },
+  },
+  {
+    type: "rent_roll_parsed",
+    payload: {
+      total_units: 10,
+      occupancy: 1,
+    },
+  },
+];
+const healQaCoverage = {
+  qa_status: "pass",
+  deterministic_flags: [],
+  artifact_inventory: {
+    t12_parsed: { present: true, has_core_totals: true },
+    rent_roll_parsed: { present: true, unit_count: 10, occupancy: 1 },
+  },
+};
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
 assert.match(reportSource, /Document-Backed Screening Outputs/);
@@ -3729,6 +3754,116 @@ assert.equal(
     },
     html: finalHtmlGuardResult.html,
   }).violations.some((v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"),
+  false
+);
+
+const acquisitionOnlyLoanTerms = {
+  purchase_price: 10640000,
+  ltv: 70,
+  interest_rate: 5.25,
+  amortization_years: 30,
+  debt_basis: "acquisition_financing_assumption",
+  derived_acquisition_loan_amount: 7448000,
+};
+const currentDebtNotAssessedState = buildCurrentDebtAssessmentState({
+  loanTermSheetTermsPayload: acquisitionOnlyLoanTerms,
+  t12Noi: 960000,
+});
+assert.equal(currentDebtNotAssessedState.current_debt_dscr_status, "not_assessed");
+assert.equal(currentDebtNotAssessedState.acquisition_only_exclusion, true);
+
+const currentDebtSectionHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
+  [
+    "<!-- BEGIN SECTION_7_REFI_STABILITY -->",
+    '<p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis</p>',
+    '<table><tr><td>Current Debt DSCR</td><td>1.42x</td></tr></table>',
+    '<p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis</p><p>{{DEBT_REFI_CONSIDERATIONS}}</p>',
+    '<p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity</p>{{REFI_SENSITIVITY_MATRIX_BLOCK}}',
+    '<div><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p>Debt balance 8750000</p></div>',
+    "<!-- END SECTION_7_REFI_STABILITY -->",
+  ].join("\n"),
+  {
+    effectiveReportMode: "v1_core",
+    reportType: "underwriting",
+    currentDebtAssessmentState: currentDebtNotAssessedState,
+    loanTermSheetTermsPayload: acquisitionOnlyLoanTerms,
+    t12Payload: { net_operating_income: 960000 },
+  }
+);
+assert.equal(
+  /Current Debt DSCR|DSCR Sensitivity|Refinance Proceeds|Maximum Financing Envelope/i.test(currentDebtSectionHealedHtml),
+  false
+);
+assert.equal(
+  currentDebtSectionHealedHtml.length === 0 || /not assessed/i.test(currentDebtSectionHealedHtml),
+  true
+);
+assert.equal(
+  buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: healQaArtifacts,
+    sourceReportCoverageQa: healQaCoverage,
+    html: currentDebtSectionHealedHtml,
+  }).violations.some((v) =>
+    [
+      "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+      "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+      "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+      "REPORT_TYPE_SECTION_LEAK",
+    ].includes(v.code)
+  ),
+  false
+);
+
+const underwritingLeakHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
+  [
+    "<!-- BEGIN SECTION_S2_INCOME_FORENSICS -->",
+    "<p>Income Forensics</p>",
+    "<!-- END SECTION_S2_INCOME_FORENSICS -->",
+    "<!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->",
+    "<p>Expense Structure</p>",
+    "<!-- END SECTION_S3_EXPENSE_STRUCTURE -->",
+  ].join("\n"),
+  {
+    effectiveReportMode: "v1_core",
+    reportType: "underwriting",
+  }
+);
+assert.equal(/Income Forensics|Expense Structure/i.test(underwritingLeakHealedHtml), false);
+assert.equal(
+  buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: healQaArtifacts,
+    sourceReportCoverageQa: healQaCoverage,
+    html: underwritingLeakHealedHtml,
+  }).violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  false
+);
+
+const screeningLeakHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
+  [
+    "<!-- BEGIN SECTION_7_DEBT -->",
+    "<p>Debt Structure</p>",
+    "<p>Current Debt Coverage</p>",
+    "<p>Refinance Stability Classification</p>",
+    "<!-- END SECTION_7_DEBT -->",
+  ].join("\n"),
+  {
+    effectiveReportMode: "screening_v1",
+    reportType: "screening",
+  }
+);
+assert.equal(/Debt Structure|Current Debt Coverage|Refinance Stability Classification/i.test(screeningLeakHealedHtml), false);
+assert.equal(
+  buildReportContractQa({
+    reportType: "screening",
+    reportTier: 2,
+    artifacts: healQaArtifacts,
+    sourceReportCoverageQa: healQaCoverage,
+    html: screeningLeakHealedHtml,
+  }).violations.some((v) => v.code === "SCREENING_UNDERWRITING_SECTION_LEAK"),
   false
 );
 
