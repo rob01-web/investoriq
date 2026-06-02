@@ -97,6 +97,18 @@ assert.match(sourcePackageMissingCopy.nextStep, /clearer or more complete docume
 assert.match(sourcePackageMissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(sourcePackageMissingCopy)), false);
 
+const coreValidLegacyMissingCopy = buildCustomerFailureMessage(
+  {
+    error_code: 'MISSING_REQUIRED_SOURCE_DATA',
+    failure_reason: 'The uploaded source package could not be verified as complete and usable for this report.',
+  },
+  { coreValidRequiredCoverage: true, creditRestored: true }
+);
+assert.equal(coreValidLegacyMissingCopy.title, 'Generation failed - credit restored');
+assert.match(coreValidLegacyMissingCopy.body, /Generation failed before publication/i);
+assert.match(coreValidLegacyMissingCopy.body, /returned to your account/i);
+assert.equal(/source package|rent roll|additional required documents|clearer or more complete documents/i.test(JSON.stringify(coreValidLegacyMissingCopy)), false);
+
 const reviewCopy = buildCustomerFailureMessage({
   error_code: 'ADMIN_REVIEW_REQUIRED',
   failure_reason: 'Admin review required.',

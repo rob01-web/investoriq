@@ -45,11 +45,27 @@ function classifyMissingDocumentCategory(job = {}) {
   return 'source_package';
 }
 
-export function classifyFailure(job = {}) {
+function buildNeutralSystemFailureCopy({ creditRestored = false } = {}) {
+  return {
+    title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
+    body: creditRestored
+      ? 'Generation failed before publication. No report was published, and your report credit has been returned to your account.'
+      : 'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.',
+    nextStep: 'You can try generating again. If this repeats, contact hello@investoriq.tech and include the property name.',
+    referenceCode: 'REPORT_GENERATION_FAILED',
+    creditLine: creditRestored ? 'Your report credit has been returned to your account.' : null,
+  };
+}
+
+export function classifyFailure(job = {}, options = {}) {
   const code = String(job?.error_code || '').trim().toUpperCase();
   const reason = String(job?.failure_reason || job?.error_message || '').trim();
+  const coreValidRequiredCoverage = options.coreValidRequiredCoverage === true;
 
   if (code === 'ADMIN_REVIEW_REQUIRED' || matchesAny(reason, ADMIN_REVIEW_HINTS)) {
+    if (coreValidRequiredCoverage) {
+      return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
+    }
     return { kind: 'admin_review', referenceCode: 'ADMIN_REVIEW_REQUIRED' };
   }
 
@@ -57,6 +73,9 @@ export function classifyFailure(job = {}) {
     code === 'DOCUMENT_FINANCIAL_SCALE_MISMATCH' ||
     matchesAny(reason, SCALE_MISMATCH_HINTS)
   ) {
+    if (coreValidRequiredCoverage) {
+      return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
+    }
     return { kind: 'document_mismatch', referenceCode: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH' };
   }
 
@@ -70,6 +89,9 @@ export function classifyFailure(job = {}) {
     ].includes(code) ||
     matchesAny(reason, MISSING_DOC_HINTS)
   ) {
+    if (coreValidRequiredCoverage) {
+      return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
+    }
     return { kind: 'missing_documents', referenceCode: code || 'MISSING_REQUIRED_SOURCE_DATA' };
   }
 
@@ -92,7 +114,8 @@ export function buildEntitlementRestoredMap(artifactRows = []) {
 }
 
 export function buildCustomerFailureMessage(job = {}, options = {}) {
-  const classification = classifyFailure(job);
+  const coreValidRequiredCoverage = options.coreValidRequiredCoverage === true;
+  const classification = classifyFailure(job, options);
   const creditRestored = options.creditRestored === true;
   const errorCode = String(job?.error_code || '').trim().toUpperCase();
   const referenceCode = classification.referenceCode;
@@ -111,6 +134,10 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
       referenceCode,
       creditLine: null,
     };
+  }
+
+  if (coreValidRequiredCoverage && classification.kind !== 'system_failure') {
+    return buildNeutralSystemFailureCopy({ creditRestored });
   }
 
   if (classification.kind === 'missing_documents') {
@@ -168,15 +195,7 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   }
 
   if (classification.kind === 'system_failure') {
-    return {
-      title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
-      body: creditRestored
-        ? restoredSystemFailureBody
-        : pendingSystemFailureBody,
-      nextStep: 'You can try generating again. If this repeats, contact hello@investoriq.tech and include the property name.',
-      referenceCode,
-      creditLine,
-    };
+    return buildNeutralSystemFailureCopy({ creditRestored });
   }
 
   return {
