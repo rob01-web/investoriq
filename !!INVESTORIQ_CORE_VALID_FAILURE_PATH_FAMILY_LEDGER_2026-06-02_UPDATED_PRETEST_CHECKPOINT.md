@@ -1,3 +1,209 @@
+# June 2, 2026 Addendum - Pre-Test Checkpoint / Universal Report-Quality Cleanup Verified / Live Testing Next
+
+## Current controlling status
+
+InvestorIQ has reached the next pre-test checkpoint.
+
+The prior live Full Underwriting run proved the core-valid customer-delivery doctrine: the job moved through the normal worker lifecycle and published instead of failing closed because of optional/support/advisory issues. The follow-up universal report-quality cleanup has now been completed and independently verified by Codex as safe to commit.
+
+This addendum supersedes any older note saying the immediate next task is DocRaptor production mode, public sample work, or more launch-copy polishing before controlled validation. DocRaptor production mode remains intentionally deferred until after final testing confidence is established.
+
+## Universal Report-Quality Cleanup 1 - verified complete
+
+Codex completed the root-class patch and then ran a no-code verification. The verification returned:
+
+```text
+1. Going-in cap rate binding: Verified
+2. Summary-only rent roll unit-mix collapse: Verified
+3. Generic orphan heading collapse: Verified
+4. Property-tax corroborating support wording: Verified
+5. Explicit current debt QA recognition / acquisition separation: Verified
+Blocker found: None
+Commit status: safe to commit
+```
+
+This was a root-invariant cleanup, not a test-report patch.
+
+## Root invariants now considered patched in this batch
+
+### 1. Universal render eligibility
+
+Status: `COMPLETE - SAFE TO COMMIT`
+
+Rules now verified:
+
+- no orphan headings;
+- no empty tables;
+- no unsupported rows;
+- summary-only rent-roll evidence cannot render a misleading full unit-mix table;
+- representative observations cannot become full unit-mix counts or averages;
+- empty intro/heading blocks collapse generically.
+
+### 2. Field-source binding
+
+Status: `COMPLETE - SAFE TO COMMIT`
+
+Rules now verified:
+
+- going-in cap rate cannot render as acquisition interest rate;
+- acquisition interest rate renders only from explicit interest-rate evidence;
+- acquisition fields render only under exact source meaning;
+- property-tax support that corroborates the T12 tax line renders as limited corroborating support;
+- corroborating property-tax support does not override T12 totals and does not become modeled property-tax input unless a validated structured property-tax artifact exists.
+
+### 3. QA conformance alignment
+
+Status: `COMPLETE - SAFE TO COMMIT`
+
+Rules now verified:
+
+- explicit current debt support is recognized as current debt by QA/conformance;
+- QA should no longer say current debt is not assessed when explicit current debt balance/rate/amortization support exists;
+- acquisition/proposed financing remains separated and does not become current debt without explicit current outstanding debt evidence.
+
+## Patch files from Codex receipt
+
+Files changed in the universal report-quality cleanup:
+
+- `api/generate-client-report.js`
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/report-contract-qa.js`
+- `tests/qa/current-debt-support-routing-smoke.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- `tests/qa/report-contract-qa-smoke.js`
+
+Validation reported by Codex:
+
+- `node --check api/generate-client-report.js`
+- `node --check api/_lib/report-surface-contracts.js`
+- `node --check api/_lib/report-contract-qa.js`
+- `node tests/qa/current-debt-support-routing-smoke.js`
+- `node tests/qa/generate-client-report-rent-roll-smoke.js`
+- `node tests/qa/report-contract-qa-smoke.js`
+- `npm.cmd run build`
+- `git diff --check`
+
+## Production / distribution readiness status
+
+### DocRaptor production mode
+
+Status: `DEFERRED INTENTIONALLY`
+
+Do not flip DocRaptor to production mode yet. The test watermark remains acceptable during controlled validation. Production mode is a distribution-readiness switch, not a report-engine correctness patch.
+
+Flip DocRaptor only after final Screening and Underwriting controlled tests pass and the system is trusted for external/public distribution.
+
+### Public sample files/assets
+
+Status: `DEFER UNTIL AFTER CONTROLLED TEST OUTPUTS ARE TRUSTED`
+
+Do not create or publish public samples from untrusted or pre-final test PDFs. Public sample assets remain a distribution task after controlled report validation.
+
+### Website/pricing/final copy
+
+Status: `STILL OPEN - DO AFTER CONTROLLED VALIDATION OR AS A SEPARATE LOW-RISK AUDIT`
+
+Website/pricing copy must still be checked before launch for:
+
+- stale pricing;
+- public AI wording;
+- BUY/SELL/HOLD language;
+- admin-review / under-review / publication-held wording;
+- misleading Underwriting availability;
+- sample links/assets;
+- doctrine-consistent document-driven positioning.
+
+But this is not the next report-engine task.
+
+## Current pre-test checklist status
+
+```text
+1. Universal render eligibility: COMPLETE / safe to commit
+2. Field-source binding: COMPLETE / safe to commit
+3. QA conformance alignment: COMPLETE / safe to commit
+4. Production/distribution readiness: PARTIALLY DEFERRED
+   - DocRaptor production mode deferred until after testing confidence
+   - public samples deferred until final trusted outputs exist
+   - website/pricing copy still open before launch
+5. Launch smoke / controlled live testing: NEXT AFTER COMMIT
+```
+
+## Immediate next action
+
+If the universal report-quality cleanup patch has not already been committed, commit it first.
+
+Recommended commit message:
+
+```text
+universal report quality cleanup
+```
+
+After that, proceed to controlled live testing. Do not start DocRaptor production mode, public sample creation, pricing changes, or broad audits before the controlled tests.
+
+## Next controlled validation sequence
+
+Run live testing in this order:
+
+1. one final Screening run;
+2. one final Full Underwriting run;
+3. Dashboard customer card review;
+4. Admin artifacts/diagnostics review;
+5. PDF visual review.
+
+For each valid report, capture:
+
+- PDF output;
+- `analysis_artifacts_rows.json`;
+- report lifecycle status;
+- delivery gate decision;
+- source-report coverage QA;
+- report-contract QA;
+- QA action plan;
+- Dashboard customer state;
+- Admin diagnostics state if relevant.
+
+## Live testing acceptance criteria
+
+A valid core report passes only if:
+
+```text
+- job reaches published;
+- customer delivery is allowed;
+- no core-valid job becomes needs_documents/user_needs_documents;
+- no core-valid job becomes publication_held;
+- no core-valid job produces MISSING_REQUIRED_SOURCE_DATA;
+- no credit restore occurs for section-only/support/advisory issues;
+- no source-package/T12/Rent Roll blame appears when core docs are valid;
+- unsupported sections are omitted, collapsed, qualified, or disclosed;
+- no orphan headings;
+- no empty tables;
+- no unsupported rows;
+- no cap-rate-as-interest-rate mapping;
+- property tax support is treated only according to source support;
+- current debt QA aligns with explicit current debt evidence;
+- acquisition/proposed financing remains separate from current debt;
+- DocRaptor test watermark is accepted during testing and remains distribution-only.
+```
+
+## Do not do next
+
+Do not:
+
+- flip DocRaptor production mode yet;
+- create public sample PDFs yet;
+- patch public sample links before final trusted outputs exist unless the task is audit-only;
+- do broad audits;
+- touch SQL/RPC lifecycle again unless a live test exposes a new blocker;
+- change pricing/Stripe before controlled validation;
+- update website launch copy before the next testing checkpoint unless explicitly chosen.
+
+## Fresh continuation point
+
+Resume from here with controlled live testing after the universal report-quality cleanup patch is committed.
+
+
+---
+
 # June 2, 2026 Addendum - LIVE UNDERWRITING PASS / SQL Needs-Documents Extinction / Ken Red-Pen Follow-Up
 
 ## Current controlling status
