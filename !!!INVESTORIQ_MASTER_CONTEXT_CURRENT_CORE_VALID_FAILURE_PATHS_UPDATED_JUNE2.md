@@ -1,3 +1,121 @@
+# June 2, 2026 Addendum - 15 Core-Valid Failure Path Families Added / Full Underwriting Launch Gate Reopened
+
+## Current controlling status
+
+The Publish-or-Fail doctrine remains correct, but the prior “Doctrine Lock Closed” implementation status is no longer sufficient for launch confidence.
+
+A controlled Full Underwriting live test proved that a report can still whole-report fail after required core documents are valid. The live package had a valid parsed T12 and valid parsed Rent Roll, but section/render-contract drift cascaded through legacy delivery/failure mapping into a whole-report fail and incorrect source-package/rent-roll blame copy.
+
+## New controlling invariant
+
+```text
+Valid T12 + valid Rent Roll = publish the report.
+
+If core docs are valid, non-core or section-level issues must collapse/omit/qualify/disclose the affected section, not fail the whole report.
+```
+
+Whole-report fail remains allowed only for:
+
+1. missing/unusable/unvalidated required T12;
+2. missing/unusable/unvalidated required Rent Roll;
+3. true runtime/storage/PDF generation failure;
+4. catastrophic render failure where no safe report shell can be produced.
+
+## New active ledger/campaign
+
+Active campaign name:
+
+```text
+InvestorIQ Core-Valid Failure Path Family Ledger
+```
+
+Suggested active ledger filename:
+
+```text
+!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_2026-06-02.md
+```
+
+This does not erase the original Decision-Source Elimination Ledger. It supersedes the launch-critical working focus.
+
+## 15 Core-Valid Failure Path Families to track until destroyed
+
+1. `CVF-01` Core T12 parse failure - legitimate fail-closed only when truly core-invalid.
+2. `CVF-02` Core Rent Roll parse failure - legitimate fail-closed only when truly core-invalid.
+3. `CVF-03` Financial scale mismatch after core parse - must disclose/qualify when defensible; only fail if truly unreconcilable.
+4. `CVF-04` Current-debt/refi render-contract drift - collapse/omit/qualify debt/refi/DSCR surfaces; do not whole-report fail.
+5. `CVF-05` Report-type section leak - strip/collapse leaked section; do not whole-report fail.
+6. `CVF-06` Source reconciliation/rendered variance drift - disclose-only for core-valid jobs.
+7. `CVF-07` Optional/full-underwriting support depth constraints - internal/distribution-only or section limitation; not ordinary customer block.
+8. `CVF-08` Delivery-gate hold-chain / legacy needs-doc conversion - destroy customer-facing `user_needs_documents` / `needs_documents` / `publication_held` conversion for core-valid jobs.
+9. `CVF-09` Generator publication-held shim - remove/bypass hold shim for core-valid section-only issues.
+10. `CVF-10` Worker terminal failure / credit restore misclassification - no `MISSING_REQUIRED_SOURCE_DATA` or entitlement restore for core-valid section-only issues.
+11. `CVF-11` Failure message builder source-package/rent-roll blame - never blame usable core docs.
+12. `CVF-12` Dashboard customer status/copy fallback - no needs-doc/publication-held/additional-documents lifecycle for core-valid jobs.
+13. `CVF-13` Runtime/storage/PDF/catastrophic render failure - legitimate fail-closed, system-failure copy only.
+14. `CVF-14` OpenAI/provider/advisory failures - diagnostic only when deterministic core is valid.
+15. `CVF-15` Optional-support/source-package/admin ops paths - internal/distribution/diagnostic only; cannot feed customer lifecycle.
+
+## P0 patch order now controlling
+
+1. Slice 1 - Core-valid delivery invariant.
+   - Main files: `api/_lib/qa-action-plan.js`, `api/generate-client-report.js`, `api/admin-run-worker.js`.
+   - Goal: core-valid jobs cannot become needs-doc/publication-held/MISSING_REQUIRED_SOURCE_DATA because of non-core/section-only issues.
+
+2. Slice 2 - Section self-heal/collapse for render-contract violations.
+   - Main files: `api/_lib/report-contract-qa.js`, `api/generate-client-report.js`, `api/_lib/report-surface-contracts.js`.
+   - Goal: current-debt/refi/report-type/source-reconciliation issues collapse/omit/qualify affected sections before delivery.
+
+3. Slice 3 - Dashboard/failure messaging final customer-copy lock.
+   - Main files: `src/lib/jobFailureMessaging.js`, `src/pages/Dashboard.jsx`.
+   - Goal: core-valid jobs never display source-package/rent-roll/additional-documents blame.
+
+4. Slice 4 - Optional/support/distribution isolation sweep.
+   - Main files: `api/_lib/source-report-coverage-qa.js`, `api/_lib/source-package-qa.js`, `api/_lib/qa-action-plan.js`.
+   - Goal: optional support docs, public-sample/high-value blockers, DocRaptor test mode, and OpenAI/advisory issues cannot block ordinary customer delivery.
+
+
+## Execution rule - bundle path families by shared file cluster
+
+When Codex begins implementation, do not patch one CVF row at a time if several rows share the same files, canonical owner, and invariant. To prevent this from taking the entire day, bundle **2-4 tightly related CVF families** per prompt only when they touch the same file cluster and share the same doctrine rule.
+
+Approved grouping pattern:
+
+1. **Delivery invariant cluster**
+   - CVF-08, CVF-09, CVF-10
+   - Files: `api/_lib/qa-action-plan.js`, `api/generate-client-report.js`, `api/admin-run-worker.js`
+   - Shared invariant: core-valid jobs cannot become needs-doc/publication-held/MISSING_REQUIRED_SOURCE_DATA/credit-restored because of non-core or section-only issues.
+
+2. **Rendered section self-heal cluster**
+   - CVF-04, CVF-05, CVF-06
+   - Files: `api/_lib/report-contract-qa.js`, `api/generate-client-report.js`, `api/_lib/report-surface-contracts.js`, `api/_lib/source-report-coverage-qa.js`
+   - Shared invariant: section-contained render-contract issues collapse/omit/qualify affected sections and do not fail core-valid reports.
+
+3. **Customer copy cluster**
+   - CVF-11, CVF-12
+   - Files: `src/lib/jobFailureMessaging.js`, `src/pages/Dashboard.jsx`
+   - Shared invariant: customer copy cannot blame source package, T12, Rent Roll, missing documents, or additional documents when core-valid is true.
+
+4. **Optional/support/distribution isolation cluster**
+   - CVF-07, CVF-14, CVF-15 plus DocRaptor/public-sample/high-value metadata behavior where surfaced through CVF-08
+   - Files: `api/_lib/source-report-coverage-qa.js`, `api/_lib/source-package-qa.js`, `api/_lib/qa-action-plan.js`, advisory QA helpers
+   - Shared invariant: optional/support/advisory/distribution blockers remain diagnostic or distribution-only and cannot block ordinary customer delivery when deterministic core docs are valid.
+
+Do not bundle unrelated parser, renderer, worker, Dashboard, and support-doc families just to move faster. Bundling is allowed only when the same patch can enforce one shared invariant without broad refactor or drift.
+
+## Immediate instruction
+
+Before any new Codex patch prompt, commit this documentation update so the 15 path families are not lost.
+
+Then give Codex Slice 1 only.
+
+Do not run more live tests until Slice 1 is complete and validated.
+Do not patch only Dashboard copy first.
+Do not patch only current-debt rendering first.
+The core-valid delivery invariant must be patched before the next symptom class.
+
+
+---
+
 # June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Progress / `user_needs_documents` Demotion Doctrine Added
 
 ## Current controlling status
