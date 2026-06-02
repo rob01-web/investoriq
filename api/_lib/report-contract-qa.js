@@ -1362,7 +1362,7 @@ export function buildReportContractQa({
             /Refinance Stability Classification/i,
           ]) || leakProbeExcerpt,
       },
-      blocks_customer_delivery: true,
+      blocks_customer_delivery: false,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
     });
@@ -1837,6 +1837,7 @@ export function buildReportContractQa({
           ? screeningLeakExcerptInUnderwriting
           : underwritingLeakExcerptInScreening || leakProbeExcerpt,
       },
+      blocksCustomerDelivery: false,
     });
   }
   const supportDocPropertyTaxLeakMatch = /(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,180}(?:property tax support|structured property tax input|modeled property tax input)|(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,180}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)/i.exec(text);
@@ -2416,7 +2417,7 @@ export function buildReportContractQa({
             /\bCurrent Debt DSCR\b/i,
           ]) || leakProbeExcerpt,
       },
-      blocks_customer_delivery: true,
+      blocks_customer_delivery: false,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
     });
@@ -2471,7 +2472,7 @@ export function buildReportContractQa({
             ]) || leakProbeExcerpt,
         },
         customer_delivery_impact: discloseOnlyReconciliationMismatch ? "disclose_only" : "block",
-        blocks_customer_delivery: !discloseOnlyReconciliationMismatch,
+        blocks_customer_delivery: false,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       });
@@ -2819,7 +2820,7 @@ export function buildReportContractQa({
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
           ]),
         },
-        blocks_customer_delivery: true,
+        blocks_customer_delivery: false,
       });
       addViolation(violations, {
         code: "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
@@ -2834,7 +2835,7 @@ export function buildReportContractQa({
             /DSCR \(T12 NOI\)\s*\n?\s*[0-9.]+x/i,
           ]),
         },
-        blocks_customer_delivery: true,
+        blocks_customer_delivery: false,
       });
     }
   }

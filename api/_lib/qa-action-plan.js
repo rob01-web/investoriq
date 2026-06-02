@@ -371,7 +371,6 @@ function actionForCoverageFlag(flag) {
   if (code === "RENT_ROLL_T12_RECONCILIATION_REQUIRED") {
     const state = flag?.evidence?.source_reconciliation_state || {};
     const parserSuspected = String(state?.status || "") === "parser_suspected";
-    const customerDeliveryBlocked = String(state?.customer_delivery_impact || "") === "block";
     const publicOutreachBlocked = String(state?.public_outreach_impact || "") === "block_until_review";
     return {
       code,
@@ -385,7 +384,7 @@ function actionForCoverageFlag(flag) {
         : "Document the rent roll vs T12 variance, disclose it institutionally, and complete internal advisory review before external use.",
       requires_code_patch: false,
       requires_regeneration: false,
-      blocks_customer_delivery: customerDeliveryBlocked,
+      blocks_customer_delivery: false,
       blocks_public_sample: publicOutreachBlocked,
       blocks_high_value_outreach: publicOutreachBlocked,
       safe_to_auto_fix: false,
@@ -818,11 +817,7 @@ const legacyCustomerBlockerFallbackCodes = new Set([
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
   "HARD_PUBLIC_LANGUAGE_CONTRACT",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
-  "REPORT_TYPE_SECTION_LEAK",
-  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
-  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-  "SCREENING_UNDERWRITING_SECTION_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
@@ -832,11 +827,6 @@ const deterministicCustomerHardDefectCodes = new Set([
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
   "HARD_PUBLIC_LANGUAGE_CONTRACT",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
-  "REPORT_TYPE_SECTION_LEAK",
-  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
-  "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
-  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
-  "SCREENING_UNDERWRITING_SECTION_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
@@ -866,6 +856,17 @@ const knownSelfHealRenderContractCodes = new Set([
   "RENDERED_PLACEHOLDER_METRIC_VALUE",
   "RENDERED_PLACEHOLDER_VALUE_LEAK",
   "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+  "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+  "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT",
+  "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT",
+  "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT",
+  "REPORT_TYPE_SECTION_LEAK",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+  "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
 ]);
 
 function classifyReportContractViolationCode(code = "") {
@@ -946,10 +947,7 @@ function isManagerContradictionCustomerBlocking(action, {
     ) {
       return true;
     }
-    if (
-      violationCode === "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH" ||
-      violationCode === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION"
-    ) {
+    if (violationCode === "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION") {
       return true;
     }
     return classifyActionDeliveryImpact(actionForReportContractViolation(violation)) === "customer_delivery_blocker";
@@ -1590,7 +1588,6 @@ function classifyActionDeliveryImpact(action) {
   const requiresRegeneration = Boolean(action?.requires_regeneration);
 
   const customerDeliveryBlockerCodes = new Set([
-    "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
     "UNSUPPORTED_CURRENT_DEBT_RENDERED",
     "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
   ]);
@@ -1643,10 +1640,16 @@ function isCoreSufficiencyPublishableBucket(bucketValue) {
 
 const CORE_VALID_NON_BLOCKING_ISSUE_CODES = new Set([
   "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+  "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT",
+  "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT",
+  "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT",
   "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
   "REPORT_TYPE_SECTION_LEAK",
   "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
   "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED",
   "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
   "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",

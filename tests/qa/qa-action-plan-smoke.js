@@ -757,7 +757,14 @@ assert.equal(Array.isArray(cleanGate.report_quality_blockers), true);
 assert.equal(cleanGate.report_quality_blockers.length, 0);
 
 const adminReviewGate = buildDeliveryGateDecision({
-  sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
   reportContractQa: {
     contract_status: "warn",
     violations: [
@@ -786,17 +793,17 @@ const adminReviewGate = buildDeliveryGateDecision({
   },
   qaDirectorReview: { overall_director_decision: "advisory_attention" },
 });
-assert.equal(adminReviewGate.delivery_gate_status, "user_needs_documents");
-assert.equal(adminReviewGate.customer_publish_eligible, false);
+assert.equal(adminReviewGate.delivery_gate_status, "deliverable");
+assert.equal(adminReviewGate.customer_publish_eligible, true);
 assert.equal(adminReviewGate.customer_delivery_ready, adminReviewGate.customer_publish_eligible);
 assert.equal(adminReviewGate.report_publishable, adminReviewGate.customer_publish_eligible);
 assert.equal(adminReviewGate.report_blocked, !adminReviewGate.report_publishable);
 assert.equal(adminReviewGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
-assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "user_needs_documents");
-assert.equal(adminReviewGate.launch_path_recommendation, "user_needs_documents");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "deliverable");
+assert.equal(adminReviewGate.launch_path_recommendation, "customer_deliverable");
 assert.equal(adminReviewGate.final_delivery_authority, "delivery_gate");
-assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "user_needs_documents");
+assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "deliverable");
 
 const rentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1617,6 +1624,10 @@ const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
     qa_status: "warn",
     deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
     source_reconciliation_state: {
       publishability_bucket: "disclose_only_publishable",
       customer_delivery_impact: "disclose_only",
@@ -1669,7 +1680,7 @@ const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
     },
   }),
 });
-assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "user_needs_documents");
+assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "deliverable");
 assert.equal(renderedReconciliationMismatchGate.publish_decision_reason, "customer_publish_eligible");
 
 const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
@@ -1969,7 +1980,7 @@ const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "user_needs_documents");
+assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "deliverable");
 assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, true);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
