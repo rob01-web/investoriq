@@ -86,7 +86,7 @@ assert.match(
 );
 assert.match(
   workerSource,
-  /const isResolvedHoldBlockedOutcome =[\s\S]{0,120}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,120}\|\|[\s\S]{0,120}resolvedDeliveryDecision\.customerDeliveryAllowed === false;/
+  /const isResolvedHoldBlockedOutcome =[\s\S]{0,80}!resolvedDeliveryDecision\.coreValidRequiredCoverage[\s\S]{0,80}\([\s\S]{0,120}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,120}\|\|[\s\S]{0,120}resolvedDeliveryDecision\.customerDeliveryAllowed === false\);/
 );
 assert.match(workerSource, /const holdOutcomeStatus = 'user_needs_documents';/);
 assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);

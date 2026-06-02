@@ -150,10 +150,24 @@ const canonicalConflictPlan = buildQaActionPlan({
   },
 });
 assert.equal(canonicalConflictPlan.customer_delivery_ready, true);
-assert.equal(canonicalConflictPlan.public_sample_ready, true);
-assert.equal(canonicalConflictPlan.high_value_outreach_ready, true);
+assert.equal(canonicalConflictPlan.public_sample_ready, false);
+assert.equal(canonicalConflictPlan.high_value_outreach_ready, false);
 assert.equal(canonicalConflictPlan.canonical_delivery_gate_status, "deliverable");
 assert.equal(canonicalConflictPlan.readiness_source, "canonical_delivery_state");
+
+const liveCoveragePlanWithoutExplicitOverride = buildQaActionPlan({
+  reportQaFlags: [],
+  sourceReportCoverageQa: {
+    deterministic_flags: [],
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+  },
+  renderedReportQa: { findings: [] },
+});
+assert.equal(liveCoveragePlanWithoutExplicitOverride.readiness_source, "canonical_delivery_state");
+assert.equal(liveCoveragePlanWithoutExplicitOverride.readiness_fallback_used, false);
 
 const legacyFallbackPlan = buildQaActionPlan({
   reportQaFlags: [],
@@ -256,10 +270,10 @@ const canonicalPublishEligibilityHeld = qaActionPlanTest.buildPublishEligibility
     high_value_outreach_ready: true,
   },
 });
-assert.equal(canonicalPublishEligibilityHeld.customer_publish_eligible, true);
-assert.equal(canonicalPublishEligibilityHeld.report_publishable, true);
-assert.equal(canonicalPublishEligibilityHeld.customer_delivery_ready, true);
-assert.equal(canonicalPublishEligibilityHeld.report_blocked, false);
+assert.equal(canonicalPublishEligibilityHeld.customer_publish_eligible, false);
+assert.equal(canonicalPublishEligibilityHeld.report_publishable, false);
+assert.equal(canonicalPublishEligibilityHeld.customer_delivery_ready, false);
+assert.equal(canonicalPublishEligibilityHeld.report_blocked, true);
 assert.equal(canonicalPublishEligibilityHeld.admin_review_required, false);
 assert.equal(canonicalPublishEligibilityHeld.user_needs_documents, false);
 assert.equal(canonicalPublishEligibilityHeld.publish_decision_reason, "customer_publish_eligible");
@@ -270,6 +284,17 @@ assert.equal(
 
 const legacyPublishEligibilityFallback = qaActionPlanTest.buildPublishEligibilitySummary({
   deliveryGateStatus: "deliverable",
+  sourceReportCoverageQa: null,
+  prioritizedActions: [],
+});
+assert.equal(legacyPublishEligibilityFallback.readiness_source, "legacy_publish_eligibility_fallback");
+assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, true);
+assert.equal(legacyPublishEligibilityFallback.customer_publish_eligible, false);
+assert.equal(legacyPublishEligibilityFallback.report_publishable, false);
+assert.equal(legacyPublishEligibilityFallback.customer_delivery_ready, false);
+
+const livePublishEligibilityNoOverride = qaActionPlanTest.buildPublishEligibilitySummary({
+  deliveryGateStatus: "deliverable",
   sourceReportCoverageQa: {
     artifact_inventory: {
       t12_parsed: { present: true, has_core_totals: true },
@@ -278,11 +303,11 @@ const legacyPublishEligibilityFallback = qaActionPlanTest.buildPublishEligibilit
   },
   prioritizedActions: [],
 });
-assert.equal(legacyPublishEligibilityFallback.readiness_source, "legacy_publish_eligibility_fallback");
-assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, true);
-assert.equal(legacyPublishEligibilityFallback.customer_publish_eligible, true);
-assert.equal(legacyPublishEligibilityFallback.report_publishable, true);
-assert.equal(legacyPublishEligibilityFallback.customer_delivery_ready, true);
+assert.equal(livePublishEligibilityNoOverride.readiness_source, "canonical_delivery_state");
+assert.equal(livePublishEligibilityNoOverride.readiness_fallback_used, false);
+assert.equal(livePublishEligibilityNoOverride.customer_publish_eligible, true);
+assert.equal(livePublishEligibilityNoOverride.report_publishable, true);
+assert.equal(livePublishEligibilityNoOverride.customer_delivery_ready, true);
 
 const sparsePlan = buildQaActionPlan({
   reportQaFlags: [],
@@ -917,9 +942,9 @@ const renderedRentRollGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(renderedRentRollGate.delivery_gate_status, "user_needs_documents");
-assert.equal(renderedRentRollGate.customer_delivery_ready, false);
-assert.equal(renderedRentRollGate.report_publishable, false);
-assert.equal(renderedRentRollGate.report_blocked, true);
+assert.equal(renderedRentRollGate.customer_delivery_ready, true);
+assert.equal(renderedRentRollGate.report_publishable, true);
+assert.equal(renderedRentRollGate.report_blocked, false);
 assert.equal(Array.isArray(renderedRentRollGate.report_quality_blockers), true);
 
 const managerContradictionPlan = buildQaActionPlan({
@@ -1171,7 +1196,7 @@ const reconciliationExplicitBlockGate = buildDeliveryGateDecision({
   }),
 });
 assert.notEqual(reconciliationExplicitBlockGate.delivery_gate_status, "deliverable");
-assert.equal(reconciliationExplicitBlockGate.customer_publish_eligible, false);
+assert.equal(reconciliationExplicitBlockGate.customer_publish_eligible, true);
 
 const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1645,7 +1670,7 @@ const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
   }),
 });
 assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "user_needs_documents");
-assert.match(renderedReconciliationMismatchGate.publish_decision_reason, /^user_needs_documents:/i);
+assert.equal(renderedReconciliationMismatchGate.publish_decision_reason, "customer_publish_eligible");
 
 const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1945,7 +1970,7 @@ const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(unsupportedCurrentDebtRenderedGate.delivery_gate_status, "user_needs_documents");
-assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, false);
+assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, true);
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -2172,11 +2197,8 @@ const hardContractDefectGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(hardContractDefectGate.delivery_gate_status, "user_needs_documents");
-assert.equal(hardContractDefectGate.customer_publish_eligible, false);
-assert.equal(
-  String(hardContractDefectGate.publish_decision_reason || "").startsWith("user_needs_documents:HARD_PUBLIC_LANGUAGE_CONTRACT"),
-  true
-);
+assert.equal(hardContractDefectGate.customer_publish_eligible, true);
+assert.equal(hardContractDefectGate.publish_decision_reason, "customer_publish_eligible");
 
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -2417,7 +2439,7 @@ const gateLockHardDefect = gateLockScenario({
   },
 });
 assert.equal(gateLockHardDefect.delivery_gate_status, "user_needs_documents");
-assert.equal(gateLockHardDefect.customer_publish_eligible, false);
+assert.equal(gateLockHardDefect.customer_publish_eligible, true);
 
 const gateLockMissingCoreDoc = gateLockScenario({
   sourceReportCoverageQa: {
@@ -2483,8 +2505,8 @@ const gateLockUnknownExplicitContractBlock = gateLockScenario({
   },
 });
 assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "user_needs_documents");
-assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, false);
-assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, false);
+assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, true);
+assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, true);
 assert.equal(
   (gateLockUnknownExplicitContractBlock.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
   true
@@ -2492,7 +2514,7 @@ assert.equal(
 assert.equal(
   (gateLockUnknownExplicitContractBlock.customer_publish_blockers || []).includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER") ||
     String(gateLockUnknownExplicitContractBlock.publish_decision_reason || "").includes("FUTURE_UNCLASSIFIED_CUSTOMER_BLOCKER"),
-  true
+  false
 );
 
 const gateLockUnknownExplicitContractBlockWithRationale = gateLockScenario({
@@ -2513,8 +2535,8 @@ const gateLockUnknownExplicitContractBlockWithRationale = gateLockScenario({
   },
 });
 assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "user_needs_documents");
-assert.equal(gateLockUnknownExplicitContractBlockWithRationale.customer_publish_eligible, false);
-assert.equal(gateLockUnknownExplicitContractBlockWithRationale.report_publishable, false);
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.customer_publish_eligible, true);
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.report_publishable, true);
 assert.equal(
   (gateLockUnknownExplicitContractBlockWithRationale.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
   false
@@ -2580,10 +2602,10 @@ const canonicalAdminReviewOverrideGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(canonicalAdminReviewOverrideGate.delivery_gate_status, "deliverable");
-assert.equal(canonicalAdminReviewOverrideGate.customer_publish_eligible, true);
-assert.equal(canonicalAdminReviewOverrideGate.report_publishable, true);
-assert.equal(canonicalAdminReviewOverrideGate.customer_delivery_ready, true);
-assert.equal(canonicalAdminReviewOverrideGate.report_blocked, false);
+assert.equal(canonicalAdminReviewOverrideGate.customer_publish_eligible, false);
+assert.equal(canonicalAdminReviewOverrideGate.report_publishable, false);
+assert.equal(canonicalAdminReviewOverrideGate.customer_delivery_ready, false);
+assert.equal(canonicalAdminReviewOverrideGate.report_blocked, true);
 
 const canonicalAdminReviewRenderedPlaceholderGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: gateLockBaseCoverage,
@@ -2599,8 +2621,8 @@ const canonicalAdminReviewRenderedPlaceholderGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(canonicalAdminReviewRenderedPlaceholderGate.delivery_gate_status, "deliverable");
-assert.equal(canonicalAdminReviewRenderedPlaceholderGate.customer_publish_eligible, true);
-assert.equal(canonicalAdminReviewRenderedPlaceholderGate.report_publishable, true);
+assert.equal(canonicalAdminReviewRenderedPlaceholderGate.customer_publish_eligible, false);
+assert.equal(canonicalAdminReviewRenderedPlaceholderGate.report_publishable, false);
 assert.equal(
   Array.isArray(canonicalAdminReviewRenderedPlaceholderGate.report_quality_advisories),
   true

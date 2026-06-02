@@ -2392,8 +2392,9 @@ export default async function handler(req, res) {
           const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
           const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage;
           const isResolvedHoldBlockedOutcome =
-            resolvedDeliveryDecision.holdDelivery === true ||
-            resolvedDeliveryDecision.customerDeliveryAllowed === false;
+            !resolvedDeliveryDecision.coreValidRequiredCoverage &&
+            (resolvedDeliveryDecision.holdDelivery === true ||
+              resolvedDeliveryDecision.customerDeliveryAllowed === false);
           const shouldHoldDeliveryOutcome = isTypedGateOutcome || isResolvedHoldBlockedOutcome;
           const holdOutcomeStatus = 'user_needs_documents';
           if (shouldHoldDeliveryOutcome) {

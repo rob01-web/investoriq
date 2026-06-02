@@ -202,7 +202,11 @@ function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null)
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
   const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
   const deliveryGateStatus =
-    rawDeliveryGateStatus === "admin_review_required" ? "deliverable" : rawDeliveryGateStatus;
+    state.source === "canonical_delivery_decision"
+      ? rawDeliveryGateStatus
+      : rawDeliveryGateStatus === "admin_review_required"
+        ? "deliverable"
+        : rawDeliveryGateStatus;
   const customerDeliveryAllowed = Boolean(state.customer_delivery_allowed);
   const holdDelivery = Boolean(state.hold_delivery);
   return {

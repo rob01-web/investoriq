@@ -242,8 +242,8 @@ const adminReviewGate = buildDeliveryGateDecision({
 });
 const adminReviewState = buildCanonicalDeliveryDecisionState(adminReviewGate);
 assert.equal(adminReviewState.customer_delivery_allowed, false);
-assert.equal(adminReviewState.public_sample_ready, false);
-assert.equal(adminReviewState.high_value_outreach_ready, false);
+assert.equal(adminReviewState.delivery_gate_status, "user_needs_documents");
+assert.equal(adminReviewState.core_valid_required_coverage, false);
 
 const docraptorOnlyGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "deliverable",
