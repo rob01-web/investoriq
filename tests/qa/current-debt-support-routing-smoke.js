@@ -3,6 +3,10 @@ import {
   inferSupportingDocTypeFromText,
   resolveLoanTermCurrentDebtPromotion,
 } from "../../api/parse/parse-doc.js";
+import {
+  buildAcquisitionAssumptionState,
+  buildCurrentDebtAssessmentState,
+} from "../../api/_lib/report-surface-contracts.js";
 
 // Explicit non-acquisition current debt evidence should be routed for loan-term parsing.
 assert.equal(
@@ -35,6 +39,39 @@ const nonAcquisitionPromotion = resolveLoanTermCurrentDebtPromotion({
 assert.equal(nonAcquisitionPromotion.explicitCurrentDebtProof, true);
 assert.equal(nonAcquisitionPromotion.hasAcquisitionOrProposedSignals, false);
 assert.equal(nonAcquisitionPromotion.shouldExposeCurrentDebtAliases, true);
+
+const explicitCurrentDebtSupportState = buildCurrentDebtAssessmentState({
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 8750000,
+    interest_rate: 0.0525,
+    amort_years: 30,
+    debt_basis: "current_debt_support",
+    semantic_doc_role: "loan_term_sheet",
+    purchase_price: 10640000,
+    ltv: 0.7,
+    derived_acquisition_loan_amount: 7450000,
+  },
+  t12Noi: 611800,
+});
+assert.equal(explicitCurrentDebtSupportState.current_debt_dscr_status, "computed");
+assert.equal(explicitCurrentDebtSupportState.has_true_current_debt_balance, true);
+assert.equal(explicitCurrentDebtSupportState.current_debt_limitation_reason_code, null);
+
+const explicitCurrentDebtAssumptionState = buildAcquisitionAssumptionState({
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 8750000,
+    interest_rate: 0.0525,
+    amort_years: 30,
+    debt_basis: "current_debt_support",
+    semantic_doc_role: "loan_term_sheet",
+    purchase_price: 10640000,
+    ltv: 0.7,
+    derived_acquisition_loan_amount: 7450000,
+  },
+  currentDebtState: explicitCurrentDebtSupportState,
+});
+assert.equal(explicitCurrentDebtAssumptionState.acquisition_support_status, "validated_supported");
+assert.equal(explicitCurrentDebtAssumptionState.current_debt_separated, true);
 
 // Acquisition/proposed-only financing must remain acquisition support, not current debt.
 assert.equal(

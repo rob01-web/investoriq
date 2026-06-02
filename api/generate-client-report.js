@@ -1962,6 +1962,26 @@ function stripT12DetailSubsection(html, headingText) {
   out = out.replace(patternB, "");
   return out;
 }
+function stripEmptyHeadingBlocks(html) {
+  if (!html) return html;
+  return String(html)
+    .replace(/<p class="section-intro">\s*<\/p>\s*/gi, "")
+    .replace(/<p class="subsection-title">\s*<\/p>\s*/gi, "");
+}
+function collapseSummaryOnlyUnitMixSection(
+  html,
+  {
+    summaryOnlyRentRollSurface = false,
+    summaryTitle = "Rent Positioning Summary",
+    summaryBody = "Verified rent-roll summary totals indicate in-place rents are below documented market rent.",
+  } = {}
+) {
+  if (!summaryOnlyRentRollSurface) return html;
+  return String(html || "").replace(
+    /<p class="subsection-title">Unit Mix and Rent Positioning<\/p>[\s\S]*?<table class="unit-mix-table">[\s\S]*?<\/table>/,
+    `<p class="subsection-title">${escapeHtml(summaryTitle)}</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(summaryBody)}</p>`
+  );
+}
 function stripChartBlockByAlt(html, altText) {
   if (!altText) return html;
   const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -2877,17 +2897,17 @@ function buildDocumentTreatmentSummaryHtml({
     }
     if (supportedPropertyTax && !filenameOnly && !environmentalLike && !zoningComplianceLike) {
       const boundToValidatedPropertyTaxSource = rowMatchesPropertyTaxSourceBinding(row, propertyTaxSourceBinding);
-      const canUseModeledPropertyTaxLabel = isParsed &&
+      const canUseCorroboratingPropertyTaxLabel = isParsed &&
         !hasWarnings &&
         !isUnclassified &&
         hasValidatedModeledPropertyTax &&
         boundToValidatedPropertyTaxSource;
       return {
-        category: canUseModeledPropertyTaxLabel ? "Modeled Inputs" : "Displayed / Limited Use",
-        note: canUseModeledPropertyTaxLabel
-          ? "Structured property tax input"
+        category: canUseCorroboratingPropertyTaxLabel ? "Displayed / Limited Use" : "Displayed / Limited Use",
+        note: canUseCorroboratingPropertyTaxLabel
+          ? "Limited corroborating support: supports T12 property tax line; not used to override T12 totals."
           : "Uploaded support document - not used quantitatively.",
-        reason_code: canUseModeledPropertyTaxLabel ? "property_tax_support" : "property_tax_support_unbound",
+        reason_code: canUseCorroboratingPropertyTaxLabel ? "property_tax_support_corroborating" : "property_tax_support_unbound",
         source_basis: sourceBasis,
       };
     }
@@ -3005,10 +3025,10 @@ function buildDocumentTreatmentSummaryHtml({
           ? {
               category: "Displayed / Limited Use",
               note: canUsePropertyTaxSupportLabel
-                ? "Property-tax support is displayed only; filename-only evidence is not modeled."
+                ? "Limited corroborating support: supports T12 property tax line; not used to override T12 totals."
                 : "Uploaded support document - not used quantitatively.",
               reason_code: canUsePropertyTaxSupportLabel
-                ? "filename_fallback_property_tax_support_only"
+                ? "filename_fallback_property_tax_support_corroborating"
                 : "filename_fallback_property_tax_support_unbound",
             }
           : /phase\s*i|esa|environment|environmental/.test(lower)
@@ -3616,7 +3636,14 @@ function buildAcquisitionFinancingAssumptionsHtml({
   );
   const purchasePriceFromText = extractPurchasePriceFromText(acquisitionContextText);
   const statedLoanAmountFromText = extractStatedLoanAmountFromText(acquisitionContextText);
-  const rateFromText = extractPercentFromText(acquisitionContextText, /(interest rate|rate)/);
+  const interestRateFromText = extractPercentFromText(
+    acquisitionContextText,
+    /(interest rate|loan rate|note rate|coupon rate)/
+  );
+  const goingInCapRateFromText = extractPercentFromText(
+    acquisitionContextText,
+    /(going[-\s]*in cap rate|going[-\s]*cap rate|going[-\s]*cap|cap rate)/
+  );
   const amortYearsFromText = extractYearsFromText(acquisitionContextText, /(amortization|amort|am\b)/);
   if (!Number.isFinite(statedLoanAmount) || statedLoanAmount <= 0) {
     statedLoanAmount = statedLoanAmountFromText;
@@ -3650,7 +3677,11 @@ function buildAcquisitionFinancingAssumptionsHtml({
       ? null
       : firstFinite(providedDerivedLoanAmount, computedDerivedLoanAmount);
 
-  const ratePct = firstFinite(termsPayload.interest_rate, acquisitionSupportPayload?.interest_rate, rateFromText);
+  const interestRatePct = firstFinite(
+    termsPayload.interest_rate,
+    acquisitionSupportPayload?.interest_rate,
+    interestRateFromText
+  );
   const amortYears = firstFinite(
     termsPayload.amortization_years,
     termsPayload.amort_years,
@@ -3660,7 +3691,8 @@ function buildAcquisitionFinancingAssumptionsHtml({
   );
   const goingInCapRate = firstFinite(
     termsPayload.going_in_cap_rate,
-    acquisitionSupportPayload?.going_in_cap_rate
+    acquisitionSupportPayload?.going_in_cap_rate,
+    goingInCapRateFromText
   );
   const closingCostsPercent = firstFinite(
     termsPayload.closing_costs_percent,
@@ -3695,7 +3727,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
     ltv,
     statedLoanAmount,
     derivedLoanAmount,
-    ratePct,
+    interestRatePct,
     amortYears,
     goingInCapRate,
     closingCostsPercent,
@@ -3774,7 +3806,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
     statedLoanAmount,
     derivedLoanAmount,
     ltv,
-    ratePct,
+    ratePct: interestRatePct,
     amortYears,
     lenderFeePercent,
   });
@@ -3807,7 +3839,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
       "Stated acquisition loan amount and purchase-price/LTV-derived loan amount differ materially; stated source values are shown without silent re-derivation."
     );
   }
-  if (!Number.isFinite(ratePct) || ratePct <= 0) {
+  if (!Number.isFinite(interestRatePct) || interestRatePct <= 0) {
     limitations.push("Estimated acquisition debt service was not modeled because the interest rate was not verified.");
   }
   if (!Number.isFinite(amortYears) || amortYears <= 0) {
@@ -3818,7 +3850,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
       "Acquisition debt sizing table was collapsed because acquisition purchase/loan/LTV inputs were incomplete, inconsistent, or unsupported."
     );
   }
-  const mortgageConstant = computeMortgageConstant(ratePct / 100, amortYears);
+  const mortgageConstant = computeMortgageConstant(interestRatePct / 100, amortYears);
   const annualDebtService =
     Number.isFinite(statedLoanAmount ?? derivedLoanAmount) &&
     (statedLoanAmount ?? derivedLoanAmount) > 0 &&
@@ -3835,7 +3867,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
     Number.isFinite(ltv) && ltv > 0 ? ["Documented LTV", formatPercent1(ltv)] : null,
     Number.isFinite(statedLoanAmount) && statedLoanAmount > 0 ? ["Stated Acquisition Loan Amount", formatCurrency(statedLoanAmount)] : null,
     Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0 ? ["Derived Acquisition Loan Amount", formatCurrency(derivedLoanAmount)] : null,
-    Number.isFinite(ratePct) && ratePct > 0 ? ["Interest Rate", formatInterestRatePercent(ratePct)] : null,
+    Number.isFinite(interestRatePct) && interestRatePct > 0 ? ["Interest Rate", formatInterestRatePercent(interestRatePct)] : null,
     Number.isFinite(amortYears) && amortYears > 0 ? ["Amortization", `${Math.round(amortYears)} years`] : null,
     Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? ["Going-In Cap Rate", formatPercent1(goingInCapRate)] : null,
     Number.isFinite(closingCostsPercent) && closingCostsPercent > 0 ? ["Closing Costs", formatPercentExactDisplay(closingCostsPercent)] : null,
@@ -5071,6 +5103,7 @@ function applyFinalSectionHealRenderGuards(
       sourceReconciliationState
     ).html;
   }
+  outputHtml = stripEmptyHeadingBlocks(outputHtml);
   return sanitizeFinalCustomerHtml(outputHtml);
 }
 function buildScreeningRentRollDistributionHtml({
@@ -7780,11 +7813,15 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
-    if (effectiveReportMode === "screening_v1" && summaryOnlyRentRollSurface) {
-      finalHtml = finalHtml.replace(
-        /<p class="subsection-title">Unit Mix and Rent Positioning<\/p>[\s\S]*?<table class="unit-mix-table">[\s\S]*?<\/table>/,
-        '<p class="subsection-title">Summary Rent Positioning</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Summary totals indicate in-place rent is below documented market rent.</p>'
-      );
+    if (summaryOnlyRentRollSurface) {
+      finalHtml = collapseSummaryOnlyUnitMixSection(finalHtml, {
+        summaryOnlyRentRollSurface: true,
+        summaryTitle: effectiveReportMode === "screening_v1" ? "Summary Rent Positioning" : "Rent Positioning Summary",
+        summaryBody:
+          effectiveReportMode === "screening_v1"
+            ? "Summary totals indicate in-place rent is below documented market rent."
+            : "Verified rent-roll summary totals indicate in-place rents are below documented market rent.",
+      });
     }
     finalHtml = replaceAll(
       finalHtml,
@@ -7884,6 +7921,7 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "T12_EXPENSE_TABLE");
       finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
     }
+    finalHtml = stripEmptyHeadingBlocks(finalHtml);
     finalHtml = replaceAll(
       finalHtml,
       "{{T12_EGI}}",
@@ -10985,6 +11023,8 @@ export const __test__ = {
   buildFinancingEnvelopeGrid,
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
+  stripEmptyHeadingBlocks,
+  collapseSummaryOnlyUnitMixSection,
   resolveRenovationDisplayMode,
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,

@@ -136,8 +136,7 @@ function resolveLoanTermSheetPayloads(artifacts, sourceReportCoverageQa = null) 
   const currentDebtLoan =
     currentDebtCandidate &&
     currentDebtCandidate.currentDebtScore > 0 &&
-    currentDebtCandidate.explicitCurrentDebtProof &&
-    !currentDebtCandidate.acquisitionOnlySignals
+    currentDebtCandidate.explicitCurrentDebtProof
       ? currentDebtCandidate.loan
       : null;
   const acquisitionLoan = [...scored]

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { buildReportContractQa } from "../../api/_lib/report-contract-qa.js";
 import { buildQaActionPlan } from "../../api/_lib/qa-action-plan.js";
-import { sanitizeFinalCustomerHtml } from "../../api/_lib/report-surface-contracts.js";
+import {
+  buildAcquisitionAssumptionState,
+  buildCurrentDebtAssessmentState,
+  sanitizeFinalCustomerHtml,
+} from "../../api/_lib/report-surface-contracts.js";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
@@ -1676,6 +1680,73 @@ const currentDebtReport = buildReportContractQa({
 });
 assert.equal(currentDebtReport.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"), false);
 assert.equal(currentDebtReport.violations.some((v) => v.code === "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED"), false);
+
+const explicitCurrentDebtSupportState = buildCurrentDebtAssessmentState({
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 8750000,
+    interest_rate: 0.0525,
+    amort_years: 30,
+    debt_basis: "current_debt_support",
+    semantic_doc_role: "loan_term_sheet",
+    purchase_price: 10640000,
+    ltv: 0.7,
+    derived_acquisition_loan_amount: 7450000,
+  },
+  t12Noi: 611800,
+});
+const explicitCurrentDebtSupportAssumptionState = buildAcquisitionAssumptionState({
+  loanTermSheetTermsPayload: {
+    outstanding_balance: 8750000,
+    interest_rate: 0.0525,
+    amort_years: 30,
+    debt_basis: "current_debt_support",
+    semantic_doc_role: "loan_term_sheet",
+    purchase_price: 10640000,
+    ltv: 0.7,
+    derived_acquisition_loan_amount: 7450000,
+  },
+  currentDebtState: explicitCurrentDebtSupportState,
+});
+const explicitCurrentDebtSupportReport = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    ...baseArtifacts,
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        outstanding_balance: 8750000,
+        interest_rate: 0.0525,
+        amort_years: 30,
+        debt_basis: "current_debt_support",
+        semantic_doc_role: "loan_term_sheet",
+        purchase_price: 10640000,
+        ltv: 0.7,
+        derived_acquisition_loan_amount: 7450000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    current_debt_state_source: "canonical_input",
+    current_debt_state: explicitCurrentDebtSupportState,
+    acquisition_assumption_state: explicitCurrentDebtSupportAssumptionState,
+  },
+  html: [
+    "<h2>Current Debt Coverage</h2>",
+    "<p>Current Debt DSCR: 1.31x</p>",
+    "<p>Refinance Stability Classification: Stable</p>",
+    "<p>Proposed acquisition financing is shown separately and is not treated as current debt.</p>",
+  ].join("\n"),
+});
+assert.equal(
+  explicitCurrentDebtSupportReport.violations.some((v) => v.code === "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT"),
+  false
+);
+assert.equal(
+  explicitCurrentDebtSupportReport.violations.some((v) => v.code === "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT"),
+  false
+);
 
 const paymentOnlyMortgageArtifacts = [
   ...baseArtifacts,

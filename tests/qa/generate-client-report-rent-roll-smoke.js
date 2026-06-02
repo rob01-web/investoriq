@@ -2882,7 +2882,10 @@ const filenameOnlyPropertyTaxBoundHtml = generatorTest.buildDocumentTreatmentSum
     source_file_id: "doc-tax-bound",
   },
 });
-assert.match(filenameOnlyPropertyTaxBoundHtml, /Property-tax support is displayed only; filename-only evidence is not modeled\./i);
+assert.match(
+  filenameOnlyPropertyTaxBoundHtml,
+  /Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+);
 const filenameOnlyRenovationTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { original_filename: "CapEx Plan - Historical.pdf" },
@@ -2946,8 +2949,11 @@ const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSu
     source_file_id: "doc-property-tax-1",
   },
 });
-assert.match(propertyTaxValidatedTreatmentHtml, /Modeled Inputs/i);
-assert.match(propertyTaxValidatedTreatmentHtml, /Structured property tax input/i);
+assert.match(propertyTaxValidatedTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(
+  propertyTaxValidatedTreatmentHtml,
+  /Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+);
 const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
@@ -2975,7 +2981,10 @@ const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatment
   },
 });
 assert.equal(/Environmental_Report\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support)/i.test(propertyTaxMismatchedSupportDocHtml), false);
-assert.match(propertyTaxMismatchedSupportDocHtml, /Tax_Record\.pdf[\s\S]{0,220}Structured property tax input/i);
+assert.match(
+  propertyTaxMismatchedSupportDocHtml,
+  /Tax_Record\.pdf[\s\S]{0,220}Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+);
 const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
@@ -2993,6 +3002,21 @@ const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummar
 });
 assert.equal(/Structured property tax input|Property tax support/i.test(propertyTaxMissingBindingHtml), false);
 assert.match(propertyTaxMissingBindingHtml, /Uploaded support document - not used quantitatively\./i);
+
+const summaryOnlyUnitMixCollapsedHtml = generatorTest.collapseSummaryOnlyUnitMixSection(
+  '<p class="subsection-title">Unit Mix and Rent Positioning</p><table class="unit-mix-table"><tbody></tbody></table>',
+  {
+    summaryOnlyRentRollSurface: true,
+    summaryTitle: "Summary Rent Positioning",
+    summaryBody: "Summary totals indicate in-place rent is below documented market rent.",
+  }
+);
+assert.equal(/unit-mix-table/i.test(summaryOnlyUnitMixCollapsedHtml), false);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Summary Rent Positioning/i);
+const strippedEmptyHeadingHtml = generatorTest.stripEmptyHeadingBlocks(
+  '<div><p class="section-intro">   </p><p class="subsection-title">  </p><p>Body</p></div>'
+);
+assert.equal(/section-intro|subsection-title/i.test(strippedEmptyHeadingHtml), false);
 const acquisitionSizingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2000000,
@@ -3059,6 +3083,22 @@ assert.equal(/Documented LTV[\s\S]{0,80}75\.0%/i.test(acquisitionInconsistentTri
 assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$500,000/i.test(acquisitionInconsistentTriangleHtml), false);
 assert.match(acquisitionInconsistentTriangleHtml, /Interest Rate[\s\S]{0,80}6\.50%/i);
 assert.match(acquisitionInconsistentTriangleHtml, /Amortization[\s\S]{0,80}30 years/i);
+const acquisitionGoingInCapOnlyHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+  loanTermSheetTermsPayload: {
+    purchase_price: 1250000,
+    ltv: 0.75,
+    going_in_cap_rate: 0.0575,
+    closing_costs_percent: 0.01,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportType: "underwriting",
+  reportTier: 2,
+});
+assert.match(acquisitionGoingInCapOnlyHtml, /Going-In Cap Rate[\s\S]{0,80}5\.8%/i);
+assert.equal(/Interest Rate[\s\S]{0,80}%/i.test(acquisitionGoingInCapOnlyHtml), false);
+assert.equal(/Estimated Annual Debt Service/i.test(acquisitionGoingInCapOnlyHtml), false);
 const acquisitionMissingPurchasePriceHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     loan_amount: 900000,

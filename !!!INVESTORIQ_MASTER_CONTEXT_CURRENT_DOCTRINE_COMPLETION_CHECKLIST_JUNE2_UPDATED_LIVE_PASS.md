@@ -1,3 +1,165 @@
+# June 2, 2026 Addendum - Full Underwriting Live Pass / SQL Lifecycle Fixed / Ken Red-Pen Result
+
+## Current controlling status
+
+Full Underwriting finally produced a successful controlled live customer-deliverable report after the stop-the-line core-valid failure path campaign.
+
+Report:
+
+```text
+Final Motherload underwriting 12
+Result: published
+Customer-deliverable: yes
+Ken/public-sample ready: no, not yet
+```
+
+This supersedes prior notes saying no more live Underwriting retests should run. That restriction applied before the SQL lifecycle and legacy fallback fixes. The controlled retest has now run and passed.
+
+## Critical production fix completed in Supabase
+
+Production Supabase was still using old function definitions:
+
+```text
+consume_purchase_and_create_job created new jobs as needs_documents.
+queue_job_for_processing only queued from needs_documents.
+```
+
+That was the last live lifecycle blocker.
+
+The production SQL functions were manually updated so:
+
+```text
+consume_purchase_and_create_job creates new jobs as queued.
+queue_job_for_processing only accepts queued.
+```
+
+A production verification query confirmed the active function definitions now use `queued`, and a status check confirmed there are no current `analysis_jobs` rows with a `needs` status.
+
+Interpretation:
+
+```text
+The legacy needs_documents lifecycle is gone from the live/new-job path.
+```
+
+## Live Underwriting result
+
+The successful job moved through:
+
+```text
+queued -> extracting -> underwriting -> scoring -> rendering -> pdf_generating -> publishing -> published
+```
+
+The report-published email artifact was created.
+
+This confirms the core-valid job no longer gets forced into:
+
+```text
+user_needs_documents
+publication_held
+MISSING_REQUIRED_SOURCE_DATA
+credit_restore_required
+entitlement_restored
+source-package / Rent Roll / T12 customer blame
+```
+
+## Math / source validation result
+
+The Ken-style red-pen review checked the report against the uploaded source docs.
+
+Core math passed:
+
+```text
+T12:
+- EGI $1,036,800
+- OpEx $425,000
+- NOI $611,800
+- Expense Ratio 41.0%
+- NOI Margin 59.0%
+
+Rent Roll:
+- 48 units
+- 46 occupied
+- 2 vacant
+- occupancy 95.83%
+- in-place annual rent $1,036,800
+- market annual rent $1,137,600
+- annual rent upside $100,800
+
+Debt:
+- balance $8,750,000
+- rate 5.25%
+- amortization 30 years
+- monthly P&I about $48,318
+- DSCR about 1.06x
+```
+
+The visible classification `Review - Debt Coverage Constraint` is appropriate because current debt DSCR is below 1.25x.
+
+## Report-quality result
+
+The report is customer-deliverable, but it is not Ken/public-sample ready.
+
+Ken/public-sample blockers:
+
+1. DocRaptor test watermark / test-mode PDF output.
+2. Acquisition section appears to show `Interest Rate 5.75%` where the source only supports `Going-In Cap Rate 5.75%`.
+3. Internal QA artifacts still contain stale legacy/canonical current-debt contradictions even though the report rendered correct current debt math.
+4. Advanced modeling page has empty/weak headings that should collapse when no meaningful content exists.
+5. Unit mix table appears under-rendered for summary/narrative rent roll data; it should collapse or qualify summary-only mode.
+6. Property tax document treatment should say it supports the T12 tax line and does not override T12 totals.
+
+## Doctrine interpretation
+
+This is the correct interpretation:
+
+```text
+Underwriting engine customer-delivery pass: YES
+Core-valid publish doctrine live-confirmed: YES
+Optional/support/advisory non-blocking doctrine live-confirmed: YES
+OpenAI quota/advisory failures non-blocking: YES
+Ken/public sample readiness: NO
+DocRaptor production mode: still required before external distribution
+```
+
+Do not call Full Underwriting public/Ken/sample ready yet.
+
+## Immediate next recommended work
+
+Do not restart broad doctrine work.
+
+Next recommended batch is a focused Ken-readiness cleanup:
+
+```text
+1. Fix acquisition cap-rate vs interest-rate label.
+2. Collapse empty/weak advanced modeling headings.
+3. Collapse or qualify summary-only unit mix table.
+4. Polish property-tax support treatment wording.
+5. Clean internal current-debt canonical QA artifact contradiction.
+6. Keep DocRaptor production mode as distribution/config work, separate from ordinary customer delivery.
+```
+
+After that, regenerate one Underwriting report and run another Ken red-pen test.
+
+## Fresh-chat continuation point
+
+We resume after the breakthrough live pass:
+
+```text
+Final Motherload underwriting 12 published.
+SQL needs_documents live lifecycle removed.
+Core-valid Underwriting customer-delivery doctrine passed live.
+Math mostly checks out.
+Ken/public-sample readiness still blocked by polish/config/artifact issues.
+```
+
+Next likely action:
+
+```text
+Focused Ken-readiness cleanup batch.
+```
+
+---
+
 # June 2, 2026 Addendum - Doctrine Completion Checklist / Remaining Work To Make InvestorIQ Obey Doctrine End-to-End
 
 ## Current controlling decision

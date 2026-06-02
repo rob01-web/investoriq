@@ -1148,6 +1148,20 @@ export function buildCurrentDebtAssessmentState({
   const loanDebtBasis = String(
     resolvedLoan?.debt_basis || loanInventory?.debt_basis || ""
   ).trim().toLowerCase();
+  const loanText = normalizeText([
+    resolvedLoan?.source_text,
+    resolvedLoan?.raw_text,
+    resolvedLoan?.notes,
+    resolvedLoan?.loan_terms_text,
+    resolvedLoan?.extracted_text,
+    loanInventory?.source_text,
+    loanInventory?.raw_text,
+    loanInventory?.notes,
+    loanInventory?.loan_terms_text,
+    loanInventory?.extracted_text,
+  ].filter(Boolean).join(" "));
+  const loanCurrentDebtTextSignal =
+    /(current mortgage statement|existing mortgage|true current debt|current outstanding balance|outstanding principal|unpaid principal|current loan balance|current mortgage balance|payoff statement|payoff balance|current monthly debt service)/.test(loanText);
 
   const hasMortgageDocument =
     Boolean(resolvedMortgage) ||
@@ -1164,35 +1178,41 @@ export function buildCurrentDebtAssessmentState({
   const loanCurrentDebtSignal = Boolean(
     positiveNumber(loanOutstandingBalance)
   );
-  const loanAcquisitionOnlySignal = Boolean(
-    loanDebtBasis.includes("acquisition") ||
-    loanDebtBasis.includes("proposed") ||
-    loanDebtBasis.includes("purchase") ||
-    loanSemanticRole === "purchase_assumptions" ||
-    loanSemanticRole.includes("acquisition") ||
+  const explicitCurrentDebtSemanticProof = Boolean(
+    loanCurrentDebtSignal &&
     (
-      Boolean(loanInventory.has_derived_acquisition_debt) &&
-      Boolean(loanInventory.has_purchase_price) &&
-      !positiveNumber(loanOutstandingBalance)
+      loanSemanticRole === "current_mortgage_statement" ||
+      loanSemanticRole === "current_debt_terms" ||
+      loanSemanticRole === "mortgage_statement" ||
+      (
+        (loanSemanticRole === "loan_term_sheet" || loanSemanticRole === "") &&
+        !/(acquisition|proposed|purchase)/.test(loanDebtBasis)
+      ) ||
+      loanCurrentDebtTextSignal ||
+      (
+        loanDebtBasis.length > 0 &&
+        /(current|existing|mortgage)/.test(loanDebtBasis) &&
+        !/(acquisition|proposed|purchase)/.test(loanDebtBasis)
+      )
     )
   );
-  const explicitCurrentDebtSemanticProof = Boolean(
-    loanSemanticRole === "current_mortgage_statement" ||
-    loanSemanticRole === "current_debt_terms" ||
-    loanSemanticRole === "mortgage_statement" ||
+  const loanAcquisitionOnlySignal = Boolean(
     (
-      (loanSemanticRole === "loan_term_sheet" || loanSemanticRole === "") &&
-      !loanAcquisitionOnlySignal
-    ) ||
-    (
-      loanDebtBasis.length > 0 &&
-      /(current|existing|mortgage)/.test(loanDebtBasis) &&
-      !/(acquisition|proposed|purchase)/.test(loanDebtBasis)
-    )
+      loanDebtBasis.includes("acquisition") ||
+      loanDebtBasis.includes("proposed") ||
+      loanDebtBasis.includes("purchase") ||
+      loanSemanticRole === "purchase_assumptions" ||
+      loanSemanticRole.includes("acquisition") ||
+      (
+        Boolean(loanInventory.has_derived_acquisition_debt) &&
+        Boolean(loanInventory.has_purchase_price) &&
+        !positiveNumber(loanOutstandingBalance)
+      )
+    ) &&
+    !explicitCurrentDebtSemanticProof
   );
   const loanSupportsCurrentDebt =
     loanCurrentDebtSignal &&
-    !loanAcquisitionOnlySignal &&
     explicitCurrentDebtSemanticProof;
 
   const hasTrueCurrentDebtBalance =
@@ -1389,7 +1409,7 @@ export function buildAcquisitionAssumptionState({
   const acquisitionFinancingRendered = Array.isArray(sourceReportCoverageQa?.rendered_text_signals)
     ? sourceReportCoverageQa.rendered_text_signals.includes("acquisition_financing_assumptions")
     : false;
-  const currentDebtSeparated = hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
+  const currentDebtSeparated = hasProposedAcquisitionFinancing;
   const debtBasis = String(resolvedLoan?.debt_basis || "").trim().toLowerCase();
   const acquisitionDebtBasisSignal =
     debtBasis.includes("acquisition") ||

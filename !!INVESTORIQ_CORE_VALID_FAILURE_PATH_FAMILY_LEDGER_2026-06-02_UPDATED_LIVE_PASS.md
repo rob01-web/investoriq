@@ -1,3 +1,373 @@
+# June 2, 2026 Addendum - LIVE UNDERWRITING PASS / SQL Needs-Documents Extinction / Ken Red-Pen Follow-Up
+
+## Current controlling status
+
+The stop-the-line core-valid failure path campaign has produced the first successful controlled Full Underwriting live retest after the legacy fallback/`needs_documents` failure chain was fixed.
+
+The live retest **Final Motherload underwriting 12** published successfully.
+
+This supersedes the prior "do not live retest" checkpoint. The controlled live retest has now run and passed for ordinary customer delivery.
+
+## What changed immediately before the live pass
+
+The final blocker was not only JavaScript delivery/copy logic. Production Supabase still had the old lifecycle functions active:
+
+```text
+consume_purchase_and_create_job created new jobs as `needs_documents`.
+queue_job_for_processing only allowed queueing from `needs_documents`.
+```
+
+Production SQL was manually updated in Supabase so that:
+
+```text
+consume_purchase_and_create_job now creates new jobs as `queued`.
+queue_job_for_processing now accepts only `queued`.
+```
+
+Verification query confirmed the active production functions now contain:
+
+```text
+consume_purchase_and_create_job:
+- inserts status = 'queued'
+- no longer creates status = 'needs_documents'
+
+queue_job_for_processing:
+- requires v_prev_status = 'queued'
+- updates only rows where status = 'queued'
+- no longer depends on status = 'needs_documents'
+```
+
+A follow-up production check returned zero rows for `analysis_jobs` statuses containing `needs`.
+
+## Live Underwriting retest result
+
+Report:
+
+```text
+Final Motherload underwriting 12
+Job ID: da6c521a-a986-48d1-ba2f-7b8e30d6dee4
+Report ID: 82a5f30b-1649-4ec6-a931-7e40d7228067
+Result: PUBLISHED
+```
+
+Observed status path:
+
+```text
+queued -> extracting -> underwriting -> scoring -> rendering -> pdf_generating -> publishing -> published
+```
+
+The report-published email artifact was created.
+
+This proves the old live failure chain no longer forced this core-valid Underwriting job into:
+
+```text
+needs_documents
+user_needs_documents
+publication_held
+MISSING_REQUIRED_SOURCE_DATA
+credit_restore_required
+entitlement_restored
+source-package / Rent Roll / T12 customer blame
+```
+
+## Core source values confirmed in the live PDF
+
+T12 source values:
+
+```text
+Effective Gross Income: $1,036,800
+Operating Expenses: $425,000
+NOI: $611,800
+Expense Ratio: 41.0%
+NOI Margin: 59.0%
+```
+
+Rent Roll source values:
+
+```text
+48 units
+46 occupied
+2 vacant
+Occupancy: 95.83%
+Annual In-Place Rent: $1,036,800
+Annual Market Rent: $1,137,600
+Annual Gross Rent Upside: $100,800
+```
+
+Debt source values:
+
+```text
+Outstanding Balance: $8,750,000
+Interest Rate: 5.25%
+Amortization: 30 years
+LTV: 70%
+```
+
+Live PDF rendered:
+
+```text
+Review - Debt Coverage Constraint
+DSCR: 1.06x
+Outstanding Balance: $8,750,000
+Interest Rate: 5.25%
+Monthly P&I: $48,318
+Amortization: 30 years
+```
+
+Math check:
+
+```text
+Monthly P&I on $8,750,000 at 5.25%, 30-year amortization ≈ $48,318
+Annual debt service ≈ $579,814
+DSCR = $611,800 / $579,814 ≈ 1.06x
+```
+
+The classification `Review - Debt Coverage Constraint` is directionally correct because current debt DSCR is below 1.25x.
+
+## Data Coverage / support-doc treatment result
+
+The report correctly displayed:
+
+```text
+CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified.
+```
+
+Document treatment was mostly correct:
+
+```text
+Modeled Inputs:
+- T12
+- Rent Roll
+- Structured current debt input
+
+Displayed / Limited Use:
+- CapEx / renovation support displayed for context only
+- Purchase assumptions context only
+
+Listed but Not Quantitatively Modeled:
+- Broker email
+- Market survey
+- Property tax bill
+- Phase I ESA / environmental due diligence
+- Unsupported appraisal summary
+```
+
+This confirms optional/support/advisory/distribution issues did not block ordinary customer delivery.
+
+## Internal artifact caveat
+
+The job published, but internal artifacts still contain stale/conflicting legacy metadata that must be cleaned later.
+
+Examples observed:
+
+```text
+readiness_source: legacy_publish_eligibility_fallback
+readiness_fallback_used: true
+report_publishable: false
+customer_publish_eligible: false
+launch_path_recommendation: user_needs_documents
+```
+
+At the same time, the canonical customer state correctly said:
+
+```text
+delivery_gate_status: deliverable
+customer_status_label: ready
+customer_delivery_allowed: true
+hold_delivery: false
+credit_restore_required: false
+fail_closed_reason_code: null
+user_needs_documents: false
+admin_review_required: false
+```
+
+Interpretation:
+
+```text
+Customer outcome path: PASS
+Internal artifact hygiene: still needs cleanup
+```
+
+Do not treat contradictory legacy artifact aliases as customer-delivery authority if canonical state and real lifecycle prove publication.
+
+## OpenAI/provider advisory result
+
+OpenAI quota/provider failures still occurred:
+
+```text
+provider_error_class: insufficient_quota
+provider_response_status: 429
+```
+
+They were correctly diagnostic/advisory only and did not block deterministic customer delivery because deterministic core artifacts validated.
+
+Status:
+
+```text
+CVF-14: safe internal/distribution-only in this live test, but OpenAI quota remains a launch-readiness/config item.
+```
+
+## Ken Dunn red-pen result
+
+A Ken Dunn / public-sample red-pen review was performed against the PDF and uploaded source documents.
+
+Verdict:
+
+```text
+Customer-deliverable: YES
+Ken/public-sample ready: NO, not yet
+Math integrity: Mostly PASS
+Report optics / QA artifacts: YELLOW
+```
+
+### Math pass items
+
+- T12 EGI / OpEx / NOI reconcile.
+- Expense ratio and NOI margin reconcile.
+- Rent Roll occupancy and annual rent totals reconcile.
+- Rent upside value sensitivity reconciles.
+- Debt monthly P&I and DSCR reconcile.
+- Cap-rate value indications reconcile.
+- Purchase price / going-in cap math reconciles.
+
+### Red-pen blockers before Ken/public-sample use
+
+1. **DocRaptor test watermark**
+   - PDF still shows test-mode watermark / test document marks.
+   - This blocks public/Ken/sample distribution, not ordinary customer delivery.
+
+2. **Acquisition section label error**
+   - Source provides purchase price and going-in cap rate.
+   - Report appears to display `Interest Rate 5.75%` in the acquisition context even though the source says `Going-In Cap Rate 5.75%`.
+   - Fix: remove acquisition `Interest Rate` unless source explicitly provides an acquisition interest rate; keep `Going-In Cap Rate`.
+
+3. **Internal QA current-debt canonical drift**
+   - QA artifacts still say current debt was fallback/not-assessed/acquisition-only even though parsed debt artifact contains $8.75M true current debt and the PDF renders the correct debt math.
+   - Fix internal canonical debt QA threading so it recognizes valid current debt.
+
+4. **Empty / weak sections**
+   - Some advanced modeling headings appear empty or underfilled.
+   - Collapse headings when no meaningful content is rendered.
+
+5. **Unit mix table under-rendering**
+   - Source rent roll is summary/narrative with representative units, not a complete standard unit table.
+   - Report should collapse or clearly qualify empty-looking unit mix surfaces instead of rendering weak/empty table framing.
+
+6. **Property tax support treatment polish**
+   - Property tax source supports the T12 tax line but is listed as not quantitatively modeled.
+   - Better label: supports T12 property tax line; not used to override T12 totals.
+
+## CVF status update after live pass
+
+Update the Core-Valid Failure Path families as follows:
+
+```text
+CVF-01 Core T12 parse failure:
+- legitimate fail path preserved
+- live test confirmed valid T12 publishes
+
+CVF-02 Core Rent Roll parse failure:
+- legitimate fail path preserved
+- live test confirmed valid Rent Roll publishes
+
+CVF-03 Financial scale mismatch:
+- no scale mismatch in this live test
+- remains legitimate only if truly unreconcilable
+
+CVF-04 Current-debt/refi render-contract drift:
+- ordinary customer delivery no longer blocked
+- live-confirmed publish
+- still needs internal QA canonical debt cleanup before Ken/public-sample readiness
+
+CVF-05 Report-type section leak:
+- ordinary customer delivery no longer blocked
+- remaining issue is internal/public-sample blocker cleanup if labels/headings are weak
+
+CVF-06 Source reconciliation/rendered variance drift:
+- ordinary customer delivery no longer blocked
+- Data Coverage core headline passed
+
+CVF-07 Optional/full-underwriting support constraints:
+- live-confirmed ordinary customer delivery allowed
+- optional support constraints stayed internal/distribution/section-level
+
+CVF-08 Delivery-gate hold-chain / legacy needs-doc conversion:
+- live-confirmed fixed for this path
+- SQL active lifecycle no longer creates or queues new jobs through needs_documents
+
+CVF-09 Generator publication-held shim:
+- live-confirmed no publication_held customer failure
+
+CVF-10 Worker terminal failure / credit restore misclassification:
+- live-confirmed no MISSING_REQUIRED_SOURCE_DATA / no credit restore on core-valid job
+
+CVF-11 Failure message builder source-package/rent-roll blame:
+- live-confirmed no customer document-blame failure path in this retest
+
+CVF-12 Dashboard customer status/copy fallback:
+- live-confirmed report published; keep monitoring Dashboard display
+
+CVF-13 Runtime/storage/PDF/catastrophic render failure:
+- legitimate fail path preserved; not triggered
+
+CVF-14 OpenAI/provider/advisory failures:
+- live-confirmed diagnostic-only; quota issue did not block
+
+CVF-15 Optional-support/source-package/admin ops paths:
+- live-confirmed optional/support degradation did not block ordinary customer delivery
+```
+
+## Current launch-readiness interpretation
+
+This live retest is a major breakthrough but does not make the PDF Ken/public-sample ready.
+
+Correct interpretation:
+
+```text
+Underwriting engine customer-delivery pass: YES
+Full Underwriting ordinary customer doctrine: materially live-confirmed for this scenario
+Ken/public-sample readiness: one cleanup batch away
+DocRaptor production mode: still required for external distribution
+Internal artifact hygiene: still required
+```
+
+## Recommended next work after this documentation checkpoint
+
+Do not start another broad hardening campaign immediately unless needed.
+
+Next recommended sequence:
+
+1. Commit/update this documentation checkpoint.
+2. Take a short pause / fresh chat.
+3. Run a focused Ken-readiness cleanup batch:
+   - acquisition cap-rate vs interest-rate label fix;
+   - collapse empty/weak advanced modeling headings;
+   - summary-only unit mix table qualification/collapse;
+   - property-tax support treatment wording polish;
+   - internal current-debt canonical QA artifact cleanup;
+   - DocRaptor production/public-sample config kept separate.
+4. After cleanup, regenerate one Underwriting PDF and run Ken red-pen again.
+5. Only then consider external/public/Ken sample distribution.
+
+## Fresh continuation point
+
+We resume after:
+
+```text
+Final Motherload underwriting 12 published successfully.
+SQL needs_documents live lifecycle was removed.
+Core-valid Underwriting doctrine passed live.
+Ken red-pen found math mostly correct but public-sample blockers remain.
+```
+
+Next decision:
+
+```text
+Start focused Ken-readiness cleanup batch, not broad doctrine rework.
+```
+
+---
+
 # June 2, 2026 Addendum - STOP-THE-LINE Legacy Fallback Extinction Plan / Exact Fix Sequence
 
 ## Current controlling status - audit failed
