@@ -211,12 +211,18 @@ function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null)
   const holdDelivery = Boolean(state.hold_delivery);
   return {
     delivery_gate_status: deliveryGateStatus,
-    customer_delivery_ready: customerDeliveryAllowed,
-    customer_publish_eligible: customerDeliveryAllowed,
+    customer_delivery_allowed: customerDeliveryAllowed,
     hold_delivery: holdDelivery,
     holdDelivery,
-    public_sample_ready: Boolean(state.public_sample_ready),
-    high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+    legacy_compatibility: {
+      delivery_gate_status: deliveryGateStatus,
+      customer_delivery_ready: customerDeliveryAllowed,
+      customer_publish_eligible: customerDeliveryAllowed,
+      hold_delivery: holdDelivery,
+      holdDelivery,
+      public_sample_ready: Boolean(state.public_sample_ready),
+      high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+    },
   };
 }
 
@@ -10802,7 +10808,11 @@ try {
     storagePath: null,
     url: null,
     deliveryDecisionState: failClosedDecisionState,
-    ...deliveryAliases,
+    delivery_gate_status: deliveryAliases.delivery_gate_status,
+    customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
+    hold_delivery: deliveryAliases.hold_delivery,
+    holdDelivery: deliveryAliases.holdDelivery,
+    legacy_compatibility: deliveryAliases.legacy_compatibility,
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
     delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
@@ -10986,7 +10996,11 @@ try {
       reportId,
       url: signedData.signedUrl,
       deliveryDecisionState: canonicalDeliveryDecisionState,
-      ...deliveryAliases,
+      delivery_gate_status: deliveryAliases.delivery_gate_status,
+      customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
+      hold_delivery: deliveryAliases.hold_delivery,
+      holdDelivery: deliveryAliases.holdDelivery,
+      legacy_compatibility: deliveryAliases.legacy_compatibility,
       delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
       delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
       delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,

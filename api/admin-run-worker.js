@@ -225,10 +225,15 @@ export default async function handler(req, res) {
             reportData?.holdDelivery ??
             (deliveryGateStatus !== 'deliverable')
           );
-      const customerStatusReasonCode =
-        deliveryDecisionState?.customer_status_reason_code ||
-        reportData?.delivery_gate_reason_code ||
-        null;
+      const customerStatusReasonCode = hasCanonical
+        ? (Boolean(deliveryDecisionState?.customer_delivery_allowed)
+            ? null
+            : deliveryDecisionState?.customer_status_reason_code ||
+              reportData?.delivery_gate_reason_code ||
+              null)
+        : deliveryDecisionState?.customer_status_reason_code ||
+          reportData?.delivery_gate_reason_code ||
+          null;
       const failClosedReasonCode =
         deliveryDecisionState?.fail_closed_reason_code ||
         reportData?.delivery_gate_reason_code ||

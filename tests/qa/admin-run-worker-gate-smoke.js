@@ -77,6 +77,10 @@ assert.match(
 );
 assert.match(
   workerSource,
+  /const customerStatusReasonCode = hasCanonical[\s\S]{0,160}\? \(Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,120}\? null[\s\S]{0,120}: deliveryDecisionState\?\.customer_status_reason_code/
+);
+assert.match(
+  workerSource,
   /const holdDelivery = coreValidRequiredCoverage[\s\S]{0,120}\? false[\s\S]{0,120}: hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.hold_delivery\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.hold_delivery[\s\S]{0,220}reportData\?\.holdDelivery/
 );
 assert.match(workerSource, /legacy_alias_conflicts/);

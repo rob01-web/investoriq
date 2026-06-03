@@ -180,6 +180,11 @@ assert.equal(legacyFallbackPlan.readiness_fallback_used, true);
 assert.equal(legacyFallbackPlan.customer_delivery_ready, true);
 assert.equal(legacyFallbackPlan.public_sample_ready, true);
 assert.equal(legacyFallbackPlan.high_value_outreach_ready, true);
+assert.equal(legacyFallbackPlan.historical_compatibility?.readiness_source, "legacy_action_plan_fallback");
+assert.equal(legacyFallbackPlan.historical_compatibility?.readiness_fallback_used, true);
+assert.equal(legacyFallbackPlan.historical_compatibility?.customer_delivery_ready, true);
+assert.equal(legacyFallbackPlan.historical_compatibility?.public_sample_ready, true);
+assert.equal(legacyFallbackPlan.historical_compatibility?.high_value_outreach_ready, true);
 assert.equal(Array.isArray(legacyFallbackPlan.prioritized_actions), true);
 assert.equal(typeof legacyFallbackPlan.action_counts?.total, "number");
 
@@ -244,6 +249,8 @@ assert.equal(canonicalPublishEligibilityMirror.customer_delivery_ready, true);
 assert.equal(canonicalPublishEligibilityMirror.report_blocked, false);
 assert.equal(canonicalPublishEligibilityMirror.readiness_source, "canonical_delivery_state");
 assert.equal(canonicalPublishEligibilityMirror.readiness_fallback_used, false);
+assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.readiness_source, "canonical_delivery_state");
+assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.report_publishable, true);
 assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_blockers), true);
 assert.equal(
   canonicalPublishEligibilityMirror.report_quality_blockers.length > 0 ||
@@ -277,6 +284,7 @@ assert.equal(canonicalPublishEligibilityHeld.report_blocked, true);
 assert.equal(canonicalPublishEligibilityHeld.admin_review_required, false);
 assert.equal(canonicalPublishEligibilityHeld.user_needs_documents, false);
 assert.equal(canonicalPublishEligibilityHeld.publish_decision_reason, "customer_publish_eligible");
+assert.equal(canonicalPublishEligibilityHeld.legacy_compatibility?.report_blocked, true);
 assert.equal(
   (canonicalPublishEligibilityHeld.report_quality_advisories || []).includes("DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION"),
   true

@@ -290,6 +290,8 @@ const canonicalPrecedenceOverLegacyAliases = buildCanonicalDeliveryDecisionState
 });
 assert.equal(canonicalPrecedenceOverLegacyAliases.customer_delivery_allowed, true);
 assert.equal(canonicalPrecedenceOverLegacyAliases.customer_status_label, "ready");
+assert.equal(canonicalPrecedenceOverLegacyAliases.customer_status_reason_code, null);
+assert.equal(canonicalPrecedenceOverLegacyAliases.legacy_compatibility?.customer_status_reason_code, "customer_publish_eligible");
 
 const generatorSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 assert.match(generatorSource, /deliveryDecisionState:/);
@@ -297,10 +299,11 @@ assert.match(generatorSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
 assert.match(generatorSource, /function buildDeliveryResponseCompatibilityAliases\(/);
 assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(blockedDecisionState\)/);
 assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(canonicalDeliveryDecisionState\)/);
-assert.match(generatorSource, /delivery_gate_status:\s*deliveryGateStatus/);
-assert.match(generatorSource, /customer_delivery_ready:\s*customerDeliveryAllowed/);
-assert.match(generatorSource, /customer_publish_eligible:\s*customerDeliveryAllowed/);
-assert.match(generatorSource, /hold_delivery:\s*holdDelivery/);
+assert.match(generatorSource, /legacy_compatibility:\s*\{/);
+assert.match(generatorSource, /customer_delivery_allowed:\s*customerDeliveryAllowed/);
+assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}customer_delivery_ready:\s*customerDeliveryAllowed/);
+assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}customer_publish_eligible:\s*customerDeliveryAllowed/);
+assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}hold_delivery:\s*holdDelivery/);
 assert.match(generatorSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\)/);
 assert.match(generatorSource, /deliveryGateDecisionResult\?\.delivery_gate_status === "user_needs_documents" &&[\s\S]{0,120}deliveryDecisionStateResult\?\.core_valid_required_coverage !== true/);
 assert.match(generatorSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\),/);
