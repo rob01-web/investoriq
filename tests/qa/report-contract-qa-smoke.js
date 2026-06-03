@@ -3144,9 +3144,11 @@ const fallbackDerivedCurrentDebtStateNotCanonicalAuthority = buildReportContract
     authority_provenance: {
       coverage_authoritative: false,
       current_debt_state_authoritative: false,
-      current_debt_state_source: "fallback_reconstructed",
     },
-    current_debt_state_source: "fallback_reconstructed",
+    legacy_compatibility: {
+      current_debt_state_source: "fallback_reconstructed",
+      legacy_fallback_active: true,
+    },
     current_debt_state: {
       current_debt_dscr_status: "computed",
       current_debt_dscr: 1.42,

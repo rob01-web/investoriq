@@ -1431,16 +1431,27 @@ if (canonicalAuthorityProvenanceResult.authority_provenance?.debt_acquisition_au
   console.error("Expected canonical debt/acquisition authority marker when canonical debt/acquisition states are supplied.");
   process.exit(1);
 }
-if (canonicalAuthorityProvenanceResult.authority_provenance?.current_debt_state_source !== "canonical_input") {
-  console.error("Expected current debt state to be marked canonical_input.");
+if (canonicalAuthorityProvenanceResult.legacy_compatibility?.current_debt_state_source !== "canonical_input") {
+  console.error("Expected current debt state to be marked canonical_input in legacy compatibility.");
   process.exit(1);
 }
-if (canonicalAuthorityProvenanceResult.authority_provenance?.acquisition_assumption_state_source !== "canonical_input") {
-  console.error("Expected acquisition assumption state to be marked canonical_input.");
+if (canonicalAuthorityProvenanceResult.legacy_compatibility?.acquisition_assumption_state_source !== "canonical_input") {
+  console.error("Expected acquisition assumption state to be marked canonical_input in legacy compatibility.");
   process.exit(1);
 }
-if (canonicalAuthorityProvenanceResult.authority_provenance?.legacy_fallback_active !== false) {
+if (canonicalAuthorityProvenanceResult.legacy_compatibility?.legacy_fallback_active !== false) {
   console.error("Expected legacy fallback to be inactive when canonical authority is present.");
+  process.exit(1);
+}
+if (Object.prototype.hasOwnProperty.call(canonicalAuthorityProvenanceResult.authority_provenance || {}, "legacy_fallback_active")) {
+  console.error("Expected legacy fallback to be isolated from canonical authority provenance.");
+  process.exit(1);
+}
+if (
+  Object.prototype.hasOwnProperty.call(canonicalAuthorityProvenanceResult.authority_provenance || {}, "current_debt_state_source") ||
+  Object.prototype.hasOwnProperty.call(canonicalAuthorityProvenanceResult.authority_provenance || {}, "acquisition_assumption_state_source")
+) {
+  console.error("Expected compatibility provenance labels to remain outside canonical authority provenance.");
   process.exit(1);
 }
 if (
@@ -1509,16 +1520,27 @@ const canonicalAbsentProvenanceFallbackResult = buildSourceReportCoverageQa({
   artifacts: [],
   html: "<h2>Data Coverage</h2><p>Fallback mode</p>",
 });
-if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.current_debt_state_source !== "fallback_reconstructed") {
+if (canonicalAbsentProvenanceFallbackResult.legacy_compatibility?.current_debt_state_source !== "fallback_reconstructed") {
   console.error("Expected fallback-reconstructed current debt source when canonical state is absent.");
   process.exit(1);
 }
-if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.acquisition_assumption_state_source !== "fallback_reconstructed") {
+if (canonicalAbsentProvenanceFallbackResult.legacy_compatibility?.acquisition_assumption_state_source !== "fallback_reconstructed") {
   console.error("Expected fallback-reconstructed acquisition source when canonical state is absent.");
   process.exit(1);
 }
-if (canonicalAbsentProvenanceFallbackResult.authority_provenance?.legacy_fallback_active !== true) {
+if (canonicalAbsentProvenanceFallbackResult.legacy_compatibility?.legacy_fallback_active !== true) {
   console.error("Expected legacy fallback to remain active when canonical authority is absent.");
+  process.exit(1);
+}
+if (Object.prototype.hasOwnProperty.call(canonicalAbsentProvenanceFallbackResult.authority_provenance || {}, "legacy_fallback_active")) {
+  console.error("Expected legacy fallback to remain isolated from canonical authority provenance.");
+  process.exit(1);
+}
+if (
+  Object.prototype.hasOwnProperty.call(canonicalAbsentProvenanceFallbackResult.authority_provenance || {}, "current_debt_state_source") ||
+  Object.prototype.hasOwnProperty.call(canonicalAbsentProvenanceFallbackResult.authority_provenance || {}, "acquisition_assumption_state_source")
+) {
+  console.error("Expected compatibility provenance labels to remain outside canonical authority provenance.");
   process.exit(1);
 }
 

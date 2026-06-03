@@ -643,16 +643,18 @@ export function buildSourceReportCoverageQa({
   });
   const canonicalCoverageAuthorityPresent =
     canonicalSectionAuthorityPresent || canonicalSufficiencyAuthorityPresent;
-  const authorityProvenance = {
-    coverage_authoritative: canonicalCoverageAuthorityPresent,
-    section_eligibility_authoritative: canonicalSectionAuthorityPresent,
-    sufficiency_authoritative: canonicalSufficiencyAuthorityPresent,
-    debt_acquisition_authoritative: canonicalDebtAcquisitionAuthorityPresent,
+  const legacyCompatibility = {
     current_debt_state_source: canonicalCurrentDebtPresent ? "canonical_input" : "fallback_reconstructed",
     current_debt_state_authoritative: canonicalCurrentDebtPresent,
     acquisition_assumption_state_source: canonicalAcquisitionPresent ? "canonical_input" : "fallback_reconstructed",
     acquisition_assumption_state_authoritative: canonicalAcquisitionPresent,
     legacy_fallback_active: !canonicalCoverageAuthorityPresent || !canonicalDebtAcquisitionAuthorityPresent,
+  };
+  const authorityProvenance = {
+    coverage_authoritative: canonicalCoverageAuthorityPresent,
+    section_eligibility_authoritative: canonicalSectionAuthorityPresent,
+    sufficiency_authoritative: canonicalSufficiencyAuthorityPresent,
+    debt_acquisition_authoritative: canonicalDebtAcquisitionAuthorityPresent,
   };
   const flags = [];
   const normalizedReportType = String(reportType || "").toLowerCase();
@@ -1063,6 +1065,7 @@ export function buildSourceReportCoverageQa({
     core_input_sufficiency_state: coreInputSufficiencyState,
     section_eligibility: sectionEligibility,
     authority_provenance: authorityProvenance,
+    legacy_compatibility: legacyCompatibility,
     rendered_sections: renderedSections,
     rendered_text_signals: renderedTextSignals,
     deterministic_flags: flags,

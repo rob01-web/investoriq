@@ -278,6 +278,7 @@ function resolveCanonicalCurrentDebtStateForQa({
   const coverageAuthority = sourceReportCoverageQa?.authority_provenance || null;
   const canonicalCurrentDebtSource = String(
     coverageAuthority?.current_debt_state_source ||
+    sourceReportCoverageQa?.legacy_compatibility?.current_debt_state_source ||
     sourceReportCoverageQa?.current_debt_state_source ||
     ""
   ).toLowerCase();
@@ -806,6 +807,7 @@ function inferCanonicalVerdictCapState(sourceReportCoverageQa = null) {
     coverageAuthorityPresent;
   const currentDebtStateSource = String(
     coverageAuthority?.current_debt_state_source ||
+    sourceReportCoverageQa?.legacy_compatibility?.current_debt_state_source ||
     sourceReportCoverageQa?.current_debt_state_source ||
     ""
   ).toLowerCase();
