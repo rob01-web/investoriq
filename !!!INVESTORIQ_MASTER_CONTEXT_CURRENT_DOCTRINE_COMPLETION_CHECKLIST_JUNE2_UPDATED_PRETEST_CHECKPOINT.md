@@ -2980,3 +2980,24 @@ Next-step status:
 5. Then run controlled Underwriting lifecycle retest.
 
 If live retesting reveals a new issue, start the next hardening family from evidence only.
+## June 3, 2026 Addendum
+
+- Legacy Kill Slice A/A2 complete: `qa-action-plan` delivery authority cleaned, `generate-client-report` delivery aliases cleaned, and `admin-run-worker` canonical worker delivery gate cleaned.
+- Canonical `deliveryDecisionState` is the live authority when present; legacy aliases and compatibility mirrors cannot decide publish, hold, fail-closed, or credit restore.
+- Legacy Kill Slice B complete: support-doc and filename fallback authority demoted to diagnostic/display-only.
+- Filename/doc-type fallback cannot create modeled property-tax support, current-debt truth, section unlocks, DCF/refi/waterfall/advanced modeling, or renovation/acquisition modeled authority.
+- Validated parsed payload and canonical taxonomy remain controlling authority.
+- Legacy Kill Slice C complete: `AdminDashboard` and `queue-metrics` lifecycle wording cleaned; remaining admin review and needs-documents terms are internal triage/diagnostic wording only, not customer lifecycle authority.
+- Final no-change verification audit complete: no decision-capable legacy fallback remnants found in live paths reviewed.
+- Remaining legacy/compatibility strings are inert diagnostics, compatibility mirrors, historical compatibility, or internal triage labels only.
+- Doctrine preserved: normal customer outcome is publish or fail-closed with credit restored; fail-closed only for unusable, missing, contradictory core T12 or Rent Roll, or catastrophic system, storage, or PDF failure.
+- Optional or support issues collapse, omit, qualify, or disclose; admin review is not a normal customer outcome.
+- Proposed or acquisition financing cannot become current debt; appraisal is valuation/context only.
+- Property-tax support can corroborate the T12 tax line only when validated and bound, and must not override modeled T12 values.
+- Codex usage remains limited until June 8; future prompts should stay tight.
+- No DocRaptor flip.
+- No public samples created.
+- No pricing or Stripe changes.
+- No SQL or RPC changes.
+- No new API or serverless routes.
+- Next step after docs update: controlled live retesting from the clean legacy-fallback checkpoint.
