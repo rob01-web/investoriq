@@ -3031,6 +3031,8 @@ const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
 assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
+assert.equal(/Structured current debt input/i.test(filenameFallbackHtml), false);
+assert.equal(/Current debt coverage was assessed from verified current debt inputs/i.test(filenameFallbackHtml), false);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
 const filenameOnlyPropertyTaxUnboundHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

@@ -1673,31 +1673,31 @@ export function buildSupportDocTaxonomyState({
     const fallbackText = normalizeText(`${originalFilename || ""} ${rawText || ""}`);
     if (/(phase\s*i|phase\s*1|esa|environment|environmental|recognized environmental condition|recognized environmental conditions|\brec\b|site assessment)/.test(fallbackText)) {
       semanticDocRole = "environmental_due_diligence";
-      semanticDocRoleReason = "fallback_environmental_context_override";
+      semanticDocRoleReason = "fallback_environmental_context_diagnostic";
       confidence = 0.86;
     } else if (/(zoning|compliance|permitted use|municipal zoning|land use|entitlement)/.test(fallbackText)) {
       semanticDocRole = "zoning_compliance_context";
-      semanticDocRoleReason = "fallback_zoning_context_override";
+      semanticDocRoleReason = "fallback_zoning_context_diagnostic";
       confidence = 0.84;
     } else if (fallbackDocType === "mortgage_statement") {
       semanticDocRole = "current_mortgage_statement";
-      semanticDocRoleReason = "fallback_doc_type_mortgage_statement";
+      semanticDocRoleReason = "fallback_doc_type_mortgage_statement_diagnostic";
       confidence = 0.7;
     } else if (fallbackDocType === "loan_term_sheet") {
       semanticDocRole = "loan_term_sheet";
-      semanticDocRoleReason = "fallback_doc_type_loan_term_sheet";
+      semanticDocRoleReason = "fallback_doc_type_loan_term_sheet_diagnostic";
       confidence = 0.7;
     } else if (fallbackDocType === "renovation") {
       semanticDocRole = "renovation_budget";
-      semanticDocRoleReason = "fallback_doc_type_renovation";
+      semanticDocRoleReason = "fallback_doc_type_renovation_diagnostic";
       confidence = 0.7;
     } else if (fallbackDocType === "property_tax") {
       semanticDocRole = "property_tax";
-      semanticDocRoleReason = "fallback_doc_type_property_tax";
+      semanticDocRoleReason = "fallback_doc_type_property_tax_diagnostic";
       confidence = 0.7;
     } else if (fallbackDocType === "appraisal") {
       semanticDocRole = "appraisal";
-      semanticDocRoleReason = "fallback_doc_type_appraisal";
+      semanticDocRoleReason = "fallback_doc_type_appraisal_diagnostic";
       confidence = 0.7;
     }
   }
