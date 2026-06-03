@@ -2213,13 +2213,23 @@ export function buildFullUnderwritingSectionEligibility({
     const optionalSourcesPresent = anyRolePresent(optionalSourceRoles, inventory, currentDebtState);
     const hasCanonicalSourceSupport = requiredSourcesPresent || optionalSourcesPresent;
     const sourceReconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
+    const hasVerifiedCurrentDebtBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
+    const hasAppraisalContext = Boolean(inventory?.appraisal_parsed?.present);
     const currentDebtSourceConstrained =
       sectionKey === "debt_structure" &&
       currentDebtState?.current_debt_dscr_status !== "computed" &&
       !currentDebtState?.has_true_current_debt_balance;
+    const dcfSourceConstrained =
+      sectionKey === "dcf" && !hasVerifiedCurrentDebtBalance;
+    const advancedModelingSourceConstrained =
+      sectionKey === "advanced_modeling" &&
+      !hasVerifiedCurrentDebtBalance &&
+      !hasAppraisalContext;
     const sourceConstrained =
       !requiredSourcesPresent ||
       currentDebtSourceConstrained ||
+      dcfSourceConstrained ||
+      advancedModelingSourceConstrained ||
       (sectionKey === "renovation_strategy" && !optionalSourcesPresent);
     let publishabilityBucket =
       !requiredSourcesPresent

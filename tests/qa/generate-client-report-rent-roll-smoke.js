@@ -45,10 +45,37 @@ const healQaCoverage = {
   },
 };
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const contractsSource = fs.readFileSync("api/_lib/report-surface-contracts.js", "utf8");
+const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
 assert.match(reportSource, /Document-Backed Screening Outputs/);
 const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
 assert.equal(legacyFallbackCallCount, 2);
+assert.ok(
+  contractsSource.includes('const dcfSourceConstrained =') &&
+    contractsSource.includes('sectionKey === "dcf"') &&
+    contractsSource.includes('!hasVerifiedCurrentDebtBalance')
+);
+assert.ok(
+  contractsSource.includes('const advancedModelingSourceConstrained =') &&
+    contractsSource.includes('sectionKey === "advanced_modeling"') &&
+    contractsSource.includes('!hasVerifiedCurrentDebtBalance')
+);
+assert.match(reportSource, /showSection9[\s\S]*hasVerifiedCurrentDebtBalance &&/);
+assert.match(reportSource, /showSection10[\s\S]*hasVerifiedCurrentDebtBalance \|\|[\s\S]*hasMeaningfulComparableRows\(tables\.comps \|\| \[\]\)/);
+assert.match(reportSource, /showScenarioAnalysisSection[\s\S]*hasVerifiedCurrentDebtBalance/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_COMPARABLE_CONTEXT"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "RELATIVE_POSITIONING"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_9_DCF"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_ADV_MODEL"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_DCF_SUMMARY"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_3"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_9_DCF_TABLE"\)/);
+assert.match(reportSource, /buildRelativePositioningCopy\(/);
+assert.match(templateSource, /<!-- BEGIN SECTION_10_COMPARABLE_CONTEXT -->/);
+assert.match(templateSource, /<!-- BEGIN RELATIVE_POSITIONING -->/);
+assert.match(templateSource, /\{\{RELATIVE_POSITIONING_COPY\}\}/);
+assert.match(templateSource, /\{\{RELATIVE_POSITIONING_NOTE\}\}/);
 assert.match(
   reportSource,
   /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
@@ -1232,6 +1259,159 @@ const acquisitionOnlyCanonicalState = generatorTest.buildRendererCanonicalState(
 
 assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.has_true_current_debt_balance, false);
 assert.equal(acquisitionOnlyCanonicalState.currentDebtAssessmentState?.current_debt_limitation_reason_code, "acquisition_only_not_current_debt");
+
+const noVerifiedCurrentDebtCanonicalState = generatorTest.buildRendererCanonicalState({
+  rentRollPayload: { total_units: 48, total_in_place_annual: 1087488 },
+  computedRentRoll: { total_units: 48, total_in_place_annual: 1087488 },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+  },
+});
+assert.equal(noVerifiedCurrentDebtCanonicalState.currentDebtAssessmentState?.has_true_current_debt_balance, false);
+assert.equal(noVerifiedCurrentDebtCanonicalState.sectionEligibility?.sections?.dcf?.source_constrained, true);
+assert.equal(noVerifiedCurrentDebtCanonicalState.sectionEligibility?.sections?.advanced_modeling?.source_constrained, true);
+assert.equal(noVerifiedCurrentDebtCanonicalState.sectionEligibility?.sections?.debt_structure?.source_constrained, true);
+
+const verifiedCurrentDebtCanonicalState = generatorTest.buildRendererCanonicalState({
+  rentRollPayload: { total_units: 48, total_in_place_annual: 1087488 },
+  computedRentRoll: { total_units: 48, total_in_place_annual: 1087488 },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: "current_mortgage_statement",
+    debt_basis: "current_debt_balance",
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    monthly_payment: 9000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+  },
+});
+assert.equal(verifiedCurrentDebtCanonicalState.currentDebtAssessmentState?.has_true_current_debt_balance, true);
+
+const verifiedCurrentDebtEligibility = buildFullUnderwritingSectionEligibility({
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    rendered_sections: {},
+  },
+  currentDebtState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 1.32,
+    current_debt_annual_debt_service: 492000,
+    current_debt_balance: 1500000,
+    current_debt_service_source: "source_payment",
+    current_debt_limitation_reason_code: null,
+  },
+  sourceReconciliationState: { status: "aligned" },
+});
+assert.equal(verifiedCurrentDebtEligibility.sections?.dcf?.source_constrained, false);
+assert.equal(verifiedCurrentDebtEligibility.sections?.advanced_modeling?.source_constrained, false);
+
+const acquisitionOnlyRefiRenderState = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: acquisitionOnlyCanonicalState.currentDebtAssessmentState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: acquisitionOnlyCanonicalState.underwritingState?.core?.acquisition?.assumptionState?.validated_fields
+    ? {
+        purchase_price: 2000000,
+        ltv: 0.75,
+        interest_rate: 0.065,
+        amortization_years: 30,
+        derived_acquisition_loan_amount: 1500000,
+      }
+    : null,
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(acquisitionOnlyRefiRenderState.allowDebtMath, false);
+const acquisitionOnlyRefiSufficiency = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {},
+  t12Payload: { net_operating_income: 650000 },
+  currentDebtAssessmentState: acquisitionOnlyCanonicalState.currentDebtAssessmentState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    purchase_price: 2000000,
+    ltv: 0.75,
+    interest_rate: 0.065,
+    amortization_years: 30,
+    derived_acquisition_loan_amount: 1500000,
+  },
+});
+assert.match(
+  acquisitionOnlyRefiSufficiency,
+  /Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided\./i
+);
+
+const verifiedCurrentDebtRefiRenderState = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 1.32,
+    current_debt_annual_debt_service: 492000,
+    current_debt_balance: 1500000,
+    current_debt_service_source: "source_payment",
+    current_debt_limitation_reason_code: null,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: "current_mortgage_statement",
+    debt_basis: "current_debt_balance",
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    monthly_payment: 9000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+  t12Payload: { net_operating_income: 650000 },
+});
+assert.equal(verifiedCurrentDebtRefiRenderState.allowDebtMath, true);
+const verifiedCurrentDebtRefiSufficiency = generatorTest.buildScreeningRefiSufficiencyTable({
+  financials: {},
+  t12Payload: { net_operating_income: 650000 },
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 1.32,
+    current_debt_annual_debt_service: 492000,
+    current_debt_balance: 1500000,
+    current_debt_service_source: "source_payment",
+    current_debt_limitation_reason_code: null,
+  },
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    semantic_doc_role: "current_mortgage_statement",
+    debt_basis: "current_debt_balance",
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    monthly_payment: 9000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
+});
+assert.match(verifiedCurrentDebtRefiSufficiency, /Current loan balance/i);
+assert.equal(/no verified current outstanding debt balance/i.test(verifiedCurrentDebtRefiSufficiency), false);
 
 const acquisitionOnlyDebtCopy = formatCurrentDebtAssessmentCopy({
   currentDebtState: buildCurrentDebtAssessmentState({

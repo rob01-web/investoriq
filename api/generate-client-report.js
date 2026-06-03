@@ -5554,7 +5554,12 @@ function buildDealScoreTable(rows = [], totalScore) {
   return html;
 }
 function buildCompsTable(rows = []) {
-  if (!rows.length) return "";
+  const meaningfulRows = (Array.isArray(rows) ? rows : []).filter((row) =>
+    [row?.name, row?.submarket, row?.distanceKm, row?.units, row?.pricePerDoor, row?.capRate].some((value) =>
+      value !== undefined && value !== null && String(value).trim() !== ""
+    )
+  );
+  if (!meaningfulRows.length) return "";
   let html = `
 <table>
   <tr>
@@ -5566,7 +5571,7 @@ function buildCompsTable(rows = []) {
     <th>Cap Rate (Stabilized)</th>
   </tr>
 `;
-  for (const row of rows) {
+  for (const row of meaningfulRows) {
     html += `
   <tr>
     <td>${row.name ?? ""}</td>
@@ -5582,6 +5587,29 @@ function buildCompsTable(rows = []) {
 </table>
 `;
   return html;
+}
+function hasMeaningfulComparableRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).some((row) =>
+    [row?.name, row?.submarket, row?.distanceKm, row?.units, row?.pricePerDoor, row?.capRate].some((value) =>
+      value !== undefined && value !== null && String(value).trim() !== ""
+    )
+  );
+}
+function buildRelativePositioningCopy(rows = []) {
+  const meaningfulRows = (Array.isArray(rows) ? rows : []).filter((row) =>
+    [row?.name, row?.submarket, row?.distanceKm, row?.units, row?.pricePerDoor, row?.capRate].some((value) =>
+      value !== undefined && value !== null && String(value).trim() !== ""
+    )
+  );
+  if (!meaningfulRows.length) return "";
+  const count = meaningfulRows.length;
+  const submarkets = [...new Set(
+    meaningfulRows
+      .map((row) => String(row?.submarket || "").trim())
+      .filter(Boolean)
+  )];
+  const submarketText = submarkets.length > 0 ? ` across ${submarkets.join(", ")}` : "";
+  return `Relative positioning is based on ${count} supported comparable${count === 1 ? "" : "s"}${submarketText} and remains limited to the market context shown above.`;
 }
 // ---------- Chart Helper ----------
 const CHART_BASE_URL =
@@ -7793,6 +7821,18 @@ if (effectiveReportMode === "screening_v1") {
       "{{FINAL_RECOMMENDATION}}",
       getNarrativeHtml("finalRecommendation")
     );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RELATIVE_POSITIONING_COPY}}",
+      buildRelativePositioningCopy(tables.comps || [])
+    );
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{RELATIVE_POSITIONING_NOTE}}",
+      hasMeaningfulComparableRows(tables.comps || [])
+        ? "Comparable positioning remains limited to the supported market context shown above and is not extrapolated beyond document-backed rows."
+        : ""
+    );
     const suppressUnitLevelRentLift =
       computedRentRoll?.is_partial_sample === true;
     const unitMix = suppressUnitLevelRentLift
@@ -8592,8 +8632,11 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "scenario_analysis",
       rendererDefault:
-        (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
-        (effectiveReportMode === "v1_core" && hasT12Data), // v1_core always builds scenario table from T12
+        hasVerifiedCurrentDebtBalance &&
+        (
+          (hasRentRollData && hasT12Data && Array.isArray(tables.scenarios) && tables.scenarios.length > 0) ||
+          (effectiveReportMode === "v1_core" && hasT12Data) // v1_core always builds scenario table from T12
+        ),
     });
     if (!showSection3) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
@@ -8743,7 +8786,7 @@ if (effectiveReportMode === "screening_v1") {
 
     // Deterministic 5-Year DCF from T12 NOI
     let dcfTableHtml = "";
-    if (t12Payload && effectiveReportMode === "v1_core") {
+    if (t12Payload && effectiveReportMode === "v1_core" && hasVerifiedCurrentDebtBalance) {
       const dcfDisplayCopy = buildFrameworkSensitivityDisplayCopy();
       const dcfSourceReconciliationLimited = Boolean(
         buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
@@ -8827,7 +8870,7 @@ if (effectiveReportMode === "screening_v1") {
 
     // Deterministic 5-Year NOI Scenario Table (Conservative / Base / Optimistic)
     let scenarioTrajectoryChartHtml = "";
-    if (effectiveReportMode === "v1_core" && t12Payload) {
+    if (effectiveReportMode === "v1_core" && t12Payload && hasVerifiedCurrentDebtBalance) {
       const noiBasis = coerceNumber(t12Payload.net_operating_income);
       const resolvedExitCapPct = coerceNumber(refiFinancials?.refi_cap_rate_base);
       const exitCapPct = (Number.isFinite(resolvedExitCapPct) && resolvedExitCapPct > 0) ? resolvedExitCapPct : 5.5;
@@ -8955,7 +8998,8 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "dcf",
       rendererDefault:
-        (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0,
+        hasVerifiedCurrentDebtBalance &&
+        ((Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0),
     });
     if (!showSection9) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
@@ -8964,7 +9008,8 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "dcf",
       rendererDefault:
-        (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0,
+        hasVerifiedCurrentDebtBalance &&
+        ((Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) || dcfTableHtml.length > 0),
     });
     if (!showSection9Table) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
@@ -8973,7 +9018,8 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "advanced_modeling",
       rendererDefault:
-        (Array.isArray(tables.comps) && tables.comps.length > 0) ||
+        hasVerifiedCurrentDebtBalance ||
+        hasMeaningfulComparableRows(tables.comps || []) ||
         hasMeaningfulNarrative(getNarrativeHtml("advancedModelingIntro")),
     });
     if (!showSection10) {
@@ -8996,10 +9042,25 @@ if (effectiveReportMode === "screening_v1") {
     if (!marketContextVisibility.keepLocationTable) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");
     }
+    const hasMeaningfulComps = hasMeaningfulComparableRows(tables.comps || []);
+    if (!hasMeaningfulComps) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_COMPARABLE_CONTEXT");
+      finalHtml = stripMarkedSection(finalHtml, "RELATIVE_POSITIONING");
+    }
     const hasRiskMatrixRows = Array.isArray(tables?.riskMatrix) && tables.riskMatrix.length > 0;
     const hasRiskNarrative = hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     if (!showSection5Matrix && !hasRiskNarrative) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK_MATRIX");
+    }
+    const showScenarioAnalysisSection =
+      hasVerifiedCurrentDebtBalance &&
+      (
+        showCashFlow ||
+        (Array.isArray(tables.returnSummary) && tables.returnSummary.length > 0) ||
+        scenarioTableHtml.length > 0
+      );
+    if (!showScenarioAnalysisSection) {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3");
     }
     const dcfRow =
       Array.isArray(tables?.returnSummary) && tables.returnSummary.length > 0
@@ -9013,7 +9074,7 @@ if (effectiveReportMode === "screening_v1") {
     const showSection10DcfSummary = shouldRenderCanonicalSection({
       sectionEligibility: sectionEligibilityStateForRender,
       sectionKey: "dcf",
-      rendererDefault: hasDcfMetric,
+      rendererDefault: hasVerifiedCurrentDebtBalance && hasDcfMetric,
     });
     if (!showSection10DcfSummary) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");

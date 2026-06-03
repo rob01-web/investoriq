@@ -1,5 +1,9 @@
 import { buildSourceReportCoverageQa } from "../../api/_lib/source-report-coverage-qa.js";
-import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
+import {
+  buildCurrentDebtAssessmentState,
+  buildFullUnderwritingSectionEligibility,
+  buildSourceReconciliationState,
+} from "../../api/_lib/report-surface-contracts.js";
 
 const result = buildSourceReportCoverageQa({
   jobId: "forest-city-smoke",
@@ -1080,6 +1084,66 @@ if (canonicalSectionEligibleMissingHeading.section_eligibility?.sections?.dcf?.e
 }
 if (canonicalSectionEligibleMissingHeading.section_eligibility?.sections?.dcf?.omitted !== false) {
   console.error("Canonical rendered DCF section should not be marked omitted from rendered-heading inference.");
+  process.exit(1);
+}
+
+const currentDebtAbsentEligibility = buildFullUnderwritingSectionEligibility({
+  sourceReportCoverageQa: {
+    artifact_inventory: {},
+    rendered_sections: {},
+  },
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: { status: "aligned" },
+});
+if (currentDebtAbsentEligibility.sections?.dcf?.source_constrained !== true) {
+  console.error("Expected DCF section to be source-constrained without verified current debt.");
+  console.error("Actual DCF section:", currentDebtAbsentEligibility.sections?.dcf);
+  process.exit(1);
+}
+if (currentDebtAbsentEligibility.sections?.advanced_modeling?.source_constrained !== true) {
+  console.error("Expected advanced modeling section to be source-constrained without verified current debt or appraisal context.");
+  console.error("Actual advanced-modeling section:", currentDebtAbsentEligibility.sections?.advanced_modeling);
+  process.exit(1);
+}
+
+const currentDebtVerifiedEligibility = buildFullUnderwritingSectionEligibility({
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+    },
+    rendered_sections: {},
+  },
+  currentDebtState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 1.32,
+    current_debt_annual_debt_service: 492000,
+    current_debt_balance: 1500000,
+    current_debt_service_source: "source_payment",
+    current_debt_limitation_reason_code: null,
+  },
+  sourceReconciliationState: { status: "aligned" },
+});
+if (currentDebtVerifiedEligibility.sections?.dcf?.source_constrained !== false) {
+  console.error("Verified current debt should keep DCF available when canonical inputs support it.");
+  console.error("Actual DCF section:", currentDebtVerifiedEligibility.sections?.dcf);
+  process.exit(1);
+}
+if (currentDebtVerifiedEligibility.sections?.advanced_modeling?.source_constrained !== false) {
+  console.error("Verified current debt should keep advanced modeling available when canonical inputs support it.");
+  console.error("Actual advanced-modeling section:", currentDebtVerifiedEligibility.sections?.advanced_modeling);
   process.exit(1);
 }
 
