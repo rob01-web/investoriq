@@ -1104,7 +1104,7 @@ export default function AdminDashboard() {
                     </div>
                     <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
                       <Btn
-                        title="Mark legacy review signal"
+                        title="Mark internal review marker"
                         onClick={() => runControlledFixQueueAction('mark_still_reviewing')}
                         disabled={
                           !!fixQueueActionLoading ||
@@ -1116,7 +1116,7 @@ export default function AdminDashboard() {
                         variant="ghost"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        {controlledActionLabel('mark_still_reviewing', 'Mark legacy review signal')}
+                        {controlledActionLabel('mark_still_reviewing', 'Mark internal review marker')}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
                         Internal legacy diagnostic control only.

@@ -288,9 +288,9 @@ function normalizeFixQueueDisplay(raw = {}) {
   const outreachReady = Boolean(raw?.high_value_outreach_ready);
   const hierarchyPriority =
     deliveryGateStatus === 'admin_review_required'
-      ? 'Admin review required'
+      ? 'Internal review required'
       : deliveryGateStatus === 'user_needs_documents'
-      ? 'Customer documents required'
+      ? 'Internal documents required'
       : customerReady && publicReady && outreachReady
       ? 'Delivery gate ready'
       : customerReady && !publicReady && !outreachReady

@@ -56,6 +56,9 @@ const adminDashboardSource = fs.readFileSync("src/pages/AdminDashboard.jsx", "ut
 assert.match(adminDashboardSource, /Internal review marker logged for internal diagnostics only\./);
 assert.match(adminDashboardSource, /<option value='reviewing'>Internal review marker<\/option>|<option value="reviewing">Internal review marker<\/option>/);
 assert.match(adminDashboardSource, /Internal review marker<\/Btn>|Internal review marker<\/button>/);
+const queueMetricsSource = fs.readFileSync("api/admin/queue-metrics.js", "utf8");
+assert.match(queueMetricsSource, /Internal review required/);
+assert.match(queueMetricsSource, /Internal documents required/);
 
 const failedGuidance = getFailedFileGuidance(
   [
