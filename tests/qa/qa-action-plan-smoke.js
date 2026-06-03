@@ -295,11 +295,13 @@ const legacyPublishEligibilityFallback = qaActionPlanTest.buildPublishEligibilit
   sourceReportCoverageQa: null,
   prioritizedActions: [],
 });
-assert.equal(legacyPublishEligibilityFallback.readiness_source, "legacy_publish_eligibility_fallback");
-assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, true);
+assert.equal(legacyPublishEligibilityFallback.readiness_source, "delivery_gate_state");
+assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, false);
 assert.equal(legacyPublishEligibilityFallback.customer_publish_eligible, false);
 assert.equal(legacyPublishEligibilityFallback.report_publishable, false);
 assert.equal(legacyPublishEligibilityFallback.customer_delivery_ready, false);
+assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_source, "legacy_publish_eligibility_fallback");
+assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_fallback_used, true);
 
 const livePublishEligibilityNoOverride = qaActionPlanTest.buildPublishEligibilitySummary({
   deliveryGateStatus: "deliverable",
@@ -311,7 +313,7 @@ const livePublishEligibilityNoOverride = qaActionPlanTest.buildPublishEligibilit
   },
   prioritizedActions: [],
 });
-assert.equal(livePublishEligibilityNoOverride.readiness_source, "canonical_delivery_state");
+assert.equal(livePublishEligibilityNoOverride.readiness_source, "delivery_gate_state");
 assert.equal(livePublishEligibilityNoOverride.readiness_fallback_used, false);
 assert.equal(livePublishEligibilityNoOverride.customer_publish_eligible, true);
 assert.equal(livePublishEligibilityNoOverride.report_publishable, true);

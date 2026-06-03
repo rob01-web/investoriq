@@ -69,7 +69,7 @@ assert.match(
 );
 assert.match(
   workerSource,
-  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,260}const deliveryGateStatus =[\s\S]{0,160}coreValidRequiredCoverage[\s\S]{0,120}\? 'deliverable'[\s\S]{0,120}: rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus;/
+  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,260}const deliveryGateStatus = hasCanonical[\s\S]{0,120}\? \(coreValidRequiredCoverage \? 'deliverable' : rawDeliveryGateStatus\)[\s\S]{0,120}: \(coreValidRequiredCoverage[\s\S]{0,120}\? 'deliverable'[\s\S]{0,120}: rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus\);/
 );
 assert.match(
   workerSource,

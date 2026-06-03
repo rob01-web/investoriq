@@ -1492,13 +1492,16 @@ function buildPublishEligibilitySummary({
       highValueOutreachImpact !== "block_until_review"
     );
   const userNeedsDocuments = normalizedDeliveryGateStatus === "user_needs_documents";
-  const readinessSource = allowLegacyReadinessFallback
+  const readinessSource = readinessOverride.present
+    ? "canonical_delivery_state"
+    : "delivery_gate_state";
+  const readinessFallbackUsed = false;
+  const legacyReadinessSource = allowLegacyReadinessFallback
     ? "legacy_publish_eligibility_fallback"
-    : "canonical_delivery_state";
-  const readinessFallbackUsed = allowLegacyReadinessFallback;
-  const publishDecisionReasonFinal = allowLegacyReadinessFallback
-    ? publishDecisionReason
-    : canonicalDeliveryGateStatus === "deliverable"
+    : readinessSource;
+  const legacyReadinessFallbackUsed = allowLegacyReadinessFallback;
+  const publishDecisionReasonFinal =
+    canonicalDeliveryGateStatus === "deliverable"
       ? "customer_publish_eligible"
       : `${canonicalDeliveryGateStatus || "delivery_gate_status_unknown"}:${String(
           canonicalReasonCodeRaw ||
@@ -1568,8 +1571,8 @@ function buildPublishEligibilitySummary({
       high_value_outreach_ready_non_authoritative_for_customer_delivery: true,
     },
     legacy_compatibility: {
-      readiness_source: readinessSource,
-      readiness_fallback_used: readinessFallbackUsed,
+      readiness_source: legacyReadinessSource,
+      readiness_fallback_used: legacyReadinessFallbackUsed,
       customer_delivery_ready: customerDeliveryReadyAlias,
       customer_publish_eligible: customerPublishEligible,
       report_publishable: reportPublishable,
@@ -2215,7 +2218,7 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
       ? "ready"
       : deliveryGateStatus === "user_needs_documents"
           ? "needs_documents"
-          : "publication_held";
+          : null;
   const customerMessage =
     customerStatusLabel === "ready"
       ? "This report is eligible for customer delivery."

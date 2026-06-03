@@ -203,10 +203,11 @@ export default async function handler(req, res) {
       const rawDeliveryGateStatus = hasCanonical
         ? String(deliveryDecisionState?.delivery_gate_status || 'deliverable')
         : String(reportData?.delivery_gate_status || 'deliverable');
-      const deliveryGateStatus =
-        coreValidRequiredCoverage
-          ? 'deliverable'
-          : rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus;
+      const deliveryGateStatus = hasCanonical
+        ? (coreValidRequiredCoverage ? 'deliverable' : rawDeliveryGateStatus)
+        : (coreValidRequiredCoverage
+            ? 'deliverable'
+            : rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus);
       const customerDeliveryAllowed = coreValidRequiredCoverage
         ? true
         : hasCanonical
@@ -231,9 +232,7 @@ export default async function handler(req, res) {
             : deliveryDecisionState?.customer_status_reason_code ||
               reportData?.delivery_gate_reason_code ||
               null)
-        : deliveryDecisionState?.customer_status_reason_code ||
-          reportData?.delivery_gate_reason_code ||
-          null;
+        : null;
       const failClosedReasonCode =
         deliveryDecisionState?.fail_closed_reason_code ||
         reportData?.delivery_gate_reason_code ||
@@ -241,8 +240,8 @@ export default async function handler(req, res) {
       const creditRestoreRequired = coreValidRequiredCoverage
         ? false
         : hasCanonical
-        ? Boolean(deliveryDecisionState?.credit_restore_required)
-        : (deliveryGateStatus === 'user_needs_documents');
+          ? Boolean(deliveryDecisionState?.credit_restore_required)
+          : (deliveryGateStatus === 'user_needs_documents');
       const legacyAliasConflicts = hasCanonical
         ? {
             delivery_gate_status:

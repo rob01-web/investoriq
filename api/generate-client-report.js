@@ -201,21 +201,15 @@ function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
 function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
   const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
-  const deliveryGateStatus =
-    state.source === "canonical_delivery_decision"
-      ? rawDeliveryGateStatus
-      : rawDeliveryGateStatus === "admin_review_required"
-        ? "deliverable"
-        : rawDeliveryGateStatus;
   const customerDeliveryAllowed = Boolean(state.customer_delivery_allowed);
   const holdDelivery = Boolean(state.hold_delivery);
   return {
-    delivery_gate_status: deliveryGateStatus,
+    delivery_gate_status: rawDeliveryGateStatus,
     customer_delivery_allowed: customerDeliveryAllowed,
     hold_delivery: holdDelivery,
     holdDelivery,
     legacy_compatibility: {
-      delivery_gate_status: deliveryGateStatus,
+      delivery_gate_status: rawDeliveryGateStatus,
       customer_delivery_ready: customerDeliveryAllowed,
       customer_publish_eligible: customerDeliveryAllowed,
       hold_delivery: holdDelivery,
@@ -10857,7 +10851,7 @@ try {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
     const failClosedDecisionState = {
       ...blockedDecisionState,
-      customer_status_label: "publication_held",
+      customer_status_label: "needs_documents",
       customer_message:
         "Report could not be generated. InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.",
     };
