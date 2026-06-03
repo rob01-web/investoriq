@@ -1116,6 +1116,39 @@ if (currentDebtAbsentEligibility.sections?.advanced_modeling?.source_constrained
   process.exit(1);
 }
 
+const appraisalOnlyEligibility = buildFullUnderwritingSectionEligibility({
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true },
+      appraisal_parsed: { present: true, has_appraised_value: true, has_cap_rate: true },
+    },
+    rendered_sections: {},
+  },
+  currentDebtState: buildCurrentDebtAssessmentState({
+    mortgagePayload: null,
+    loanTermSheetTermsPayload: {
+      purchase_price: 2000000,
+      ltv: 0.75,
+      interest_rate: 0.065,
+      amortization_years: 30,
+      derived_acquisition_loan_amount: 1500000,
+    },
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: { status: "aligned" },
+});
+if (appraisalOnlyEligibility.sections?.dcf?.source_constrained !== true) {
+  console.error("Expected DCF section to remain source-constrained with appraisal context only.");
+  console.error("Actual DCF section:", appraisalOnlyEligibility.sections?.dcf);
+  process.exit(1);
+}
+if (appraisalOnlyEligibility.sections?.advanced_modeling?.source_constrained !== true) {
+  console.error("Expected advanced modeling section to remain source-constrained with appraisal context only.");
+  console.error("Actual advanced-modeling section:", appraisalOnlyEligibility.sections?.advanced_modeling);
+  process.exit(1);
+}
+
 const currentDebtVerifiedEligibility = buildFullUnderwritingSectionEligibility({
   sourceReportCoverageQa: {
     artifact_inventory: {

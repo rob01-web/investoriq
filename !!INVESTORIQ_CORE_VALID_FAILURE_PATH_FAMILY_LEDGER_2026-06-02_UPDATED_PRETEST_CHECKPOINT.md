@@ -1,3 +1,122 @@
+# June 3, 2026 Addendum - Codex Usage Conservation / Slice 3 In Progress Checkpoint
+
+## Current continuation point
+
+Codex is currently working on:
+
+```text
+Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup
+```
+
+This follows:
+
+```text
+Slice 0 - Documentation checkpoint: complete
+Slice 1 - Delivery/artifact legacy alias cleanup: pass / safe to commit
+Slice 2 - Advanced modeling / DCF / waterfall render gates: pass / safe to commit
+Slice 3 - in progress with tightened prompt
+```
+
+## Codex usage constraint
+
+Rob has limited Codex usage until June 8.
+
+Current remaining usage at this checkpoint:
+
+```text
+62% remaining
+```
+
+Because usage is limited, future Codex work must conserve usage. Do not ask Codex for unnecessary long summaries, broad re-audits, repeated verification passes, or nonessential exploratory work.
+
+## Prompt/receipt style change - controlling from this point forward
+
+Codex prompts should remain:
+
+- tightly scoped;
+- tied to the committed `.MD` cleanup map;
+- repo-wide by root family, not report-specific;
+- limited to the mapped file cluster unless Codex proves the invariant cannot be enforced there;
+- direct and short enough to avoid wasting usage.
+
+Codex receipts should be concise. Do not ask Codex for long narrative summaries of every detail it changed unless a serious failure or ambiguous patch requires deeper explanation.
+
+Use this compact receipt standard by default:
+
+```text
+A. Files changed
+B. Audit IDs addressed
+C. Exact production rule fixed
+D. Tests run / pass
+E. Anti-hardcode confirmation
+F. Anything intentionally not touched
+```
+
+Request longer receipts only when:
+
+- Codex changes files outside the requested scope;
+- a test fails;
+- a production invariant is unclear;
+- a patch touches delivery/credit/SQL/lifecycle behavior;
+- a patch risks weakening fail-closed behavior;
+- the result is not obviously safe to commit.
+
+## Slice 3 tightened scope
+
+The active Slice 3 prompt was tightened to reduce Codex usage.
+
+Controlling Slice 3 invariant:
+
+```text
+Proposed acquisition/refinance financing can be recognized as proposed/acquisition support without becoming true current debt.
+```
+
+Additional non-negotiable appraisal guard:
+
+```text
+Appraisal context may support valuation/comparable context only.
+Appraisal context must never unlock current debt, current-debt DSCR, refinance, DCF, waterfall, debt-service mix, sale-proceeds, or equity-return surfaces.
+```
+
+Slice 3 scope:
+
+```text
+Audit IDs: L-18, L-21, L-22
+Files:
+- api/parse/parse-doc.js
+- api/_lib/report-surface-contracts.js
+- api/_lib/report-contract-qa.js
+- api/_lib/source-report-coverage-qa.js
+- related tests only
+```
+
+`api/generate-client-report.js` may be inspected only for the appraisal unlock guard and patched only if required to enforce the invariant.
+
+## Current execution guardrails
+
+Do not live retest yet.
+Do not rerun the repo-wide audit.
+Do not flip DocRaptor production mode.
+Do not create public samples.
+Do not change pricing/Stripe.
+Do not casually patch SQL/RPC.
+Do not add new API/serverless routes.
+Do not hardcode 124 Richmond, filenames, job IDs, report IDs, or fixture-only values.
+Do not ask Codex for broad summaries or broad audits while usage is constrained.
+
+## Next sequence after Slice 3
+
+After Codex returns the Slice 3 receipt:
+
+1. Review whether Slice 3 passes using the compact receipt.
+2. If pass, commit Slice 3.
+3. Continue to Slice 4 - Property-tax corroborating support path.
+4. Then Slice 5 - Dashboard/customer/Admin copy cleanup.
+5. Then Slice 6 - Parser/source-coverage fallback rationalization.
+6. Reassess before any live retest.
+
+---
+
 # June 2, 2026 Addendum - Repo-Wide Legacy Residue Audit Converted Into Cleanup Map
 
 ## Purpose

@@ -73,6 +73,34 @@ const explicitCurrentDebtAssumptionState = buildAcquisitionAssumptionState({
 assert.equal(explicitCurrentDebtAssumptionState.acquisition_support_status, "validated_supported");
 assert.equal(explicitCurrentDebtAssumptionState.current_debt_separated, true);
 
+// Appraisal context is valuation-only and must not promote current debt aliases.
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Appraisal Summary",
+      "As-is Value: $12,000,000",
+      "Cap Rate: 5.75%",
+      "Valuation context only.",
+    ].join("\n")
+  ),
+  "appraisal"
+);
+const appraisalPromotion = resolveLoanTermCurrentDebtPromotion({
+  rawText: [
+    "Appraisal Summary",
+    "As-is Value: $12,000,000",
+    "Cap Rate: 5.75%",
+    "Valuation context only.",
+  ].join("\n"),
+  outstandingBalance: null,
+  purchasePrice: null,
+  derivedAcquisitionLoanAmount: null,
+  ltv: null,
+});
+assert.equal(appraisalPromotion.explicitCurrentDebtProof, false);
+assert.equal(appraisalPromotion.hasAcquisitionOrProposedSignals, false);
+assert.equal(appraisalPromotion.shouldExposeCurrentDebtAliases, false);
+
 // Acquisition/proposed-only financing must remain acquisition support, not current debt.
 assert.equal(
   inferSupportingDocTypeFromText(
@@ -102,6 +130,38 @@ const acquisitionPromotion = resolveLoanTermCurrentDebtPromotion({
 assert.equal(acquisitionPromotion.explicitCurrentDebtProof, false);
 assert.equal(acquisitionPromotion.hasAcquisitionOrProposedSignals, true);
 assert.equal(acquisitionPromotion.shouldExposeCurrentDebtAliases, false);
+
+const appraisalPlusAcquisitionPromotion = resolveLoanTermCurrentDebtPromotion({
+  rawText: [
+    "Indicative acquisition financing term sheet",
+    "Purchase price: $12,500,000",
+    "Proposed loan amount: $8,750,000",
+    "Proposed LTV: 70%",
+    "Appraisal Summary",
+    "As-is Value: $12,000,000",
+  ].join("\n"),
+  outstandingBalance: 8750000,
+  purchasePrice: 12500000,
+  derivedAcquisitionLoanAmount: 8750000,
+  ltv: 70,
+});
+assert.equal(appraisalPlusAcquisitionPromotion.explicitCurrentDebtProof, false);
+assert.equal(appraisalPlusAcquisitionPromotion.hasAcquisitionOrProposedSignals, true);
+assert.equal(appraisalPlusAcquisitionPromotion.shouldExposeCurrentDebtAliases, false);
+
+// Ambiguous financing language without explicit current debt evidence must fail safe.
+assert.equal(
+  inferSupportingDocTypeFromText(
+    [
+      "Loan terms review",
+      "Interest rate discussed",
+      "Amortization discussed",
+      "Payment structure discussed",
+      "No balance figure is provided.",
+    ].join("\n")
+  ),
+  "supporting_documents_unclassified"
+);
 
 // Generic support without debt semantics remains unclassified.
 assert.equal(

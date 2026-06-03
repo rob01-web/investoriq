@@ -2174,13 +2174,13 @@ const UNDERWRITING_SECTION_BLUEPRINTS = {
   dcf: {
     rendered_keys: ["has_dcf_section"],
     required_source_roles: ["t12_parsed"],
-    optional_source_roles: ["appraisal_parsed", "mortgage_statement_parsed", "loan_term_sheet_parsed"],
+    optional_source_roles: ["mortgage_statement_parsed", "loan_term_sheet_parsed"],
     omission_reason_code: "source_constrained_dcf",
   },
   advanced_modeling: {
     rendered_keys: ["has_advanced_modeling_section"],
     required_source_roles: ["t12_parsed", "rent_roll_parsed"],
-    optional_source_roles: ["mortgage_statement_parsed", "loan_term_sheet_parsed", "renovation_parsed", "appraisal_parsed"],
+    optional_source_roles: ["mortgage_statement_parsed", "loan_term_sheet_parsed", "renovation_parsed"],
     omission_reason_code: "source_constrained_advanced_modeling",
   },
   methodology: {
@@ -2214,7 +2214,6 @@ export function buildFullUnderwritingSectionEligibility({
     const hasCanonicalSourceSupport = requiredSourcesPresent || optionalSourcesPresent;
     const sourceReconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtState?.has_true_current_debt_balance);
-    const hasAppraisalContext = Boolean(inventory?.appraisal_parsed?.present);
     const currentDebtSourceConstrained =
       sectionKey === "debt_structure" &&
       currentDebtState?.current_debt_dscr_status !== "computed" &&
@@ -2223,8 +2222,7 @@ export function buildFullUnderwritingSectionEligibility({
       sectionKey === "dcf" && !hasVerifiedCurrentDebtBalance;
     const advancedModelingSourceConstrained =
       sectionKey === "advanced_modeling" &&
-      !hasVerifiedCurrentDebtBalance &&
-      !hasAppraisalContext;
+      !hasVerifiedCurrentDebtBalance;
     const sourceConstrained =
       !requiredSourcesPresent ||
       currentDebtSourceConstrained ||
