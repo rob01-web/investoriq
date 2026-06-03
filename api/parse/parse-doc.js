@@ -501,6 +501,16 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   if (financingRoute.explicitCurrentDebtProof && currentDebtSignals >= 2) {
     return 'mortgage_statement';
   }
+  const propertyTaxSignals = countMatches(SUPPORTING_DOC_ALIASES.property_tax);
+  const propertyTaxDocumentSignals =
+    /\b(?:property\s*tax|property_tax|tax\s*bill|tax\s*notice|municipal\s*property\s*taxes?|real(?:ty|\\s+estate)\s*tax(?:es)?|annual\s*taxes|assessment\s*roll|roll\s*number|tax\s*installments?|installments?)\b/i.test(String(text || ""));
+  const nonPropertyTaxSupportSignals =
+    has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION']) ||
+    has(['PHASE I', 'PHASE 1', 'ESA', 'ENVIRONMENTAL', 'ZONING', 'COMPLIANCE', 'PERMITTED USE']) ||
+    has(['RENOVATION', 'CAPEX', 'CAP EX', 'CAPITAL BUDGET', 'SCOPE OF WORK']) ||
+    has(['MARKET SURVEY', 'RENT SURVEY', 'RENT COMP']) ||
+    has(['BROKER', 'BROKER NOTE', 'BACKGROUND', 'GENERAL MARKET COMMENTARY']);
+  if ((propertyTaxSignals >= 2 || propertyTaxDocumentSignals) && !nonPropertyTaxSupportSignals) return 'property_tax';
   if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
 
   if (financingRoute.ambiguousFinancingRoute) {
@@ -519,8 +529,6 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   const renovationSignals = countMatches(SUPPORTING_DOC_ALIASES.renovation);
   const renovationNameSignal = /renovation|capex|cap ex|capital|budget|scope/i.test(nameNorm);
   if ((allowFilenameHint && renovationNameSignal && renovationSignals >= 1) || renovationSignals >= 2) return 'renovation';
-
-  if (countMatches(SUPPORTING_DOC_ALIASES.property_tax) >= 2 || has(['PROPERTY TAX', 'ASSESSMENT', 'MUNICIPAL', 'ROLL NUMBER'])) return 'property_tax';
   if (has(['POLICY NUMBER', 'NAMED INSURED']) && countMatches(['COVERAGE', 'PREMIUM', 'EFFECTIVE DATE', 'EXPIRATION DATE', 'DEDUCTIBLE']) >= 2) return 'insurance_policy';
   if (has(['BEGINNING BALANCE', 'ENDING BALANCE']) && countMatches(['ACCOUNT NUMBER', 'DEPOSITS', 'WITHDRAWALS', 'DAILY BALANCE', 'STATEMENT PERIOD']) >= 2) return 'bank_statement';
   return 'supporting_documents_unclassified';

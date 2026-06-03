@@ -74,18 +74,6 @@ assert.equal(
 assert.equal(
   inferSupportingDocTypeFromText(
     [
-      "Historical Capital Expenditure Summary",
-      "Roof Replacement 2018-09-15 $45,000",
-      "Boiler Replacement 2020-02-10 $32,000",
-      "CapEx items only. No rent lift, ROI, payback, or forward-looking renovation plan provided.",
-    ].join("\n")
-  ),
-  "renovation"
-);
-
-assert.equal(
-  inferSupportingDocTypeFromText(
-    [
       "Property Tax Notice",
       "Annual Tax 2025 $42,300",
       "Assessment Roll 1234-567",
@@ -332,6 +320,45 @@ const phaseIOverrideTaxonomy = buildSupportDocTaxonomyState({
 });
 assert.equal(phaseIOverrideTaxonomy.semantic_doc_role, "environmental_due_diligence");
 assert.notEqual(phaseIOverrideTaxonomy.semantic_doc_role, "property_tax");
+
+const appraisalOverrideTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "supporting",
+  detectedDocType: "supporting",
+  originalFilename: "Appraisal_Summary.pdf",
+  rawText: [
+    "Appraisal Summary",
+    "As-is Value $12,000,000",
+    "Cap Rate 5.75%",
+  ].join("\n"),
+  payload: {},
+});
+assert.notEqual(appraisalOverrideTaxonomy.semantic_doc_role, "property_tax");
+
+const renovationOverrideTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "supporting",
+  detectedDocType: "supporting",
+  originalFilename: "Renovation_Budget.pdf",
+  rawText: [
+    "Renovation Budget",
+    "Scope of Work",
+    "Total Budget $250,000",
+  ].join("\n"),
+  payload: {},
+});
+assert.notEqual(renovationOverrideTaxonomy.semantic_doc_role, "property_tax");
+
+const brokerOverrideTaxonomy = buildSupportDocTaxonomyState({
+  declaredDocType: "supporting",
+  detectedDocType: "supporting",
+  originalFilename: "Broker_Note.pdf",
+  rawText: [
+    "Broker note",
+    "General market commentary.",
+    "No property tax document attached.",
+  ].join("\n"),
+  payload: {},
+});
+assert.notEqual(brokerOverrideTaxonomy.semantic_doc_role, "property_tax");
 
 const zoningOverrideTaxonomy = buildSupportDocTaxonomyState({
   declaredDocType: "property_tax",

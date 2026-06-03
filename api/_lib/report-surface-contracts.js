@@ -1578,6 +1578,12 @@ export function buildSupportDocTaxonomyState({
   const hasPropertyTaxSignals =
     positiveNumber(payload?.annual_tax) ||
     hasText(["property tax", "tax bill", "assessment notice", "assessment", "roll number", "municipal tax"]);
+  const hasNonPropertyTaxSupportSignals =
+    hasText(["appraisal", "appraised value", "as-is value", "stabilized value", "value conclusion", "opinion of value", "valuation report", "market survey", "broker opinion"]) ||
+    hasText(["phase i", "phase 1", "esa", "environmental", "environment", "recognized environmental condition", "recognized environmental conditions", "rec", "site assessment"]) ||
+    hasText(["zoning", "compliance", "permitted use", "municipal zoning", "land use", "entitlement"]) ||
+    hasText(["renovation", "capex", "cap ex", "capital budget", "capital expenditure", "scope of work", "unit turn", "phasing", "rent lift", "roi", "payback"]) ||
+    hasText(["broker", "broker note", "background", "general market commentary", "email", "from:", "re:", "subject:", "sent:", "@"]);
   const hasEnvironmentalSignals =
     hasText([
       "phase i",
@@ -1646,7 +1652,7 @@ export function buildSupportDocTaxonomyState({
     semanticDocRole = "renovation_budget";
     semanticDocRoleReason = "renovation_support_signals";
     confidence = 0.93;
-  } else if (hasPropertyTaxSignals) {
+  } else if (hasPropertyTaxSignals && !hasNonPropertyTaxSupportSignals) {
     semanticDocRole = "property_tax";
     semanticDocRoleReason = "property_tax_support_signals";
     confidence = 0.93;

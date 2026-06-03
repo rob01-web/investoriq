@@ -2970,6 +2970,36 @@ assert.equal(
   true
 );
 
+const propertyTaxMismatchNonBlocking = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    {
+      type: "t12_parsed",
+      payload: {
+        effective_gross_income: 1000000,
+        total_operating_expenses: 400000,
+        net_operating_income: 600000,
+        expense_lines: [
+          { label: "Property Taxes", amount: 36000 },
+        ],
+      },
+    },
+    {
+      type: "property_tax_parsed",
+      payload: {
+        annual_tax: 42000,
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Property tax support listed for auditability only.</p>",
+});
+assert.equal(
+  propertyTaxMismatchNonBlocking.violations.some((v) => v.code === "PROPERTY_TAX_T12_MISMATCH"),
+  false
+);
+
 const currentDebtDocumentTreatmentContradiction = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
