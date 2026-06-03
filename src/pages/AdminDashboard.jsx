@@ -518,7 +518,7 @@ export default function AdminDashboard() {
       }
       setFixQueueActionMessage(
         action === 'mark_still_reviewing'
-          ? 'Legacy review signal logged for internal diagnostics only.'
+          ? 'Internal review marker logged for internal diagnostics only.'
           : data?.message || 'Action completed.'
       );
       await fetchFixQueue();
@@ -1628,7 +1628,7 @@ export default function AdminDashboard() {
                     value={issueFilter} onChange={e => { setIssueFilter(e.target.value); fetchIssues(e.target.value); }}
                     style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
                     <option value="open">Open</option>
-                    <option value="reviewing">Legacy review signal</option>
+                    <option value="reviewing">Internal review marker</option>
                     <option value="resolved">Resolved</option>
                     <option value="all">All</option>
                   </select>
@@ -1671,7 +1671,7 @@ export default function AdminDashboard() {
                           <TblTd right>
                             <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
                               {issue.status !== 'reviewing' && (
-                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Legacy review signal</Btn>
+                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Internal review marker</Btn>
                               )}
                               {issue.status !== 'resolved' && (
                                 <Btn onClick={() => updateIssue(issue.id, 'resolved')} disabled={isUpdating} variant="success">

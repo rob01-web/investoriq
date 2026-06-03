@@ -2044,8 +2044,8 @@ useEffect(() => {
                     ? needsDocumentsMessage
                     : activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
                     ? activeDeliveryDecision.customer_message
-                    : activeJobForRuns?.status === 'queued' ? 'Processing underway. Monitor status in Active Jobs below.'
-                    : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Processing underway. Monitor status in Active Jobs below.'
+                    : activeJobForRuns?.status === 'queued' ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
+                    : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')

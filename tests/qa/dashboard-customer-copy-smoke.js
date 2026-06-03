@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
@@ -44,6 +45,17 @@ const coreValidDecision = resolveDashboardCustomerStatus(
 );
 assert.equal(coreValidDecision.customer_status_label, "failed");
 assert.equal(/source package|rent roll|additional required documents|needs documents/i.test(String(coreValidDecision.customer_message || "")), false);
+
+const dashboardSource = fs.readFileSync("src/pages/Dashboard.jsx", "utf8");
+assert.match(
+  dashboardSource,
+  /Report generation may take up to 24 business hours\. You will be notified when your report is ready\./
+);
+assert.equal(/Processing underway\. Monitor status in Active Jobs below\./.test(dashboardSource), false);
+const adminDashboardSource = fs.readFileSync("src/pages/AdminDashboard.jsx", "utf8");
+assert.match(adminDashboardSource, /Internal review marker logged for internal diagnostics only\./);
+assert.match(adminDashboardSource, /<option value='reviewing'>Internal review marker<\/option>|<option value="reviewing">Internal review marker<\/option>/);
+assert.match(adminDashboardSource, /Internal review marker<\/Btn>|Internal review marker<\/button>/);
 
 const failedGuidance = getFailedFileGuidance(
   [
