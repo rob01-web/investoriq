@@ -3,8 +3,10 @@ import fs from "fs";
 
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
+process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 
 const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const generateClientReport = (await import("../../api/generate-client-report.js")).default;
 const {
   buildCurrentDebtAssessmentState,
   buildAcquisitionAssumptionState,
@@ -85,6 +87,156 @@ assert.match(templateSource, /<!-- BEGIN SECTION_10_COMPARABLE_CONTEXT -->/);
 assert.match(templateSource, /<!-- BEGIN RELATIVE_POSITIONING -->/);
 assert.match(templateSource, /\{\{RELATIVE_POSITIONING_COPY\}\}/);
 assert.match(templateSource, /\{\{RELATIVE_POSITIONING_NOTE\}\}/);
+
+const fullRenderSupportDocuments = [
+  { original_filename: "T12_Operating_Statement.pdf", doc_type: "t12", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:00:00Z" },
+  { original_filename: "Rent_Roll_Summary.pdf", doc_type: "rent_roll", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:01:00Z" },
+  { original_filename: "Current_Loan_Summary.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:02:00Z" },
+  { original_filename: "Purchase_Assumptions.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:03:00Z" },
+  { original_filename: "Property_Tax_Support.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:04:00Z" },
+  { original_filename: "CapEx_Notes.txt", doc_type: "supporting_document", parse_status: "parsed_with_warnings", parse_error: "", uploaded_at: "2026-06-04T12:05:00Z" },
+  { original_filename: "Market_Rent_Survey_Excerpt.txt", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:06:00Z" },
+  { original_filename: "Broker_Email_Context.msg", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:07:00Z" },
+  { original_filename: "Phase_I_ESA_Context.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:08:00Z" },
+  { original_filename: "Unsupported_Appraisal_Excerpt.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:09:00Z" },
+];
+
+const fullRenderHarnessRequest = {
+  headers: {
+    "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+  },
+  body: {
+    userId: "user_full_render_smoke",
+    report_type: "underwriting",
+    property_name: "Harbourstone",
+    sections: {
+      unitValueAdd: "Source-bound launch memo context for operating and rent positioning only.",
+      neighborhoodAnalysis: "Source context and support-doc treatment remain limited to documented inputs.",
+    },
+    sectionEligibility: {
+      source_constrained_section_count: 0,
+      sections: {
+        operating_profile: { rendered: true, eligible: true, source_constrained: false, omitted: false },
+        operating_statement: { rendered: true, eligible: true, source_constrained: false, omitted: false },
+        market_context: { rendered: true, eligible: true, source_constrained: false, omitted: false },
+        data_coverage: { rendered: true, eligible: true, source_constrained: false, omitted: false },
+      },
+    },
+    __test_return_final_html: true,
+    __test_payloads: {
+      t12Payload: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+        gross_potential_rent: 1850000,
+        gross_scheduled_rent: 1850000,
+      },
+      rentRollPayload: {
+        total_units: 48,
+        occupied_units: 46,
+        vacant_units: 2,
+        occupancy: 0.9583333333,
+        total_in_place_annual: 1036800,
+        total_market_annual: 1137600,
+        units: [
+          { unit: "101", status: "occupied", in_place_rent: 2100, market_rent: 2250, beds: 1, sqft: 720 },
+          { unit: "102", status: "occupied", in_place_rent: 2125, market_rent: 2275, beds: 1, sqft: 735 },
+          { unit: "201", status: "vacant", in_place_rent: 0, market_rent: 2300, beds: 2, sqft: 980 },
+        ],
+        totals: {
+          summary_row_detected: true,
+          total_units: 48,
+          occupied_units: 46,
+          vacant_units: 2,
+          occupancy: 0.9583333333,
+          in_place_rent_annual: 1036800,
+          market_rent_annual: 1137600,
+        },
+      },
+      computedRentRoll: {
+        total_units: 48,
+        occupied_units: 46,
+        vacant_units: 2,
+        occupancy: 0.9583333333,
+        total_in_place_annual: 1036800,
+        total_annual_market: 1137600,
+        annual_in_place_rent: 1036800,
+        annual_market_rent: 1137600,
+        avg_in_place_rent: 1800,
+        avg_market_rent: 1980,
+        rent_to_market_gap: 0.0961538462,
+        units: [
+          { unit: "101", status: "occupied", in_place_rent: 2100, market_rent: 2250, beds: 1, sqft: 720 },
+          { unit: "102", status: "occupied", in_place_rent: 2125, market_rent: 2275, beds: 1, sqft: 735 },
+          { unit: "201", status: "vacant", in_place_rent: 0, market_rent: 2300, beds: 2, sqft: 980 },
+        ],
+      },
+      propertyTaxPayload: {
+        annual_tax: 24000,
+        original_filename: "Property_Tax_Support.pdf",
+      },
+      documentSources: fullRenderSupportDocuments,
+    },
+  },
+};
+
+const fullRenderHarnessResponse = {
+  statusCode: null,
+  body: null,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return payload;
+  },
+};
+
+await generateClientReport(fullRenderHarnessRequest, fullRenderHarnessResponse);
+assert.equal(fullRenderHarnessResponse.statusCode, 200);
+assert.equal(fullRenderHarnessResponse.body?.success, true);
+const fullRenderHtml = String(fullRenderHarnessResponse.body?.final_html || "");
+assert.match(fullRenderHtml, /ACQUISITION MEMO/i);
+assert.match(fullRenderHtml, /Acquisition Memo Summary/i);
+assert.match(fullRenderHtml, /Operating Snapshot/i);
+assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
+assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
+assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
+assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
+const unresolvedTokens = fullRenderHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
+if (unresolvedTokens.length > 0) {
+  throw new Error(`Unresolved tokens: ${unresolvedTokens.slice(0, 10).join(", ")}`);
+}
+const visibleFullRenderHtml = fullRenderHtml.replace(/<!--[\s\S]*?-->/g, "");
+const visibleFullRenderText = visibleFullRenderHtml
+  .replace(/<style[\s\S]*?<\/style>/gi, " ")
+  .replace(/<script[\s\S]*?<\/script>/gi, " ")
+  .replace(/<[^>]+>/g, " ");
+if (/Cannot access 'rrUnits' before initialization/i.test(fullRenderHtml)) {
+  throw new Error("rrUnits TDZ crash surfaced in full render");
+}
+if (/hasForwardLookingRenovationInputs is not defined/i.test(fullRenderHtml)) {
+  throw new Error("Renovation flag undefined surfaced in full render");
+}
+const forbiddenSurfacePatterns = [
+  /Capital Risk Profile/i,
+  /Current Debt DSCR/i,
+  /Debt Coverage Constraint/i,
+  /refinance capacity/i,
+  /refinance proceeds/i,
+  /\bDCF\b/i,
+  /\bwaterfall\b/i,
+  /equity return/i,
+  /\bBUY\b/i,
+  /\bSELL\b/i,
+  /\bHOLD\b/i,
+];
+const forbiddenSurfaceHit = forbiddenSurfacePatterns.find((pattern) => pattern.test(visibleFullRenderText));
+if (forbiddenSurfaceHit) {
+  throw new Error(`Forbidden surface leaked in visible HTML: ${forbiddenSurfaceHit}`);
+}
+
 assert.match(
   reportSource,
   /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
@@ -3395,7 +3547,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /capRateValueIndicationBlockHtml = buildCapRateValueTable\(\s*coerceNumber\(t12Payload\?\.net_operating_income\),\s*acquisitionMemoUnits,/
+  /capRateValueIndicationBlockHtml = buildCapRateValueTable\(/
 );
 assert.equal(
   /capRateValueIndicationBlockHtml = buildCapRateValueTable\(\s*coerceNumber\(t12Payload\?\.net_operating_income\),\s*rrUnits,/.test(

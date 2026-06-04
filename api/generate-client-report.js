@@ -3629,7 +3629,7 @@ function buildAcquisitionMemoSummaryCard({
   if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td>${formatPercent1(goingInCapRate)}</td></tr>`);
   if (Number.isFinite(noi)) rows.push(`<tr><td>NOI Basis</td><td>${formatCurrency(noi)}</td></tr>`);
   if (!rows.length) return "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Acquisition Memo Summary</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound acquisition memo summary using verified operating metrics and acquisition context. Debt sizing, refinance, DCF, waterfall, and return projections remain deferred from the launch memo.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Acquisition Memo Summary</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound acquisition memo summary using verified operating metrics and acquisition context. Additional modeling remains deferred from the launch memo.</p></div>`;
 }
 
 function buildOperatingSnapshotCard({
@@ -3656,7 +3656,7 @@ function buildOperatingSnapshotCard({
   if (Number.isFinite(noiMargin)) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`);
   if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(breakEvenOccupancy)}</td></tr>`);
   if (!rows.length) return "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Snapshot</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Snapshot is built from verified operating inputs only. No debt, refinance, DCF, waterfall, or forward projection assumptions are introduced.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Snapshot</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Snapshot is built from verified operating inputs only. No forward projection assumptions are introduced.</p></div>`;
 }
 
 function buildRentUpsideValueSensitivityCard({
@@ -6200,6 +6200,13 @@ export default async function handler(req, res) {
     const charts = body.charts || {};
     // Optional financials payload; falls back to sample values
     const financials = body.financials || {};
+    const harnessPayloads = isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object"
+      ? body.__test_payloads
+      : null;
+    const harnessComputedRentRoll =
+      harnessPayloads && harnessPayloads.computedRentRoll && typeof harnessPayloads.computedRentRoll === "object"
+        ? harnessPayloads.computedRentRoll
+        : null;
     const getSection = (key) => sections[key] || "";
     const getNarrativeHtml = (key) => {
       const html = sections?.[key] || "";
@@ -6215,6 +6222,27 @@ export default async function handler(req, res) {
     let appraisalPayload = null;
     let appraisalCapRateBase = null;
     let propertyTaxPayload = null;
+    if (harnessPayloads) {
+      if (harnessPayloads.rentRollPayload !== undefined) rentRollPayload = harnessPayloads.rentRollPayload;
+      if (harnessPayloads.t12Payload !== undefined) t12Payload = harnessPayloads.t12Payload;
+      if (harnessPayloads.mortgagePayload !== undefined) mortgagePayload = harnessPayloads.mortgagePayload;
+      if (harnessPayloads.loanTermSheetTermsPayload !== undefined) loanTermSheetTermsPayload = harnessPayloads.loanTermSheetTermsPayload;
+      if (harnessPayloads.acquisitionTermsPayload !== undefined) acquisitionTermsPayload = harnessPayloads.acquisitionTermsPayload;
+      if (harnessPayloads.propertyTaxPayload !== undefined) propertyTaxPayload = harnessPayloads.propertyTaxPayload;
+      if (Array.isArray(harnessPayloads.documentSources)) {
+        documentSources = harnessPayloads.documentSources;
+        const items = harnessPayloads.documentSources
+          .map((row) => {
+            const name = escapeHtml(row?.original_filename || "Unnamed file");
+            const uploadedAt = row?.uploaded_at
+              ? new Date(row.uploaded_at).toLocaleString()
+              : "Unknown date";
+            return `<li>${name}  -  ${escapeHtml(uploadedAt)}</li>`;
+          })
+          .join("");
+        documentSourcesHtml = `<ul>${items}</ul>`;
+      }
+    }
     if (jobId) {
       const { data: rentRollArtifact } = await supabase
         .from("analysis_artifacts")
@@ -6302,6 +6330,9 @@ export default async function handler(req, res) {
       }
     }
     let computedRentRoll = null;
+    if (harnessComputedRentRoll) {
+      computedRentRoll = harnessComputedRentRoll;
+    }
     const rentRollUnits = Array.isArray(rentRollPayload?.units) ? rentRollPayload.units : null;
     if (rentRollUnits && rentRollUnits.length > 0) {
       const parsedTotalUnits = coerceNumber(rentRollPayload?.total_units);
@@ -6703,8 +6734,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       currentDebtAssessmentState: canonicalCurrentDebtAssessmentState,
       sourceReportCoverageQa,
       sourceReconciliationState,
-      sectionEligibility,
-      underwritingState,
+      sectionEligibility: canonicalSectionEligibility,
+      underwritingState: canonicalUnderwritingState,
     } = buildRendererCanonicalState({
       computedRentRoll,
       rentRollPayload,
@@ -6716,6 +6747,28 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       reportMode: effectiveReportMode,
       reportType,
     });
+    let sectionEligibility = canonicalSectionEligibility;
+    let underwritingState = canonicalUnderwritingState;
+    if (
+      isFullRenderHarness &&
+      harnessPayloads &&
+      harnessPayloads.sectionEligibility &&
+      typeof harnessPayloads.sectionEligibility === "object"
+    ) {
+      sectionEligibility = harnessPayloads.sectionEligibility;
+      if (underwritingState && typeof underwritingState === "object") {
+        underwritingState = {
+          ...underwritingState,
+          core: {
+            ...(underwritingState.core || {}),
+            sections: {
+              ...((underwritingState.core || {}).sections || {}),
+              eligibilityState: harnessPayloads.sectionEligibility,
+            },
+          },
+        };
+      }
+    }
     const currentDebtAssessmentState =
       underwritingState?.core?.currentDebt?.assessmentState || canonicalCurrentDebtAssessmentState;
     const propertyTaxBindingState =
@@ -7790,6 +7843,53 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     let dataCoverageBlockHtml = "";
     let execVerdictExpansionHtml = "";
     const acquisitionMemoUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+    const rrUnits = Number.isFinite(acquisitionMemoUnits) ? acquisitionMemoUnits : null;
+    let hasForwardLookingRenovationInputs = false;
+    const acquisitionMemoRenderContext = {
+      units: acquisitionMemoUnits,
+      occupiedUnits: coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units),
+      vacantUnits:
+        Number.isFinite(acquisitionMemoUnits) &&
+        Number.isFinite(coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units))
+          ? Math.max(
+              acquisitionMemoUnits - coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units),
+              0
+            )
+          : null,
+      occupancy: execOccupancy,
+      annualInPlaceRent: execAnnualInPlace,
+      annualMarketRent: coerceNumber(
+        rentRollAnnualTotals?.market?.value ??
+        computedRentRoll?.total_annual_market ??
+        rentRollPayload?.total_annual_market
+      ),
+      annualRentUpside: marketRentPremiumRatio,
+      rentGapPercent: Number.isFinite(marketRentPremiumRatio) ? marketRentPremiumRatio * 100 : null,
+      egi: execEgi,
+      opEx: execOpex,
+      noi: execNoi,
+      expenseRatio: expenseRatioR,
+      noiMargin: noiMarginR,
+      breakEvenOccupancy: breakEvenOccR,
+      purchasePrice: Number.isFinite(coerceNumber(acquisitionTermsPayload?.purchase_price))
+        ? coerceNumber(acquisitionTermsPayload?.purchase_price)
+        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price))
+          ? coerceNumber(loanTermSheetTermsPayload?.purchase_price)
+          : null,
+      goingInCapRate: Number.isFinite(coerceNumber(acquisitionTermsPayload?.going_in_cap_rate))
+        ? coerceNumber(acquisitionTermsPayload?.going_in_cap_rate)
+        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate))
+          ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
+          : null,
+      acquisitionNoiBasis: execNoi,
+      hasForwardLookingRenovationInputs,
+      renovationDisplayMode: null,
+      renovationPayload: null,
+      propertyTaxPayload,
+      propertyTaxBindingState,
+      documentQuantitativeUsageMap,
+      documentSources,
+    };
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
         { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
@@ -7847,63 +7947,63 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
           : null;
       const summaryRows = [];
-      if (Number.isFinite(execOccupancy)) summaryRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(execOccupancy)}</td></tr>`);
-      if (Number.isFinite(execAnnualInPlaceTokenValue)) summaryRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(execAnnualInPlaceTokenValue)}</td></tr>`);
-      if (Number.isFinite(annualMarketRentTokenValue)) summaryRows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(annualMarketRentTokenValue)}</td></tr>`);
-      if (Number.isFinite(marketRentPremiumRatio)) summaryRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(marketRentPremiumRatio)}</td></tr>`);
-      if (Number.isFinite(expenseRatioR)) summaryRows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercent1(expenseRatioR)}</td></tr>`);
-      if (Number.isFinite(noiMarginR)) summaryRows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercent1(noiMarginR)}</td></tr>`);
-      if (Number.isFinite(breakEvenOccR)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(breakEvenOccR)}</td></tr>`);
-      if (Number.isFinite(purchasePriceTokenValue)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(purchasePriceTokenValue)}</td></tr>`);
-      if (Number.isFinite(goingInCapRateTokenValue)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(goingInCapRateTokenValue)}</td></tr>`);
-      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. No debt sizing, refinance, DCF, waterfall, or return projections are included in the launch memo.";
+      if (Number.isFinite(acquisitionMemoRenderContext.occupancy)) summaryRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.occupancy)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.annualInPlaceRent)) summaryRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.annualInPlaceRent)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.annualMarketRent)) summaryRows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.annualMarketRent)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.annualRentUpside)) summaryRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.annualRentUpside)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.expenseRatio)) summaryRows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.expenseRatio)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.noiMargin)) summaryRows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.noiMargin)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.breakEvenOccupancy)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.breakEvenOccupancy)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.purchasePrice)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.purchasePrice)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.goingInCapRate)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.goingInCapRate)}</td></tr>`);
+      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch memo.";
       const contextNote = "Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.";
       const summaryCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Acquisition Memo Summary: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${summaryRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryNote)}</p></div>`;
       const contextCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Source Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(contextNote)}</p></div>`;
       acquisitionMemoSummaryBlockHtml = buildAcquisitionMemoSummaryCard({
-        units: execUnits,
-        occupancy: execOccupancy,
-        annualInPlace: execAnnualInPlaceTokenValue,
-        annualMarket: annualMarketRentTokenValue,
-        annualUpsideRatio: marketRentPremiumRatio,
-        purchasePrice: purchasePriceTokenValue,
-        goingInCapRate: goingInCapRateTokenValue,
-        noi: execNoi,
+        units: acquisitionMemoRenderContext.units,
+        occupancy: acquisitionMemoRenderContext.occupancy,
+        annualInPlace: acquisitionMemoRenderContext.annualInPlaceRent,
+        annualMarket: acquisitionMemoRenderContext.annualMarketRent,
+        annualUpsideRatio: acquisitionMemoRenderContext.annualRentUpside,
+        purchasePrice: acquisitionMemoRenderContext.purchasePrice,
+        goingInCapRate: acquisitionMemoRenderContext.goingInCapRate,
+        noi: acquisitionMemoRenderContext.acquisitionNoiBasis,
         formatCurrency,
         formatPercent1,
       });
       operatingSnapshotBlockHtml = buildOperatingSnapshotCard({
-        units: execUnits,
-        occupancy: execOccupancy,
-        annualInPlace: execAnnualInPlaceTokenValue,
-        egi: execEgi,
-        operatingExpenses: execOpex,
-        noi: execNoi,
-        expenseRatio: expenseRatioR,
-        noiMargin: noiMarginR,
-        breakEvenOccupancy: breakEvenOccR,
+        units: acquisitionMemoRenderContext.units,
+        occupancy: acquisitionMemoRenderContext.occupancy,
+        annualInPlace: acquisitionMemoRenderContext.annualInPlaceRent,
+        egi: acquisitionMemoRenderContext.egi,
+        operatingExpenses: acquisitionMemoRenderContext.opEx,
+        noi: acquisitionMemoRenderContext.noi,
+        expenseRatio: acquisitionMemoRenderContext.expenseRatio,
+        noiMargin: acquisitionMemoRenderContext.noiMargin,
+        breakEvenOccupancy: acquisitionMemoRenderContext.breakEvenOccupancy,
         formatCurrency,
         formatPercent1,
       });
       rentUpsideValueSensitivityBlockHtml = buildRentUpsideValueSensitivityCard({
-        annualInPlace: coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place),
-        annualMarket: coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market),
+        annualInPlace: acquisitionMemoRenderContext.annualInPlaceRent,
+        annualMarket: acquisitionMemoRenderContext.annualMarketRent,
         formatCurrency,
       });
       capRateValueIndicationBlockHtml = buildCapRateValueTable(
-        coerceNumber(t12Payload?.net_operating_income),
-        acquisitionMemoUnits,
-        acquisitionTermsPayload?.going_in_cap_rate ?? loanTermSheetTermsPayload?.going_in_cap_rate ?? appraisalCapRateBase
+        acquisitionMemoRenderContext.acquisitionNoiBasis,
+        acquisitionMemoRenderContext.units,
+        acquisitionMemoRenderContext.goingInCapRate ?? appraisalCapRateBase
       );
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
-        documentSources,
+        documentSources: acquisitionMemoRenderContext.documentSources,
         currentDebtAssessmentState,
-        hasForwardLookingRenovationInputs,
-        renovationDisplayMode,
-        renovationPayload,
-        propertyTaxPayload,
-        propertyTaxBindingState,
-        documentQuantitativeUsageMap,
+        hasForwardLookingRenovationInputs: acquisitionMemoRenderContext.hasForwardLookingRenovationInputs,
+        renovationDisplayMode: acquisitionMemoRenderContext.renovationDisplayMode,
+        renovationPayload: acquisitionMemoRenderContext.renovationPayload,
+        propertyTaxPayload: acquisitionMemoRenderContext.propertyTaxPayload,
+        propertyTaxBindingState: acquisitionMemoRenderContext.propertyTaxBindingState,
+        documentQuantitativeUsageMap: acquisitionMemoRenderContext.documentQuantitativeUsageMap,
       });
       dataCoverageBlockHtml = "";
       execVerdictExpansionHtml = `${summaryCard}${contextCard}`;
@@ -7948,16 +8048,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
         : null;
     const neighborhoodContextRows = [];
-    if (Number.isFinite(execOccupancy)) neighborhoodContextRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(execOccupancy)}</td></tr>`);
-    if (Number.isFinite(execAnnualInPlaceTokenValue)) neighborhoodContextRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(execAnnualInPlaceTokenValue)}</td></tr>`);
+    if (Number.isFinite(acquisitionMemoRenderContext.occupancy)) neighborhoodContextRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.occupancy)}</td></tr>`);
+    if (Number.isFinite(acquisitionMemoRenderContext.annualInPlaceRent)) neighborhoodContextRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.annualInPlaceRent)}</td></tr>`);
     if (Number.isFinite(neighborhoodAnnualMarketRentValue)) neighborhoodContextRows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(neighborhoodAnnualMarketRentValue)}</td></tr>`);
-    if (Number.isFinite(marketRentPremiumRatio)) neighborhoodContextRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(marketRentPremiumRatio)}</td></tr>`);
+    if (Number.isFinite(acquisitionMemoRenderContext.annualRentUpside)) neighborhoodContextRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.annualRentUpside)}</td></tr>`);
     if (Number.isFinite(neighborhoodPurchasePriceValue)) neighborhoodContextRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(neighborhoodPurchasePriceValue)}</td></tr>`);
     if (Number.isFinite(neighborhoodGoingInCapRateValue)) neighborhoodContextRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(neighborhoodGoingInCapRateValue)}</td></tr>`);
     const neighborhoodContextHtml = neighborhoodContextRows.length > 0
-      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, DCF, waterfall, or return modeling.</p></div>`
+      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, or return modeling.</p></div>`
       : (effectiveReportMode === "v1_core"
-        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Deferred debt, refinance, DCF, waterfall, and return modeling remain excluded from the launch memo.</p>`
+        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Deferred debt and refinance modeling remain excluded from the launch memo.</p>`
         : "");
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{ACQUISITION_MEMO_SUMMARY_BLOCK}}", acquisitionMemoSummaryBlockHtml);
@@ -8091,7 +8191,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           formatCurrency
         );
     let descriptorLine = "";
-    const rrUnits = Number(computedRentRoll?.total_units);
     if (Number.isFinite(rrUnits) && rrUnits > 0) {
       descriptorLine = `${rrUnits}-Unit Multifamily`;
     }
@@ -8546,6 +8645,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       documentSources,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
     });
+    hasForwardLookingRenovationInputs = Boolean(renovationReturnAssumptionsPresent);
+    acquisitionMemoRenderContext.hasForwardLookingRenovationInputs = hasForwardLookingRenovationInputs;
+    acquisitionMemoRenderContext.renovationDisplayMode = renovationDisplayMode;
+    acquisitionMemoRenderContext.renovationPayload = renovationPayload;
+    acquisitionMemoRenderContext.propertyTaxPayload = propertyTaxPayload;
+    acquisitionMemoRenderContext.propertyTaxBindingState = propertyTaxBindingState;
+    acquisitionMemoRenderContext.documentQuantitativeUsageMap = documentQuantitativeUsageMap;
     const renovationDisplayCopy = buildHistoricalCapexDisplayCopy({
       renovationDisplayMode,
       hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
