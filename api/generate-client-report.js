@@ -7789,6 +7789,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     let sourceContextBlockHtml = "";
     let dataCoverageBlockHtml = "";
     let execVerdictExpansionHtml = "";
+    const acquisitionMemoUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
         { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
@@ -7891,7 +7892,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       });
       capRateValueIndicationBlockHtml = buildCapRateValueTable(
         coerceNumber(t12Payload?.net_operating_income),
-        rrUnits,
+        acquisitionMemoUnits,
         acquisitionTermsPayload?.going_in_cap_rate ?? loanTermSheetTermsPayload?.going_in_cap_rate ?? appraisalCapRateBase
       );
       sourceContextBlockHtml = buildLaunchSourceContextBlock({

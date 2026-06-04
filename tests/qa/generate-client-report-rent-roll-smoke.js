@@ -3389,6 +3389,20 @@ assert.match(reportSource, /SECTION_2_2_CAP_RATE_VALUE_INDICATION/);
 assert.match(reportSource, /Source Context \/ Support Document Treatment/);
 assert.match(reportSource, /Data Coverage &amp; Source Limitations/);
 assert.match(reportSource, /function stripThinSectionPages/);
+assert.match(
+  reportSource,
+  /const acquisitionMemoUnits = coerceNumber\(computedRentRoll\?\.total_units \?\? rentRollPayload\?\.total_units\);/
+);
+assert.match(
+  reportSource,
+  /capRateValueIndicationBlockHtml = buildCapRateValueTable\(\s*coerceNumber\(t12Payload\?\.net_operating_income\),\s*acquisitionMemoUnits,/
+);
+assert.equal(
+  /capRateValueIndicationBlockHtml = buildCapRateValueTable\(\s*coerceNumber\(t12Payload\?\.net_operating_income\),\s*rrUnits,/.test(
+    reportSource
+  ),
+  false
+);
 const strippedEmptyHeadingHtml = generatorTest.stripEmptyHeadingBlocks(
   '<div><p class="section-intro">   </p><p class="subsection-title">  </p><p>Body</p></div>'
 );
