@@ -7,7 +7,7 @@ import { Loader2, UploadCloud, AlertCircle, FileDown } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
-import { formatReportUploadGateErrorMessage, resolveReportUploadGate } from '@/lib/reportUploadGate';
+import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from '@/lib/reportUploadGate';
 
 // DESIGN TOKENS
 const T = {
@@ -1259,9 +1259,6 @@ useEffect(() => {
       if (!acknowledged) { toast({ title: 'Acknowledgement required', description: 'Please acknowledge the disclosures before generating.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
       const effectivePropertyName = propertyNameRef.current.trim();
       if (!effectivePropertyName) { toast({ title: 'Property name required', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
-      const rentRolls = uploadedFiles.filter((f) => f.docType === 'rent_roll');
-      const t12s = uploadedFiles.filter((f) => f.docType === 't12' || f.docType === 't12_or_operating_statement');
-      if (rentRolls.length === 0 || t12s.length === 0) { toast({ title: 'Required documents missing', description: 'Upload a Rent Roll and T12 to proceed.', variant: 'destructive' }); setLoading(false); analyzeInFlightRef.current = false; return; }
       if (!reportUploadGate.canGenerate) {
         toast({
           title: 'Upload requirements not met',
@@ -1276,13 +1273,26 @@ useEffect(() => {
       const batchId = stagedBatchId || crypto.randomUUID();
       if (!stagedBatchId) setStagedBatchId(batchId);
 
-      const allFiles = [...rentRolls, ...t12s, ...uploadedFiles.filter((f) => f.docType !== 'rent_roll' && f.docType !== 't12' && f.docType !== 't12_or_operating_statement')];
+      const resolvedFiles = uploadedFiles.map((entry) => {
+        const resolvedCoreDocType = resolveCoreUploadDocType(entry);
+        return {
+          ...entry,
+          resolvedDocType: resolvedCoreDocType || normalizeDashboardDocType(entry.docType),
+        };
+      });
+      const rentRolls = resolvedFiles.filter((f) => f.resolvedDocType === 'rent_roll');
+      const t12s = resolvedFiles.filter((f) => f.resolvedDocType === 't12');
+      const allFiles = [
+        ...rentRolls,
+        ...t12s,
+        ...resolvedFiles.filter((f) => f.resolvedDocType !== 'rent_roll' && f.resolvedDocType !== 't12'),
+      ];
 
       const stagedFiles = [];
       for (const entry of allFiles) {
         const { file, docType } = entry;
         const ext = file.name.split('.').pop() || 'bin';
-        const normalizedDocType = normalizeDashboardDocType(docType);
+        const normalizedDocType = normalizeDashboardDocType(entry.resolvedDocType || docType);
         const safeOriginalName = safeName(file.name);
         const storagePath = `staged/${profile.id}/${batchId}/${normalizedDocType}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: uploadError } = DASHBOARD_DIAG_MINIMAL

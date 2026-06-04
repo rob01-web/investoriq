@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 
-import { resolveReportUploadGate, formatReportUploadGateErrorMessage } from "../../src/lib/reportUploadGate.js";
+import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from "../../src/lib/reportUploadGate.js";
 
 const screeningGate = resolveReportUploadGate({
   reportType: "screening",
@@ -56,6 +56,28 @@ const underwritingWithCoreMislabeledAsSupport = resolveReportUploadGate({
 assert.equal(underwritingWithCoreMislabeledAsSupport.canGenerate, true);
 assert.equal(underwritingWithCoreMislabeledAsSupport.hasSupportDocs, true);
 assert.equal(underwritingWithCoreMislabeledAsSupport.hasCoreDocs, true);
+
+const swappedCoreUploads = resolveReportUploadGate({
+  reportType: "screening",
+  uploadedFiles: [
+    { docType: "rent_roll", original_name: "Acme_T12_Operating_Statement.pdf" },
+    { docType: "t12", original_name: "Acme_Rent_Roll.xlsx" },
+  ],
+});
+assert.equal(swappedCoreUploads.canGenerate, true);
+assert.equal(swappedCoreUploads.blockedMessage, "");
+assert.equal(resolveCoreUploadDocType({ docType: "rent_roll", original_name: "Acme_T12_Operating_Statement.pdf" }), "t12");
+assert.equal(resolveCoreUploadDocType({ docType: "t12", original_name: "Acme_Rent_Roll.xlsx" }), "rent_roll");
+
+const ambiguousCoreUploads = resolveReportUploadGate({
+  reportType: "screening",
+  uploadedFiles: [
+    { docType: "supporting_documents", original_name: "Notes.pdf" },
+    { docType: "supporting_documents", original_name: "Context.pdf" },
+  ],
+});
+assert.equal(ambiguousCoreUploads.canGenerate, false);
+assert.equal(ambiguousCoreUploads.blockedReasonCode, "MISSING_REQUIRED_CORE_DOCUMENTS");
 
 assert.equal(
   formatReportUploadGateErrorMessage("MISSING_REQUIRED_CORE_DOCUMENTS", "screening"),

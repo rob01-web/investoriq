@@ -6,6 +6,22 @@ function normalizeUploadedDocType(value) {
   return normalizeDashboardDocType(value);
 }
 
+function normalizeFilenameHint(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\u2010-\u2015]/g, '-')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function inferCoreDocTypeFromFilename(value) {
+  const normalized = normalizeFilenameHint(value);
+  if (!normalized) return '';
+  if (/\b(t12|trailing 12|operating statement|income statement)\b/.test(normalized)) return 't12';
+  if (/\b(rent roll|rentroll)\b/.test(normalized)) return 'rent_roll';
+  return '';
+}
+
 function isCoreDocType(docType) {
   const normalized = normalizeUploadedDocType(docType);
   return CORE_DOC_TYPES.has(normalized);
@@ -14,6 +30,16 @@ function isCoreDocType(docType) {
 function isSupportDocType(docType) {
   const normalized = normalizeUploadedDocType(docType);
   return Boolean(normalized) && !CORE_DOC_TYPES.has(normalized);
+}
+
+export function resolveCoreUploadDocType(row = {}) {
+  const filenameHint = inferCoreDocTypeFromFilename(
+    row?.original_name ?? row?.original_filename ?? row?.file?.name ?? ''
+  );
+  const normalizedDocType = normalizeUploadedDocType(row?.docType ?? row?.doc_type);
+  if (normalizedDocType === 't12_or_operating_statement') return 't12';
+  if (CORE_DOC_TYPES.has(normalizedDocType)) return filenameHint || normalizedDocType;
+  return '';
 }
 
 function buildCoreUploadMessage({ hasRentRoll, hasT12 }) {
@@ -31,9 +57,10 @@ export function resolveReportUploadGate({ reportType = 'screening', uploadedFile
   const rows = Array.isArray(uploadedFiles) ? uploadedFiles : [];
   const normalizedRows = rows.map((row) => ({
     docType: normalizeUploadedDocType(row?.docType ?? row?.doc_type),
+    coreDocType: resolveCoreUploadDocType(row),
   }));
-  const hasRentRoll = normalizedRows.some((row) => row.docType === 'rent_roll');
-  const hasT12 = normalizedRows.some((row) => row.docType === 't12' || row.docType === 't12_or_operating_statement');
+  const hasRentRoll = normalizedRows.some((row) => row.coreDocType === 'rent_roll');
+  const hasT12 = normalizedRows.some((row) => row.coreDocType === 't12');
   const hasCoreDocs = hasRentRoll && hasT12;
   const hasSupportDocs = normalizedRows.some((row) => isSupportDocType(row.docType));
   const selectedReportType = String(reportType || '').toLowerCase().trim();
