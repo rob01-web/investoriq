@@ -5055,7 +5055,33 @@ function applyFinalSectionHealRenderGuards(
     outputHtml = stripMarkedSection(outputHtml, "SECTION_10_ADV_MODEL");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_11_FINAL_RECS");
     outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
-  } else if (effectiveReportMode === "v1_core" || String(reportType || "").trim().length > 0) {
+  } else if (effectiveReportMode === "v1_core") {
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_3_SCENARIO");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_3");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_4_NEIGHBORHOOD");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_5_RISK");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_6_RENOVATION");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT_TABLES");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_8_DEAL_SCORE");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_9_DCF");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_9_DCF_TABLE");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_ADV_MODEL");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_DCF_SUMMARY");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_COMPARABLE_CONTEXT");
+    outputHtml = stripMarkedSection(outputHtml, "RELATIVE_POSITIONING");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_11_FINAL_RECS");
+    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_DEAL_SCORE_BAR");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_EXPENSE_RATIO");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_EQUITY_COMPONENTS");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_BREAKEVEN");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_RISK_RADAR");
+    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_RENOVATION");
+  }
+  if (effectiveReportMode === "v1_core" || String(reportType || "").trim().length > 0) {
     outputHtml = stripMarkedSection(outputHtml, "SECTION_S2_INCOME_FORENSICS");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_S3_EXPENSE_STRUCTURE");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_S4_NOI_STABILITY");
@@ -6349,7 +6375,7 @@ export default async function handler(req, res) {
       "{{ESTIMATES_DISCLOSURE}}",
       effectiveReportMode === "screening_v1"
         ? "InvestorIQ screening outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
-        : "InvestorIQ underwriting outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
+        : "InvestorIQ acquisition memo outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -6360,7 +6386,7 @@ export default async function handler(req, res) {
       /<h3>\s*InvestorIQ Estimates\s*<\/h3>/g,
       effectiveReportMode === "screening_v1"
         ? "<h3>Document-Backed Screening Outputs</h3>"
-        : "<h3>Document-Backed Underwriting Outputs</h3>"
+        : "<h3>Document-Backed Acquisition Memo Outputs</h3>"
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -7572,14 +7598,14 @@ if (effectiveReportMode === "screening_v1") {
       if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
       const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
       if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
-      const modeLabel = effectiveReportMode === "v1_core" ? "Underwriting" : "Preliminary Screening";
+      const modeLabel = effectiveReportMode === "v1_core" ? "Acquisition Memo" : "Preliminary Screening";
       snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}</div></div>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
       finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
     }
-    const reportTypeLabel = effectiveReportMode === "v1_core" ? "Underwriting Memorandum" : "Preliminary Investment Screening Memorandum";
+    const reportTypeLabel = effectiveReportMode === "v1_core" ? "Acquisition Memo" : "Preliminary Investment Screening Memorandum";
     finalHtml = replaceAll(finalHtml, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
     if (effectiveReportMode === "v1_core") {
@@ -9026,6 +9052,32 @@ if (effectiveReportMode === "screening_v1") {
     if (!showSection11) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
     }
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_3");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF_TABLE");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_ADV_MODEL");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_DCF_SUMMARY");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_10_COMPARABLE_CONTEXT");
+      finalHtml = stripMarkedSection(finalHtml, "RELATIVE_POSITIONING");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_11_FINAL_RECS");
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_DEAL_SCORE_BAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EXPENSE_RATIO");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_EQUITY_COMPONENTS");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_BREAKEVEN");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RISK_RADAR");
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_CHART_RENOVATION");
+    }
     const marketContextVisibility = resolveMarketContextSectionVisibility({
       sectionEligibility: sectionEligibilityStateForRender,
       rendererDefault: section4FallbackRenderDefault,
@@ -9226,6 +9278,24 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = finalHtml.replace(
         /<span class="section-header-title">Data Coverage &amp; Underwriting Gaps<\/span>/g,
         '<span class="section-header-title">Data Coverage &amp; Screening Notes</span>'
+      );
+    }
+    if (effectiveReportMode === "v1_core") {
+      finalHtml = finalHtml.replace(
+        /<span class="section-header-title">Data Coverage &amp; Underwriting Scope<\/span>/g,
+        '<span class="section-header-title">Data Coverage &amp; Source Limitations</span>'
+      );
+      finalHtml = finalHtml.replace(
+        /<span class="section-header-title">Data Coverage &amp; Screening Notes<\/span>/g,
+        '<span class="section-header-title">Data Coverage &amp; Source Limitations</span>'
+      );
+      finalHtml = finalHtml.replace(
+        /DATA COVERAGE\s*&\s*UNDERWRITING SCOPE\s*-\s*SOURCE-SUPPORTED INPUTS AND WITHHELD SECTIONS/gi,
+        "Data Coverage & Source Limitations - Source-Supported Inputs and Withheld Sections"
+      );
+      finalHtml = finalHtml.replace(
+        /Missing inputs and omitted sections/gi,
+        "Source limitations and omitted sections"
       );
     }
     finalHtml = finalHtml.replace(

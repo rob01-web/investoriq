@@ -49,6 +49,7 @@ const contractsSource = fs.readFileSync("api/_lib/report-surface-contracts.js", 
 const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
 assert.match(reportSource, /Document-Backed Screening Outputs/);
+assert.match(reportSource, /Document-Backed Acquisition Memo Outputs/);
 const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
 assert.equal(legacyFallbackCallCount, 2);
 assert.ok(
@@ -61,9 +62,7 @@ assert.ok(
     contractsSource.includes('sectionKey === "advanced_modeling"') &&
     contractsSource.includes('!hasVerifiedCurrentDebtBalance')
 );
-assert.match(reportSource, /showSection9[\s\S]*hasVerifiedCurrentDebtBalance &&/);
-assert.match(reportSource, /showSection10[\s\S]*hasVerifiedCurrentDebtBalance \|\|[\s\S]*hasMeaningfulComparableRows\(tables\.comps \|\| \[\]\)/);
-assert.match(reportSource, /showScenarioAnalysisSection[\s\S]*hasVerifiedCurrentDebtBalance/);
+assert.match(reportSource, /if \(effectiveReportMode === "v1_core"\) \{[\s\S]*stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\)[\s\S]*stripMarkedSection\(finalHtml, "SECTION_9_DCF"\)[\s\S]*stripMarkedSection\(finalHtml, "SECTION_10_ADV_MODEL"\)[\s\S]*stripMarkedSection\(finalHtml, "SECTION_CHART_EQUITY_COMPONENTS"\)/);
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_COMPARABLE_CONTEXT"\)/);
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "RELATIVE_POSITIONING"\)/);
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_9_DCF"\)/);
@@ -71,6 +70,10 @@ assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_ADV_MODEL
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_10_DCF_SUMMARY"\)/);
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_3"\)/);
 assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_9_DCF_TABLE"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "EXEC_DSCR_CARD"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_7_DEBT"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_7_DEBT_TABLES"\)/);
+assert.match(reportSource, /stripMarkedSection\(finalHtml, "SECTION_8_DEAL_SCORE"\)/);
 assert.match(reportSource, /buildRelativePositioningCopy\(/);
 assert.match(templateSource, /<!-- BEGIN SECTION_10_COMPARABLE_CONTEXT -->/);
 assert.match(templateSource, /<!-- BEGIN RELATIVE_POSITIONING -->/);
@@ -4033,6 +4036,50 @@ assert.equal(
       "UNSUPPORTED_CURRENT_DEBT_RENDERED",
       "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
       "REPORT_TYPE_SECTION_LEAK",
+    ].includes(v.code)
+  ),
+  false
+);
+
+const acquisitionMemoHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
+  [
+    "<!-- BEGIN SECTION_3_SCENARIO -->",
+    "<section>Scenario Analysis & Five-Year Outlook</section>",
+    "<!-- END SECTION_3_SCENARIO -->",
+    "<!-- BEGIN SECTION_7_DEBT -->",
+    "<section>Debt Structure & Financing</section>",
+    "<!-- END SECTION_7_DEBT -->",
+    "<!-- BEGIN SECTION_9_DCF -->",
+    "<section>Discounted Cash Flow (DCF)</section>",
+    "<!-- END SECTION_9_DCF -->",
+    "<!-- BEGIN SECTION_10_ADV_MODEL -->",
+    "<section>Advanced Financial Modeling</section>",
+    "<!-- END SECTION_10_ADV_MODEL -->",
+    "<!-- BEGIN SECTION_CHART_EQUITY_COMPONENTS -->",
+    "<section>Equity Cash Flow Waterfall</section>",
+    "<!-- END SECTION_CHART_EQUITY_COMPONENTS -->",
+  ].join("\n"),
+  {
+    effectiveReportMode: "v1_core",
+    reportType: "underwriting",
+  }
+);
+assert.equal(
+  /Scenario Analysis|Five-Year Outlook|Debt Structure|Debt Financing|Discounted Cash Flow|Advanced Financial Modeling|Equity Cash Flow Waterfall/i.test(acquisitionMemoHealedHtml),
+  false
+);
+assert.equal(
+  buildReportContractQa({
+    reportType: "underwriting",
+    reportTier: 2,
+    artifacts: healQaArtifacts,
+    sourceReportCoverageQa: healQaCoverage,
+    html: acquisitionMemoHealedHtml,
+  }).violations.some((v) =>
+    [
+      "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+      "REPORT_TYPE_SECTION_LEAK",
+      "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
     ].includes(v.code)
   ),
   false
