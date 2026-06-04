@@ -50,6 +50,31 @@ const honestLumpSum = buildReportContractQa({
 assert.equal(honestLumpSum.violations.length, 0);
 assert.equal(honestLumpSum.customer_delivery_ready, true);
 
+const acquisitionMemoLaunchHtml = [
+  "<h2>Executive Summary</h2>",
+  "<p>ACQUISITION MEMO</p>",
+  "<h3>Acquisition Memo Summary</h3>",
+  "<table><tr><td>Occupancy</td><td>100.0%</td></tr><tr><td>Annual In-Place Rent</td><td>$1,200,000</td></tr><tr><td>Annual Market Rent</td><td>$1,350,000</td></tr></table>",
+  "<h3>Source Context</h3>",
+  "<p>Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.</p>",
+  "<h3>Document Treatment</h3>",
+  "<p>Structured T12, rent roll, and supporting documents are listed where available.</p>",
+  "<h3>Data Coverage &amp; Source Limitations</h3>",
+  "<p>Unsupported or unstructured uploads remain excluded from modeled outputs.</p>",
+].join("\n");
+const acquisitionMemoLaunchQa = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: acquisitionMemoLaunchHtml,
+});
+assert.equal(acquisitionMemoLaunchQa.violations.length, 0);
+assert.equal(
+  /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds/i.test(acquisitionMemoLaunchHtml),
+  false
+);
+
 const sanitizedHtml = sanitizeFinalCustomerHtml(
   "<p>Current\uFFFEdebt DSCR \u200b / Not assessed / Current debt balance not provided</p>"
 );
@@ -111,8 +136,6 @@ const rentRollAction = rentRollContradictionPlan.prioritized_actions.find(
 assert.equal(rentRollAction.action_type, "render_gating_fix_required");
 assert.equal(rentRollAction.owner_area, "rent_roll_normalizer");
 assert.equal(rentRollAction.blocks_customer_delivery, false);
-assert.equal(rentRollAction.blocks_public_sample, true);
-assert.equal(rentRollAction.blocks_high_value_outreach, true);
 
 const rentRollConsistent = buildReportContractQa({
   reportType: "underwriting",
@@ -632,8 +655,6 @@ const dataCoverageOptionalLimitationHeadlineDriftViolation = dataCoverageOptiona
 );
 assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.severity, "high");
 assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_customer_delivery, false);
-assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_public_sample, true);
-assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.blocks_high_value_outreach, true);
 assert.equal(dataCoverageOptionalLimitationHeadlineDriftViolation.category, "data_coverage_taxonomy_contract");
 
 const dataCoverageReconciliationHeadlineAllowed = buildReportContractQa({
@@ -918,8 +939,6 @@ const supportDocTreatmentViolation = supportDocTreatmentLeak.violations.find(
 assert.equal(Boolean(supportDocTreatmentViolation), true);
 assert.equal(supportDocTreatmentViolation.severity, "high");
 assert.equal(supportDocTreatmentViolation.blocks_customer_delivery, false);
-assert.equal(supportDocTreatmentViolation.blocks_public_sample, true);
-assert.equal(supportDocTreatmentViolation.blocks_high_value_outreach, true);
 const supportDocTreatmentClean = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
@@ -2736,27 +2755,35 @@ assert.equal(
   true
 );
 
-const readinessAliasContradiction = buildReportContractQa({
+const readinessAliasDistributionMetadata = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
   artifacts: baseArtifacts,
   sourceReportCoverageQa: baseCoverage,
   qaFixRouting: {
-    public_sample_ready: true,
-    public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
-    public_sample_impact: "block_until_review",
-    high_value_outreach_ready: true,
-    high_value_outreach_blockers: ["ACQUISITION_FINANCING_FIELD_LIMITED"],
-    high_value_outreach_impact: "block_until_review",
+    distribution_ready: true,
+    distribution_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+    distribution_impact: "block_until_review",
+    production_pdf_ready: true,
+    production_pdf_config_issues: ["ACQUISITION_FINANCING_FIELD_LIMITED"],
+    production_pdf_config_issue: "block_until_review",
   },
   html: "<p>Clean baseline body.</p>",
 });
 assert.equal(
-  readinessAliasContradiction.violations.some((v) => v.code === "PUBLIC_SAMPLE_READY_WITH_BLOCKERS"),
+  readinessAliasDistributionMetadata.report_quality_ready,
+  true
+);
+assert.equal(readinessAliasDistributionMetadata.contract_status, "pass");
+assert.equal(readinessAliasDistributionMetadata.report_quality_status, "pass");
+assert.equal(readinessAliasDistributionMetadata.distribution_status, "review");
+assert.equal(readinessAliasDistributionMetadata.distribution_ready, false);
+assert.equal(
+  readinessAliasDistributionMetadata.distribution_readiness_issues.some((issue) => issue.code === "DISTRIBUTION_CONFIG_ISSUE"),
   true
 );
 assert.equal(
-  readinessAliasContradiction.violations.some((v) => v.code === "HIGH_VALUE_OUTREACH_READY_WITH_BLOCKERS"),
+  readinessAliasDistributionMetadata.distribution_readiness_issues.some((issue) => issue.code === "PRODUCTION_PDF_CONFIG_ISSUE"),
   true
 );
 
@@ -2771,16 +2798,14 @@ const canonicalDeliveryWinsOverRouting = buildReportContractQa({
         delivery_gate_status: "admin_review_required",
         customer_delivery_allowed: false,
         hold_delivery: true,
-        public_sample_ready: false,
-        high_value_outreach_ready: false,
+        distribution_ready: false,
       },
     },
   },
   qaFixRouting: {
     customer_delivery_ready: true,
     customer_publish_eligible: true,
-    public_sample_ready: true,
-    high_value_outreach_ready: true,
+    distribution_ready: true,
   },
   deliveryGateDecision: {
     delivery_gate_status: "deliverable",
@@ -2810,8 +2835,7 @@ const canonicalDeliveryHoldConflict = buildReportContractQa({
         delivery_gate_status: "user_needs_documents",
         customer_delivery_allowed: false,
         hold_delivery: true,
-        public_sample_ready: false,
-        high_value_outreach_ready: false,
+        distribution_ready: false,
       },
       hold_delivery: false,
     },
@@ -2832,14 +2856,21 @@ const legacyReadinessFallbackNoCanonical = buildReportContractQa({
   artifacts: baseArtifacts,
   sourceReportCoverageQa: baseCoverage,
   qaFixRouting: {
-    public_sample_ready: true,
-    public_sample_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
-    public_sample_impact: "block_until_review",
+    distribution_ready: true,
+    distribution_blockers: ["DOCRAPTOR_NOT_PRODUCTION_MODE"],
+    distribution_impact: "block_until_review",
   },
   html: "<p>Clean baseline body.</p>",
 });
 assert.equal(
-  legacyReadinessFallbackNoCanonical.violations.some((v) => v.code === "PUBLIC_SAMPLE_READY_WITH_BLOCKERS"),
+  legacyReadinessFallbackNoCanonical.report_quality_ready,
+  true
+);
+assert.equal(legacyReadinessFallbackNoCanonical.report_quality_status, "pass");
+assert.equal(legacyReadinessFallbackNoCanonical.distribution_status, "review");
+assert.equal(legacyReadinessFallbackNoCanonical.distribution_ready, false);
+assert.equal(
+  legacyReadinessFallbackNoCanonical.distribution_readiness_issues.some((issue) => issue.code === "DISTRIBUTION_CONFIG_ISSUE"),
   true
 );
 

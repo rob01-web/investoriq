@@ -887,7 +887,7 @@ assert.equal(/Pass Conditions \(All must hold\)|Hard Disqualifiers \(Any trigger
 assert.equal(/reportTierBadges|reportTierBadgeHtml|Screening Scope|Source-Constrained|Debt Not Provided|Disclosure Required/.test(reportSource), false);
 assert.match(
   reportSource,
-  /if \(effectiveReportMode === "v1_core" && dealScoreState\.displayVerdict\?\.cap_explanation\)/
+  /const coverVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*"ACQUISITION<br\/>MEMO"/
 );
 assert.match(
   reportSource,
@@ -899,28 +899,22 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /Primary Constraint: Current Debt DSCR of \$\{_ds\} constrains refinance capacity below standard lender coverage thresholds\./
+  /const execVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*"ACQUISITION MEMO"/
 );
 assert.match(
   reportSource,
-  /Primary Constraint: Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided\./
+  /Acquisition Memo Summary:/
 );
 assert.match(
   reportSource,
-  /\{\{DEBT_DSCR_NOTE\}\}/
+  /Source Context/
 );
 assert.match(
   reportSource,
-  /Current Debt DSCR reflects current outstanding debt service and T12 NOI only\./
+  /finalHtml = replaceAll\(finalHtml, "\{\{NEIGHBORHOOD_CONTEXT_BLOCK\}\}", neighborhoodContextHtml\);/
 );
-assert.match(
-  reportSource,
-  /\{\{DEBT_REFI_CONSIDERATIONS\}\}/
-);
-assert.match(
-  reportSource,
-  /Refinance stress and binding-constraint analysis is based on current outstanding debt inputs/
-);
+assert.equal(/CAPITAL RISK PROFILE/.test(reportSource), false);
+assert.equal(/Current Debt DSCR reflects current outstanding debt service and T12 NOI only\./.test(reportSource), false);
 assert.equal(/DSCR \(Computed\)/i.test(reportSource), false);
 assert.equal(/Top Income Line Share of EGI/.test(reportSource), false);
 assert.match(reportSource, /Top Income Line Compared with EGI/);
@@ -962,7 +956,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /if \(!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr\)/
+  /finalHtml = stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\);/
 );
 assert.match(
   reportSource,
@@ -976,18 +970,10 @@ assert.equal(
   /hasComputedCurrentDebtDscr[\s\S]{0,400}Refinance Stability Classification: Not Assessed/.test(reportSource),
   false
 );
-assert.match(
-  reportSource,
-  /Refinance Stability Classification: Source-Limited/
-);
-assert.match(
-  reportSource,
-  /const hasCanonicalCurrentRefiDebtBasis[\s\S]*hasCanonicalCurrentRefiDebtBasis && !canRenderRefi/
-);
-assert.match(
-  reportSource,
-  /const currentDebtAssessed = Boolean\(\s*refiDebtRenderState\?\.status === "valid"/
-);
+assert.equal(/Refinance Stability Classification: Source-Limited/.test(reportSource), false);
+assert.match(reportSource, /finalHtml = stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\);/);
+assert.match(reportSource, /finalHtml = replaceAll\(finalHtml, "\{\{DEBT_DSCR_NOTE\}\}", ""\);/);
+assert.match(reportSource, /finalHtml = replaceAll\(finalHtml, "\{\{DEBT_REFI_CONSIDERATIONS\}\}", ""\);/);
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
@@ -3194,14 +3180,45 @@ const summaryOnlyUnitMixCollapsedHtml = generatorTest.collapseSummaryOnlyUnitMix
     summaryOnlyRentRollSurface: true,
     summaryTitle: "Summary Rent Positioning",
     summaryBody: "Summary totals indicate in-place rent is below documented market rent.",
+    summaryMetrics: {
+      totalUnits: 48,
+      occupiedUnits: 46,
+      occupancy: 0.9583,
+      annualInPlace: 1036800,
+      annualMarket: 1137600,
+      formatCurrency,
+    },
   }
 );
 assert.equal(/unit-mix-table/i.test(summaryOnlyUnitMixCollapsedHtml), false);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Summary Rent Positioning/i);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Annual In-Place Rent/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Annual Market Rent/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Annual Gross Rent Upside/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Rent Gap %/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Total Units/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupied Units/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Vacant Units/);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupancy/);
+assert.match(reportSource, /function buildRentPositioningSummaryCard/);
+assert.match(reportSource, /function stripThinSectionPages/);
 const strippedEmptyHeadingHtml = generatorTest.stripEmptyHeadingBlocks(
   '<div><p class="section-intro">   </p><p class="subsection-title">  </p><p>Body</p></div>'
 );
 assert.equal(/section-intro|subsection-title/i.test(strippedEmptyHeadingHtml), false);
+const thinSectionCollapsedHtml = generatorTest.stripThinSectionPages(
+  '<section class="section page-break"><div class="section-header"><span class="section-header-eyebrow">Section 01</span><span class="section-header-title">Thin Example</span><span class="section-header-sub">Orphan heading</span></div><p>Only one weak sentence.</p></section>'
+);
+assert.equal(thinSectionCollapsedHtml.trim(), "");
+const denseSectionPreservedHtml = generatorTest.stripThinSectionPages(
+  '<section class="section page-break"><div class="section-header"><span class="section-header-eyebrow">Section 01</span><span class="section-header-title">Dense Example</span><span class="section-header-sub">Source supported</span></div><table><tbody><tr><td>Metric</td><td>Value</td></tr></tbody></table></section>'
+);
+assert.match(denseSectionPreservedHtml, /Dense Example/);
+assert.match(denseSectionPreservedHtml, /Metric/);
+const emptyTableSectionCollapsedHtml = generatorTest.stripThinSectionPages(
+  '<section class="section page-break"><div class="section-header"><span class="section-header-eyebrow">Section 02</span><span class="section-header-title">Empty Table</span><span class="section-header-sub">Orphan table</span></div><table><tbody></tbody></table></section>'
+);
+assert.equal(emptyTableSectionCollapsedHtml.trim(), "");
 const acquisitionSizingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2000000,
@@ -4281,10 +4298,8 @@ assert.match(summaryOnlyRentRollDistributionHtml, /Annual Market Rent \(Total\).
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg In-Place Rent"), false);
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg Market Rent"), false);
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Rent Bands (In-Place)"), false);
-assert.match(
-  reportSource,
-  /effectiveReportMode === "screening_v1"[\s\S]{0,400}if \(summaryOnlyRentRollSurface\) return ""/
-);
+assert.match(reportSource, /function buildRentPositioningSummaryCard/);
+assert.match(reportSource, /function stripThinSectionPages/);
 
 const rowLevelRentRollDistributionHtml = generatorTest.buildScreeningRentRollDistributionHtml({
   computedRentRoll: {

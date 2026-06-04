@@ -1968,18 +1968,113 @@ function stripEmptyHeadingBlocks(html) {
     .replace(/<p class="section-intro">\s*<\/p>\s*/gi, "")
     .replace(/<p class="subsection-title">\s*<\/p>\s*/gi, "");
 }
+function stripThinSectionPages(html) {
+  if (!html) return html;
+  return String(html).replace(/<section class="section page-break">([\s\S]*?)<\/section>/gi, (match, inner) => {
+    const innerText = String(inner || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const wordCount = innerText ? innerText.split(/\s+/).length : 0;
+    const hasNonEmptyTable = /<table\b[\s\S]*?<tbody>[\s\S]*?<tr[\s\S]*?<\/tr>[\s\S]*?<\/tbody>[\s\S]*?<\/table>/i.test(inner);
+    const hasDenseContent = /<(?:div class="card|div class='card'|img\b|ul\b|ol\b)/i.test(inner) || hasNonEmptyTable;
+    const paragraphCount = (String(inner || "").match(/<p\b/gi) || []).length;
+    const hasSectionHeader = /<div class="section-header">/i.test(inner);
+    if (hasSectionHeader && !hasDenseContent && paragraphCount <= 1 && wordCount < 60) {
+      return "";
+    }
+    return match;
+  });
+}
+function buildRentPositioningSummaryCard({
+  title = "Rent Positioning Summary",
+  body = "Verified rent-roll summary totals indicate in-place rents are below documented market rent.",
+  totalUnits = null,
+  occupiedUnits = null,
+  occupancy = null,
+  annualInPlace = null,
+  annualMarket = null,
+  formatCurrency,
+} = {}) {
+  const rows = [];
+  const units = Number(totalUnits);
+  const occupied = Number(occupiedUnits);
+  const hasUnits = Number.isFinite(units) && units > 0;
+  const hasOccupied = Number.isFinite(occupied) && occupied >= 0;
+  const vacantUnits = hasUnits && hasOccupied ? Math.max(0, units - occupied) : null;
+  const inPlace = Number(annualInPlace);
+  const market = Number(annualMarket);
+  const hasInPlace = Number.isFinite(inPlace);
+  const hasMarket = Number.isFinite(market);
+  if (hasInPlace) {
+    rows.push(`<tr><td>Annual In-Place Rent</td><td>${formatCurrency(inPlace)}</td></tr>`);
+  }
+  if (hasMarket) {
+    rows.push(`<tr><td>Annual Market Rent</td><td>${formatCurrency(market)}</td></tr>`);
+  }
+  if (hasInPlace && hasMarket && market > inPlace) {
+    const annualUpside = market - inPlace;
+    const rentGapPct = inPlace > 0 ? ((market - inPlace) / inPlace) * 100 : null;
+    rows.push(`<tr><td>Annual Gross Rent Upside</td><td>${formatCurrency(annualUpside)}</td></tr>`);
+    rows.push(
+      `<tr><td>Rent Gap %</td><td>${
+        Number.isFinite(rentGapPct)
+          ? `${rentGapPct.toLocaleString("en-CA", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}%`
+          : "Not assessed"
+      }</td></tr>`
+    );
+  } else if (hasInPlace || hasMarket) {
+    rows.push(`<tr><td>Annual Gross Rent Upside</td><td>Not assessed</td></tr>`);
+    rows.push(`<tr><td>Rent Gap %</td><td>Not assessed</td></tr>`);
+  }
+  if (hasUnits) {
+    rows.push(`<tr><td>Total Units</td><td>${Math.round(units)}</td></tr>`);
+  }
+  if (hasOccupied) {
+    rows.push(`<tr><td>Occupied Units</td><td>${Math.round(occupied)}</td></tr>`);
+  }
+  if (Number.isFinite(vacantUnits)) {
+    rows.push(`<tr><td>Vacant Units</td><td>${Math.round(vacantUnits)}</td></tr>`);
+  }
+  if (Number.isFinite(occupancy)) {
+    rows.push(
+      `<tr><td>Occupancy</td><td>${(occupancy * 100).toLocaleString("en-CA", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}%</td></tr>`
+    );
+  }
+  const metricsHtml = rows.length
+    ? `<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
+    : "";
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">${escapeHtml(title)}</p>${metricsHtml}<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(body)}</p></div>`;
+}
 function collapseSummaryOnlyUnitMixSection(
   html,
   {
     summaryOnlyRentRollSurface = false,
     summaryTitle = "Rent Positioning Summary",
     summaryBody = "Verified rent-roll summary totals indicate in-place rents are below documented market rent.",
+    summaryMetrics = {},
   } = {}
 ) {
   if (!summaryOnlyRentRollSurface) return html;
+  const denseSummaryCard = buildRentPositioningSummaryCard({
+    title: summaryTitle,
+    body: summaryBody,
+    totalUnits: summaryMetrics.totalUnits,
+    occupiedUnits: summaryMetrics.occupiedUnits,
+    occupancy: summaryMetrics.occupancy,
+    annualInPlace: summaryMetrics.annualInPlace,
+    annualMarket: summaryMetrics.annualMarket,
+    formatCurrency: summaryMetrics.formatCurrency || ((value) => String(value)),
+  });
   return String(html || "").replace(
     /<p class="subsection-title">Unit Mix and Rent Positioning<\/p>[\s\S]*?<table class="unit-mix-table">[\s\S]*?<\/table>/,
-    `<p class="subsection-title">${escapeHtml(summaryTitle)}</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(summaryBody)}</p>`
+    denseSummaryCard
   );
 }
 function stripChartBlockByAlt(html, altText) {
@@ -4264,8 +4359,8 @@ function buildScreeningDataCoverageSummary({
     const currentDebtCoverageCopy =
       currentDebtAssessmentState?.current_debt_limitation_reason_code === "acquisition_only_not_current_debt" &&
       !currentDebtAssessmentState?.has_true_current_debt_balance
-        ? currentDebtCoverageState.explanation
-        : `Structured T12, rent roll, and debt inputs are used where available. Unsupported or unstructured uploads remain excluded from modeled outputs. ${currentDebtCoverageState.explanation}`;
+        ? "Structured T12, rent roll, and supporting documents are listed where available. Unsupported or unstructured uploads remain excluded from modeled outputs."
+        : "Structured T12, rent roll, and supporting documents are listed where available. Unsupported or unstructured uploads remain excluded from modeled outputs.";
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
     const sectionEligibilityCopy = (
       Number(optionalSectionState?.renovationEligibility?.source_constrained ? 1 : 0) +
@@ -6913,34 +7008,6 @@ if (effectiveReportMode === "screening_v1") {
     if (!driver1 && hasSourceReconciliationVariance && sourceReconciliationNarrativePolicy.primary_pressure_point_allowed) {
       primaryPressurePoint = `Source reconciliation variance of ${rrVsGprDisplay} between rent roll and T12 gross potential rent requires review.`;
     }
-    // For underwriting, override pressure point with DSCR-based language if mortgage available
-    if (effectiveReportMode === "v1_core" && hasVerifiedCurrentDebtBalance) {
-      const currentDebtCoverage = canonicalRefiDebtBasis;
-      if (Number.isFinite(currentDebtCoverage.dscr) && currentDebtCoverage.dscr > 0) {
-        const _ds = formatMultiple(currentDebtCoverage.dscr, 2);
-        if (currentDebtCoverage.dscr < 1.25) {
-          primaryPressurePoint = `Primary Constraint: Current Debt DSCR of ${_ds} constrains refinance capacity below standard lender coverage thresholds.`;
-        } else if (currentDebtCoverage.dscr < 1.35) {
-          primaryPressurePoint = `Primary Constraint: Current Debt DSCR of ${_ds} indicates moderate debt coverage with limited refinancing cushion.`;
-        } else if (!driver1) {
-          primaryPressurePoint = "Primary Constraint: Current debt coverage appears within assessed thresholds; refinance risk remains subject to source completeness.";
-        }
-      }
-    }
-    const hasCurrentDebtAssessmentGap =
-      effectiveReportMode === "v1_core" &&
-      !driver1 &&
-      !hasVerifiedCurrentDebtBalance &&
-      currentDebtAssessmentState?.current_debt_dscr_status !== "computed" &&
-      [
-        "no_current_debt_document",
-        "no_current_outstanding_balance",
-        "incomplete_current_debt_terms",
-      ].includes(String(currentDebtAssessmentState?.current_debt_limitation_reason_code || "").trim());
-    if (hasCurrentDebtAssessmentGap) {
-      primaryPressurePoint =
-        "Primary Constraint: Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.";
-    }
     if (
       effectiveReportMode === "v1_core" &&
       sourceReconciliationNarrativePolicy.data_coverage_required &&
@@ -7276,64 +7343,10 @@ if (effectiveReportMode === "screening_v1") {
         )}, increasing sensitivity to vacancy and income disruption.`
       );
     }
-    // v1_core underwriting-specific bullets (DSCR, refi stability, debt capacity)
-    if (effectiveReportMode === "v1_core") {
-      if (
-        sourceReconciliationNarrativePolicy.data_coverage_required &&
-        hasSourceReconciliationVariance
-      ) {
-        riskBullets.unshift(
-          "Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation."
-        );
-      }
-      const canonicalRefiDebtBasisForBullets = canonicalRefiDebtBasis;
-      if (hasComputedCurrentDebtDscr && Number.isFinite(canonicalRefiDebtBasisForBullets.dscr) && canonicalRefiDebtBasisForBullets.dscr > 0) {
-        const _ds = formatMultiple(canonicalRefiDebtBasisForBullets.dscr, 2);
-        if (canonicalRefiDebtBasisForBullets.dscr >= 1.35) {
-          upsideBullets.push(`Current Debt DSCR of ${_ds} exceeds the 1.35x preferred threshold. Debt service is well-covered by T12 NOI.`);
-        } else if (canonicalRefiDebtBasisForBullets.dscr >= 1.25) {
-          riskBullets.push(`Current Debt DSCR of ${_ds} is adequate but below the 1.35x preferred threshold. Limited coverage cushion.`);
-        } else {
-          riskBullets.push(`Base case Current Debt DSCR of ${_ds} falls below standard lender coverage thresholds, constraining refinance capacity and limiting debt proceeds under both current and stressed conditions.`);
-        }
-      } else {
-        const dscrNotAssessedCopy = currentDebtNotAssessedCopy({
-          currentDebtState: currentDebtAssessmentState,
-          mortgagePayload,
-          loanTermSheetTermsPayload,
-          t12Noi: coerceNumber(t12Payload?.net_operating_income),
-        });
-      riskBullets.push(
-        dscrNotAssessedCopy.explanation
+    if (effectiveReportMode === "v1_core" && sourceReconciliationNarrativePolicy.data_coverage_required && hasSourceReconciliationVariance) {
+      riskBullets.unshift(
+        "Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation."
       );
-      }
-      const visibleRefiClass = normalizeVisibleReportClassification({
-        baseClass: screeningClass === "Fragile" ? "Fragile" : screeningClass,
-        effectiveReportMode,
-        sourceReconciliationCapActive: Boolean(
-          sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
-        ),
-        coreSupportInsufficient: Boolean(!screeningHasSufficientData || screeningClass === "Insufficient Data"),
-        debtCoverageConstraintActive: Boolean(
-          Number.isFinite(canonicalRefiDebtBasisForBullets?.dscr) && canonicalRefiDebtBasisForBullets.dscr < 1.25
-        ),
-      });
-      const _refiClass = hasVerifiedCurrentDebtBalance && visibleRefiClass
-        ? `Operating profile classified ${visibleRefiClass}. Under stressed conditions, refinance proceeds are constrained by declining coverage and reduced capital flexibility.`
-        : null;
-      if (_refiClass) riskBullets.push(_refiClass);
-    }
-    const primaryConstraintAlreadyCarriesDscr =
-      effectiveReportMode === "v1_core" &&
-      /Current Debt DSCR of .*?(constrains refinance capacity|moderate debt coverage)/i.test(
-        String(primaryPressurePoint || "")
-      );
-    if (primaryConstraintAlreadyCarriesDscr) {
-      for (let i = riskBullets.length - 1; i >= 0; i -= 1) {
-        if (/^Base case Current Debt DSCR of .*?(coverage thresholds|refinance capacity)/i.test(riskBullets[i])) {
-          riskBullets.splice(i, 1);
-        }
-      }
     }
     if (isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object") {
       const harnessPayloads = body.__test_payloads;
@@ -7510,31 +7523,31 @@ if (effectiveReportMode === "screening_v1") {
     const baseVisibleClass =
       effectiveReportMode === "screening_v1"
         ? (screeningClass === "Fragile" ? "Fragile" : screeningClass)
-        : (dealScoreState.displayVerdict?.label || "Review - Insufficient Core Support");
+        : (screeningClass === "Fragile" ? "Fragile" : screeningClass);
     const computedVisibleLabelInputs = {
       baseClass: baseVisibleClass,
       sourceReconciliationCapActive,
       coreSupportInsufficient,
-      debtCoverageConstraintActive,
+      debtCoverageConstraintActive: effectiveReportMode === "v1_core" ? false : debtCoverageConstraintActive,
     };
     const canonicalVisibleClassificationState = buildCanonicalVisibleClassificationState({
-      reportType,
-      reportTier,
+      reportType: effectiveReportMode === "v1_core" ? "screening" : reportType,
+      reportTier: effectiveReportMode === "v1_core" ? 1 : reportTier,
       baseLabel: baseVisibleClass,
       score: dealScoreState?.score,
-      hasDscrScore: dealScoreState?.hasDscrScore,
-      currentDebtDscr: dealScoreState?.computedDscrForVerdict,
+      hasDscrScore: effectiveReportMode === "screening_v1" ? dealScoreState?.hasDscrScore : false,
+      currentDebtDscr: effectiveReportMode === "screening_v1" ? dealScoreState?.computedDscrForVerdict : null,
       sourceReconciliationState,
       sourceReconciliationCapActive,
       coreSupportInsufficient,
-      debtCoverageConstraintActive,
+      debtCoverageConstraintActive: false,
     });
     const computedCoverClassificationLabel = canonicalVisibleClassificationState.label;
     if (underwritingState?.core?.classification) {
       underwritingState.core.classification.visibleLabelInputs = computedVisibleLabelInputs;
       underwritingState.core.classification.visibleLabel = computedCoverClassificationLabel;
       underwritingState.core.classification.visibleClassificationState = canonicalVisibleClassificationState;
-      underwritingState.core.classification.verdictState = dealScoreState.displayVerdict || null;
+      underwritingState.core.classification.verdictState = effectiveReportMode === "v1_core" ? null : dealScoreState.displayVerdict || null;
     }
     const classificationState = underwritingState?.core?.classification || null;
     const coverClassificationLabel =
@@ -7565,13 +7578,13 @@ if (effectiveReportMode === "screening_v1") {
       : coverClassificationLabel === "Outside Parameters" ? "verdict-fragile"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
-    // Verdict label tokens: differentiate screening triage vs underwriting capital profile
+    // Verdict label tokens: differentiate screening triage vs acquisition memo
     const coverVerdictLabel = effectiveReportMode === "v1_core"
-      ? "CAPITAL RISK<br/>PROFILE"
+      ? "ACQUISITION<br/>MEMO"
       : "SCREENING<br/>SIGNAL";
     finalHtml = replaceAll(finalHtml, "{{COVER_VERDICT_LABEL}}", coverVerdictLabel);
     const execVerdictLabel = effectiveReportMode === "v1_core"
-      ? "CAPITAL RISK PROFILE"
+      ? "ACQUISITION MEMO"
       : "SCREENING SIGNAL";
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_LABEL}}", execVerdictLabel);
     // Cover metric strip: screening only; strip when values unavailable
@@ -7700,18 +7713,35 @@ if (effectiveReportMode === "screening_v1") {
         : "";
       execVerdictExpansionHtml = `${frameworkCard}${thesisCard}`;
     } else if (effectiveReportMode === "v1_core" && screeningClass && screeningClass !== "Insufficient Data") {
-      // Underwriting: show capital risk profile card + DSCR note + operating classification
-      const erPctStr = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
-      const nmPctStr = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
-      const beoStr   = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
-      let rows = "";
-      if (erPctStr) rows += `<tr><td>Expense Ratio</td><td style="font-weight:600;">${erPctStr}</td></tr>`;
-      if (nmPctStr) rows += `<tr><td>NOI Margin</td><td style="font-weight:600;">${nmPctStr}</td></tr>`;
-      if (beoStr)   rows += `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${beoStr}</td></tr>`;
-      const profileNote = dealScoreState.displayVerdict?.cap_explanation ||
-        "Operating profile classification based on standardized underwriting thresholds from uploaded documents only.";
-      const profileCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Capital Risk Profile: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(profileNote)}</p></div>`;
-      execVerdictExpansionHtml = profileCard;
+      // Acquisition Memo: operating summary plus source context, not debt/refi profiling
+      const annualMarketRentTokenValue = Number.isFinite(coerceNumber(rentRollAnnualTotals?.market?.value))
+        ? coerceNumber(rentRollAnnualTotals?.market?.value)
+        : null;
+      const purchasePriceTokenValue = Number.isFinite(coerceNumber(acquisitionTermsPayload?.purchase_price))
+        ? coerceNumber(acquisitionTermsPayload?.purchase_price)
+        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price))
+          ? coerceNumber(loanTermSheetTermsPayload?.purchase_price)
+          : null;
+      const goingInCapRateTokenValue = Number.isFinite(coerceNumber(acquisitionTermsPayload?.going_in_cap_rate))
+        ? coerceNumber(acquisitionTermsPayload?.going_in_cap_rate)
+        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate))
+          ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
+          : null;
+      const summaryRows = [];
+      if (Number.isFinite(execOccupancy)) summaryRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(execOccupancy)}</td></tr>`);
+      if (Number.isFinite(execAnnualInPlaceTokenValue)) summaryRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(execAnnualInPlaceTokenValue)}</td></tr>`);
+      if (Number.isFinite(annualMarketRentTokenValue)) summaryRows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(annualMarketRentTokenValue)}</td></tr>`);
+      if (Number.isFinite(marketRentPremiumRatio)) summaryRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(marketRentPremiumRatio)}</td></tr>`);
+      if (Number.isFinite(expenseRatioR)) summaryRows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercent1(expenseRatioR)}</td></tr>`);
+      if (Number.isFinite(noiMarginR)) summaryRows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercent1(noiMarginR)}</td></tr>`);
+      if (Number.isFinite(breakEvenOccR)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(breakEvenOccR)}</td></tr>`);
+      if (Number.isFinite(purchasePriceTokenValue)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(purchasePriceTokenValue)}</td></tr>`);
+      if (Number.isFinite(goingInCapRateTokenValue)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(goingInCapRateTokenValue)}</td></tr>`);
+      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. No debt sizing, refinance, DCF, waterfall, or return projections are included in the launch memo.";
+      const contextNote = "Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.";
+      const summaryCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Acquisition Memo Summary: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${summaryRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryNote)}</p></div>`;
+      const contextCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Source Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(contextNote)}</p></div>`;
+      execVerdictExpansionHtml = `${summaryCard}${contextCard}`;
     }
     const acquisitionRenderStateFromBuilder = underwritingState?.core?.acquisition || {};
     const acquisitionFinancingAssumptionsRender = buildAcquisitionFinancingAssumptionsHtml({
@@ -7739,7 +7769,33 @@ if (effectiveReportMode === "screening_v1") {
     );
     const hasTrueCurrentDebtBalance = currentDebtAssessmentState.has_true_current_debt_balance;
     const acquisitionOnlyDebt = effectiveReportMode === "v1_core" && hasProposedAcquisitionFinancing && !hasTrueCurrentDebtBalance;
+    const neighborhoodAnnualMarketRentValue = Number.isFinite(coerceNumber(rentRollAnnualTotals?.market?.value))
+      ? coerceNumber(rentRollAnnualTotals?.market?.value)
+      : null;
+    const neighborhoodPurchasePriceValue = Number.isFinite(coerceNumber(acquisitionTermsPayload?.purchase_price))
+      ? coerceNumber(acquisitionTermsPayload?.purchase_price)
+      : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price))
+        ? coerceNumber(loanTermSheetTermsPayload?.purchase_price)
+        : null;
+    const neighborhoodGoingInCapRateValue = Number.isFinite(coerceNumber(acquisitionTermsPayload?.going_in_cap_rate))
+      ? coerceNumber(acquisitionTermsPayload?.going_in_cap_rate)
+      : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate))
+        ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
+        : null;
+    const neighborhoodContextRows = [];
+    if (Number.isFinite(execOccupancy)) neighborhoodContextRows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(execOccupancy)}</td></tr>`);
+    if (Number.isFinite(execAnnualInPlaceTokenValue)) neighborhoodContextRows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(execAnnualInPlaceTokenValue)}</td></tr>`);
+    if (Number.isFinite(neighborhoodAnnualMarketRentValue)) neighborhoodContextRows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(neighborhoodAnnualMarketRentValue)}</td></tr>`);
+    if (Number.isFinite(marketRentPremiumRatio)) neighborhoodContextRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(marketRentPremiumRatio)}</td></tr>`);
+    if (Number.isFinite(neighborhoodPurchasePriceValue)) neighborhoodContextRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(neighborhoodPurchasePriceValue)}</td></tr>`);
+    if (Number.isFinite(neighborhoodGoingInCapRateValue)) neighborhoodContextRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(neighborhoodGoingInCapRateValue)}</td></tr>`);
+    const neighborhoodContextHtml = neighborhoodContextRows.length > 0
+      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, DCF, waterfall, or return modeling.</p></div>`
+      : (effectiveReportMode === "v1_core"
+        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Deferred debt, refinance, DCF, waterfall, and return modeling remain excluded from the launch memo.</p>`
+        : "");
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
+    finalHtml = replaceAll(finalHtml, "{{NEIGHBORHOOD_CONTEXT_BLOCK}}", neighborhoodContextHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
     if (!String(upsideHtml || "").trim()) {
@@ -7879,6 +7935,12 @@ if (effectiveReportMode === "screening_v1") {
     finalHtml = finalHtml.replace(/-\s*,\s*/g, "");
     finalHtml = finalHtml.replace(/\s*,\s*<\/h1>/g, "</h1>");
     finalHtml = replaceAll(finalHtml, "{{UNIT_MIX_ROWS}}", unitMixRows || "");
+    if (!summaryOnlyRentRollSurface && !String(unitMixRows || "").trim()) {
+      finalHtml = finalHtml.replace(
+        /<p class="subsection-title">Unit Mix and Rent Positioning<\/p>\s*<table class="unit-mix-table">[\s\S]*?<tbody>\s*<\/tbody>\s*<\/table>/i,
+        ""
+      );
+    }
     if (summaryOnlyRentRollSurface) {
       finalHtml = collapseSummaryOnlyUnitMixSection(finalHtml, {
         summaryOnlyRentRollSurface: true,
@@ -7887,6 +7949,14 @@ if (effectiveReportMode === "screening_v1") {
           effectiveReportMode === "screening_v1"
             ? "Summary totals indicate in-place rent is below documented market rent."
             : "Verified rent-roll summary totals indicate in-place rents are below documented market rent.",
+        summaryMetrics: {
+          totalUnits: coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units),
+          occupiedUnits: coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units),
+          occupancy: coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload)),
+          annualInPlace: coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place ?? rentRollPayload?.total_in_place_annual),
+          annualMarket: coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market ?? rentRollPayload?.total_market_annual),
+          formatCurrency,
+        },
       });
     }
     finalHtml = replaceAll(
@@ -7896,11 +7966,37 @@ if (effectiveReportMode === "screening_v1") {
         ? ""
         : effectiveReportMode === "screening_v1"
         ? (() => {
-            if (summaryOnlyRentRollSurface) return "";
             const annualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
             const annualMarket = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
-            if (Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
-              return `<div class="card no-break"><p class="subsection-title">Rent Positioning Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Rent roll data indicates in-place rents are below market across the current unit mix.</p></div>`;
+            const occupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
+            const totalUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+            const occupiedUnits = coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units);
+            if (summaryOnlyRentRollSurface) {
+              return `<div class="card no-break"><p class="subsection-title">Source Context</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">Verified rent-roll summary totals were used because row-level unit mix was not provided. The metrics above remain source-bound and document-derived.</p></div>`;
+            }
+            if (
+              Number.isFinite(annualInPlace) ||
+              Number.isFinite(annualMarket) ||
+              Number.isFinite(occupancy) ||
+              Number.isFinite(totalUnits) ||
+              Number.isFinite(occupiedUnits)
+            ) {
+              const summaryBody =
+                Number.isFinite(annualInPlace) &&
+                Number.isFinite(annualMarket) &&
+                annualMarket > annualInPlace
+                  ? "Rent roll data indicates in-place rents are below market across the current unit mix."
+                  : "Source-bound rent positioning summary uses verified totals where available and leaves unsupported metrics unassessed.";
+              return buildRentPositioningSummaryCard({
+                title: "Rent Positioning Summary",
+                body: summaryBody,
+                totalUnits,
+                occupiedUnits,
+                occupancy,
+                annualInPlace,
+                annualMarket,
+                formatCurrency,
+              });
             }
             return "";
           })()
@@ -7988,6 +8084,7 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = stripT12DetailSubsection(finalHtml, "Operating Expenses (TTM)");
     }
     finalHtml = stripEmptyHeadingBlocks(finalHtml);
+    finalHtml = stripThinSectionPages(finalHtml);
     finalHtml = replaceAll(
       finalHtml,
       "{{T12_EGI}}",
@@ -8347,89 +8444,10 @@ if (effectiveReportMode === "screening_v1") {
     let canRenderRefi = false;
     const currentDebtNotAssessedRenderCopy =
       "Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.";
-    if (effectiveReportMode !== "v1_core") {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-      finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
-      finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", "");
-      finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", "");
-    } else {
-      const canonicalRefiDebtBasisForRender = canonicalRefiDebtBasis;
-      const hasCanonicalCurrentRefiDebtBasis =
-        Boolean(canonicalRefiDebtBasisForRender?.hasTrueCurrentDebtBalance) &&
-        !Boolean(canonicalRefiDebtBasisForRender?.isAcquisitionOnly) &&
-        Number.isFinite(coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance)) &&
-        coerceNumber(canonicalRefiDebtBasisForRender?.debtBalance) > 0;
-      if (!hasCanonicalCurrentRefiDebtBasis && !hasComputedCurrentDebtDscr) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
-        finalHtml = finalHtml.replace(
-          /<p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis<\/p>[\s\S]*?<p class="small" style="margin-top:8px;">[\s\S]*?<\/p>/i,
-          `<p class="small">${escapeHtml(currentDebtNotAssessedRenderCopy)}</p>`
-        );
-        finalHtml = finalHtml.replace(
-          /<p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis<\/p>[\s\S]*?<p>\s*\{\{DEBT_REFI_CONSIDERATIONS\}\}\s*<\/p>/i,
-          ""
-        );
-        finalHtml = finalHtml.replace(
-          /<p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity<\/p>[\s\S]*?\{\{REFI_SENSITIVITY_MATRIX_BLOCK\}\}/i,
-          ""
-        );
-        finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", currentDebtNotAssessedRenderCopy);
-        finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", currentDebtNotAssessedRenderCopy);
-        finalHtml = replaceAll(finalHtml, "{{REFI_SENSITIVITY_MATRIX_BLOCK}}", "");
-      } else {
-      const refiResult = buildRefiStabilityModel({
-        financials: refiFinancials,
-        t12Payload,
-        formatValue: formatCurrency,
-        currentDebtState: currentDebtAssessmentState,
-        mortgagePayload,
-        loanTermSheetTermsPayload,
-      });
-      const validRefiTiers = new Set([
-        "Stable",
-        "Sensitized",
-        "Fragile",
-        "Refinance Shortfall Under Stress",
-      ]);
-      const refiHtml = String(refiResult?.html || "").trim();
-      canRenderRefi =
-        validRefiTiers.has(refiResult?.tier) && refiHtml.length > 0;
-      const refiNarrativeMode = resolveRefiNarrativeMode({
-        refiDebtRenderState: sharedRefiDebtRenderState,
-        hasComputedCurrentDebtDscr,
-        hasCanonicalCurrentRefiDebtBasis,
-        canRenderFullRefi: canRenderRefi,
-      });
-      const hasDebtButIncompleteRefiInputs =
-        hasCanonicalCurrentRefiDebtBasis && !canRenderRefi;
-      if (canRenderRefi) {
-        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", refiHtml);
-      } else if (hasDebtButIncompleteRefiInputs) {
-        const refiNotProducedCopy = refiNarrativeMode.copy;
-        finalHtml = replaceAll(
-          finalHtml,
-          "{{REFI_STABILITY_BLOCK}}",
-          `<div class="card no-break"><p><strong>Refinance Stability Classification: Source-Limited</strong></p><p>${refiNotProducedCopy}</p><p class="small">Required refinance inputs include current debt balance, interest rate, amortization, refinance cap rate, NOI, and deterministic stress assumptions.</p></div>`
-        );
-      } else {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-        finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
-      }
-      if (hasCanonicalCurrentRefiDebtBasis || hasComputedCurrentDebtDscr) {
-        finalHtml = replaceAll(
-          finalHtml,
-          "{{DEBT_DSCR_NOTE}}",
-          "Current Debt DSCR reflects current outstanding debt service and T12 NOI only. Proposed acquisition financing assumptions are evaluated separately and do not replace current debt coverage assessment."
-        );
-        finalHtml = replaceAll(
-          finalHtml,
-          "{{DEBT_REFI_CONSIDERATIONS}}",
-          "Refinance stress and binding-constraint analysis is based on current outstanding debt inputs and deterministic stress assumptions. Proposed acquisition financing assumptions are not used as current debt."
-        );
-      }
-      }
-    }
+    finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
+    finalHtml = replaceAll(finalHtml, "{{REFI_STABILITY_BLOCK}}", "");
+    finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", "");
+    finalHtml = replaceAll(finalHtml, "{{DEBT_REFI_CONSIDERATIONS}}", "");
     const earlySectionEligibilityStateForRender =
       underwritingState?.core?.sections?.eligibilityState || sectionEligibility || null;
     const showOperatingStatement = Boolean(
@@ -8662,6 +8680,7 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
     }
     const section4FallbackRenderDefault =
+      effectiveReportMode === "v1_core" ||
       hasMeaningfulNarrative(getNarrativeHtml("neighborhoodAnalysis")) ||
       hasMeaningfulNarrative(getNarrativeHtml("riskAssessment"));
     const showSection5 = shouldRenderCanonicalSection({
@@ -9055,7 +9074,6 @@ if (effectiveReportMode === "screening_v1") {
     if (effectiveReportMode === "v1_core") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
@@ -9082,6 +9100,10 @@ if (effectiveReportMode === "screening_v1") {
       sectionEligibility: sectionEligibilityStateForRender,
       rendererDefault: section4FallbackRenderDefault,
     });
+    if (effectiveReportMode === "v1_core") {
+      marketContextVisibility.keepNeighborhood = true;
+      marketContextVisibility.keepLocationTable = true;
+    }
     if (!marketContextVisibility.keepNeighborhood) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
     }
@@ -9133,7 +9155,6 @@ if (effectiveReportMode === "screening_v1") {
     })) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_2_RENOVATION_ROI");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
@@ -9475,19 +9496,8 @@ if (effectiveReportMode === "screening_v1") {
       finalHtml = replaceAll(finalHtml, "{{RETURN_SUMMARY_TABLE}}", "");
       finalHtml = stripMarkedSection(finalHtml, "RETURN_SUMMARY_SUBSECTION");
       finalHtml = replaceAll(finalHtml, "{{COMPARABLES_TABLE}}", "");
-      // DSCR KPI card in exec summary
-      {
-        let execDscrText = null;
-        const execCurrentDebtCoverage = canonicalRefiDebtBasis;
-        if (Number.isFinite(execCurrentDebtCoverage.dscr) && execCurrentDebtCoverage.dscr > 0) {
-          execDscrText = formatMultiple(execCurrentDebtCoverage.dscr, 2);
-        }
-        if (execDscrText) {
-          finalHtml = replaceAll(finalHtml, "{{EXEC_DSCR_COMPUTED}}", execDscrText);
-        } else {
-          finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
-        }
-      }
+      // DSCR KPI card is deferred from the Acquisition Memo launch path.
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
     }
     // ===== HTML/CSS Charts (shared across Screening + Underwriting) =====
     // Chart 1: NOI Waterfall
@@ -11163,6 +11173,7 @@ export const __test__ = {
   buildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
   stripEmptyHeadingBlocks,
+  stripThinSectionPages,
   collapseSummaryOnlyUnitMixSection,
   resolveRenovationDisplayMode,
   buildRenovationDisplayCopy,

@@ -479,9 +479,9 @@ function addViolation(violations, violation) {
     message: violation.message || "",
     evidence: violation.evidence || {},
     customer_delivery_impact: violation.customer_delivery_impact || null,
+    report_quality_impact: violation.report_quality_impact || null,
+    distribution_impact: violation.distribution_impact || null,
     blocks_customer_delivery: Boolean(violation.blocks_customer_delivery),
-    blocks_public_sample: violation.blocks_public_sample !== false,
-    blocks_high_value_outreach: violation.blocks_high_value_outreach !== false,
   });
 }
 
@@ -516,6 +516,8 @@ function addRenderedLeakViolation(violations, {
   evidence,
   blocksCustomerDelivery = true,
   customerDeliveryImpact = null,
+  reportQualityImpact = null,
+  distributionImpact = null,
 }) {
   addViolation(violations, {
     code,
@@ -524,9 +526,9 @@ function addRenderedLeakViolation(violations, {
     message,
     evidence,
     customer_delivery_impact: customerDeliveryImpact,
+    report_quality_impact: reportQualityImpact,
+    distribution_impact: distributionImpact,
     blocks_customer_delivery: blocksCustomerDelivery,
-    blocks_public_sample: true,
-    blocks_high_value_outreach: true,
   });
 }
 
@@ -1450,6 +1452,7 @@ export function buildReportContractQa({
   });
   const canonicalDeliveryState = canonicalDeliveryResolution.state;
   const hasCanonicalDeliveryState = Boolean(canonicalDeliveryState && typeof canonicalDeliveryState === "object");
+  const distributionReadinessIssues = [];
   const readinessPayloadCandidates = hasCanonicalDeliveryState
     ? [canonicalDeliveryState]
     : [
@@ -1554,65 +1557,69 @@ export function buildReportContractQa({
   }
 
   for (const readinessPayload of readinessPayloadCandidates) {
-    const publicSampleReady = readinessPayload?.public_sample_ready;
-    const publicSampleBlockers = Array.isArray(readinessPayload?.public_sample_blockers)
-      ? readinessPayload.public_sample_blockers
-      : Array.isArray(readinessPayload?.readiness_hierarchy?.public_sample_blockers)
-        ? readinessPayload.readiness_hierarchy.public_sample_blockers
-        : Array.isArray(readinessPayload?.distribution_context?.public_sample_blockers)
-          ? readinessPayload.distribution_context.public_sample_blockers
-          : [];
-    const publicSampleImpact = String(
-      readinessPayload?.public_sample_impact ||
-      readinessPayload?.readiness_hierarchy?.public_sample_impact ||
-      readinessPayload?.distribution_context?.public_sample_impact ||
+    const distributionReady =
+      readinessPayload?.distribution_ready ??
+      readinessPayload?.production_pdf_ready ??
+      readinessPayload?.distribution_context?.distribution_ready ??
+      readinessPayload?.readiness_hierarchy?.distribution_ready;
+    const distributionBlockers = Array.isArray(readinessPayload?.distribution_blockers)
+      ? readinessPayload.distribution_blockers
+      : Array.isArray(readinessPayload?.production_pdf_config_issues)
+        ? readinessPayload.production_pdf_config_issues
+        : Array.isArray(readinessPayload?.distribution_context?.distribution_blockers)
+          ? readinessPayload.distribution_context.distribution_blockers
+          : Array.isArray(readinessPayload?.readiness_hierarchy?.distribution_blockers)
+            ? readinessPayload.readiness_hierarchy.distribution_blockers
+            : [];
+    const distributionImpact = String(
+      readinessPayload?.distribution_impact ||
+      readinessPayload?.production_pdf_config_issue ||
+      readinessPayload?.distribution_context?.distribution_impact ||
+      readinessPayload?.readiness_hierarchy?.distribution_impact ||
       ""
     ).toLowerCase();
-    if (publicSampleReady === true && (publicSampleBlockers.length > 0 || publicSampleImpact === "block_until_review")) {
-      addViolation(violations, {
-        code: "PUBLIC_SAMPLE_READY_WITH_BLOCKERS",
-        severity: "high",
-        category: "distribution_readiness_contract",
-        message: "Public-sample readiness is true while blockers or block-until-review impact are present.",
+    if (distributionReady === true && (distributionBlockers.length > 0 || distributionImpact === "block_until_review")) {
+      distributionReadinessIssues.push({
+        code: "DISTRIBUTION_CONFIG_ISSUE",
+        severity: "info",
+        category: "distribution_readiness_metadata",
+        message: "Distribution metadata records blockers or block-until-review impact.",
         evidence: {
-          public_sample_ready: publicSampleReady,
-          public_sample_blockers: publicSampleBlockers,
-          public_sample_impact: publicSampleImpact || null,
+          distribution_ready: distributionReady,
+          distribution_blockers: distributionBlockers,
+          distribution_impact: distributionImpact || null,
         },
-        blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
       });
     }
 
-    const highValueReady = readinessPayload?.high_value_outreach_ready;
-    const highValueBlockers = Array.isArray(readinessPayload?.high_value_outreach_blockers)
-      ? readinessPayload.high_value_outreach_blockers
-      : Array.isArray(readinessPayload?.readiness_hierarchy?.high_value_outreach_blockers)
-        ? readinessPayload.readiness_hierarchy.high_value_outreach_blockers
-        : Array.isArray(readinessPayload?.distribution_context?.high_value_outreach_blockers)
-          ? readinessPayload.distribution_context.high_value_outreach_blockers
-          : [];
-    const highValueImpact = String(
-      readinessPayload?.high_value_outreach_impact ||
-      readinessPayload?.readiness_hierarchy?.high_value_outreach_impact ||
-      readinessPayload?.distribution_context?.high_value_outreach_impact ||
+    const productionPdfReady = readinessPayload?.production_pdf_ready ?? readinessPayload?.distribution_ready;
+    const productionPdfBlockers = Array.isArray(readinessPayload?.production_pdf_config_issues)
+      ? readinessPayload.production_pdf_config_issues
+      : Array.isArray(readinessPayload?.distribution_blockers)
+        ? readinessPayload.distribution_blockers
+        : Array.isArray(readinessPayload?.readiness_hierarchy?.production_pdf_config_issues)
+          ? readinessPayload.readiness_hierarchy.production_pdf_config_issues
+          : Array.isArray(readinessPayload?.distribution_context?.production_pdf_config_issues)
+            ? readinessPayload.distribution_context.production_pdf_config_issues
+            : [];
+    const productionPdfImpact = String(
+      readinessPayload?.production_pdf_config_issue ||
+      readinessPayload?.distribution_impact ||
+      readinessPayload?.readiness_hierarchy?.production_pdf_config_issue ||
+      readinessPayload?.distribution_context?.production_pdf_config_issue ||
       ""
     ).toLowerCase();
-    if (highValueReady === true && (highValueBlockers.length > 0 || highValueImpact === "block_until_review")) {
-      addViolation(violations, {
-        code: "HIGH_VALUE_OUTREACH_READY_WITH_BLOCKERS",
-        severity: "high",
-        category: "distribution_readiness_contract",
-        message: "High-value-outreach readiness is true while blockers or block-until-review impact are present.",
+    if (productionPdfReady === true && (productionPdfBlockers.length > 0 || productionPdfImpact === "block_until_review")) {
+      distributionReadinessIssues.push({
+        code: "PRODUCTION_PDF_CONFIG_ISSUE",
+        severity: "info",
+        category: "distribution_readiness_metadata",
+        message: "Production PDF distribution metadata records blockers or block-until-review impact.",
         evidence: {
-          high_value_outreach_ready: highValueReady,
-          high_value_outreach_blockers: highValueBlockers,
-          high_value_outreach_impact: highValueImpact || null,
+          production_pdf_ready: productionPdfReady,
+          production_pdf_config_issues: productionPdfBlockers,
+          production_pdf_config_issue: productionPdfImpact || null,
         },
-        blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
       });
     }
   }
@@ -2898,17 +2905,12 @@ export function buildReportContractQa({
   const counts = countBySeverity(violations);
   const contractStatus = counts.critical > 0 ? "block" : counts.total > 0 ? "warn" : "pass";
   const violationCustomerDeliveryReady = !violations.some((violation) => violation.blocks_customer_delivery);
-  const violationPublicSampleReady = !violations.some((violation) => violation.blocks_public_sample && ["medium", "high", "critical"].includes(violation.severity));
-  const violationHighValueOutreachReady = !violations.some((violation) => violation.blocks_high_value_outreach && ["medium", "high", "critical"].includes(violation.severity));
   const customerDeliveryReady = hasCanonicalDeliveryState
     ? Boolean(canonicalDeliveryState?.customer_delivery_allowed)
     : violationCustomerDeliveryReady;
-  const publicSampleReady = hasCanonicalDeliveryState
-    ? Boolean(canonicalDeliveryState?.public_sample_ready)
-    : violationPublicSampleReady;
-  const highValueOutreachReady = hasCanonicalDeliveryState
-    ? Boolean(canonicalDeliveryState?.high_value_outreach_ready)
-    : violationHighValueOutreachReady;
+  const reportQualityReady = contractStatus === "pass";
+  const distributionStatus = distributionReadinessIssues.length > 0 ? "review" : "ready";
+  const distributionReady = distributionReadinessIssues.length === 0;
 
   return {
     event: "report_contract_qa",
@@ -2921,9 +2923,12 @@ export function buildReportContractQa({
     report_type: reportType,
     report_tier: reportTier,
     contract_status: contractStatus,
+    report_quality_status: contractStatus,
+    report_quality_ready: reportQualityReady,
+    distribution_status: distributionStatus,
+    distribution_ready: distributionReady,
     customer_delivery_ready: customerDeliveryReady,
-    public_sample_ready: publicSampleReady,
-    high_value_outreach_ready: highValueOutreachReady,
+    distribution_readiness_issues: distributionReadinessIssues,
     violations,
     counts,
     delivery_conformance_source: canonicalDeliveryResolution.source,
