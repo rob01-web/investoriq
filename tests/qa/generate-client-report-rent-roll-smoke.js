@@ -19,6 +19,12 @@ const { buildFullUnderwritingState } = await import("../../api/_lib/full-underwr
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
+const formatPercent1 = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = n > 1.5 ? n : n * 100;
+  return `${pct.toFixed(1)}%`;
+};
 const healQaArtifacts = [
   {
     type: "t12_parsed",
@@ -915,7 +921,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /finalHtml = replaceAll\(finalHtml, "\{\{NEIGHBORHOOD_CONTEXT_BLOCK\}\}", neighborhoodContextHtml\);/
+  /finalHtml = replaceAll\(finalHtml, "\{\{NEIGHBORHOOD_CONTEXT_BLOCK\}\}", sourceContextBlockHtml \|\| neighborhoodContextHtml\);/
 );
 assert.equal(/CAPITAL RISK PROFILE/.test(reportSource), false);
 assert.equal(/Current Debt DSCR reflects current outstanding debt service and T12 NOI only\./.test(reportSource), false);
@@ -2631,21 +2637,71 @@ const screeningDataCoverageHtml = generatorTest.buildScreeningDataCoverageSummar
   hasForwardLookingRenovationInputs: false,
 });
 
-assert.match(screeningDataCoverageHtml, /Core financial inputs/i);
+assert.match(screeningDataCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(screeningDataCoverageHtml, /Core operating inputs \(T12 and Rent Roll\) were fully verified/i);
+assert.match(screeningDataCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
 assert.equal(screeningDataCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(screeningDataCoverageHtml), false);
-assert.match(screeningDataCoverageHtml, /Document Treatment Summary/i);
-assert.match(screeningDataCoverageHtml, /Modeled Inputs/i);
-assert.match(screeningDataCoverageHtml, /Displayed \/ Limited Use/i);
-assert.match(screeningDataCoverageHtml, /Listed but Not Quantitatively Modeled/i);
-assert.match(screeningDataCoverageHtml, /Historical capital items are displayed for context only/i);
-assert.match(screeningDataCoverageHtml, /Final\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Market Survey\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Historical CapEx Note\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Unsupported Appraisal Summary\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Unsupported Market Survey\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Unsupported Phase I ESA\.pdf/i);
-assert.match(screeningDataCoverageHtml, /Broker email background context\.msg/i);
+assert.match(screeningDataCoverageHtml, /T12 Operating Statement/i);
+assert.match(screeningDataCoverageHtml, /Rent Roll/i);
+const acquisitionMemoCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
+  t12Payload: {
+    gross_potential_rent: 1087488,
+    effective_gross_income: 1100000,
+    total_operating_expenses: 450000,
+    net_operating_income: 650000,
+  },
+  computedRentRoll: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1187488,
+    occupancy: 0.95,
+    summary_row_detected: true,
+  },
+  rentRollPayload: {
+    total_units: 48,
+    total_in_place_annual: 1087488,
+    total_market_annual: 1187488,
+    occupancy: 0.95,
+    totals: {
+      total_units: 48,
+      occupied_units: 46,
+      in_place_rent_annual: 1087488,
+      market_rent_annual: 1187488,
+      summary_row_detected: true,
+    },
+  },
+  financials: {},
+  effectiveReportMode: "v1_core",
+  supportingUnderwritingDocsUsed: false,
+  hasUploadedFiles: true,
+  documentSources: [
+    { original_filename: "T12.pdf", doc_type: "t12", parse_status: "parsed" },
+    { original_filename: "Rent Roll.pdf", doc_type: "rent_roll", parse_status: "parsed" },
+    { original_filename: "Property Tax.pdf", doc_type: "property_tax", parse_status: "parsed" },
+  ],
+  currentDebtAssessmentState: buildCurrentDebtAssessmentState({
+    mortgagePayload: null,
+    t12Noi: 650000,
+  }),
+  sourceReconciliationState: {
+    status: "aligned",
+    variance_pct: null,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  sectionEligibility: {
+    source_constrained_section_count: 0,
+  },
+  hasForwardLookingRenovationInputs: false,
+});
+assert.match(acquisitionMemoCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(acquisitionMemoCoverageHtml, /Core operating inputs \(T12 and Rent Roll\) were fully verified/i);
+assert.match(acquisitionMemoCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
+assert.match(acquisitionMemoCoverageHtml, /T12 Operating Statement/i);
+assert.match(acquisitionMemoCoverageHtml, /Rent Roll/i);
+assert.equal(/<table>\s*<\/table>/.test(acquisitionMemoCoverageHtml), false);
 
 const historicalCapexDisplayCopy = generatorTest.buildRenovationDisplayCopy({
   renovationDisplayMode: "historical_only",
@@ -3045,7 +3101,9 @@ const budgetOnlyRenovationCoverageHtml = generatorTest.buildScreeningDataCoverag
   hasForwardLookingRenovationInputs: false,
   renovationDisplayMode: "budget_only_no_roi",
 });
-assert.match(budgetOnlyRenovationCoverageHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(budgetOnlyRenovationCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(budgetOnlyRenovationCoverageHtml, /Core operating inputs \(T12 and Rent Roll\) were fully verified/i);
+assert.match(budgetOnlyRenovationCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
 assert.equal(budgetOnlyRenovationCoverageHtml.includes("Historical Capital Expenditure Summary"), false);
 
 const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
@@ -3236,7 +3294,100 @@ assert.match(summaryOnlyUnitMixCollapsedHtml, /Total Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupied Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Vacant Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupancy/);
+const summaryOnlyRentPositioningTitle = generatorTest.resolveRentPositioningSectionTitle({
+  effectiveReportMode: "v1_core",
+  summaryOnlyRentRollSurface: true,
+});
+assert.equal(summaryOnlyRentPositioningTitle.title, "Summary Rent Positioning & Value Sensitivity");
+assert.equal(/Unit-Level/i.test(summaryOnlyRentPositioningTitle.title), false);
+assert.equal(
+  generatorTest.resolveRentPositioningSectionTitle({
+    effectiveReportMode: "v1_core",
+    summaryOnlyRentRollSurface: false,
+  }).title,
+  "Unit-Level Rent Positioning & Value Sensitivity"
+);
+const acquisitionMemoSummaryCardHtml = generatorTest.buildAcquisitionMemoSummaryCard({
+  units: 48,
+  occupancy: 0.9583,
+  annualInPlace: 1036800,
+  annualMarket: 1137600,
+  annualUpsideRatio: 0.097,
+  purchasePrice: 10640000,
+  goingInCapRate: 0.0575,
+  noi: 611800,
+  formatCurrency,
+  formatPercent1,
+});
+assert.match(acquisitionMemoSummaryCardHtml, /Acquisition Memo Summary/);
+assert.match(acquisitionMemoSummaryCardHtml, /Purchase Price/);
+assert.match(acquisitionMemoSummaryCardHtml, /NOI Basis/);
+assert.equal(/<table>\s*<\/table>/.test(acquisitionMemoSummaryCardHtml), false);
+assert.equal(/<table>\s*<\/table>/.test(acquisitionMemoSummaryCardHtml), false);
+const operatingSnapshotCardHtml = generatorTest.buildOperatingSnapshotCard({
+  units: 48,
+  occupancy: 0.9583,
+  annualInPlace: 1036800,
+  egi: 1500000,
+  operatingExpenses: 600000,
+  noi: 900000,
+  expenseRatio: 0.4,
+  noiMargin: 0.6,
+  breakEvenOccupancy: 0.4,
+  formatCurrency,
+  formatPercent1,
+});
+assert.match(operatingSnapshotCardHtml, /Operating Snapshot/);
+assert.match(operatingSnapshotCardHtml, /Effective Gross Income/);
+assert.match(operatingSnapshotCardHtml, /Break-Even Occupancy/);
+assert.equal(/<table>\s*<\/table>/.test(operatingSnapshotCardHtml), false);
+assert.equal(/<table>\s*<\/table>/.test(operatingSnapshotCardHtml), false);
+const rentUpsideValueSensitivityCardHtml = generatorTest.buildRentUpsideValueSensitivityCard({
+  annualInPlace: 1036800,
+  annualMarket: 1137600,
+  formatCurrency,
+});
+assert.match(rentUpsideValueSensitivityCardHtml, /Rent Upside \/ Value Sensitivity/);
+assert.match(rentUpsideValueSensitivityCardHtml, /Implied Value Sensitivity at Stabilization/);
+assert.equal(/Unit-Level/i.test(rentUpsideValueSensitivityCardHtml), false);
+assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
+assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
+const sourceContextBlockHtml = generatorTest.buildLaunchSourceContextBlock({
+  documentSources: [
+    { original_filename: "T12.pdf", doc_type: "t12" },
+    { original_filename: "Rent Roll.pdf", doc_type: "rent_roll" },
+    { original_filename: "Property Tax.pdf", doc_type: "property_tax" },
+    { original_filename: "Appraisal Summary.pdf", doc_type: "appraisal" },
+    { original_filename: "Broker Email.pdf", doc_type: "broker_email" },
+  ],
+  currentDebtAssessmentState: {
+    current_debt_dscr_status: "not_assessed",
+    has_true_current_debt_balance: false,
+  },
+  hasForwardLookingRenovationInputs: false,
+  renovationDisplayMode: null,
+  renovationPayload: null,
+  propertyTaxPayload: { annual_tax: 92000 },
+  propertyTaxBindingState: { hasValidatedAnnualTax: true, annualTaxStatus: "validated" },
+  documentQuantitativeUsageMap: null,
+});
+assert.match(sourceContextBlockHtml, /Modeled core inputs are limited to T12 and Rent Roll/);
+assert.match(sourceContextBlockHtml, /Document Treatment Summary/);
+assert.match(sourceContextBlockHtml, /context-only/i);
+assert.match(sourceContextBlockHtml, /Acquisition context is limited to verified purchase assumptions and going-in cap rate context/i);
+assert.equal(/<table>\s*<\/table>/.test(sourceContextBlockHtml), false);
 assert.match(reportSource, /function buildRentPositioningSummaryCard/);
+assert.match(reportSource, /function buildAcquisitionMemoSummaryCard/);
+assert.match(reportSource, /function buildOperatingSnapshotCard/);
+assert.match(reportSource, /function buildRentUpsideValueSensitivityCard/);
+assert.match(reportSource, /function buildLaunchSourceContextBlock/);
+assert.match(reportSource, /function resolveRentPositioningSectionTitle/);
+assert.match(reportSource, /SECTION_0_6_ACQUISITION_MEMO_SUMMARY/);
+assert.match(reportSource, /SECTION_0_7_OPERATING_SNAPSHOT/);
+assert.match(reportSource, /SECTION_2_1_RENT_UPSIDE_VALUE_SENSITIVITY/);
+assert.match(reportSource, /SECTION_2_2_CAP_RATE_VALUE_INDICATION/);
+assert.match(reportSource, /Source Context \/ Support Document Treatment/);
+assert.match(reportSource, /Data Coverage &amp; Source Limitations/);
 assert.match(reportSource, /function stripThinSectionPages/);
 const strippedEmptyHeadingHtml = generatorTest.stripEmptyHeadingBlocks(
   '<div><p class="section-intro">   </p><p class="subsection-title">  </p><p>Body</p></div>'
@@ -3540,8 +3691,9 @@ const liveCurrentDebtModeledCoverageHtml = generatorTest.buildScreeningDataCover
   },
   hasForwardLookingRenovationInputs: false,
 });
-assert.match(liveCurrentDebtModeledCoverageHtml, /Structured current debt input/i);
-assert.match(liveCurrentDebtModeledCoverageHtml, /Modeled Inputs/i);
+assert.match(liveCurrentDebtModeledCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(liveCurrentDebtModeledCoverageHtml, /Core operating inputs \(T12 and Rent Roll\) were fully verified/i);
+assert.match(liveCurrentDebtModeledCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
 const cleanScreeningCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
     gross_potential_rent: 1087488,
@@ -3735,7 +3887,8 @@ const cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml = generatorTest.bu
 });
 assert.match(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml, /CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified/i);
 assert.equal(/SOURCE LIMITATIONS DISCLOSURE/i.test(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml), false);
-assert.match(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml, /BEGIN DOCUMENT_TREATMENT_SUMMARY/);
+assert.match(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
+assert.equal(/BEGIN DOCUMENT_TREATMENT_SUMMARY/i.test(cleanCoreUnsupportedSupportDocsUnderwritingCoverageHtml), false);
 
 const reconciliationDisclosureCoverageHtmlUnderwriting = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
@@ -3847,7 +4000,8 @@ const liveCurrentDebtLimitedCoverageHtml = generatorTest.buildScreeningDataCover
   },
   hasForwardLookingRenovationInputs: false,
 });
-assert.match(liveCurrentDebtLimitedCoverageHtml, /Current debt support only; no verified current debt balance/i);
+assert.match(liveCurrentDebtLimitedCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(liveCurrentDebtLimitedCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
 assert.equal(/Structured current debt input/i.test(liveCurrentDebtLimitedCoverageHtml), false);
 
 const sourceReconciliationFixture = {
@@ -4446,8 +4600,9 @@ const acquisitionOnlyCoverageHtml = generatorTest.buildScreeningDataCoverageSumm
   },
 });
 
-assert.match(acquisitionOnlyCoverageHtml, /Proposed acquisition financing is shown separately/i);
-assert.match(acquisitionOnlyCoverageHtml, /Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified/i);
+assert.match(acquisitionOnlyCoverageHtml, /CORE INPUT COVERAGE CONFIRMED/i);
+assert.match(acquisitionOnlyCoverageHtml, /Core operating inputs \(T12 and Rent Roll\) were fully verified/i);
+assert.match(acquisitionOnlyCoverageHtml, /Optional or support documents remain qualitative\/context-only/i);
 assert.equal(acquisitionOnlyCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(acquisitionOnlyCoverageHtml), false);
 

@@ -54,13 +54,21 @@ const acquisitionMemoLaunchHtml = [
   "<h2>Executive Summary</h2>",
   "<p>ACQUISITION MEMO</p>",
   "<h3>Acquisition Memo Summary</h3>",
-  "<table><tr><td>Occupancy</td><td>100.0%</td></tr><tr><td>Annual In-Place Rent</td><td>$1,200,000</td></tr><tr><td>Annual Market Rent</td><td>$1,350,000</td></tr></table>",
-  "<h3>Source Context</h3>",
-  "<p>Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.</p>",
-  "<h3>Document Treatment</h3>",
+  "<table><tr><td>Occupancy</td><td>100.0%</td></tr><tr><td>Annual In-Place Rent</td><td>$1,200,000</td></tr><tr><td>Annual Market Rent</td><td>$1,350,000</td></tr><tr><td>Purchase Price</td><td>$10,640,000</td></tr></table>",
+  "<h3>Operating Snapshot</h3>",
+  "<table><tr><td>Units</td><td>48</td></tr><tr><td>Effective Gross Income</td><td>$1,500,000</td></tr><tr><td>Operating Expenses</td><td>$600,000</td></tr><tr><td>NOI</td><td>$900,000</td></tr><tr><td>Expense Ratio</td><td>40.0%</td></tr><tr><td>NOI Margin</td><td>60.0%</td></tr></table>",
+  "<h3>Rent Positioning Summary</h3>",
+  "<table><tr><td>Annual In-Place Rent</td><td>$1,200,000</td></tr><tr><td>Annual Market Rent</td><td>$1,350,000</td></tr><tr><td>Annual Gross Rent Upside</td><td>$150,000</td></tr><tr><td>Rent Gap %</td><td>12.5%</td></tr><tr><td>Total Units</td><td>48</td></tr><tr><td>Occupied Units</td><td>48</td></tr><tr><td>Vacant Units</td><td>0</td></tr><tr><td>Occupancy</td><td>100.0%</td></tr></table>",
+  "<h3>Rent Upside / Value Sensitivity</h3>",
+  "<table><tr><td>Annual In-Place Rent</td><td>$1,200,000</td></tr><tr><td>Annual Market Rent</td><td>$1,350,000</td></tr><tr><td>Annual Gross Rent Upside</td><td>$150,000</td></tr></table>",
+  "<h3>Cap-Rate Value Indication</h3>",
+  "<table><tr><td>Cap Rate</td><td>Implied Value</td><td>Per Unit</td></tr><tr><td>5.0%</td><td>$18,000,000</td><td>$375,000</td></tr></table>",
+  "<h3>Source Context / Support Document Treatment</h3>",
+  "<p>Modeled core inputs: T12 and Rent Roll. Corroborating support: property tax if validated. Context only / not modeled: market survey, broker email, appraisal summary, environmental, zoning, and CapEx notes.</p>",
+  "<h3>Document Treatment Summary</h3>",
   "<p>Structured T12, rent roll, and supporting documents are listed where available.</p>",
   "<h3>Data Coverage &amp; Source Limitations</h3>",
-  "<p>Unsupported or unstructured uploads remain excluded from modeled outputs.</p>",
+  "<p>Unsupported or unstructured uploads remain excluded from modeled outputs. Optional support documents remain qualitative unless validated.</p>",
 ].join("\n");
 const acquisitionMemoLaunchQa = buildReportContractQa({
   reportType: "underwriting",
@@ -70,6 +78,14 @@ const acquisitionMemoLaunchQa = buildReportContractQa({
   html: acquisitionMemoLaunchHtml,
 });
 assert.equal(acquisitionMemoLaunchQa.violations.length, 0);
+assert.match(acquisitionMemoLaunchHtml, /Acquisition Memo Summary/);
+assert.match(acquisitionMemoLaunchHtml, /Operating Snapshot/);
+assert.match(acquisitionMemoLaunchHtml, /Rent Positioning Summary/);
+assert.match(acquisitionMemoLaunchHtml, /Rent Upside \/ Value Sensitivity/);
+assert.match(acquisitionMemoLaunchHtml, /Cap-Rate Value Indication/);
+assert.match(acquisitionMemoLaunchHtml, /Source Context \/ Support Document Treatment/);
+assert.match(acquisitionMemoLaunchHtml, /Data Coverage &amp; Source Limitations/);
+assert.equal(/<table>\s*<\/table>/.test(acquisitionMemoLaunchHtml), false);
 assert.equal(
   /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds|Capital Risk Profile|Review - Debt Coverage Constraint/i.test(acquisitionMemoLaunchHtml),
   false
