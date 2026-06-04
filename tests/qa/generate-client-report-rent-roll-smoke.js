@@ -903,6 +903,10 @@ assert.match(
 );
 assert.match(
   reportSource,
+  /launchMemoMode:\s*effectiveReportMode === "v1_core"/
+);
+assert.match(
+  reportSource,
   /Acquisition Memo Summary:/
 );
 assert.match(
@@ -916,6 +920,8 @@ assert.match(
 assert.equal(/CAPITAL RISK PROFILE/.test(reportSource), false);
 assert.equal(/Current Debt DSCR reflects current outstanding debt service and T12 NOI only\./.test(reportSource), false);
 assert.equal(/DSCR \(Computed\)/i.test(reportSource), false);
+assert.equal(/Review - Debt Coverage Constraint/i.test(reportSource), true);
+assert.match(reportSource, /execRefiLine = "";?/);
 assert.equal(/Top Income Line Share of EGI/.test(reportSource), false);
 assert.match(reportSource, /Top Income Line Compared with EGI/);
 assert.match(reportSource, /EGI is net of vacancy \/ credit-loss offsets/);
@@ -1802,6 +1808,36 @@ const canonicalLoanDealScoreState = generatorTest.buildDealScorecardState({
   },
 });
 assert.equal(/No current debt document provided|Not assessed - no current debt document|no true current debt balance was verified/i.test(canonicalLoanDealScoreState.dealScoreTableHtml), false);
+const launchMemoDealScoreState = generatorTest.buildDealScorecardState({
+  expenseRatioR: 0.369,
+  noiMarginR: 0.631,
+  execOccupancy: 0.95,
+  breakEvenOccR: 0.369,
+  marketRentPremiumRatio: 0.16,
+  currentDebtAssessmentState: canonicalLoanDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: canonicalLoanSelection.currentDebtPayload,
+  t12Payload: { net_operating_income: 611789.1838458668 },
+  sourceReconciliationState: {
+    status: "aligned",
+    publishability_bucket: "core_sufficient_publishable",
+    rr_annual_in_place: 1087488,
+    t12_gpr: 1087488,
+    variance_pct: 0,
+    has_material_variance: false,
+    customer_delivery_impact: "none",
+    public_outreach_impact: "none",
+    source_reconciliation_disclosure: null,
+  },
+  launchMemoMode: true,
+  launchMemoBaseLabel: "Stable",
+});
+assert.equal(launchMemoDealScoreState.displayVerdict?.label, "Stable");
+assert.equal(launchMemoDealScoreState.hasDscrScore, false);
+assert.equal(
+  /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds/i.test(launchMemoDealScoreState.dealScoreTableHtml),
+  false
+);
 
 const loanTermOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   currentDebtState: loanTermOnlyCurrentDebtState,

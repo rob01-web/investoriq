@@ -71,7 +71,7 @@ const acquisitionMemoLaunchQa = buildReportContractQa({
 });
 assert.equal(acquisitionMemoLaunchQa.violations.length, 0);
 assert.equal(
-  /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds/i.test(acquisitionMemoLaunchHtml),
+  /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds|Capital Risk Profile|Review - Debt Coverage Constraint/i.test(acquisitionMemoLaunchHtml),
   false
 );
 

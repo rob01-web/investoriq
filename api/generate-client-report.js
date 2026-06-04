@@ -809,6 +809,8 @@ function buildDealScorecardState({
   loanTermSheetTermsPayload = null,
   t12Payload = null,
   sourceReconciliationState = null,
+  launchMemoMode = false,
+  launchMemoBaseLabel = null,
 }) {
   const scoreRows = [];
   let totalPoints = 0;
@@ -877,21 +879,24 @@ function buildDealScorecardState({
 
   let hasDscrScore = false;
   let computedDscrForVerdict = null;
-  const currentDebtScorecardEntry = buildCurrentDebtScorecardEntry({
-    currentDebtState: currentDebtAssessmentState,
-    mortgagePayload,
-    loanTermSheetTermsPayload,
-    t12Payload,
-  });
-  const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
-  if (currentDebtScorecardEntry.hasDscrScore) {
-    computedDscrForVerdict = coerceNumber(currentDebtCoverage.dscr);
-    totalPoints += currentDebtScorecardEntry.scoreRow.pts;
-    maxPoints += currentDebtScorecardEntry.scoreRow.max;
-    scoreRows.push(currentDebtScorecardEntry.scoreRow);
-    hasDscrScore = true;
-  } else if (currentDebtScorecardEntry.scoreRow) {
-    scoreRows.push(currentDebtScorecardEntry.scoreRow);
+  let currentDebtScorecardEntry = null;
+  if (!launchMemoMode) {
+    currentDebtScorecardEntry = buildCurrentDebtScorecardEntry({
+      currentDebtState: currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      t12Payload,
+    });
+    const currentDebtCoverage = currentDebtScorecardEntry.currentDebtCoverage;
+    if (currentDebtScorecardEntry.hasDscrScore) {
+      computedDscrForVerdict = coerceNumber(currentDebtCoverage.dscr);
+      totalPoints += currentDebtScorecardEntry.scoreRow.pts;
+      maxPoints += currentDebtScorecardEntry.scoreRow.max;
+      scoreRows.push(currentDebtScorecardEntry.scoreRow);
+      hasDscrScore = true;
+    } else if (currentDebtScorecardEntry.scoreRow) {
+      scoreRows.push(currentDebtScorecardEntry.scoreRow);
+    }
   }
 
   if (!(scoreRows.length >= 4 && maxPoints > 0)) {
@@ -907,12 +912,25 @@ function buildDealScorecardState({
   }
 
   const score = Math.round((totalPoints / maxPoints) * 100);
-  const displayVerdict = buildCanonicalDisplayVerdictState({
-    score,
-    hasDscrScore,
-    currentDebtDscr: computedDscrForVerdict,
-    sourceReconciliationState,
-  });
+  const sourceReconciliationConstrained = Boolean(
+    buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
+  );
+  const displayVerdict = launchMemoMode
+    ? buildCanonicalVisibleClassificationState({
+      reportType: "screening",
+      reportTier: 1,
+        baseLabel: launchMemoBaseLabel || "Stable",
+        sourceReconciliationState,
+        sourceReconciliationCapActive: sourceReconciliationConstrained,
+        coreSupportInsufficient: false,
+        debtCoverageConstraintActive: false,
+      })
+    : buildCanonicalDisplayVerdictState({
+        score,
+        hasDscrScore,
+        currentDebtDscr: computedDscrForVerdict,
+        sourceReconciliationState,
+      });
   const rows = scoreRows.map((r) =>
     {
       const scoreDisplay = Number.isFinite(Number(r.max)) && Number(r.max) > 0
@@ -928,13 +946,14 @@ function buildDealScorecardState({
       );
     }
   ).join("");
-  const sourceReconciliationConstrained = Boolean(
-    buildSourceReconciliationNarrativeProminencePolicy(sourceReconciliationState).data_coverage_required
-  );
   const scoreLabel = sourceReconciliationConstrained ? "Operating Metrics Score" : "Composite Score";
-  let note = displayVerdict.cap_explanation ||
-    "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
-  if (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "debt_coverage_constraint" || displayVerdict.cap_reason_code === "debt_coverage_not_assessed") {
+  let note = launchMemoMode
+    ? (sourceReconciliationConstrained
+        ? "Operating metrics are shown with source reconciliation disclosure; debt/refi classification is not used in the launch memo."
+        : "Composite score reflects available operating metrics only. Base score thresholds: Stable 70+ | Sensitized 50-69 | Fragile <50.")
+    : displayVerdict.cap_explanation ||
+      "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
+  if (!launchMemoMode && (sourceReconciliationConstrained || displayVerdict.cap_reason_code === "debt_coverage_constraint" || displayVerdict.cap_reason_code === "debt_coverage_not_assessed")) {
     const noteParts = [
       "Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only.",
     ];
@@ -6532,6 +6551,7 @@ if (effectiveReportMode === "screening_v1") {
       // relevant for underwriting. Only strip S6 (screening-specific refi sufficiency
       // check, replaced by the full Refi Stability Classification section).
       finalHtml = stripMarkedSection(finalHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
+      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
     }
     // 5. Inject dynamic tables (fall back to blank if not provided)
     finalHtml = replaceAll(
@@ -6911,6 +6931,7 @@ if (effectiveReportMode === "screening_v1") {
       if (validRefiTiers.has(refiTier)) {
         execRefiLine = `<p>Refinance Stability Classification: ${escapeHtml(refiTier)}.</p>`;
       }
+      execRefiLine = "";
     }
     const execArticle = String(execUnitsText).trim().startsWith("8") ? "an" : "a";
     const execOpeningLine = `<p>${escapeHtml(
@@ -7503,6 +7524,8 @@ if (effectiveReportMode === "screening_v1") {
       loanTermSheetTermsPayload,
       t12Payload,
       sourceReconciliationState,
+      launchMemoMode: effectiveReportMode === "v1_core",
+      launchMemoBaseLabel: screeningClass,
     });
     const sourceReconciliationCapActive = Boolean(
       sourceReconciliationNarrativePolicy?.data_coverage_required === true &&
