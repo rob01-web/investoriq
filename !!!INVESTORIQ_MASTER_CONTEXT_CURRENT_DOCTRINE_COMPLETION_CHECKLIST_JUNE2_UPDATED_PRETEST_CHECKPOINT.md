@@ -1,3 +1,63 @@
+# June 4, 2026 Addendum - Product Ladder Locked / Underwriting Converted To Acquisition Memo / Slice 1 Completed
+
+- InvestorIQ Screening Report: lower price; fast first-pass property screen from T12 + Rent Roll; keep Screening stable/as-is because it has been the cleanest report type.
+- InvestorIQ Acquisition Memo: main launch product; document-driven acquisition and financing-readiness memo for property investors; built from the current Underwriting/v1_core path, but unstable advanced sections are hard-collapsed/deferred; goal is lender/investor-facing preliminary acquisition memo, not full V2 underwriting.
+- InvestorIQ Full Underwriting V2.0: coming later; advanced debt/refi, DCF, waterfall, capital stack, integrations, investor/lender package.
+- Acquisition Memo Slice 1 completed:
+  - `api/generate-client-report.js` updated.
+  - `tests/qa/generate-client-report-rent-roll-smoke.js` updated.
+  - `v1_core` output now labels as Acquisition Memo.
+  - `Document-Backed Underwriting Outputs` changed to `Document-Backed Acquisition Memo Outputs`.
+  - Screening path intentionally unchanged.
+  - No new report mode created.
+  - No SQL/RPC, Stripe/pricing, DocRaptor, public sample, or route changes.
+- Preserved in Acquisition Memo:
+  - Executive Summary
+  - Operating Statement
+  - Operating Profile
+  - Expense Structure
+  - NOI Stability
+  - Rent Roll / Rent Positioning
+  - Rent upside / mark-to-market
+  - Value Indication / Cap-Rate Framework
+  - Acquisition Context, only source-bound purchase price / going-in cap context
+  - Document Treatment
+  - Data Coverage / Source Limitations
+  - Source Limitations
+  - Operating-risk language inside Executive Summary / Operating Profile
+- Hard-collapsed / deferred to V2.0:
+  - Current Debt / Debt Structure
+  - DSCR
+  - Refinance Stability / Refi Stress
+  - Acquisition Financing Debt Sizing
+  - Scenario Analysis / Five-Year Outlook
+  - DCF
+  - Advanced Financial Modeling
+  - Equity Waterfall
+  - Complex chart pages
+  - Exit / sale assumptions
+  - Advanced return projections
+  - Deal Scorecard section
+  - Dedicated Risk Register section
+- Launch interpretation:
+  - Acquisition Memo is the main launch product.
+  - It is a toned-down Underwriting path, not expanded Screening.
+  - Screening remains stable lower-priced first-pass screen.
+  - Full Underwriting V2.0 remains future premium product.
+  - The collapse is rule-based/section-marker-based, not property-specific.
+  - Debt/support docs may still be disclosed in Document Treatment/Data Coverage, but are not modeled into current debt, DSCR, refi, DCF, waterfall, or return surfaces for launch.
+- Validation:
+  - `node --check api/generate-client-report.js`
+  - `node --check api/_lib/report-surface-contracts.js`
+  - `node tests/qa/generate-client-report-rent-roll-smoke.js` PASS
+  - `node tests/qa/report-contract-qa-smoke.js` PASS
+  - `npm run build` PASS
+  - `git diff --check` PASS with LF/CRLF warnings only
+  - no hardcoding
+- Next recommended step:
+  - After docs update/archive, run one controlled Acquisition Memo generation and visually inspect the PDF.
+  - Do not patch more code before seeing the actual memo output unless a clear blocker is already known.
+
 # June 3, 2026 Addendum - Codex Usage Conservation / Slice 3 In Progress Checkpoint
 
 ## Current continuation point

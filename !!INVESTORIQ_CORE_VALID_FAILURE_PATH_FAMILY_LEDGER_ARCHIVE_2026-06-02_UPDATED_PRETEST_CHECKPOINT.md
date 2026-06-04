@@ -1,3 +1,13 @@
+# June 4, 2026 Archive Note - Superseded By Acquisition Memo Product Ladder
+
+This ledger is retained as historical cleanup context. The core-valid failure path work materially informed the current launch doctrine, but the active launch direction is now controlled by the Master Context product ladder:
+
+1. InvestorIQ Screening Report - stable lower-priced first-pass report.
+2. InvestorIQ Acquisition Memo - main launch product, converted from the current Underwriting/v1_core path with unstable advanced sections hard-collapsed/deferred.
+3. InvestorIQ Full Underwriting V2.0 - future premium product for advanced debt/refi, DCF, waterfall, capital stack, integrations, and investor/lender package.
+
+Do not use this archived ledger as the immediate next-work queue unless a future regression specifically reopens a core-valid delivery/failure-path issue.
+
 # June 3, 2026 Addendum - Codex Usage Conservation / Slice 3 In Progress Checkpoint
 
 ## Current continuation point
