@@ -485,6 +485,12 @@ function addViolation(violations, violation) {
   });
 }
 
+const legacyCompatibilityInputOnly = {
+  // Deprecated compatibility only; not report-quality authority and not returned by report-contract QA.
+  blocks_public_sample: true,
+  blocks_high_value_outreach: true,
+};
+
 function excerptAround(text, needle, radius = 140) {
   const source = String(text || "");
   const index = source.toUpperCase().indexOf(String(needle || "").toUpperCase());
@@ -1249,8 +1255,7 @@ export function buildReportContractQa({
         excerpt: firstPatternExcerpt(text, [/CORE INPUTS EXTRACTED\s*-\s*SOURCE LIMITATIONS DISCLOSURE/i, /SOURCE LIMITATIONS DISCLOSURE/i]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const hasDataCoverageHeading = /Data Coverage/i.test(text);
@@ -1284,8 +1289,7 @@ export function buildReportContractQa({
           .map(([key]) => key),
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const renderedDebtSectionHeadingPresent = /Debt Structure|Current Debt Coverage/i.test(text);
@@ -1306,8 +1310,7 @@ export function buildReportContractQa({
         excerpt: firstPatternExcerpt(text, [/Debt Structure/i, /Current Debt Coverage/i]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (
@@ -1326,8 +1329,7 @@ export function buildReportContractQa({
         section_eligibility_debt_structure: debtStructureEligibility,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const hasComputedCurrentDebtSurface =
@@ -1366,8 +1368,7 @@ export function buildReportContractQa({
           ]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (
@@ -1389,8 +1390,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const hasRefiEligibilityDrift =
@@ -1417,8 +1417,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const hasRenovationModelingSurface =
@@ -1441,8 +1440,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const canonicalVerdictCapState = inferCanonicalVerdictCapState(sourceReportCoverageQa);
@@ -1494,8 +1492,7 @@ export function buildReportContractQa({
           canonical_delivery_source: canonicalDeliveryResolution.source,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
 
@@ -1522,8 +1519,7 @@ export function buildReportContractQa({
           canonical_delivery_source: canonicalDeliveryResolution.source,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
 
@@ -1550,8 +1546,7 @@ export function buildReportContractQa({
           canonical_delivery_source: canonicalDeliveryResolution.source,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -1651,8 +1646,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (
@@ -1671,8 +1665,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   } else if (canonicalVerdictCapState.cap_reason_code === "source_reconciliation_disclosure") {
@@ -1688,8 +1681,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   } else if (canonicalVerdictCapState.cap_reason_code === "insufficient_core_support") {
@@ -1705,8 +1697,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -1736,8 +1727,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (canonicalVisibleClassificationRegex && !canonicalVisibleClassificationRegex.test(text)) {
@@ -1751,8 +1741,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
 
@@ -1859,8 +1848,7 @@ export function buildReportContractQa({
         excerpt: supportDocPropertyTaxLeakMatch[0],
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const canonicalSupportDocs = collectCanonicalSupportDocs(sourceReportCoverageQa, artifacts);
@@ -1944,8 +1932,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -1975,8 +1962,7 @@ export function buildReportContractQa({
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   const structuredCurrentDebtNames = modeledDocRows
@@ -2001,8 +1987,7 @@ export function buildReportContractQa({
         conflicting_files: contradictoryCurrentDebtFiles,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
 
@@ -2035,8 +2020,7 @@ export function buildReportContractQa({
           property_tax_binding_state: bindingState,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     } else if (dangerousStructuredRows.length > 0) {
       addViolation(violations, {
@@ -2049,8 +2033,7 @@ export function buildReportContractQa({
           property_tax_binding_state: bindingState,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -2075,8 +2058,7 @@ export function buildReportContractQa({
           ]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
 
@@ -2108,8 +2090,7 @@ export function buildReportContractQa({
           ]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (hasComputedCurrentDebtState && hasStaleMissingDebtCopy) {
@@ -2142,8 +2123,7 @@ export function buildReportContractQa({
         implied_avg_in_place_rent: Number.isFinite(impliedAvgInPlaceRent) ? impliedAvgInPlaceRent : null,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
 
@@ -2247,8 +2227,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -2300,8 +2279,7 @@ export function buildReportContractQa({
           },
           customer_delivery_impact: "disclose_only",
           blocks_customer_delivery: false,
-          blocks_public_sample: true,
-          blocks_high_value_outreach: true,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
         });
       }
     }
@@ -2395,8 +2373,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -2426,8 +2403,7 @@ export function buildReportContractQa({
           ]) || leakProbeExcerpt,
       },
       blocks_customer_delivery: false,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
   if (currentDebtDscrValues.length >= 2) {
@@ -2446,8 +2422,7 @@ export function buildReportContractQa({
           max_value: maxValue,
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -2481,8 +2456,7 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: discloseOnlyReconciliationMismatch ? "disclose_only" : "block",
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
   }
@@ -2650,8 +2624,7 @@ export function buildReportContractQa({
           message: "Rendered acquisition purchase price appears to be populated from stated loan amount.",
           evidence: { purchase_price: purchasePrice, stated_acquisition_loan_amount: statedLoan, excerpt: acquisitionSection.slice(0, 400) },
           blocks_customer_delivery: false,
-          blocks_public_sample: true,
-          blocks_high_value_outreach: true,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
         });
       }
     }
@@ -2680,8 +2653,7 @@ export function buildReportContractQa({
           excerpt: acquisitionSection.slice(0, 400),
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
     const canUseArtifactClosingFallback = !canonicalAcquisitionValues?.hasCanonicalAcquisitionState;
@@ -2700,8 +2672,7 @@ export function buildReportContractQa({
           excerpt: firstPatternExcerpt(acquisitionSection, [/Closing Costs[^\n]{0,40}0\.0%/i]),
         },
         blocks_customer_delivery: false,
-        blocks_public_sample: true,
-        blocks_high_value_outreach: true,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
     if (hasAcquisitionSection) {
@@ -2782,8 +2753,7 @@ export function buildReportContractQa({
           },
           customer_delivery_impact: "disclose_only",
           blocks_customer_delivery: false,
-          blocks_public_sample: true,
-          blocks_high_value_outreach: true,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
         });
       }
     }

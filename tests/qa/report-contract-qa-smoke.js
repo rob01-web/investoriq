@@ -2786,6 +2786,11 @@ assert.equal(
   readinessAliasDistributionMetadata.distribution_readiness_issues.some((issue) => issue.code === "PRODUCTION_PDF_CONFIG_ISSUE"),
   true
 );
+const readinessAliasDistributionMetadataSerialized = JSON.stringify(readinessAliasDistributionMetadata);
+assert.equal(readinessAliasDistributionMetadataSerialized.includes("public_sample_ready"), false);
+assert.equal(readinessAliasDistributionMetadataSerialized.includes("high_value_outreach_ready"), false);
+assert.equal(readinessAliasDistributionMetadataSerialized.includes("blocks_public_sample"), false);
+assert.equal(readinessAliasDistributionMetadataSerialized.includes("blocks_high_value_outreach"), false);
 
 const canonicalDeliveryWinsOverRouting = buildReportContractQa({
   reportType: "underwriting",
