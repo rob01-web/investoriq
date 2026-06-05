@@ -1990,6 +1990,13 @@ function stripEmptyHeadingBlocks(html) {
 function stripThinSectionPages(html) {
   if (!html) return html;
   return String(html).replace(/<section class="section page-break">([\s\S]*?)<\/section>/gi, (match, inner) => {
+    if (
+      /<span class="section-header-title">\s*(Data Coverage &amp; Source Limitations|Source Context \/ Support Document Treatment)\s*<\/span>/i.test(inner) ||
+      /<p class="subsection-title">\s*Document Treatment Summary\s*<\/p>/i.test(inner) ||
+      /<p class="subsection-title">\s*(Data Coverage \/ Source Reliability|Source Reliability)\s*<\/p>/i.test(inner)
+    ) {
+      return match;
+    }
     const innerText = String(inner || "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
@@ -2279,7 +2286,18 @@ function shouldStripDataCoverageSectionByRenderedCopy({
   hasCanonicalCoverageAuthority = false,
 } = {}) {
   if (hasCanonicalCoverageAuthority) return false;
-  const dnaCount = (String(coverageSectionHtml || "").match(/DATA NOT AVAILABLE/g) || []).length;
+  const coverageHtml = String(coverageSectionHtml || "");
+  if (
+    /<p class="subsection-title">\s*(Data Coverage \/ Source Reliability|Source Reliability)\s*<\/p>/i.test(coverageHtml) ||
+    /<p class="subsection-title">\s*Document Treatment Summary\s*<\/p>/i.test(coverageHtml) ||
+    /Data Coverage &amp; Source Limitations/i.test(coverageHtml) ||
+    /Source Context \/ Support Document Treatment/i.test(coverageHtml) ||
+    /T12 Operating Statement/i.test(coverageHtml) ||
+    /Rent Roll/i.test(coverageHtml)
+  ) {
+    return false;
+  }
+  const dnaCount = (coverageHtml.match(/DATA NOT AVAILABLE/g) || []).length;
   return dnaCount >= 3;
 }
 function constantTimeEqual(a, b) {
@@ -4444,9 +4462,17 @@ function buildScreeningDataCoverageSummary({
     ? `<p style="margin:8px 0 0 0;color:#374151;font-size:11px;">Field extraction completeness does not imply cross-source reconciliation. The T12 and rent roll fields were extracted, but the income scale variance remains unresolved.</p>`
     : "";
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
+  const sourceReliabilityRows = [
+    `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Core quantitative source</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">EGI, OpEx, and NOI</td></tr>`,
+    `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Core quantitative source</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Units, occupancy, in-place rent, and market rent</td></tr>`,
+    effectiveReportMode === "v1_core"
+      ? `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Support documents</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Context only unless validated</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Corroborating support, not an override for modeled core inputs</td></tr>`
+      : `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Unsupported inputs</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Omitted</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Missing or unsupported items are not inferred</td></tr>`,
+  ].join("");
+  const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">Debt, refinance, DCF, waterfall, and equity-return surfaces remain excluded from the launch memo and screening report.</p></div>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : "All required screening inputs were fully extracted from uploaded documents.")}</p>${coverageTableHtml}${fieldCompletenessClarification}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : "All required screening inputs were fully extracted from uploaded documents.")}</p>${coverageTableHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
     }
     if (effectiveReportMode === "v1_core") {
       const memoCoverageCopy = sourceReconciliationRequired
@@ -4464,7 +4490,7 @@ function buildScreeningDataCoverageSummary({
       ) > 0 || sourceConstrainedSectionCount > 0
         ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
         : "";
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : memoCoverageCopy)}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(optionalSupportCopy)}</p>${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}${fieldCompletenessClarification}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : memoCoverageCopy)}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(optionalSupportCopy)}</p>${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
     }
     const currentDebtCoverageState = formatCurrentDebtAssessmentCopy({
       currentDebtState: currentDebtAssessmentState,
@@ -4499,7 +4525,7 @@ function buildScreeningDataCoverageSummary({
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
-  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${nextBestUploadsHtml}<p class="small">Sections not supported by minimum verified source coverage were intentionally withheld from analysis.</p>${unlocksCard}`;
+  return `<p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p>${coverageTableHtml}${sourceReliabilityHtml}${nextBestUploadsHtml}<p class="small">Sections not supported by minimum verified source coverage were intentionally withheld from analysis.</p>${unlocksCard}`;
 }
 function isEligiblePositiveIncomeDriver(row) {
   const label = String(row?.label || "").trim();
@@ -5269,7 +5295,6 @@ function applyFinalSectionHealRenderGuards(
   } else if (effectiveReportMode === "v1_core") {
     outputHtml = stripMarkedSection(outputHtml, "SECTION_3_SCENARIO");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_3");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_4_NEIGHBORHOOD");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_5_RISK");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_6_RENOVATION");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");

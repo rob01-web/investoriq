@@ -204,6 +204,8 @@ assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positi
 assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
 assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
+assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
+assert.match(fullRenderHtml, /Source Reliability/i);
 const unresolvedTokens = fullRenderHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (unresolvedTokens.length > 0) {
   throw new Error(`Unresolved tokens: ${unresolvedTokens.slice(0, 10).join(", ")}`);
@@ -235,6 +237,90 @@ const forbiddenSurfacePatterns = [
 const forbiddenSurfaceHit = forbiddenSurfacePatterns.find((pattern) => pattern.test(visibleFullRenderText));
 if (forbiddenSurfaceHit) {
   throw new Error(`Forbidden surface leaked in visible HTML: ${forbiddenSurfaceHit}`);
+}
+
+const screeningHarnessRequest = {
+  headers: {
+    "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+  },
+  body: {
+    userId: "user_screening_full_render_smoke",
+    report_type: "screening",
+    property_name: "Harbourstone",
+    __test_return_final_html: true,
+    __test_payloads: {
+      t12Payload: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+        gross_potential_rent: 1850000,
+        gross_scheduled_rent: 1850000,
+      },
+      rentRollPayload: {
+        total_units: 48,
+        occupied_units: 46,
+        vacant_units: 2,
+        occupancy: 0.9583333333,
+        total_in_place_annual: 1036800,
+        total_market_annual: 1137600,
+        totals: {
+          summary_row_detected: true,
+          total_units: 48,
+          occupied_units: 46,
+          vacant_units: 2,
+          occupancy: 0.9583333333,
+          in_place_rent_annual: 1036800,
+          market_rent_annual: 1137600,
+        },
+      },
+      computedRentRoll: {
+        total_units: 48,
+        occupied_units: 46,
+        vacant_units: 2,
+        occupancy: 0.9583333333,
+        total_in_place_annual: 1036800,
+        total_annual_market: 1137600,
+        annual_in_place_rent: 1036800,
+        annual_market_rent: 1137600,
+        avg_in_place_rent: 1800,
+        avg_market_rent: 1980,
+        rent_to_market_gap: 0.0961538462,
+      },
+    },
+  },
+};
+const screeningHarnessResponse = {
+  statusCode: null,
+  body: null,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return payload;
+  },
+};
+await generateClientReport(screeningHarnessRequest, screeningHarnessResponse);
+assert.equal(screeningHarnessResponse.statusCode, 200);
+assert.equal(screeningHarnessResponse.body?.success, true);
+const screeningHtml = String(screeningHarnessResponse.body?.final_html || "");
+assert.match(screeningHtml, /Data Coverage &amp; Source Limitations/i);
+assert.match(screeningHtml, /Source Reliability/i);
+assert.match(screeningHtml, /T12 Operating Statement/i);
+assert.match(screeningHtml, /Rent Roll/i);
+const screeningUnresolvedTokens = screeningHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
+if (screeningUnresolvedTokens.length > 0) {
+  throw new Error(`Screening unresolved tokens: ${screeningUnresolvedTokens.slice(0, 10).join(", ")}`);
+}
+const screeningVisibleText = screeningHtml
+  .replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/<style[\s\S]*?<\/style>/gi, " ")
+  .replace(/<script[\s\S]*?<\/script>/gi, " ")
+  .replace(/<[^>]+>/g, " ");
+const screeningForbiddenHit = forbiddenSurfacePatterns.find((pattern) => pattern.test(screeningVisibleText));
+if (screeningForbiddenHit) {
+  throw new Error(`Forbidden surface leaked in screening HTML: ${screeningForbiddenHit}`);
 }
 
 assert.match(
