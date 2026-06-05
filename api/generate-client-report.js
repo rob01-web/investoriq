@@ -3253,6 +3253,7 @@ function buildDocumentTreatmentSummaryHtml({
       note: escapeHtml(classification.note),
       source_basis: classification.source_basis,
       reason_code: classification.reason_code,
+      category: classification.category,
     };
     if (classification.category === "Modeled Inputs") {
       pushUnique(modeled, entry);
@@ -3271,8 +3272,19 @@ function buildDocumentTreatmentSummaryHtml({
       : `<p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(emptyNote)}</p>`;
     return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
   };
+  const sourceTreatmentRowsHtml = files
+    .map(
+      (file) => {
+        const classification = classifyRow(file);
+        return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.category)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
+      }
+    )
+    .join("");
+  const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
+    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
+    : "";
 
-  return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
+  return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
 }
 
 function buildHistoricalCapexDisplayCopy({
@@ -3713,7 +3725,8 @@ function buildLaunchSourceContextBlock({
     propertyTaxBindingState,
     documentQuantitativeUsageMap,
   });
-  return `${intro}${treatment}`;
+  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Deferred surfaces remain collapsed in the launch memo: current-debt DSCR, refinance, DCF, waterfall, equity-return, deal-score, and final recommendation outputs. They are not reintroduced unless the report family explicitly supports them and the required source basis exists.</p></div>`;
+  return `${intro}${treatment}${excludedDeferredHtml}`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -5318,10 +5331,6 @@ function applyFinalSectionHealRenderGuards(
     outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_RENOVATION");
   }
   if (effectiveReportMode === "v1_core" || String(reportType || "").trim().length > 0) {
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S2_INCOME_FORENSICS");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S3_EXPENSE_STRUCTURE");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S4_NOI_STABILITY");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_S6_RENOVATION");
     outputHtml = stripMarkedSection(outputHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
   }
@@ -8428,67 +8437,25 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{T12_PER_UNIT_ROWS}}",
       buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
     );
-    const screeningIncomeForensicsHtml = effectiveReportMode === "screening_v1"
-      ? (() => {
-          const operatingSummaryLines = [];
-          const screeningOccupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
-          const screeningAnnualInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value ?? rentRollPayload?.total_in_place_annual);
-          const screeningExpenseRatio = Number.isFinite(t12EgiValue) && Number.isFinite(t12TotalExpensesValue) && t12EgiValue > 0
-            ? t12TotalExpensesValue / t12EgiValue
-            : null;
-          const screeningNoiMargin = Number.isFinite(t12EgiValue) && Number.isFinite(t12NoiValue) && t12EgiValue > 0
-            ? t12NoiValue / t12EgiValue
-            : null;
-          const screeningAvgInPlace = coerceNumber(computedRentRoll?.avg_in_place_rent ?? rentRollPayload?.avg_in_place_rent);
-          const screeningAvgMarket = coerceNumber(computedRentRoll?.avg_market_rent ?? rentRollPayload?.avg_market_rent);
-          if (Number.isFinite(screeningOccupancy) || Number.isFinite(screeningAnnualInPlace)) {
-            const incomeParts = [];
-            if (Number.isFinite(screeningOccupancy)) incomeParts.push(`occupancy of ${formatPercent1(screeningOccupancy)}`);
-            if (Number.isFinite(screeningAnnualInPlace)) incomeParts.push(`annual in-place rent of ${formatCurrency(screeningAnnualInPlace)}`);
-            if (incomeParts.length > 0) operatingSummaryLines.push(`${incomeParts[0].charAt(0).toUpperCase() + incomeParts[0].slice(1)}${incomeParts.length > 1 ? ` and ${incomeParts.slice(1).join(" and ")}` : ""}.`);
-          }
-          if (Number.isFinite(t12TotalExpensesValue) || Number.isFinite(screeningExpenseRatio)) {
-            const expenseParts = [];
-            if (Number.isFinite(t12TotalExpensesValue)) expenseParts.push(`total operating expenses of ${formatCurrency(t12TotalExpensesValue)}`);
-            if (Number.isFinite(screeningExpenseRatio)) expenseParts.push(`an expense ratio of ${formatPercent1(screeningExpenseRatio)}`);
-            if (expenseParts.length > 0) operatingSummaryLines.push(`${expenseParts[0].charAt(0).toUpperCase() + expenseParts[0].slice(1)}${expenseParts.length > 1 ? ` and ${expenseParts.slice(1).join(" and ")}` : ""}.`);
-          }
-          if (Number.isFinite(t12NoiValue) || Number.isFinite(screeningNoiMargin)) {
-            const noiParts = [];
-            if (Number.isFinite(t12NoiValue)) noiParts.push(`NOI of ${formatCurrency(t12NoiValue)}`);
-            if (Number.isFinite(screeningNoiMargin)) noiParts.push(`an NOI margin of ${formatPercent1(screeningNoiMargin)}`);
-            if (noiParts.length > 0) operatingSummaryLines.push(`${noiParts[0].charAt(0).toUpperCase() + noiParts[0].slice(1)}${noiParts.length > 1 ? `, reflecting ${noiParts.slice(1).join(" and ")}` : ""}.`);
-          }
-          if (Number.isFinite(screeningAvgInPlace) && Number.isFinite(screeningAvgMarket) && screeningAvgInPlace > 0 && screeningAvgMarket > screeningAvgInPlace) {
-            operatingSummaryLines.push(
-              summaryOnlyRentRollSurface
-                ? "Verified rent-roll summary totals indicate below-market in-place rent levels."
-                : "Rent roll data supports below-market in-place rents across the current unit mix."
-            );
-          }
-          return operatingSummaryLines.length > 0
-            ? `<div class="card no-break"><p class="subsection-title">Operating Profile Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0;">${escapeHtml(operatingSummaryLines.join(" "))}</p></div>`
-            : "";
-        })()
-      : buildScreeningIncomeForensicsHtml({
-          t12Payload,
-          computedRentRoll,
-          rentRollPayload,
-          formatCurrency,
-          sourceReconciliationState,
-        });
+    const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+      sourceReconciliationState,
+    });
     finalHtml = replaceAll(
       finalHtml,
       "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
       screeningIncomeForensicsHtml
     );
-    const screeningExpenseHtml = effectiveReportMode === "screening_v1" ? "" : buildScreeningExpenseStructureHtml({
+    const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
       formatCurrency,
     });
-    const screeningNoiHtml = effectiveReportMode === "screening_v1" ? "" : buildScreeningNoiStabilityHtml({
+    const screeningNoiHtml = buildScreeningNoiStabilityHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
@@ -9430,9 +9397,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     if (effectiveReportMode === "v1_core") {
       marketContextVisibility.keepNeighborhood = true;
       marketContextVisibility.keepLocationTable = true;
-    }
-    if (!marketContextVisibility.keepNeighborhood) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
     }
     if (!marketContextVisibility.keepLocationTable) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_4_LOCATION_TABLE");

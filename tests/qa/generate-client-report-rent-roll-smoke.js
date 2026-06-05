@@ -206,6 +206,16 @@ assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
+assert.match(fullRenderHtml, /Source Treatment \/ Quantitative Use/i);
+assert.match(fullRenderHtml, /Excluded \/ Deferred Analysis/i);
+assert.match(fullRenderHtml, /Purchase Price/i);
+assert.match(fullRenderHtml, /Going-In Cap Rate/i);
+assert.match(fullRenderHtml, /Property_Tax_Support\.pdf/i);
+assert.match(fullRenderHtml, /Market_Rent_Survey_Excerpt\.txt/i);
+assert.match(fullRenderHtml, /CapEx_Notes\.txt/i);
+assert.match(fullRenderHtml, /Phase_I_ESA_Context\.pdf/i);
+assert.match(fullRenderHtml, /Broker_Email_Context\.msg/i);
+assert.match(fullRenderHtml, /Unsupported_Appraisal_Excerpt\.pdf/i);
 const unresolvedTokens = fullRenderHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (unresolvedTokens.length > 0) {
   throw new Error(`Unresolved tokens: ${unresolvedTokens.slice(0, 10).join(", ")}`);
@@ -309,6 +319,11 @@ assert.match(screeningHtml, /Data Coverage &amp; Source Limitations/i);
 assert.match(screeningHtml, /Source Reliability/i);
 assert.match(screeningHtml, /T12 Operating Statement/i);
 assert.match(screeningHtml, /Rent Roll/i);
+assert.match(screeningHtml, /Top Positive Income Lines Compared with EGI/i);
+assert.match(screeningHtml, /Top Expense Drivers \(share of OpEx\)/i);
+assert.match(screeningHtml, /Operating Expense Ratio/i);
+assert.match(screeningHtml, /NOI Stability Review/i);
+assert.match(screeningHtml, /Rent Roll Distribution/i);
 const screeningUnresolvedTokens = screeningHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (screeningUnresolvedTokens.length > 0) {
   throw new Error(`Screening unresolved tokens: ${screeningUnresolvedTokens.slice(0, 10).join(", ")}`);
