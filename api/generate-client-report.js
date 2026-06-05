@@ -3132,10 +3132,19 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedLoanTerms) {
+      const hasDocumentDerivedAcquisitionContext =
+        Number.isFinite(purchasePrice) && purchasePrice > 0 ||
+        Number.isFinite(goingInCapRate) && goingInCapRate > 0 ||
+        Number.isFinite(statedLoanAmount) && statedLoanAmount > 0 ||
+        Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0;
       return {
         category: "Displayed / Limited Use",
-        note: "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt.",
-        reason_code: "loan_term_sheet_proposed_acquisition_only",
+        note: hasDocumentDerivedAcquisitionContext
+          ? "Acquisition context / document-derived purchase-price or cap-rate reference. Does not override T12 or Rent Roll."
+          : "Acquisition context only; not quantitatively modeled.",
+        reason_code: hasDocumentDerivedAcquisitionContext
+          ? "loan_term_sheet_acquisition_context"
+          : "loan_term_sheet_proposed_acquisition_only",
         source_basis: sourceBasis,
       };
     }
@@ -3272,16 +3281,105 @@ function buildDocumentTreatmentSummaryHtml({
       : `<p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(emptyNote)}</p>`;
     return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
   };
+  const resolveDocumentRoleLabel = (row, classification) => {
+    const canonicalRole = normalizedText(row?.semantic_doc_role || row?.display_doc_type || row?.doc_type || "");
+    if (/^(t12|trailing[-_\s]?12|ttm operating statement|operating statement|income statement)$/.test(canonicalRole)) {
+      return "T12 Operating Statement";
+    }
+    if (/^rent[_\s-]?roll$/.test(canonicalRole)) {
+      return "Rent Roll";
+    }
+    if (/^property[_\s-]?tax$/.test(canonicalRole)) {
+      return "Property Tax Support";
+    }
+    if (/^(purchase assumptions|loan term sheet|loan[_\s-]?term[_\s-]?sheet|acquisition financing|proposed acquisition financing)$/.test(canonicalRole)) {
+      return "Purchase Assumptions";
+    }
+    if (/^(current mortgage statement|current debt terms|mortgage statement|debt terms)$/.test(canonicalRole)) {
+      return "Loan / Debt Support";
+    }
+    if (/^(market survey|market rent survey|rent survey|rent comps|rent comparables)$/.test(canonicalRole)) {
+      return "Market Rent Context";
+    }
+    if (/^(renovation budget|capex|capital expenditure|capital budget|construction budget|renovation)$/.test(canonicalRole)) {
+      return "CapEx / Renovation Context";
+    }
+    if (/^(environmental due diligence|phase i|phase 1|esa|environmental)$/.test(canonicalRole)) {
+      return "Environmental Due Diligence Context";
+    }
+    if (/^(appraisal|valuation report|opinion of value)$/.test(canonicalRole)) {
+      return "Appraisal Context";
+    }
+    if (/^(broker email|broker|email|background|diligence)$/.test(canonicalRole)) {
+      return "Broker / Diligence Context";
+    }
+    if (classification?.reason_code === "property_tax_support_corroborating" || classification?.reason_code === "property_tax_support_unbound") {
+      return "Property Tax Support";
+    }
+    if (classification?.reason_code === "current_debt_not_assessed" || classification?.reason_code === "current_debt_not_used_here" || classification?.reason_code === "structured_current_debt_input") {
+      return "Loan / Debt Support";
+    }
+    if (classification?.reason_code === "loan_term_sheet_proposed_acquisition_only") {
+      return "Purchase Assumptions";
+    }
+    if (classification?.reason_code === "loan_term_sheet_acquisition_context") {
+      return "Purchase Assumptions";
+    }
+    return "Other Support Document";
+  };
+  const resolveTreatmentLabel = (row, classification) => {
+    switch (classification?.reason_code) {
+      case "structured_current_debt_input":
+        return "Core quantitative source";
+      case "canonical_current_debt_quantitative_usage":
+        return "Core quantitative source";
+      case "property_tax_support_corroborating":
+        return "Corroborating support";
+      case "property_tax_support_unbound":
+      case "filename_fallback_property_tax_support_corroborating":
+      case "filename_fallback_property_tax_support_unbound":
+        return "Corroborating support";
+      case "loan_term_sheet_proposed_acquisition_only":
+      case "loan_term_sheet_acquisition_context":
+        return "Acquisition context / document-derived purchase-price or cap-rate reference";
+      case "current_debt_not_assessed":
+      case "current_debt_not_used_here":
+        return "Debt support received; analysis deferred";
+      case "market_survey_context_only":
+      case "filename_fallback_market_survey_context_only":
+        return "Context only";
+      case "historical_capex_only":
+      case "renovation_budget_no_roi_inputs":
+      case "renovation_forward_looking_transparency_only":
+        return "Context only";
+      case "environmental_support_context_only":
+      case "filename_fallback_environmental_support_only":
+        return "Context only";
+      case "zoning_compliance_context_only":
+      case "filename_fallback_zoning_support_only":
+        return "Context only";
+      case "unsupported_appraisal_or_market_source":
+      case "filename_fallback_unsupported_appraisal_source":
+        return "Context only";
+      case "support_context_file":
+      case "unclassified_support_file":
+      case "filename_fallback_unclassified_support_file":
+      default:
+        return classification?.category === "Modeled Inputs" ? "Core quantitative source" : "Context only";
+    }
+  };
   const sourceTreatmentRowsHtml = files
     .map(
       (file) => {
         const classification = classifyRow(file);
-        return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.category)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
+        const rowRoleLabel = resolveDocumentRoleLabel(file, classification);
+        const rowTreatmentLabel = resolveTreatmentLabel(file, classification);
+        return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowRoleLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowTreatmentLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
       }
     )
     .join("");
   const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
-    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
+    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
     : "";
 
   return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
@@ -3714,7 +3812,7 @@ function buildLaunchSourceContextBlock({
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
 } = {}) {
-  const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and going-in cap rate context.</p>`;
+  const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
   const treatment = buildDocumentTreatmentSummaryHtml({
     documentSources,
     currentDebtAssessmentState,
@@ -3725,7 +3823,7 @@ function buildLaunchSourceContextBlock({
     propertyTaxBindingState,
     documentQuantitativeUsageMap,
   });
-  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Deferred surfaces remain collapsed in the launch memo: current-debt DSCR, refinance, DCF, waterfall, equity-return, deal-score, and final recommendation outputs. They are not reintroduced unless the report family explicitly supports them and the required source basis exists.</p></div>`;
+  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing, refinance, return-projection, and recommendation modules remain deferred from the launch acquisition memo unless explicitly supported by the report family and verified source basis.</p></div>`;
   return `${intro}${treatment}${excludedDeferredHtml}`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
@@ -4482,7 +4580,11 @@ function buildScreeningDataCoverageSummary({
       ? `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Support documents</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Context only unless validated</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Corroborating support, not an override for modeled core inputs</td></tr>`
       : `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Unsupported inputs</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Omitted</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Missing or unsupported items are not inferred</td></tr>`,
   ].join("");
-  const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">Debt, refinance, DCF, waterfall, and equity-return surfaces remain excluded from the launch memo and screening report.</p></div>`;
+  const sourceReliabilityFooter =
+    effectiveReportMode === "screening_v1"
+      ? "Advanced financing, refinance, return-projection, and recommendation modules remain excluded from Screening."
+      : "Advanced financing, refinance, return-projection, and recommendation modules remain deferred from the launch acquisition memo unless explicitly supported by the report family and verified source basis.";
+  const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(sourceReliabilityFooter)}</p></div>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
       return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : "All required screening inputs were fully extracted from uploaded documents.")}</p>${coverageTableHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
@@ -7990,7 +8092,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       if (Number.isFinite(acquisitionMemoRenderContext.breakEvenOccupancy)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.breakEvenOccupancy)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.purchasePrice)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.purchasePrice)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.goingInCapRate)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.goingInCapRate)}</td></tr>`);
-      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch memo.";
+      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch acquisition memo.";
       const contextNote = "Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.";
       const summaryCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Acquisition Memo Summary: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${summaryRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryNote)}</p></div>`;
       const contextCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Source Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(contextNote)}</p></div>`;
@@ -8320,7 +8422,10 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
                 Number.isFinite(annualMarket) &&
                 annualMarket > annualInPlace
                   ? "Rent roll data indicates in-place rents are below documented market rent across the current unit mix."
-                  : "Source-bound rent positioning summary uses verified totals where available and leaves unsupported metrics unassessed.";
+                  : "Source-bound rent positioning evidence uses verified totals where available and leaves unsupported metrics unassessed.";
+              if (summaryOnlyRentRollSurface) {
+                return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Evidence</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${Number.isFinite(totalUnits) ? `<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>` : ""}${Number.isFinite(occupiedUnits) ? `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>` : ""}${Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>` : ""}${Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>` : ""}${Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>` : ""}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryBody)}</p></div>`;
+              }
               return buildRentPositioningSummaryCard({
                 title: "Rent Positioning Summary",
                 body: summaryBody,

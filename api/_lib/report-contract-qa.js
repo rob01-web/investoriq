@@ -214,7 +214,7 @@ function extractLabeledNumber(text, labels) {
 function extractRenderedOccupancyValues(text) {
   const source = String(text || "");
   const values = [];
-  const blockedContext = /\b(?:break[- ]?even|stabilized|sensitized|buffer|stress|threshold|vacancy|market occupancy)\b/i;
+  const blockedContext = /\b(?:break[- ]?even|stabilized|sensitized|buffer|stress|threshold|vacancy|market occupancy|expense ratio|expense sensitivity|noi margin|operating cushion)\b/i;
   const labels = [
     "Occupancy",
     "Current Occupancy",
@@ -1837,7 +1837,7 @@ export function buildReportContractQa({
       blocksCustomerDelivery: false,
     });
   }
-  const supportDocPropertyTaxLeakMatch = /(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,180}(?:property tax support|structured property tax input|modeled property tax input)|(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,180}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)/i.exec(text);
+  const supportDocPropertyTaxLeakMatch = /<tr[^>]*>[\s\S]{0,260}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,260}(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,260}<\/tr>|<tr[^>]*>[\s\S]{0,260}(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,260}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,260}<\/tr>/i.exec(text);
   if (supportDocPropertyTaxLeakMatch) {
     addViolation(violations, {
       code: "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT",
