@@ -1837,15 +1837,21 @@ export function buildReportContractQa({
       blocksCustomerDelivery: false,
     });
   }
-  const supportDocPropertyTaxLeakMatch = /<tr[^>]*>[\s\S]{0,260}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,260}(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,260}<\/tr>|<tr[^>]*>[\s\S]{0,260}(?:property tax support|structured property tax input|modeled property tax input)[\s\S]{0,260}(?:phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning)[\s\S]{0,260}<\/tr>/i.exec(text);
-  if (supportDocPropertyTaxLeakMatch) {
+  const supportDocPropertyTaxLeakRow = Array.from(text.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi))
+    .map((match) => String(match[0] || ""))
+    .find((row) => {
+      const hasPropertyTaxLabel = /property tax support|structured property tax input|modeled property tax input/i.test(row);
+      const hasEnvironmentalLabel = /phase\s*i|phase\s*1|esa|environment(?:al)?|recognized environmental condition|recognized environmental conditions|zoning|compliance|permitted use|municipal zoning/i.test(row);
+      return hasPropertyTaxLabel && hasEnvironmentalLabel;
+    });
+  if (supportDocPropertyTaxLeakRow) {
     addViolation(violations, {
       code: "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT",
       severity: "high",
       category: "compliance",
       message: "Environmental/zoning/compliance support docs are labeled as property-tax support or modeled property-tax input.",
       evidence: {
-        excerpt: supportDocPropertyTaxLeakMatch[0],
+        excerpt: supportDocPropertyTaxLeakRow,
       },
       blocks_customer_delivery: false,
       legacy_compatibility_input_only: legacyCompatibilityInputOnly,

@@ -692,7 +692,7 @@ function resolveRefiNarrativeMode({
     return {
       mode: "current_debt_coverage_assessed_full_refi_limited",
       classification: "source_limited",
-      copy: "Current debt coverage was assessed from verified current debt inputs; full refinance proceeds and stability classification were source-limited because forward refinance assumptions were incomplete.",
+      copy: "Current debt coverage was assessed from verified current debt inputs; advanced financing outputs remain source-limited because forward refinance assumptions were incomplete.",
     };
   }
   if (
@@ -949,7 +949,7 @@ function buildDealScorecardState({
   const scoreLabel = sourceReconciliationConstrained ? "Operating Metrics Score" : "Composite Score";
   let note = launchMemoMode
     ? (sourceReconciliationConstrained
-        ? "Operating metrics are shown with source reconciliation disclosure; debt/refi classification is not used in the launch memo."
+        ? "Operating metrics are shown with source reconciliation disclosure; advanced financing and return-projection modules are outside the Screening Report scope."
         : "Composite score reflects available operating metrics only. Base score thresholds: Stable 70+ | Sensitized 50-69 | Fragile <50.")
     : displayVerdict.cap_explanation ||
       "Composite score is calculated from reported metrics only. Base score thresholds: Within Underwriting Parameters \u2265 70 | Review 50\u201369 | Outside Parameters < 50. DSCR below 1.25x or not assessed applies a mandatory Review verdict cap.";
@@ -3133,14 +3133,16 @@ function buildDocumentTreatmentSummaryHtml({
     }
     if (supportedLoanTerms) {
       const hasDocumentDerivedAcquisitionContext =
-        Number.isFinite(purchasePrice) && purchasePrice > 0 ||
-        Number.isFinite(goingInCapRate) && goingInCapRate > 0 ||
-        Number.isFinite(statedLoanAmount) && statedLoanAmount > 0 ||
-        Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0;
+        (typeof purchasePrice !== "undefined" && Number.isFinite(purchasePrice) && purchasePrice > 0) ||
+        (typeof goingInCapRate !== "undefined" && Number.isFinite(goingInCapRate) && goingInCapRate > 0) ||
+        (typeof statedLoanAmount !== "undefined" && Number.isFinite(statedLoanAmount) && statedLoanAmount > 0) ||
+        (typeof derivedLoanAmount !== "undefined" && Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0);
       return {
-        category: "Displayed / Limited Use",
+        category: hasDocumentDerivedAcquisitionContext
+          ? "Purchase Assumptions / Acquisition Context"
+          : "Displayed / Limited Use",
         note: hasDocumentDerivedAcquisitionContext
-          ? "Acquisition context / document-derived purchase-price or cap-rate reference. Does not override T12 or Rent Roll."
+          ? "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt."
           : "Acquisition context only; not quantitatively modeled.",
         reason_code: hasDocumentDerivedAcquisitionContext
           ? "loan_term_sheet_acquisition_context"
@@ -3757,7 +3759,7 @@ function buildAcquisitionMemoSummaryCard({
   if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td>${formatPercent1(goingInCapRate)}</td></tr>`);
   if (Number.isFinite(noi)) rows.push(`<tr><td>NOI Basis</td><td>${formatCurrency(noi)}</td></tr>`);
   if (!rows.length) return "";
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Acquisition Memo Summary</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound acquisition memo summary using verified operating metrics and acquisition context. Additional modeling remains deferred from the launch memo.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Acquisition Memo Summary</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound acquisition memo summary using verified operating metrics and acquisition context. Additional modeling remains deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
 }
 
 function buildOperatingSnapshotCard({
@@ -3823,7 +3825,7 @@ function buildLaunchSourceContextBlock({
     propertyTaxBindingState,
     documentQuantitativeUsageMap,
   });
-  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing, refinance, return-projection, and recommendation modules remain deferred from the launch acquisition memo unless explicitly supported by the report family and verified source basis.</p></div>`;
+  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
   return `${intro}${treatment}${excludedDeferredHtml}`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
@@ -4397,7 +4399,7 @@ function buildScreeningRefiSufficiencyTable({
         }</td><td>${row.value}</td></tr>`
     )
     .join("");
-  return `<p>Refinance Stability Classification not produced due to insufficient refinance inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether deterministic refinance classification inputs are present in uploaded documents. Missing required inputs prevent refinance stability scoring.</p>`;
+  return `<p>Advanced financing sufficiency not produced due to insufficient inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether required inputs are present in uploaded documents. Missing required inputs prevent advanced financing analysis.</p>`;
 }
 function buildScreeningDataCoverageSummary({
   t12Payload,
@@ -4582,8 +4584,8 @@ function buildScreeningDataCoverageSummary({
   ].join("");
   const sourceReliabilityFooter =
     effectiveReportMode === "screening_v1"
-      ? "Advanced financing, refinance, return-projection, and recommendation modules remain excluded from Screening."
-      : "Advanced financing, refinance, return-projection, and recommendation modules remain deferred from the launch acquisition memo unless explicitly supported by the report family and verified source basis.";
+      ? "Advanced financing and return-projection modules are outside the Screening Report scope."
+      : "Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.";
   const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(sourceReliabilityFooter)}</p></div>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
@@ -6786,7 +6788,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_TITLE}}", rentPosi
 finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentPositioningSectionLabel.subtitle);
     if (effectiveReportMode === "screening_v1") {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_3_SCENARIO");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_4_NEIGHBORHOOD");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
@@ -8193,7 +8194,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     const neighborhoodContextHtml = neighborhoodContextRows.length > 0
       ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, or return modeling.</p></div>`
       : (effectiveReportMode === "v1_core"
-        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Deferred debt and refinance modeling remain excluded from the launch memo.</p>`
+        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Advanced financing and return-projection modules remain excluded from this report.</p>`
         : "");
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{ACQUISITION_MEMO_SUMMARY_BLOCK}}", acquisitionMemoSummaryBlockHtml);
@@ -8424,7 +8425,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
                   ? "Rent roll data indicates in-place rents are below documented market rent across the current unit mix."
                   : "Source-bound rent positioning evidence uses verified totals where available and leaves unsupported metrics unassessed.";
               if (summaryOnlyRentRollSurface) {
-                return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Evidence</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${Number.isFinite(totalUnits) ? `<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>` : ""}${Number.isFinite(occupiedUnits) ? `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>` : ""}${Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>` : ""}${Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>` : ""}${Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>` : ""}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryBody)}</p></div>`;
+                return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Summary</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${Number.isFinite(totalUnits) ? `<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>` : ""}${Number.isFinite(occupiedUnits) ? `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>` : ""}${Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>` : ""}${Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>` : ""}${Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>` : ""}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryBody)}</p></div>`;
               }
               return buildRentPositioningSummaryCard({
                 title: "Rent Positioning Summary",
@@ -8583,20 +8584,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{SCREENING_RENT_ROLL_BLOCK}}",
       screeningRentRollHtml
     );
-    if (effectiveReportMode === "screening_v1") {
-      if ((screeningIncomeForensicsHtml || "").trim().length === 0) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
-      }
-      if ((screeningExpenseHtml || "").trim().length === 0) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
-      }
-      if ((screeningNoiHtml || "").trim().length === 0) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
-      }
-    }
-    if ((screeningRentRollHtml || "").trim().length === 0) {
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
-    }
     const screeningRefiSufficiencyHtml =
       effectiveReportMode === "screening_v1"
         ? ""
@@ -8623,15 +8610,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
       screeningRefiSufficiencyHtml
     );
-    const screeningHasSufficientDataGate = hasMinimumScreeningCoverage(t12Payload);
-    if (effectiveReportMode === "screening_v1") {
-      if (!screeningHasSufficientDataGate) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S2_INCOME_FORENSICS");
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S3_EXPENSE_STRUCTURE");
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S4_NOI_STABILITY");
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_S5_RENT_ROLL_DISTRIBUTION");
-      }
-    }
     let renovationPayload = null;
     if (jobId) {
       const { data: renovationArtifact } = await supabase
