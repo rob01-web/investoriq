@@ -1,62 +1,320 @@
-# June 4, 2026 Addendum - Product Ladder Locked / Underwriting Converted To Acquisition Memo / Slice 1 Completed
+# June 4, 2026 Addendum - Acquisition Memo Product Pivot / Memo Density / Renderer Runtime Stability Checkpoint
 
-- InvestorIQ Screening Report: lower price; fast first-pass property screen from T12 + Rent Roll; keep Screening stable/as-is because it has been the cleanest report type.
-- InvestorIQ Acquisition Memo: main launch product; document-driven acquisition and financing-readiness memo for property investors; built from the current Underwriting/v1_core path, but unstable advanced sections are hard-collapsed/deferred; goal is lender/investor-facing preliminary acquisition memo, not full V2 underwriting.
-- InvestorIQ Full Underwriting V2.0: coming later; advanced debt/refi, DCF, waterfall, capital stack, integrations, investor/lender package.
-- Acquisition Memo Slice 1 completed:
-  - `api/generate-client-report.js` updated.
-  - `tests/qa/generate-client-report-rent-roll-smoke.js` updated.
-  - `v1_core` output now labels as Acquisition Memo.
-  - `Document-Backed Underwriting Outputs` changed to `Document-Backed Acquisition Memo Outputs`.
-  - Screening path intentionally unchanged.
-  - No new report mode created.
-  - No SQL/RPC, Stripe/pricing, DocRaptor, public sample, or route changes.
-- Preserved in Acquisition Memo:
-  - Executive Summary
-  - Operating Statement
-  - Operating Profile
-  - Expense Structure
-  - NOI Stability
-  - Rent Roll / Rent Positioning
-  - Rent upside / mark-to-market
-  - Value Indication / Cap-Rate Framework
-  - Acquisition Context, only source-bound purchase price / going-in cap context
-  - Document Treatment
-  - Data Coverage / Source Limitations
-  - Source Limitations
-  - Operating-risk language inside Executive Summary / Operating Profile
-- Hard-collapsed / deferred to V2.0:
-  - Current Debt / Debt Structure
-  - DSCR
-  - Refinance Stability / Refi Stress
-  - Acquisition Financing Debt Sizing
-  - Scenario Analysis / Five-Year Outlook
-  - DCF
-  - Advanced Financial Modeling
-  - Equity Waterfall
-  - Complex chart pages
-  - Exit / sale assumptions
-  - Advanced return projections
-  - Deal Scorecard section
-  - Dedicated Risk Register section
-- Launch interpretation:
-  - Acquisition Memo is the main launch product.
-  - It is a toned-down Underwriting path, not expanded Screening.
-  - Screening remains stable lower-priced first-pass screen.
-  - Full Underwriting V2.0 remains future premium product.
-  - The collapse is rule-based/section-marker-based, not property-specific.
-  - Debt/support docs may still be disclosed in Document Treatment/Data Coverage, but are not modeled into current debt, DSCR, refi, DCF, waterfall, or return surfaces for launch.
-- Validation:
-  - `node --check api/generate-client-report.js`
-  - `node --check api/_lib/report-surface-contracts.js`
-  - `node tests/qa/generate-client-report-rent-roll-smoke.js` PASS
-  - `node tests/qa/report-contract-qa-smoke.js` PASS
-  - `npm run build` PASS
-  - `git diff --check` PASS with LF/CRLF warnings only
-  - no hardcoding
-- Next recommended step:
-  - After docs update/archive, run one controlled Acquisition Memo generation and visually inspect the PDF.
-  - Do not patch more code before seeing the actual memo output unless a clear blocker is already known.
+## Current controlling status
+
+InvestorIQ is now continuing under the June 4 product ladder and Acquisition Memo launch pivot.
+
+The current launch ladder is:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced stable first-pass report from T12 + Rent Roll
+   - keep Screening stable and largely as-is
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - built from the current Underwriting / v1_core path
+   - document-driven acquisition and preliminary financing-readiness memo
+   - not a loan approval
+   - not final Full Underwriting V2.0
+
+3. InvestorIQ Full Underwriting V2.0
+   - coming later
+   - advanced debt/refi, DCF, waterfall, capital stack, integrations, and full investor/lender package
+```
+
+## Acquisition Memo Slice 1 completed
+
+Acquisition Memo Slice 1 isolated the launch memo from current-debt / DSCR Review-cap summary logic.
+
+Completed behavior:
+
+- launch Acquisition Memo no longer uses current-debt DSCR or debt-cap verdict logic for the Executive Summary / launch memo visible classification;
+- the visible contradiction where the memo showed Stable but also said classification was capped at Review because current debt DSCR was below 1.25x was removed;
+- `v1_core` launch memo classification now uses operating/acquisition memo logic, not current-debt verdict caps;
+- Full Underwriting / future V2 debt logic remains preserved for the future V2 path.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/report-contract-qa-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+isolate acquisition memo from debt verdict caps
+```
+
+## Acquisition Memo Slice 2 completed
+
+Acquisition Memo Slice 2 expanded the memo structure so the Acquisition Memo no longer feels like a thin 7-page Screening-plus shell.
+
+Added / promoted dedicated memo sections:
+
+```text
+Acquisition Memo Summary
+Operating Snapshot
+Rent Positioning Summary
+Rent Upside / Value Sensitivity
+Cap-Rate Value Indication
+Source Context / Support Document Treatment
+Data Coverage & Source Limitations
+```
+
+Additional behavior:
+
+- Document Treatment now renders as a dedicated memo-grade source-context block instead of being buried only inside a coverage card;
+- Data Coverage now renders as a dedicated memo-grade section and no longer depends on old stripped debt/refi/scenario artifacts to become substantial;
+- rent-positioning title logic now uses summary-driven language when only summary totals drive the surface;
+- `Unit-Level Rent Positioning & Value Sensitivity` is used only when true unit-level detail is actually rendered.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/report-template-runtime.html
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/report-contract-qa-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+expand acquisition memo section structure
+```
+
+## Runtime failures found during live Acquisition Memo testing
+
+Two live Acquisition Memo runs failed during rendering after valid T12 + valid Rent Roll parsing.
+
+Failures:
+
+```text
+Acquisition Memo 3:
+Cannot access 'rrUnits' before initialization
+
+Acquisition Memo 4:
+hasForwardLookingRenovationInputs is not defined
+```
+
+Interpretation:
+
+- these were renderer/runtime variable-scope bugs;
+- these were not customer document failures;
+- T12 and Rent Roll were valid/parseable;
+- credit restore behavior correctly treated them as platform/render failures;
+- the failures reinforced that unsupported support docs must collapse, qualify, or render context-only rather than kill a core-valid report.
+
+Doctrine reaffirmed:
+
+```text
+Valid T12 + valid Rent Roll should publish unless true runtime/storage/PDF/catastrophic failure prevents safe generation.
+
+Unsupported support docs should collapse, qualify, omit, or render context-only.
+
+Renderer runtime defects are platform defects, not bad-upload failures.
+```
+
+## Emergency tiny fix completed
+
+A focused runtime fix was completed for the `rrUnits` TDZ crash.
+
+Completed behavior:
+
+- Acquisition Memo cap-rate/value rendering now uses an initialized units value before rendering;
+- the prior pre-initialization `rrUnits` usage was removed from the early memo assembly path.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+fix acquisition memo units initialization
+```
+
+## Root runtime audit completed
+
+After the second runtime failure, whack-a-mole patching was stopped.
+
+Codex ran an audit-only pass of its Acquisition Memo Slice 2 work.
+
+Root cause class identified:
+
+```text
+Acquisition Memo renderer-scope TDZ / missing render-context initialization
+```
+
+Pattern identified:
+
+```text
+New Acquisition Memo sections reached sideways into scattered late-bound locals instead of consuming one early safe render context object.
+```
+
+Why existing tests missed this:
+
+- tests were too source-regex/helper-level;
+- they did not execute the actual `v1_core` final HTML assembly path;
+- they did not exercise the realistic support-doc combination that failed in production.
+
+## Root runtime stability patch completed
+
+A system-level runtime stability patch was completed.
+
+Completed behavior:
+
+- one early Acquisition Memo render context now exists before section assembly;
+- memo sections consume initialized/defaulted context rather than reaching sideways into late-bound locals;
+- `rrUnits` / unit-count hazards were resolved;
+- `hasForwardLookingRenovationInputs` is now defined before source-context and data-coverage assembly;
+- unstructured renovation/CapEx support defaults to context-only / limited-use instead of creating runtime risk.
+
+Early Acquisition Memo render context now includes safe/defaulted values for:
+
+```text
+units
+occupiedUnits
+vacantUnits
+occupancy
+annualInPlaceRent
+annualMarketRent
+annualRentUpside
+rentGapPercent
+egi
+opEx
+noi
+expenseRatio
+noiMargin
+breakEvenOccupancy
+purchasePrice
+goingInCapRate
+acquisitionNoiBasis
+hasForwardLookingRenovationInputs
+renovationDisplayMode
+renovationPayload
+propertyTaxPayload
+propertyTaxBindingState
+documentQuantitativeUsageMap
+documentSources
+```
+
+A real `v1_core` full-render smoke was added using `__test_return_final_html` and a Harbourstone-style fixture package.
+
+The smoke executes the real handler / final HTML assembly far enough to catch:
+
+```text
+ReferenceError
+TDZ crash
+undefined render variables
+unresolved {{TOKEN}} placeholders
+```
+
+The fixture includes:
+
+```text
+valid T12
+valid narrative / summary Rent Roll
+current loan summary
+purchase assumptions
+property tax support
+unstructured CapEx notes
+market survey excerpt
+broker email context
+Phase I ESA context
+unsupported appraisal excerpt
+```
+
+Support docs in the harness fail soft / context-only unless validated.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+stabilize acquisition memo render context
+```
+
+## Codex usage constraint
+
+Rob is conserving Codex usage.
+
+Current note:
+
+```text
+Codex usage is down to about 85% remaining.
+Reset: Jun 11, 2026 8:38 AM.
+```
+
+Future Codex prompts should remain:
+
+- tight;
+- high-impact;
+- no broad audits unless clearly necessary;
+- no long receipts by default;
+- no repeated verification passes unless a serious ambiguity or failure requires it.
+
+## Current next action
+
+Do not do more Codex patches tonight.
+
+Next fresh-chat action:
+
+```text
+Run one controlled live Acquisition Memo test.
+```
+
+If it publishes, inspect:
+
+- actual PDF page count;
+- memo flow and density;
+- Document Treatment;
+- Data Coverage;
+- source treatment;
+- support-doc context-only handling;
+- absence of V2 debt/refi/DCF/waterfall surfaces.
+
+If it fails again with a renderer/runtime error, treat that as evidence the full-render harness is still missing a production branch.
+
+Do not run multiple live tests in a row without reviewing artifacts.
+
+## Current live-test acceptance checklist
+
+The next controlled Acquisition Memo live test should prove:
+
+```text
+report publishes;
+no renderer/runtime 500;
+no entitlement restore unless true runtime fatal;
+PDF is materially fuller than the old 7-page shell;
+no Current Debt DSCR launch-memo leak;
+no Debt Coverage Constraint launch-memo leak;
+no refinance capacity/proceeds surface;
+no DCF;
+no waterfall;
+no equity return;
+no BUY / SELL / HOLD language;
+Document Treatment is visible and source-bound;
+Data Coverage is visible and not falsely severe when T12 + Rent Roll are clean;
+support docs are context-only/limited-use unless validated;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no public AI wording.
+```
+
+---
 
 # June 3, 2026 Addendum - Codex Usage Conservation / Slice 3 In Progress Checkpoint
 
@@ -3079,16 +3337,3 @@ If live retesting reveals a new issue, start the next hardening family from evid
 - The current live-test interpretation that caused this pivot is recorded as follows: Screening Test 1 passed strongly and looked customer-deliverable; Underwriting Test 2 proved many core sections work, including T12, Rent Roll, current debt recognition, DSCR classification, property-tax support, environmental containment, market survey containment, appraisal containment, and renovation collapse; however, Underwriting still exposes too many advanced-surface, public-sample, and Ken-readiness issues, especially purchase-assumption, acquisition, cap-rate, and document-treatment consistency; rather than hold the business hostage to full Underwriting perfection, launch the reliable product first and move only proven low-risk value into it.
 - Next implementation direction after this documentation checkpoint: a small planning or audit slice, not a broad rewrite; identify exactly which existing collapsed or hidden Underwriting sections can safely be enabled for Screening; map which files control those Screening section gates; recommend the smallest implementation slice to create enhanced Screening or Acquisition Memo; no code changes during that planning or audit unless Rob explicitly asks.
 - Guardrails: no code changes in this docs update; no Stripe or pricing changes; no DocRaptor flip; no public samples; no new API or serverless routes; no SQL or RPC changes; no broad repo audit; preserve limited Codex usage discipline; keep future Codex prompts tight and receipt-only.
-## June 4, 2026 Addendum - Product Ladder / Acquisition Memo Pivot
-
-- InvestorIQ Screening Report: lower price; fast first-pass property screen from T12 + Rent Roll; keep Screening stable and as-is because it has been the cleanest report type.
-- InvestorIQ Acquisition Memo: main launch product; document-driven acquisition and financing-readiness memo for property investors; built from the current Underwriting path, but with unstable advanced sections hard-collapsed or deferred; goal is lender- or investor-facing preliminary acquisition memo, not full V2 underwriting.
-- InvestorIQ Full Underwriting V2.0: coming later; advanced debt/refi, DCF, waterfall, capital stack, integrations, investor/lender package.
-- Strategic interpretation: we are no longer trying to turn Screening into the main financing product by opening random Underwriting sections.
-- Screening stays stable as the lower-priced first-pass product.
-- Current Underwriting becomes the basis for InvestorIQ Acquisition Memo, but the sections causing repeated instability must be collapsed for launch.
-- Full Underwriting V2.0 remains the future premium product.
-- Acquisition Memo should be financing-readiness focused, but not overpromise loan approval, final lender underwriting, investor returns, DCF, or capital stack execution.
-- Immediate next step after this docs update: run a focused audit only to identify which current Underwriting sections should remain in Acquisition Memo, which must hard-collapse for launch, which move to Full Underwriting V2.0, the exact files/functions/marked sections/gates controlling those sections, and the smallest implementation slice; no code changes during the audit.
-- Preserve existing doctrine: publish or fail closed; no admin-review/customer limbo; no public AI wording; no BUY, SELL, or HOLD; deterministic/source-bound outputs only; unsupported or unsafe sections collapse, omit, qualify, or disclose; do not hardcode property names, filenames, report IDs, job IDs, or fixture-only values.
-- Preserve Codex usage discipline: Rob has limited Codex usage until June 8; keep prompts tight; keep receipts concise; do not ask for broad summaries, broad audits, repeated validation passes, or nonessential exploratory work.

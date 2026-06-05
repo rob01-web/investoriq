@@ -1,3 +1,137 @@
+# June 4, 2026 Addendum - Acquisition Memo Renderer Runtime Failures Classified Under CVF-13 / Root Stability Harness Added
+
+## Current controlling status
+
+The June 4 Acquisition Memo live failures are now classified in the Core-Valid Failure Path Family Ledger.
+
+These failures were not CVF-01 or CVF-02 required-core document failures.
+
+The uploaded source package had valid/parseable core documents:
+
+```text
+T12 parsed successfully.
+Rent Roll parsed successfully.
+```
+
+The failures occurred after core parsing and during renderer/final HTML assembly.
+
+Therefore the failures classify under:
+
+```text
+CVF-13 Runtime/storage/PDF/catastrophic render failure
+```
+
+## Live failures recorded
+
+Two live Acquisition Memo runs failed during rendering:
+
+```text
+Acquisition Memo 3:
+Cannot access 'rrUnits' before initialization
+
+Acquisition Memo 4:
+hasForwardLookingRenovationInputs is not defined
+```
+
+Interpretation:
+
+- both failures were renderer/runtime variable-scope defects;
+- neither failure was caused by bad T12 or bad Rent Roll input;
+- neither failure should be treated as missing required source data;
+- entitlement/credit restore was correct because true runtime/platform failure prevented safe report generation.
+
+## Doctrine interpretation
+
+CVF-13 remains a legitimate whole-report fail class when a true runtime/storage/PDF/catastrophic render failure prevents safe report generation.
+
+However, preventable renderer-scope defects must be caught locally before live testing whenever possible.
+
+Valid-core doctrine remains:
+
+```text
+Core-valid jobs publish unless true runtime/storage/PDF/catastrophic failure prevents safe generation.
+
+Unsupported support documents collapse, qualify, omit, or render context-only.
+
+Support-doc ambiguity must not become a required-core failure.
+```
+
+## Root cause class identified
+
+Audit-only investigation identified the root class as:
+
+```text
+Acquisition Memo renderer-scope TDZ / missing render-context initialization
+```
+
+Pattern:
+
+```text
+New Acquisition Memo sections reached sideways into scattered late-bound locals instead of consuming one early safe render context object.
+```
+
+The prior test suite missed the class because it was too source-regex/helper-level and did not execute the actual `v1_core` final HTML assembly path with a realistic support-doc package.
+
+## Root stability patch completed
+
+A root runtime stability patch was completed.
+
+Completed behavior:
+
+- early Acquisition Memo render context added before section assembly;
+- `rrUnits` / unit-count hazard resolved;
+- `hasForwardLookingRenovationInputs` undefined hazard resolved;
+- Acquisition Memo source-context/data-coverage sections now consume initialized/defaulted context;
+- unstructured support docs fail soft / context-only instead of creating runtime risk.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+A real `v1_core` full-render smoke was added using `__test_return_final_html` and a Harbourstone-style support-doc fixture.
+
+The smoke now executes the actual handler / final HTML assembly path far enough to catch:
+
+```text
+ReferenceError
+TDZ crash
+undefined render variables
+unresolved {{TOKEN}} placeholders
+```
+
+## CVF-13 status note
+
+CVF-13 remains legitimate, not deleted.
+
+But the renderer-scope subclass exposed today should now be guarded by the full-render smoke harness before more live tests.
+
+Expected future behavior:
+
+```text
+If a core-valid report fails because of true runtime/storage/PDF/catastrophic failure, fail closed and restore credit.
+
+If the runtime issue is a preventable renderer-scope variable/scope defect, catch it in the full-render harness before live testing.
+```
+
+## Next verification
+
+Next action is not another Codex patch.
+
+Next action:
+
+```text
+Run one controlled live Acquisition Memo test in a fresh chat.
+```
+
+If the report publishes, inspect PDF quality and artifacts.
+
+If it fails again with a renderer/runtime error, the full-render harness is still missing a production branch and must be expanded before additional live retries.
+
+---
+
 # June 2, 2026 Addendum - Doctrine Completion Checklist / Remaining Work To Make InvestorIQ Obey Doctrine End-to-End
 
 ## Current controlling decision
