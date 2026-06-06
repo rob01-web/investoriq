@@ -1,3 +1,323 @@
+# June 5/6, 2026 Addendum - Pre-Retest Checkpoint After Elite Report Fullness / Source Treatment / Readiness Cleanup
+
+## Current controlling status
+
+InvestorIQ is now ready for the next clean live retest batch after a major June 5/6 cleanup sequence.
+
+The working product ladder remains:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced, stable first-pass report from T12 + Rent Roll
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - document-driven acquisition and preliminary financing-readiness memo
+   - built from the former Underwriting / v1_core path
+   - not Full Underwriting V2.0
+
+3. InvestorIQ Full Underwriting V2.0
+   - deferred / coming later
+   - advanced debt/refi, DCF, waterfall, capital stack, integrations, and full investor/lender package
+```
+
+The latest live reports showed strong directional improvement:
+
+```text
+Screening Memo 3: 7 pages
+Acquisition Memo 6: 14 pages
+```
+
+However, red-pen review still found known root-level issues. Those issues have now been patched in two focused batches. The next step is not another Codex audit. The next step is one fresh clean Screening and one fresh clean Acquisition Memo retest.
+
+## Work completed today
+
+### 1. Report fullness / source-bound section assembly direction validated
+
+The report-fullness effort materially improved page count and report feel:
+
+```text
+Screening moved to 7 pages.
+Acquisition Memo moved to 14 pages.
+```
+
+This confirmed that the pivot from thin shell to source-bound memo/report structure is working.
+
+The quality bar remains universal:
+
+```text
+There is no customer-vs-Ken-vs-public-sample quality tier.
+Every report should be document-driven, deterministic, source-bound, and credible enough for sophisticated review.
+```
+
+Use distribution labels only for operational/config readiness, such as DocRaptor production mode or public sample publishing.
+
+### 2. Ken-style red-pen review findings from live Screening Memo 3 / Acquisition Memo 6
+
+Known issues identified before patching:
+
+```text
+Screening still risked thin pages / thin final assembly.
+Screening used customer-visible advanced-module/exclusion wording.
+Acquisition Memo duplicated Rent Positioning Summary.
+Acquisition Memo support-treatment table needed clean semantic role/treatment labels while preserving filename transparency.
+Debt support was too close to modeled current-debt treatment.
+Purchase assumptions treatment could contradict document-derived purchase/cap-rate context.
+Deferred-analysis wording listed forbidden advanced module names too explicitly.
+Artifacts still showed legacy readiness alias contradictions beside canonical deliverability.
+Provider/advisory quota failures needed to remain diagnostic-only.
+DocRaptor test mode needed to remain distribution metadata only.
+Purchase assumptions/acquisition context still needed classification/treatment follow-through.
+```
+
+Important correction recorded during review:
+
+```text
+Uploaded filenames should remain visible for transparency.
+Do not blank customer filenames.
+Do not remove file-level auditability.
+Clean the semantic role/treatment labels beside filenames instead.
+```
+
+This filename-transparency rule is now controlling.
+
+## Patch batch 1 - source treatment, filename transparency, duplicate rent-positioning cleanup
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/_lib/report-contract-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Duplicate Acquisition Memo rent-positioning presentation corrected.
+Summary-only rent-roll branch now emits Rent Positioning Evidence rather than a second Rent Positioning Summary.
+Uploaded filenames remain visible for auditability.
+Support-treatment table separates Filename, Document Role, and Treatment.
+Semantic labels are clean/customer-facing and based on document role/treatment, not raw filename wording.
+Loan/current-debt support is disclosed as debt support received with launch memo analysis deferred.
+Purchase assumptions render as acquisition context / document-derived purchase-price or cap-rate reference when supported.
+Property tax, market survey, CapEx, appraisal, environmental, broker/email, and unclassified support render with explicit source-bound treatment.
+Customer-facing deferred/excluded wording no longer lists exact advanced module names.
+Screening no longer mentions launch memo.
+QA false-positive risks around support-doc proximity and occupancy drift were reduced.
+```
+
+Validation:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/report-contract-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Status:
+
+```text
+Safe to commit / committed before continuing.
+```
+
+## Patch batch 2 - final assembly depth, visual/output polish, readiness alias alignment
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/_lib/qa-action-plan.js
+api/_lib/report-contract-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Screening final assembly keeps full source-bound T12/Rent Roll operating depth when valid T12 + Rent Roll exist.
+Screening preserves income reconstruction, expense structure, NOI stability, rent-roll distribution, and Data Coverage / Source Reliability.
+Screening visible output no longer uses launch memo, DCF, waterfall, equity return, deal score, final recommendation, current-debt DSCR, refinance proceeds, or refinance stability language.
+Screening scope wording is generic and safe.
+Acquisition Memo wrapper churn / duplicate rent-positioning presentation was reduced.
+Smoke verifies one visible rent-positioning path.
+Canonical deliverability now drives legacy compatibility/readiness aliases.
+Canonical deliverable jobs should no longer emit contradictory report_blocked/report_publishable/customer_delivery_ready/customer_publish_eligible/user_needs_documents-style aliases.
+Provider/advisory failures remain diagnostic-only when deterministic core parsing succeeds.
+DocRaptor test mode remains distribution/public-sample metadata only and is not ordinary customer delivery authority.
+Purchase assumptions classify as purchase-context/acquisition-context support when supported, otherwise context-only.
+Purchase assumptions do not become appraisal, appraised value, T12 override, Rent Roll override, or current debt override.
+Forbidden V2/full-underwriting surfaces remain collapsed/deferred.
+```
+
+Validation:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/qa-action-plan.js
+node --check api/_lib/report-contract-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Status:
+
+```text
+Safe to commit / committed before retest.
+```
+
+## Codex usage conservation note
+
+Rob is conserving Codex usage.
+
+Controlling workflow from this checkpoint:
+
+```text
+Do not run another Codex audit before the clean retest batch.
+Do not start another patch just because an issue might exist.
+Do not ask Codex for broad summaries or broad audits.
+Use Codex only for a targeted patch if the next clean live PDFs/artifacts reveal a real blocker.
+```
+
+Preferred prompt style remains:
+
+```text
+small, direct, scope-locked micro-prompts;
+patch exact known defects;
+no broad exploration unless genuinely necessary;
+compact receipt only.
+```
+
+## Next action
+
+Run only this clean live retest batch:
+
+```text
+1. One fresh Screening Report using valid T12 + Rent Roll.
+2. One fresh Acquisition Memo using valid T12 + Rent Roll + support docs.
+```
+
+Use the same document family as the last tests unless intentionally changing the source package.
+
+Do not run messy variants or edge cases until the clean retest batch is reviewed.
+
+## What to upload after retesting
+
+For each clean retest, upload:
+
+```text
+PDF
+analysis_artifacts_rows.json
+report_contract_qa artifact if separate
+source_report_coverage_qa artifact if separate
+qa_action_plan artifact if separate
+delivery_gate_decision / deliveryDecisionState evidence if visible
+Dashboard/Admin screenshots only if the lifecycle/display looks wrong
+```
+
+## Retest review checklist - Screening
+
+Screening must show:
+
+```text
+substantial report feel for the product tier;
+valid T12 + Rent Roll operating depth survives final PDF assembly;
+Income Reconstruction / Operating Expenses / NOI / rent-roll analysis where source-supported;
+Data Coverage / Source Reliability visible;
+no launch memo wording;
+no DCF / Discounted Cash Flow / waterfall / equity return / deal score / final recommendation / current-debt DSCR / refinance wording;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no one-card pages that feel unfinished unless unavoidable from source limitation;
+no public AI wording;
+no BUY / SELL / HOLD.
+```
+
+## Retest review checklist - Acquisition Memo
+
+Acquisition Memo must show:
+
+```text
+fuller memo presentation;
+one rent-positioning path only;
+source-bound operating, rent, cap-rate/value indication, acquisition context, Data Coverage, Source Treatment, and deferred advanced-module language;
+filenames preserved for transparency;
+clean document role/treatment labels beside filenames;
+debt support disclosed as received/contextual/deferred, not modeled current-debt analysis;
+purchase assumptions treated as acquisition context when supported;
+property tax, environmental, market survey, CapEx, appraisal, broker/email roles clearly separated;
+advanced financing/refinance/return-projection/recommendation modules deferred in customer-safe language;
+no current-debt DSCR;
+no refinance proceeds/stability;
+no DCF;
+no waterfall;
+no equity return;
+no deal score;
+no final recommendation;
+no BUY / SELL / HOLD;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no internal parser/admin/vendor artifacts in customer-facing copy.
+```
+
+## Retest review checklist - artifacts
+
+Artifacts should show:
+
+```text
+customer_delivery_allowed: true
+hold_delivery: false
+delivery_gate_status: deliverable / ready
+canonical delivery state controls compatibility aliases
+no contradictory legacy aliases on deliverable jobs
+no customer-lifecycle needs_documents/publication_held/admin_review_required for core-valid jobs
+no entitlement_restored for section-only/support/advisory/distribution issues
+provider/advisory failures diagnostic-only when deterministic core parsing succeeds
+DocRaptor test mode distribution-only, not ordinary customer delivery blocker
+```
+
+## Do not do yet
+
+Do not:
+
+```text
+flip DocRaptor production mode;
+create public sample links;
+send anything to Ken/public distribution;
+run messy/edge variants before reviewing the clean retest;
+run another Codex audit before the retest;
+patch Dashboard/Admin unless the next artifacts or screenshots show a real customer/admin lifecycle issue;
+change pricing/Stripe;
+add routes/serverless functions;
+patch SQL/RPC casually.
+```
+
+## Fresh chat continuation prompt
+
+Use this if starting a new chat after this checkpoint:
+
+```text
+We are continuing InvestorIQ after the June 5/6 Elite Report Fullness / Source Treatment / Readiness Alias cleanup.
+
+Completed today:
+- Screening Memo 3 reached 7 pages and Acquisition Memo 6 reached 14 pages, confirming fullness direction.
+- Patch 1 cleaned Acquisition Memo source treatment, filename transparency, duplicate rent-positioning, purchase assumptions consistency, debt-support deferred/contextual treatment, and QA false positives.
+- Patch 2 preserved Screening final-assembly operating depth, cleaned Screening advanced/exclusion wording, improved Acquisition Memo wrapper/page composition, aligned legacy readiness aliases with canonical delivery, kept provider/DocRaptor diagnostic-only, and fixed purchase-assumptions acquisition-context follow-through.
+- Files touched across both patches: api/generate-client-report.js, api/_lib/qa-action-plan.js, api/_lib/report-contract-qa.js, tests/qa/generate-client-report-rent-roll-smoke.js.
+- Validation passed and patches were safe to commit.
+
+Next action:
+Run one fresh clean Screening Report and one fresh clean Acquisition Memo using the same source family as the last tests. Upload PDFs and analysis artifacts for Ken-style red-pen review.
+
+Guardrails:
+No more Codex audits before retest. No messy/edge variants yet. Do not flip DocRaptor. Do not create public samples. Do not change pricing/Stripe. Preserve filename transparency. Do not re-enable current-debt DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD surfaces.
+```
+
+---
+
 # June 4, 2026 Addendum - Acquisition Memo Product Pivot / Memo Density / Renderer Runtime Stability Checkpoint
 
 ## Current controlling status

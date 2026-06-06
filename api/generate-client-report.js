@@ -1993,7 +1993,7 @@ function stripThinSectionPages(html) {
     if (
       /<span class="section-header-title">\s*(Data Coverage &amp; Source Limitations|Source Context \/ Support Document Treatment)\s*<\/span>/i.test(inner) ||
       /<p class="subsection-title">\s*Document Treatment Summary\s*<\/p>/i.test(inner) ||
-      /<p class="subsection-title">\s*(Data Coverage \/ Source Reliability|Source Reliability)\s*<\/p>/i.test(inner)
+      /<p class="subsection-title">\s*(Data Coverage \/ Source Reliability|Source Reliability|Income Reconstruction|Operating Expenses|Expense Ratio Sensitivity|NOI Stability Review|Rent Roll Distribution)\s*<\/p>/i.test(inner)
     ) {
       return match;
     }
@@ -3016,6 +3016,16 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedMortgage) {
+      if (effectiveReportMode === "v1_core") {
+        return {
+          category: "Displayed / Limited Use",
+          note: currentDebtHasTrueBalance
+            ? "Debt support received; analysis deferred."
+            : "Debt support received; no verified current debt balance.",
+          reason_code: currentDebtHasTrueBalance ? "current_debt_not_used_here" : "current_debt_not_assessed",
+          source_basis: sourceBasis,
+        };
+      }
       if (isParsed && !hasWarnings && !isUnclassified && currentDebtHasTrueBalance && currentDebtIsAssessed) {
         return {
           category: "Modeled Inputs",
@@ -3142,7 +3152,7 @@ function buildDocumentTreatmentSummaryHtml({
           ? "Purchase Assumptions / Acquisition Context"
           : "Displayed / Limited Use",
         note: hasDocumentDerivedAcquisitionContext
-          ? "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt."
+          ? "Acquisition context / document-derived purchase-price or cap-rate reference. Does not override T12 or Rent Roll."
           : "Acquisition context only; not quantitatively modeled.",
         reason_code: hasDocumentDerivedAcquisitionContext
           ? "loan_term_sheet_acquisition_context"
@@ -3325,7 +3335,7 @@ function buildDocumentTreatmentSummaryHtml({
       return "Purchase Assumptions";
     }
     if (classification?.reason_code === "loan_term_sheet_acquisition_context") {
-      return "Purchase Assumptions";
+      return "Purchase Assumptions / Acquisition Context";
     }
     return "Other Support Document";
   };
@@ -3346,7 +3356,7 @@ function buildDocumentTreatmentSummaryHtml({
         return "Acquisition context / document-derived purchase-price or cap-rate reference";
       case "current_debt_not_assessed":
       case "current_debt_not_used_here":
-        return "Debt support received; analysis deferred";
+        return "Debt support received / contextual or deferred";
       case "market_survey_context_only":
       case "filename_fallback_market_survey_context_only":
         return "Context only";
@@ -8192,9 +8202,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     if (Number.isFinite(neighborhoodPurchasePriceValue)) neighborhoodContextRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(neighborhoodPurchasePriceValue)}</td></tr>`);
     if (Number.isFinite(neighborhoodGoingInCapRateValue)) neighborhoodContextRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(neighborhoodGoingInCapRateValue)}</td></tr>`);
     const neighborhoodContextHtml = neighborhoodContextRows.length > 0
-      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, or return modeling.</p></div>`
+      ? `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">${effectiveReportMode === "screening_v1" ? "Source Context" : "Acquisition Context"}</p><table><tbody>${neighborhoodContextRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${effectiveReportMode === "screening_v1" ? "Source-bound operating context only. Advanced financing and return-projection modules are outside the Screening Report scope." : "Source-bound operating and acquisition context only. No projections, debt sizing, refinance, or return modeling."}</p></div>`
       : (effectiveReportMode === "v1_core"
-        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported acquisition context is limited to operating metrics currently available from T12 and rent roll inputs. Advanced financing and return-projection modules remain excluded from this report.</p>`
+        ? `<p class="small" style="margin:0;color:#374151;line-height:1.6;">Source-supported context is limited to operating metrics currently available from T12 and rent roll inputs. Advanced financing and return-projection modules remain excluded from this report.</p>`
         : "");
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
     finalHtml = replaceAll(finalHtml, "{{ACQUISITION_MEMO_SUMMARY_BLOCK}}", acquisitionMemoSummaryBlockHtml);
@@ -8349,7 +8359,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     if (summaryOnlyRentRollSurface) {
       finalHtml = collapseSummaryOnlyUnitMixSection(finalHtml, {
         summaryOnlyRentRollSurface: true,
-        summaryTitle: effectiveReportMode === "screening_v1" ? "Summary Rent Positioning" : "Rent Positioning Summary",
+        summaryTitle: effectiveReportMode === "screening_v1" ? "Summary Rent Positioning" : "Rent Positioning Evidence",
         summaryBody:
           effectiveReportMode === "screening_v1"
             ? "Summary totals indicate in-place rent is below documented market rent."
@@ -8425,7 +8435,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
                   ? "Rent roll data indicates in-place rents are below documented market rent across the current unit mix."
                   : "Source-bound rent positioning evidence uses verified totals where available and leaves unsupported metrics unassessed.";
               if (summaryOnlyRentRollSurface) {
-                return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Summary</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${Number.isFinite(totalUnits) ? `<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>` : ""}${Number.isFinite(occupiedUnits) ? `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>` : ""}${Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>` : ""}${Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>` : ""}${Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>` : ""}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryBody)}</p></div>`;
+                return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Evidence</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${Number.isFinite(totalUnits) ? `<tr><td>Total Units</td><td>${Math.round(totalUnits)}</td></tr>` : ""}${Number.isFinite(occupiedUnits) ? `<tr><td>Occupied Units</td><td>${Math.round(occupiedUnits)}</td></tr>` : ""}${Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>` : ""}${Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>` : ""}${Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>` : ""}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryBody)}</p></div>`;
               }
               return buildRentPositioningSummaryCard({
                 title: "Rent Positioning Summary",

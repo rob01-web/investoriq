@@ -1992,6 +1992,16 @@ export function buildDeliveryGateDecision({
       deprecated_admin_review_reason_requires_classification:
         deprecatedAdminReviewResolution.inject_diagnostic_code === "DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION",
       customer_delivery_ready_legacy: canonicalCustomerAllowed,
+      legacy_compatibility: {
+        customer_delivery_ready: canonicalCustomerAllowed,
+        customer_publish_eligible: canonicalCustomerAllowed,
+        report_publishable: canonicalCustomerAllowed,
+        report_blocked: !canonicalCustomerAllowed,
+        launch_path_recommendation:
+          canonicalDeliveryGateStatus === "user_needs_documents"
+            ? "user_needs_documents"
+            : "customer_deliverable",
+      },
     };
   }
 

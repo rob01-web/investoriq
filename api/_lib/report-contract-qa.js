@@ -214,28 +214,21 @@ function extractLabeledNumber(text, labels) {
 function extractRenderedOccupancyValues(text) {
   const source = String(text || "");
   const values = [];
-  const blockedContext = /\b(?:break[- ]?even|stabilized|sensitized|buffer|stress|threshold|vacancy|market occupancy|expense ratio|expense sensitivity|noi margin|operating cushion)\b/i;
-  const labels = [
-    "Occupancy",
-    "Current Occupancy",
-    "Rent Roll Occupancy",
-    "Physical Occupancy",
-  ];
-  for (const label of labels) {
-    const pattern = new RegExp(`${escapeRegExp(label)}[^0-9]{0,40}([0-9]+(?:\\.[0-9]+)?)\\s*%?`, "ig");
-    let match;
-    while ((match = pattern.exec(source)) !== null) {
-      const windowStart = Math.max(0, match.index - 60);
-      const windowEnd = Math.min(source.length, match.index + match[0].length + 60);
-      const contextWindow = source.slice(windowStart, windowEnd);
-      if (blockedContext.test(contextWindow)) continue;
-      const ratio = normalizeOccupancyRatio(match[1]);
-      if (!Number.isFinite(ratio)) continue;
-      values.push({
-        label,
-        value: ratio,
-      });
-    }
+  const blockedContext = /\b(?:break[- ]?even|stabilized|sensitized|buffer|stress|threshold|vacancy|market occupancy|expense ratio|expense sensitivity|noi margin|operating cushion|cap rate|exit cap|framework|sensitivity|grid|model)\b/i;
+  const lines = source.split(/\n+/);
+  for (const line of lines) {
+    const normalizedLine = String(line || "").trim();
+    if (!normalizedLine) continue;
+    if (blockedContext.test(normalizedLine)) continue;
+    const occupancyMatch = /\b(?:Current Occupancy|Rent Roll Occupancy|Physical Occupancy|Occupancy)\b[^0-9]{0,40}([0-9]+(?:\.[0-9]+)?)\s*%?/i.exec(normalizedLine);
+    if (!occupancyMatch) continue;
+    const label = occupancyMatch[0].match(/\b(?:Current Occupancy|Rent Roll Occupancy|Physical Occupancy|Occupancy)\b/i)?.[0] || "Occupancy";
+    const ratio = normalizeOccupancyRatio(occupancyMatch[1]);
+    if (!Number.isFinite(ratio)) continue;
+    values.push({
+      label,
+      value: ratio,
+    });
   }
   return values;
 }
