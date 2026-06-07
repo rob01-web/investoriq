@@ -1935,6 +1935,26 @@ export function buildReportContractQa({
       });
     }
   }
+  if (!reportTypeIsScreeningReport) {
+    const purchaseAssumptionsAppraisalRows = extractDocumentTreatmentRows(rawHtml, "Source Treatment / Quantitative Use").filter((row) =>
+      /purchase_assumptions_source\.txt/i.test(row.raw) &&
+      /Appraisal Context/i.test(row.raw)
+    );
+    if (purchaseAssumptionsAppraisalRows.length > 0) {
+      addViolation(violations, {
+        code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Purchase assumptions support is rendered as Appraisal Context instead of Purchase Assumptions / Acquisition Context.",
+        evidence: {
+          rows: purchaseAssumptionsAppraisalRows,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+  }
   const modeledDocNames = extractDocumentTreatmentFileNames(rawHtml, "Modeled Inputs");
   const modeledDocRows = extractDocumentTreatmentRows(rawHtml, "Modeled Inputs");
   const displayedLimitedRows = extractDocumentTreatmentRows(rawHtml, "Displayed / Limited Use");
@@ -1946,6 +1966,50 @@ export function buildReportContractQa({
     rawHtml,
     "Listed but Not Quantitatively Modeled"
   );
+  const purchaseAssumptionsDebtRows = [
+    ...modeledDocRows,
+    ...displayedLimitedRows,
+    ...listedNotModeledRows,
+  ].filter((row) =>
+    /purchase_assumptions_source\.txt/i.test(row.raw) &&
+    /(Debt Support Received \/ Contextual|Loan \/ Debt Support)/i.test(row.raw)
+  );
+  if (purchaseAssumptionsDebtRows.length > 0) {
+    addViolation(violations, {
+      code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
+      severity: "high",
+      category: "support_document_treatment_contract",
+      message: "Purchase assumptions support is rendered as debt support instead of Purchase Assumptions / Acquisition Context.",
+      evidence: {
+        rows: purchaseAssumptionsDebtRows,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+    });
+  }
+  const loanTermsSimpleRows = [
+    ...modeledDocRows,
+    ...displayedLimitedRows,
+    ...listedNotModeledRows,
+  ].filter((row) =>
+    /loan_terms_simple_source\.txt/i.test(row.raw) &&
+    /(Purchase Assumptions|Purchase Assumptions \/ Acquisition Context|Core quantitative source|Structured current debt input)/i.test(row.raw)
+  );
+  if (loanTermsSimpleRows.length > 0) {
+    addViolation(violations, {
+      code: "LOAN_TERMS_SIMPLE_SOURCE_TREATMENT_DRIFT",
+      severity: "high",
+      category: "support_document_treatment_contract",
+      message: "Launch-mode loan support is rendered as purchase assumptions or structured current debt input instead of contextual/deferred debt support.",
+      evidence: {
+        rows: loanTermsSimpleRows,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+    });
+  }
   const duplicateDocumentTreatmentNames = modeledDocNames.filter((name) =>
     listedNotModeledDocNames.includes(name)
   );

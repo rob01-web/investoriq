@@ -201,21 +201,52 @@ function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
 function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
   const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
-  const customerDeliveryAllowed = Boolean(state.customer_delivery_allowed);
+  const customerDeliveryAllowed =
+    state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null
+      ? Boolean(state.customer_delivery_allowed)
+      : rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery);
   const holdDelivery = Boolean(state.hold_delivery);
+  const publicSampleReady = Boolean(state.public_sample_ready);
+  const highValueOutreachReady = Boolean(state.high_value_outreach_ready);
+  const launchPathRecommendation =
+    customerDeliveryAllowed
+      ? (publicSampleReady && highValueOutreachReady
+        ? "customer_deliverable"
+        : "customer_deliverable_with_internal_advisory")
+      : (rawDeliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
+  const readinessHierarchy = {
+    final_delivery_authority: "delivery_gate",
+    final_delivery_status: rawDeliveryGateStatus,
+    customer_delivery_ready: customerDeliveryAllowed,
+    customer_publish_eligible: customerDeliveryAllowed,
+    report_publishable: customerDeliveryAllowed,
+    report_blocked: !customerDeliveryAllowed,
+    public_sample_ready: publicSampleReady,
+    high_value_outreach_ready: highValueOutreachReady,
+    advisory_only_findings: Array.isArray(state.advisory_only_findings) ? state.advisory_only_findings.length : 0,
+  };
   return {
     delivery_gate_status: rawDeliveryGateStatus,
     customer_delivery_allowed: customerDeliveryAllowed,
     hold_delivery: holdDelivery,
     holdDelivery,
+    report_publishable: customerDeliveryAllowed,
+    report_blocked: !customerDeliveryAllowed,
+    customer_delivery_ready: customerDeliveryAllowed,
+    customer_publish_eligible: customerDeliveryAllowed,
+    launch_path_recommendation: launchPathRecommendation,
+    readiness_hierarchy: readinessHierarchy,
     legacy_compatibility: {
       delivery_gate_status: rawDeliveryGateStatus,
       customer_delivery_ready: customerDeliveryAllowed,
       customer_publish_eligible: customerDeliveryAllowed,
+      report_publishable: customerDeliveryAllowed,
+      report_blocked: !customerDeliveryAllowed,
+      launch_path_recommendation: launchPathRecommendation,
       hold_delivery: holdDelivery,
       holdDelivery,
-      public_sample_ready: Boolean(state.public_sample_ready),
-      high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+      public_sample_ready: publicSampleReady,
+      high_value_outreach_ready: highValueOutreachReady,
     },
   };
 }
@@ -1382,19 +1413,23 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
 }
 
 function buildDocumentQuantitativeUsageMap({
+  effectiveReportMode = "screening_v1",
   currentDebtAssessmentState = null,
   mortgagePayload = null,
   loanTermSheetTermsPayload = null,
 } = {}) {
   const hasTrueCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
   const currentDebtComputed = String(currentDebtAssessmentState?.current_debt_dscr_status || "").trim().toLowerCase() === "computed";
+  const launchMemoMode = String(effectiveReportMode || "").toLowerCase() === "v1_core";
   const payloadHasCurrentDebtSignals = Boolean(
     isFinitePositive(mortgagePayload?.outstanding_balance) ||
     isFinitePositive(mortgagePayload?.current_outstanding_balance) ||
     isFinitePositive(mortgagePayload?.current_loan_balance) ||
-    isFinitePositive(loanTermSheetTermsPayload?.outstanding_balance) ||
-    isFinitePositive(loanTermSheetTermsPayload?.current_outstanding_balance) ||
-    isFinitePositive(loanTermSheetTermsPayload?.current_loan_balance)
+    (!launchMemoMode && (
+      isFinitePositive(loanTermSheetTermsPayload?.outstanding_balance) ||
+      isFinitePositive(loanTermSheetTermsPayload?.current_outstanding_balance) ||
+      isFinitePositive(loanTermSheetTermsPayload?.current_loan_balance)
+    ))
   );
   const hasCurrentDebtQuantitativeUse =
     hasTrueCurrentDebtBalance ||
@@ -1410,6 +1445,7 @@ function buildDocumentQuantitativeUsageMap({
   const rows = [];
   const pushCurrentDebtUsage = (payload = null, sourceBasis = null) => {
     if (!payload || typeof payload !== "object") return;
+    if (launchMemoMode && sourceBasis === "canonical_loan_term_sheet_payload") return;
     const idTokens = [
       payload?.source_file_id,
       payload?.file_id,
@@ -1446,7 +1482,7 @@ function buildDocumentQuantitativeUsageMap({
       },
     });
   };
-  pushCurrentDebtUsage(mortgagePayload, "canonical_mortgage_payload");
+    pushCurrentDebtUsage(mortgagePayload, "canonical_mortgage_payload");
   pushCurrentDebtUsage(loanTermSheetTermsPayload, "canonical_loan_term_sheet_payload");
   return { rows };
 }
@@ -2684,6 +2720,7 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
 
 function buildDocumentTreatmentSummaryHtml({
   documentSources = [],
+  reportMode = null,
   currentDebtAssessmentState = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
@@ -2795,6 +2832,7 @@ function buildDocumentTreatmentSummaryHtml({
       .toLowerCase();
   const hasText = (value, pattern) => pattern.test(normalizedText(value));
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
+  const launchMemoMode = String(reportMode || "").toLowerCase() === "v1_core";
   const hasForwardLookingRenovationRowSignals = () => {
     const rows = [
       ...(Array.isArray(renovationPayload?.budget_rows) ? renovationPayload.budget_rows : []),
@@ -2973,6 +3011,10 @@ function buildDocumentTreatmentSummaryHtml({
       hasUsefulCanonicalRole
         ? (effectiveCanonicalRole === "loan_term_sheet" || effectiveCanonicalRole === "purchase_assumptions")
         : /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
+    const hasLaunchAcquisitionContext =
+      (Number.isFinite(coerceNumber(row?.purchase_price)) && coerceNumber(row?.purchase_price) > 0) ||
+      (Number.isFinite(coerceNumber(row?.going_in_cap_rate)) && coerceNumber(row?.going_in_cap_rate) > 0) ||
+      /noi basis|net operating income basis|acquisition context|purchase context/i.test(semanticAndFileText);
     const appraisalLike =
       hasUsefulCanonicalRole
         ? effectiveCanonicalRole === "appraisal"
@@ -3016,12 +3058,12 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedMortgage) {
-      if (effectiveReportMode === "v1_core") {
+      if (launchMemoMode) {
         return {
           category: "Displayed / Limited Use",
           note: currentDebtHasTrueBalance
-            ? "Debt support received; analysis deferred."
-            : "Debt support received; no verified current debt balance.",
+            ? "Debt support received / contextual or deferred."
+            : "Debt support received / contextual or deferred.",
           reason_code: currentDebtHasTrueBalance ? "current_debt_not_used_here" : "current_debt_not_assessed",
           source_basis: sourceBasis,
         };
@@ -3142,21 +3184,35 @@ function buildDocumentTreatmentSummaryHtml({
       };
     }
     if (supportedLoanTerms) {
+      const purchaseAssumptionsLike =
+        effectiveCanonicalRole === "purchase_assumptions" ||
+        /(^|\b)purchase[_\s-]?assumptions(\b|$)/.test(semanticAndFileText);
       const hasDocumentDerivedAcquisitionContext =
+        hasLaunchAcquisitionContext ||
         (typeof purchasePrice !== "undefined" && Number.isFinite(purchasePrice) && purchasePrice > 0) ||
-        (typeof goingInCapRate !== "undefined" && Number.isFinite(goingInCapRate) && goingInCapRate > 0) ||
-        (typeof statedLoanAmount !== "undefined" && Number.isFinite(statedLoanAmount) && statedLoanAmount > 0) ||
-        (typeof derivedLoanAmount !== "undefined" && Number.isFinite(derivedLoanAmount) && derivedLoanAmount > 0);
+        (typeof goingInCapRate !== "undefined" && Number.isFinite(goingInCapRate) && goingInCapRate > 0);
+      if (purchaseAssumptionsLike) {
+        return {
+          category: "Displayed / Limited Use",
+          note: hasDocumentDerivedAcquisitionContext
+            ? "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt."
+            : "Acquisition context only; not quantitatively modeled.",
+          reason_code: hasDocumentDerivedAcquisitionContext
+            ? "loan_term_sheet_acquisition_context"
+            : "purchase_assumptions_context_only",
+          source_basis: sourceBasis,
+        };
+      }
       return {
         category: hasDocumentDerivedAcquisitionContext
           ? "Purchase Assumptions / Acquisition Context"
           : "Displayed / Limited Use",
         note: hasDocumentDerivedAcquisitionContext
           ? "Acquisition context / document-derived purchase-price or cap-rate reference. Does not override T12 or Rent Roll."
-          : "Acquisition context only; not quantitatively modeled.",
+          : (launchMemoMode ? "Debt support received / contextual or deferred." : "Acquisition context only; not quantitatively modeled."),
         reason_code: hasDocumentDerivedAcquisitionContext
           ? "loan_term_sheet_acquisition_context"
-          : "loan_term_sheet_proposed_acquisition_only",
+          : (launchMemoMode ? "current_debt_not_used_here" : "loan_term_sheet_proposed_acquisition_only"),
         source_basis: sourceBasis,
       };
     }
@@ -3304,8 +3360,8 @@ function buildDocumentTreatmentSummaryHtml({
     if (/^property[_\s-]?tax$/.test(canonicalRole)) {
       return "Property Tax Support";
     }
-    if (/^(purchase assumptions|loan term sheet|loan[_\s-]?term[_\s-]?sheet|acquisition financing|proposed acquisition financing)$/.test(canonicalRole)) {
-      return "Purchase Assumptions";
+    if (/^(purchase[_\s-]?assumptions|purchase assumptions)$/.test(canonicalRole)) {
+      return "Purchase Assumptions / Acquisition Context";
     }
     if (/^(current mortgage statement|current debt terms|mortgage statement|debt terms)$/.test(canonicalRole)) {
       return "Loan / Debt Support";
@@ -3329,12 +3385,15 @@ function buildDocumentTreatmentSummaryHtml({
       return "Property Tax Support";
     }
     if (classification?.reason_code === "current_debt_not_assessed" || classification?.reason_code === "current_debt_not_used_here" || classification?.reason_code === "structured_current_debt_input") {
-      return "Loan / Debt Support";
+      return launchMemoMode ? "Debt Support Received / Contextual" : "Loan / Debt Support";
     }
     if (classification?.reason_code === "loan_term_sheet_proposed_acquisition_only") {
       return "Purchase Assumptions";
     }
     if (classification?.reason_code === "loan_term_sheet_acquisition_context") {
+      return "Purchase Assumptions / Acquisition Context";
+    }
+    if (classification?.reason_code === "purchase_assumptions_context_only") {
       return "Purchase Assumptions / Acquisition Context";
     }
     return "Other Support Document";
@@ -3354,6 +3413,8 @@ function buildDocumentTreatmentSummaryHtml({
       case "loan_term_sheet_proposed_acquisition_only":
       case "loan_term_sheet_acquisition_context":
         return "Acquisition context / document-derived purchase-price or cap-rate reference";
+      case "purchase_assumptions_context_only":
+        return "Context only";
       case "current_debt_not_assessed":
       case "current_debt_not_used_here":
         return "Debt support received / contextual or deferred";
@@ -3815,6 +3876,7 @@ function buildRentUpsideValueSensitivityCard({
 }
 
 function buildLaunchSourceContextBlock({
+  reportMode = null,
   documentSources = [],
   currentDebtAssessmentState = null,
   hasForwardLookingRenovationInputs = false,
@@ -3826,6 +3888,7 @@ function buildLaunchSourceContextBlock({
 } = {}) {
   const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
   const treatment = buildDocumentTreatmentSummaryHtml({
+    reportMode,
     documentSources,
     currentDebtAssessmentState,
     hasForwardLookingRenovationInputs,
@@ -4641,6 +4704,7 @@ function buildScreeningDataCoverageSummary({
       ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
     const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
+      reportMode: effectiveReportMode,
       documentSources,
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs,
@@ -6934,6 +6998,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
     const hasVerifiedCurrentDebtBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance);
     let documentQuantitativeUsageMap = buildDocumentQuantitativeUsageMap({
+      effectiveReportMode,
       currentDebtAssessmentState,
       mortgagePayload,
       loanTermSheetTermsPayload,
@@ -7680,6 +7745,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         documentSourcesHtml = `<ul>${items}</ul>`;
       }
       documentQuantitativeUsageMap = buildDocumentQuantitativeUsageMap({
+        effectiveReportMode,
         currentDebtAssessmentState,
         mortgagePayload,
         loanTermSheetTermsPayload,
@@ -8143,6 +8209,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         acquisitionMemoRenderContext.goingInCapRate ?? appraisalCapRateBase
       );
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
+        reportMode: effectiveReportMode,
         documentSources: acquisitionMemoRenderContext.documentSources,
         currentDebtAssessmentState,
         hasForwardLookingRenovationInputs: acquisitionMemoRenderContext.hasForwardLookingRenovationInputs,
@@ -8402,16 +8469,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
                 annualMarket > annualInPlace
                   ? "Rent roll data indicates in-place rents are below market across the current unit mix."
                   : "Source-bound rent positioning summary uses verified totals where available and leaves unsupported metrics unassessed.";
-              return buildRentPositioningSummaryCard({
-                title: "Rent Positioning Summary",
-                body: summaryBody,
-                totalUnits,
-                occupiedUnits,
-                occupancy,
-                annualInPlace,
-                annualMarket,
-                formatCurrency,
-              });
+              return "";
             }
             return "";
           })()
@@ -10108,6 +10166,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             : String(safeHtml || "");
       let htmlString = sanitizeTypography(htmlStringRaw);
       const harnessDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+        reportMode: effectiveReportMode,
         documentSources,
         currentDebtAssessmentState,
         hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
@@ -10808,6 +10867,7 @@ try {
   sourceCoverageQaResult = sourceCoverageQa;
   if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+      reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
       currentDebtAssessmentState,
       hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
@@ -11297,8 +11357,7 @@ try {
         bucket: "internal",
         object_path: `analysis_jobs/${jobId || "unknown"}/delivery_gate_decision/${gateTimestamp}.json`,
         payload: {
-          ...deliveryGateDecision,
-          deliveryDecisionState: deliveryDecisionStateResult,
+          ...(normalizedDeliveryGateDecision || deliveryGateDecision),
         },
       },
     ]);
@@ -11306,9 +11365,19 @@ try {
       console.error("Failed to write delivery_gate_decision artifact:", deliveryGateErr);
     }
   }
-} catch (err) {
-  console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
-}
+  } catch (err) {
+    console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
+  }
+  const normalizedDeliveryAliases = buildDeliveryResponseCompatibilityAliases(deliveryDecisionStateResult);
+  const normalizedDeliveryGateDecision = deliveryGateDecisionResult
+    ? {
+        ...deliveryGateDecisionResult,
+        ...normalizedDeliveryAliases,
+        legacy_compatibility: normalizedDeliveryAliases.legacy_compatibility,
+        readiness_hierarchy: normalizedDeliveryAliases.readiness_hierarchy,
+        deliveryDecisionState: deliveryDecisionStateResult,
+      }
+    : null;
   if (
     deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents" &&
     deliveryDecisionStateResult?.core_valid_required_coverage !== true
@@ -11332,6 +11401,12 @@ try {
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
     hold_delivery: deliveryAliases.hold_delivery,
     holdDelivery: deliveryAliases.holdDelivery,
+    report_publishable: deliveryAliases.report_publishable,
+    report_blocked: deliveryAliases.report_blocked,
+    customer_delivery_ready: deliveryAliases.customer_delivery_ready,
+    customer_publish_eligible: deliveryAliases.customer_publish_eligible,
+    launch_path_recommendation: deliveryAliases.launch_path_recommendation,
+    readiness_hierarchy: deliveryAliases.readiness_hierarchy,
     legacy_compatibility: deliveryAliases.legacy_compatibility,
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
@@ -11516,11 +11591,17 @@ try {
       reportId,
       url: signedData.signedUrl,
       deliveryDecisionState: canonicalDeliveryDecisionState,
-      delivery_gate_status: deliveryAliases.delivery_gate_status,
-      customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
-      hold_delivery: deliveryAliases.hold_delivery,
-      holdDelivery: deliveryAliases.holdDelivery,
-      legacy_compatibility: deliveryAliases.legacy_compatibility,
+    delivery_gate_status: deliveryAliases.delivery_gate_status,
+    customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
+    hold_delivery: deliveryAliases.hold_delivery,
+    holdDelivery: deliveryAliases.holdDelivery,
+    report_publishable: deliveryAliases.report_publishable,
+    report_blocked: deliveryAliases.report_blocked,
+    customer_delivery_ready: deliveryAliases.customer_delivery_ready,
+    customer_publish_eligible: deliveryAliases.customer_publish_eligible,
+    launch_path_recommendation: deliveryAliases.launch_path_recommendation,
+    readiness_hierarchy: deliveryAliases.readiness_hierarchy,
+    legacy_compatibility: deliveryAliases.legacy_compatibility,
       delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
       delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
       delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
@@ -11570,6 +11651,7 @@ export const __test__ = {
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
   buildReportStoragePath,
+  buildDeliveryResponseCompatibilityAliases,
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,
   applyFinalSectionHealRenderGuards,

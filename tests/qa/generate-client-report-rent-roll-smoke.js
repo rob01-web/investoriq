@@ -235,6 +235,12 @@ assert.equal(canonicalDeliverableDecision.diagnostics.customer_publish_eligible,
 assert.equal(canonicalDeliverableDecision.diagnostics.report_publishable, true);
 assert.equal(canonicalDeliverableDecision.diagnostics.report_blocked, false);
 assert.equal(canonicalDeliverableDecision.legacy_compatibility.customer_delivery_allowed, true);
+const normalizedDeliverableAliases = generatorTest.buildDeliveryResponseCompatibilityAliases(canonicalDeliverableDecision);
+assert.equal(normalizedDeliverableAliases.report_blocked, false);
+assert.equal(normalizedDeliverableAliases.report_publishable, true);
+assert.equal(normalizedDeliverableAliases.customer_delivery_ready, true);
+assert.equal(normalizedDeliverableAliases.customer_publish_eligible, true);
+assert.match(normalizedDeliverableAliases.launch_path_recommendation, /^customer_deliverable/);
 const unresolvedTokens = fullRenderHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (unresolvedTokens.length > 0) {
   throw new Error(`Unresolved tokens: ${unresolvedTokens.slice(0, 10).join(", ")}`);
@@ -3076,6 +3082,7 @@ assert.equal(
   false
 );
 const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
   documentSources: [
     {
       original_filename: "purchase_assumptions_source.txt",
@@ -3094,6 +3101,25 @@ assert.equal(
   /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]*purchase_assumptions_source\.txt/i.test(
     purchaseAssumptionsLimitedUseHtml
   ),
+  false
+);
+const loanTermsSimpleHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: [
+    {
+      original_filename: "loan_terms_simple_source.txt",
+      doc_type: "loan_term_sheet",
+      semantic_doc_role: "loan_term_sheet",
+      parse_status: "parsed",
+    },
+  ],
+});
+assert.match(
+  loanTermsSimpleHtml,
+  /(?:Debt support received \/ contextual or deferred|Acquisition context \/ document-derived purchase-price or cap-rate reference|Acquisition context only; not quantitatively modeled\.)/i
+);
+assert.equal(
+  /Purchase Assumptions \/ Acquisition Context|Structured current debt input|Core quantitative source|Appraisal Context/i.test(loanTermsSimpleHtml),
   false
 );
 const acquisitionQaCalibrationRender = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
@@ -3627,6 +3653,7 @@ assert.equal(/Unit-Level/i.test(rentUpsideValueSensitivityCardHtml), false);
 assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
 assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
 const sourceContextBlockHtml = generatorTest.buildLaunchSourceContextBlock({
+  reportMode: "v1_core",
   documentSources: [
     { original_filename: "T12.pdf", doc_type: "t12" },
     { original_filename: "Rent Roll.pdf", doc_type: "rent_roll" },

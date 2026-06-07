@@ -1556,6 +1556,10 @@ export function buildSupportDocTaxonomyState({
       ) ||
       (
         acquisitionPayloadSignalCount >= 1 &&
+        hasText(["noi basis", "net operating income basis", "noi support", "acquisition context", "purchase context", "document-derived cap-rate reference"])
+      ) ||
+      (
+        acquisitionPayloadSignalCount >= 1 &&
         (
           hasText(["purchase price", "purchase assumptions", "acquisition financing", "going-in cap", "ltv", "loan-to-value", "closing costs", "amortization"]) ||
           countText(["purchase", "assumption", "financ", "loan", "ltv", "amort", "rate", "closing"]) >= 1
@@ -1660,7 +1664,7 @@ export function buildSupportDocTaxonomyState({
     semanticDocRole = "broker_email";
     semanticDocRoleReason = "broker_email_support_signals";
     confidence = 0.8;
-  } else if (hasAppraisalSignals) {
+  } else if (hasAppraisalSignals && !hasPurchaseAssumptionSignals) {
     semanticDocRole = "appraisal";
     semanticDocRoleReason = "appraisal_support_signals";
     confidence = 0.9;
