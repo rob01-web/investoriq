@@ -1955,6 +1955,24 @@ export function buildReportContractQa({
       });
     }
   }
+  const purchaseAssumptionsNotModeledRows = extractDocumentTreatmentRows(rawHtml, "Listed but Not Quantitatively Modeled").filter((row) =>
+    /purchase_assumptions_source\.txt/i.test(row.raw) &&
+    /(Purchase Price|Going-In Cap Rate|NOI Basis|Acquisition context|document-derived acquisition context)/i.test(row.raw)
+  );
+  if (purchaseAssumptionsNotModeledRows.length > 0) {
+    addViolation(violations, {
+      code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
+      severity: "high",
+      category: "support_document_treatment_contract",
+      message: "Purchase assumptions support is rendered as Listed but Not Quantitatively Modeled instead of Acquisition Context.",
+      evidence: {
+        rows: purchaseAssumptionsNotModeledRows,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+    });
+  }
   const modeledDocNames = extractDocumentTreatmentFileNames(rawHtml, "Modeled Inputs");
   const modeledDocRows = extractDocumentTreatmentRows(rawHtml, "Modeled Inputs");
   const displayedLimitedRows = extractDocumentTreatmentRows(rawHtml, "Displayed / Limited Use");
@@ -2004,6 +2022,56 @@ export function buildReportContractQa({
       message: "Launch-mode loan support is rendered as purchase assumptions or structured current debt input instead of contextual/deferred debt support.",
       evidence: {
         rows: loanTermsSimpleRows,
+      },
+      customer_delivery_impact: "disclose_only",
+      blocks_customer_delivery: false,
+      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+    });
+  }
+  const acquisitionFinancingReadinessTable = firstTableAfterHeading(rawHtml, /Acquisition Financing Readiness/i);
+  if (acquisitionFinancingReadinessTable) {
+    const acquisitionFinancingReadinessRows = tableRowsFromHtml(acquisitionFinancingReadinessTable);
+    const acquisitionFinancingReadinessText = acquisitionFinancingReadinessRows.map((row) => row.text).join(" | ");
+    if (/Going-In DSCR/i.test(acquisitionFinancingReadinessText)) {
+      const requiredPatterns = [
+        /Purchase Price/i,
+        /NOI Basis/i,
+        /Proposed Loan Amount/i,
+        /LTV/i,
+        /Interest Rate/i,
+        /Amortization/i,
+        /Estimated Annual Debt Service/i,
+        /Going-In DSCR/i,
+      ];
+      const missingLabels = requiredPatterns
+        .filter((pattern) => !pattern.test(acquisitionFinancingReadinessText))
+        .map((pattern) => pattern.source);
+      if (missingLabels.length > 0) {
+        addViolation(violations, {
+          code: "ACQUISITION_FINANCING_READINESS_INCOMPLETE",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Launch acquisition financing readiness rendered a DSCR table without all required source-supported inputs.",
+          evidence: {
+            missing_labels: missingLabels,
+            rows: acquisitionFinancingReadinessRows,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
+    }
+  }
+  const rentPositioningVisibleBlocks = (rawHtml.match(/<p class="subsection-title">\s*(Rent Positioning Evidence|Rent Positioning Summary|Summary Rent Positioning)\s*<\/p>/gi) || []);
+  if (rentPositioningVisibleBlocks.length > 1) {
+    addViolation(violations, {
+      code: "RENT_POSITIONING_DUPLICATE_RENDER",
+      severity: "high",
+      category: "render_contract",
+      message: "Acquisition Memo renders more than one visible rent-positioning summary/evidence block.",
+      evidence: {
+        visible_block_count: rentPositioningVisibleBlocks.length,
       },
       customer_delivery_impact: "disclose_only",
       blocks_customer_delivery: false,

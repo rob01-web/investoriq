@@ -1539,6 +1539,11 @@ export function buildSupportDocTaxonomyState({
       "current outstanding principal balance",
     ]);
   const acquisitionPayloadSignalCount = [
+    payload?.purchase_price,
+    payload?.purchasePrice,
+    payload?.acquisition_price,
+    payload?.asking_price,
+    payload?.purchase_price_amount,
     payload?.ltv,
     payload?.interest_rate,
     payload?.amortization_years ?? payload?.amort_years,

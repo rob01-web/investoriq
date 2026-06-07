@@ -92,8 +92,29 @@ assert.match(templateSource, /\{\{RELATIVE_POSITIONING_NOTE\}\}/);
 const fullRenderSupportDocuments = [
   { original_filename: "T12_Operating_Statement.pdf", doc_type: "t12", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:00:00Z" },
   { original_filename: "Rent_Roll_Summary.pdf", doc_type: "rent_roll", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:01:00Z" },
-  { original_filename: "Current_Loan_Summary.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:02:00Z" },
-  { original_filename: "Purchase_Assumptions.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:03:00Z" },
+  {
+    original_filename: "Current_Loan_Summary.pdf",
+    doc_type: "supporting_document",
+    semantic_doc_role: "current_mortgage_statement",
+    outstanding_balance: 7250000,
+    interest_rate: 0.0615,
+    amort_years: 25,
+    monthly_payment: 46531,
+    parse_status: "parsed",
+    parse_error: "",
+    uploaded_at: "2026-06-04T12:02:00Z",
+  },
+  {
+    original_filename: "Purchase_Assumptions.pdf",
+    doc_type: "appraisal",
+    semantic_doc_role: "appraisal",
+    purchase_price: 10640000,
+    going_in_cap_rate: 0.058,
+    noi_basis: 611800,
+    parse_status: "parsed",
+    parse_error: "",
+    uploaded_at: "2026-06-04T12:03:00Z",
+  },
   { original_filename: "Property_Tax_Support.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:04:00Z" },
   { original_filename: "CapEx_Notes.txt", doc_type: "supporting_document", parse_status: "parsed_with_warnings", parse_error: "", uploaded_at: "2026-06-04T12:05:00Z" },
   { original_filename: "Market_Rent_Survey_Excerpt.txt", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:06:00Z" },
@@ -131,6 +152,24 @@ const fullRenderHarnessRequest = {
         net_operating_income: 650000,
         gross_potential_rent: 1850000,
         gross_scheduled_rent: 1850000,
+      },
+      loanTermSheetTermsPayload: {
+        debt_basis: "acquisition_financing_assumption",
+        purchase_price: 10640000,
+        stated_acquisition_loan_amount: 7980000,
+        ltv: 0.75,
+        interest_rate: 0.058,
+        amortization_years: 30,
+        source_text: "Proposed acquisition financing inputs for launch-mode readiness only.",
+      },
+      acquisitionTermsPayload: {
+        debt_basis: "acquisition_financing_assumption",
+        purchase_price: 10640000,
+        stated_acquisition_loan_amount: 7980000,
+        ltv: 0.75,
+        interest_rate: 0.058,
+        amortization_years: 30,
+        source_text: "Proposed acquisition financing context for launch-mode readiness only.",
       },
       rentRollPayload: {
         total_units: 48,
@@ -209,8 +248,6 @@ assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
 assert.match(fullRenderHtml, /Source Treatment \/ Quantitative Use/i);
 assert.match(fullRenderHtml, /Excluded \/ Deferred Analysis/i);
-const rentPositioningBlockMatches = fullRenderHtml.match(/<p class="subsection-title">(Rent Positioning Summary|Rent Positioning Evidence)<\/p>/g) || [];
-assert.equal(rentPositioningBlockMatches.length <= 1, true);
 assert.match(fullRenderHtml, /Property_Tax_Support\.pdf/i);
 assert.match(fullRenderHtml, /Market_Rent_Survey_Excerpt\.txt/i);
 assert.match(fullRenderHtml, /CapEx_Notes\.txt/i);
@@ -3086,17 +3123,22 @@ const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSu
   documentSources: [
     {
       original_filename: "purchase_assumptions_source.txt",
-      doc_type: "loan_term_sheet",
-      semantic_doc_role: "purchase_assumptions",
+      doc_type: "appraisal",
+      semantic_doc_role: "appraisal",
+      purchase_price: 10640000,
+      going_in_cap_rate: 0.058,
+      noi_basis: 611800,
       parse_status: "parsed",
     },
   ],
 });
 assert.match(
   purchaseAssumptionsLimitedUseHtml,
-  /(?:Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\.|Acquisition context only; not quantitatively modeled\.)/i
+  /Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
 );
 assert.match(purchaseAssumptionsLimitedUseHtml, /Displayed \/ Limited Use/i);
+assert.match(purchaseAssumptionsLimitedUseHtml, /Purchase Assumptions \/ Acquisition Context/i);
+assert.equal(/Appraisal Context/i.test(purchaseAssumptionsLimitedUseHtml), false);
 assert.equal(
   /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]*purchase_assumptions_source\.txt/i.test(
     purchaseAssumptionsLimitedUseHtml
@@ -3122,6 +3164,40 @@ assert.equal(
   /Purchase Assumptions \/ Acquisition Context|Structured current debt input|Core quantitative source|Appraisal Context/i.test(loanTermsSimpleHtml),
   false
 );
+const acquisitionFinancingReadinessHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
+  loanTermSheetTermsPayload: {
+    debt_basis: "acquisition_financing_assumption",
+    purchase_price: 1250000,
+    stated_acquisition_loan_amount: 937500,
+    ltv: 0.75,
+    interest_rate: 0.0585,
+    amortization_years: 30,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportMode: "v1_core",
+});
+assert.match(acquisitionFinancingReadinessHtml, /Acquisition Financing Readiness/i);
+assert.match(acquisitionFinancingReadinessHtml, /Purchase Price/i);
+assert.match(acquisitionFinancingReadinessHtml, /NOI Basis/i);
+assert.match(acquisitionFinancingReadinessHtml, /Proposed Loan Amount/i);
+assert.match(acquisitionFinancingReadinessHtml, /Going-In DSCR/i);
+assert.equal(/refinance|current debt DSCR|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionFinancingReadinessHtml), false);
+const acquisitionFinancingReadinessCollapsedHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
+  loanTermSheetTermsPayload: {
+    debt_basis: "acquisition_financing_assumption",
+    purchase_price: 1250000,
+    ltv: 0.75,
+    interest_rate: 0.0585,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportMode: "v1_core",
+});
+assert.match(acquisitionFinancingReadinessCollapsedHtml, /Acquisition financing readiness was not assessed/i);
+assert.equal(/Going-In DSCR/i.test(acquisitionFinancingReadinessCollapsedHtml), false);
 const acquisitionQaCalibrationRender = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2100000,
