@@ -283,6 +283,8 @@ assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
 assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
 assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(fullRenderHtml, /Acquisition Request Context/i);
+assert.match(fullRenderHtml, /Annual Rent Upside/i);
+assert.match(fullRenderHtml, /Rent Gap %/i);
 assert.match(fullRenderHtml, /Operating Support/i);
 assert.match(fullRenderHtml, /Rent \/ Value Support/i);
 assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
@@ -293,7 +295,9 @@ assert.match(fullRenderHtml, /Interest Rate/i);
 assert.match(fullRenderHtml, /Amortization/i);
 assert.match(fullRenderHtml, /LTV/i);
 assert.match(fullRenderHtml, /Proposed Acquisition Financing[\s\S]*Not source-complete \/ not modeled\./i);
+assert.equal((fullRenderHtml.match(/Proposed Acquisition Financing/gi) || []).length, 1);
 assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
+assert.match(fullRenderHtml, /Document-derived cap-rate reference[\s\S]*5\.(?:75|80)%/i);
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
@@ -305,6 +309,19 @@ assert.match(fullRenderHtml, /CapEx_Notes\.txt/i);
 assert.match(fullRenderHtml, /Phase_I_ESA_Context\.pdf/i);
 assert.match(fullRenderHtml, /Broker_Email_Context\.msg/i);
 assert.match(fullRenderHtml, /Unsupported_Appraisal_Excerpt\.pdf/i);
+const checklistSectionMatch = /Lender Diligence Checklist[\s\S]*?<\/table>/i.exec(fullRenderHtml);
+assert.ok(checklistSectionMatch, "Missing lender diligence checklist");
+const checklistSectionHtml = checklistSectionMatch[0];
+assert.equal((checklistSectionHtml.match(/Property tax support/gi) || []).length, 1);
+if (/Environmental \/ Phase I support/i.test(checklistSectionHtml)) {
+  assert.match(checklistSectionHtml, /Context only \/ not modeled/i);
+}
+if (/Appraisal support/i.test(checklistSectionHtml)) {
+  assert.match(checklistSectionHtml, /Context only unless structured value exists/i);
+}
+if (/CapEx \/ renovation plan/i.test(checklistSectionHtml)) {
+  assert.match(checklistSectionHtml, /Context only unless verified budget and rent-lift assumptions exist/i);
+}
 const canonicalDeliverableDecision = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "deliverable",
   customer_delivery_allowed: true,
