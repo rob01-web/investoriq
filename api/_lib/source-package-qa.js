@@ -266,6 +266,38 @@ function isDeterministicLanguageGuaranteeFalsePositive(finding) {
   return isAllowedMethodologyOnlyText(finding);
 }
 
+function normalizePercentForComparison(value) {
+  const parsed = Number(String(value ?? "").replace(/%/g, ""));
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed > 1.5 ? parsed : parsed * 100;
+}
+
+function extractPercentValuesForComparison(text) {
+  const source = String(text || "");
+  const values = [];
+  const pattern = /(-?\d+(?:\.\d+)?)\s*%/g;
+  let match;
+  while ((match = pattern.exec(source))) {
+    const percentPoints = normalizePercentForComparison(match[1]);
+    if (Number.isFinite(percentPoints)) {
+      values.push(percentPoints);
+    }
+  }
+  return values;
+}
+
+function getCanonicalCapRatePercentPoints(compactPayload) {
+  const inventory = compactPayload?.source_report_coverage_qa?.artifact_inventory || {};
+  const acquisitionSupport = inventory?.loan_term_sheet_parsed?.acquisition_support || {};
+  return normalizePercentForComparison(
+    acquisitionSupport?.going_in_cap_rate ??
+    inventory?.loan_term_sheet_parsed?.going_in_cap_rate ??
+    compactPayload?.source_report_coverage_qa?.acquisition_assumption_state?.validated_fields?.going_in_cap_rate ??
+    compactPayload?.source_report_coverage_qa?.acquisition_assumption_state?.going_in_cap_rate ??
+    null
+  );
+}
+
 function extractRenderedOccupancy(text) {
   const source = typeof text === "string" ? text : "";
   const match = source.match(/\boccupancy\b[^0-9]{0,40}(\d{1,3}(?:\.\d+)?)\s*%/i);
@@ -288,6 +320,23 @@ function isOccupancyFalsePositive(finding, compactPayload) {
     Number.isFinite(renderedOccupancy) &&
     Math.abs(coverageOccupancy - renderedOccupancy) < 0.005
   );
+}
+
+function isCapRateRoundingFalsePositive(finding, compactPayload) {
+  const text = textOfFinding(finding);
+  if (!/cap rate|going[- ]in cap|acquisition cap-rate|document-derived cap-rate reference/i.test(text)) {
+    return false;
+  }
+  if (!/inconsistent|contradict|mismatch|differs|different/.test(text)) {
+    return false;
+  }
+  const canonicalCapRate = getCanonicalCapRatePercentPoints(compactPayload);
+  const renderedPercentValues = extractPercentValuesForComparison(text);
+  if (!Number.isFinite(canonicalCapRate) || renderedPercentValues.length === 0) {
+    return false;
+  }
+  const tolerancePercentagePoints = 0.1;
+  return renderedPercentValues.every((value) => Math.abs(value - canonicalCapRate) <= tolerancePercentagePoints);
 }
 
 function isClearRenderedDisclosureFalsePositive(finding, compactPayload) {
@@ -358,6 +407,7 @@ function filterSourcePackageFalsePositives(review, compactPayload) {
       !isFilenameTokenOnlyFinding(finding) &&
       !isDeterministicLanguageGuaranteeFalsePositive(finding) &&
       !isOccupancyFalsePositive(finding, compactPayload) &&
+      !isCapRateRoundingFalsePositive(finding, compactPayload) &&
       !isClearRenderedDisclosureFalsePositive(finding, compactPayload) &&
       !isSupportedAcquisitionAssumptionsFalsePositive(finding, compactPayload)
     ));
@@ -611,6 +661,7 @@ export const __test__ = {
   summarizeArtifact,
   countAllFindings,
   filterSourcePackageFalsePositives,
+  isCapRateRoundingFalsePositive,
   SOURCE_PACKAGE_QA_PROMPT,
   RESPONSE_SCHEMA,
 };
