@@ -1,3 +1,192 @@
+# June 8, 2026 Addendum - Acquisition Memo Financing-Ready Product Doctrine / Preliminary Financing Readiness Summary Locked
+
+## Current controlling clarification
+
+InvestorIQ Acquisition Memo is not merely a light debt-context memo.
+
+The controlling product ladder is now:
+
+```text
+1. InvestorIQ Screening Report
+   Purpose: help investors narrow a broad property search down to a few deals worth deeper diligence.
+   Scope: T12 + Rent Roll operating triage, rent upside, operating quality, and source coverage.
+   Not a financing memo or lender approval package.
+
+2. InvestorIQ Acquisition Memo
+   Purpose: financing-ready acquisition memo for approximately 1-150/200 unit properties.
+   User outcome: help smaller and mid-market property investors organize the property story, operating support, NOI, rent upside, purchase basis, value indication, debt context, source coverage, and lender diligence gaps well enough to approach lenders and support acquisition financing conversations.
+   It should be strong enough for users to show a lender when pursuing financing for a 1-150/200 unit acquisition, while avoiding unsupported loan-approval claims.
+
+3. InvestorIQ Full Underwriting V2.0
+   Purpose: lender-credit-committee / institutional package for sophisticated users such as Ken Dunn, family offices, larger operators, brokers, and institutional users.
+   Target use case: 250+ unit assets, multi-building deals, and approximately $50M-$500M transactions.
+   Future scope: advanced debt/refi, full DSCR stack, DCF, waterfall, capital stack, sensitivity analysis, integrations, lender/investor package, and institutional credit-committee-ready outputs.
+```
+
+This supersedes any narrower language suggesting Acquisition Memo is only for under-50-unit properties or only for vague/simple financing discussions.
+
+## Acquisition Memo financing-readiness standard
+
+Acquisition Memo should support lender-facing preliminary financing conversations for 1-150/200 unit deals, but it must not claim loan approval, lender commitment, or institutional credit-committee completeness.
+
+Correct positioning:
+
+```text
+Acquisition Memo = financing-ready for serious lender discussions and acquisition financing requests.
+Full Underwriting V2.0 = institutional lender / credit-committee package for major assets and portfolios.
+```
+
+The Acquisition Memo should answer the lender's first-pass questions:
+
+```text
+What is the property?
+What is the verified income and NOI?
+What is the purchase basis?
+What rent/value support exists?
+What debt or financing context was uploaded?
+What is verified, what is context-only, and what remains missing for full credit underwriting?
+```
+
+## Required new section: Preliminary Financing Readiness Summary
+
+Add or upgrade the Acquisition Memo financing section to render as:
+
+```text
+Preliminary Financing Readiness Summary
+```
+
+The section should include the following structure when source-supported.
+
+### 1. Acquisition Request Context
+
+```text
+- Purchase Price
+- NOI Basis
+- Going-In Cap Rate
+- Units
+- Price per Unit
+- NOI per Unit
+```
+
+### 2. Operating Support
+
+```text
+- Effective Gross Income
+- Operating Expenses
+- NOI
+- Expense Ratio
+- NOI Margin
+- Occupancy
+- Break-Even Occupancy
+```
+
+### 3. Rent / Value Support
+
+```text
+- Annual In-Place Rent
+- Annual Market Rent
+- Annual Rent Upside
+- Rent Gap %
+- Implied Value at 5.0%, 6.0%, 7.0% cap rates
+- Document-derived cap-rate reference, if available
+```
+
+### 4. Debt / Financing Context
+
+```text
+- Uploaded Existing Debt Context, if available:
+  - Outstanding Balance
+  - Interest Rate
+  - Amortization
+  - LTV
+- Proposed Acquisition Financing:
+  - Shown only if explicitly provided
+  - Otherwise: "Not source-complete / not modeled"
+```
+
+### 5. Lender Diligence Checklist
+
+```text
+- T12 verified: Yes
+- Rent Roll verified: Yes
+- Purchase assumptions provided: Yes / No
+- Property tax support: Yes / No
+- Current debt context uploaded: Yes / No
+- Proposed acquisition loan terms complete: Yes / No
+- Environmental / Phase I support: Context only / not modeled
+- Appraisal support: Context only unless structured value exists
+- CapEx / renovation plan: Context only unless verified budget and rent-lift assumptions exist
+```
+
+## Safe boundaries for the financing-readiness section
+
+Allowed in Acquisition Memo:
+
+```text
+Acquisition Request Context
+Operating Support
+Rent / Value Support
+Uploaded Existing Debt Context
+Proposed Acquisition Financing status, only if explicitly source-supported
+Lender Diligence Checklist
+Source-complete limitation notes
+```
+
+Do not reopen Full Underwriting V2.0 surfaces in Acquisition Memo:
+
+```text
+No refinance proceeds
+No refinance stress
+No full debt sizing unless proposed acquisition financing terms are explicitly source-complete and the output is bounded to the Acquisition Memo readiness section
+No DCF
+No waterfall
+No equity returns
+No full debt schedule
+No final recommendation
+No BUY / SELL / HOLD
+No loan approval or lender commitment language
+No institutional credit-committee claim
+```
+
+Current debt / existing debt context must remain separate from proposed acquisition financing.
+
+```text
+Existing/current debt may be shown as Uploaded Existing Debt Context when verified.
+Existing/current debt must not be relabeled as Proposed Acquisition Financing unless the source explicitly says it is proposed acquisition financing.
+```
+
+## Source-gating rule
+
+If proposed acquisition financing terms are incomplete, the memo should still render the lender-facing readiness summary using verified property-level and source-coverage inputs, but proposed acquisition debt sizing/math should say:
+
+```text
+Not source-complete / not modeled
+```
+
+This limitation is acceptable and should not block the report.
+
+## Immediate next implementation slice
+
+After the Document Treatment root-render family is confirmed fixed, the next Codex slice should be:
+
+```text
+Add Preliminary Financing Readiness Summary to Acquisition Memo.
+```
+
+It must be a bounded Acquisition Memo product-value slice, not a V2 debt/refi/DCF reopening.
+
+Guardrails:
+
+```text
+Do not touch Screening except protective regression.
+Do not change pricing, Stripe, SQL/RPC, Supabase schema, routes, Dashboard, DocRaptor config, OpenAI config, auth, or upload gates.
+Do not add new API/serverless routes.
+Do not re-enable Full Underwriting V2 surfaces.
+Do not hardcode property names, report IDs, production filenames, or fixture values outside tests.
+```
+
+---
+
 # June 7, 2026 Addendum - Clean Retest Results / Acquisition Memo Root Renderer Failure Still Open / No More Testing Until Final Document-Treatment Precedence Patch
 
 ## Current controlling status
@@ -270,7 +459,7 @@ Acquisition Memo:
 
 ```text
 Purpose: investor-ready acquisition memo for basic/smaller property diligence and financing discussions.
-For simple under-50-unit assets, it should eventually support basic financing approval conversations when the required proposed acquisition financing inputs are explicitly provided.
+For approximately 1-150/200 unit assets, it should support financing-ready lender conversations and acquisition financing requests when the required source inputs are available, while avoiding unsupported loan-approval claims.
 It should not claim full lender approval if debt terms are incomplete.
 ```
 
