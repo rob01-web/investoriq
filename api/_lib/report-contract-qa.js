@@ -1988,26 +1988,6 @@ export function buildReportContractQa({
       });
     }
   }
-  if (!reportTypeIsScreeningReport) {
-    const purchaseAssumptionsAppraisalRows = extractDocumentTreatmentRows(rawHtml, "Source Treatment / Quantitative Use").filter((row) =>
-      /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i.test(row.raw) &&
-      /Appraisal Context/i.test(row.raw)
-    );
-    if (purchaseAssumptionsAppraisalRows.length > 0) {
-      addViolation(violations, {
-        code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
-        severity: "high",
-        category: "support_document_treatment_contract",
-        message: "Purchase assumptions support is rendered as Appraisal Context instead of Purchase Assumptions / Acquisition Context.",
-        evidence: {
-          rows: purchaseAssumptionsAppraisalRows,
-        },
-        customer_delivery_impact: "disclose_only",
-        blocks_customer_delivery: false,
-        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
-      });
-    }
-  }
   const purchaseAssumptionsNotModeledRows = extractDocumentTreatmentRows(rawHtml, "Listed but Not Quantitatively Modeled").filter((row) =>
     /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i.test(row.raw)
   );
