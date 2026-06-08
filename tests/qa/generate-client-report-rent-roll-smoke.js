@@ -3134,7 +3134,7 @@ const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSu
 });
 assert.match(
   purchaseAssumptionsLimitedUseHtml,
-  /Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+  /Purchase price \/ going-in cap \/ NOI basis support; does not override T12\/Rent Roll operating truth\./i
 );
 assert.match(purchaseAssumptionsLimitedUseHtml, /Displayed \/ Limited Use/i);
 assert.match(purchaseAssumptionsLimitedUseHtml, /Purchase Assumptions \/ Acquisition Context/i);
@@ -3145,6 +3145,97 @@ assert.equal(
   ),
   false
 );
+const purchaseAssumptionsPrecedenceHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: [
+    {
+      original_filename: "purchase_assumptions_source.txt",
+      source_file_id: "purchase-assumptions-shared-source",
+      file_id: "purchase-assumptions-shared-file",
+      doc_type: "appraisal",
+      semantic_doc_role: "appraisal",
+      parse_status: "parsed",
+    },
+    {
+      original_filename: "purchase_assumptions_source.txt",
+      source_file_id: "purchase-assumptions-shared-source",
+      file_id: "purchase-assumptions-shared-file",
+      doc_type: "loan_term_sheet",
+      semantic_doc_role: "purchase_assumptions",
+      purchase_price: 10640000,
+      going_in_cap_rate: 0.0575,
+      noi_basis: 611800,
+      accepted_fields: ["purchase_price", "going_in_cap_rate"],
+      parse_status: "parsed",
+    },
+  ],
+});
+assert.match(purchaseAssumptionsPrecedenceHtml, /purchase_assumptions_source\.txt/i);
+assert.match(purchaseAssumptionsPrecedenceHtml, /Purchase Assumptions \/ Acquisition Context/i);
+assert.match(
+  purchaseAssumptionsPrecedenceHtml,
+  /Purchase price \/ going-in cap \/ NOI basis support; does not override T12\/Rent Roll operating truth\./i
+);
+const purchaseAssumptionsSourceTreatmentTable =
+  String(purchaseAssumptionsPrecedenceHtml.match(/<p class="subsection-title">Source Treatment \/ Quantitative Use<\/p>[\s\S]*?<table[\s\S]*?<\/table>/i)?.[0] || "");
+assert.equal((purchaseAssumptionsSourceTreatmentTable.match(/purchase_assumptions_source\.txt/gi) || []).length, 1);
+assert.equal(/Appraisal Context/i.test(purchaseAssumptionsPrecedenceHtml), false);
+assert.equal(/Listed for auditability only; not used quantitatively/i.test(purchaseAssumptionsPrecedenceHtml), false);
+assert.equal(
+  /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]*purchase_assumptions_source\.txt/i.test(
+    purchaseAssumptionsPrecedenceHtml
+  ),
+  false
+);
+const dealInputsPrecedenceHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: [
+    {
+      original_filename: "deal_inputs_uploaded_by_user.txt",
+      source_file_id: "deal-inputs-shared-source",
+      file_id: "deal-inputs-shared-file",
+      doc_type: "appraisal",
+      semantic_doc_role: "appraisal",
+      parse_status: "parsed",
+    },
+    {
+      original_filename: "deal_inputs_uploaded_by_user.txt",
+      source_file_id: "deal-inputs-shared-source",
+      file_id: "deal-inputs-shared-file",
+      doc_type: "loan_term_sheet",
+      semantic_doc_role: "purchase_assumptions",
+      purchase_price: 10640000,
+      going_in_cap_rate: 0.0575,
+      noi_basis: 611800,
+      accepted_fields: ["purchase_price", "going_in_cap_rate"],
+      parse_status: "parsed",
+    },
+  ],
+});
+assert.match(dealInputsPrecedenceHtml, /Purchase Assumptions \/ Acquisition Context/i);
+assert.equal(/Appraisal Context/i.test(dealInputsPrecedenceHtml), false);
+assert.equal(/Listed for auditability only; not used quantitatively/i.test(dealInputsPrecedenceHtml), false);
+assert.equal(
+  /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]*deal_inputs_uploaded_by_user\.txt/i.test(
+    dealInputsPrecedenceHtml
+  ),
+  false
+);
+const unsupportedAppraisalHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: [
+    {
+      original_filename: "Unsupported Appraisal Summary.pdf",
+      doc_type: "appraisal",
+      semantic_doc_role: "appraisal",
+      parse_status: "parsed_with_warnings",
+      parse_error: "doc_type_unclassified",
+    },
+  ],
+});
+assert.match(unsupportedAppraisalHtml, /Appraisal Context/i);
+assert.match(unsupportedAppraisalHtml, /Context only/i);
+assert.equal(/Purchase Assumptions \/ Acquisition Context/i.test(unsupportedAppraisalHtml), false);
 const loanTermsSimpleHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   reportMode: "v1_core",
   documentSources: [

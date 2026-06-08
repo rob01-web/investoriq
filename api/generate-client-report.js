@@ -2933,6 +2933,88 @@ function buildDocumentTreatmentSummaryHtml({
       return names instanceof Set && rowNameTokens.some((token) => names.has(token));
     }) || null;
   };
+  const rowHasAcquisitionSupport = (row) =>
+    (Number.isFinite(coerceNumber(row?.purchase_price)) && coerceNumber(row?.purchase_price) > 0) ||
+    (Number.isFinite(coerceNumber(row?.acquisition_price)) && coerceNumber(row?.acquisition_price) > 0) ||
+    (Number.isFinite(coerceNumber(row?.asking_price)) && coerceNumber(row?.asking_price) > 0) ||
+    (Number.isFinite(coerceNumber(row?.purchase_price_amount)) && coerceNumber(row?.purchase_price_amount) > 0) ||
+    (Number.isFinite(coerceNumber(row?.going_in_cap_rate)) && coerceNumber(row?.going_in_cap_rate) > 0) ||
+    (Number.isFinite(coerceNumber(row?.noi_basis)) && coerceNumber(row?.noi_basis) > 0) ||
+    (Number.isFinite(coerceNumber(row?.net_operating_income_basis)) && coerceNumber(row?.net_operating_income_basis) > 0) ||
+    /purchase price|going[-\s]*in cap|noi basis|net operating income basis|acquisition context|purchase context|document-derived cap-rate reference/i.test(
+      normalizedText([row?.source_text, row?.raw_text, row?.notes, row?.loan_terms_text, row?.extracted_text].filter(Boolean).join(" | "))
+    );
+  const sourceTreatmentIdentityKey = (row) => {
+    const tokens = [
+      row?.source_file_id,
+      row?.file_id,
+      row?.document_id,
+      row?.artifact_file_id,
+      row?.original_filename,
+    ]
+      .map(normalizeIdentityToken)
+      .filter(Boolean);
+    return tokens[0] || "";
+  };
+  const sourceTreatmentAuthorityScore = (row, classification) => {
+    const canonicalRole = normalizedText(row?.semantic_doc_role || row?.display_doc_type || row?.doc_type || "");
+    const reason = normalizedText(classification?.reason_code || "");
+    let tier = 100;
+    if (
+      canonicalRole === "t12" ||
+      canonicalRole === "rent_roll" ||
+      reason === "structured_operating_input" ||
+      reason === "structured_rent_roll_input"
+    ) {
+      tier = 900;
+    } else if (
+      rowHasAcquisitionSupport(row) &&
+      (reason === "purchase_assumptions_acquisition_context" ||
+        reason === "loan_term_sheet_acquisition_context" ||
+        canonicalRole === "purchase_assumptions" ||
+        canonicalRole === "loan_term_sheet")
+    ) {
+      tier = 800;
+    } else if (
+      reason === "property_tax_support_corroborating" ||
+      reason === "property_tax_support_unbound" ||
+      canonicalRole === "property_tax"
+    ) {
+      tier = 700;
+    } else if (
+      reason === "current_debt_not_assessed" ||
+      reason === "current_debt_not_used_here" ||
+      reason === "structured_current_debt_input" ||
+      reason === "canonical_current_debt_quantitative_usage" ||
+      canonicalRole === "current_mortgage_statement" ||
+      canonicalRole === "loan_term_sheet"
+    ) {
+      tier = 600;
+    } else if (
+      reason === "historical_capex_only" ||
+      reason === "renovation_budget_no_roi_inputs" ||
+      reason === "renovation_forward_looking_transparency_only" ||
+      canonicalRole === "renovation_budget"
+    ) {
+      tier = 500;
+    } else if (reason === "market_survey_context_only" || canonicalRole === "market_survey") {
+      tier = 400;
+    } else if (
+      reason === "environmental_support_context_only" ||
+      reason === "zoning_compliance_context_only" ||
+      canonicalRole === "environmental_due_diligence" ||
+      canonicalRole === "zoning_compliance_context"
+    ) {
+      tier = 300;
+    } else if (reason === "unsupported_appraisal_or_market_source" || canonicalRole === "appraisal") {
+      tier = 200;
+    }
+    const parsedBonus = String(row?.parse_status || "").toLowerCase() === "parsed" ? 10 : 0;
+    const warningPenalty = /warning|parsed_with_warnings/.test(normalizedText(row?.parse_status || "")) ? -5 : 0;
+    const acquisitionBonus = rowHasAcquisitionSupport(row) ? 20 : 0;
+    return tier * 1000 + parsedBonus + warningPenalty + acquisitionBonus;
+  };
+  const sourceTreatmentEntriesByIdentity = new Map();
   const classifyRow = (row) => {
     const quantitativeUsage = findQuantitativeUsage(row);
     if (quantitativeUsage?.usageType === "current_debt") {
@@ -3033,10 +3115,7 @@ function buildDocumentTreatmentSummaryHtml({
       hasUsefulCanonicalRole
         ? (effectiveCanonicalRole === "loan_term_sheet" || effectiveCanonicalRole === "purchase_assumptions")
         : /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
-    const hasLaunchAcquisitionContext =
-      (Number.isFinite(coerceNumber(row?.purchase_price)) && coerceNumber(row?.purchase_price) > 0) ||
-      (Number.isFinite(coerceNumber(row?.going_in_cap_rate)) && coerceNumber(row?.going_in_cap_rate) > 0) ||
-      /noi basis|net operating income basis|acquisition context|purchase context/i.test(semanticAndFileText);
+    const hasLaunchAcquisitionContext = rowHasAcquisitionSupport(row);
     const appraisalLike =
       hasUsefulCanonicalRole
         ? effectiveCanonicalRole === "appraisal" && !hasLaunchAcquisitionContext
@@ -3153,18 +3232,7 @@ function buildDocumentTreatmentSummaryHtml({
     ) {
       return {
         category: "Displayed / Limited Use",
-        note: "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt.",
-        reason_code: "purchase_assumptions_acquisition_context",
-        source_basis: sourceBasis,
-      };
-    }
-    if (
-      hasLaunchAcquisitionContext &&
-      (purchaseAssumptionsFilenameHint || acquisitionContextSemanticHint || acquisitionContextRoleHint)
-    ) {
-      return {
-        category: "Displayed / Limited Use",
-        note: "Acquisition assumptions context only; used only for displayed purchase/cap-rate context and not used to override T12, Rent Roll, or current debt.",
+        note: "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth.",
         reason_code: "purchase_assumptions_acquisition_context",
         source_basis: sourceBasis,
       };
@@ -3374,9 +3442,38 @@ function buildDocumentTreatmentSummaryHtml({
     };
   };
 
-  for (const file of files) {
+  const sourceTreatmentEntries = [];
+  files.forEach((file, sourceIndex) => {
     const classification = classifyRow(file);
-    const entry = {
+    const sourceIdentityKey = sourceTreatmentIdentityKey(file);
+    const sourceTreatmentAuthorityScoreValue = sourceTreatmentAuthorityScore(file, classification);
+    const groupedEntry = {
+      file,
+      classification,
+      sourceIdentityKey,
+      sourceTreatmentAuthorityScore: sourceTreatmentAuthorityScoreValue,
+      sourceIndex,
+    };
+    if (!sourceTreatmentEntriesByIdentity.has(sourceIdentityKey)) {
+      sourceTreatmentEntriesByIdentity.set(sourceIdentityKey, []);
+    }
+    sourceTreatmentEntriesByIdentity.get(sourceIdentityKey).push(groupedEntry);
+  });
+  for (const groupedEntries of sourceTreatmentEntriesByIdentity.values()) {
+    if (!Array.isArray(groupedEntries) || groupedEntries.length === 0) continue;
+    groupedEntries.sort((left, right) => {
+      if (right.sourceTreatmentAuthorityScore !== left.sourceTreatmentAuthorityScore) {
+        return right.sourceTreatmentAuthorityScore - left.sourceTreatmentAuthorityScore;
+      }
+      return left.sourceIndex - right.sourceIndex;
+    });
+    sourceTreatmentEntries.push(groupedEntries[0]);
+  }
+  sourceTreatmentEntries.sort((left, right) => left.sourceIndex - right.sourceIndex);
+  for (const entry of sourceTreatmentEntries) {
+    const file = entry.file;
+    const classification = entry.classification;
+    const entryRow = {
       key: file.original_filename.toLowerCase(),
       name: escapeHtml(file.original_filename),
       note: escapeHtml(classification.note),
@@ -3385,11 +3482,11 @@ function buildDocumentTreatmentSummaryHtml({
       category: classification.category,
     };
     if (classification.category === "Modeled Inputs") {
-      pushUnique(modeled, entry);
+      pushUnique(modeled, entryRow);
     } else if (classification.category === "Displayed / Limited Use") {
-      pushUnique(limitedUse, entry);
+      pushUnique(limitedUse, entryRow);
     } else {
-      pushUnique(notModeled, entry);
+      pushUnique(notModeled, entryRow);
     }
   }
 
@@ -3506,15 +3603,14 @@ function buildDocumentTreatmentSummaryHtml({
         return classification?.category === "Modeled Inputs" ? "Core quantitative source" : "Context only";
     }
   };
-  const sourceTreatmentRowsHtml = files
-    .map(
-      (file) => {
-        const classification = classifyRow(file);
-        const rowRoleLabel = resolveDocumentRoleLabel(file, classification);
-        const rowTreatmentLabel = resolveTreatmentLabel(file, classification);
-        return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowRoleLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowTreatmentLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
-      }
-    )
+  const sourceTreatmentRowsHtml = sourceTreatmentEntries
+    .map((entry) => {
+      const file = entry.file || entry;
+      const classification = entry.classification || classifyRow(file);
+      const rowRoleLabel = resolveDocumentRoleLabel(file, classification);
+      const rowTreatmentLabel = resolveTreatmentLabel(file, classification);
+      return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowRoleLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowTreatmentLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
+    })
     .join("");
   const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
     ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`

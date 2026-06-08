@@ -1935,9 +1935,62 @@ export function buildReportContractQa({
       });
     }
   }
+  const sourceTreatmentTable = firstTableAfterHeading(rawHtml, /Source Treatment \/ Quantitative Use/i);
+  if (sourceTreatmentTable) {
+    const sourceTreatmentRows = tableRowsFromHtml(sourceTreatmentTable)
+      .map((row) => ({
+        ...row,
+        cells: (row.html.match(/<td\b[\s\S]*?<\/td>/gi) || [])
+          .map((cell) => stripHtml(cell).replace(/\s+/g, " ").trim()),
+      }))
+      .filter((row) => row.cells.length >= 4);
+    const rowTextForTreatment = (row) => [row.cells[0], row.cells[1], row.cells[2], row.cells[3]].join(" ");
+    const acquisitionSupportPattern = /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i;
+    const badAcquisitionTreatmentPattern = /(Appraisal Context|Context only|Listed for auditability only; not used quantitatively|Listed but Not Quantitatively Modeled)/i;
+    const duplicateFilenameCounts = new Map();
+    for (const row of sourceTreatmentRows) {
+      const filename = String(row.cells[0] || "").trim().toLowerCase();
+      if (!filename) continue;
+      duplicateFilenameCounts.set(filename, (duplicateFilenameCounts.get(filename) || 0) + 1);
+    }
+    const duplicateFilenameRows = sourceTreatmentRows.filter((row) => {
+      const filename = String(row.cells[0] || "").trim().toLowerCase();
+      return filename && (duplicateFilenameCounts.get(filename) || 0) > 1;
+    });
+    if (duplicateFilenameRows.length > 0) {
+      addViolation(violations, {
+        code: "DOCUMENT_TREATMENT_DUPLICATE_SOURCE_ROW",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Final document treatment table renders more than one row for the same source filename.",
+        evidence: {
+          rows: duplicateFilenameRows,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+    const acquisitionSupportRows = sourceTreatmentRows.filter((row) => acquisitionSupportPattern.test(rowTextForTreatment(row)));
+    const acquisitionSupportDriftRows = acquisitionSupportRows.filter((row) => badAcquisitionTreatmentPattern.test(rowTextForTreatment(row)));
+    if (acquisitionSupportDriftRows.length > 0) {
+      addViolation(violations, {
+        code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Purchase assumptions support is rendered with appraisal or not-modeled treatment instead of acquisition context.",
+        evidence: {
+          rows: acquisitionSupportDriftRows,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+  }
   if (!reportTypeIsScreeningReport) {
     const purchaseAssumptionsAppraisalRows = extractDocumentTreatmentRows(rawHtml, "Source Treatment / Quantitative Use").filter((row) =>
-      /purchase_assumptions_source\.txt/i.test(row.raw) &&
+      /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i.test(row.raw) &&
       /Appraisal Context/i.test(row.raw)
     );
     if (purchaseAssumptionsAppraisalRows.length > 0) {
@@ -1956,8 +2009,7 @@ export function buildReportContractQa({
     }
   }
   const purchaseAssumptionsNotModeledRows = extractDocumentTreatmentRows(rawHtml, "Listed but Not Quantitatively Modeled").filter((row) =>
-    /purchase_assumptions_source\.txt/i.test(row.raw) &&
-    /(Purchase Price|Going-In Cap Rate|NOI Basis|Acquisition context|document-derived acquisition context)/i.test(row.raw)
+    /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i.test(row.raw)
   );
   if (purchaseAssumptionsNotModeledRows.length > 0) {
     addViolation(violations, {

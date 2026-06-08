@@ -2171,6 +2171,7 @@ export function buildDeliveryGateDecision({
     top_action_code: prioritizedActions[0]?.code || null,
     owner_area: prioritizedActions[0]?.owner_area || null,
     recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
+    ...publishEligibility,
     customer_delivery_ready: publishEligibility.report_publishable,
     public_sample_ready: publishEligibility.public_sample_ready,
     high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
@@ -2183,7 +2184,13 @@ export function buildDeliveryGateDecision({
       high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
       advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
     },
-    ...publishEligibility,
+    legacy_compatibility: {
+      customer_delivery_ready: publishEligibility.report_publishable,
+      customer_publish_eligible: publishEligibility.report_publishable,
+      report_publishable: publishEligibility.report_publishable,
+      report_blocked: !publishEligibility.report_publishable,
+      launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "user_needs_documents",
+    },
   };
 }
 
@@ -2452,6 +2459,28 @@ export function buildQaActionPlan({
       "QA manager decisions are advisory and cannot change deterministic financial values.",
       "Derived acquisition financing must remain separate from current debt and refinance balance logic.",
     ],
+    customer_delivery_ready: customerReady,
+    customer_publish_eligible: customerReady,
+    report_publishable: customerReady,
+    report_blocked: !customerReady,
+    launch_path_recommendation: launchPathRecommendation,
+    readiness_hierarchy: {
+      final_delivery_authority: "delivery_gate",
+      final_delivery_status: finalDeliveryStatus,
+      customer_delivery_ready: customerReady,
+      public_sample_ready: publicSampleReady,
+      high_value_outreach_ready: highValueOutreachReady,
+      advisory_only_findings: counts.total,
+    },
+    historical_compatibility: {
+      readiness_source: readinessSource,
+      readiness_fallback_used: readinessFallbackUsed,
+      delivery_recommendation: resolvedDeliveryRecommendation,
+      launch_path_recommendation: launchPathRecommendation,
+      customer_delivery_ready: customerReady,
+      public_sample_ready: publicSampleReady,
+      high_value_outreach_ready: highValueOutreachReady,
+    },
   };
 }
 

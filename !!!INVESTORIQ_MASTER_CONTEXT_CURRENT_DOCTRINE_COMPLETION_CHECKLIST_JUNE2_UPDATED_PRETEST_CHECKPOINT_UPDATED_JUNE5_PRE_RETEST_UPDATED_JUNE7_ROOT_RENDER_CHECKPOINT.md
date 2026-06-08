@@ -1,3 +1,345 @@
+# June 7, 2026 Addendum - Screening Launchable / Acquisition Memo Final Source-Treatment Root Bug Still Open / Codex Emergency Patch In Progress
+
+## Current controlling status
+
+InvestorIQ has completed the June 7 clean retest batch.
+
+Results:
+
+```text
+Screening Memo 7 - CLEAN: launchable / founder-beta ready.
+Acquisition Memo 10 - CLEAN: not launchable yet.
+```
+
+The remaining Acquisition Memo issue is narrow but serious:
+
+```text
+The final Document Treatment Summary still renders purchase_assumptions_source.txt as Appraisal Context / Context only / Listed for auditability only; not used quantitatively, even though the same report uses that source for purchase price and going-in cap rate.
+```
+
+This is a visible credibility contradiction and must be fixed before Acquisition Memo launch or Ken/public/founder outreach.
+
+## OpenAI API credits restored
+
+Rob restored OpenAI API credits before the latest retest.
+
+The prior `insufficient_quota` issue is no longer the blocker. OpenAI/advisory/recovery calls are working again and artifacts show successful responses.
+
+Important interpretation:
+
+```text
+AI did recover the relevant acquisition fields.
+The deterministic final renderer failed to consume the validated acquisition artifact correctly.
+Therefore the issue is not OpenAI failing; it is final renderer artifact precedence and QA blind spot.
+```
+
+## Product ladder remains controlling
+
+Current launch ladder:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced first-pass document-based triage from T12 + Rent Roll
+   - launchable now based on Screening Memo 7
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - investor-ready acquisition and preliminary financing-readiness memo
+   - should support basic financing discussions for simple/smaller properties when source-complete proposed acquisition financing inputs are provided
+   - not launchable until final source-treatment contradiction is fixed
+
+3. InvestorIQ Full Underwriting V2.0
+   - deferred / coming later
+   - advanced current debt/refi, DCF, waterfall, capital stack, integrations, full lender/investor package
+```
+
+## Screening Memo 7 conclusion
+
+Screening Memo 7 does what the Screening product is meant to do.
+
+It gives a fast document-based triage answer:
+
+```text
+Is this property obviously worth more attention,
+or should it be passed / placed in the maybe pile?
+```
+
+Visible metrics reviewed:
+
+```text
+Stable classification
+48 units
+95.8% occupancy
+Annual in-place rent: $1,036,800
+Annual market rent: $1,137,600
+Annual gross rent upside: $100,800
+Rent gap: 9.7%
+Effective gross income: $1,036,800
+Operating expenses: $425,000
+NOI: $611,800
+Expense ratio: 41.0%
+NOI margin: 59.0%
+Break-even occupancy: 41.0%
+T12 coverage: 4/4
+Rent Roll coverage: 4/4
+```
+
+Artifacts showed:
+
+```text
+report_contract_qa: pass
+violations: []
+report_quality_ready: true
+customer_delivery_ready: true
+```
+
+Screening launch decision:
+
+```text
+Screening Report at founder pricing around $199 is launchable.
+```
+
+Commercial framing:
+
+```text
+Screening is not competing with free calculators on raw arithmetic alone.
+It beats free calculators by extracting, validating, organizing, and presenting T12 + Rent Roll evidence into a consistent memo.
+For high-volume users who screen dozens of deals/month, future bundles/subscription/custom pricing will likely be needed.
+```
+
+## Acquisition Memo 10 conclusion
+
+Acquisition Memo 10 improved but still failed the launch bar.
+
+What passed:
+
+```text
+Core math remained correct.
+Purchase Price $10,640,000 displayed in the Acquisition Memo Summary.
+Going-In Cap Rate 5.8% displayed in the Acquisition Memo Summary.
+NOI Basis $611,800 displayed.
+Duplicate Rent Positioning Evidence appears fixed.
+V2 forbidden surfaces remained deferred/collapsed.
+```
+
+What failed:
+
+```text
+Document Treatment Summary still rendered purchase_assumptions_source.txt as:
+- Appraisal Context
+- Context only
+- Listed for auditability only; not used quantitatively
+
+The same file also appeared under:
+- Listed but Not Quantitatively Modeled
+```
+
+This is a visible contradiction because the report used that file for acquisition summary values earlier.
+
+Acquisition Memo launch decision:
+
+```text
+Do not launch Acquisition Memo until this final source-treatment contradiction is fixed and proven in the regenerated PDF.
+```
+
+## Root cause diagnosis
+
+Artifacts show two competing same-file artifact paths for `purchase_assumptions_source.txt`:
+
+```text
+1. stale appraisal_parsed artifact:
+   semantic_doc_role: appraisal
+   cap_rate: 5.75
+   missing_appraised_value
+
+2. validated acquisition artifact:
+   artifact type: loan_term_sheet_parsed acquisition artifact
+   semantic_doc_role: purchase_assumptions
+   validated: true
+   purchase_price: 10640000
+   going_in_cap_rate: 5.75
+   accepted_fields: purchase_price, going_in_cap_rate
+```
+
+The final Document Treatment Summary renderer is still letting the stale appraisal artifact win for the visible source-treatment row.
+
+Correct root rule:
+
+```text
+When duplicate artifacts exist for the same source file, validated acquisition-support truth must outrank stale appraisal metadata for final Document Treatment Summary rendering.
+```
+
+## QA blind spot diagnosis
+
+`report_contract_qa` passed despite the visible PDF contradiction.
+
+This means the contract QA is not checking final rendered Document Treatment Summary text/rows strongly enough.
+
+The patch must fix both:
+
+```text
+1. production final renderer artifact precedence
+2. final rendered contract QA blind spot
+```
+
+Do not accept another receipt that only says internal artifacts are correct. The regenerated PDF must prove the visible output is correct.
+
+## Correct Acquisition Memo source-treatment invariant
+
+In Acquisition Memo mode, if a source file has any validated acquisition fields such as:
+
+```text
+purchase_price
+going_in_cap_rate
+noi_basis
+semantic_doc_role: purchase_assumptions
+```
+
+then the visible Document Treatment Summary must render it as:
+
+```text
+Document Role: Purchase Assumptions / Acquisition Context
+Treatment: Acquisition context / document-derived acquisition context
+Use: Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth
+```
+
+It must not render as:
+
+```text
+Appraisal Context
+Context only / not used quantitatively
+Listed for auditability only; not used quantitatively
+Listed but Not Quantitatively Modeled
+```
+
+Unsupported appraisal files without validated acquisition fields still remain Appraisal Context / context only.
+
+Debt/current loan support such as `loan_terms_simple_source.txt` remains Debt Support Received / contextual or deferred unless explicitly identified as proposed acquisition financing and source-complete for the mini financing section.
+
+## Mini Acquisition Financing Readiness section doctrine
+
+Rob clarified that Acquisition Memo should eventually be strong enough to support basic financing approval conversations for simple/smaller properties, especially under roughly 50 units, when the required source inputs are explicitly provided.
+
+Current doctrine:
+
+```text
+Acquisition Memo may include a small controlled financing-readiness section.
+It must not reopen Full Underwriting V2 surfaces.
+```
+
+Required source-gated inputs for financing math:
+
+```text
+purchase_price
+NOI basis
+proposed acquisition loan amount OR LTV
+interest rate
+amortization years
+```
+
+Allowed calculations:
+
+```text
+Proposed Loan Amount
+Estimated Annual Debt Service
+Going-In DSCR
+Going-In LTV
+```
+
+Required collapse behavior:
+
+```text
+If required financing inputs are incomplete, do not render partial debt math.
+Show a compact limitation note or omit the math.
+```
+
+Do not render before V2:
+
+```text
+refinance proceeds
+refinance stress
+current-debt DSCR unless explicitly in scope and source-supported
+full debt schedule
+DCF
+waterfall
+equity returns
+final recommendation
+BUY / SELL / HOLD
+```
+
+For Acquisition Memo 10, financing fields were incomplete, so the absence/collapse of financing math is acceptable. The launch blocker is the purchase-assumptions document-treatment contradiction.
+
+## Current Codex task in progress
+
+Codex is working on emergency root fix:
+
+```text
+Final Document Treatment Summary same-file artifact precedence and contract QA blind spot.
+```
+
+Acceptance requirements for Codex receipt:
+
+```text
+A. Exact final renderer function that produced the bad row
+B. Why report_contract_qa passed despite the bad PDF
+C. Production precedence fix implemented
+D. Final rendered contract check added
+E. Regression with same filename producing stale appraisal + validated acquisition artifacts
+F. Safe to commit yes/no
+```
+
+## No-more-testing rule until patch lands
+
+Do not run a different test package now.
+
+Reason:
+
+```text
+A different test might pass by accident if it does not create both a stale appraisal artifact and a validated acquisition artifact for the same file.
+That would not prove the root bug is fixed.
+```
+
+After Codex patches, rerun the same Acquisition Memo source package.
+
+## Next retest acceptance checklist
+
+After Codex patch and commit, run one Acquisition Memo retest using the same source family.
+
+Pass only if:
+
+```text
+purchase_assumptions_source.txt renders as Purchase Assumptions / Acquisition Context.
+purchase_assumptions_source.txt does not render as Appraisal Context.
+purchase_assumptions_source.txt does not render as Context only / not used quantitatively.
+purchase_assumptions_source.txt does not appear under Listed but Not Quantitatively Modeled.
+Only one Rent Positioning Evidence/Summary block appears.
+No V2 debt/refi/DCF/waterfall/deal-score/final-recommendation leak appears.
+Core operating and acquisition math remains correct.
+```
+
+## Launch posture after this update
+
+```text
+Screening: launchable.
+Acquisition Memo: one visible final-render/source-treatment root bug away, not launchable yet.
+Full Underwriting V2.0: deferred.
+DocRaptor production mode: still distribution/public-sample switch, not ordinary customer delivery logic.
+```
+
+## Immediate continuation point
+
+Continue from here:
+
+```text
+Codex is patching the final Document Treatment Summary artifact precedence issue.
+Do not run more live tests until Codex returns.
+When Codex returns, review root-path receipt, commit if safe, then run one same-package Acquisition Memo retest.
+```
+
+
+
+---
+
 # June 5/6, 2026 Addendum - Pre-Retest Checkpoint After Elite Report Fullness / Source Treatment / Readiness Cleanup
 
 ## Current controlling status
