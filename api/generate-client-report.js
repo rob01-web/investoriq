@@ -4059,6 +4059,205 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
   return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 
+function buildPreliminaryFinancingReadinessSummaryHtml({
+  reportMode = null,
+  acquisitionMemoRenderContext = null,
+  acquisitionAssumptionState = null,
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
+  propertyTaxPayload = null,
+  propertyTaxBindingState = null,
+  sourceReportCoverageQa = null,
+  formatCurrency,
+  formatPercent1,
+  formatInterestRatePercent,
+} = {}) {
+  if (String(reportMode || "").toLowerCase() !== "v1_core") return "";
+  const ctx = acquisitionMemoRenderContext && typeof acquisitionMemoRenderContext === "object"
+    ? acquisitionMemoRenderContext
+    : {};
+  const firstFinite = (...values) => {
+    for (const value of values) {
+      const parsed = coerceNumber(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const escapeLabel = (value) => escapeHtml(String(value ?? ""));
+  const t12Verified = Boolean(
+    sourceReportCoverageQa?.artifact_inventory?.t12_parsed?.present === true &&
+    sourceReportCoverageQa?.artifact_inventory?.t12_parsed?.has_core_totals === true
+  );
+  const rentRollVerified = Boolean(
+    sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.present === true &&
+    sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.has_total_units === true
+  );
+  const purchasePrice = firstFinite(ctx.purchasePrice, acquisitionTermsPayload?.purchase_price, acquisitionTermsPayload?.purchasePrice);
+  const noiBasis = firstFinite(ctx.acquisitionNoiBasis, acquisitionTermsPayload?.noi_basis, acquisitionTermsPayload?.net_operating_income_basis, acquisitionTermsPayload?.noi);
+  const goingInCapRate = firstFinite(ctx.goingInCapRate, acquisitionTermsPayload?.going_in_cap_rate);
+  const units = firstFinite(ctx.units, sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.total_units);
+  const pricePerUnit = Number.isFinite(purchasePrice) && Number.isFinite(units) && units > 0 ? purchasePrice / units : null;
+  const noiPerUnit = Number.isFinite(noiBasis) && Number.isFinite(units) && units > 0 ? noiBasis / units : null;
+  const egi = firstFinite(ctx.egi);
+  const opEx = firstFinite(ctx.opEx);
+  const noi = firstFinite(ctx.noi, noiBasis);
+  const expenseRatio = firstFinite(ctx.expenseRatio);
+  const noiMargin = firstFinite(ctx.noiMargin);
+  const occupancy = firstFinite(ctx.occupancy);
+  const breakEvenOccupancy = firstFinite(ctx.breakEvenOccupancy);
+  const annualInPlaceRent = firstFinite(ctx.annualInPlaceRent);
+  const annualMarketRent = firstFinite(ctx.annualMarketRent);
+  const annualRentUpside = firstFinite(ctx.annualRentUpside);
+  const rentGapPercent = firstFinite(ctx.rentGapPercent);
+  const documentDerivedCapRate = firstFinite(
+    ctx.goingInCapRate,
+    acquisitionTermsPayload?.going_in_cap_rate,
+    acquisitionTermsPayload?.document_derived_cap_rate
+  );
+  const currentDebtHasVerifiedBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance === true);
+  const currentDebtBalance = firstFinite(
+    currentDebtAssessmentState?.current_debt_balance,
+    mortgagePayload?.outstanding_balance,
+    mortgagePayload?.current_outstanding_balance,
+    mortgagePayload?.current_loan_balance,
+    loanTermSheetTermsPayload?.outstanding_balance,
+    loanTermSheetTermsPayload?.current_outstanding_balance,
+    loanTermSheetTermsPayload?.current_loan_balance
+  );
+  const currentDebtInterestRate = firstFinite(
+    mortgagePayload?.interest_rate,
+    mortgagePayload?.rate,
+    loanTermSheetTermsPayload?.interest_rate
+  );
+  const currentDebtAmortYears = firstFinite(
+    mortgagePayload?.amort_years,
+    mortgagePayload?.amortization_years,
+    loanTermSheetTermsPayload?.amort_years,
+    loanTermSheetTermsPayload?.amortization_years
+  );
+  const currentDebtLtv = firstFinite(
+    mortgagePayload?.ltv,
+    loanTermSheetTermsPayload?.ltv
+  );
+  const currentDebtRows = currentDebtHasVerifiedBalance
+    ? [
+        Number.isFinite(currentDebtBalance) ? `<tr><td>Outstanding Balance</td><td style="font-weight:600;">${formatCurrency(currentDebtBalance)}</td></tr>` : "",
+        Number.isFinite(currentDebtInterestRate) ? `<tr><td>Interest Rate</td><td style="font-weight:600;">${formatInterestRatePercent(currentDebtInterestRate)}</td></tr>` : "",
+        Number.isFinite(currentDebtAmortYears) ? `<tr><td>Amortization</td><td style="font-weight:600;">${Math.round(currentDebtAmortYears)} years</td></tr>` : "",
+        Number.isFinite(currentDebtLtv) ? `<tr><td>LTV</td><td style="font-weight:600;">${formatPercent1(currentDebtLtv)}</td></tr>` : "",
+      ].filter(Boolean)
+    : [];
+  const acqPurchasePrice = firstFinite(
+    acquisitionTermsPayload?.purchase_price,
+    acquisitionTermsPayload?.purchasePrice,
+    acquisitionTermsPayload?.acquisition_price,
+    acquisitionTermsPayload?.purchase_price_amount
+  );
+  const acqLoanAmount = firstFinite(
+    acquisitionTermsPayload?.stated_acquisition_loan_amount,
+    acquisitionTermsPayload?.loan_amount,
+    acquisitionTermsPayload?.proposed_loan_amount,
+    acquisitionTermsPayload?.acquisition_loan_amount,
+    acquisitionTermsPayload?.derived_acquisition_loan_amount
+  );
+  const acqLtv = firstFinite(acquisitionTermsPayload?.ltv);
+  const acqInterestRate = firstFinite(acquisitionTermsPayload?.interest_rate);
+  const acqAmortYears = firstFinite(
+    acquisitionTermsPayload?.amortization_years,
+    acquisitionTermsPayload?.amort_years
+  );
+  const proposedAcquisitionFinancingSourceComplete =
+    Boolean(acquisitionAssumptionState?.has_validated_acquisition_assumptions) &&
+    Number.isFinite(acqPurchasePrice) &&
+    Number.isFinite(noiBasis) &&
+    (
+      (Number.isFinite(acqLoanAmount) && acqLoanAmount > 0) ||
+      (Number.isFinite(acqLtv) && acqLtv > 0)
+    ) &&
+    Number.isFinite(acqInterestRate) &&
+    acqInterestRate > 0 &&
+    Number.isFinite(acqAmortYears) &&
+    acqAmortYears > 0;
+  const proposedAcquisitionLoanAmount =
+    Number.isFinite(acqLoanAmount) && acqLoanAmount > 0
+      ? acqLoanAmount
+      : Number.isFinite(acqPurchasePrice) && Number.isFinite(acqLtv) && acqLtv > 0
+        ? acqPurchasePrice * acqLtv
+        : null;
+  const proposedAcquisitionRows = proposedAcquisitionFinancingSourceComplete
+    ? [
+        `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acqPurchasePrice)}</td></tr>`,
+        `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatCurrency(noiBasis)}</td></tr>`,
+        `<tr><td>Proposed Loan Amount</td><td style="font-weight:600;">${formatCurrency(proposedAcquisitionLoanAmount)}</td></tr>`,
+        `<tr><td>Proposed Loan-to-Value (LTV)</td><td style="font-weight:600;">${formatPercent1(Number.isFinite(proposedAcquisitionLoanAmount) && Number.isFinite(acqPurchasePrice) && acqPurchasePrice > 0 ? proposedAcquisitionLoanAmount / acqPurchasePrice : acqLtv)}</td></tr>`,
+        `<tr><td>Interest Rate</td><td style="font-weight:600;">${formatInterestRatePercent(acqInterestRate)}</td></tr>`,
+        `<tr><td>Amortization</td><td style="font-weight:600;">${Math.round(acqAmortYears)} years</td></tr>`,
+      ]
+    : [];
+  const requestRows = [
+    Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(purchasePrice)}</td></tr>` : "",
+    Number.isFinite(noiBasis) ? `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatCurrency(noiBasis)}</td></tr>` : "",
+    Number.isFinite(goingInCapRate) ? `<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(goingInCapRate)}</td></tr>` : "",
+    Number.isFinite(units) ? `<tr><td>Units</td><td style="font-weight:600;">${Math.round(units)}</td></tr>` : "",
+    Number.isFinite(pricePerUnit) ? `<tr><td>Price per Unit</td><td style="font-weight:600;">${formatCurrency(pricePerUnit)}</td></tr>` : "",
+    Number.isFinite(noiPerUnit) ? `<tr><td>NOI per Unit</td><td style="font-weight:600;">${formatCurrency(noiPerUnit)}</td></tr>` : "",
+  ].filter(Boolean);
+  const operatingRows = [
+    Number.isFinite(egi) ? `<tr><td>Effective Gross Income</td><td style="font-weight:600;">${formatCurrency(egi)}</td></tr>` : "",
+    Number.isFinite(opEx) ? `<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatCurrency(opEx)}</td></tr>` : "",
+    Number.isFinite(noi) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatCurrency(noi)}</td></tr>` : "",
+    Number.isFinite(expenseRatio) ? `<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercent1(expenseRatio)}</td></tr>` : "",
+    Number.isFinite(noiMargin) ? `<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercent1(noiMargin)}</td></tr>` : "",
+    Number.isFinite(occupancy) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercent1(occupancy)}</td></tr>` : "",
+    Number.isFinite(breakEvenOccupancy) ? `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(breakEvenOccupancy)}</td></tr>` : "",
+  ].filter(Boolean);
+  const rentSupportRows = [
+    Number.isFinite(annualInPlaceRent) ? `<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(annualInPlaceRent)}</td></tr>` : "",
+    Number.isFinite(annualMarketRent) ? `<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(annualMarketRent)}</td></tr>` : "",
+    Number.isFinite(annualRentUpside) ? `<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(annualRentUpside)}</td></tr>` : "",
+    Number.isFinite(rentGapPercent) ? `<tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercent1(rentGapPercent)}</td></tr>` : "",
+  ].filter(Boolean);
+  const capRateRows = [];
+  if (Number.isFinite(noiBasis) && noiBasis > 0) {
+    for (const capRate of [0.05, 0.06, 0.07]) {
+      const impliedValue = noiBasis / capRate;
+      const impliedPerUnit = Number.isFinite(units) && units > 0 ? impliedValue / units : null;
+      capRateRows.push(
+        `<tr><td>${(capRate * 100).toFixed(1)}% cap rate</td><td style="font-weight:600;">${formatCurrency(impliedValue)}</td><td style="font-weight:600;">${Number.isFinite(impliedPerUnit) ? formatCurrency(impliedPerUnit) : "-"}</td></tr>`
+      );
+    }
+  }
+  const checklistRows = [
+    `<tr><td>T12 verified</td><td style="font-weight:600;">${t12Verified ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Rent Roll verified</td><td style="font-weight:600;">${rentRollVerified ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Number.isFinite(purchasePrice) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Property tax support</td><td style="font-weight:600;">${Boolean(propertyTaxBindingState?.hasValidatedAnnualTax || isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax)) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Environmental / Phase I support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`,
+    `<tr><td>Appraisal support</td><td style="font-weight:600;">Context only unless structured value exists</td></tr>`,
+    `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`,
+  ];
+  const sectionHasContent =
+    requestRows.length > 0 ||
+    operatingRows.length > 0 ||
+    rentSupportRows.length > 0 ||
+    currentDebtRows.length > 0 ||
+    proposedAcquisitionRows.length > 0;
+  if (!sectionHasContent) {
+    return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Preliminary Financing Readiness Summary</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Preliminary financing readiness was not assessed because the required source-backed acquisition and operating inputs were not fully available.</p></div>`;
+  }
+  const currentDebtContextHtml = currentDebtRows.length > 0
+    ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${currentDebtRows.join("")}</tbody></table>`
+    : `<p class="small" style="margin:0;color:#64748b;">No verified current debt context was provided.</p>`;
+  const proposedAcquisitionHtml = proposedAcquisitionFinancingSourceComplete
+    ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${proposedAcquisitionRows.join("")}</tbody></table>`
+    : `<p class="small" style="margin:0;color:#64748b;">Proposed acquisition financing: Not source-complete / not modeled.</p>`;
+  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Preliminary Financing Readiness Summary</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Shown for lender discussion and acquisition diligence support only. InvestorIQ has not produced loan approval or institutional credit-committee underwriting in this Acquisition Memo.</p><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Acquisition Request Context</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${requestRows.join("")}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Operating Support</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${operatingRows.join("")}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Rent / Value Support</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${rentSupportRows.join("")}${capRateRows.length ? capRateRows.join("") : ""}${Number.isFinite(documentDerivedCapRate) ? `<tr><td>Document-derived cap-rate reference</td><td style="font-weight:600;">${formatPercent1(documentDerivedCapRate)}</td><td>-</td></tr>` : ""}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Debt / Financing Context</p><div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Uploaded Existing Debt Context</div>${currentDebtContextHtml}</div><div><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Proposed Acquisition Financing</div>${proposedAcquisitionHtml}</div></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Lender Diligence Checklist</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${checklistRows.join("")}</tbody></table></div></div>`;
+}
+
 function buildAcquisitionMemoSummaryCard({
   units = null,
   occupancy = null,
@@ -8520,6 +8719,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     let operatingSnapshotBlockHtml = "";
     let rentUpsideValueSensitivityBlockHtml = "";
     let capRateValueIndicationBlockHtml = "";
+    let preliminaryFinancingReadinessSummaryBlockHtml = "";
     let sourceContextBlockHtml = "";
     let dataCoverageBlockHtml = "";
     let execVerdictExpansionHtml = "";
@@ -8676,13 +8876,27 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         acquisitionMemoRenderContext.units,
         acquisitionMemoRenderContext.goingInCapRate ?? appraisalCapRateBase
       );
+      preliminaryFinancingReadinessSummaryBlockHtml = buildPreliminaryFinancingReadinessSummaryHtml({
+        reportMode: effectiveReportMode,
+        acquisitionMemoRenderContext,
+        acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
+        currentDebtAssessmentState,
+        mortgagePayload,
+        loanTermSheetTermsPayload,
+        acquisitionTermsPayload,
+        propertyTaxPayload,
+        propertyTaxBindingState,
+        sourceReportCoverageQa,
+        formatCurrency,
+        formatPercent1,
+        formatInterestRatePercent,
+      });
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
         reportMode: effectiveReportMode,
         documentSources: acquisitionMemoRenderContext.documentSources,
         currentDebtAssessmentState,
         canonicalAcquisitionState:
           underwritingState?.core?.acquisition?.assumptionState ||
-          acquisitionAssumptionState ||
           null,
         loanTermSheetTermsPayload,
         acquisitionTermsPayload,
@@ -8753,6 +8967,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{OPERATING_SNAPSHOT_BLOCK}}", operatingSnapshotBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{RENT_UPSIDE_VALUE_SENSITIVITY_BLOCK}}", rentUpsideValueSensitivityBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{CAP_RATE_VALUE_INDICATION_BLOCK}}", capRateValueIndicationBlockHtml);
+    finalHtml = replaceAll(finalHtml, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", preliminaryFinancingReadinessSummaryBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{NEIGHBORHOOD_CONTEXT_BLOCK}}", sourceContextBlockHtml || neighborhoodContextHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
@@ -9988,9 +10203,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-      if (!String(acquisitionFinancingReadinessHtml || "").trim().length) {
-        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
-      }
+      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");

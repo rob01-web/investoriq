@@ -196,11 +196,16 @@ const fullRenderHarnessRequest = {
       acquisitionTermsPayload: {
         debt_basis: "acquisition_financing_assumption",
         purchase_price: 10640000,
-        stated_acquisition_loan_amount: 7980000,
-        ltv: 0.75,
-        interest_rate: 0.058,
-        amortization_years: 30,
-        source_text: "Proposed acquisition financing context for launch-mode readiness only.",
+        going_in_cap_rate: 0.058,
+        noi_basis: 611800,
+        source_text: "Purchase assumptions / acquisition context for launch-mode readiness only.",
+      },
+      mortgagePayload: {
+        outstanding_balance: 8750000,
+        interest_rate: 0.0525,
+        amort_years: 30,
+        ltv: 0.70,
+        monthly_payment: 52500,
       },
       rentRollPayload: {
         total_units: 48,
@@ -275,6 +280,17 @@ assert.match(fullRenderHtml, /Operating Snapshot/i);
 assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
 assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
 assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
+assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
+assert.match(fullRenderHtml, /Acquisition Request Context/i);
+assert.match(fullRenderHtml, /Operating Support/i);
+assert.match(fullRenderHtml, /Rent \/ Value Support/i);
+assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
+assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
+assert.match(fullRenderHtml, /Outstanding Balance/i);
+assert.match(fullRenderHtml, /Interest Rate/i);
+assert.match(fullRenderHtml, /Amortization/i);
+assert.match(fullRenderHtml, /LTV/i);
+assert.match(fullRenderHtml, /Proposed acquisition financing: Not source-complete \/ not modeled\./i);
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
@@ -344,6 +360,7 @@ if (listedNotModeledSectionMatch) {
 const forbiddenSurfacePatterns = [
   /Capital Risk Profile/i,
   /Current Debt DSCR/i,
+  /\bDSCR\b/i,
   /Debt Coverage Constraint/i,
   /refinance capacity/i,
   /refinance proceeds/i,
@@ -355,6 +372,8 @@ const forbiddenSurfacePatterns = [
   /deal score/i,
   /final recommendation/i,
   /launch memo/i,
+  /Acquisition Financing Readiness/i,
+  /Proposed Acquisition Debt Sizing/i,
   /\bBUY\b/i,
   /\bSELL\b/i,
   /\bHOLD\b/i,
@@ -435,6 +454,7 @@ assert.match(screeningHtml, /Source Reliability/i);
 assert.match(screeningHtml, /T12 Operating Statement/i);
 assert.match(screeningHtml, /Rent Roll/i);
 assert.match(screeningHtml, /Advanced financing and return-projection modules are outside the Screening Report scope\./i);
+assert.equal(/Preliminary Financing Readiness Summary/i.test(screeningHtml), false);
 assert.equal(/launch memo/i.test(screeningHtml), false);
 const screeningUnresolvedTokens = screeningHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (screeningUnresolvedTokens.length > 0) {
