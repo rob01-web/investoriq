@@ -185,13 +185,14 @@ const fullRenderHarnessRequest = {
         gross_scheduled_rent: 1850000,
       },
       loanTermSheetTermsPayload: {
-        debt_basis: "acquisition_financing_assumption",
-        purchase_price: 10640000,
-        stated_acquisition_loan_amount: 7980000,
-        ltv: 0.75,
+        debt_basis: "current_debt_context",
+        outstanding_balance: 8750000,
+        ltv: 0.70,
         interest_rate: 0.058,
         amortization_years: 30,
-        source_text: "Proposed acquisition financing inputs for launch-mode readiness only.",
+        source_text: "Current debt support for lender discussion only.",
+        semantic_doc_role: "loan_debt_support",
+        semantic_doc_display_label: "loan_debt_support",
       },
       acquisitionTermsPayload: {
         debt_basis: "acquisition_financing_assumption",
@@ -286,11 +287,13 @@ assert.match(fullRenderHtml, /Operating Support/i);
 assert.match(fullRenderHtml, /Rent \/ Value Support/i);
 assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
 assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
+assert.match(fullRenderHtml, /Shown for lender discussion and acquisition diligence support only/i);
 assert.match(fullRenderHtml, /Outstanding Balance/i);
 assert.match(fullRenderHtml, /Interest Rate/i);
 assert.match(fullRenderHtml, /Amortization/i);
 assert.match(fullRenderHtml, /LTV/i);
-assert.match(fullRenderHtml, /Proposed acquisition financing: Not source-complete \/ not modeled\./i);
+assert.match(fullRenderHtml, /Proposed Acquisition Financing[\s\S]*Not source-complete \/ not modeled\./i);
+assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
@@ -377,6 +380,9 @@ const forbiddenSurfacePatterns = [
   /\bBUY\b/i,
   /\bSELL\b/i,
   /\bHOLD\b/i,
+  /Proposed Loan Amount/i,
+  /Estimated Annual Debt Service/i,
+  /Going-In DSCR/i,
 ];
 const forbiddenSurfaceHit = forbiddenSurfacePatterns.find((pattern) => pattern.test(visibleFullRenderText));
 if (forbiddenSurfaceHit) {

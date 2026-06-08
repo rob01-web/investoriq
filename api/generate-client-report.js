@@ -4116,6 +4116,12 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     acquisitionTermsPayload?.going_in_cap_rate,
     acquisitionTermsPayload?.document_derived_cap_rate
   );
+  const proposedAcquisitionFinancingSourceComplete = Boolean(
+    /proposed_acquisition_financing/i.test(String(loanTermSheetTermsPayload?.semantic_doc_role || acquisitionTermsPayload?.semantic_doc_role || "")) ||
+    /proposed\s+acquisition\s+(financing|loan|debt)|proposed\s+loan\s+terms|future\s+underwriting/i.test(
+      String(loanTermSheetTermsPayload?.source_text || acquisitionTermsPayload?.source_text || loanTermSheetTermsPayload?.notes || acquisitionTermsPayload?.notes || "")
+    )
+  );
   const currentDebtHasVerifiedBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance === true);
   const currentDebtBalance = firstFinite(
     currentDebtAssessmentState?.current_debt_balance,
@@ -4149,53 +4155,12 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
         Number.isFinite(currentDebtLtv) ? `<tr><td>LTV</td><td style="font-weight:600;">${formatPercent1(currentDebtLtv)}</td></tr>` : "",
       ].filter(Boolean)
     : [];
-  const acqPurchasePrice = firstFinite(
-    acquisitionTermsPayload?.purchase_price,
-    acquisitionTermsPayload?.purchasePrice,
-    acquisitionTermsPayload?.acquisition_price,
-    acquisitionTermsPayload?.purchase_price_amount
-  );
-  const acqLoanAmount = firstFinite(
-    acquisitionTermsPayload?.stated_acquisition_loan_amount,
-    acquisitionTermsPayload?.loan_amount,
-    acquisitionTermsPayload?.proposed_loan_amount,
-    acquisitionTermsPayload?.acquisition_loan_amount,
-    acquisitionTermsPayload?.derived_acquisition_loan_amount
-  );
-  const acqLtv = firstFinite(acquisitionTermsPayload?.ltv);
-  const acqInterestRate = firstFinite(acquisitionTermsPayload?.interest_rate);
-  const acqAmortYears = firstFinite(
-    acquisitionTermsPayload?.amortization_years,
-    acquisitionTermsPayload?.amort_years
-  );
-  const proposedAcquisitionFinancingSourceComplete =
-    Boolean(acquisitionAssumptionState?.has_validated_acquisition_assumptions) &&
-    Number.isFinite(acqPurchasePrice) &&
-    Number.isFinite(noiBasis) &&
-    (
-      (Number.isFinite(acqLoanAmount) && acqLoanAmount > 0) ||
-      (Number.isFinite(acqLtv) && acqLtv > 0)
-    ) &&
-    Number.isFinite(acqInterestRate) &&
-    acqInterestRate > 0 &&
-    Number.isFinite(acqAmortYears) &&
-    acqAmortYears > 0;
-  const proposedAcquisitionLoanAmount =
-    Number.isFinite(acqLoanAmount) && acqLoanAmount > 0
-      ? acqLoanAmount
-      : Number.isFinite(acqPurchasePrice) && Number.isFinite(acqLtv) && acqLtv > 0
-        ? acqPurchasePrice * acqLtv
-        : null;
-  const proposedAcquisitionRows = proposedAcquisitionFinancingSourceComplete
-    ? [
-        `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acqPurchasePrice)}</td></tr>`,
-        `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatCurrency(noiBasis)}</td></tr>`,
-        `<tr><td>Proposed Loan Amount</td><td style="font-weight:600;">${formatCurrency(proposedAcquisitionLoanAmount)}</td></tr>`,
-        `<tr><td>Proposed Loan-to-Value (LTV)</td><td style="font-weight:600;">${formatPercent1(Number.isFinite(proposedAcquisitionLoanAmount) && Number.isFinite(acqPurchasePrice) && acqPurchasePrice > 0 ? proposedAcquisitionLoanAmount / acqPurchasePrice : acqLtv)}</td></tr>`,
-        `<tr><td>Interest Rate</td><td style="font-weight:600;">${formatInterestRatePercent(acqInterestRate)}</td></tr>`,
-        `<tr><td>Amortization</td><td style="font-weight:600;">${Math.round(acqAmortYears)} years</td></tr>`,
-      ]
-    : [];
+  const proposedAcquisitionRows = [];
+  if (proposedAcquisitionFinancingSourceComplete) {
+    proposedAcquisitionRows.push(`<tr><td>Proposed Acquisition Financing</td><td style="font-weight:600;">Source-complete inputs provided / available for future underwriting.</td></tr>`);
+  } else {
+    proposedAcquisitionRows.push(`<tr><td>Proposed Acquisition Financing</td><td style="font-weight:600;">Not source-complete / not modeled.</td></tr>`);
+  }
   const requestRows = [
     Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(purchasePrice)}</td></tr>` : "",
     Number.isFinite(noiBasis) ? `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatCurrency(noiBasis)}</td></tr>` : "",
@@ -4236,10 +4201,21 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     `<tr><td>Property tax support</td><td style="font-weight:600;">${Boolean(propertyTaxBindingState?.hasValidatedAnnualTax || isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax)) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Environmental / Phase I support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`,
-    `<tr><td>Appraisal support</td><td style="font-weight:600;">Context only unless structured value exists</td></tr>`,
-    `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`,
   ];
+  const supportPresenceRows = [
+    Boolean(sourceReportCoverageQa?.artifact_inventory?.appraisal_parsed?.present) || /\bappraisal\b/i.test(String(sourceReportCoverageQa?.uploaded_files?.map?.((row) => `${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`).join(" ")) || "")
+      ? `<tr><td>Appraisal support</td><td style="font-weight:600;">Context only unless structured value exists</td></tr>`
+      : "",
+    Boolean(sourceReportCoverageQa?.artifact_inventory?.property_tax_parsed?.present)
+      ? `<tr><td>Property tax support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`
+      : "",
+    Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /phase\s*i|esa|environment/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+      ? `<tr><td>Environmental / Phase I support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`
+      : "",
+    Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /capex|renovation|capital budget|construction budget/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+      ? `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`
+      : "",
+  ].filter(Boolean);
   const sectionHasContent =
     requestRows.length > 0 ||
     operatingRows.length > 0 ||
@@ -4252,10 +4228,13 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   const currentDebtContextHtml = currentDebtRows.length > 0
     ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${currentDebtRows.join("")}</tbody></table>`
     : `<p class="small" style="margin:0;color:#64748b;">No verified current debt context was provided.</p>`;
-  const proposedAcquisitionHtml = proposedAcquisitionFinancingSourceComplete
-    ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${proposedAcquisitionRows.join("")}</tbody></table>`
-    : `<p class="small" style="margin:0;color:#64748b;">Proposed acquisition financing: Not source-complete / not modeled.</p>`;
-  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Preliminary Financing Readiness Summary</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Shown for lender discussion and acquisition diligence support only. InvestorIQ has not produced loan approval or institutional credit-committee underwriting in this Acquisition Memo.</p><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Acquisition Request Context</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${requestRows.join("")}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Operating Support</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${operatingRows.join("")}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Rent / Value Support</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${rentSupportRows.join("")}${capRateRows.length ? capRateRows.join("") : ""}${Number.isFinite(documentDerivedCapRate) ? `<tr><td>Document-derived cap-rate reference</td><td style="font-weight:600;">${formatPercent1(documentDerivedCapRate)}</td><td>-</td></tr>` : ""}</tbody></table></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Debt / Financing Context</p><div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Uploaded Existing Debt Context</div>${currentDebtContextHtml}</div><div><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Proposed Acquisition Financing</div>${proposedAcquisitionHtml}</div></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Lender Diligence Checklist</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${checklistRows.join("")}</tbody></table></div></div>`;
+  const proposedAcquisitionHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${proposedAcquisitionRows.join("")}</tbody></table>`;
+  const checklistHtml = [
+    ...checklistRows,
+    ...supportPresenceRows,
+  ].join("");
+  const lenderNote = "Shown for lender discussion and acquisition diligence support only. This Acquisition Memo organizes verified operating evidence, rent-positioning support, acquisition context, and uploaded financing context. It does not represent loan approval, lender commitment, or institutional credit-committee underwriting.";
+  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Preliminary Financing Readiness Summary</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(lenderNote)}</p><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Acquisition Request Context</p>${requestRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${requestRows.join("")}</tbody></table>` : `<p class="small" style="margin:0;color:#64748b;">No acquisition request context was available.</p>`}</div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Operating Support</p>${operatingRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${operatingRows.join("")}</tbody></table>` : `<p class="small" style="margin:0;color:#64748b;">No operating support rows were available.</p>`}</div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Rent / Value Support</p>${rentSupportRows.length || capRateRows.length || Number.isFinite(documentDerivedCapRate) ? `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${rentSupportRows.join("")}${capRateRows.length ? capRateRows.join("") : ""}${Number.isFinite(documentDerivedCapRate) ? `<tr><td>Document-derived cap-rate reference</td><td style="font-weight:600;">${formatPercent1(documentDerivedCapRate)}</td><td>-</td></tr>` : ""}</tbody></table>` : `<p class="small" style="margin:0;color:#64748b;">No rent/value support rows were available.</p>`}</div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Debt / Financing Context</p><div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Uploaded Existing Debt Context</div>${currentDebtContextHtml}</div><div><div style="font-size:11px;font-weight:600;color:#1F3A5F;margin-bottom:4px;">Proposed Acquisition Financing</div>${proposedAcquisitionHtml}</div></div><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Lender Diligence Checklist</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${checklistHtml}</tbody></table></div></div>`;
 }
 
 function buildAcquisitionMemoSummaryCard({
