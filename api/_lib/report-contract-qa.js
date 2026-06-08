@@ -1988,6 +1988,24 @@ export function buildReportContractQa({
       });
     }
   }
+  const canonicalDocumentTreatmentRows = Array.isArray(sourceReportCoverageQa?.document_treatment_canonical_rows)
+    ? sourceReportCoverageQa.document_treatment_canonical_rows
+    : [];
+  const canonicalAcquisitionDocumentRows = canonicalDocumentTreatmentRows.filter((row) => {
+    const canonicalText = [
+      row?.original_filename,
+      row?.file_name,
+      row?.filename,
+      row?.semantic_doc_role,
+      row?.semantic_doc_display_label,
+      row?.display_doc_type,
+      row?.doc_type,
+      row?.semantic_doc_role_reason,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return /(purchase[_\s-]*assumptions|acquisition[_\s-]*context|document[-\s]*derived acquisition context|purchase price|going[-\s]*in cap|noi basis)/i.test(canonicalText);
+  });
   const purchaseAssumptionsNotModeledRows = extractDocumentTreatmentRows(rawHtml, "Listed but Not Quantitatively Modeled").filter((row) =>
     /(purchase price|going-in cap|going in cap|noi basis|acquisition context|purchase assumptions|document-derived acquisition context)/i.test(row.raw)
   );
@@ -2005,6 +2023,51 @@ export function buildReportContractQa({
       legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
+  if (canonicalAcquisitionDocumentRows.length > 0) {
+    const renderedRowsByFilename = new Map();
+    for (const row of sourceTreatmentRows) {
+      const filename = String(row.cells[0] || "").trim().toLowerCase();
+      if (!filename) continue;
+      if (!renderedRowsByFilename.has(filename)) {
+        renderedRowsByFilename.set(filename, []);
+      }
+      renderedRowsByFilename.get(filename).push(row);
+    }
+    const listedNotModeledRows = extractDocumentTreatmentRows(rawHtml, "Listed but Not Quantitatively Modeled");
+    const canonicalAcquisitionDriftRows = [];
+    for (const canonicalRow of canonicalAcquisitionDocumentRows) {
+      const filename = String(canonicalRow?.original_filename || canonicalRow?.file_name || canonicalRow?.filename || "").trim().toLowerCase();
+      if (!filename) continue;
+      const renderedRows = renderedRowsByFilename.get(filename) || [];
+      const listedRows = listedNotModeledRows.filter((row) => row.name === filename);
+      const badRenderedRows = renderedRows.filter((row) => badAcquisitionTreatmentPattern.test(rowTextForTreatment(row)));
+      if (renderedRows.length === 0 || badRenderedRows.length > 0 || listedRows.length > 0) {
+        canonicalAcquisitionDriftRows.push(...badRenderedRows, ...listedRows);
+        if (renderedRows.length === 0) {
+          canonicalAcquisitionDriftRows.push({
+            canonical_source_filename: filename,
+            canonical_semantic_doc_role: canonicalRow?.semantic_doc_role || null,
+            canonical_semantic_doc_display_label: canonicalRow?.semantic_doc_display_label || null,
+            rendered_status: "missing_from_source_treatment_table",
+          });
+        }
+      }
+    }
+    if (canonicalAcquisitionDriftRows.length > 0) {
+      addViolation(violations, {
+        code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Canonical acquisition support is rendered with appraisal or not-modeled treatment instead of acquisition context.",
+        evidence: {
+          rows: canonicalAcquisitionDriftRows,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+  }
   const modeledDocNames = extractDocumentTreatmentFileNames(rawHtml, "Modeled Inputs");
   const modeledDocRows = extractDocumentTreatmentRows(rawHtml, "Modeled Inputs");
   const displayedLimitedRows = extractDocumentTreatmentRows(rawHtml, "Displayed / Limited Use");
@@ -2016,28 +2079,6 @@ export function buildReportContractQa({
     rawHtml,
     "Listed but Not Quantitatively Modeled"
   );
-  const purchaseAssumptionsDebtRows = [
-    ...modeledDocRows,
-    ...displayedLimitedRows,
-    ...listedNotModeledRows,
-  ].filter((row) =>
-    /purchase_assumptions_source\.txt/i.test(row.raw) &&
-    /(Debt Support Received \/ Contextual|Loan \/ Debt Support)/i.test(row.raw)
-  );
-  if (purchaseAssumptionsDebtRows.length > 0) {
-    addViolation(violations, {
-      code: "PURCHASE_ASSUMPTIONS_ROLE_DRIFT",
-      severity: "high",
-      category: "support_document_treatment_contract",
-      message: "Purchase assumptions support is rendered as debt support instead of Purchase Assumptions / Acquisition Context.",
-      evidence: {
-        rows: purchaseAssumptionsDebtRows,
-      },
-      customer_delivery_impact: "disclose_only",
-      blocks_customer_delivery: false,
-      legacy_compatibility_input_only: legacyCompatibilityInputOnly,
-    });
-  }
   const loanTermsSimpleRows = [
     ...modeledDocRows,
     ...displayedLimitedRows,

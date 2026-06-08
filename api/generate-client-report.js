@@ -2718,10 +2718,79 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   return { visibleColumns, rows: normalizedRows };
 }
 
+function canonicalizeDocumentTreatmentSources(documentSources = []) {
+  const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
+  const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
+  const rows = Array.isArray(documentSources)
+    ? documentSources.filter((row) => row && typeof row === "object")
+    : [];
+  if (rows.length === 0) return [];
+
+  const canonicalIdentityKey = (row) => {
+    const filename = normalizeToken(row?.original_filename || row?.file_name || row?.filename);
+    if (filename) return `filename:${filename}`;
+    const ids = [
+      row?.source_file_id,
+      row?.file_id,
+      row?.document_id,
+      row?.artifact_file_id,
+      row?.id,
+    ]
+      .map(normalizeToken)
+      .filter(Boolean);
+    return ids[0] ? `id:${ids[0]}` : "";
+  };
+
+  const authorityScore = (row) => {
+    const roleText = normalizeText([
+      row?.semantic_doc_role,
+      row?.semantic_doc_display_label,
+      row?.display_doc_type,
+      row?.doc_type,
+      row?.semantic_doc_role_reason,
+    ]
+      .filter(Boolean)
+      .join(" | "));
+    if (/(?:\bt12\b|income reconstruction|operating statement|rent roll)/i.test(roleText)) return 900;
+    if (/(?:purchase[_\s-]*assumptions|acquisition[_\s-]*context|document[-\s]*derived acquisition context|purchase price|going[-\s]*in cap|noi basis)/i.test(roleText)) return 800;
+    if (/(?:property tax|tax support)/i.test(roleText)) return 700;
+    if (/(?:current mortgage|current debt|loan\/? debt support|debt support|loan term sheet)/i.test(roleText)) return 600;
+    if (/(?:renovation|capex|capital expenditure)/i.test(roleText)) return 500;
+    if (/(?:market survey|rent survey|rent comp)/i.test(roleText)) return 400;
+    if (/(?:phase\s*i|esa|environment|zoning|compliance)/i.test(roleText)) return 300;
+    if (/(?:appraisal|valuation|market value)/i.test(roleText)) return 200;
+    return 100;
+  };
+
+  const grouped = new Map();
+  rows.forEach((row, index) => {
+    const key = canonicalIdentityKey(row);
+    if (!key) return;
+    const entry = { row, index, score: authorityScore(row) };
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(entry);
+  });
+
+  const merged = [];
+  for (const entries of grouped.values()) {
+    if (!Array.isArray(entries) || entries.length === 0) continue;
+    entries.sort((left, right) => right.score - left.score || left.index - right.index);
+    const winner = entries[0];
+    merged.push({
+      ...winner.row,
+      canonical_document_treatment_identity_key: canonicalIdentityKey(winner.row),
+    });
+  }
+  return merged;
+}
+
 function buildDocumentTreatmentSummaryHtml({
   documentSources = [],
   reportMode = null,
   currentDebtAssessmentState = null,
+  canonicalAcquisitionState = null,
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
   renovationPayload = null,
@@ -2796,49 +2865,47 @@ function buildDocumentTreatmentSummaryHtml({
       .filter(Boolean);
     return rowNameTokens.some((token) => binding.nameCandidates.has(token));
   };
-  const files = Array.isArray(documentSources)
-    ? documentSources
-        .map((row) => ({
-          id: row?.id ?? null,
-          file_id: row?.file_id ?? null,
-          source_file_id: row?.source_file_id ?? null,
-          document_id: row?.document_id ?? null,
-          artifact_file_id: row?.artifact_file_id ?? null,
-          purchase_price: row?.purchase_price ?? null,
-          acquisition_price: row?.acquisition_price ?? null,
-          asking_price: row?.asking_price ?? null,
-          purchase_price_amount: row?.purchase_price_amount ?? null,
-          going_in_cap_rate: row?.going_in_cap_rate ?? null,
-          noi_basis: row?.noi_basis ?? null,
-          net_operating_income_basis: row?.net_operating_income_basis ?? null,
-          outstanding_balance: row?.outstanding_balance ?? null,
-          current_outstanding_balance: row?.current_outstanding_balance ?? null,
-          current_loan_balance: row?.current_loan_balance ?? null,
-          loan_amount: row?.loan_amount ?? null,
-          stated_acquisition_loan_amount: row?.stated_acquisition_loan_amount ?? null,
-          derived_acquisition_loan_amount: row?.derived_acquisition_loan_amount ?? null,
-          ltv: row?.ltv ?? null,
-          interest_rate: row?.interest_rate ?? null,
-          amort_years: row?.amort_years ?? null,
-          amortization_years: row?.amortization_years ?? null,
-          source_text: String(row?.source_text || "").trim(),
-          raw_text: String(row?.raw_text || "").trim(),
-          notes: String(row?.notes || "").trim(),
-          loan_terms_text: String(row?.loan_terms_text || "").trim(),
-          extracted_text: String(row?.extracted_text || "").trim(),
-          original_filename: String(row?.original_filename || "").trim(),
-          file_name: String(row?.file_name || "").trim(),
-          doc_type: String(row?.doc_type || "").trim(),
-          display_doc_type: String(row?.display_doc_type || "").trim(),
-          semantic_doc_role: String(row?.semantic_doc_role || "").trim(),
-          semantic_doc_display_label: String(row?.semantic_doc_display_label || "").trim(),
-          semantic_doc_role_reason: String(row?.semantic_doc_role_reason || "").trim(),
-          semantic_doc_role_confidence: row?.semantic_doc_role_confidence ?? null,
-          parse_status: String(row?.parse_status || "").trim(),
-          parse_error: String(row?.parse_error || "").trim(),
-        }))
-        .filter((row) => row.original_filename.length > 0)
-    : [];
+  const files = canonicalizeDocumentTreatmentSources(documentSources)
+    .map((row) => ({
+      id: row?.id ?? null,
+      file_id: row?.file_id ?? null,
+      source_file_id: row?.source_file_id ?? null,
+      document_id: row?.document_id ?? null,
+      artifact_file_id: row?.artifact_file_id ?? null,
+      purchase_price: row?.purchase_price ?? null,
+      acquisition_price: row?.acquisition_price ?? null,
+      asking_price: row?.asking_price ?? null,
+      purchase_price_amount: row?.purchase_price_amount ?? null,
+      going_in_cap_rate: row?.going_in_cap_rate ?? null,
+      noi_basis: row?.noi_basis ?? null,
+      net_operating_income_basis: row?.net_operating_income_basis ?? null,
+      outstanding_balance: row?.outstanding_balance ?? null,
+      current_outstanding_balance: row?.current_outstanding_balance ?? null,
+      current_loan_balance: row?.current_loan_balance ?? null,
+      loan_amount: row?.loan_amount ?? null,
+      stated_acquisition_loan_amount: row?.stated_acquisition_loan_amount ?? null,
+      derived_acquisition_loan_amount: row?.derived_acquisition_loan_amount ?? null,
+      ltv: row?.ltv ?? null,
+      interest_rate: row?.interest_rate ?? null,
+      amort_years: row?.amort_years ?? null,
+      amortization_years: row?.amortization_years ?? null,
+      source_text: String(row?.source_text || "").trim(),
+      raw_text: String(row?.raw_text || "").trim(),
+      notes: String(row?.notes || "").trim(),
+      loan_terms_text: String(row?.loan_terms_text || "").trim(),
+      extracted_text: String(row?.extracted_text || "").trim(),
+      original_filename: String(row?.original_filename || "").trim(),
+      file_name: String(row?.file_name || "").trim(),
+      doc_type: String(row?.doc_type || "").trim(),
+      display_doc_type: String(row?.display_doc_type || "").trim(),
+      semantic_doc_role: String(row?.semantic_doc_role || "").trim(),
+      semantic_doc_display_label: String(row?.semantic_doc_display_label || "").trim(),
+      semantic_doc_role_reason: String(row?.semantic_doc_role_reason || "").trim(),
+      semantic_doc_role_confidence: row?.semantic_doc_role_confidence ?? null,
+      parse_status: String(row?.parse_status || "").trim(),
+      parse_error: String(row?.parse_error || "").trim(),
+    }))
+    .filter((row) => row.original_filename.length > 0);
   if (!files.length) return "";
 
   const modeled = [];
@@ -2855,6 +2922,26 @@ function buildDocumentTreatmentSummaryHtml({
   const hasText = (value, pattern) => pattern.test(normalizedText(value));
   const hasAnyText = (...values) => values.some((value) => String(value || "").trim().length > 0);
   const launchMemoMode = String(reportMode || "").toLowerCase() === "v1_core";
+  const acquisitionAuthorityPayload =
+    (acquisitionTermsPayload && typeof acquisitionTermsPayload === "object" ? acquisitionTermsPayload : null) ||
+    (loanTermSheetTermsPayload && typeof loanTermSheetTermsPayload === "object" ? loanTermSheetTermsPayload : null);
+  const hasCanonicalAcquisitionAuthority = Boolean(
+    canonicalAcquisitionState &&
+      (
+        canonicalAcquisitionState.has_validated_acquisition_assumptions === true ||
+        canonicalAcquisitionState.has_proposed_acquisition_financing === true ||
+        canonicalAcquisitionState.acquisition_assumptions_supported === true
+      )
+  ) || Boolean(
+    acquisitionAuthorityPayload &&
+      (
+        Number.isFinite(coerceNumber(acquisitionAuthorityPayload?.purchase_price)) ||
+        Number.isFinite(coerceNumber(acquisitionAuthorityPayload?.going_in_cap_rate)) ||
+        Number.isFinite(coerceNumber(acquisitionAuthorityPayload?.noi_basis)) ||
+        Number.isFinite(coerceNumber(acquisitionAuthorityPayload?.stated_acquisition_loan_amount)) ||
+        Number.isFinite(coerceNumber(acquisitionAuthorityPayload?.derived_acquisition_loan_amount))
+      )
+  );
   const hasForwardLookingRenovationRowSignals = () => {
     const rows = [
       ...(Array.isArray(renovationPayload?.budget_rows) ? renovationPayload.budget_rows : []),
@@ -3077,10 +3164,14 @@ function buildDocumentTreatmentSummaryHtml({
     const filenameOnly = sourceBasis === "filename_fallback";
     const semanticText = hasSemanticMetadata ? metadataText : "";
     const semanticAndFileText = `${semanticText} | ${fileText}`;
+    const purchaseAssumptionsFilenameHint = /purchase[_\s-]?assumptions/.test(fileText);
+    const canonicalAcquisitionRoleOverride = hasCanonicalAcquisitionAuthority && purchaseAssumptionsFilenameHint;
     const explicitEnvironmentalSignals = /(phase[\s_]*i|phase[\s_]*1|esa|environment|environmental|site assessment|recognized environmental condition|recognized environmental conditions|\brec\b)/.test(semanticAndFileText);
     const explicitZoningSignals = /(zoning|compliance|permitted use|municipal zoning|land use|entitlement|municipal code)/.test(semanticAndFileText);
     const canonicalRoleCandidate =
-      canonicalRole && canonicalRole !== "other_support"
+      canonicalAcquisitionRoleOverride
+        ? "purchase_assumptions"
+        : canonicalRole && canonicalRole !== "other_support"
         ? canonicalRole
         : trustedExistingRoleSet.has(existingSemanticRole)
         ? existingSemanticRole
@@ -3115,7 +3206,7 @@ function buildDocumentTreatmentSummaryHtml({
       hasUsefulCanonicalRole
         ? (effectiveCanonicalRole === "loan_term_sheet" || effectiveCanonicalRole === "purchase_assumptions")
         : /(^|\b)(loan term sheet|loan_term_sheet|purchase assumptions|proposed acquisition financing)(\b|$)/.test(semanticText);
-    const hasLaunchAcquisitionContext = rowHasAcquisitionSupport(row);
+    const hasLaunchAcquisitionContext = rowHasAcquisitionSupport(row) || canonicalAcquisitionRoleOverride;
     const appraisalLike =
       hasUsefulCanonicalRole
         ? effectiveCanonicalRole === "appraisal" && !hasLaunchAcquisitionContext
@@ -3218,7 +3309,6 @@ function buildDocumentTreatmentSummaryHtml({
         source_basis: sourceBasis,
       };
     }
-    const purchaseAssumptionsFilenameHint = /purchase[_\s-]?assumptions/.test(fileText);
     const acquisitionContextSemanticHint =
       /purchase price|going[-\s]*in cap|noi basis|net operating income basis|acquisition context|purchase context|document-derived cap-rate reference/i.test(semanticAndFileText);
     const acquisitionContextRoleHint =
@@ -4040,6 +4130,9 @@ function buildLaunchSourceContextBlock({
   reportMode = null,
   documentSources = [],
   currentDebtAssessmentState = null,
+  canonicalAcquisitionState = null,
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
   hasForwardLookingRenovationInputs = false,
   renovationDisplayMode = null,
   renovationPayload = null,
@@ -4052,6 +4145,9 @@ function buildLaunchSourceContextBlock({
     reportMode,
     documentSources,
     currentDebtAssessmentState,
+    canonicalAcquisitionState,
+    loanTermSheetTermsPayload,
+    acquisitionTermsPayload,
     hasForwardLookingRenovationInputs,
     renovationDisplayMode,
     renovationPayload,
@@ -4060,7 +4156,7 @@ function buildLaunchSourceContextBlock({
     documentQuantitativeUsageMap,
   });
   const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
-  return `${intro}${treatment}${excludedDeferredHtml}`;
+  return `${intro}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatment}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${excludedDeferredHtml}`;
 }
 function buildFinancingEnvelopeGrid(noi, units) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
@@ -8584,6 +8680,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         reportMode: effectiveReportMode,
         documentSources: acquisitionMemoRenderContext.documentSources,
         currentDebtAssessmentState,
+        canonicalAcquisitionState:
+          underwritingState?.core?.acquisition?.assumptionState ||
+          acquisitionAssumptionState ||
+          null,
+        loanTermSheetTermsPayload,
+        acquisitionTermsPayload,
         hasForwardLookingRenovationInputs: acquisitionMemoRenderContext.hasForwardLookingRenovationInputs,
         renovationDisplayMode: acquisitionMemoRenderContext.renovationDisplayMode,
         renovationPayload: acquisitionMemoRenderContext.renovationPayload,
@@ -10535,6 +10637,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         reportMode: effectiveReportMode,
         documentSources,
         currentDebtAssessmentState,
+        canonicalAcquisitionState:
+          underwritingState?.core?.acquisition?.assumptionState ||
+          acquisitionAssumptionState ||
+          null,
+        loanTermSheetTermsPayload,
+        acquisitionTermsPayload,
         hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
         renovationDisplayMode,
         renovationPayload,
@@ -11206,6 +11314,9 @@ let sourcePackageQaArtifacts = [];
 try {
   let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
   let coverageArtifacts = [];
+  if (isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object" && Array.isArray(body.__test_payloads.coverageArtifacts)) {
+    coverageArtifacts = body.__test_payloads.coverageArtifacts;
+  }
   if (jobId) {
     const { data: jobFiles, error: jobFilesErr } = await supabase
       .from("analysis_job_files")
@@ -11276,12 +11387,21 @@ try {
       null,
     underwritingState,
   });
+  sourceCoverageQa.document_treatment_canonical_rows = canonicalizeDocumentTreatmentSources(
+    Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
+  );
   sourceCoverageQaResult = sourceCoverageQa;
   if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
       currentDebtAssessmentState,
+      canonicalAcquisitionState:
+        underwritingState?.core?.acquisition?.assumptionState ||
+        acquisitionAssumptionState ||
+        null,
+      loanTermSheetTermsPayload,
+      acquisitionTermsPayload,
       hasForwardLookingRenovationInputs: Boolean(renovationReturnAssumptionsPresent),
       renovationDisplayMode,
       propertyTaxPayload,

@@ -121,6 +121,37 @@ const fullRenderSupportDocuments = [
   { original_filename: "Broker_Email_Context.msg", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:07:00Z" },
   { original_filename: "Phase_I_ESA_Context.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:08:00Z" },
   { original_filename: "Unsupported_Appraisal_Excerpt.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:09:00Z" },
+  { id: "purchase-acq-file", original_filename: "purchase_assumptions_source.txt", doc_type: "loan_term_sheet", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:10:00Z" },
+  { id: "purchase-appraisal-file", original_filename: "purchase_assumptions_source.txt", doc_type: "appraisal", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:11:00Z" },
+];
+
+const fullRenderCoverageArtifacts = [
+  {
+    type: "loan_term_sheet_parsed",
+    payload: {
+      file_id: "purchase-acq-file",
+      original_filename: "purchase_assumptions_source.txt",
+      semantic_doc_role: "purchase_assumptions",
+      semantic_doc_display_label: "purchase_assumptions",
+      validated: true,
+      purchase_price: 10640000,
+      going_in_cap_rate: 0.0575,
+      noi_basis: 611800,
+      debt_basis: "acquisition_financing_assumption",
+      accepted_fields: ["purchase_price", "going_in_cap_rate", "noi_basis"],
+    },
+  },
+  {
+    type: "appraisal_parsed",
+    payload: {
+      file_id: "purchase-appraisal-file",
+      original_filename: "purchase_assumptions_source.txt",
+      semantic_doc_role: "appraisal",
+      semantic_doc_display_label: "appraisal",
+      validated: false,
+      cap_rate: 0.0575,
+    },
+  },
 ];
 
 const fullRenderHarnessRequest = {
@@ -216,6 +247,7 @@ const fullRenderHarnessRequest = {
         original_filename: "Property_Tax_Support.pdf",
       },
       documentSources: fullRenderSupportDocuments,
+      coverageArtifacts: fullRenderCoverageArtifacts,
     },
   },
 };
@@ -292,6 +324,22 @@ if (/Cannot access 'rrUnits' before initialization/i.test(fullRenderHtml)) {
 }
 if (/hasForwardLookingRenovationInputs is not defined/i.test(fullRenderHtml)) {
   throw new Error("Renovation flag undefined surfaced in full render");
+}
+const sourceTreatmentTableMatch = /<p class="subsection-title">Source Treatment \/ Quantitative Use<\/p>[\s\S]*?<\/table>/i.exec(fullRenderHtml);
+assert.ok(sourceTreatmentTableMatch, "Missing source treatment table in final HTML");
+const sourceTreatmentTableHtml = sourceTreatmentTableMatch[0];
+const sourceTreatmentRowHtmls = sourceTreatmentTableHtml.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+const purchaseAssumptionsRowHtml = sourceTreatmentRowHtmls.find((row) => /purchase_assumptions_source\.txt/i.test(row));
+assert.ok(purchaseAssumptionsRowHtml, "Missing purchase_assumptions_source.txt row in source treatment table");
+assert.match(purchaseAssumptionsRowHtml, /Purchase Assumptions \/ Acquisition Context/i);
+assert.equal(/Appraisal Context/i.test(purchaseAssumptionsRowHtml), false);
+assert.equal(/Context only/i.test(purchaseAssumptionsRowHtml), false);
+assert.equal(/Listed for auditability only/i.test(purchaseAssumptionsRowHtml), false);
+assert.equal(/Listed but Not Quantitatively Modeled/i.test(purchaseAssumptionsRowHtml), false);
+assert.equal((sourceTreatmentTableHtml.match(/purchase_assumptions_source\.txt/gi) || []).length, 1);
+const listedNotModeledSectionMatch = /<p class="subsection-title">Listed but Not Quantitatively Modeled<\/p>[\s\S]*?(?=<p class="subsection-title">|$)/i.exec(fullRenderHtml);
+if (listedNotModeledSectionMatch) {
+  assert.equal(/purchase_assumptions_source\.txt/i.test(listedNotModeledSectionMatch[0]), false);
 }
 const forbiddenSurfacePatterns = [
   /Capital Risk Profile/i,

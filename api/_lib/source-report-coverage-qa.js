@@ -430,8 +430,44 @@ function buildArtifactInventory(artifacts) {
 }
 
 function buildSupportDocDisplayLookup(artifacts) {
-  const lookup = new Map();
-  for (const row of Array.isArray(artifacts) ? artifacts : []) {
+  const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
+  const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
+  const authorityScore = (row) => {
+    const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
+    const semanticDocRole = payload?.semantic_doc_role || null;
+    const semanticDocRoleConfidence = payload?.semantic_doc_role_confidence ?? null;
+    const roleText = normalizeText([
+      semanticDocRole,
+      payload?.semantic_doc_display_label,
+      payload?.semantic_doc_role_reason,
+      row?.type,
+    ]
+      .filter(Boolean)
+      .join(" | "));
+    const isValidatedAcquisitionSupport =
+      payload?.validated === true ||
+      payload?.validated_acquisition_assumptions === true ||
+      payload?.acquisition_support?.has_purchase_price === true ||
+      payload?.acquisition_support?.has_derived_acquisition_debt === true ||
+      Number.isFinite(Number(payload?.purchase_price)) ||
+      Number.isFinite(Number(payload?.acquisition_price)) ||
+      Number.isFinite(Number(payload?.asking_price)) ||
+      Number.isFinite(Number(payload?.going_in_cap_rate)) ||
+      Number.isFinite(Number(payload?.noi_basis)) ||
+      /purchase[_\s-]*assumptions|acquisition[_\s-]*context/.test(roleText);
+    if (/(?:\bt12\b|income reconstruction|operating statement|rent roll)/i.test(roleText)) return 1000;
+    if (isValidatedAcquisitionSupport) return 900;
+    if (/(?:property tax|tax support)/i.test(roleText)) return 800;
+    if (/(?:current mortgage|current debt|loan\/? debt support|debt support|loan term sheet)/i.test(roleText)) return 700;
+    if (/(?:renovation|capex|capital expenditure)/i.test(roleText)) return 600;
+    if (/(?:market survey|rent survey|rent comp)/i.test(roleText)) return 500;
+    if (/(?:phase\s*i|esa|environment|zoning|compliance)/i.test(roleText)) return 400;
+    if (/(?:appraisal|valuation|market value)/i.test(roleText)) return 300;
+    return 100;
+  };
+  const rows = Array.isArray(artifacts) ? artifacts : [];
+  const grouped = new Map();
+  for (const row of rows) {
     const payload = row?.payload && typeof row.payload === "object" ? row.payload : {};
     const semanticDocRole = payload?.semantic_doc_role || null;
     const semanticDocRoleConfidence = payload?.semantic_doc_role_confidence ?? null;
@@ -453,11 +489,23 @@ function buildSupportDocDisplayLookup(artifacts) {
       semantic_doc_role_confidence: semanticDocRoleConfidence,
       semantic_doc_role_reason: payload?.semantic_doc_role_reason || null,
       semantic_doc_display_label: semanticDocDisplayLabel,
+      payload,
+      row,
     };
-    const fileId = String(payload?.file_id || "").trim();
-    const filename = String(payload?.original_filename || "").trim().toLowerCase();
-    if (fileId) lookup.set(fileId, record);
-    if (filename) lookup.set(filename, record);
+    const keys = [
+      String(payload?.file_id || row?.file_id || "").trim(),
+      String(payload?.original_filename || row?.original_filename || "").trim().toLowerCase(),
+    ].filter(Boolean);
+    for (const key of keys) {
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push({ record, score: authorityScore(row), index: grouped.get(key).length });
+    }
+  }
+  const lookup = new Map();
+  for (const [key, entries] of grouped.entries()) {
+    if (!Array.isArray(entries) || entries.length === 0) continue;
+    entries.sort((left, right) => right.score - left.score || left.index - right.index);
+    lookup.set(key, entries[0].record);
   }
   return lookup;
 }
