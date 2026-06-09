@@ -106,6 +106,8 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
     ? sourceReportCoverageQa.deterministic_flags
     : [];
   let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
+  const acquisitionFinancingReadinessLimitedRendered = renderedSignals.includes("acquisition_financing_readiness_limited");
+  acquisitionFinancingRendered ||= acquisitionFinancingReadinessLimitedRendered;
   for (const flag of deterministicFlags) {
     if (flag?.evidence?.loan_term_sheet) candidates.push(flag.evidence.loan_term_sheet);
     if (flag?.evidence?.loan_term_sheet_parsed) candidates.push(flag.evidence.loan_term_sheet_parsed);
@@ -126,6 +128,7 @@ function collectDebtContext({ sourceReportCoverageQa = null, qaFixRouting = null
     current_debt_state: currentDebtState,
     acquisition_assumption_state: sourceReportCoverageQa?.acquisition_assumption_state || null,
     acquisition_financing_rendered: acquisitionFinancingRendered,
+    acquisition_financing_readiness_limited_rendered: acquisitionFinancingReadinessLimitedRendered,
     source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
     rent_roll_present: Boolean(inventoryRentRoll?.present),
   };
@@ -173,6 +176,28 @@ function actionForReportFlag(flag, context = {}) {
       requires_regeneration: true,
       blocks_public_sample: true,
       blocks_high_value_outreach: true,
+      safe_to_auto_fix: false,
+      evidence: flag?.evidence || null,
+    };
+  }
+  if (code === "ACQUISITION_FINANCING_FIELD_LIMITED") {
+    const expectedLimitedRender = Boolean(context.acquisition_financing_readiness_limited_rendered);
+    return {
+      code,
+      title: expectedLimitedRender
+        ? "Acquisition financing is intentionally source-limited"
+        : "Acquisition financing source limitation review",
+      source_artifact: "report_qa_flags",
+      severity: expectedLimitedRender ? "low" : severity,
+      action_type: expectedLimitedRender ? "no_action_false_positive" : "source_document_limitation",
+      owner_area: expectedLimitedRender ? "qa_calibration" : "source_documents",
+      recommended_next_step: expectedLimitedRender
+        ? "No code action required when proposed acquisition financing is correctly rendered as not source-complete / not modeled."
+        : "Verify acquisition financing fields are source-complete before relying on lender-facing readiness.",
+      requires_code_patch: false,
+      requires_regeneration: false,
+      blocks_public_sample: !expectedLimitedRender,
+      blocks_high_value_outreach: !expectedLimitedRender,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };

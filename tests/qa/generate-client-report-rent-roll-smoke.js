@@ -121,6 +121,13 @@ const fullRenderSupportDocuments = [
   { original_filename: "Broker_Email_Context.msg", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:07:00Z" },
   { original_filename: "Phase_I_ESA_Context.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:08:00Z" },
   { original_filename: "Unsupported_Appraisal_Excerpt.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:09:00Z" },
+  {
+    original_filename: "This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only.txt",
+    doc_type: "supporting_document",
+    parse_status: "parsed",
+    parse_error: "",
+    uploaded_at: "2026-06-04T12:09:30Z",
+  },
   { id: "purchase-acq-file", original_filename: "purchase_assumptions_source.txt", doc_type: "loan_term_sheet", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:10:00Z" },
   { id: "purchase-appraisal-file", original_filename: "purchase_assumptions_source.txt", doc_type: "appraisal", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:11:00Z" },
 ];
@@ -283,8 +290,6 @@ assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
 assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
 assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(fullRenderHtml, /Acquisition Request Context/i);
-assert.match(fullRenderHtml, /Annual Rent Upside/i);
-assert.match(fullRenderHtml, /Rent Gap %/i);
 assert.match(fullRenderHtml, /Operating Support/i);
 assert.match(fullRenderHtml, /Rent \/ Value Support/i);
 assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
@@ -294,7 +299,11 @@ assert.match(fullRenderHtml, /Outstanding Balance/i);
 assert.match(fullRenderHtml, /Interest Rate/i);
 assert.match(fullRenderHtml, /Amortization/i);
 assert.match(fullRenderHtml, /LTV/i);
-assert.match(fullRenderHtml, /Proposed Acquisition Financing[\s\S]*Not source-complete \/ not modeled\./i);
+const financingSectionMatch = /Preliminary Financing Readiness Summary[\s\S]*?Lender Diligence Checklist/i.exec(fullRenderHtml);
+assert.ok(financingSectionMatch, "Missing preliminary financing readiness summary block");
+assert.match(financingSectionMatch[0], /Annual Rent Upside[\s\S]*\$100,800/i);
+assert.match(financingSectionMatch[0], /Rent Gap %[\s\S]*9\.7%/i);
+assert.match(financingSectionMatch[0], /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
 assert.equal((fullRenderHtml.match(/Proposed Acquisition Financing/gi) || []).length, 1);
 assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
 assert.match(fullRenderHtml, /Document-derived cap-rate reference[\s\S]*5\.(?:75|80)%/i);
@@ -364,7 +373,11 @@ if (/hasForwardLookingRenovationInputs is not defined/i.test(fullRenderHtml)) {
 const sourceTreatmentTableMatch = /<p class="subsection-title">Source Treatment \/ Quantitative Use<\/p>[\s\S]*?<\/table>/i.exec(fullRenderHtml);
 assert.ok(sourceTreatmentTableMatch, "Missing source treatment table in final HTML");
 const sourceTreatmentTableHtml = sourceTreatmentTableMatch[0];
+assert.match(sourceTreatmentTableHtml, /This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only\.txt/i);
 const sourceTreatmentRowHtmls = sourceTreatmentTableHtml.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+const longFilenameRowHtml = sourceTreatmentRowHtmls.find((row) => /This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only\.txt/i.test(row));
+assert.ok(longFilenameRowHtml, "Missing long filename row in source treatment table");
+assert.equal((longFilenameRowHtml.match(/<td\b/gi) || []).length, 4);
 const purchaseAssumptionsRowHtml = sourceTreatmentRowHtmls.find((row) => /purchase_assumptions_source\.txt/i.test(row));
 assert.ok(purchaseAssumptionsRowHtml, "Missing purchase_assumptions_source.txt row in source treatment table");
 assert.match(purchaseAssumptionsRowHtml, /Purchase Assumptions \/ Acquisition Context/i);

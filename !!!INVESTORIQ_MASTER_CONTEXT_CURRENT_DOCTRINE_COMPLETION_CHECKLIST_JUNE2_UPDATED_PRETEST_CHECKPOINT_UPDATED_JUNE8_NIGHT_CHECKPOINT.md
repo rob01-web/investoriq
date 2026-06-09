@@ -1,3 +1,457 @@
+# June 8, 2026 Night Addendum - Acquisition Memo 13 Financing-Ready Checkpoint / Final Polish + Advisory Rounding Root Fix
+
+## Current controlling status
+
+InvestorIQ ended June 8 with the Acquisition Memo product direction materially validated.
+
+Current report/product status:
+
+```text
+Screening Report:
+Launchable / founder-beta ready.
+
+Acquisition Memo:
+Founder-beta / customer-deliverable and now credible for 1-150/200 unit financing conversations, pending one final retest after the latest polish and advisory QA rounding patch.
+
+Full Underwriting V2.0:
+Still deferred. This remains the institutional lender-credit-committee package for 250+ unit assets, multi-building deals, family office / Ken Dunn type users, and roughly $50M-$500M transactions.
+```
+
+Controlling product distinction:
+
+```text
+Acquisition Memo = financing-ready acquisition memo for serious lender discussions and acquisition financing requests on approximately 1-150/200 unit properties.
+
+Full Underwriting V2.0 = institutional credit-committee package with full DSCR stack, debt sizing, DCF, waterfall, capital stack, integrations, lender/investor package, and advanced sensitivity analysis.
+```
+
+Do not reopen Full Underwriting V2 surfaces inside the launch Acquisition Memo.
+
+## Acquisition Memo 12 root-render confirmation
+
+The repeated Document Treatment contradiction finally tested clean.
+
+The old failure was:
+
+```text
+purchase_assumptions_source.txt used correctly in the Acquisition Memo Summary for:
+- Purchase Price $10,640,000
+- Going-In Cap Rate 5.8%
+- NOI Basis $611,800
+
+but rendered incorrectly in Document Treatment as:
+- Appraisal Context
+- Context only
+- Listed for auditability only; not used quantitatively
+- Listed but Not Quantitatively Modeled
+```
+
+Acquisition Memo 12 proved the root-render fix:
+
+```text
+purchase_assumptions_source.txt rendered as:
+Purchase Assumptions / Acquisition Context
+
+It did not render as:
+Appraisal Context
+Context only
+Listed for auditability only
+Listed but Not Quantitatively Modeled
+```
+
+Interpretation:
+
+```text
+Final Document Treatment Summary same-file artifact precedence family is fixed in the tested path.
+Validated acquisition / purchase-assumptions authority now beats stale appraisal metadata for the same source identity.
+The visible PDF contradiction is no longer present.
+```
+
+This root family should be treated as closed after the next final retest confirms it remains stable after the financing-section patches.
+
+## Acquisition Memo 13 result - 100-unit / lender-conversation test
+
+Acquisition Memo 13 reached 17 pages and passed the practical "Ken Dunn 100-unit property test" / smaller-deal lender-conversation test.
+
+Clarified meaning of the test:
+
+```text
+This is not the full Ken Dunn institutional $50M-$500M / 250+ unit credit-committee test.
+This is the 50-150-ish / 1-150/200 unit Acquisition Memo financing-conversation test.
+```
+
+Verdict:
+
+```text
+Acquisition Memo 13 = PASS for founder-beta / customer-deliverable / 1-150/200 unit lender-conversation use, with minor polish.
+Full institutional Ken Dunn test = not applicable until Full Underwriting V2.0.
+```
+
+Acquisition Memo 13 now gives lenders and borrowers a coherent first-pass package:
+
+```text
+property size
+occupancy
+T12 income / expenses / NOI
+rent roll support
+rent upside
+purchase price
+going-in cap rate
+cap-rate value indication
+uploaded existing debt context
+source coverage
+document treatment
+what is verified, context-only, and not modeled
+```
+
+## Preliminary Financing Readiness Summary implemented
+
+The new Acquisition Memo financing section was implemented and refined.
+
+New section:
+
+```text
+Preliminary Financing Readiness Summary
+```
+
+Purpose:
+
+```text
+Make Acquisition Memo useful for 1-150/200 unit acquisition borrowers preparing lender discussions and acquisition financing requests, without implying loan approval or reopening V2 debt/refi/DCF surfaces.
+```
+
+Section structure now includes:
+
+```text
+1. Acquisition Request Context
+   - Purchase Price
+   - NOI Basis
+   - Going-In Cap Rate
+   - Units
+   - Price per Unit
+   - NOI per Unit
+
+2. Operating Support
+   - Effective Gross Income
+   - Operating Expenses
+   - NOI
+   - Expense Ratio
+   - NOI Margin
+   - Occupancy
+   - Break-Even Occupancy
+
+3. Rent / Value Support
+   - Annual In-Place Rent
+   - Annual Market Rent
+   - Annual Rent Upside
+   - Rent Gap %
+   - Implied Value at 5.0%, 6.0%, 7.0% cap rates
+   - Document-derived cap-rate reference, if available
+
+4. Debt / Financing Context
+   - Uploaded Existing Debt Context, when verified:
+     - Outstanding Balance
+     - Interest Rate
+     - Amortization
+     - LTV
+   - Proposed Acquisition Financing:
+     - shown only if explicitly source-complete
+     - otherwise: Not source-complete / not modeled
+
+5. Lender Diligence Checklist
+   - T12 verified: Yes / No
+   - Rent Roll verified: Yes / No
+   - Purchase assumptions provided: Yes / No
+   - Property tax support: Yes / No
+   - Current debt context uploaded: Yes / No
+   - Proposed acquisition loan terms complete: Yes / No
+   - Environmental / Phase I support: Context only / not modeled, when present
+   - Appraisal support: Context only unless structured value exists, when present
+   - CapEx / renovation plan: Context only unless verified budget and rent-lift assumptions exist, when present
+```
+
+Required note/caution remains:
+
+```text
+Shown for lender discussion and acquisition diligence support only. This Acquisition Memo organizes verified operating evidence, rent-positioning support, acquisition context, and uploaded financing context. It does not represent loan approval, lender commitment, refinance proceeds, full debt sizing, DCF, equity waterfall, or institutional credit-committee underwriting.
+```
+
+## Financing-section implementation sequence completed
+
+### Slice 1 - New Acquisition Memo-only section
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/report-template-runtime.html
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Added buildPreliminaryFinancingReadinessSummaryHtml(...)
+Added Acquisition Memo-only template block
+Wired section into v1_core Acquisition Memo final render path
+Kept Screening unchanged
+Kept old V2 debt/refi sections collapsed
+Current debt shown only as Uploaded Existing Debt Context
+Proposed acquisition financing separate and not derived from current debt
+```
+
+### Slice 2 - Lender-facing section hardening
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Strengthened the Preliminary Financing Readiness Summary without reopening V2 debt math.
+Existing/current debt remains disclosure-only under Uploaded Existing Debt Context.
+Proposed acquisition financing collapses to Not source-complete / not modeled unless explicit source-complete proposed-financing language exists.
+No proposed loan amount, debt service, DSCR, or debt sizing rendered in this slice.
+Forbidden V2 and loan-approval language confirmed absent from visible HTML.
+Screening regression confirms the section does not render in Screening.
+```
+
+Forbidden surfaces kept closed:
+
+```text
+DSCR
+Current Debt DSCR
+refinance proceeds
+refinance stability
+DCF
+waterfall
+equity return
+deal score
+final recommendation
+BUY / SELL / HOLD
+loan approval
+lender commitment
+financing approval
+credit approval
+Proposed Acquisition Debt Sizing
+```
+
+### Slice 3 - Tiny visible polish
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Added Annual Rent Upside to Rent / Value Support.
+Added Rent Gap % to Rent / Value Support.
+Fixed duplicate Proposed Acquisition Financing label.
+Removed duplicate/wrong Property tax support: Context only / not modeled row.
+Property tax support now appears once as Yes / No.
+Kept Screening unchanged.
+Kept forbidden V2 surfaces closed.
+```
+
+Interpretation:
+
+```text
+The financing section should now feel like a credible Acquisition Memo section rather than a tiny debt-context note.
+```
+
+## Cap-rate advisory QA false-positive root fix completed
+
+A final advisory/root cleanup fixed the cap-rate rounding false-positive class.
+
+Problem:
+
+```text
+Source value: 5.75%
+Customer report display: 5.8%
+
+This is normal display rounding, not a real source-report contradiction.
+The live source-package advisory layer could still flag it as source_report_inconsistency.
+```
+
+Root issue:
+
+```text
+Production advisory QA treated normal rounded percentage displays as source/report contradictions.
+```
+
+Files changed:
+
+```text
+api/_lib/source-package-qa.js
+tests/qa/source-package-cap-rate-rounding-smoke.js
+```
+
+Production path fixed:
+
+```text
+filterSourcePackageFalsePositives(review, compactPayload)
+isCapRateRoundingFalsePositive(finding, compactPayload)
+```
+
+Rounding rule:
+
+```text
+Cap-rate / percentage comparisons normalize to percentage points.
+Values within 0.1 percentage points are treated as equivalent.
+The filter is narrowly scoped to cap-rate / percentage source-report inconsistency findings.
+```
+
+Regression proof:
+
+```text
+source 5.75% vs rendered 5.8% -> no source_report_inconsistency
+source 5.75% vs rendered 5.75% -> no source_report_inconsistency
+source 5.75% vs rendered 6.5% -> still source_report_inconsistency
+non-cap contradictions remain unaffected
+```
+
+Interpretation:
+
+```text
+This is a root-class advisory QA fix, not a test-report hack.
+Do not hardcode Acquisition Memo 13, Harbourstone, purchase_assumptions_source.txt, 5.75, or 5.8 in production logic.
+```
+
+## Current report readiness assessment
+
+No-BS readiness assessment as of this checkpoint:
+
+```text
+Screening Report:
+8.5/10 launch readiness.
+Launchable/founder-beta ready.
+
+Acquisition Memo:
+Approximately 8+/10 if the next final retest confirms the new financing section polish and advisory rounding fix.
+Founder-beta/customer-deliverable.
+Financing-conversation ready for 1-150/200 unit properties.
+Not a loan approval package.
+Not a Full Underwriting V2 institutional package.
+
+Full Underwriting V2.0:
+Do not launch.
+Future premium product.
+```
+
+Current strongest product point:
+
+```text
+InvestorIQ now has document-treatment discipline:
+it clearly separates what was used quantitatively, what was context-only, what was deferred, and what was not modeled.
+```
+
+Current remaining risk:
+
+```text
+Trust polish.
+No visible contradictions.
+No stale document treatment.
+No false QA panic.
+No awkward duplicate labels.
+No V2 leakage.
+No Summary-vs-Data-Coverage contradictions.
+```
+
+## Next action after this checkpoint
+
+Do not do more tonight after committing the final cap-rate advisory patch and updating docs.
+
+Next work session:
+
+```text
+Run ONE controlled Acquisition Memo retest using the same/source-family package.
+```
+
+Retest acceptance checklist:
+
+```text
+1. Preliminary Financing Readiness Summary appears and looks substantial.
+2. Rent / Value Support includes Annual Rent Upside and Rent Gap %.
+3. Proposed Acquisition Financing appears once as Not source-complete / not modeled when incomplete.
+4. Lender Diligence Checklist has no duplicate Property tax support context-only row.
+5. Uploaded Existing Debt Context appears only as debt context, not proposed acquisition financing.
+6. purchase_assumptions_source.txt still renders as Purchase Assumptions / Acquisition Context.
+7. No Appraisal Context / Context only contradiction for validated purchase assumptions.
+8. No Listed but Not Quantitatively Modeled leak for validated purchase assumptions.
+9. No V2 surfaces leak:
+   - DSCR
+   - Current Debt DSCR
+   - refinance proceeds
+   - refinance stability
+   - DCF
+   - waterfall
+   - equity return
+   - deal score
+   - final recommendation
+   - BUY / SELL / HOLD
+10. Advisory QA should not false-flag 5.75% vs 5.8% cap-rate rounding.
+11. Screening remains unchanged/protected.
+```
+
+If this retest passes:
+
+```text
+Acquisition Memo can be treated as founder-beta / customer-deliverable and financing-conversation ready for 1-150/200 unit acquisitions.
+Next remaining launch work moves to final website/pricing/checkout/sample/DocRaptor/distribution polish, not report-core rescue.
+```
+
+## Guardrails going forward
+
+Continue to enforce:
+
+```text
+micro-prompts only
+no broad audits unless a real new root class appears
+no report-specific production hacks
+no hardcoded production filenames, property names, report IDs, or fixture-only values outside tests
+no new API/serverless routes casually due to Vercel Hobby constraints
+no pricing / Stripe / SQL / RPC changes during report-core polish
+no DocRaptor production flip until final report confidence is confirmed
+no public/Ken/sample distribution until DocRaptor production mode and public sample readiness are addressed
+no public AI wording
+no BUY / SELL / HOLD
+no loan approval / lender commitment / financing approval / credit approval language
+no reopening V2 debt/refi/DCF/waterfall/full debt sizing inside Acquisition Memo
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 8 night checkpoint.
+
+Completed:
+- Screening Memo 7 is launchable/founder-beta ready.
+- Acquisition Memo 12 fixed the purchase-assumptions Document Treatment contradiction.
+- Acquisition Memo 13 reached 17 pages and passed the 100-unit/lender-conversation test with minor polish.
+- Preliminary Financing Readiness Summary has been implemented and polished.
+- Cap-rate advisory QA rounding false-positive root fix is complete.
+- Latest patches were safe to commit.
+
+Next:
+- Run ONE controlled Acquisition Memo retest.
+- Upload PDF + artifacts.
+- Review only the financing summary polish, Document Treatment stability, V2 leakage absence, and cap-rate QA rounding behavior.
+- If clean, mark Acquisition Memo founder-beta/customer-deliverable and financing-conversation ready for 1-150/200 unit deals.
+```
+
+---
+
+
 # June 8, 2026 Addendum - Acquisition Memo Financing-Ready Product Doctrine / Preliminary Financing Readiness Summary Locked
 
 ## Current controlling clarification

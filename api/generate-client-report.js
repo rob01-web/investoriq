@@ -3693,17 +3693,18 @@ function buildDocumentTreatmentSummaryHtml({
         return classification?.category === "Modeled Inputs" ? "Core quantitative source" : "Context only";
     }
   };
+  const sourceTreatmentCellStyle = "padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;";
   const sourceTreatmentRowsHtml = sourceTreatmentEntries
     .map((entry) => {
       const file = entry.file || entry;
       const classification = entry.classification || classifyRow(file);
       const rowRoleLabel = resolveDocumentRoleLabel(file, classification);
       const rowTreatmentLabel = resolveTreatmentLabel(file, classification);
-      return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(file.original_filename)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowRoleLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rowTreatmentLabel)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(classification.note)}</td></tr>`;
+      return `<tr><td style="${sourceTreatmentCellStyle}">${escapeHtml(file.original_filename)}</td><td style="${sourceTreatmentCellStyle}">${escapeHtml(rowRoleLabel)}</td><td style="${sourceTreatmentCellStyle}">${escapeHtml(rowTreatmentLabel)}</td><td style="${sourceTreatmentCellStyle}">${escapeHtml(classification.note)}</td></tr>`;
     })
     .join("");
   const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
-    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
+    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:28%;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
     : "";
 
   return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
@@ -4111,6 +4112,14 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   const annualMarketRent = firstFinite(ctx.annualMarketRent);
   const annualRentUpside = firstFinite(ctx.annualRentUpside);
   const rentGapPercent = firstFinite(ctx.rentGapPercent);
+  const annualRentUpsideDisplay =
+    Number.isFinite(annualMarketRent) && Number.isFinite(annualInPlaceRent)
+      ? Math.max(0, annualMarketRent - annualInPlaceRent)
+      : null;
+  const rentGapPercentDisplay =
+    Number.isFinite(annualMarketRent) && Number.isFinite(annualInPlaceRent) && annualInPlaceRent > 0
+      ? ((annualMarketRent - annualInPlaceRent) / annualInPlaceRent) * 100
+      : null;
   const documentDerivedCapRate = firstFinite(
     sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed?.acquisition_support?.going_in_cap_rate,
     sourceReportCoverageQa?.artifact_inventory?.loan_term_sheet_parsed?.going_in_cap_rate,
@@ -4159,9 +4168,9 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     : [];
   const proposedAcquisitionRows = [];
   if (proposedAcquisitionFinancingSourceComplete) {
-    proposedAcquisitionRows.push(`<tr><td>Proposed Acquisition Financing</td><td style="font-weight:600;">Source-complete inputs provided / available for future underwriting.</td></tr>`);
+    proposedAcquisitionRows.push(`<tr><td colspan="2" style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">Proposed Acquisition Financing: Source-complete inputs provided / available for future underwriting.</td></tr>`);
   } else {
-    proposedAcquisitionRows.push(`<tr><td>Proposed Acquisition Financing</td><td style="font-weight:600;">Not source-complete / not modeled.</td></tr>`);
+    proposedAcquisitionRows.push(`<tr><td colspan="2" style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">Proposed Acquisition Financing: Not source-complete / not modeled.</td></tr>`);
   }
   const requestRows = [
     Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(purchasePrice)}</td></tr>` : "",
@@ -4183,8 +4192,8 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   const rentSupportRows = [
     Number.isFinite(annualInPlaceRent) ? `<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatCurrency(annualInPlaceRent)}</td></tr>` : "",
     Number.isFinite(annualMarketRent) ? `<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatCurrency(annualMarketRent)}</td></tr>` : "",
-    Number.isFinite(annualRentUpside) ? `<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(annualRentUpside)}</td></tr>` : "",
-    Number.isFinite(rentGapPercent) ? `<tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercent1(rentGapPercent)}</td></tr>` : "",
+    Number.isFinite(annualRentUpsideDisplay) ? `<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatCurrency(annualRentUpsideDisplay)}</td></tr>` : "",
+    Number.isFinite(rentGapPercentDisplay) ? `<tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercent1(rentGapPercentDisplay)}</td></tr>` : "",
   ].filter(Boolean);
   const capRateRows = [];
   if (Number.isFinite(noiBasis) && noiBasis > 0) {
@@ -11581,6 +11590,15 @@ try {
   sourceCoverageQa.document_treatment_canonical_rows = canonicalizeDocumentTreatmentSources(
     Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
   );
+  if (typeof finalHtml === "string" && /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i.test(finalHtml)) {
+    const renderedSignals = Array.isArray(sourceCoverageQa.rendered_text_signals)
+      ? sourceCoverageQa.rendered_text_signals
+      : [];
+    if (!renderedSignals.includes("acquisition_financing_readiness_limited")) {
+      renderedSignals.push("acquisition_financing_readiness_limited");
+    }
+    sourceCoverageQa.rendered_text_signals = renderedSignals;
+  }
   sourceCoverageQaResult = sourceCoverageQa;
   if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
