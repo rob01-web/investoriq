@@ -41,6 +41,31 @@ const routeText = result.routes
   .join(" | ");
 const resultText = JSON.stringify(result);
 
+const acquisitionFinancingLimitedRender = buildQaFixRouting({
+  reportQaFlags: [
+    {
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      severity: "medium",
+      message: "Acquisition financing is intentionally source-limited.",
+      evidence: {},
+    },
+  ],
+  sourceReportCoverageQa: {
+    rendered_text_signals: ["acquisition_financing_readiness_limited"],
+  },
+});
+
+const acquisitionFinancingCaution = buildQaFixRouting({
+  reportQaFlags: [
+    {
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      severity: "medium",
+      message: "Acquisition financing source limitation review.",
+      evidence: {},
+    },
+  ],
+});
+
 assert.equal(result.event, "qa_fix_routing");
 assert.equal(result.advisory_only, true);
 assert.equal(result.no_public_surface, true);
@@ -58,6 +83,26 @@ assert.equal(/public sample|outreach sample|high-value|Ken|public_sample|high_va
 assert.equal(/public sample|outreach sample|high-value|Ken|public_sample|high_value|public_or_outreach/i.test(resultText), false);
 assert.equal(resultText.includes("public_sample_ready"), false);
 assert.equal(resultText.includes("public_sample_blocker"), false);
+
+const limitedRoute = acquisitionFinancingLimitedRender.routes.find((route) => route.code === "ACQUISITION_FINANCING_FIELD_LIMITED");
+assert.equal(acquisitionFinancingLimitedRender.elite_ready, true);
+assert.equal(acquisitionFinancingLimitedRender.admin_action_required, false);
+assert.equal(acquisitionFinancingLimitedRender.elite_readiness_blockers.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), false);
+assert.equal(acquisitionFinancingLimitedRender.advisory_only_findings.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), true);
+assert.equal(limitedRoute.routing, "source_insufficient");
+assert.equal(limitedRoute.action, "no_action_false_positive");
+assert.equal(limitedRoute.elite_blocker, false);
+assert.equal(limitedRoute.requires_regeneration, false);
+
+const cautionRoute = acquisitionFinancingCaution.routes.find((route) => route.code === "ACQUISITION_FINANCING_FIELD_LIMITED");
+assert.equal(acquisitionFinancingCaution.elite_ready, true);
+assert.equal(acquisitionFinancingCaution.admin_action_required, false);
+assert.equal(acquisitionFinancingCaution.elite_readiness_blockers.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), false);
+assert.equal(acquisitionFinancingCaution.advisory_only_findings.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), true);
+assert.equal(cautionRoute.routing, "source_insufficient");
+assert.equal(cautionRoute.action, "acquisition_financing_remains_source_limited_until_terms_are_complete");
+assert.equal(cautionRoute.elite_blocker, false);
+assert.equal(cautionRoute.requires_regeneration, false);
 
 const docRaptorOnly = buildQaFixRouting({
   reportQaFlags: [

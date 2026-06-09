@@ -94,6 +94,7 @@ function buildRoutingContext(sourceReportCoverageQa) {
     ? sourceReportCoverageQa.deterministic_flags
     : [];
   let acquisitionFinancingRendered = renderedSignals.includes("acquisition_financing_assumptions");
+  const acquisitionFinancingReadinessLimitedRendered = renderedSignals.includes("acquisition_financing_readiness_limited");
   for (const flag of deterministicFlags) {
     if (flag?.evidence?.acquisition_financing?.rendered) acquisitionFinancingRendered = true;
   }
@@ -101,6 +102,7 @@ function buildRoutingContext(sourceReportCoverageQa) {
     has_derived_acquisition_debt: hasDerivedAcquisitionEvidence(inventoryLoan),
     has_current_debt_balance: hasCurrentDebtBalanceEvidence(inventoryLoan),
     acquisition_financing_rendered: acquisitionFinancingRendered,
+    acquisition_financing_readiness_limited_rendered: acquisitionFinancingReadinessLimitedRendered,
     source_coverage_passed: sourceReportCoverageQa?.qa_status === "pass" || deterministicFlags.length === 0,
     rent_roll_present: Boolean(inventoryRentRoll?.present),
   };
@@ -303,6 +305,28 @@ function routeRenderedFinding(finding) {
 }
 
 function routeFlag(flag, source, context = {}) {
+  if (String(flag?.code || "") === "ACQUISITION_FINANCING_FIELD_LIMITED") {
+    const limitedRendered = Boolean(context.acquisition_financing_readiness_limited_rendered);
+    return {
+      code: "ACQUISITION_FINANCING_FIELD_LIMITED",
+      source,
+      severity: limitedRendered ? "low" : normalizeSeverity(flag?.severity || "medium"),
+      category: flag?.category || "source_document_limitation",
+      routing: "source_insufficient",
+      action: limitedRendered
+        ? "no_action_false_positive"
+        : "acquisition_financing_remains_source_limited_until_terms_are_complete",
+      safe_auto_fix: false,
+      requires_regeneration: false,
+      admin_review_required: false,
+      elite_blocker: false,
+      distribution_config_blocker: false,
+      message: limitedRendered
+        ? "Acquisition financing is intentionally source-limited and correctly qualified in the memo."
+        : flag?.message || "Acquisition financing remains source-limited until proposed terms are source-complete.",
+      evidence: flag?.evidence || null,
+    };
+  }
   if (String(flag?.code || "") === "DOCRAPTOR_NOT_PRODUCTION_MODE") {
     return {
       code: "DOCRAPTOR_NOT_PRODUCTION_MODE",
