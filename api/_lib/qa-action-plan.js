@@ -196,8 +196,10 @@ function actionForReportFlag(flag, context = {}) {
         : "Verify acquisition financing fields are source-complete before relying on lender-facing readiness.",
       requires_code_patch: false,
       requires_regeneration: false,
-      blocks_public_sample: !expectedLimitedRender,
-      blocks_high_value_outreach: !expectedLimitedRender,
+      blocks_public_sample: false,
+      blocks_high_value_outreach: false,
+      elite_blocker: false,
+      distribution_config_blocker: false,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };
@@ -226,6 +228,8 @@ function actionForReportFlag(flag, context = {}) {
       requires_regeneration: !derivedOnlyRendered,
       blocks_public_sample: !derivedOnlyRendered,
       blocks_high_value_outreach: !derivedOnlyRendered,
+      elite_blocker: !derivedOnlyRendered,
+      distribution_config_blocker: false,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };
@@ -250,6 +254,8 @@ function actionForReportFlag(flag, context = {}) {
       requires_regeneration: !derivedOnly,
       blocks_public_sample: !derivedOnlyRendered,
       blocks_high_value_outreach: !derivedOnlyRendered,
+      elite_blocker: !derivedOnlyRendered,
+      distribution_config_blocker: false,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };
@@ -279,6 +285,8 @@ function actionForReportFlag(flag, context = {}) {
           blocks_public_sample: false,
           blocks_high_value_outreach: false,
           blocks_customer_delivery: false,
+          elite_blocker: false,
+          distribution_config_blocker: false,
           safe_to_auto_fix: false,
           evidence: flag?.evidence || null,
         }
@@ -292,9 +300,11 @@ function actionForReportFlag(flag, context = {}) {
           recommended_next_step: "Verify whether the acquisition assumptions are fully documented and supported before external distribution.",
           requires_code_patch: false,
           requires_regeneration: false,
-          blocks_public_sample: true,
-          blocks_high_value_outreach: true,
+          blocks_public_sample: false,
+          blocks_high_value_outreach: false,
           blocks_customer_delivery: false,
+          elite_blocker: false,
+          distribution_config_blocker: false,
           safe_to_auto_fix: false,
           evidence: flag?.evidence || null,
         };
@@ -328,8 +338,10 @@ function actionForReportFlag(flag, context = {}) {
       recommended_next_step: "Enable and verify production PDF mode before external distribution.",
       requires_code_patch: false,
       requires_regeneration: true,
-      blocks_public_sample: true,
-      blocks_high_value_outreach: true,
+      blocks_public_sample: false,
+      blocks_high_value_outreach: false,
+      elite_blocker: false,
+      distribution_config_blocker: true,
       safe_to_auto_fix: false,
       evidence: flag?.evidence || null,
     };
@@ -473,6 +485,7 @@ function actionForRoute(route) {
     artifact_gap: ["artifact_mapping_fix_required", "parser"],
     render_gating_gap: ["render_gating_fix_required", "report_renderer"],
     source_insufficient: ["source_document_limitation", "source_documents"],
+    distribution_config_blocker: ["production_config_only", "production_config"],
   };
   const [actionType, ownerArea] = mapping[route.routing] || [];
   if (!actionType) return null;
@@ -774,6 +787,7 @@ function buildRootCauseSummary(actions) {
     artifact_mapping_work_needed: Boolean(counts.by_action_type.artifact_mapping_fix_required),
     render_gating_work_needed: Boolean(counts.by_action_type.render_gating_fix_required),
     production_config_only: counts.total > 0 && counts.total === (counts.by_action_type.production_config_only || 0),
+    distribution_config_only: counts.total > 0 && counts.total === (counts.by_action_type.production_config_only || 0),
     source_document_limitation_present: Boolean(counts.by_action_type.source_document_limitation),
     public_sample_blocked_by_rollup_only: false,
   };
@@ -834,6 +848,14 @@ function reasonCodeForAction(action) {
 
 function uniqueCodes(values) {
   return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function uniqueActionCodes(actions, predicate) {
+  return uniqueCodes(
+    (Array.isArray(actions) ? actions : [])
+      .filter((action) => predicate(action))
+      .map((action) => action?.code)
+  );
 }
 
 const legacyCustomerBlockerFallbackCodes = new Set([
@@ -1302,9 +1324,15 @@ function buildPublishEligibilitySummary({
     ...outreachActionBlockers,
     ...publicSampleBlockers,
   ]);
+  const distributionConfigBlockers = uniqueCodes(
+    (Array.isArray(actionRows) ? actionRows : [])
+      .filter((action) => classifyActionDeliveryImpact(action) === "distribution_config_blocker")
+      .map((action) => action?.code)
+  );
 
   const publicSampleBlockerSet = new Set(publicSampleBlockers.map((entry) => String(entry || "").toUpperCase()));
   const highValueOutreachBlockerSet = new Set(highValueOutreachBlockers.map((entry) => String(entry || "").toUpperCase()));
+  const distributionConfigBlockerSet = new Set(distributionConfigBlockers.map((entry) => String(entry || "").toUpperCase()));
   const sourceLimitationsByCode = new Set(
     actionRows
       .filter((action) => String(action?.action_type || "") === "source_document_limitation")
@@ -1331,6 +1359,7 @@ function buildPublishEligibilitySummary({
     if (coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(normalized)) return false;
     if (publicSampleBlockerSet.has(normalized)) return false;
     if (highValueOutreachBlockerSet.has(normalized)) return false;
+    if (distributionConfigBlockerSet.has(normalized)) return false;
     if (optionalLimitationCodes.has(normalized)) return false;
     if (
       coreSufficiencyPublishable &&
@@ -1453,6 +1482,7 @@ function buildPublishEligibilitySummary({
     ...optionalSupportingContractAdvisories,
     ...publicSampleBlockers,
     ...highValueOutreachBlockers,
+    ...distributionConfigBlockers,
     ...(deprecatedAdminReviewResolution.inject_diagnostic_code
       ? [deprecatedAdminReviewResolution.inject_diagnostic_code]
       : []),
@@ -1516,6 +1546,13 @@ function buildPublishEligibilitySummary({
       highValueOutreachBlockers.length === 0 &&
       highValueOutreachImpact !== "block_until_review"
     );
+  const eliteReadinessBlockers = uniqueCodes([
+    ...customerPublishBlockers,
+    ...publicSampleBlockers,
+    ...highValueOutreachBlockers,
+  ]);
+  const eliteReady = Boolean(reportPublishable && eliteReadinessBlockers.length === 0);
+  const distributionConfigBlocked = distributionConfigBlockers.length > 0;
   const userNeedsDocuments = normalizedDeliveryGateStatus === "user_needs_documents";
   const readinessSource = readinessOverride.present
     ? "canonical_delivery_state"
@@ -1537,6 +1574,10 @@ function buildPublishEligibilitySummary({
 
   return {
     delivery_authority: "delivery_gate",
+    elite_ready: eliteReady,
+    elite_readiness_blockers: eliteReadinessBlockers,
+    distribution_config_blocked: distributionConfigBlocked,
+    distribution_config_blockers: distributionConfigBlockers,
     report_quality_blockers: reportQualityBlockers,
     report_quality_advisories: reportQualityAdvisories,
     report_publishable: reportPublishable,
@@ -1558,6 +1599,10 @@ function buildPublishEligibilitySummary({
       final_delivery_status: readinessOverride.present
         ? (normalizeCustomerDeliveryGateStatus(canonicalDeliveryGateStatus) || normalizedDeliveryGateStatus)
         : normalizedDeliveryGateStatus,
+      elite_ready: eliteReady,
+      elite_readiness_blockers: eliteReadinessBlockers,
+      distribution_config_blocked: distributionConfigBlocked,
+      distribution_config_blockers: distributionConfigBlockers,
       report_publishable: reportPublishable,
       report_blocked: !reportPublishable,
       report_quality_blockers: reportQualityBlockers,
@@ -1645,13 +1690,19 @@ function classifyActionDeliveryImpact(action) {
     return "customer_delivery_blocker";
   }
 
+  if (code === "DOCRAPTOR_NOT_PRODUCTION_MODE" || actionType === "production_config_only") {
+    return "distribution_config_blocker";
+  }
+
   if (
     actionType === "source_document_limitation" ||
-    actionType === "production_config_only" ||
     publicOrOutreachOnlyCodes.has(code) ||
     ((blocksPublic || blocksOutreach) && (requiresPatch || requiresRegeneration) &&
       ["report_renderer", "parser", "rent_roll_normalizer", "production_config"].includes(ownerArea))
   ) {
+    if (actionType === "source_document_limitation" && !blocksPublic && !blocksOutreach && blocksCustomer !== true) {
+      return "advisory_only";
+    }
     return "public_or_outreach_only_blocker";
   }
 
@@ -2428,6 +2479,29 @@ export function buildQaActionPlan({
       ? "canonical_delivery_state"
       : "legacy_action_plan_fallback";
   const readinessFallbackUsed = !liveCoverageContext && !readinessOverride.present;
+  const eliteReadinessBlockers = uniqueCodes(
+    prioritizedActions
+      .filter((action) => {
+        const impact = classifyActionDeliveryImpact(action);
+        return impact === "customer_delivery_blocker" || impact === "public_or_outreach_only_blocker";
+      })
+      .map((action) => action?.code)
+  );
+  const distributionConfigBlockers = uniqueCodes(
+    prioritizedActions
+      .filter((action) => classifyActionDeliveryImpact(action) === "distribution_config_blocker")
+      .map((action) => action?.code)
+  );
+  const advisoryOnlyFindingCodes = uniqueCodes(
+    prioritizedActions
+      .filter((action) => {
+        const impact = classifyActionDeliveryImpact(action);
+        return impact === "advisory_only" || impact === "distribution_config_blocker";
+      })
+      .map((action) => action?.code)
+  );
+  const eliteReady = Boolean(customerReady && eliteReadinessBlockers.length === 0);
+  const distributionConfigBlocked = distributionConfigBlockers.length > 0;
 
   return {
     event: "qa_action_plan",
@@ -2440,6 +2514,11 @@ export function buildQaActionPlan({
     report_type: reportType,
     report_tier: reportTier,
     timestamp: new Date().toISOString(),
+    elite_ready: eliteReady,
+    elite_readiness_blockers: eliteReadinessBlockers,
+    distribution_config_blocked: distributionConfigBlocked,
+    distribution_config_blockers: distributionConfigBlockers,
+    advisory_only_findings: advisoryOnlyFindingCodes,
     delivery_recommendation: resolvedDeliveryRecommendation,
     customer_delivery_ready: customerReady,
     public_sample_ready: publicSampleReady,
@@ -2456,10 +2535,15 @@ export function buildQaActionPlan({
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: finalDeliveryStatus,
+      elite_ready: eliteReady,
+      elite_readiness_blockers: eliteReadinessBlockers,
+      distribution_config_blocked: distributionConfigBlocked,
+      distribution_config_blockers: distributionConfigBlockers,
+      advisory_only_findings: advisoryOnlyFindingCodes,
       customer_delivery_ready: customerReady,
       public_sample_ready: publicSampleReady,
       high_value_outreach_ready: highValueOutreachReady,
-      advisory_only_findings: counts.total,
+      advisory_only_findings_count: counts.total,
     },
     historical_compatibility: {
       readiness_source: readinessSource,
@@ -2492,10 +2576,14 @@ export function buildQaActionPlan({
     readiness_hierarchy: {
       final_delivery_authority: "delivery_gate",
       final_delivery_status: finalDeliveryStatus,
+      elite_ready: eliteReady,
+      elite_readiness_blockers: eliteReadinessBlockers,
+      distribution_config_blocked: distributionConfigBlocked,
+      distribution_config_blockers: distributionConfigBlockers,
       customer_delivery_ready: customerReady,
       public_sample_ready: publicSampleReady,
       high_value_outreach_ready: highValueOutreachReady,
-      advisory_only_findings: counts.total,
+      advisory_only_findings: advisoryOnlyFindingCodes,
     },
     historical_compatibility: {
       readiness_source: readinessSource,

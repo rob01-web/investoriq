@@ -14,7 +14,6 @@ const result = buildQaFixRouting({
       { code: "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT", severity: "high", message: "Debt assumptions not structured.", evidence: {}, routing: "artifact_gap" },
       { code: "FULL_UNDERWRITING_TIER_DEPTH_CONSTRAINED", severity: "high", message: "Full underwriting depth constrained.", evidence: {}, routing: "admin_review_required" },
       { code: "FULL_UNDERWRITING_SUPPORT_UNDERUSED", severity: "high", message: "Support package underused.", evidence: {}, routing: "admin_review_required" },
-      { code: "PUBLIC_SAMPLE_NOT_READY", severity: "high", message: "Public sample not ready.", evidence: {}, routing: "public_sample_blocker" },
     ],
   },
   reportQaFlags: [
@@ -36,20 +35,41 @@ const result = buildQaFixRouting({
 
 const routeCodes = result.routes.map((route) => route.code);
 const routeTypes = new Set(result.routes.map((route) => route.routing));
+const routeText = result.routes
+  .flatMap((route) => [route.code, route.routing, route.category, route.action, route.message])
+  .filter(Boolean)
+  .join(" | ");
+const resultText = JSON.stringify(result);
 
 assert.equal(result.event, "qa_fix_routing");
 assert.equal(result.advisory_only, true);
 assert.equal(result.no_public_surface, true);
-assert.equal(result.public_sample_ready, false);
 assert.equal(result.customer_delivery_action, "advisory_only_no_delivery_block");
 assert.equal(result.admin_action_required, true);
 assert.equal(result.regenerate_recommended, true);
+assert.equal(result.elite_ready, false);
+assert.equal(result.elite_readiness_blockers.length > 0, true);
+assert.equal(result.distribution_config_blocked, false);
 assert.equal(routeTypes.has("parser_gap"), true);
 assert.equal(routeTypes.has("artifact_gap"), true);
 assert.equal(routeTypes.has("render_gating_gap"), true);
-assert.equal(routeCodes.includes("PUBLIC_SAMPLE_REVIEW_HOLD"), true);
-assert.equal(JSON.stringify(result).includes(["qa", "blocked"].join("_")), false);
-assert.equal(JSON.stringify(result).includes(["qa", "review", "required"].join("_")), false);
+assert.equal(routeCodes.includes("PUBLIC_SAMPLE_REVIEW_HOLD"), false);
+assert.equal(/public sample|outreach sample|high-value|Ken|public_sample|high_value|public_or_outreach/i.test(routeText), false);
+assert.equal(/public sample|outreach sample|high-value|Ken|public_sample|high_value|public_or_outreach/i.test(resultText), false);
+assert.equal(resultText.includes("public_sample_ready"), false);
+assert.equal(resultText.includes("public_sample_blocker"), false);
+
+const docRaptorOnly = buildQaFixRouting({
+  reportQaFlags: [
+    { code: "DOCRAPTOR_NOT_PRODUCTION_MODE", severity: "medium", message: "DocRaptor is in test mode.", evidence: {} },
+  ],
+});
+assert.equal(docRaptorOnly.elite_ready, true);
+assert.equal(docRaptorOnly.distribution_config_blocked, true);
+assert.equal(docRaptorOnly.distribution_config_blockers.includes("DOCRAPTOR_NOT_PRODUCTION_MODE"), true);
+assert.equal(docRaptorOnly.elite_readiness_blockers.length, 0);
+assert.equal(docRaptorOnly.routes.some((route) => route.elite_blocker), false);
+assert.equal(/public sample|outreach sample|high-value|Ken|public_sample|high_value|public_or_outreach/i.test(JSON.stringify(docRaptorOnly)), false);
 
 console.log("qa-fix-routing smoke PASS");
 console.log(routeCodes.join(", "));

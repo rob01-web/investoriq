@@ -15,6 +15,10 @@ function highestSeverity(routes) {
   ), "low");
 }
 
+function uniqueCodes(values) {
+  return [...new Set((Array.isArray(values) ? values : []).map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
 function addRoute(routes, route) {
   routes.push({
     code: route.code,
@@ -26,7 +30,8 @@ function addRoute(routes, route) {
     safe_auto_fix: Boolean(route.safe_auto_fix),
     requires_regeneration: Boolean(route.requires_regeneration),
     admin_review_required: Boolean(route.admin_review_required),
-    public_sample_blocker: Boolean(route.public_sample_blocker),
+    elite_blocker: Boolean(route.elite_blocker),
+    distribution_config_blocker: Boolean(route.distribution_config_blocker),
     message: route.message || "",
     evidence: route.evidence || null,
   });
@@ -40,7 +45,8 @@ function routeCounts(routes) {
     safe_auto_fix: 0,
     requires_regeneration: 0,
     admin_review_required: 0,
-    public_sample_blocker: 0,
+    elite_blocker: 0,
+    distribution_config_blocker: 0,
   };
   for (const route of Array.isArray(routes) ? routes : []) {
     counts.total += 1;
@@ -51,7 +57,8 @@ function routeCounts(routes) {
     if (route.safe_auto_fix) counts.safe_auto_fix += 1;
     if (route.requires_regeneration) counts.requires_regeneration += 1;
     if (route.admin_review_required) counts.admin_review_required += 1;
-    if (route.public_sample_blocker) counts.public_sample_blocker += 1;
+    if (route.elite_blocker) counts.elite_blocker += 1;
+    if (route.distribution_config_blocker) counts.distribution_config_blocker += 1;
   }
   return counts;
 }
@@ -114,14 +121,15 @@ function routeDisplayFix(flag, source) {
     severity: flag?.severity || "medium",
     category: flag?.category || "display_quality",
     routing: "display_fix",
-    action: "deterministic_template_or_render_patch",
-    safe_auto_fix: exactSafeCodes.has(code),
-    requires_regeneration: true,
-    admin_review_required: normalizeSeverity(flag?.severity) === "high" || normalizeSeverity(flag?.severity) === "critical",
-    public_sample_blocker: normalizeSeverity(flag?.severity) !== "low",
-    message: flag?.message || "Visible report output requires deterministic display cleanup.",
-    evidence: flag?.evidence || null,
-  };
+      action: "deterministic_template_or_render_patch",
+      safe_auto_fix: exactSafeCodes.has(code),
+      requires_regeneration: true,
+      admin_review_required: normalizeSeverity(flag?.severity) === "high" || normalizeSeverity(flag?.severity) === "critical",
+      elite_blocker: normalizeSeverity(flag?.severity) !== "low",
+      distribution_config_blocker: false,
+      message: flag?.message || "Visible report output requires deterministic display cleanup.",
+      evidence: flag?.evidence || null,
+    };
 }
 
 function routeParserGap(flag, source, context = {}) {
@@ -151,7 +159,8 @@ function routeParserGap(flag, source, context = {}) {
       safe_auto_fix: false,
       requires_regeneration: false,
       admin_review_required: false,
-      public_sample_blocker: false,
+      elite_blocker: false,
+      distribution_config_blocker: false,
       message: "Proposed acquisition financing rendered separately; missing current debt balance is not a parser blocker.",
       evidence: flag?.evidence || null,
     };
@@ -170,7 +179,8 @@ function routeParserGap(flag, source, context = {}) {
     safe_auto_fix: false,
     requires_regeneration: true,
     admin_review_required: true,
-    public_sample_blocker: severity === "medium" || severity === "high" || severity === "critical",
+    elite_blocker: severity === "medium" || severity === "high" || severity === "critical",
+    distribution_config_blocker: false,
     message: flag?.message || "Structured source data did not reach the report.",
     evidence: flag?.evidence || null,
   };
@@ -204,7 +214,8 @@ function routeRenderGap(flag, source, context = {}) {
       safe_auto_fix: false,
       requires_regeneration: false,
       admin_review_required: false,
-      public_sample_blocker: false,
+      elite_blocker: false,
+      distribution_config_blocker: false,
       message: flag?.message || "Current DSCR remains unassessed because only proposed acquisition financing was provided.",
       evidence: flag?.evidence || null,
     };
@@ -220,11 +231,12 @@ function routeRenderGap(flag, source, context = {}) {
       severity: flag?.severity || "medium",
       category: flag?.category || "render_gating_gap",
       routing: "render_gating_gap",
-      action: "document_section_depth_constraints_for_public_or_outreach_use",
+      action: "document_section_depth_constraints_for_elite_readiness",
       safe_auto_fix: false,
       requires_regeneration: false,
       admin_review_required: false,
-      public_sample_blocker: true,
+      elite_blocker: true,
+      distribution_config_blocker: false,
       message: flag?.message || "Rendered underwriting depth is source-constrained relative to the support package.",
       evidence: flag?.evidence || null,
     };
@@ -235,11 +247,12 @@ function routeRenderGap(flag, source, context = {}) {
     severity: flag?.severity || "medium",
     category: flag?.category || "render_gating_gap",
     routing: "render_gating_gap",
-    action: "inspect_parser_artifacts_and_render_gating",
+    action: "inspect_parser_artifacts_and_render_gating_for_elite_readiness",
     safe_auto_fix: false,
     requires_regeneration: true,
     admin_review_required: true,
-    public_sample_blocker: true,
+    elite_blocker: true,
+    distribution_config_blocker: false,
     message: flag?.message || "Rendered report depth does not match available source support.",
     evidence: flag?.evidence || null,
   };
@@ -259,7 +272,8 @@ function routeSourceInsufficient(flag, source) {
     safe_auto_fix: false,
     requires_regeneration: false,
     admin_review_required: severity === "high" || severity === "critical",
-    public_sample_blocker: true,
+    elite_blocker: true,
+    distribution_config_blocker: false,
     message: flag?.message || "Source package is insufficient or unsupported for showcase use.",
     evidence: flag?.evidence || null,
   };
@@ -289,6 +303,23 @@ function routeRenderedFinding(finding) {
 }
 
 function routeFlag(flag, source, context = {}) {
+  if (String(flag?.code || "") === "DOCRAPTOR_NOT_PRODUCTION_MODE") {
+    return {
+      code: "DOCRAPTOR_NOT_PRODUCTION_MODE",
+      source,
+      severity: normalizeSeverity(flag?.severity || "medium"),
+      category: flag?.category || "production_config",
+      routing: "distribution_config_blocker",
+      action: "verify_production_pdf_mode_before_external_distribution",
+      safe_auto_fix: false,
+      requires_regeneration: true,
+      admin_review_required: false,
+      elite_blocker: false,
+      distribution_config_blocker: true,
+      message: flag?.message || "Production PDF configuration is not enabled.",
+      evidence: flag?.evidence || null,
+    };
+  }
   if (
     String(flag?.code || "") === "MARKET_SURVEY_CLASSIFICATION_REVIEW" &&
     context.source_coverage_passed &&
@@ -304,7 +335,8 @@ function routeFlag(flag, source, context = {}) {
       safe_auto_fix: false,
       requires_regeneration: false,
       admin_review_required: false,
-      public_sample_blocker: false,
+      elite_blocker: false,
+      distribution_config_blocker: false,
       message: flag?.message || "Market survey classification review is informational because rent roll parsing and source coverage passed.",
       evidence: flag?.evidence || null,
     };
@@ -346,34 +378,12 @@ export function buildQaFixRouting({
     if (route) addRoute(routes, route);
   }
 
-  const hasMediumHighParserArtifactOrRenderRoute = routes.some((route) =>
-    ["parser_gap", "artifact_gap", "render_gating_gap"].includes(route.routing) &&
-    ["medium", "high", "critical"].includes(normalizeSeverity(route.severity))
-  );
-
-  if (hasMediumHighParserArtifactOrRenderRoute) {
-    addRoute(routes, {
-      code: "PUBLIC_SAMPLE_REVIEW_HOLD",
-      source: "qa_fix_routing",
-      severity: "high",
-      category: "public_sample_readiness",
-      routing: "public_sample_blocker",
-      action: "do_not_use_for_public_or_outreach_sample_until_resolved",
-      safe_auto_fix: false,
-      requires_regeneration: true,
-      admin_review_required: true,
-      public_sample_blocker: true,
-      message: "Medium or high source, parser, artifact, or render-depth findings require resolution before public or outreach sample use.",
-      evidence: {
-        blocking_route_codes: routes
-          .filter((route) => ["parser_gap", "artifact_gap", "render_gating_gap"].includes(route.routing))
-          .map((route) => route.code),
-      },
-    });
-  }
-
   const counts = routeCounts(routes);
   const highSeverity = highestSeverity(routes);
+  const eliteBlockers = uniqueCodes(routes.filter((route) => route.elite_blocker).map((route) => route.code));
+  const distributionConfigBlockers = uniqueCodes(routes.filter((route) => route.distribution_config_blocker).map((route) => route.code));
+  const eliteReady = eliteBlockers.length === 0;
+  const distributionConfigBlocked = distributionConfigBlockers.length > 0;
   return {
     event: "qa_fix_routing",
     advisory_only: true,
@@ -386,7 +396,11 @@ export function buildQaFixRouting({
     routes,
     route_counts: counts,
     highest_severity: highSeverity,
-    public_sample_ready: !routes.some((route) => route.public_sample_blocker),
+    elite_ready: eliteReady,
+    elite_readiness_blockers: eliteBlockers,
+    distribution_config_blocked: distributionConfigBlocked,
+    distribution_config_blockers: distributionConfigBlockers,
+    advisory_only_findings: uniqueCodes(routes.filter((route) => !route.elite_blocker).map((route) => route.code)),
     customer_delivery_action: "advisory_only_no_delivery_block",
     admin_action_required: routes.some((route) => route.admin_review_required),
     deterministic_auto_fix_available: routes.some((route) => route.safe_auto_fix),

@@ -20,6 +20,28 @@ function filterFindings(findingText, compactPayload) {
   return sourcePackageQaTest.filterSourcePackageFalsePositives(review, compactPayload);
 }
 
+const validatedAcquisitionPayload = {
+  rendered_report_text: "Purchase assumptions and document-derived cap rate reference are shown in the memo.",
+  source_report_coverage_qa: {
+    acquisition_assumption_state: {
+      has_validated_acquisition_assumptions: true,
+      validated_fields: {
+        purchase_price: 10640000,
+        going_in_cap_rate: 0.0575,
+        noi_basis: 611800,
+      },
+      going_in_cap_rate: 0.0575,
+    },
+    artifact_inventory: {
+      loan_term_sheet_parsed: {
+        acquisition_support: {
+          going_in_cap_rate: 0.0575,
+        },
+      },
+    },
+  },
+};
+
 const compactPayload = {
   rendered_report_text: "Going-in cap rate 5.8% and occupancy 92.0%.",
   source_report_coverage_qa: {
@@ -32,6 +54,12 @@ const compactPayload = {
     },
   },
 };
+
+const unsupportedCapRateWarningFiltered = filterFindings(
+  "source_report_inconsistency: The report flags the document-derived cap rate as unsupported or potentially unsupported.",
+  validatedAcquisitionPayload
+);
+assert.equal(unsupportedCapRateWarningFiltered.source_report_consistency_findings.length, 0);
 
 const roundedCapRateFinding = filterFindings(
   "source_report_inconsistency: The report inconsistently mentions a going-in cap rate of 5.8% while the parsed artifact shows a cap rate of 5.75%.",
@@ -59,5 +87,11 @@ const nonCapRateContradictionFinding = filterFindings(
   }
 );
 assert.equal(nonCapRateContradictionFinding.source_report_consistency_findings.length, 1);
+
+const unsupportedCapRateWarningStillFlagsWithoutValidatedSupport = filterFindings(
+  "source_report_inconsistency: The report flags the document-derived cap rate as unsupported or potentially unsupported.",
+  compactPayload
+);
+assert.equal(unsupportedCapRateWarningStillFlagsWithoutValidatedSupport.source_report_consistency_findings.length, 1);
 
 console.log("source-package cap-rate rounding smoke PASS");

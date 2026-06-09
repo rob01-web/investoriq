@@ -25,6 +25,10 @@ assert.equal(expectedLimitedAction.requires_code_patch, false);
 assert.equal(expectedLimitedAction.requires_regeneration, false);
 assert.equal(expectedLimitedAction.blocks_public_sample, false);
 assert.equal(expectedLimitedAction.blocks_high_value_outreach, false);
+assert.equal(expectedLimitedPlan.elite_ready, true);
+assert.equal(expectedLimitedPlan.distribution_config_blocked, false);
+assert.equal(expectedLimitedPlan.elite_readiness_blockers.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), false);
+assert.equal(expectedLimitedPlan.advisory_only_findings.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), true);
 
 const cautionPlan = buildQaActionPlan({
   reportQaFlags: [limitedFinding],
@@ -38,7 +42,25 @@ assert.ok(cautionAction, "Expected financing-limited caution action missing");
 assert.equal(cautionAction.action_type, "source_document_limitation");
 assert.equal(cautionAction.requires_code_patch, false);
 assert.equal(cautionAction.requires_regeneration, false);
-assert.equal(cautionAction.blocks_public_sample, true);
-assert.equal(cautionAction.blocks_high_value_outreach, true);
+assert.equal(cautionAction.blocks_public_sample, false);
+assert.equal(cautionAction.blocks_high_value_outreach, false);
+assert.equal(cautionPlan.elite_ready, true);
+assert.equal(cautionPlan.distribution_config_blocked, false);
+assert.equal(cautionPlan.elite_readiness_blockers.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), false);
+assert.equal(cautionPlan.advisory_only_findings.includes("ACQUISITION_FINANCING_FIELD_LIMITED"), true);
+
+const docRaptorPlan = buildQaActionPlan({
+  reportQaFlags: [
+    { code: "DOCRAPTOR_NOT_PRODUCTION_MODE", severity: "medium", message: "DocRaptor test mode is enabled.", evidence: {} },
+  ],
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+  },
+});
+assert.equal(docRaptorPlan.elite_ready, true);
+assert.equal(docRaptorPlan.distribution_config_blocked, true);
+assert.equal(docRaptorPlan.distribution_config_blockers.includes("DOCRAPTOR_NOT_PRODUCTION_MODE"), true);
+assert.equal(docRaptorPlan.customer_delivery_ready, true);
+assert.equal(docRaptorPlan.public_sample_ready, true);
 
 console.log("acquisition-financing-field-limited smoke PASS");
