@@ -1195,7 +1195,6 @@ export function buildReportContractQa({
   const screeningLeakPatternsForUnderwriting = [
     /\bDocument-Backed Screening Outputs\b/i,
     /\bInvestorIQ screening outputs are document-backed\b/i,
-    /\bUnit-Level Rent Positioning\b/i,
   ];
   const underwritingLeakPatternsForScreening = [
     /\bDebt Structure\b/i,
@@ -2101,20 +2100,32 @@ export function buildReportContractQa({
       legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
-  const acquisitionFinancingReadinessTable = firstTableAfterHeading(rawHtml, /Acquisition Financing Readiness/i);
+  const acquisitionFinancingReadinessTable = firstTableAfterHeading(rawHtml, /(?:Proposed Acquisition Financing Context|Acquisition Financing Readiness)/i);
   if (acquisitionFinancingReadinessTable) {
     const acquisitionFinancingReadinessRows = tableRowsFromHtml(acquisitionFinancingReadinessTable);
     const acquisitionFinancingReadinessText = acquisitionFinancingReadinessRows.map((row) => row.text).join(" | ");
-    if (/Going-In DSCR/i.test(acquisitionFinancingReadinessText)) {
+    const limitedNoteShown = /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i.test(acquisitionFinancingReadinessText);
+    if (!limitedNoteShown) {
+      if (/Going-In DSCR|Estimated Annual Debt Service/i.test(acquisitionFinancingReadinessText)) {
+        addViolation(violations, {
+          code: "ACQUISITION_FINANCING_READINESS_INCOMPLETE",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Launch acquisition financing context still renders deprecated DSCR or debt-service fields.",
+          evidence: {
+            rows: acquisitionFinancingReadinessRows,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
       const requiredPatterns = [
         /Purchase Price/i,
-        /NOI Basis/i,
         /Proposed Loan Amount/i,
-        /LTV/i,
+        /(?:LTV|Documented LTV)/i,
         /Interest Rate/i,
         /Amortization/i,
-        /Estimated Annual Debt Service/i,
-        /Going-In DSCR/i,
       ];
       const missingLabels = requiredPatterns
         .filter((pattern) => !pattern.test(acquisitionFinancingReadinessText))
@@ -2124,7 +2135,7 @@ export function buildReportContractQa({
           code: "ACQUISITION_FINANCING_READINESS_INCOMPLETE",
           severity: "high",
           category: "support_document_treatment_contract",
-          message: "Launch acquisition financing readiness rendered a DSCR table without all required source-supported inputs.",
+          message: "Launch acquisition financing context was rendered without all required source-supported inputs.",
           evidence: {
             missing_labels: missingLabels,
             rows: acquisitionFinancingReadinessRows,
@@ -2752,11 +2763,18 @@ export function buildReportContractQa({
       hasCurrentDebtNotAssessedPhrase(text) ||
       /current debt service is not assessed because no current outstanding debt balance was provided/i.test(text);
     const hasSeparation =
-      /Proposed Acquisition Debt Sizing/i.test(text) &&
-      /Derived Acquisition Loan Amount/i.test(text) &&
-      /Proposed Acquisition DSCR/i.test(text) &&
-      /not current outstanding debt/i.test(text) &&
-      /not used as (?:a )?current refinance debt balance/i.test(text);
+      /Proposed Acquisition Financing Context|Acquisition Financing Readiness/i.test(text) &&
+      (
+        /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i.test(text) ||
+        (
+          /Purchase Price/i.test(text) &&
+          /Proposed Loan Amount/i.test(text) &&
+          /(?:LTV|Documented LTV)/i.test(text) &&
+          /Interest Rate/i.test(text) &&
+          /Amortization/i.test(text)
+        )
+      ) &&
+      !/current debt DSCR|current refinance debt balance|refinance proceeds|refinance sufficiency|refinance stress/i.test(text);
     const contaminated =
       (/DSCR Sensitivity|Refinance Stress Test|Current Debt Coverage|Full Refinance Sufficiency/i.test(text) && !cleanCurrentDebtLimitation) ||
       /Current Debt DSCR\s*[:\n]\s*(?!Not assessed|NOT ASSESSED|current debt balance not provided|no current debt document provided|current outstanding debt balance not provided|current debt terms were not fully provided|current debt service not assessed|current debt service is not assessed)[0-9.]+x/i.test(text) ||
@@ -2788,11 +2806,11 @@ export function buildReportContractQa({
     });
     const acquisitionSection = subsectionAfter(
       text,
-      /Proposed Acquisition Debt Sizing/i,
+      /(?:Proposed Acquisition Financing Context|Acquisition Financing Readiness|Proposed Acquisition Debt Sizing)/i,
       [/Current Debt Coverage/i, /Deal Scorecard/i, /Risk Register/i],
       2400
     );
-    const hasAcquisitionSection = /Proposed Acquisition Debt Sizing/i.test(text) && String(acquisitionSection || "").trim().length > 0;
+    const hasAcquisitionSection = /(?:Proposed Acquisition Financing Context|Acquisition Financing Readiness|Proposed Acquisition Debt Sizing)/i.test(text) && String(acquisitionSection || "").trim().length > 0;
     const purchasePrice = Number(canonicalAcquisitionValues?.purchase_price);
     const statedLoan = Number(canonicalAcquisitionValues?.stated_acquisition_loan_amount);
     if (
@@ -2803,12 +2821,12 @@ export function buildReportContractQa({
       Math.abs(purchasePrice - statedLoan) > Math.max(100, purchasePrice * 0.02)
     ) {
       const renderedPurchaseMatch = /Purchase Price[^\n]{0,120}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(acquisitionSection);
-      const renderedStatedLoanMatch = /Stated Acquisition Loan Amount[^\n]{0,120}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(acquisitionSection);
+      const renderedLoanAmountMatch = /(?:Proposed Loan Amount|Stated Acquisition Loan Amount|Derived Acquisition Loan Amount|Acquisition Loan Amount)[^\n]{0,120}\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i.exec(acquisitionSection);
       const renderedPurchaseValue = renderedPurchaseMatch
         ? Number(String(renderedPurchaseMatch[1]).replace(/,/g, ""))
         : null;
-      const renderedStatedLoanValue = renderedStatedLoanMatch
-        ? Number(String(renderedStatedLoanMatch[1]).replace(/,/g, ""))
+      const renderedLoanAmountValue = renderedLoanAmountMatch
+        ? Number(String(renderedLoanAmountMatch[1]).replace(/,/g, ""))
         : null;
       const badPurchaseLine =
         Number.isFinite(renderedPurchaseValue) &&
@@ -2816,8 +2834,8 @@ export function buildReportContractQa({
         (
           Math.abs(renderedPurchaseValue - statedLoan) <= Math.max(100, statedLoan * 0.02) ||
           (
-            Number.isFinite(renderedStatedLoanValue) &&
-            Math.abs(renderedPurchaseValue - renderedStatedLoanValue) <= Math.max(100, renderedStatedLoanValue * 0.02)
+            Number.isFinite(renderedLoanAmountValue) &&
+            Math.abs(renderedPurchaseValue - renderedLoanAmountValue) <= Math.max(100, renderedLoanAmountValue * 0.02)
           )
         );
       if (badPurchaseLine) {
@@ -2843,8 +2861,8 @@ export function buildReportContractQa({
     if (
       Number.isFinite(authoritativeLenderFeePercent) &&
       authoritativeLenderFeePercent > 0 &&
-      /Proposed Acquisition Debt Sizing/i.test(text) &&
-      !/Lender Fee/i.test(acquisitionSection)
+      /(?:Proposed Acquisition Financing Context|Acquisition Financing Readiness|Proposed Acquisition Debt Sizing)/i.test(text) &&
+      !/(?:Lender Fee|Closing \/ Lender Fee|Origination Fee|Financing Fee)/i.test(acquisitionSection)
     ) {
       addViolation(violations, {
         code: "ACQUISITION_LENDER_FEE_OMITTED_RENDERED",
@@ -2885,15 +2903,22 @@ export function buildReportContractQa({
       const canonicalPurchasePrice = coerceNumber(canonicalAcquisitionValues?.purchase_price);
       const canonicalStatedLoanAmount = coerceNumber(canonicalAcquisitionValues?.stated_acquisition_loan_amount);
       const canonicalDerivedLoanAmount = coerceNumber(canonicalAcquisitionValues?.derived_acquisition_loan_amount);
+      const canonicalLoanAmount = coerceNumber(
+        canonicalAcquisitionValues?.stated_acquisition_loan_amount ?? canonicalAcquisitionValues?.derived_acquisition_loan_amount
+      );
       const canonicalLenderFeePercent = normalizePercentForComparison(canonicalAcquisitionValues?.lender_fee_percent);
 
       const renderedPurchasePrice = extractLabeledNumber(acquisitionSection, ["Purchase Price"]);
-      const renderedStatedLoanAmount = extractLabeledNumber(acquisitionSection, ["Stated Acquisition Loan Amount"]);
-      const renderedDerivedLoanAmount =
-        extractLabeledNumber(acquisitionSection, ["Derived Acquisition Loan Amount"]) ??
+      const renderedStatedLoanAmount =
+        extractLabeledNumber(acquisitionSection, ["Proposed Loan Amount"]) ??
+        extractLabeledNumber(acquisitionSection, ["Stated Acquisition Loan Amount"]) ??
         extractLabeledNumber(acquisitionSection, ["Acquisition Loan Amount"]);
+      const renderedDerivedLoanAmount = extractLabeledNumber(acquisitionSection, ["Derived Acquisition Loan Amount"]);
+      const renderedLoanAmount =
+        renderedStatedLoanAmount ??
+        renderedDerivedLoanAmount;
       const renderedLenderFeeMatch =
-        /(?:Lender Fee|Origination Fee|Financing Fee)[^0-9]{0,80}([0-9]+(?:\.[0-9]+)?)\s*%/i.exec(acquisitionSection);
+        /(?:Lender Fee|Closing \/ Lender Fee|Origination Fee|Financing Fee)[^0-9]{0,80}([0-9]+(?:\.[0-9]+)?)\s*%/i.exec(acquisitionSection);
       const renderedLenderFeePercent = renderedLenderFeeMatch
         ? coerceNumber(renderedLenderFeeMatch[1]) / 100
         : null;
@@ -2917,8 +2942,7 @@ export function buildReportContractQa({
         }
       };
       compareMoney("purchase_price", canonicalPurchasePrice, renderedPurchasePrice);
-      compareMoney("stated_acquisition_loan_amount", canonicalStatedLoanAmount, renderedStatedLoanAmount);
-      compareMoney("derived_acquisition_loan_amount", canonicalDerivedLoanAmount, renderedDerivedLoanAmount);
+      compareMoney("proposed_acquisition_loan_amount", canonicalLoanAmount, renderedLoanAmount);
       if (Number.isFinite(canonicalLenderFeePercent) && canonicalLenderFeePercent > 0 && Number.isFinite(renderedLenderFeePercent)) {
         const absDiffPercentagePoints = Math.abs(renderedLenderFeePercent - canonicalLenderFeePercent) * 100;
         if (absDiffPercentagePoints > feeTolerancePercentagePoints) {

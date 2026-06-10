@@ -283,7 +283,7 @@ function findRenderedSignals(html) {
     ["dscr_current_debt_not_assessed", /Current Debt DSCR|Current debt service is not assessed|Current debt service not assessed|No current debt document provided|Current debt terms were not fully provided/i],
     ["debt_sizing_balance_not_provided", /current outstanding debt balance not provided|current debt balance not provided|no current debt document provided|current debt terms were not fully provided/i],
     ["refinance_stability_not_produced", /Refinance Stability Classification not produced/i],
-    ["acquisition_financing_assumptions", /Proposed Acquisition Debt Sizing|Acquisition Financing Assumptions|Derived Acquisition Loan Amount|Proposed Acquisition DSCR|Derived from uploaded purchase assumptions/i],
+    ["acquisition_financing_assumptions", /Proposed Acquisition Financing Context|Acquisition Financing Assumptions|Derived Acquisition Loan Amount|Proposed Acquisition DSCR|Derived from uploaded purchase assumptions/i],
   ];
   return signalPatterns
     .filter(([, pattern]) => pattern.test(text))

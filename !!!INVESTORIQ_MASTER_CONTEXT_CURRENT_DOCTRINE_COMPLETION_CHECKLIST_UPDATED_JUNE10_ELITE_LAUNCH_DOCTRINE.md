@@ -1,3 +1,405 @@
+# June 10, 2026 Addendum - Launch Doctrine / ELITE vs Not-Yet-ELITE Checkpoint After Acquisition Memo 15/16 + 124 Richmond Clean/Messy Tests
+
+## Current controlling interpretation
+
+InvestorIQ is no longer trying to make every optional surface perfect before launch.
+
+The controlling launch doctrine is now:
+
+```text
+InvestorIQ may launch when every published report is mathematically correct, source-bound, non-fabricated, properly qualified, and customer-deliverable.
+
+InvestorIQ does not need every optional or advanced section to be complete before launch.
+
+If an optional or advanced input is incomplete, unsupported, ambiguous, or unsafe, the correct behavior is to omit, collapse, qualify, disclose, or route it to admin diagnostics — not to block the entire report and not to invent a conclusion.
+```
+
+This checkpoint distinguishes between:
+
+```text
+Tier 1 = must be ELITE / launch-blocking if wrong.
+Tier 2 = should be good, but can be patched post-launch if the report remains honest, conservative, and customer-deliverable.
+Tier 3 = normal post-launch iteration.
+```
+
+## Report evidence behind this checkpoint
+
+Recent tested reports / packages reviewed:
+
+```text
+Acquisition Memo 15 - CLEAN
+Acquisition Memo 16 - CLEAN / swapped-slot stress test
+124 Richmond - MESSY
+124 Richmond - CLEAN
+```
+
+Current interpretation:
+
+```text
+Acquisition Memo 15 / 16:
+- Customer-facing PDF passed core math, document treatment, financing-readiness limitation handling, and V2-leak prevention.
+- Swapped-slot stress test confirmed content authority over upload-slot assumptions.
+- Internal QA still had advisory/routing calibration work, which has since been patched in qa-fix-routing.
+
+124 Richmond MESSY:
+- Not a bust.
+- Core parsing survived messy documents.
+- Customer-facing PDF remained coherent and conservative.
+- Unsupported support docs stayed context-only.
+
+124 Richmond CLEAN:
+- Not a bust.
+- Core parsing and customer-facing operating math passed.
+- Clean proposed acquisition financing was parsed/validated but not yet safely rendered as proposed-financing context.
+- This exposed a generalized Acquisition Memo financing-context render contract gap, not a report-specific bug.
+```
+
+## Tier 1 launch-blocking doctrine
+
+These items must be ELITE before launch because failures create legal, trust, refund, or customer-reliance risk.
+
+### 1. Core math and calculations
+
+Must be correct:
+
+```text
+EGI
+Gross rental income
+Other income
+Operating expenses
+NOI
+Expense ratio
+NOI margin
+Break-even occupancy
+Occupancy
+Annual in-place rent
+Annual market rent
+Annual rent upside
+Rent gap %
+Per-unit metrics
+Cap-rate value math
+Price per unit
+NOI per unit
+```
+
+Current status:
+
+```text
+ELITE / regression-watch.
+```
+
+Recent tests consistently carried core math through the report surfaces, including 124 Richmond CLEAN and MESSY.
+
+### 2. T12 and Rent Roll core parsing
+
+Must be correct:
+
+```text
+T12 parses to EGI / OpEx / NOI.
+Rent Roll parses to units / occupancy / in-place rent / market rent.
+Core valid documents must publish.
+Core invalid/unusable documents must fail closed or be blocked at upload/server gate.
+```
+
+Current status:
+
+```text
+ELITE.
+```
+
+Validated across clean spreadsheets, messy packages, narrative/AI-recovery style tests, and swapped-slot stress testing.
+
+### 3. Source-to-output binding
+
+Must be perfect:
+
+```text
+T12 controls operating income / expenses / NOI.
+Rent Roll controls units / occupancy / in-place rent / market rent.
+Property tax support only corroborates tax support and must not override T12 totals.
+Appraisal / market survey / offering summary / Phase I / zoning / CapEx must not override deterministic core values unless explicitly validated for a specific allowed use.
+Debt terms must not become current debt unless they are true existing/current debt.
+Proposed acquisition financing must not become refinance/current debt.
+```
+
+Current status:
+
+```text
+ELITE for T12/Rent Roll and support-doc containment.
+Good / patch-in-progress for proposed acquisition financing render behavior.
+```
+
+### 4. No fabricated or inferred financial facts
+
+Must never fabricate:
+
+```text
+purchase price
+loan amount
+interest rate
+amortization
+debt service
+DSCR
+market rent
+cap rate
+appraised value
+renovation budget
+rent lift
+ROI
+payback
+current debt balance
+NOI
+expense totals
+occupancy
+```
+
+Current status:
+
+```text
+Near ELITE.
+```
+
+Recent tests showed conservative omission/qualification rather than fabrication. The remaining clean-financing issue is over-omission, not hallucination.
+
+### 5. Correct fail-closed behavior for core documents
+
+Must be perfect:
+
+```text
+Missing/unusable T12 -> fail closed or blocked before generation.
+Missing/unusable Rent Roll -> fail closed or blocked before generation.
+Core-valid jobs publish unless true runtime/storage/PDF/catastrophic failure prevents safe generation.
+No customer admin-review limbo.
+No needs-documents loop for active jobs.
+Credit restored only for true core failure or true platform/runtime fatal.
+```
+
+Current status:
+
+```text
+Mostly ELITE for valid-core publish path.
+Continue invalid-core/server-gate regression before full launch.
+```
+
+### 6. No dangerous V2 leakage in launch products
+
+Acquisition Memo must not render unsupported advanced underwriting surfaces:
+
+```text
+DSCR conclusions
+current-debt DSCR
+refinance proceeds
+refinance sufficiency / stress
+DCF
+waterfall
+equity return
+deal score
+BUY / SELL / HOLD
+final recommendation
+loan approval / lender commitment / credit decision language
+```
+
+Current status:
+
+```text
+ELITE in recent customer-facing PDFs.
+```
+
+### 7. Debt / proposed acquisition financing / current debt separation
+
+Must be perfect:
+
+```text
+Current debt = actual existing/outstanding debt.
+Proposed acquisition financing = proposed/acquisition terms only.
+Refinance logic must not use proposed acquisition financing.
+Acquisition loan amount must not become purchase price.
+Purchase price must not become loan amount.
+Indicative terms must remain indicative.
+```
+
+Current status:
+
+```text
+Good but not fully ELITE yet.
+```
+
+Customer-facing PDFs are no longer contaminating proposed financing into current debt/refi outputs. Remaining root work is the bounded Proposed Acquisition Financing Context render path and corresponding contract QA calibration.
+
+### 8. Report classification must not mislead
+
+Must be conservative and non-promotional:
+
+```text
+Stable
+Sensitized
+Fragile
+Review - Source Reconciliation Disclosure
+Review - Insufficient Core Support
+Review - Debt Coverage Constraint, only where actually applicable
+```
+
+Must not imply:
+
+```text
+approved
+safe deal
+good investment
+pass/fail investment recommendation
+```
+
+Current status:
+
+```text
+Good / launch-safe, keep regression tests.
+```
+
+### 9. Disclaimers and limitation language
+
+Must be present and clear:
+
+```text
+document-backed
+framework-constrained
+not loan approval
+not lender commitment
+not investment / legal / tax advice
+missing values omitted rather than inferred
+unsupported docs context-only
+advanced sections deferred unless verified and in scope
+```
+
+Current status:
+
+```text
+ELITE.
+```
+
+### 10. Delivery lifecycle / payment / access basics
+
+Must be correct:
+
+```text
+Report publishes or fails closed with clear reason.
+No admin-review customer limbo.
+No report marked ready when PDF is missing.
+Credits/payment must not double-spend or silently disappear.
+Users must not access other users' reports.
+Download/storage paths must remain owner/admin protected.
+```
+
+Current status:
+
+```text
+Valid-core publish path is ELITE in recent tests.
+Security/payment/access must receive final launch smoke before public launch.
+```
+
+## Tier 2 important but not launch-blocking if Tier 1 remains true
+
+These are important, but can be patched post-launch if the report remains honest, conservative, and customer-deliverable.
+
+```text
+PDF spacing / layout polish
+long filename wrapping
+thin pages / divider pages
+some duplicate/awkward wording
+conservative omission of optional support details
+optional CapEx summary depth
+optional appraisal / market survey summary depth
+admin dashboard diagnostic polish
+advisory QA false positives/noise
+DocRaptor test-mode distribution configuration during internal/founder beta
+```
+
+Current Tier 2 status summary:
+
+```text
+PDF structure / report completeness: good, improving.
+Document Treatment Summary: near ELITE from doctrine/safety standpoint; filename wrapping remains cosmetic.
+Advisory QA diagnostics: useful but noisy; public/high-value/Ken vocabulary cleanup mostly patched but some old manager artifacts may still appear until fully refreshed.
+Optional support-doc summaries: launch-safe, not elite.
+CapEx / renovation handling: launch-safe and conservative.
+Appraisal / market survey handling: ELITE for containment, optional summary polish later.
+```
+
+## Already ELITE list
+
+The system is already ELITE or effectively ELITE in these areas based on recent tests:
+
+```text
+1. T12/Rent Roll core parsing across clean, messy, narrative/recovery, and swapped-slot tests.
+2. Core operating math: EGI, OpEx, NOI, expense ratio, NOI margin, break-even occupancy.
+3. Rent roll math: units, occupancy, in-place rent, market rent, rent upside, rent gap.
+4. Core source binding: T12 and Rent Roll control modeled operating outputs.
+5. Unsupported support-doc containment: Phase I, zoning, appraisal, market survey, offering summary, unsupported CapEx.
+6. Property tax corroborating support treatment.
+7. No dangerous V2 leakage in recent Acquisition Memo PDFs.
+8. Conservative omission/qualification of missing or incomplete data.
+9. Customer-facing limitation/disclaimer language.
+10. Valid-core publish path.
+```
+
+## Not yet ELITE / bounded root work still open
+
+These are the current bounded root issues, not proof that the system is broken:
+
+```text
+1. Proposed Acquisition Financing Context render path when clean proposed financing terms are validated.
+2. Current debt vs proposed acquisition financing contract QA calibration after that render path is added.
+3. REPORT_TYPE_SECTION_LEAK detector calibration for valid Acquisition Memo sections.
+4. Advisory QA vocabulary/noise cleanup in all manager/action artifacts.
+5. Admin dashboard diagnostic clarity.
+6. Final invalid-core/server-gate/payment/access smoke before full public launch.
+```
+
+## Current Codex work in progress
+
+Codex is currently working on the generalized root-contract patch:
+
+```text
+Acquisition Memo proposed-financing context render path + current-debt/proposed-financing separation + report-contract QA calibration.
+```
+
+This is not a 124 Richmond report patch.
+
+124 Richmond CLEAN is regression evidence only. The production invariant is:
+
+```text
+If validated proposed/acquisition financing context exists, the Acquisition Memo should render a bounded Proposed Acquisition Financing Context block.
+
+If proposed financing is incomplete, keep Not source-complete / not modeled.
+
+In both cases, do not open DSCR/refi/DCF/waterfall/deal-score/final-recommendation/V2 surfaces.
+```
+
+## Launch discipline from this checkpoint
+
+Do not ask Codex for broad audits by default.
+
+If an audit is needed, it must be limited to Tier 1 doctrine:
+
+```text
+Find only paths that can violate launch-blocking Tier 1 doctrine.
+Do not list cosmetic issues.
+Do not suggest product expansion.
+Do not patch.
+Return only launch-blocking root risks with file/function owners.
+```
+
+The launch bar is not perfection everywhere. The launch bar is:
+
+```text
+Core financial truth = ELITE.
+Source binding = ELITE.
+No fabrication = ELITE.
+Unsafe/V2 surfaces closed = ELITE.
+Delivery lifecycle honest = ELITE.
+Optional completeness and polish can be patched through admin diagnostics after launch.
+```
+
+---
+
 # June 8, 2026 Night Addendum - Acquisition Memo 13 Financing-Ready Checkpoint / Final Polish + Advisory Rounding Root Fix
 
 ## Current controlling status

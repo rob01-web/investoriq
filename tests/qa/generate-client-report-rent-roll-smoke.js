@@ -304,9 +304,74 @@ assert.ok(financingSectionMatch, "Missing preliminary financing readiness summar
 assert.match(financingSectionMatch[0], /Annual Rent Upside[\s\S]*\$100,800/i);
 assert.match(financingSectionMatch[0], /Rent Gap %[\s\S]*9\.7%/i);
 assert.match(financingSectionMatch[0], /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
-assert.equal((fullRenderHtml.match(/Proposed Acquisition Financing/gi) || []).length, 1);
+assert.equal((financingSectionMatch[0].match(/Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./gi) || []).length, 1);
 assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
 assert.match(fullRenderHtml, /Document-derived cap-rate reference[\s\S]*5\.(?:75|80)%/i);
+
+const completeFinancingHarnessRequest = {
+  headers: {
+    "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+  },
+  body: {
+    userId: "user_generic_financing_context",
+    report_type: "underwriting",
+    property_name: "Generic Financing Context Package",
+    __test_return_final_html: true,
+    __test_payloads: {
+      t12Payload: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+      },
+      rentRollPayload: {
+        total_units: 12,
+        occupied_units: 11,
+        vacant_units: 1,
+      },
+      loanTermSheetTermsPayload: {
+        debt_basis: "proposed_acquisition_financing",
+        semantic_doc_role: "purchase_assumptions",
+        purchase_price: 1250000,
+        stated_acquisition_loan_amount: 937500,
+        ltv: 0.75,
+        interest_rate: 0.0585,
+        amortization_years: 30,
+        lender_fee_percent: 0.01,
+        source_text: "Proposed acquisition financing context for lender discussion only.",
+      },
+      acquisitionTermsPayload: {
+        debt_basis: "proposed_acquisition_financing",
+        purchase_price: 1250000,
+        ltv: 0.75,
+        interest_rate: 0.0585,
+        amortization_years: 30,
+        source_text: "Purchase assumptions / acquisition context for lender discussion only.",
+      },
+    },
+  },
+};
+const generateClientReportForFinancing = (await import("../../api/generate-client-report.js?complete-financing-smoke")).default;
+const completeFinancingHarnessResponse = {
+  statusCode: null,
+  body: null,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return payload;
+  },
+};
+await generateClientReportForFinancing(completeFinancingHarnessRequest, completeFinancingHarnessResponse);
+assert.equal(completeFinancingHarnessResponse.statusCode, 200);
+assert.equal(completeFinancingHarnessResponse.body?.success, true);
+const completeFinancingHtml = String(completeFinancingHarnessResponse.body?.final_html || "");
+assert.match(completeFinancingHtml, /Proposed Acquisition Financing Context/i);
+assert.match(completeFinancingHtml, /Proposed Loan Amount/i);
+assert.match(completeFinancingHtml, /Closing \/ Lender Fee/i);
+assert.match(completeFinancingHtml, /This is source-bound proposed acquisition financing context only/i);
+
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
@@ -410,7 +475,6 @@ const forbiddenSurfacePatterns = [
   /\bBUY\b/i,
   /\bSELL\b/i,
   /\bHOLD\b/i,
-  /Proposed Loan Amount/i,
   /Estimated Annual Debt Service/i,
   /Going-In DSCR/i,
 ];
@@ -3361,38 +3425,76 @@ assert.equal(
 );
 const acquisitionFinancingReadinessHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
   loanTermSheetTermsPayload: {
-    debt_basis: "acquisition_financing_assumption",
     purchase_price: 1250000,
     stated_acquisition_loan_amount: 937500,
     ltv: 0.75,
     interest_rate: 0.0585,
     amortization_years: 30,
+    lender_fee_percent: 0.01,
+    debt_basis: "proposed_acquisition_financing",
+    semantic_doc_role: "purchase_assumptions",
   },
   t12Payload: {
     net_operating_income: 650000,
   },
   reportMode: "v1_core",
 });
-assert.match(acquisitionFinancingReadinessHtml, /Acquisition Financing Readiness/i);
+assert.match(acquisitionFinancingReadinessHtml, /Proposed Acquisition Financing Context/i);
 assert.match(acquisitionFinancingReadinessHtml, /Purchase Price/i);
-assert.match(acquisitionFinancingReadinessHtml, /NOI Basis/i);
 assert.match(acquisitionFinancingReadinessHtml, /Proposed Loan Amount/i);
-assert.match(acquisitionFinancingReadinessHtml, /Going-In DSCR/i);
-assert.equal(/refinance|current debt DSCR|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionFinancingReadinessHtml), false);
+assert.match(acquisitionFinancingReadinessHtml, /LTV/i);
+assert.match(acquisitionFinancingReadinessHtml, /Interest Rate/i);
+assert.match(acquisitionFinancingReadinessHtml, /Amortization/i);
+assert.match(acquisitionFinancingReadinessHtml, /Closing \/ Lender Fee/i);
+assert.match(acquisitionFinancingReadinessHtml, /source-bound proposed acquisition financing context only/i);
+assert.equal(/refinance proceeds|refinance stability|current debt DSCR|DCF|waterfall|equity return|BUY|SELL|HOLD|Going-In DSCR|Estimated Annual Debt Service/i.test(acquisitionFinancingReadinessHtml), false);
+const acquisitionFinancingReadinessCurrentDebtOnlyHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
+  loanTermSheetTermsPayload: {
+    debt_basis: "current_debt_context",
+    semantic_doc_role: "current_debt_terms",
+    current_outstanding_balance: 8750000,
+    interest_rate: 0.0525,
+    amortization_years: 30,
+    ltv: 0.7,
+    lender_fee_percent: 0.01,
+    financing_fee_percent: 0.01,
+    origination_fee_percent: 0.01,
+  },
+  acquisitionTermsPayload: {
+    purchase_price: 1250000,
+  },
+  t12Payload: {
+    net_operating_income: 650000,
+  },
+  reportMode: "v1_core",
+  currentDebtAssessmentState: {
+    has_true_current_debt_balance: true,
+    current_debt_dscr_status: "computed",
+  },
+});
+assert.match(acquisitionFinancingReadinessCurrentDebtOnlyHtml, /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
+assert.equal(/Proposed Loan Amount/i.test(acquisitionFinancingReadinessCurrentDebtOnlyHtml), false);
+assert.equal(/Interest Rate/i.test(acquisitionFinancingReadinessCurrentDebtOnlyHtml), false);
+assert.equal(/Amortization/i.test(acquisitionFinancingReadinessCurrentDebtOnlyHtml), false);
+assert.equal(/Closing \/ Lender Fee/i.test(acquisitionFinancingReadinessCurrentDebtOnlyHtml), false);
+assert.equal(/refinance proceeds|refinance stability|current debt DSCR|DCF|waterfall|equity return|BUY|SELL|HOLD|Going-In DSCR|Estimated Annual Debt Service/i.test(acquisitionFinancingReadinessCurrentDebtOnlyHtml), false);
 const acquisitionFinancingReadinessCollapsedHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
   loanTermSheetTermsPayload: {
-    debt_basis: "acquisition_financing_assumption",
     purchase_price: 1250000,
     ltv: 0.75,
     interest_rate: 0.0585,
+    debt_basis: "proposed_acquisition_financing",
+    semantic_doc_role: "purchase_assumptions",
   },
   t12Payload: {
     net_operating_income: 650000,
   },
   reportMode: "v1_core",
 });
-assert.match(acquisitionFinancingReadinessCollapsedHtml, /Acquisition financing readiness was not assessed/i);
-assert.equal(/Going-In DSCR/i.test(acquisitionFinancingReadinessCollapsedHtml), false);
+assert.match(acquisitionFinancingReadinessCollapsedHtml, /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
+assert.equal(/Going-In DSCR|Estimated Annual Debt Service/i.test(acquisitionFinancingReadinessCollapsedHtml), false);
+assert.equal(/Proposed Loan Amount/i.test(acquisitionFinancingReadinessCollapsedHtml), false);
+assert.equal(/refinance proceeds|refinance stability|current debt DSCR|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionFinancingReadinessCollapsedHtml), false);
 const acquisitionQaCalibrationRender = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2100000,

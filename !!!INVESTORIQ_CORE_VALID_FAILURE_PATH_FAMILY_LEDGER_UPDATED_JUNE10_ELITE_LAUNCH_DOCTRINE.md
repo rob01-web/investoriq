@@ -1,3 +1,251 @@
+# June 10, 2026 Addendum - ELITE Launch Doctrine Status / Core-Valid Failure Path Reclassification
+
+## Current controlling status
+
+The Core-Valid Failure Path Ledger now distinguishes between launch-blocking Tier 1 doctrine and non-blocking Tier 2 polish/advisory issues.
+
+The controlling launch rule is:
+
+```text
+Core-valid reports must publish unless true core failure or true runtime/storage/PDF/catastrophic render failure prevents safe generation.
+
+Optional/support/advisory/distribution issues must remain section-level, diagnostic, advisory, or distribution-config only.
+
+The system may launch when Tier 1 truth, math, source binding, non-fabrication, unsafe-surface prevention, and delivery lifecycle are ELITE.
+```
+
+This supersedes any workflow where every advisory, optional section, public/sample field, or cosmetic PDF issue is treated as a launch blocker.
+
+## Tier 1 doctrine families that must remain ELITE
+
+The following are launch-blocking if violated:
+
+```text
+1. Core math / calculations.
+2. T12 and Rent Roll core parse / validation.
+3. Source-to-output binding.
+4. No fabricated or inferred financial facts.
+5. Correct fail-closed behavior for truly invalid required core docs.
+6. No dangerous V2 leakage in launch products.
+7. Current debt / proposed acquisition financing / refi separation.
+8. Conservative non-misleading report classification.
+9. Customer-facing disclaimer / limitation language.
+10. Delivery lifecycle, credit, payment, and report-access basics.
+```
+
+## Current ELITE / near-ELITE mapping to CVF families
+
+### CVF-01 / CVF-02 - Core T12 and Rent Roll parse failure
+
+Current status:
+
+```text
+Legitimate fail-closed families preserved.
+Valid-core parse path is ELITE in recent clean, messy, narrative/recovery, spreadsheet, and swapped-slot tests.
+```
+
+Evidence from recent checkpoint:
+
+```text
+Acquisition Memo 15/16 and 124 Richmond Clean/Messy tests showed T12 and Rent Roll verified at 4/4 / 100% where core docs were usable.
+```
+
+Remaining launch check:
+
+```text
+Run final invalid-core/server-gate smoke before full public launch.
+```
+
+### CVF-03 - Financial scale mismatch after core parse
+
+Current status:
+
+```text
+No active recent blocker observed.
+Treat as disclosure/qualification unless true unreconcilable core contradiction exists.
+```
+
+### CVF-04 - Current-debt/refi render-contract drift
+
+Current status:
+
+```text
+Mostly contained in customer-facing PDFs.
+Not fully ELITE until proposed acquisition financing context render path and current-debt separation contract QA are finalized.
+```
+
+Recent tests show proposed financing did not leak into DSCR/refi/current-debt surfaces. Remaining issue is over-conservative omission of clean proposed acquisition financing context.
+
+### CVF-05 - Report-type section leak
+
+Current status:
+
+```text
+Customer-facing PDFs appear safe.
+QA detector still needs calibration for valid Acquisition Memo section labels.
+```
+
+Not launch-blocking if detector noise remains admin-only, but should be patched because it creates false elite-readiness noise.
+
+### CVF-06 - Source reconciliation / rendered variance drift
+
+Current status:
+
+```text
+Strong / near ELITE.
+Recent source reconciliation and rent/T12 alignment held across tested packages.
+```
+
+### CVF-07 - Optional/full-underwriting support depth constraints
+
+Current status:
+
+```text
+Safe-internal / distribution-only direction is working.
+Optional support issues are not killing customer delivery in recent tests.
+```
+
+Remaining issue is diagnostic/advisory calibration, not customer-facing doctrine failure.
+
+### CVF-08 / CVF-09 / CVF-10 - Delivery-gate hold-chain, publication-held shim, worker terminal failure misclassification
+
+Current status:
+
+```text
+Valid-core publish path is ELITE in recent tests.
+Core-valid jobs are publishing and customer delivery remains allowed despite advisory/support/config findings.
+```
+
+Continue to guard against any resurrection of:
+
+```text
+user_needs_documents
+needs_documents
+publication_held
+MISSING_REQUIRED_SOURCE_DATA
+entitlement_restored
+```
+
+for core-valid section-only/support/advisory issues.
+
+### CVF-11 / CVF-12 - Failure message and Dashboard customer-copy fallback
+
+Current status:
+
+```text
+Mostly ELITE for current valid-core path.
+Still requires final customer-facing invalid-core/system-failure copy smoke before public launch.
+```
+
+### CVF-13 - Runtime/storage/PDF/catastrophic render failure
+
+Current status:
+
+```text
+Legitimate fail-closed family preserved.
+Renderer-scope TDZ/undefined-variable subclass has been root-patched and harnessed.
+```
+
+Still legitimate:
+
+```text
+true runtime fatal
+storage failure
+PDF generation fatal
+catastrophic render failure where no safe shell can be produced
+```
+
+### CVF-14 - OpenAI/provider/advisory failures
+
+Current status:
+
+```text
+Diagnostic-only when deterministic core artifacts are valid.
+Safe-internal / monitor.
+```
+
+### CVF-15 - Optional-support/source-package/admin ops paths
+
+Current status:
+
+```text
+Mostly safe-internal / distribution-only.
+Support-doc containment is ELITE in recent PDFs.
+```
+
+Recent tests show Phase I, zoning, unsupported appraisal, market survey, offering summary, and CapEx remained context-only / not quantitatively modeled.
+
+## Already ELITE from a CVF perspective
+
+```text
+1. CVF-01/CVF-02 valid-core parsing path for usable T12 and Rent Roll.
+2. CVF-06 source reconciliation for tested T12/Rent Roll value families.
+3. CVF-07/CVF-15 support-doc containment in customer-facing PDFs.
+4. CVF-08/CVF-09/CVF-10 valid-core publish path in recent live tests.
+5. CVF-14 provider/advisory diagnostic-only behavior when deterministic core succeeds.
+6. V2 leakage prevention in recent Acquisition Memo PDFs.
+7. Property tax corroborating support path.
+8. Document Treatment safety/containment for unsupported docs.
+```
+
+## Not yet ELITE / open bounded CVF work
+
+```text
+1. CVF-04: proposed acquisition financing context render path and current-debt separation contract calibration.
+2. CVF-05: report-type section leak detector calibration for valid Acquisition Memo sections.
+3. CVF-07/CVF-15: advisory/action/manager vocabulary cleanup so old public-sample/high-value/Ken language is not active authority.
+4. CVF-11/CVF-12: final Dashboard/failure-copy smoke for invalid-core/system-failure scenarios.
+5. Payment/access/download owner protection smoke before full public launch.
+```
+
+## Tier 2 issues are not CVF launch blockers
+
+The following are not launch blockers if Tier 1 remains true:
+
+```text
+PDF spacing/polish
+long filename wrapping
+some divider/thin pages
+awkward repeated wording
+overly conservative omission of optional support details
+optional CapEx / appraisal / market survey depth
+advisory QA noise
+admin dashboard diagnostic grouping
+DocRaptor test mode during internal/founder beta
+```
+
+These should route to admin diagnostics or post-launch patch backlog, not fail customer delivery.
+
+## Current root patch in progress
+
+Codex is currently working on:
+
+```text
+Generalized Acquisition Memo Proposed Acquisition Financing Context render path.
+```
+
+Required invariant:
+
+```text
+Validated proposed acquisition financing context may render as bounded acquisition-financing context.
+It must not become current debt, refinance analysis, DSCR, debt-service underwriting, DCF, waterfall, deal score, or final recommendation.
+Incomplete proposed financing must remain Not source-complete / not modeled and advisory-only when correctly qualified.
+```
+
+## Updated doctrine for future audits
+
+Do not ask Codex to audit every possible imperfection.
+
+Future audits must be restricted to:
+
+```text
+Tier 1 launch-blocking doctrine only.
+Find paths that can create wrong math, wrong source binding, fabricated values, unsafe V2 leakage, customer lifecycle limbo, payment/access failure, or false fail-closed behavior.
+Do not list cosmetic or optional-depth issues as launch blockers.
+```
+
+---
+
 # June 8, 2026 Night Addendum - Acquisition Memo 13 Financing-Ready Checkpoint / Final Polish + Advisory Rounding Root Fix
 
 ## Current controlling status

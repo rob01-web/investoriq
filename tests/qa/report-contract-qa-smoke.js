@@ -943,14 +943,16 @@ const supportDocTreatmentLeak = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
   artifacts: baseArtifacts,
-  sourceReportCoverageQa: baseCoverage,
-  html: [
-    "<h2>Document Treatment Summary</h2>",
-    "<p>Unsupported Phase I ESA.pdf - Structured property tax input</p>",
-  ].join("\n"),
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    support_documents: [
+      { original_filename: "environmental_report.pdf", semantic_doc_role: "environmental" },
+    ],
+  },
+  html: "<p>environmental_report.pdf - Structured property tax input</p>",
 });
 const supportDocTreatmentViolation = supportDocTreatmentLeak.violations.find(
-  (v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"
+  (v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"
 );
 assert.equal(Boolean(supportDocTreatmentViolation), true);
 assert.equal(supportDocTreatmentViolation.severity, "high");
@@ -962,7 +964,7 @@ const supportDocTreatmentClean = buildReportContractQa({
   sourceReportCoverageQa: baseCoverage,
   html: [
     "<h2>Document Treatment Summary</h2>",
-    "<p>Environmental and zoning support documents were reviewed for qualitative context and are not treated as structured property-tax inputs.</p>",
+    "<table><tbody><tr><td>Environmental_and_Zoning_Context.pdf</td><td>Environmental and zoning support documents were reviewed for qualitative context and are not treated as structured property-tax inputs.</td></tr></tbody></table>",
   ].join("\n"),
 });
 assert.equal(supportDocTreatmentClean.violations.some((v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"), false);
@@ -1073,11 +1075,20 @@ const supportDocNoCanonicalExistingLeakStillFires = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,
   artifacts: baseArtifacts,
-  sourceReportCoverageQa: baseCoverage,
-  html: "<p>Phase I ESA - Structured property tax input</p>",
+  sourceReportCoverageQa: {
+    qa_status: "pass",
+    deterministic_flags: [],
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+    },
+    support_documents: [
+      { original_filename: "environmental_report.pdf", semantic_doc_role: "environmental" },
+    ],
+  },
+  html: "<p>environmental_report.pdf - Structured property tax input</p>",
 });
 assert.equal(
-  supportDocNoCanonicalExistingLeakStillFires.violations.some((v) => v.code === "SUPPORT_DOC_TREATMENT_LABEL_CONTRACT"),
+  supportDocNoCanonicalExistingLeakStillFires.violations.some((v) => v.code === "SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT"),
   true
 );
 
@@ -3401,6 +3412,85 @@ const underwritingNeutralMethodologyNoLeak = buildReportContractQa({
 });
 assert.equal(
   underwritingNeutralMethodologyNoLeak.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  false
+);
+
+const acquisitionMemoAllowedSectionsNoLeak = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: baseArtifacts,
+  sourceReportCoverageQa: baseCoverage,
+  html: [
+    "<h3>Acquisition Memo Summary</h3>",
+    "<h3>Operating Snapshot</h3>",
+    "<h3>Unit Mix / Rent Positioning</h3>",
+    "<h3>Rent Upside / Value Sensitivity</h3>",
+    "<h3>Cap-Rate Value Indication</h3>",
+    "<h3>Preliminary Financing Readiness Summary</h3>",
+    "<h3>Proposed Acquisition Financing Context</h3>",
+    "<h3>Source Context / Support Document Treatment</h3>",
+    "<h3>Data Coverage / Source Reliability</h3>",
+    "<h3>Methodology / Data Transparency</h3>",
+  ].join("\n"),
+});
+assert.equal(
+  acquisitionMemoAllowedSectionsNoLeak.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
+  false
+);
+
+const acquisitionMemoProposedFinancingSeparationNoLeak = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    {
+      type: "loan_term_sheet_parsed",
+      payload: {
+        semantic_doc_role: "purchase_assumptions",
+        debt_basis: "proposed_acquisition_financing",
+        purchase_price: 1250000,
+        stated_acquisition_loan_amount: 937500,
+        ltv: 0.75,
+        interest_rate: 0.0585,
+        amortization_years: 30,
+        lender_fee_percent: 0.01,
+      },
+    },
+  ],
+  sourceReportCoverageQa: {
+    ...baseCoverage,
+    artifact_inventory: {
+      ...baseCoverage.artifact_inventory,
+      loan_term_sheet_parsed: {
+        present: true,
+        acquisition_support: {
+          purchase_price: 1250000,
+          derived_acquisition_loan_amount: 937500,
+          debt_basis: "proposed_acquisition_financing",
+          semantic_doc_role: "purchase_assumptions",
+        },
+      },
+    },
+    current_debt_state: {
+      current_debt_dscr_status: "not_assessed",
+      has_true_current_debt_balance: false,
+      current_debt_separated: true,
+      current_debt_limitation_reason_code: "acquisition_only_not_current_debt",
+    },
+  },
+  html: [
+    "<h3>Acquisition Memo Summary</h3>",
+    "<h3>Preliminary Financing Readiness Summary</h3>",
+    "<h3>Proposed Acquisition Financing Context</h3>",
+    "<p>Proposed Acquisition Financing: Source-complete inputs provided / available for future underwriting.</p>",
+    "<table><tbody><tr><td>Purchase Price</td><td>$1,250,000</td></tr><tr><td>Proposed Loan Amount</td><td>$937,500</td></tr><tr><td>LTV</td><td>75.0%</td></tr><tr><td>Interest Rate</td><td>5.9%</td></tr><tr><td>Amortization</td><td>30 years</td></tr><tr><td>Closing / Lender Fee</td><td>1.0%</td></tr></tbody></table>",
+  ].join("\n"),
+});
+assert.equal(
+  acquisitionMemoProposedFinancingSeparationNoLeak.violations.some((v) => v.code === "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT"),
+  false
+);
+assert.equal(
+  acquisitionMemoProposedFinancingSeparationNoLeak.violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
   false
 );
 

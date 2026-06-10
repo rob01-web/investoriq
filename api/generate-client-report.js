@@ -4840,30 +4840,60 @@ function buildAcquisitionFinancingReadinessHtml({
   ]
     .filter((value) => typeof value === "string" && value.trim())
     .join("\n");
+  const currentDebtSourceLike =
+    /(current mortgage statement|existing mortgage|true current debt|current outstanding balance|outstanding principal|unpaid principal|current loan balance|current mortgage balance|payoff statement|payoff balance|current monthly debt service)/i.test(combinedText) ||
+    ["current_mortgage_statement", "current_debt_terms", "mortgage_statement"].includes(
+      String(currentLoanPayload?.semantic_doc_role || acquisitionContextPayload?.semantic_doc_role || "").trim().toLowerCase()
+    ) ||
+    (
+      /(current|existing|mortgage)/i.test(String(currentLoanPayload?.debt_basis || acquisitionContextPayload?.debt_basis || "")) &&
+      !/(acquisition|proposed|purchase)/i.test(String(currentLoanPayload?.debt_basis || acquisitionContextPayload?.debt_basis || ""))
+    );
+  const proposedAcquisitionSourcePayload = currentDebtSourceLike ? null : currentLoanPayload;
   const hasProposedAcquisitionTerms = Boolean(
     currentDebtAssessmentState?.has_proposed_acquisition_financing ||
-    String(currentLoanPayload?.debt_basis || acquisitionContextPayload?.debt_basis || "").toLowerCase().includes("acquisition") ||
+    String(proposedAcquisitionSourcePayload?.debt_basis || acquisitionContextPayload?.debt_basis || "").toLowerCase().includes("acquisition") ||
     /(?:purchase|proposed acquisition|acquisition financing|going[-\s]*in cap|purchase price)/i.test(combinedText) ||
-    String(currentLoanPayload?.semantic_doc_role || acquisitionContextPayload?.semantic_doc_role || "").trim().toLowerCase() === "purchase_assumptions"
+    String(proposedAcquisitionSourcePayload?.semantic_doc_role || acquisitionContextPayload?.semantic_doc_role || "").trim().toLowerCase() === "purchase_assumptions"
   );
-  const hasAcquisitionReadinessMathInputs =
-    Number.isFinite(coerceNumber(currentLoanPayload?.purchase_price ?? acquisitionContextPayload?.purchase_price)) &&
-    (
-      Number.isFinite(coerceNumber(currentLoanPayload?.stated_acquisition_loan_amount ?? currentLoanPayload?.loan_amount ?? currentLoanPayload?.derived_acquisition_loan_amount)) ||
-      Number.isFinite(coerceNumber(currentLoanPayload?.ltv ?? acquisitionContextPayload?.ltv))
-    ) &&
-    Number.isFinite(coerceNumber(currentLoanPayload?.interest_rate ?? acquisitionContextPayload?.interest_rate)) &&
+  const hasAcquisitionContextHints =
+    Number.isFinite(coerceNumber(acquisitionContextPayload?.purchase_price ?? acquisitionSupportPayload?.purchase_price)) ||
+    Number.isFinite(coerceNumber(acquisitionContextPayload?.going_in_cap_rate ?? acquisitionSupportPayload?.going_in_cap_rate)) ||
+    Number.isFinite(coerceNumber(acquisitionContextPayload?.ltv ?? acquisitionSupportPayload?.ltv)) ||
+    Number.isFinite(coerceNumber(acquisitionContextPayload?.interest_rate ?? acquisitionSupportPayload?.interest_rate)) ||
     Number.isFinite(
       coerceNumber(
-        currentLoanPayload?.amort_years ??
-        currentLoanPayload?.amortization_years ??
         acquisitionContextPayload?.amort_years ??
-        acquisitionContextPayload?.amortization_years
+        acquisitionContextPayload?.amortization_years ??
+        acquisitionSupportPayload?.amort_years ??
+        acquisitionSupportPayload?.amortization_years
       )
+    );
+  const hasSourceBoundProposedAcquisitionContext =
+    Number.isFinite(coerceNumber(proposedAcquisitionSourcePayload?.purchase_price ?? acquisitionContextPayload?.purchase_price ?? acquisitionSupportPayload?.purchase_price)) &&
+    (
+      Number.isFinite(coerceNumber(proposedAcquisitionSourcePayload?.stated_acquisition_loan_amount ?? proposedAcquisitionSourcePayload?.loan_amount ?? proposedAcquisitionSourcePayload?.derived_acquisition_loan_amount)) ||
+      Number.isFinite(coerceNumber(proposedAcquisitionSourcePayload?.ltv ?? acquisitionContextPayload?.ltv ?? acquisitionSupportPayload?.ltv))
     ) &&
-    Number.isFinite(coerceNumber(t12Payload?.net_operating_income));
-  const explicitProposedAcquisitionBasis = hasProposedAcquisitionTerms || hasAcquisitionReadinessMathInputs;
-  if (!explicitProposedAcquisitionBasis) return "";
+    Number.isFinite(coerceNumber(proposedAcquisitionSourcePayload?.interest_rate ?? acquisitionContextPayload?.interest_rate ?? acquisitionSupportPayload?.interest_rate)) &&
+    Number.isFinite(
+      coerceNumber(
+        proposedAcquisitionSourcePayload?.amort_years ??
+        proposedAcquisitionSourcePayload?.amortization_years ??
+        acquisitionContextPayload?.amort_years ??
+        acquisitionContextPayload?.amortization_years ??
+        acquisitionSupportPayload?.amort_years ??
+        acquisitionSupportPayload?.amortization_years
+      )
+  );
+  if (!hasSourceBoundProposedAcquisitionContext) {
+    if (!hasProposedAcquisitionTerms && !currentDebtSourceLike && !hasAcquisitionContextHints) return "";
+    const notes = ["Proposed Acquisition Financing: Not source-complete / not modeled."];
+    if (currentDebtSourceLike) {
+      notes.push("Current/existing debt support was uploaded, but it remains contextual and is not treated as proposed acquisition financing.");
+    }
+    return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Proposed Acquisition Financing Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(notes.join(" "))}</p></div>`;
+  }
 
   const firstFinite = (...values) => {
     for (const value of values) {
@@ -4873,10 +4903,10 @@ function buildAcquisitionFinancingReadinessHtml({
     return null;
   };
   const purchasePrice = firstFinite(
-    currentLoanPayload?.purchase_price,
-    currentLoanPayload?.purchasePrice,
-    currentLoanPayload?.acquisition_price,
-    currentLoanPayload?.purchase_price_amount,
+    proposedAcquisitionSourcePayload?.purchase_price,
+    proposedAcquisitionSourcePayload?.purchasePrice,
+    proposedAcquisitionSourcePayload?.acquisition_price,
+    proposedAcquisitionSourcePayload?.purchase_price_amount,
     acquisitionContextPayload?.purchase_price,
     acquisitionContextPayload?.purchasePrice,
     acquisitionContextPayload?.acquisition_price,
@@ -4887,16 +4917,16 @@ function buildAcquisitionFinancingReadinessHtml({
     acquisitionSupportPayload?.purchase_price_amount
   );
   const explicitLtv = firstFinite(
-    currentLoanPayload?.ltv,
+    proposedAcquisitionSourcePayload?.ltv,
     acquisitionContextPayload?.ltv,
     acquisitionSupportPayload?.ltv
   );
   const statedLoanAmount = firstFinite(
-    currentLoanPayload?.stated_acquisition_loan_amount,
-    currentLoanPayload?.loan_amount,
-    currentLoanPayload?.proposed_loan_amount,
-    currentLoanPayload?.acquisition_loan_amount,
-    currentLoanPayload?.stated_loan_amount,
+    proposedAcquisitionSourcePayload?.stated_acquisition_loan_amount,
+    proposedAcquisitionSourcePayload?.loan_amount,
+    proposedAcquisitionSourcePayload?.proposed_loan_amount,
+    proposedAcquisitionSourcePayload?.acquisition_loan_amount,
+    proposedAcquisitionSourcePayload?.stated_loan_amount,
     acquisitionContextPayload?.stated_acquisition_loan_amount,
     acquisitionContextPayload?.loan_amount,
     acquisitionContextPayload?.proposed_loan_amount,
@@ -4917,19 +4947,18 @@ function buildAcquisitionFinancingReadinessHtml({
       : null;
   const proposedLoanAmount = firstFinite(statedLoanAmount, derivedLoanFromLtv);
   const interestRatePct = firstFinite(
-    currentLoanPayload?.interest_rate,
+    proposedAcquisitionSourcePayload?.interest_rate,
     acquisitionContextPayload?.interest_rate,
     acquisitionSupportPayload?.interest_rate
   );
   const amortYears = firstFinite(
-    currentLoanPayload?.amortization_years,
-    currentLoanPayload?.amort_years,
+    proposedAcquisitionSourcePayload?.amortization_years,
+    proposedAcquisitionSourcePayload?.amort_years,
     acquisitionContextPayload?.amortization_years,
     acquisitionContextPayload?.amort_years,
     acquisitionSupportPayload?.amortization_years,
     acquisitionSupportPayload?.amort_years
   );
-  const noiBasis = coerceNumber(t12Payload?.net_operating_income);
   const derivedLtv =
     Number.isFinite(proposedLoanAmount) &&
     proposedLoanAmount > 0 &&
@@ -4937,45 +4966,26 @@ function buildAcquisitionFinancingReadinessHtml({
     purchasePrice > 0
       ? proposedLoanAmount / purchasePrice
       : null;
-  const hasCompleteInputs =
-    Number.isFinite(purchasePrice) &&
-    purchasePrice > 0 &&
-    Number.isFinite(noiBasis) &&
-    noiBasis > 0 &&
-    Number.isFinite(proposedLoanAmount) &&
-    proposedLoanAmount > 0 &&
-    Number.isFinite(interestRatePct) &&
-    interestRatePct > 0 &&
-    Number.isFinite(amortYears) &&
-    amortYears > 0;
   const currentDebtContextOnly = Boolean(
     currentDebtAssessmentState?.has_true_current_debt_balance ||
     currentDebtAssessmentState?.current_debt_dscr_status === "computed"
   );
-  if (!hasCompleteInputs) {
-    const note = currentDebtContextOnly
-      ? "Current/existing debt support was uploaded, but it remains contextual and is not treated as proposed acquisition financing."
-      : "Acquisition financing readiness was not assessed because proposed acquisition loan amount/LTV, interest rate, or amortization was not fully verified.";
-    return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Financing Readiness</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(note)}</p></div>`;
-  }
-  const mortgageConstant = computeMortgageConstant(interestRatePct / 100, amortYears);
-  const annualDebtService =
-    Number.isFinite(mortgageConstant) && mortgageConstant > 0
-      ? proposedLoanAmount * mortgageConstant
-      : null;
-  const goingInDscr =
-    Number.isFinite(noiBasis) &&
-    noiBasis > 0 &&
-    Number.isFinite(annualDebtService) &&
-    annualDebtService > 0
-      ? noiBasis / annualDebtService
-      : null;
+  const lenderFeePercent = firstFinite(
+    proposedAcquisitionSourcePayload?.lender_fee_percent,
+    proposedAcquisitionSourcePayload?.financing_fee_percent,
+    proposedAcquisitionSourcePayload?.origination_fee_percent,
+    acquisitionContextPayload?.lender_fee_percent,
+    acquisitionContextPayload?.financing_fee_percent,
+    acquisitionContextPayload?.origination_fee_percent,
+    acquisitionSupportPayload?.lender_fee_percent,
+    acquisitionSupportPayload?.financing_fee_percent,
+    acquisitionSupportPayload?.origination_fee_percent
+  );
   const rows = [
     ["Purchase Price", formatCurrency(purchasePrice)],
-    ["NOI Basis", formatCurrency(noiBasis)],
     ["Proposed Loan Amount", formatCurrency(proposedLoanAmount)],
     [
-      "Proposed Loan-to-Value (LTV)",
+      "LTV",
       Number.isFinite(derivedLtv)
         ? formatPercent1(derivedLtv)
         : Number.isFinite(explicitLtv)
@@ -4984,10 +4994,9 @@ function buildAcquisitionFinancingReadinessHtml({
     ],
     ["Interest Rate", formatInterestRatePercent(interestRatePct)],
     ["Amortization", `${Math.round(amortYears)} years`],
-    ["Estimated Annual Debt Service", formatCurrency(annualDebtService)],
-    ["Going-In DSCR", Number.isFinite(goingInDscr) ? formatMultiple(goingInDscr, 2) : "Not assessed"],
-  ];
-  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Financing Readiness</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Financing readiness is calculated only from uploaded acquisition financing inputs and does not represent lender approval.</p><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Input</th><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(label)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
+    Number.isFinite(lenderFeePercent) ? ["Closing / Lender Fee", formatPercentExactDisplay(lenderFeePercent)] : null,
+  ].filter(Boolean);
+  return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Proposed Acquisition Financing Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">This is source-bound proposed acquisition financing context only. It is not loan approval, lender commitment, credit decision, refinance sufficiency analysis, or debt-service underwriting.</p><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Input</th><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(label)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function buildScreeningRefiSufficiencyTable({
   financials,
@@ -9012,8 +9021,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
   <div class="no-break">
     <div class="section-header">
       <span class="section-header-eyebrow">Section 03</span>
-      <span class="section-header-title">Acquisition Financing Readiness</span>
-      <span class="section-header-sub">Source-gated proposed acquisition financing inputs</span>
+      <span class="section-header-title">Proposed Acquisition Financing Context</span>
+      <span class="section-header-sub">Source-bound proposed acquisition financing context only</span>
     </div>
     ${acquisitionFinancingReadinessHtml}
   </div>
@@ -10120,7 +10129,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         String(acquisitionFinancingAssumptionsHtml || "").trim().length > 0 ||
         String(acquisitionFinancingReadinessHtml || "").trim().length > 0,
     });
-    if (!showSection7) {
+    const showProposedAcquisitionFinancingContext =
+      String(acquisitionFinancingReadinessHtml || "").trim().length > 0;
+    if (!showSection7 && !showProposedAcquisitionFinancingContext) {
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
     }
     const showSection7Tables = shouldRenderCanonicalSection({
@@ -10190,7 +10201,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       finalHtml = stripMarkedSection(finalHtml, "SECTION_5_RISK");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_6_RENOVATION");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");
-      finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      if (!String(acquisitionFinancingReadinessHtml || "").trim()) {
+        finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT");
+      }
       finalHtml = stripMarkedSection(finalHtml, "SECTION_7_DEBT_TABLES");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_8_DEAL_SCORE");
       finalHtml = stripMarkedSection(finalHtml, "SECTION_9_DCF");
@@ -10971,7 +10984,7 @@ try {
     isFinitePositive(loanTermSheetTermsPayload?.amort_years) &&
     isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount);
   const acquisitionFinancingRendered =
-    /Proposed Acquisition Debt Sizing|Derived Acquisition Loan Amount/i.test(htmlString);
+    /Proposed Acquisition Financing Context|Acquisition Financing Readiness|Proposed Loan Amount|Documented LTV/i.test(htmlString);
   const acquisitionFinancingReadinessInputsUsable =
     effectiveReportMode === "v1_core" &&
     /acquisition|proposed|purchase/i.test(
@@ -11002,7 +11015,7 @@ try {
     ) &&
     isFinitePositive(t12Payload?.net_operating_income);
   const acquisitionFinancingReadinessRendered =
-    /Acquisition Financing Readiness|Going-In DSCR|Proposed Loan Amount/i.test(htmlString);
+    /Proposed Acquisition Financing Context|Acquisition Financing Readiness|Source-complete inputs provided \/ available for future underwriting\.|Proposed Loan Amount|Documented LTV|Interest Rate|Amortization/i.test(htmlString);
   const acquisitionFinancingDerivedOnlyRendered =
     acquisitionFinancingInputsUsable &&
     acquisitionFinancingRendered &&
@@ -11590,6 +11603,15 @@ try {
   sourceCoverageQa.document_treatment_canonical_rows = canonicalizeDocumentTreatmentSources(
     Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
   );
+  if (typeof finalHtml === "string" && /Proposed Acquisition Financing Context|Source-complete inputs provided \/ available for future underwriting\./i.test(finalHtml)) {
+    const renderedSignals = Array.isArray(sourceCoverageQa.rendered_text_signals)
+      ? sourceCoverageQa.rendered_text_signals
+      : [];
+    if (!renderedSignals.includes("acquisition_financing_assumptions")) {
+      renderedSignals.push("acquisition_financing_assumptions");
+    }
+    sourceCoverageQa.rendered_text_signals = renderedSignals;
+  }
   if (typeof finalHtml === "string" && /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i.test(finalHtml)) {
     const renderedSignals = Array.isArray(sourceCoverageQa.rendered_text_signals)
       ? sourceCoverageQa.rendered_text_signals
