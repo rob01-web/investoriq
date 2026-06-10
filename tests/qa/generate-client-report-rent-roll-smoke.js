@@ -5438,4 +5438,182 @@ assert.doesNotThrow(() => {
   assert.equal(validatedPath, publishedReportStoragePath);
 });
 
+const attackStyleSupportDocs = [
+  { id: "a1", original_filename: "Stonebridge_Assumptions.pdf", doc_type: "environmental", semantic_doc_role: "environmental_due_diligence", parse_status: "parsed" },
+  { id: "d1", original_filename: "Current_Debt_Stonebridge.pdf", doc_type: "supporting_documents_unclassified", semantic_doc_role: "other_support", parse_status: "parsed" },
+  { id: "r1", original_filename: "Stonebridge_Reno_Plan.pdf", doc_type: "rent_roll", semantic_doc_role: "rent_roll", parse_status: "parsed" },
+  { id: "ap1", original_filename: "Stonebridge_Appraisal.pdf", doc_type: "appraisal", semantic_doc_role: "appraisal", parse_status: "parsed" },
+  { id: "m1", original_filename: "Stonebridge_Market_Survey.pdf", doc_type: "market_survey", semantic_doc_role: "market_survey", parse_status: "parsed" },
+  { id: "e1", original_filename: "Stonebridge_Phase_I_ESA.pdf", doc_type: "environmental", semantic_doc_role: "environmental_due_diligence", parse_status: "parsed" },
+];
+const attackStyleArtifacts = [
+  {
+    type: "appraisal_parsed",
+    payload: {
+      file_id: "a1",
+      original_filename: "Stonebridge_Assumptions.pdf",
+      semantic_doc_role: "appraisal",
+      cap_rate: 0.0575,
+    },
+  },
+  {
+    type: "loan_term_sheet_parsed",
+    payload: {
+      file_id: "a1",
+      original_filename: "Stonebridge_Assumptions.pdf",
+      semantic_doc_role: "purchase_assumptions",
+      purchase_price: 10640000,
+      stated_acquisition_loan_amount: 7450000,
+      ltv: 0.7,
+      interest_rate: 0.0575,
+      amortization_years: 30,
+      lender_fee_percent: 0.01,
+      going_in_cap_rate: 0.0575,
+      noi_basis: 611800,
+      source_text: "Proposed acquisition financing with purchase price, LTV, interest rate, amortization, and lender fee.",
+    },
+  },
+  {
+    type: "mortgage_statement_parsed",
+    payload: {
+      file_id: "d1",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      semantic_doc_role: "current_mortgage_statement",
+      outstanding_balance: 8750000,
+      interest_rate: 0.0525,
+      amortization_years: 30,
+      ltv: 0.7,
+      source_text: "Existing current debt statement with outstanding principal balance.",
+    },
+  },
+  {
+    type: "renovation_parsed",
+    payload: {
+      file_id: "r1",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      semantic_doc_role: "renovation_budget",
+      total_budget: 1138000,
+      budget_rows: [
+        { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
+        { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
+      ],
+      timing_or_phasing: "Months 1-24",
+      rent_lift: "1BR $225; 2BR $325",
+    },
+  },
+  {
+    type: "appraisal_parsed",
+    payload: {
+      file_id: "ap1",
+      original_filename: "Stonebridge_Appraisal.pdf",
+      semantic_doc_role: "appraisal",
+      source_text: "Appraisal summary context only.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "m1",
+      original_filename: "Stonebridge_Market_Survey.pdf",
+      semantic_doc_role: "market_survey",
+      source_text: "Market rent survey context only.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "e1",
+      original_filename: "Stonebridge_Phase_I_ESA.pdf",
+      semantic_doc_role: "environmental_due_diligence",
+      source_text: "Phase I ESA environmental due diligence context.",
+    },
+  },
+];
+const supportDocAuthorityRows = generatorTest.buildCanonicalSupportDocAuthorityRows({
+  documentSources: attackStyleSupportDocs,
+  artifacts: attackStyleArtifacts,
+});
+assert.equal(supportDocAuthorityRows.filter((row) => row.original_filename === "Stonebridge_Assumptions.pdf").length, 1);
+assert.equal(
+  supportDocAuthorityRows.find((row) => row.original_filename === "Stonebridge_Assumptions.pdf")?.canonical_support_doc_role,
+  "proposed_acquisition_financing"
+);
+assert.equal(
+  supportDocAuthorityRows.find((row) => row.original_filename === "Current_Debt_Stonebridge.pdf")?.canonical_support_doc_role,
+  "current_debt_context"
+);
+assert.match(
+  supportDocAuthorityRows.find((row) => row.original_filename === "Stonebridge_Reno_Plan.pdf")?.canonical_support_doc_role || "",
+  /renovation|capex/i
+);
+const attackDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: attackStyleSupportDocs,
+  supportDocAuthorityRows,
+});
+assert.match(attackDocumentTreatmentHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
+assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Environmental/i.test(attackDocumentTreatmentHtml), false);
+assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Appraisal Context/i.test(attackDocumentTreatmentHtml), false);
+assert.match(attackDocumentTreatmentHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Debt Support Received \/ Contextual/i);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Purchase Assumptions/i.test(attackDocumentTreatmentHtml), false);
+assert.match(attackDocumentTreatmentHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,220}Rent Roll/i.test(attackDocumentTreatmentHtml), false);
+assert.match(attackDocumentTreatmentHtml, /Stonebridge_Appraisal\.pdf[\s\S]{0,220}Appraisal Context/i);
+assert.match(attackDocumentTreatmentHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,220}Market Rent Context/i);
+assert.match(attackDocumentTreatmentHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
+const attackPrelimHtml = generatorTest.buildPreliminaryFinancingReadinessSummaryHtml({
+  reportMode: "v1_core",
+  acquisitionMemoRenderContext: {
+    units: 100,
+    annualInPlaceRent: 1000000,
+    annualMarketRent: 1100000,
+    annualRentUpside: 100000,
+    rentGapPercent: 0.1,
+    egi: 950000,
+    opEx: 338200,
+    noi: 611800,
+    purchasePrice: null,
+    goingInCapRate: null,
+    acquisitionNoiBasis: 611800,
+  },
+  supportDocAuthorityRows,
+  sourceReportCoverageQa: {
+    artifact_inventory: {
+      t12_parsed: { present: true, has_core_totals: true },
+      rent_roll_parsed: { present: true, has_total_units: true },
+    },
+  },
+  formatCurrency,
+  formatPercent1,
+  formatInterestRatePercent: formatPercent1,
+});
+assert.match(attackPrelimHtml, /Purchase assumptions provided[\s\S]{0,80}Yes/i);
+assert.match(attackPrelimHtml, /Current debt context uploaded[\s\S]{0,80}Yes/i);
+assert.match(attackPrelimHtml, /Proposed acquisition loan terms complete[\s\S]{0,80}Yes/i);
+assert.match(attackPrelimHtml, /Uploaded Existing Debt Context[\s\S]{0,220}Outstanding Balance[\s\S]{0,80}\$8,750,000/i);
+assert.match(attackPrelimHtml, /CapEx \/ renovation plan[\s\S]{0,120}Context only unless verified budget and rent-lift assumptions exist/i);
+const attackAcquisitionFinancingHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
+  reportMode: "v1_core",
+  supportDocAuthorityRows,
+});
+assert.match(attackAcquisitionFinancingHtml, /Proposed Acquisition Financing Context/i);
+assert.match(attackAcquisitionFinancingHtml, /Proposed Loan Amount[\s\S]{0,80}\$7,450,000/i);
+assert.match(attackAcquisitionFinancingHtml, /Interest Rate[\s\S]{0,80}5\.75%/i);
+assert.equal(/Current Debt DSCR|refinance proceeds|waterfall|deal score|final recommendation|BUY|SELL|HOLD/i.test(attackAcquisitionFinancingHtml), false);
+const attackContractQa = buildReportContractQa({
+  html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
+  reportType: "underwriting",
+  reportMode: "v1_core",
+  sourceReportCoverageQa: {
+    support_document_authority_rows: supportDocAuthorityRows,
+    document_treatment_canonical_rows: supportDocAuthorityRows,
+  },
+});
+assert.equal(
+  attackContractQa.violations.some((violation) =>
+    ["SUPPORT_DOC_AUTHORITY_DRIFT", "PURCHASE_ASSUMPTIONS_ROLE_DRIFT"].includes(violation.code)
+  ),
+  false
+);
+
 console.log("generate-client-report rent-roll smoke PASS");

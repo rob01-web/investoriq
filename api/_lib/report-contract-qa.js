@@ -1968,7 +1968,9 @@ export function buildReportContractQa({
       });
     }
   }
-  const canonicalDocumentTreatmentRows = Array.isArray(sourceReportCoverageQa?.document_treatment_canonical_rows)
+  const canonicalDocumentTreatmentRows = Array.isArray(sourceReportCoverageQa?.support_document_authority_rows)
+    ? sourceReportCoverageQa.support_document_authority_rows
+    : Array.isArray(sourceReportCoverageQa?.document_treatment_canonical_rows)
     ? sourceReportCoverageQa.document_treatment_canonical_rows
     : [];
   const canonicalAcquisitionDocumentRows = canonicalDocumentTreatmentRows.filter((row) => {
@@ -2004,8 +2006,19 @@ export function buildReportContractQa({
     });
   }
   if (canonicalAcquisitionDocumentRows.length > 0) {
+    const acquisitionSourceTreatmentRows = sourceTreatmentTable
+      ? tableRowsFromHtml(sourceTreatmentTable)
+        .map((row) => ({
+          ...row,
+          cells: (row.html.match(/<td\b[\s\S]*?<\/td>/gi) || [])
+            .map((cell) => stripHtml(cell).replace(/\s+/g, " ").trim()),
+        }))
+        .filter((row) => row.cells.length >= 4)
+      : [];
+    const acquisitionRowTextForTreatment = (row) => [row.cells[0], row.cells[1], row.cells[2], row.cells[3]].join(" ");
+    const acquisitionBadTreatmentPattern = /(Appraisal Context|Context only|Listed for auditability only; not used quantitatively|Listed but Not Quantitatively Modeled)/i;
     const renderedRowsByFilename = new Map();
-    for (const row of sourceTreatmentRows) {
+    for (const row of acquisitionSourceTreatmentRows) {
       const filename = String(row.cells[0] || "").trim().toLowerCase();
       if (!filename) continue;
       if (!renderedRowsByFilename.has(filename)) {
@@ -2020,7 +2033,7 @@ export function buildReportContractQa({
       if (!filename) continue;
       const renderedRows = renderedRowsByFilename.get(filename) || [];
       const listedRows = listedNotModeledRows.filter((row) => row.name === filename);
-      const badRenderedRows = renderedRows.filter((row) => badAcquisitionTreatmentPattern.test(rowTextForTreatment(row)));
+      const badRenderedRows = renderedRows.filter((row) => acquisitionBadTreatmentPattern.test(acquisitionRowTextForTreatment(row)));
       if (renderedRows.length === 0 || badRenderedRows.length > 0 || listedRows.length > 0) {
         canonicalAcquisitionDriftRows.push(...badRenderedRows, ...listedRows);
         if (renderedRows.length === 0) {
@@ -2041,6 +2054,61 @@ export function buildReportContractQa({
         message: "Canonical acquisition support is rendered with appraisal or not-modeled treatment instead of acquisition context.",
         evidence: {
           rows: canonicalAcquisitionDriftRows,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+  }
+  if (canonicalDocumentTreatmentRows.length > 0) {
+    const authoritySourceTreatmentRows = sourceTreatmentTable
+      ? tableRowsFromHtml(sourceTreatmentTable)
+        .map((row) => ({
+          ...row,
+          cells: (row.html.match(/<td\b[\s\S]*?<\/td>/gi) || [])
+            .map((cell) => stripHtml(cell).replace(/\s+/g, " ").trim()),
+        }))
+        .filter((row) => row.cells.length >= 4)
+      : [];
+    const authorityRowTextForTreatment = (row) => [row.cells[0], row.cells[1], row.cells[2], row.cells[3]].join(" ");
+    const renderedRowsByFilename = new Map();
+    for (const row of authoritySourceTreatmentRows) {
+      const filename = String(row.cells[0] || "").trim().toLowerCase();
+      if (!filename) continue;
+      if (!renderedRowsByFilename.has(filename)) renderedRowsByFilename.set(filename, []);
+      renderedRowsByFilename.get(filename).push(row);
+    }
+    const authorityDriftRows = [];
+    for (const canonicalRow of canonicalDocumentTreatmentRows) {
+      const filename = String(canonicalRow?.original_filename || canonicalRow?.file_name || canonicalRow?.filename || "").trim().toLowerCase();
+      if (!filename) continue;
+      const role = String(canonicalRow?.canonical_support_doc_role || canonicalRow?.semantic_doc_role || "").trim().toLowerCase();
+      const renderedRows = renderedRowsByFilename.get(filename) || [];
+      if (renderedRows.length === 0) continue;
+      const renderedText = renderedRows.map((row) => authorityRowTextForTreatment(row)).join(" ");
+      const renderedRoleTreatmentText = renderedRows.map((row) => [row.cells[1], row.cells[2]].join(" ")).join(" ");
+      if (/current_debt_context/.test(role) && /purchase assumptions|acquisition context/i.test(renderedRoleTreatmentText)) {
+        authorityDriftRows.push({ filename, role, rendered_text: renderedText, reason: "current_debt_rendered_as_acquisition_financing" });
+      }
+      if (/renovation|capex/.test(role) && /\brent roll\b|market rent context/i.test(renderedRoleTreatmentText)) {
+        authorityDriftRows.push({ filename, role, rendered_text: renderedText, reason: "renovation_rendered_as_rent_roll" });
+      }
+      if (/appraisal|market_survey|environmental/.test(role) && /core quantitative source|purchase assumptions|proposed acquisition financing/i.test(renderedRoleTreatmentText)) {
+        authorityDriftRows.push({ filename, role, rendered_text: renderedText, reason: "context_support_rendered_as_quantitative_or_acquisition" });
+      }
+      if (/purchase_assumptions|proposed_acquisition_financing/.test(role) && /environmental|mortgage|current debt|rent roll|appraisal context|listed for auditability only|not used quantitatively/i.test(renderedRoleTreatmentText)) {
+        authorityDriftRows.push({ filename, role, rendered_text: renderedText, reason: "acquisition_support_rendered_as_wrong_role" });
+      }
+    }
+    if (authorityDriftRows.length > 0) {
+      addViolation(violations, {
+        code: "SUPPORT_DOC_AUTHORITY_DRIFT",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Rendered support-document treatment contradicts canonical support-document authority.",
+        evidence: {
+          rows: authorityDriftRows,
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,

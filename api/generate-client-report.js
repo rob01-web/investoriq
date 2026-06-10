@@ -2784,8 +2784,252 @@ function canonicalizeDocumentTreatmentSources(documentSources = []) {
   return merged;
 }
 
+function buildCanonicalSupportDocAuthorityRows({
+  documentSources = [],
+  artifacts = [],
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
+  mortgagePayload = null,
+  renovationPayload = null,
+  propertyTaxPayload = null,
+  appraisalPayload = null,
+} = {}) {
+  const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
+  const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
+  const firstFinite = (...values) => {
+    for (const value of values) {
+      const parsed = coerceNumber(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const identityKeyFor = (row = {}) => {
+    const filename = normalizeToken(row?.original_filename || row?.source_original_filename || row?.file_name || row?.filename);
+    if (filename) return `filename:${filename}`;
+    const id = [
+      row?.source_file_id,
+      row?.file_id,
+      row?.document_id,
+      row?.artifact_file_id,
+      row?.id,
+    ].map(normalizeToken).find(Boolean);
+    return id ? `id:${id}` : "";
+  };
+  const payloadRows = [
+    { type: "loan_term_sheet_parsed", payload: loanTermSheetTermsPayload },
+    { type: "loan_term_sheet_parsed", payload: acquisitionTermsPayload },
+    { type: "mortgage_statement_parsed", payload: mortgagePayload },
+    { type: "renovation_parsed", payload: renovationPayload },
+    { type: "property_tax_parsed", payload: propertyTaxPayload },
+    { type: "appraisal_parsed", payload: appraisalPayload },
+    ...(Array.isArray(artifacts) ? artifacts : []),
+  ]
+    .map((entry) => {
+      const payload = entry?.payload && typeof entry.payload === "object" ? entry.payload : null;
+      if (!payload) return null;
+      return {
+        ...payload,
+        artifact_type: entry?.type || payload?.artifact_type || null,
+      };
+    })
+    .filter(Boolean);
+  const rows = [
+    ...(Array.isArray(documentSources) ? documentSources : []),
+    ...payloadRows,
+  ].filter((row) => row && typeof row === "object");
+  if (!rows.length) return [];
+
+  const grouped = new Map();
+  rows.forEach((row, index) => {
+    const key = identityKeyFor(row);
+    if (!key) return;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push({ row, index });
+  });
+
+  const hasAnyNumber = (row, keys) => keys.some((key) => Number.isFinite(coerceNumber(row?.[key])) && coerceNumber(row?.[key]) > 0);
+  const hasAnyText = (row, keys, pattern) => keys.some((key) => pattern.test(normalizeText(row?.[key])));
+  const combinedTextFor = (row) => [
+    row?.semantic_doc_role,
+    row?.semantic_doc_display_label,
+    row?.semantic_doc_role_reason,
+    row?.display_doc_type,
+    row?.doc_type,
+    row?.artifact_type,
+    row?.original_filename,
+    row?.source_original_filename,
+    row?.file_name,
+    row?.filename,
+    row?.debt_basis,
+    row?.source_text,
+    row?.raw_text,
+    row?.notes,
+    row?.loan_terms_text,
+    row?.extracted_text,
+  ].filter(Boolean).join(" | ");
+
+  const classifyAuthority = (row) => {
+    const text = normalizeText(combinedTextFor(row));
+    const hasPurchaseContext =
+      hasAnyNumber(row, ["purchase_price", "purchasePrice", "acquisition_price", "asking_price", "purchase_price_amount", "going_in_cap_rate", "noi_basis", "net_operating_income_basis"]) ||
+      /(purchase[_\s-]*assumptions|acquisition[_\s-]*context|purchase price|going[-\s]*in cap|noi basis|proposed acquisition)/i.test(text);
+    const hasProposedFinancing =
+      hasAnyNumber(row, ["stated_acquisition_loan_amount", "derived_acquisition_loan_amount", "proposed_loan_amount", "acquisition_loan_amount"]) ||
+      (
+        hasAnyNumber(row, ["ltv", "interest_rate", "amort_years", "amortization_years", "lender_fee_percent", "financing_fee_percent", "origination_fee_percent"]) &&
+        /(proposed|acquisition|purchase)/i.test(text)
+      );
+    const hasCurrentDebt =
+      !hasPurchaseContext &&
+      (
+        hasAnyNumber(row, ["outstanding_balance", "current_outstanding_balance", "current_loan_balance"]) ||
+        /(current mortgage|current debt|existing debt|existing mortgage|outstanding principal|payoff|unpaid principal|current loan)/i.test(text)
+      );
+    const hasRenovation =
+      hasAnyNumber(row, ["total_budget", "total_capex", "renovation_budget"]) ||
+      Array.isArray(row?.budget_rows) ||
+      Array.isArray(row?.execution_rows) ||
+      /(renovation|capex|capital expenditure|capital budget|construction budget|scope of work|rent lift|phasing)/i.test(text);
+    const hasRenovationRentLift =
+      hasAnyNumber(row, ["rent_lift", "expected_monthly_rent_lift"]) ||
+      /(rent lift|expected monthly rent lift)/i.test(text) ||
+      [...(Array.isArray(row?.budget_rows) ? row.budget_rows : []), ...(Array.isArray(row?.execution_rows) ? row.execution_rows : [])]
+        .some((item) => hasAnyNumber(item, ["expected_monthly_rent_lift", "rent_lift"]));
+    const hasRenovationPhasing =
+      hasAnyText(row, ["timing_or_phasing", "phase_timing", "execution_note", "source_text", "raw_text", "notes"], /\b(month|months|phase|phasing|q[1-4]|quarter|implementation schedule)\b/i) ||
+      [...(Array.isArray(row?.budget_rows) ? row.budget_rows : []), ...(Array.isArray(row?.execution_rows) ? row.execution_rows : [])]
+        .some((item) => hasAnyText(item, ["phase_timing", "timing_or_phasing"], /\b(month|months|phase|phasing|q[1-4]|quarter)\b/i));
+    const hasPropertyTax = hasAnyNumber(row, ["annual_tax", "property_tax", "tax_amount"]) || /(property tax|tax bill|tax notice|municipal tax)/i.test(text);
+    const hasMarketSurvey = /(market survey|market rent survey|rent survey|rent comp|rent comparable)/i.test(text);
+    const hasEnvironmental = /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(text);
+    const hasAppraisal = /(appraisal|appraised value|valuation report|opinion of value)/i.test(text);
+
+    if (hasPurchaseContext || hasProposedFinancing) {
+      return {
+        score: 800,
+        canonical_support_doc_role: hasProposedFinancing ? "proposed_acquisition_financing" : "purchase_assumptions",
+        document_role_label: "Purchase Assumptions / Acquisition Context",
+        treatment_label: "Acquisition context / document-derived acquisition context",
+        use_label: "Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.",
+        treatment_category: "Displayed / Limited Use",
+        has_acquisition_support: true,
+        has_proposed_acquisition_financing: Boolean(hasProposedFinancing),
+      };
+    }
+    if (hasCurrentDebt) {
+      return {
+        score: 700,
+        canonical_support_doc_role: "current_debt_context",
+        document_role_label: "Debt Support Received / Contextual",
+        treatment_label: "Debt support received / contextual or deferred",
+        use_label: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+        treatment_category: "Displayed / Limited Use",
+        has_current_debt_context: true,
+      };
+    }
+    if (hasPropertyTax) {
+      return {
+        score: 650,
+        canonical_support_doc_role: "property_tax",
+        document_role_label: "Property Tax Support",
+        treatment_label: "Corroborating support",
+        use_label: "Corroborating property-tax support; does not override T12 totals.",
+        treatment_category: "Displayed / Limited Use",
+      };
+    }
+    if (hasRenovation) {
+      const structured = hasRenovationRentLift || hasRenovationPhasing;
+      return {
+        score: 600,
+        canonical_support_doc_role: structured ? "structured_renovation_capex_plan" : "renovation_capex_budget_context",
+        document_role_label: structured ? "Structured Renovation / CapEx Plan" : "Renovation / CapEx Budget Context",
+        treatment_label: structured ? "Structured renovation / CapEx context" : "Budget/scope only",
+        use_label: structured
+          ? "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled."
+          : "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided.",
+        treatment_category: "Displayed / Limited Use",
+        has_structured_renovation_budget: true,
+        has_renovation_rent_lift: Boolean(hasRenovationRentLift),
+        has_renovation_phasing: Boolean(hasRenovationPhasing),
+      };
+    }
+    if (hasMarketSurvey) {
+      return {
+        score: 500,
+        canonical_support_doc_role: "market_survey_context",
+        document_role_label: "Market Rent Context",
+        treatment_label: "Context only",
+        use_label: "Market/rent context only; does not override Rent Roll market rent.",
+        treatment_category: "Listed but Not Quantitatively Modeled",
+      };
+    }
+    if (hasEnvironmental) {
+      return {
+        score: 400,
+        canonical_support_doc_role: "environmental_due_diligence_context",
+        document_role_label: "Environmental Due Diligence Context",
+        treatment_label: "Context only",
+        use_label: "Environmental due-diligence context only; no quantitative model impact.",
+        treatment_category: "Listed but Not Quantitatively Modeled",
+      };
+    }
+    if (hasAppraisal) {
+      return {
+        score: 300,
+        canonical_support_doc_role: "appraisal_context",
+        document_role_label: "Appraisal Context",
+        treatment_label: "Context only",
+        use_label: "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation.",
+        treatment_category: "Listed but Not Quantitatively Modeled",
+      };
+    }
+    return {
+      score: 100,
+      canonical_support_doc_role: "other_support_context",
+      document_role_label: "Other Support Document",
+      treatment_label: "Context only",
+      use_label: "Listed for auditability only; not used quantitatively.",
+      treatment_category: "Listed but Not Quantitatively Modeled",
+    };
+  };
+
+  const authorityRows = [];
+  for (const [key, entries] of grouped.entries()) {
+    const enriched = entries.map(({ row, index }) => ({
+      row,
+      index,
+      authority: classifyAuthority(row),
+    }));
+    enriched.sort((left, right) => right.authority.score - left.authority.score || left.index - right.index);
+    const winner = enriched[0];
+    const filename = String(
+      winner.row?.original_filename ||
+      winner.row?.source_original_filename ||
+      winner.row?.file_name ||
+      winner.row?.filename ||
+      ""
+    ).trim();
+    authorityRows.push({
+      ...winner.row,
+      original_filename: filename,
+      canonical_support_doc_identity_key: key,
+      canonical_document_treatment_identity_key: key,
+      semantic_doc_role: winner.authority.canonical_support_doc_role,
+      semantic_doc_display_label: winner.authority.document_role_label,
+      ...winner.authority,
+      allowed_uses: [winner.authority.use_label],
+      forbidden_uses: [
+        "Does not override T12 or Rent Roll core truth.",
+        "Does not open DSCR, refinance, DCF, waterfall, equity return, deal score, or final recommendation surfaces.",
+      ],
+    });
+  }
+  return authorityRows.filter((row) => String(row?.original_filename || "").trim().length > 0);
+}
+
 function buildDocumentTreatmentSummaryHtml({
   documentSources = [],
+  supportDocAuthorityRows = null,
   reportMode = null,
   currentDebtAssessmentState = null,
   canonicalAcquisitionState = null,
@@ -2865,7 +3109,10 @@ function buildDocumentTreatmentSummaryHtml({
       .filter(Boolean);
     return rowNameTokens.some((token) => binding.nameCandidates.has(token));
   };
-  const files = canonicalizeDocumentTreatmentSources(documentSources)
+  const authoritativeDocumentSources = Array.isArray(supportDocAuthorityRows) && supportDocAuthorityRows.length > 0
+    ? supportDocAuthorityRows
+    : canonicalizeDocumentTreatmentSources(documentSources);
+  const files = authoritativeDocumentSources
     .map((row) => ({
       id: row?.id ?? null,
       file_id: row?.file_id ?? null,
@@ -2904,6 +3151,17 @@ function buildDocumentTreatmentSummaryHtml({
       semantic_doc_role_confidence: row?.semantic_doc_role_confidence ?? null,
       parse_status: String(row?.parse_status || "").trim(),
       parse_error: String(row?.parse_error || "").trim(),
+      canonical_support_doc_role: String(row?.canonical_support_doc_role || "").trim(),
+      document_role_label: String(row?.document_role_label || "").trim(),
+      treatment_label: String(row?.treatment_label || "").trim(),
+      use_label: String(row?.use_label || "").trim(),
+      treatment_category: String(row?.treatment_category || "").trim(),
+      has_acquisition_support: row?.has_acquisition_support === true,
+      has_proposed_acquisition_financing: row?.has_proposed_acquisition_financing === true,
+      has_current_debt_context: row?.has_current_debt_context === true,
+      has_structured_renovation_budget: row?.has_structured_renovation_budget === true,
+      has_renovation_rent_lift: row?.has_renovation_rent_lift === true,
+      has_renovation_phasing: row?.has_renovation_phasing === true,
     }))
     .filter((row) => row.original_filename.length > 0);
   if (!files.length) return "";
@@ -3103,6 +3361,15 @@ function buildDocumentTreatmentSummaryHtml({
   };
   const sourceTreatmentEntriesByIdentity = new Map();
   const classifyRow = (row) => {
+    if (row?.canonical_support_doc_role && row?.treatment_label && row?.use_label) {
+      const reasonCode = `canonical_support_doc_${normalizedText(row.canonical_support_doc_role).replace(/[^a-z0-9]+/g, "_")}`;
+      return {
+        category: row.treatment_category || "Displayed / Limited Use",
+        note: row.use_label,
+        reason_code: reasonCode,
+        source_basis: "canonical_support_doc_authority",
+      };
+    }
     const quantitativeUsage = findQuantitativeUsage(row);
     if (quantitativeUsage?.usageType === "current_debt") {
       return {
@@ -3589,6 +3856,7 @@ function buildDocumentTreatmentSummaryHtml({
     return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
   };
   const resolveDocumentRoleLabel = (row, classification) => {
+    if (row?.document_role_label) return row.document_role_label;
     const canonicalRole = normalizedText(row?.semantic_doc_role || row?.display_doc_type || row?.doc_type || "");
     if (/^(t12|trailing[-_\s]?12|ttm operating statement|operating statement|income statement)$/.test(canonicalRole)) {
       return "T12 Operating Statement";
@@ -3662,6 +3930,7 @@ function buildDocumentTreatmentSummaryHtml({
     return "Other Support Document";
   };
   const resolveTreatmentLabel = (row, classification) => {
+    if (row?.treatment_label) return row.treatment_label;
     switch (classification?.reason_code) {
       case "structured_current_debt_input":
         return "Core quantitative source";
@@ -4088,6 +4357,7 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   propertyTaxPayload = null,
   propertyTaxBindingState = null,
   sourceReportCoverageQa = null,
+  supportDocAuthorityRows = null,
   formatCurrency,
   formatPercent1,
   formatInterestRatePercent,
@@ -4103,6 +4373,30 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     }
     return null;
   };
+  const authorityRows = Array.isArray(supportDocAuthorityRows) && supportDocAuthorityRows.length > 0
+    ? supportDocAuthorityRows
+    : Array.isArray(sourceReportCoverageQa?.support_document_authority_rows)
+    ? sourceReportCoverageQa.support_document_authority_rows
+    : Array.isArray(sourceReportCoverageQa?.document_treatment_canonical_rows)
+    ? sourceReportCoverageQa.document_treatment_canonical_rows
+    : [];
+  const authorityByRole = (pattern) => authorityRows.find((row) => pattern.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || "")));
+  const acquisitionAuthorityRow = authorityRows.find((row) =>
+    row?.has_acquisition_support === true ||
+    row?.has_proposed_acquisition_financing === true ||
+    /(purchase_assumptions|proposed_acquisition_financing)/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+  ) || null;
+  const proposedFinancingAuthorityRow = authorityRows.find((row) =>
+    row?.has_proposed_acquisition_financing === true ||
+    /proposed_acquisition_financing/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+  ) || null;
+  const currentDebtAuthorityRow = authorityRows.find((row) =>
+    row?.has_current_debt_context === true ||
+    /current_debt_context/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+  ) || null;
+  const renovationAuthorityRow = authorityByRole(/renovation|capex/i);
+  const appraisalAuthorityRow = authorityByRole(/appraisal/i);
+  const environmentalAuthorityRow = authorityByRole(/environmental|phase|esa/i);
   const escapeLabel = (value) => escapeHtml(String(value ?? ""));
   const t12Verified = Boolean(
     sourceReportCoverageQa?.artifact_inventory?.t12_parsed?.present === true &&
@@ -4112,9 +4406,9 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.present === true &&
     sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.has_total_units === true
   );
-  const purchasePrice = firstFinite(ctx.purchasePrice, acquisitionTermsPayload?.purchase_price, acquisitionTermsPayload?.purchasePrice);
-  const noiBasis = firstFinite(ctx.acquisitionNoiBasis, acquisitionTermsPayload?.noi_basis, acquisitionTermsPayload?.net_operating_income_basis, acquisitionTermsPayload?.noi);
-  const goingInCapRate = firstFinite(ctx.goingInCapRate, acquisitionTermsPayload?.going_in_cap_rate);
+  const purchasePrice = firstFinite(ctx.purchasePrice, acquisitionTermsPayload?.purchase_price, acquisitionTermsPayload?.purchasePrice, acquisitionAuthorityRow?.purchase_price, acquisitionAuthorityRow?.purchasePrice, acquisitionAuthorityRow?.acquisition_price);
+  const noiBasis = firstFinite(ctx.acquisitionNoiBasis, acquisitionTermsPayload?.noi_basis, acquisitionTermsPayload?.net_operating_income_basis, acquisitionTermsPayload?.noi, acquisitionAuthorityRow?.noi_basis, acquisitionAuthorityRow?.net_operating_income_basis);
+  const goingInCapRate = firstFinite(ctx.goingInCapRate, acquisitionTermsPayload?.going_in_cap_rate, acquisitionAuthorityRow?.going_in_cap_rate);
   const units = firstFinite(ctx.units, sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.total_units);
   const pricePerUnit = Number.isFinite(purchasePrice) && Number.isFinite(units) && units > 0 ? purchasePrice / units : null;
   const noiPerUnit = Number.isFinite(noiBasis) && Number.isFinite(units) && units > 0 ? noiBasis / units : null;
@@ -4145,12 +4439,13 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     acquisitionTermsPayload?.document_derived_cap_rate
   );
   const proposedAcquisitionFinancingSourceComplete = Boolean(
+    proposedFinancingAuthorityRow?.has_proposed_acquisition_financing === true ||
     /proposed_acquisition_financing/i.test(String(loanTermSheetTermsPayload?.semantic_doc_role || acquisitionTermsPayload?.semantic_doc_role || "")) ||
     /proposed\s+acquisition\s+(financing|loan|debt)|proposed\s+loan\s+terms|future\s+underwriting/i.test(
       String(loanTermSheetTermsPayload?.source_text || acquisitionTermsPayload?.source_text || loanTermSheetTermsPayload?.notes || acquisitionTermsPayload?.notes || "")
     )
   );
-  const currentDebtHasVerifiedBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance === true);
+  const currentDebtHasVerifiedBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance === true || currentDebtAuthorityRow);
   const currentDebtBalance = firstFinite(
     currentDebtAssessmentState?.current_debt_balance,
     mortgagePayload?.outstanding_balance,
@@ -4158,22 +4453,29 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     mortgagePayload?.current_loan_balance,
     loanTermSheetTermsPayload?.outstanding_balance,
     loanTermSheetTermsPayload?.current_outstanding_balance,
-    loanTermSheetTermsPayload?.current_loan_balance
+    loanTermSheetTermsPayload?.current_loan_balance,
+    currentDebtAuthorityRow?.outstanding_balance,
+    currentDebtAuthorityRow?.current_outstanding_balance,
+    currentDebtAuthorityRow?.current_loan_balance
   );
   const currentDebtInterestRate = firstFinite(
     mortgagePayload?.interest_rate,
     mortgagePayload?.rate,
-    loanTermSheetTermsPayload?.interest_rate
+    loanTermSheetTermsPayload?.interest_rate,
+    currentDebtAuthorityRow?.interest_rate
   );
   const currentDebtAmortYears = firstFinite(
     mortgagePayload?.amort_years,
     mortgagePayload?.amortization_years,
     loanTermSheetTermsPayload?.amort_years,
-    loanTermSheetTermsPayload?.amortization_years
+    loanTermSheetTermsPayload?.amortization_years,
+    currentDebtAuthorityRow?.amort_years,
+    currentDebtAuthorityRow?.amortization_years
   );
   const currentDebtLtv = firstFinite(
     mortgagePayload?.ltv,
-    loanTermSheetTermsPayload?.ltv
+    loanTermSheetTermsPayload?.ltv,
+    currentDebtAuthorityRow?.ltv
   );
   const currentDebtRows = currentDebtHasVerifiedBalance
     ? [
@@ -4227,17 +4529,17 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     `<tr><td>Rent Roll verified</td><td style="font-weight:600;">${rentRollVerified ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Number.isFinite(purchasePrice) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Property tax support</td><td style="font-weight:600;">${Boolean(propertyTaxBindingState?.hasValidatedAnnualTax || isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax)) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document || currentDebtAuthorityRow) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
   ];
   const supportPresenceRows = [
-    Boolean(sourceReportCoverageQa?.artifact_inventory?.appraisal_parsed?.present) || /\bappraisal\b/i.test(String(sourceReportCoverageQa?.uploaded_files?.map?.((row) => `${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`).join(" ")) || "")
+    Boolean(appraisalAuthorityRow) || Boolean(sourceReportCoverageQa?.artifact_inventory?.appraisal_parsed?.present) || /\bappraisal\b/i.test(String(sourceReportCoverageQa?.uploaded_files?.map?.((row) => `${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`).join(" ")) || "")
       ? `<tr><td>Appraisal support</td><td style="font-weight:600;">Context only unless structured value exists</td></tr>`
       : "",
-    Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /phase\s*i|esa|environment/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+    Boolean(environmentalAuthorityRow) || Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /phase\s*i|esa|environment/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
       ? `<tr><td>Environmental / Phase I support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`
       : "",
-    Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /capex|renovation|capital budget|construction budget/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+    Boolean(renovationAuthorityRow) || Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /capex|renovation|capital budget|construction budget/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
       ? `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`
       : "",
   ].filter(Boolean);
@@ -4342,6 +4644,7 @@ function buildLaunchSourceContextBlock({
   propertyTaxPayload = null,
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
+  supportDocAuthorityRows = null,
 } = {}) {
   const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
   const treatment = buildDocumentTreatmentSummaryHtml({
@@ -4357,6 +4660,7 @@ function buildLaunchSourceContextBlock({
     propertyTaxPayload,
     propertyTaxBindingState,
     documentQuantitativeUsageMap,
+    supportDocAuthorityRows,
   });
   const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
   return `${intro}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatment}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${excludedDeferredHtml}`;
@@ -4823,8 +5127,18 @@ function buildAcquisitionFinancingReadinessHtml({
   t12Payload = null,
   reportMode = null,
   currentDebtAssessmentState = null,
+  supportDocAuthorityRows = null,
 } = {}) {
   if (String(reportMode || "").toLowerCase() !== "v1_core") return "";
+  const authorityRows = Array.isArray(supportDocAuthorityRows) ? supportDocAuthorityRows : [];
+  const proposedAuthorityRow = authorityRows.find((row) =>
+    row?.has_proposed_acquisition_financing === true ||
+    /proposed_acquisition_financing/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+  ) || null;
+  const currentDebtAuthorityRow = authorityRows.find((row) =>
+    row?.has_current_debt_context === true ||
+    /current_debt_context/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+  ) || null;
   const currentLoanPayload =
     loanTermSheetTermsPayload && typeof loanTermSheetTermsPayload === "object"
       ? loanTermSheetTermsPayload
@@ -4866,8 +5180,9 @@ function buildAcquisitionFinancingReadinessHtml({
       /(current|existing|mortgage)/i.test(String(currentLoanPayload?.debt_basis || acquisitionContextPayload?.debt_basis || "")) &&
       !/(acquisition|proposed|purchase)/i.test(String(currentLoanPayload?.debt_basis || acquisitionContextPayload?.debt_basis || ""))
     );
-  const proposedAcquisitionSourcePayload = currentDebtSourceLike ? null : currentLoanPayload;
+  const proposedAcquisitionSourcePayload = proposedAuthorityRow || (currentDebtSourceLike ? null : currentLoanPayload);
   const hasProposedAcquisitionTerms = Boolean(
+    proposedAuthorityRow ||
     currentDebtAssessmentState?.has_proposed_acquisition_financing ||
     String(proposedAcquisitionSourcePayload?.debt_basis || acquisitionContextPayload?.debt_basis || "").toLowerCase().includes("acquisition") ||
     /(?:purchase|proposed acquisition|acquisition financing|going[-\s]*in cap|purchase price)/i.test(combinedText) ||
@@ -4904,9 +5219,9 @@ function buildAcquisitionFinancingReadinessHtml({
       )
   );
   if (!hasSourceBoundProposedAcquisitionContext) {
-    if (!hasProposedAcquisitionTerms && !currentDebtSourceLike && !hasAcquisitionContextHints) return "";
+    if (!hasProposedAcquisitionTerms && !currentDebtSourceLike && !currentDebtAuthorityRow && !hasAcquisitionContextHints) return "";
     const notes = ["Proposed Acquisition Financing: Not source-complete / not modeled."];
-    if (currentDebtSourceLike) {
+    if (currentDebtSourceLike || currentDebtAuthorityRow) {
       notes.push("Current/existing debt support was uploaded, but it remains contextual and is not treated as proposed acquisition financing.");
     }
     return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Proposed Acquisition Financing Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(notes.join(" "))}</p></div>`;
@@ -8739,6 +9054,20 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     const acquisitionMemoUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
     const rrUnits = Number.isFinite(acquisitionMemoUnits) ? acquisitionMemoUnits : null;
     let hasForwardLookingRenovationInputs = false;
+    const renderSupportDocAuthorityRows = buildCanonicalSupportDocAuthorityRows({
+      documentSources,
+      loanTermSheetTermsPayload,
+      acquisitionTermsPayload,
+      mortgagePayload,
+      renovationPayload: null,
+      propertyTaxPayload,
+      appraisalPayload,
+    });
+    const renderAcquisitionAuthorityRow = renderSupportDocAuthorityRows.find((row) =>
+      row?.has_acquisition_support === true ||
+      row?.has_proposed_acquisition_financing === true ||
+      /(purchase_assumptions|proposed_acquisition_financing)/i.test(String(row?.canonical_support_doc_role || ""))
+    ) || null;
     const acquisitionMemoRenderContext = {
       units: acquisitionMemoUnits,
       occupiedUnits: coerceNumber(computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units),
@@ -8769,11 +9098,15 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         ? coerceNumber(acquisitionTermsPayload?.purchase_price)
         : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price))
           ? coerceNumber(loanTermSheetTermsPayload?.purchase_price)
+          : Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.purchase_price))
+            ? coerceNumber(renderAcquisitionAuthorityRow?.purchase_price)
           : null,
       goingInCapRate: Number.isFinite(coerceNumber(acquisitionTermsPayload?.going_in_cap_rate))
         ? coerceNumber(acquisitionTermsPayload?.going_in_cap_rate)
         : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate))
           ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
+          : Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.going_in_cap_rate))
+            ? coerceNumber(renderAcquisitionAuthorityRow?.going_in_cap_rate)
           : null,
       acquisitionNoiBasis: execNoi,
       hasForwardLookingRenovationInputs,
@@ -8783,6 +9116,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
       documentSources,
+      supportDocAuthorityRows: renderSupportDocAuthorityRows,
     };
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
@@ -8900,6 +9234,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTaxPayload,
         propertyTaxBindingState,
         sourceReportCoverageQa,
+        supportDocAuthorityRows: acquisitionMemoRenderContext.supportDocAuthorityRows,
         formatCurrency,
         formatPercent1,
         formatInterestRatePercent,
@@ -8919,6 +9254,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTaxPayload: acquisitionMemoRenderContext.propertyTaxPayload,
         propertyTaxBindingState: acquisitionMemoRenderContext.propertyTaxBindingState,
         documentQuantitativeUsageMap: acquisitionMemoRenderContext.documentQuantitativeUsageMap,
+        supportDocAuthorityRows: acquisitionMemoRenderContext.supportDocAuthorityRows,
       });
       dataCoverageBlockHtml = "";
       execVerdictExpansionHtml = `${summaryCard}${contextCard}`;
@@ -8949,6 +9285,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       t12Payload,
       reportMode: effectiveReportMode,
       currentDebtAssessmentState,
+      supportDocAuthorityRows: acquisitionMemoRenderContext.supportDocAuthorityRows,
     });
     const neighborhoodAnnualMarketRentValue = Number.isFinite(coerceNumber(rentRollAnnualTotals?.market?.value))
       ? coerceNumber(rentRollAnnualTotals?.market?.value)
@@ -9456,13 +9793,21 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         const lower = name.toLowerCase();
         return lower && renovationFilenameTerms.some((term) => lower.includes(term));
       }) : [];
+    const renovationAuthorityRows = buildCanonicalSupportDocAuthorityRows({
+      documentSources,
+      renovationPayload,
+    });
+    const renovationAuthorityRow = renovationAuthorityRows.find((row) =>
+      /renovation|capex/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+    ) || null;
     const hasRenovationFilenameSignal = renovationSourceFilenames.length > 0;
+    const hasRenovationAuthoritySignal = Boolean(renovationAuthorityRow);
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
-    const renovationAcknowledgmentHtml = !hasRenovationFilenameSignal
+    const renovationAcknowledgmentHtml = !hasRenovationFilenameSignal && !hasRenovationAuthoritySignal
       ? ""
-      : hasForwardLookingRenovationAssumptions
+      : hasForwardLookingRenovationAssumptions || Boolean(renovationAuthorityRow?.has_renovation_rent_lift || renovationAuthorityRow?.has_renovation_phasing)
       ? `<strong>Uploaded Renovation / CapEx Document:</strong> Structured renovation budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only. Renovation ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.`
-      : hasExplicitRenovationInput
+      : hasExplicitRenovationInput || Boolean(renovationAuthorityRow?.has_structured_renovation_budget)
       ? `<strong>Uploaded Renovation / CapEx Document:</strong> Budget/scope items were received. Rent lift, ROI, payback, phasing, and implementation schedule were not provided; therefore renovation returns were not assessed.`
       : `<strong>Uploaded Renovation / CapEx Document:</strong> Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.`;
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
@@ -11588,6 +11933,16 @@ try {
   }
   sourcePackageQaFiles = coverageFiles;
   sourcePackageQaArtifacts = coverageArtifacts;
+  const supportDocAuthorityRowsForQa = buildCanonicalSupportDocAuthorityRows({
+    documentSources: coverageFiles,
+    artifacts: coverageArtifacts,
+    loanTermSheetTermsPayload,
+    acquisitionTermsPayload,
+    mortgagePayload,
+    renovationPayload,
+    propertyTaxPayload,
+    appraisalPayload,
+  });
   const sourceCoverageQa = buildSourceReportCoverageQa({
     jobId: jobId || null,
     userId: effectiveUserId || null,
@@ -11629,9 +11984,12 @@ try {
       null,
     underwritingState,
   });
-  sourceCoverageQa.document_treatment_canonical_rows = canonicalizeDocumentTreatmentSources(
-    Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
-  );
+  sourceCoverageQa.support_document_authority_rows = supportDocAuthorityRowsForQa;
+  sourceCoverageQa.document_treatment_canonical_rows = supportDocAuthorityRowsForQa.length > 0
+    ? supportDocAuthorityRowsForQa
+    : canonicalizeDocumentTreatmentSources(
+      Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
+    );
   if (typeof finalHtml === "string" && /Proposed Acquisition Financing Context|Source-complete inputs provided \/ available for future underwriting\./i.test(finalHtml)) {
     const renderedSignals = Array.isArray(sourceCoverageQa.rendered_text_signals)
       ? sourceCoverageQa.rendered_text_signals
@@ -11667,6 +12025,7 @@ try {
       propertyTaxPayload,
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
+      supportDocAuthorityRows: sourceCoverageQa.support_document_authority_rows,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -12422,6 +12781,7 @@ export const __test__ = {
   alignDealScorecardVisibleClassificationHtml,
   buildAcquisitionFinancingAssumptionsHtml,
   buildAcquisitionFinancingReadinessHtml,
+  buildPreliminaryFinancingReadinessSummaryHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
   resolveCanonicalRefiDebtBasis,
@@ -12466,6 +12826,7 @@ export const __test__ = {
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
+  buildCanonicalSupportDocAuthorityRows,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
   resolveScreeningClassificationConsumerLabel,
