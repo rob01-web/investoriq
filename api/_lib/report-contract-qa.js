@@ -1,6 +1,10 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 
-import { buildCurrentDebtAssessmentState, hasCurrentDebtSemanticState } from "./report-surface-contracts.js";
+import {
+  buildCurrentDebtAssessmentState,
+  hasCurrentDebtSemanticState,
+  resolveCanonicalRentRollAnnualTotals,
+} from "./report-surface-contracts.js";
 
 const REPORT_CONTRACT_QA_VERSION = "2026.05.09.1";
 
@@ -889,40 +893,17 @@ function resolveCanonicalRentRollAnnualTotalsForContract({
   sourceReportCoverageQa = null,
 } = {}) {
   const rentRollPayload = latestPayload(artifacts, "rent_roll_parsed") || null;
-  const totals = rentRollPayload?.totals && typeof rentRollPayload.totals === "object" ? rentRollPayload.totals : null;
-  const isPartialSample = rentRollPayload?.is_partial_sample === true;
-  const trustedSummaryTotals =
-    totals?.summary_row_detected === true ||
-    rentRollPayload?.summary_row_detected === true;
-  const canonicalAnnualInPlaceCandidates = [
-    sourceReportCoverageQa?.source_reconciliation_state?.rr_annual_in_place,
-    rentRollPayload?.annual_in_place_rent,
-    rentRollPayload?.annualized_in_place_rent,
-    rentRollPayload?.total_in_place_annual,
-    totals?.in_place_rent_annual,
-    totals?.current_rent_annual,
-    Number.isFinite(coerceNumber(totals?.in_place_rent_monthly)) ? coerceNumber(totals?.in_place_rent_monthly) * 12 : null,
-    Number.isFinite(coerceNumber(totals?.current_rent_monthly)) ? coerceNumber(totals?.current_rent_monthly) * 12 : null,
-  ];
-  const canonicalAnnualMarketCandidates = [
-    rentRollPayload?.annual_market_rent,
-    rentRollPayload?.annualized_market_rent,
-    rentRollPayload?.total_market_annual,
-    totals?.market_rent_annual,
-    Number.isFinite(coerceNumber(totals?.market_rent_monthly)) ? coerceNumber(totals?.market_rent_monthly) * 12 : null,
-  ];
-  const firstPositiveFinite = (values) => {
-    for (const value of values) {
-      const n = coerceNumber(value);
-      if (Number.isFinite(n) && n > 0) return n;
-    }
-    return null;
-  };
+  const canonicalAnnualTotals = resolveCanonicalRentRollAnnualTotals({
+    computedRentRoll: rentRollPayload,
+    rentRollPayload,
+  });
+  const inPlace = canonicalAnnualTotals?.in_place || null;
+  const market = canonicalAnnualTotals?.market || null;
   return {
-    annual_in_place_rent: firstPositiveFinite(canonicalAnnualInPlaceCandidates),
-    annual_market_rent: firstPositiveFinite(canonicalAnnualMarketCandidates),
-    is_partial_sample: isPartialSample,
-    trusted_summary_totals: trustedSummaryTotals,
+    annual_in_place_rent: Number.isFinite(coerceNumber(inPlace?.value)) && coerceNumber(inPlace.value) > 0 ? coerceNumber(inPlace.value) : null,
+    annual_market_rent: Number.isFinite(coerceNumber(market?.value)) && coerceNumber(market.value) > 0 ? coerceNumber(market.value) : null,
+    is_partial_sample: rentRollPayload?.is_partial_sample === true,
+    trusted_summary_totals: Boolean(inPlace?.trusted_summary_totals || market?.trusted_summary_totals),
     rent_roll_state: sourceReportCoverageQa?.rent_roll_sufficiency_state || null,
     rent_roll_inventory: sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed || null,
   };

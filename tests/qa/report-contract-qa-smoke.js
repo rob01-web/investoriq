@@ -237,6 +237,34 @@ assert.equal(
   false
 );
 
+const canonicalRentRollMarketSummaryPollutedRowAligned = buildReportContractQa({
+  reportType: "underwriting",
+  reportTier: 2,
+  artifacts: [
+    baseArtifacts[0],
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        total_units: 48,
+        total_market_annual: 21744000,
+        unit_mix: [{ count: 48, market_rent: 1888 }],
+        totals: {
+          total_units: 48,
+          summary_row_detected: true,
+          market_rent_annual: 21744000,
+          market_rent_monthly: 1812000,
+        },
+      },
+    },
+  ],
+  sourceReportCoverageQa: baseCoverage,
+  html: "<p>Annual Market Rent (Total) $1,087,488</p>",
+});
+assert.equal(
+  canonicalRentRollMarketSummaryPollutedRowAligned.violations.some((v) => v.code === "RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT"),
+  false
+);
+
 const canonicalRentRollMarketDrift = buildReportContractQa({
   reportType: "underwriting",
   reportTier: 2,

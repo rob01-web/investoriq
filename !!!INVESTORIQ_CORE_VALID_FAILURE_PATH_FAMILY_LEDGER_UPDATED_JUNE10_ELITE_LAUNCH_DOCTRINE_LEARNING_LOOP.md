@@ -1,3 +1,370 @@
+# June 10, 2026 Addendum - InvestorIQ Learning Loop Doctrine / No Silent Financial Mutation
+
+## Current controlling decision
+
+InvestorIQ should become more intelligent from every controlled test and every future live report, but it must not silently change customer-facing financial truth.
+
+The learning system is allowed to improve diagnostics, issue clustering, QA calibration, source-package scoring, regression recommendations, and future patch proposals.
+
+The learning system is not allowed to silently mutate deterministic financial outputs, source-bound values, delivery authority, credit/payment/access state, or customer-facing calculations.
+
+Controlling rule:
+
+```text
+InvestorIQ may learn from test and live-report outcomes, but any learned rule that can affect customer-facing financial outputs must be promoted through human-approved deterministic code, regression tests, and commit review before it can affect production reports.
+```
+
+## Three-zone learning architecture
+
+### 1. Locked deterministic calculation engine
+
+This layer remains sacred and must not self-learn or self-mutate.
+
+It owns:
+
+```text
+NOI
+EGI
+Gross rental income
+Other income
+Operating expenses
+Expense ratio
+NOI margin
+Break-even occupancy
+Occupancy
+Annual in-place rent
+Annual market rent
+Annual rent upside
+Rent gap %
+Per-unit metrics
+Cap-rate value math
+Price per unit
+NOI per unit
+Current debt context values
+Proposed acquisition financing values when explicitly source-complete
+Delivery/fail-closed/customer-credit/payment/access authority
+```
+
+Permitted change path:
+
+```text
+human red-pen decision -> deterministic rule proposal -> Codex/code patch -> regression test -> review -> commit -> future reports
+```
+
+Forbidden change path:
+
+```text
+test observation -> AI silently changes numbers in a future report
+```
+
+### 2. Learning ledger / feedback memory
+
+Every meaningful test and future live report should produce structured learning records.
+
+Minimum learning event fields:
+
+```text
+report_id / job_id
+report_type
+source_package_family
+issue_code
+human_red_pen_decision
+severity
+launch_blocker: yes/no
+customer_visible: yes/no
+math_affected: yes/no
+source_binding_affected: yes/no
+root_cause_family
+recommended_owner_area
+patch_required: yes/no
+regression_required: yes/no
+final_disposition
+notes
+```
+
+Allowed human red-pen dispositions:
+
+```text
+true_launch_blocker
+true_bug_non_launch_blocker
+qa_false_positive
+correct_conservative_disclosure
+source_limitation_correctly_handled
+support_doc_containment_pass
+v2_surface_leak
+current_debt_proposed_financing_contamination
+renderer_or_pdf_polish
+admin_dashboard_diagnostic_polish
+post_launch_backlog
+ignore_for_now
+```
+
+### 3. Recommendation / QA intelligence layer
+
+This layer may use prior learning records to make the system smarter without touching customer financial outputs.
+
+Allowed uses:
+
+```text
+cluster repeated issue families;
+identify repeated QA false positives;
+recommend focused Codex prompts;
+recommend regression tests;
+rank issues as Tier 1, Tier 2, or Tier 3;
+warn when a live report resembles a prior failure pattern;
+recommend whether an issue is parser, renderer, QA contract, source limitation, distribution config, or admin diagnostic;
+prepare V2 eligibility intelligence from Acquisition Memo patterns.
+```
+
+Forbidden uses:
+
+```text
+change NOI, rent, cap-rate value, debt, DSCR, financing, delivery, credit, payment, or access outputs without a deterministic patch;
+override T12/Rent Roll/source-bound values because a prior test looked similar;
+suppress a real customer-visible math issue because a previous issue was a false positive;
+mark a report deliverable or failed based only on learned similarity;
+create new modeled outputs from unsupported support documents.
+```
+
+## Test 1 / Test 2 learning signal recorded
+
+The first two June 10 major tests created the first clear Learning Loop candidate.
+
+Observed pattern:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT fired in Test 1 and Test 2.
+Customer-visible rendered annual market rent appeared mathematically correct from row/unit-mix rent-roll math.
+Internal QA/canonical value appeared polluted by inflated summary totals.
+```
+
+Interpretation:
+
+```text
+This is not yet proof of wrong customer-facing math.
+It is a repeated QA/canonical-source-selection trust issue.
+Treat as a Critical Watchlist / potential launch blocker if repeated across the 7-test batch.
+Likely owner area: QA contract / rent-roll canonical source selection, not report renderer, unless a later test proves customer-visible math is wrong.
+```
+
+Correct learning classification for now:
+
+```text
+issue_code: RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+human_red_pen_decision: qa_false_positive_pattern_candidate
+severity: critical_watchlist
+customer_visible_math_wrong: not proven
+system_trust_affected: yes
+patch_now: no, wait for all 7 tests unless it escalates into visible math defect
+regression_required_if_patched: yes
+```
+
+## Startup launch discipline
+
+Learning Loop doctrine does not mean pausing launch for every imperfect artifact.
+
+Launch-blocking learning families are only those that can create Tier 1 failures:
+
+```text
+wrong math;
+wrong source binding;
+fabricated/inferred unsupported values;
+current debt / proposed financing / refi contamination;
+unsafe V2 surface leakage;
+customer lifecycle limbo;
+false fail-closed or false publish;
+credit/payment/access/security failure;
+missing or misleading customer-facing limitations.
+```
+
+Tier 2 learning families can be captured for post-launch improvement:
+
+```text
+PDF spacing;
+filename wrapping;
+thin divider pages;
+repetitive wording;
+advisory QA noise;
+admin diagnostic clarity;
+optional support-doc summary depth;
+public/sample/DocRaptor distribution polish.
+```
+
+## V2 Underwriting benefit
+
+Acquisition Memo testing should become the training ground for Full Underwriting V2.0.
+
+Every memo test can teach V2:
+
+```text
+which source packages are strong enough for debt sizing;
+which fields are commonly missing for DSCR;
+which support docs are safe context-only;
+which support docs should never unlock modeled outputs;
+which current-debt/proposed-financing combinations are dangerous;
+which QA signals are reliable versus noisy;
+which source gaps should create V2 eligibility constraints.
+```
+
+V2 should not inherit the old broad underwriting surfaces until the Learning Loop has enough source-package evidence and deterministic eligibility rules.
+
+## Future implementation target
+
+When launch pressure allows, add a persistent `learning_events` / `red_pen_review_events` table or artifact family.
+
+Near-term manual version:
+
+```text
+During major test batches, record each issue in the docs as:
+- Test number
+- visible report issue
+- artifact/QA issue
+- launch-blocking status
+- human decision
+- owner area
+- defer/patch decision
+```
+
+Longer-term product version:
+
+```text
+Every generated report creates structured diagnostics.
+Human/Admin red-pen decisions attach dispositions.
+Repeated patterns create recommended rules/regressions.
+Only human-approved deterministic patches can affect financial outputs.
+```
+
+## Guardrail phrase
+
+Use this phrase as the controlling shorthand:
+
+```text
+InvestorIQ learns for diagnostics and future rules; it does not silently learn new numbers.
+```
+
+---
+
+# June 10, 2026 Addendum - Learning Loop Mapping to Core-Valid Failure Path Ledger
+
+## Current CVF interpretation of Learning Loop doctrine
+
+The Learning Loop is not a new delivery authority and not a new calculation authority.
+
+It is a diagnostics and regression-intelligence layer that supports the existing CVF doctrine.
+
+Mapping:
+
+```text
+CVF families remain the launch-blocking doctrine map.
+Learning events help classify whether a repeated issue is a true CVF launch blocker, a QA false positive, a correct disclosure, or Tier 2 polish.
+```
+
+## Learning Loop cannot override CVF authority
+
+Learning events must not override:
+
+```text
+CVF-01 / CVF-02 core T12/Rent Roll validity;
+CVF-04 current-debt/refi separation;
+CVF-05 report-type section leak gates;
+CVF-06 source reconciliation disclosure behavior;
+CVF-08 / CVF-09 / CVF-10 delivery-gate and worker lifecycle;
+CVF-11 / CVF-12 customer failure/Dashboard copy;
+CVF-13 runtime/storage/PDF catastrophic failure treatment;
+CVF-14 provider/advisory diagnostic-only behavior;
+CVF-15 optional-support diagnostic-only behavior.
+```
+
+Learning events may recommend patches or regressions for these families, but cannot directly change customer outputs.
+
+## Tests 1-2 CVF watchlist mapping
+
+Observed repeated issue:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+```
+
+Likely CVF family:
+
+```text
+CVF-06 Source reconciliation / rendered variance drift
+```
+
+Possible related authority family:
+
+```text
+report_contract_qa canonical rent-roll source selection / summary-total acceptance
+```
+
+Current status:
+
+```text
+Critical Watchlist / potential launch blocker.
+Not yet proven as customer-visible wrong math.
+Repeated enough to track as a system-trust issue.
+Do not patch until all 7 reports are reviewed unless the defect becomes customer-visible.
+```
+
+Correct CVF handling if confirmed:
+
+```text
+If rendered math is correct and QA canonical is wrong:
+- patch QA/canonical source selection;
+- add regression proving row-derived/unit-mix totals outrank polluted summary totals when summary totals are magnitude-inconsistent;
+- do not patch renderer math.
+
+If rendered math is wrong:
+- classify as Tier 1 core math/source-binding blocker;
+- patch renderer/source selection immediately after batch review;
+- add regression proving customer-visible annual market rent/rent gap/value sensitivity use correct authority.
+```
+
+## CVF learning event classification template
+
+Use this template for future ledger entries:
+
+```text
+Issue Code:
+Report/Test:
+CVF Family:
+Human Red-Pen Decision:
+Customer Visible:
+Math Affected:
+Source Binding Affected:
+Launch Blocker:
+Owner Area:
+Patch Timing:
+Regression Required:
+Final Disposition:
+```
+
+## No silent mutation rule added to CVF doctrine
+
+All CVF patches must remain deterministic.
+
+A repeated learning pattern may trigger:
+
+```text
+recommended Codex prompt;
+recommended regression fixture;
+recommended QA calibration;
+recommended source-package scoring rule;
+recommended V2 eligibility rule.
+```
+
+It may not trigger:
+
+```text
+automatic changes to financial values;
+automatic suppression of customer-visible warnings;
+automatic delivery/fail-closed changes;
+automatic source override;
+automatic V2 debt/DSCR/refi/DCF unlocks.
+```
+
+---
+
 # June 10, 2026 Addendum - ELITE Launch Doctrine Status / Core-Valid Failure Path Reclassification
 
 ## Current controlling status

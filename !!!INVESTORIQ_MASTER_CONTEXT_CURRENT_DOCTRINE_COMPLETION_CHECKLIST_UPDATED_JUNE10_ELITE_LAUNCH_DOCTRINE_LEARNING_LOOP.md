@@ -1,3 +1,336 @@
+# June 10, 2026 Addendum - InvestorIQ Learning Loop Doctrine / No Silent Financial Mutation
+
+## Current controlling decision
+
+InvestorIQ should become more intelligent from every controlled test and every future live report, but it must not silently change customer-facing financial truth.
+
+The learning system is allowed to improve diagnostics, issue clustering, QA calibration, source-package scoring, regression recommendations, and future patch proposals.
+
+The learning system is not allowed to silently mutate deterministic financial outputs, source-bound values, delivery authority, credit/payment/access state, or customer-facing calculations.
+
+Controlling rule:
+
+```text
+InvestorIQ may learn from test and live-report outcomes, but any learned rule that can affect customer-facing financial outputs must be promoted through human-approved deterministic code, regression tests, and commit review before it can affect production reports.
+```
+
+## Three-zone learning architecture
+
+### 1. Locked deterministic calculation engine
+
+This layer remains sacred and must not self-learn or self-mutate.
+
+It owns:
+
+```text
+NOI
+EGI
+Gross rental income
+Other income
+Operating expenses
+Expense ratio
+NOI margin
+Break-even occupancy
+Occupancy
+Annual in-place rent
+Annual market rent
+Annual rent upside
+Rent gap %
+Per-unit metrics
+Cap-rate value math
+Price per unit
+NOI per unit
+Current debt context values
+Proposed acquisition financing values when explicitly source-complete
+Delivery/fail-closed/customer-credit/payment/access authority
+```
+
+Permitted change path:
+
+```text
+human red-pen decision -> deterministic rule proposal -> Codex/code patch -> regression test -> review -> commit -> future reports
+```
+
+Forbidden change path:
+
+```text
+test observation -> AI silently changes numbers in a future report
+```
+
+### 2. Learning ledger / feedback memory
+
+Every meaningful test and future live report should produce structured learning records.
+
+Minimum learning event fields:
+
+```text
+report_id / job_id
+report_type
+source_package_family
+issue_code
+human_red_pen_decision
+severity
+launch_blocker: yes/no
+customer_visible: yes/no
+math_affected: yes/no
+source_binding_affected: yes/no
+root_cause_family
+recommended_owner_area
+patch_required: yes/no
+regression_required: yes/no
+final_disposition
+notes
+```
+
+Allowed human red-pen dispositions:
+
+```text
+true_launch_blocker
+true_bug_non_launch_blocker
+qa_false_positive
+correct_conservative_disclosure
+source_limitation_correctly_handled
+support_doc_containment_pass
+v2_surface_leak
+current_debt_proposed_financing_contamination
+renderer_or_pdf_polish
+admin_dashboard_diagnostic_polish
+post_launch_backlog
+ignore_for_now
+```
+
+### 3. Recommendation / QA intelligence layer
+
+This layer may use prior learning records to make the system smarter without touching customer financial outputs.
+
+Allowed uses:
+
+```text
+cluster repeated issue families;
+identify repeated QA false positives;
+recommend focused Codex prompts;
+recommend regression tests;
+rank issues as Tier 1, Tier 2, or Tier 3;
+warn when a live report resembles a prior failure pattern;
+recommend whether an issue is parser, renderer, QA contract, source limitation, distribution config, or admin diagnostic;
+prepare V2 eligibility intelligence from Acquisition Memo patterns.
+```
+
+Forbidden uses:
+
+```text
+change NOI, rent, cap-rate value, debt, DSCR, financing, delivery, credit, payment, or access outputs without a deterministic patch;
+override T12/Rent Roll/source-bound values because a prior test looked similar;
+suppress a real customer-visible math issue because a previous issue was a false positive;
+mark a report deliverable or failed based only on learned similarity;
+create new modeled outputs from unsupported support documents.
+```
+
+## Test 1 / Test 2 learning signal recorded
+
+The first two June 10 major tests created the first clear Learning Loop candidate.
+
+Observed pattern:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT fired in Test 1 and Test 2.
+Customer-visible rendered annual market rent appeared mathematically correct from row/unit-mix rent-roll math.
+Internal QA/canonical value appeared polluted by inflated summary totals.
+```
+
+Interpretation:
+
+```text
+This is not yet proof of wrong customer-facing math.
+It is a repeated QA/canonical-source-selection trust issue.
+Treat as a Critical Watchlist / potential launch blocker if repeated across the 7-test batch.
+Likely owner area: QA contract / rent-roll canonical source selection, not report renderer, unless a later test proves customer-visible math is wrong.
+```
+
+Correct learning classification for now:
+
+```text
+issue_code: RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+human_red_pen_decision: qa_false_positive_pattern_candidate
+severity: critical_watchlist
+customer_visible_math_wrong: not proven
+system_trust_affected: yes
+patch_now: no, wait for all 7 tests unless it escalates into visible math defect
+regression_required_if_patched: yes
+```
+
+## Startup launch discipline
+
+Learning Loop doctrine does not mean pausing launch for every imperfect artifact.
+
+Launch-blocking learning families are only those that can create Tier 1 failures:
+
+```text
+wrong math;
+wrong source binding;
+fabricated/inferred unsupported values;
+current debt / proposed financing / refi contamination;
+unsafe V2 surface leakage;
+customer lifecycle limbo;
+false fail-closed or false publish;
+credit/payment/access/security failure;
+missing or misleading customer-facing limitations.
+```
+
+Tier 2 learning families can be captured for post-launch improvement:
+
+```text
+PDF spacing;
+filename wrapping;
+thin divider pages;
+repetitive wording;
+advisory QA noise;
+admin diagnostic clarity;
+optional support-doc summary depth;
+public/sample/DocRaptor distribution polish.
+```
+
+## V2 Underwriting benefit
+
+Acquisition Memo testing should become the training ground for Full Underwriting V2.0.
+
+Every memo test can teach V2:
+
+```text
+which source packages are strong enough for debt sizing;
+which fields are commonly missing for DSCR;
+which support docs are safe context-only;
+which support docs should never unlock modeled outputs;
+which current-debt/proposed-financing combinations are dangerous;
+which QA signals are reliable versus noisy;
+which source gaps should create V2 eligibility constraints.
+```
+
+V2 should not inherit the old broad underwriting surfaces until the Learning Loop has enough source-package evidence and deterministic eligibility rules.
+
+## Future implementation target
+
+When launch pressure allows, add a persistent `learning_events` / `red_pen_review_events` table or artifact family.
+
+Near-term manual version:
+
+```text
+During major test batches, record each issue in the docs as:
+- Test number
+- visible report issue
+- artifact/QA issue
+- launch-blocking status
+- human decision
+- owner area
+- defer/patch decision
+```
+
+Longer-term product version:
+
+```text
+Every generated report creates structured diagnostics.
+Human/Admin red-pen decisions attach dispositions.
+Repeated patterns create recommended rules/regressions.
+Only human-approved deterministic patches can affect financial outputs.
+```
+
+## Guardrail phrase
+
+Use this phrase as the controlling shorthand:
+
+```text
+InvestorIQ learns for diagnostics and future rules; it does not silently learn new numbers.
+```
+
+---
+
+# June 10, 2026 Addendum - Major Test Batch Running Log / Tests 1-2 Learning Notes
+
+## Current batch status
+
+Rob is running a 7-report major test batch under Ken Dunn red-pen review.
+
+Instruction:
+
+```text
+Review all 7 tests first.
+Do not patch after each individual report unless a catastrophic launch blocker appears.
+Separate true launch blockers from Tier 2 polish.
+Track repeated root patterns before asking Codex to patch.
+```
+
+## Test 1 - Maplewell Court
+
+Customer-facing verdict:
+
+```text
+PASS with disclosure.
+```
+
+Key wins:
+
+```text
+Current debt was correctly treated as Uploaded Existing Debt Context.
+Current debt did not become proposed acquisition financing.
+Proposed Acquisition Financing correctly rendered as Not source-complete / not modeled.
+Property tax support correctly corroborated the T12 property tax line and did not override T12 totals.
+Source Reconciliation Disclosure was conservative and appropriate for the T12/Rent Roll income variance.
+```
+
+Critical watchlist:
+
+```text
+Internal QA/canonical rent-roll annual market rent drift fired with inflated canonical annual market rent while the rendered report appeared mathematically correct.
+```
+
+## Test 2 - Silvergate Manor
+
+Customer-facing verdict:
+
+```text
+PASS with disclosure.
+```
+
+Key wins:
+
+```text
+Unsupported appraisal did not override cap-rate value framework.
+Unsupported market survey did not override rent roll.
+Unsupported Phase I ESA stayed environmental context-only and did not create modeled impact.
+Historical CapEx stayed historical/context-only and did not create renovation ROI, payback, rent-lift, or forward budget outputs.
+Broker email did not override structured T12/Rent Roll source authority.
+No current debt and no proposed acquisition loan terms correctly rendered as no verified current debt context and Not source-complete / not modeled proposed acquisition financing.
+```
+
+Critical watchlist escalation:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT repeated in Test 2.
+Rendered annual market rent again appeared correct from row/unit-mix math.
+Internal QA/canonical market rent again appeared inflated by bad summary-total acceptance.
+This is now a pattern to evaluate after all 7 tests.
+```
+
+## Current master watchlist after Tests 1-2
+
+```text
+1. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT repeated as likely QA/canonical-source-selection issue.
+   Status: Critical Watchlist / potential launch blocker if repeated.
+   Patch timing: wait for all 7 tests unless customer-visible math is proven wrong.
+   Likely owner: report_contract_qa / rent-roll canonical source selection.
+```
+
+## Current non-blocking observations after Tests 1-2
+
+```text
+DocRaptor test mode remains distribution/public-sample config only.
+Filename wrapping remains PDF polish.
+Thin divider page before financing readiness remains polish.
+Repetitive disclosure language remains polish unless it becomes misleading.
+```
+
+---
+
 # June 10, 2026 Addendum - Launch Doctrine / ELITE vs Not-Yet-ELITE Checkpoint After Acquisition Memo 15/16 + 124 Richmond Clean/Messy Tests
 
 ## Current controlling interpretation
