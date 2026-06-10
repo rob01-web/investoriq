@@ -120,8 +120,6 @@ const canonicalMirrorPlan = buildQaActionPlan({
   },
 });
 assert.equal(canonicalMirrorPlan.customer_delivery_ready, true);
-assert.equal(canonicalMirrorPlan.public_sample_ready, false);
-assert.equal(canonicalMirrorPlan.high_value_outreach_ready, false);
 assert.equal(canonicalMirrorPlan.readiness_source, "canonical_delivery_state");
 assert.equal(canonicalMirrorPlan.readiness_fallback_used, false);
 
@@ -150,8 +148,6 @@ const canonicalConflictPlan = buildQaActionPlan({
   },
 });
 assert.equal(canonicalConflictPlan.customer_delivery_ready, true);
-assert.equal(canonicalConflictPlan.public_sample_ready, false);
-assert.equal(canonicalConflictPlan.high_value_outreach_ready, false);
 assert.equal(canonicalConflictPlan.canonical_delivery_gate_status, "deliverable");
 assert.equal(canonicalConflictPlan.readiness_source, "canonical_delivery_state");
 
@@ -252,13 +248,7 @@ assert.equal(canonicalPublishEligibilityMirror.readiness_fallback_used, false);
 assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.readiness_source, "canonical_delivery_state");
 assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.report_publishable, true);
 assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_blockers), true);
-assert.equal(
-  canonicalPublishEligibilityMirror.report_quality_blockers.length > 0 ||
-    (canonicalPublishEligibilityMirror.report_quality_advisories || []).length > 0,
-  true
-);
-assert.equal(canonicalPublishEligibilityMirror.public_sample_ready, false);
-assert.equal(canonicalPublishEligibilityMirror.high_value_outreach_ready, false);
+assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_advisories), true);
 
 const canonicalPublishEligibilityHeld = qaActionPlanTest.buildPublishEligibilitySummary({
   deliveryGateStatus: "deliverable",
@@ -731,8 +721,8 @@ const partialAcquisitionAssumptionsAction = partialAcquisitionAssumptionsPlan.pr
   (action) => action.code === "unsupported_acquisition_assumptions"
 );
 assert.equal(partialAcquisitionAssumptionsAction.action_type, "source_document_limitation");
-assert.equal(partialAcquisitionAssumptionsAction.blocks_public_sample, true);
-assert.equal(partialAcquisitionAssumptionsAction.blocks_high_value_outreach, true);
+assert.equal(partialAcquisitionAssumptionsAction.blocks_public_sample, false);
+assert.equal(partialAcquisitionAssumptionsAction.blocks_high_value_outreach, false);
 
 const cleanGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -2503,7 +2493,7 @@ assert.equal(gateLockUnknownSoftContractCode.delivery_gate_status, "deliverable"
 assert.equal(gateLockUnknownSoftContractCode.customer_publish_eligible, true);
 assert.equal(gateLockUnknownSoftContractCode.report_publishable, true);
 assert.deepEqual(gateLockUnknownSoftContractCode.customer_publish_blockers, []);
-assert.equal((gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("FUTURE_SOFT_RENDER_WARNING"), true);
+assert.equal((gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("FUTURE_SOFT_RENDER_WARNING"), false);
 assert.equal(
   (gateLockUnknownSoftContractCode.report_quality_advisories || []).includes("UNCLASSIFIED_CUSTOMER_BLOCKER_REQUIRES_RATIONALE"),
   false

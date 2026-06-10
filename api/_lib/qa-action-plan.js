@@ -42,6 +42,8 @@ function pushAction(actions, action) {
     blocks_public_sample: Boolean(action.blocks_public_sample),
     blocks_high_value_outreach: Boolean(action.blocks_high_value_outreach),
     safe_to_auto_fix: Boolean(action.safe_to_auto_fix),
+    elite_blocker: Boolean(action.elite_blocker),
+    distribution_config_blocker: Boolean(action.distribution_config_blocker),
     evidence: action.evidence || null,
   });
 }
@@ -1480,8 +1482,6 @@ function buildPublishEligibilitySummary({
     ...advisoryOnlyFindings,
     ...unclassifiedCustomerBlockersMissingRationale,
     ...optionalSupportingContractAdvisories,
-    ...publicSampleBlockers,
-    ...highValueOutreachBlockers,
     ...distributionConfigBlockers,
     ...(deprecatedAdminReviewResolution.inject_diagnostic_code
       ? [deprecatedAdminReviewResolution.inject_diagnostic_code]
@@ -1548,8 +1548,6 @@ function buildPublishEligibilitySummary({
     );
   const eliteReadinessBlockers = uniqueCodes([
     ...customerPublishBlockers,
-    ...publicSampleBlockers,
-    ...highValueOutreachBlockers,
   ]);
   const eliteReady = Boolean(reportPublishable && eliteReadinessBlockers.length === 0);
   const distributionConfigBlocked = distributionConfigBlockers.length > 0;
@@ -1620,7 +1618,7 @@ function buildPublishEligibilitySummary({
     regeneration_recommended: regenerationRecommended,
     regeneration_required_for_customer_delivery: regenerationRequiredForCustomerDelivery,
     regeneration_required_for_public_sample: regenerationRequiredForPublicSample,
-    regeneration_required: regenerationRequired,
+    regeneration_required: regenerationRequiredForCustomerDelivery,
     customer_delivery_impact: customerDeliveryImpact,
     public_sample_impact: publicSampleImpact,
     high_value_outreach_impact: highValueOutreachImpact,
@@ -1648,6 +1646,12 @@ function buildPublishEligibilitySummary({
       report_publishable: reportPublishable,
       report_blocked: !reportPublishable,
       publish_decision_reason: publishDecisionReasonFinal,
+      public_sample_ready: publicSampleReadyLegacy,
+      high_value_outreach_ready: highValueOutreachReadyLegacy,
+      public_sample_blockers: publicSampleBlockers,
+      high_value_outreach_blockers: highValueOutreachBlockers,
+      public_sample_ready_non_authoritative_for_customer_delivery: true,
+      high_value_outreach_ready_non_authoritative_for_customer_delivery: true,
     },
     distribution_context: {
       non_authoritative_exposure_metadata: true,
@@ -2077,6 +2081,8 @@ export function buildDeliveryGateDecision({
           canonicalDeliveryGateStatus === "user_needs_documents"
             ? "user_needs_documents"
             : "customer_deliverable",
+        public_sample_ready: publicReady,
+        high_value_outreach_ready: outreachReady,
       },
     };
   }
@@ -2240,35 +2246,37 @@ export function buildDeliveryGateDecision({
     deliveryGateDecision,
   });
 
-  return {
-    final_delivery_authority: "delivery_gate",
-    delivery_gate_status: "deliverable",
-    reason_code: null,
-    top_action_code: prioritizedActions[0]?.code || null,
-    owner_area: prioritizedActions[0]?.owner_area || null,
-    recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
-    ...publishEligibility,
-    customer_delivery_ready: publishEligibility.report_publishable,
-    public_sample_ready: publishEligibility.public_sample_ready,
-    high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
-    launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "user_needs_documents",
-    readiness_hierarchy: {
+    return {
       final_delivery_authority: "delivery_gate",
-      final_delivery_status: "deliverable",
+      delivery_gate_status: "deliverable",
+      reason_code: null,
+      top_action_code: prioritizedActions[0]?.code || null,
+      owner_area: prioritizedActions[0]?.owner_area || null,
+      recommended_next_step: prioritizedActions[0]?.recommended_next_step || null,
+      ...publishEligibility,
       customer_delivery_ready: publishEligibility.report_publishable,
       public_sample_ready: publishEligibility.public_sample_ready,
       high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
-      advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
-    },
-    legacy_compatibility: {
-      customer_delivery_ready: publishEligibility.report_publishable,
-      customer_publish_eligible: publishEligibility.report_publishable,
-      report_publishable: publishEligibility.report_publishable,
-      report_blocked: !publishEligibility.report_publishable,
       launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "user_needs_documents",
-    },
-  };
-}
+      readiness_hierarchy: {
+        final_delivery_authority: "delivery_gate",
+        final_delivery_status: "deliverable",
+        customer_delivery_ready: publishEligibility.report_publishable,
+        public_sample_ready: publishEligibility.public_sample_ready,
+        high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
+        advisory_only_findings: Array.isArray(qaActionPlan?.advisory_only_findings) ? qaActionPlan.advisory_only_findings.length : 0,
+      },
+      legacy_compatibility: {
+        customer_delivery_ready: publishEligibility.report_publishable,
+        customer_publish_eligible: publishEligibility.report_publishable,
+        report_publishable: publishEligibility.report_publishable,
+        report_blocked: !publishEligibility.report_publishable,
+        launch_path_recommendation: publishEligibility.report_publishable ? "customer_deliverable" : "user_needs_documents",
+        public_sample_ready: publishEligibility.public_sample_ready,
+        high_value_outreach_ready: publishEligibility.high_value_outreach_ready,
+      },
+    };
+  }
 
 export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null) {
   const state = deliveryGateDecision && typeof deliveryGateDecision === "object"
@@ -2356,6 +2364,8 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
       hold_delivery: holdDelivery,
       public_sample_ready: Boolean(state.public_sample_ready),
       high_value_outreach_ready: Boolean(state.high_value_outreach_ready),
+      public_blockers: publicBlockers,
+      high_value_blockers: highValueBlockers,
     },
     source: "canonical_delivery_decision",
   };

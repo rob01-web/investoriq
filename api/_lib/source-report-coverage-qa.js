@@ -892,7 +892,7 @@ export function buildSourceReportCoverageQa({
         source_reconciliation_state: sourceReconciliationStateResolved,
         rendered_text_signals: renderedTextSignals,
       },
-      routing: "public_sample_blocker",
+      routing: "advisory_only",
     });
   }
 
@@ -997,7 +997,7 @@ export function buildSourceReportCoverageQa({
         missing_key_sections: missingKeySections,
         section_eligibility: sectionEligibility,
       },
-      routing: "public_sample_blocker",
+      routing: "render_gating_gap",
     });
   }
   if (
@@ -1026,7 +1026,7 @@ export function buildSourceReportCoverageQa({
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
       },
-      routing: "public_sample_blocker",
+      routing: "render_gating_gap",
     });
   }
 
@@ -1073,7 +1073,7 @@ export function buildSourceReportCoverageQa({
         rendered_section_count: renderedSections.section_count,
         rendered_text_signals: renderedTextSignals,
       },
-      routing: "public_sample_blocker",
+      routing: "render_gating_gap",
     });
   }
 
@@ -1082,11 +1082,11 @@ export function buildSourceReportCoverageQa({
       code: "PUBLIC_SAMPLE_NOT_READY",
       severity: "medium",
       category: "sample_readiness",
-      message: "Coverage findings should be resolved or reviewed before using this output as a public or outreach sample.",
+      message: "Coverage findings should be resolved or reviewed before external use.",
       evidence: {
         related_flags: flags.map((flag) => flag.code),
       },
-      routing: "public_sample_blocker",
+      routing: "advisory_only",
     });
   }
 

@@ -1,0 +1,69 @@
+FINAL ATTACK TEST 8 - MIXED SUPPORT / DUPLICATE PRECEDENCE / RENOVATION + DEBT SEPARATION
+
+Purpose:
+Validate that InvestorIQ can publish an Acquisition Memo when T12 and Rent Roll are usable, while the support package contains tempting but bounded sources: purchase assumptions, appraisal context, current debt, renovation plan, market survey, and Phase I ESA.
+
+Core expected values:
+- Units: 64
+- Occupied units: 60
+- Vacant units: 4
+- Occupancy: 93.8%
+- T12 Effective Gross Income: $1,500,000
+- T12 Operating Expenses: $555,000
+- T12 Net Operating Income: $945,000
+- Expense Ratio: 37.0%
+- NOI Margin: 63.0%
+- Break-Even Occupancy: 37.0%
+- Rent roll annual in-place rent: $1,432,800
+- Rent roll annual market rent: $1,718,400
+- Annual rent upside: $285,600
+- Rent gap: 19.9%
+
+Acquisition support expected values:
+- Purchase price: $13,500,000
+- NOI basis: $945,000
+- Going-in cap reference: 7.00%
+- Proposed acquisition loan: $9,450,000
+- LTV: 70.0%
+- Interest rate: 5.95%
+- Amortization: 30 years
+- Lender fee: 0.85%
+
+Current debt expected values:
+- Current outstanding balance: $6,800,000
+- Interest rate: 4.85%
+- Amortization remaining: 24 years
+- Monthly payment: $39,250
+- Maturity: 2029-11-01
+
+Renovation expected values:
+- Total renovation budget: $1,280,000
+- 1BR interiors: 20 units x $18,500/unit, expected rent lift $225/month, Months 1-18
+- 2BR interiors: 18 units x $24,000/unit, expected rent lift $325/month, Months 1-24
+- Common area refresh: $210,000
+- Exterior/security: $115,000
+- Contingency: $153,000
+
+Expected InvestorIQ behavior:
+- Should publish Acquisition Memo.
+- Should not fail closed.
+- Should not go to admin review.
+- Should not infer the cause of source differences.
+- Should keep current debt separate from proposed acquisition financing.
+- Should not treat the proposed acquisition loan as current debt.
+- Should not use appraisal value as purchase price.
+- Should not use stabilized NOI as T12 NOI.
+- Should not use market survey rents to override rent roll market rent.
+- Should acknowledge structured renovation budget/rent lift/phasing as source facts only.
+- Should not model renovation ROI, payback, NOI impact, value impact, refinance, DCF, waterfall, equity return, deal score, or final recommendation.
+- Phase I ESA should remain context only and not property tax support.
+- No BUY / SELL / HOLD / proceed recommendation.
+
+Intended attack seams:
+1. Purchase assumptions vs appraisal precedence.
+2. Current debt vs proposed acquisition financing separation.
+3. Renovation plan bounded display without ROI/payback modeling.
+4. Market survey non-override of rent roll.
+5. Support-doc role contamination prevention.
+6. V2 leakage prevention.
+7. False fail-closed prevention.
