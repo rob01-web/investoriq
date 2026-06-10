@@ -3640,8 +3640,15 @@ const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocument
     rent_lift: "150",
   },
 });
-assert.match(forwardLookingRenovationModeledTreatmentHtml, /Modeled Inputs/i);
-assert.match(forwardLookingRenovationModeledTreatmentHtml, /Forward-looking renovation support includes document-stated rent-lift assumptions/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Structured renovation \/ CapEx context/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Structured renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
+assert.equal(
+  /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
+    forwardLookingRenovationModeledTreatmentHtml
+  ),
+  false
+);
 
 const forwardLookingRowEvidenceTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -3659,8 +3666,15 @@ const forwardLookingRowEvidenceTreatmentHtml = generatorTest.buildDocumentTreatm
 });
 assert.equal(/Historical capital items are displayed for context only/i.test(forwardLookingRowEvidenceTreatmentHtml), false);
 assert.match(forwardLookingRowEvidenceTreatmentHtml, /Displayed \/ Limited Use/i);
+assert.match(forwardLookingRowEvidenceTreatmentHtml, /Structured renovation \/ CapEx context/i);
 assert.match(forwardLookingRowEvidenceTreatmentHtml, /Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
 assert.equal(/ROI, payback, NOI, valuation, or refinance outputs/i.test(forwardLookingRowEvidenceTreatmentHtml), true);
+assert.equal(
+  /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
+    forwardLookingRowEvidenceTreatmentHtml
+  ),
+  false
+);
 
 const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -3668,10 +3682,22 @@ const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummary
   ],
   renovationDisplayMode: "budget_only_no_roi",
   hasForwardLookingRenovationInputs: true,
+  renovationPayload: {
+    total_budget: 540000,
+    budget_rows: [
+      { category: "Common Areas", estimated_cost: 125000 },
+    ],
+  },
 });
 assert.match(budgetOnlyNoRoiTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(budgetOnlyNoRoiTreatmentHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
 assert.equal(/Forward-looking renovation support is document-backed/i.test(budgetOnlyNoRoiTreatmentHtml), false);
+assert.equal(
+  /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
+    budgetOnlyNoRoiTreatmentHtml
+  ),
+  false
+);
 
 const metadataFirstOverFilenameHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [

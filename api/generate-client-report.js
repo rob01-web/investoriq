@@ -3356,16 +3356,16 @@ function buildDocumentTreatmentSummaryHtml({
       }
       if (normalizedRenovationDisplayMode === "forward_looking_modelable" && hasValidatedForwardLookingRenovationSupport) {
         return {
-          category: "Modeled Inputs",
-          note: "Forward-looking renovation support is document-backed",
+          category: "Displayed / Limited Use",
+          note: "Structured renovation budget and timing/phasing are displayed for source transparency only; ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.",
           reason_code: "forward_looking_renovation_input",
           source_basis: renovationSourceBasis,
         };
       }
       if (normalizedRenovationDisplayMode === "forward_looking_with_rent_lift" && hasValidatedForwardLookingRenovationSupport) {
         return {
-          category: "Modeled Inputs",
-          note: "Forward-looking renovation support includes document-stated rent-lift assumptions",
+          category: "Displayed / Limited Use",
+          note: "Structured renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.",
           reason_code: "forward_looking_renovation_rent_lift_input",
           source_basis: renovationSourceBasis,
         };
@@ -3646,6 +3646,19 @@ function buildDocumentTreatmentSummaryHtml({
     if (classification?.reason_code === "purchase_assumptions_context_only") {
       return "Purchase Assumptions / Acquisition Context";
     }
+    if (
+      classification?.reason_code === "forward_looking_renovation_input" ||
+      classification?.reason_code === "forward_looking_renovation_rent_lift_input" ||
+      classification?.reason_code === "renovation_forward_looking_transparency_only"
+    ) {
+      return "Structured Renovation / CapEx Plan";
+    }
+    if (classification?.reason_code === "renovation_budget_no_roi_inputs") {
+      return "Renovation / CapEx Budget Context";
+    }
+    if (classification?.reason_code === "historical_capex_only") {
+      return "Historical Capital Items";
+    }
     return "Other Support Document";
   };
   const resolveTreatmentLabel = (row, classification) => {
@@ -3674,9 +3687,13 @@ function buildDocumentTreatmentSummaryHtml({
       case "filename_fallback_market_survey_context_only":
         return "Context only";
       case "historical_capex_only":
-      case "renovation_budget_no_roi_inputs":
-      case "renovation_forward_looking_transparency_only":
         return "Context only";
+      case "renovation_budget_no_roi_inputs":
+        return "Budget/scope only";
+      case "renovation_forward_looking_transparency_only":
+      case "forward_looking_renovation_input":
+      case "forward_looking_renovation_rent_lift_input":
+        return "Structured renovation / CapEx context";
       case "environmental_support_context_only":
       case "filename_fallback_environmental_support_only":
         return "Context only";
@@ -9407,6 +9424,15 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         hasStructuredRenovationRows(renovationPayload?.execution_rows)
     );
     const hasExplicitRenovationInput = Boolean(hasVerifiedStructuredRenovationInput);
+    const hasForwardLookingRenovationAssumptions = Boolean(
+      hasVerifiedStructuredRenovationInput &&
+        [
+          renovationPayload?.timing_or_phasing,
+          renovationPayload?.rent_lift,
+          renovationPayload?.roi,
+          renovationPayload?.payback_period,
+        ].some((value) => hasMeaningfulRenovationText(value))
+    );
     const renovationFilenameTerms = [
       "capex",
       "cap ex",
@@ -9432,10 +9458,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       }) : [];
     const hasRenovationFilenameSignal = renovationSourceFilenames.length > 0;
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
-    const renovationAcknowledgmentHtml =
-      !hasExplicitRenovationInput && hasRenovationFilenameSignal
-        ? `<strong>Uploaded Renovation / CapEx Document:</strong> Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.`
-        : "";
+    const renovationAcknowledgmentHtml = !hasRenovationFilenameSignal
+      ? ""
+      : hasForwardLookingRenovationAssumptions
+      ? `<strong>Uploaded Renovation / CapEx Document:</strong> Structured renovation budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only. Renovation ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.`
+      : hasExplicitRenovationInput
+      ? `<strong>Uploaded Renovation / CapEx Document:</strong> Budget/scope items were received. Rent lift, ROI, payback, phasing, and implementation schedule were not provided; therefore renovation returns were not assessed.`
+      : `<strong>Uploaded Renovation / CapEx Document:</strong> Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.`;
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
       documentSourcesHtml += `<p class="small" style="margin-top:8px;">${renovationAcknowledgmentHtml}</p>`;
     }
