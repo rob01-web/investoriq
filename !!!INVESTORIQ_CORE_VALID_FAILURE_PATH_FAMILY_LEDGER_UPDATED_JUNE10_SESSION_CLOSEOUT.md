@@ -1,3 +1,448 @@
+# June 10, 2026 Session Closeout Addendum - CVF / Learning Ledger Update After Seven-Test Batch, Patches 1-3, Claude V2 Notes, and Final Attack Test 8
+
+## Current CVF status after today’s session
+
+The June 10 session refined the Core-Valid Failure Path interpretation.
+
+Controlling finding:
+
+```text
+The highest-risk core CVF families are no longer showing broad collapse in live PDFs.
+The strongest remaining Acquisition Memo launch blocker is now support-document role routing and bounded acquisition-context extraction.
+```
+
+Core math / delivery / V2 containment status:
+
+```text
+Core T12/Rent Roll math: repeatedly holding.
+Core-valid publish with disclosure: repeatedly holding.
+Invalid-core fail-closed behavior: holding in Tests 5-6.
+Credit restore behavior: holding in Tests 5-6.
+V2 leakage prevention: holding in Tests 1-8 reviewed today.
+Rent-roll canonical QA drift: patched and did not recur in Attack Test 8.
+```
+
+## Seven-test batch CVF mapping
+
+### Tests 1-4
+
+Verdict:
+
+```text
+Customer-facing reports passed with disclosure.
+Internal RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT repeated.
+```
+
+CVF mapping:
+
+```text
+Primary family: CVF-06 Source reconciliation / rendered variance drift.
+Owner area: report_contract_qa / rent-roll canonical source selection.
+Human red-pen decision: qa_false_positive_pattern_confirmed, system_trust_affected.
+Launch status before patch: true launch blocker because repeated internal canonical drift could undermine QA/delivery confidence.
+```
+
+Resolution:
+
+```text
+Patch 1 completed.
+report-contract-qa now uses shared resolveCanonicalRentRollAnnualTotals(...) authority.
+Regression added for polluted summary total with correct row-derived annual market rent.
+True mismatch still fails.
+```
+
+Post-patch status:
+
+```text
+CVF-06 rent-roll canonical drift subclass: patched / regression-covered / monitor in live retests.
+```
+
+### Test 5
+
+Verdict:
+
+```text
+Correct fail-closed for unusable/bad rent roll.
+```
+
+CVF mapping:
+
+```text
+Primary family: CVF-02 Core Rent Roll parse failure.
+Human red-pen decision: source_limitation_correctly_handled / legitimate fail-closed.
+Launch status: PASS.
+```
+
+### Test 6
+
+Verdict:
+
+```text
+Correct fail-closed for financially impossible 10x T12/Rent Roll mismatch.
+```
+
+CVF mapping:
+
+```text
+Primary family: CVF-03 Financial scale mismatch after core parse.
+Human red-pen decision: source_limitation_correctly_handled / legitimate fail-closed for unreconcilable package.
+Launch status: PASS.
+```
+
+### Test 7
+
+Verdict:
+
+```text
+Exact PASS against expected controlled source-reconciliation disclosure contract.
+```
+
+CVF mapping:
+
+```text
+Primary family: CVF-06 Source reconciliation / rendered variance drift.
+Human red-pen decision: correct_conservative_disclosure.
+Launch status: PASS.
+```
+
+## Patch 1 CVF update - Rent-roll canonical QA drift
+
+```text
+Files changed:
+- api/_lib/report-contract-qa.js
+- tests/qa/report-contract-qa-smoke.js
+
+CVF family:
+- CVF-06
+
+Issue code:
+- RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+
+Disposition:
+- patched / monitor
+
+Regression required:
+- yes, added in report-contract-qa-smoke
+
+Remaining risk:
+- if a rent roll has no trustworthy row/unit evidence, QA can still use summary totals by intentional fallback.
+```
+
+## Patch 2 CVF update - Renovation / CapEx document treatment
+
+```text
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+CVF families:
+- CVF-07 Optional/full-underwriting support depth constraints
+- CVF-15 Optional-support/source-package/admin ops paths
+
+Disposition:
+- partially patched
+
+What was fixed:
+- budget-only renovation docs acknowledge budget/scope while refusing rent-lift/ROI/payback/phasing if absent.
+- structured forward-looking renovation docs can render budget/rent-lift/phasing as source facts only.
+- no ROI/payback/NOI impact/valuation/refi/DCF/waterfall/final recommendation was introduced.
+
+Remaining risk found by Attack Test 8:
+- live routing can still misclassify a structured Reno Plan PDF as Rent Roll context before the new structured renovation treatment row has final authority.
+```
+
+## Patch 3 CVF update - QA advisory calibration / stale routing noise
+
+```text
+Files changed:
+- api/_lib/source-report-coverage-qa.js
+- api/_lib/qa-action-plan.js
+- tests/qa/qa-action-plan-smoke.js
+
+CVF families:
+- CVF-07
+- CVF-14
+- CVF-15
+- CVF-08 compatibility/noise surfaces where public/sample metadata can appear beside delivery authority
+
+Disposition:
+- patched / monitor
+
+What was fixed:
+- noisy source-coverage findings rerouted to advisory_only or render_gating_gap instead of public_sample_blocker.
+- DocRaptor kept as distribution_config_blocked only.
+- legacy public/high-value fields preserved as compatibility metadata, not active routing authority.
+```
+
+Remaining monitoring item:
+
+```text
+Final Attack Test 8 still showed readiness_source: legacy_action_plan_fallback / canonical_delivery_gate_status null in QA action plan artifacts.
+This did not block customer delivery, but remains an internal trust/diagnostic watchlist item.
+```
+
+## Claude V2 notes mapped to CVF / future DS roadmap
+
+Claude’s V2 architecture review should be preserved as future roadmap.
+
+Key CVF/DS mappings:
+
+```text
+1. Renderer-selected rent-roll canonical write-through:
+   - CVF-06 / report_contract_qa canonical authority hardening.
+   - Future V2 PR A.
+   - Not required to reopen launch Patch 1 unless drift recurs.
+
+2. Acquisition triangle fixture suite:
+   - CVF-04 current debt / proposed acquisition financing / refi separation.
+   - CVF-07 optional/full-underwriting support-depth constraints.
+   - CVF-15 optional support/source-package routing.
+   - Future V2 PR B.
+   - Attack Test 8 shows a launch-scope subset is now needed for Acquisition Memo support-doc routing.
+
+3. Section eligibility smoke suite:
+   - CVF-04 / CVF-05 / V2 full-underwriting source-constrained behavior.
+   - Future V2 PR C.
+   - Not launch-blocking for Acquisition Memo unless V2 surfaces leak.
+```
+
+Claude’s strongest architectural conclusion:
+
+```text
+No rewrite required. The codebase needs authority alignment and fixture-based hardening, especially around acquisition/debt/support-document combinations.
+```
+
+## Final Attack Test 8 CVF entry
+
+Test name:
+
+```text
+Final Attack Test 8 - Stonebridge Lofts
+```
+
+Source package family:
+
+```text
+Valid XLSX T12 + valid XLSX Rent Roll + messy overlapping support-doc package:
+- Purchase/proposed acquisition assumptions
+- Appraisal summary
+- Current debt statement
+- Structured renovation plan
+- Market survey
+- Phase I ESA
+```
+
+Customer-facing verdict:
+
+```text
+PASS WITH DISCLOSURE / SAFE BUT INCOMPLETE.
+```
+
+CVF pass findings:
+
+```text
+CVF-01/CVF-02: pass, XLSX T12/Rent Roll parsed.
+CVF-03/CVF-06: pass with source reconciliation disclosure; no false fail-closed.
+CVF-08/CVF-09/CVF-10: pass, report published and no customer lifecycle limbo.
+CVF-13: pass, no runtime/PDF fatal.
+V2 containment: pass, no DSCR/refi/DCF/waterfall/final recommendation leak.
+Rent-roll canonical drift subclass of CVF-06: pass, no recurrence.
+```
+
+Critical CVF failures found:
+
+### CVF-04 / CVF-15 - Purchase assumptions and proposed acquisition financing misrouted
+
+Observed source facts:
+
+```text
+Stonebridge_Assumptions.pdf contained purchase price $13,500,000, NOI basis $945,000, going-in cap 7.00%, proposed acquisition loan $9,450,000, LTV 70.0%, interest rate 5.95%, amortization 30 years, lender fee 0.85%.
+```
+
+Observed wrong behavior:
+
+```text
+PDF said Purchase assumptions provided: No.
+PDF said Proposed acquisition loan terms complete: No.
+PDF said Proposed Acquisition Financing: Not source-complete / not modeled.
+Artifact parsed Stonebridge_Assumptions.pdf as mortgage_statement_parsed with rate/amortization but no loan amount.
+Artifact semantic role bizarrely showed environmental_due_diligence.
+```
+
+Classification:
+
+```text
+Human red-pen decision: true_launch_blocker.
+Customer visible: yes.
+Math affected: no core math affected, but acquisition-context source binding affected.
+Source binding affected: yes.
+Owner area: support-doc role routing / acquisition assumptions extraction / proposed financing context.
+Patch required: yes.
+Regression required: yes, use Final Attack Test 8-style fixture.
+```
+
+### CVF-04 / CVF-15 - Current debt statement not recognized
+
+Observed source facts:
+
+```text
+Current_Debt_Stonebridge.pdf contained current outstanding balance $6,800,000, interest rate 4.85%, amortization remaining 24 years, monthly payment $39,250, maturity 2029-11-01.
+```
+
+Observed wrong behavior:
+
+```text
+PDF said No verified current debt context was provided.
+Document Treatment listed the file as Other Support Document / Context only / auditability only.
+```
+
+Classification:
+
+```text
+Human red-pen decision: true_launch_blocker for Acquisition Memo product quality.
+Customer visible: yes.
+Math affected: no unsafe math rendered.
+Source binding affected: yes.
+Owner area: current debt support-doc routing / extraction / Document Treatment / Financing Readiness consumer.
+Patch required: yes.
+Regression required: yes.
+```
+
+### CVF-07 / CVF-15 - Structured Reno Plan misrouted as Rent Roll
+
+Observed source facts:
+
+```text
+Stonebridge_Reno_Plan.pdf contained total renovation budget $1,280,000, unit scopes, cost/unit, stated rent lifts, and phasing.
+```
+
+Observed wrong behavior:
+
+```text
+PDF said no verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided.
+Document Treatment labeled Stonebridge_Reno_Plan.pdf as Rent Roll / Context only.
+AI rent-roll recovery attempted and correctly rejected it as not a rent roll, but the final treatment row still inherited wrong rent-roll framing.
+```
+
+Classification:
+
+```text
+Human red-pen decision: true_launch_blocker for Acquisition Memo support-doc intelligence.
+Customer visible: yes.
+Math affected: no core math affected.
+Source binding affected: yes.
+Owner area: support-doc classifier / parser dispatch / renovation treatment renderer.
+Patch required: yes.
+Regression required: yes.
+```
+
+## New active blocker after Attack Test 8
+
+New blocker name:
+
+```text
+Patch 4 - Support Document Role Routing / Acquisition Context / Current Debt / Structured Reno Path Fix
+```
+
+Primary CVF families:
+
+```text
+CVF-04 Current-debt/refi render-contract drift and debt/proposed-financing separation.
+CVF-07 Optional/full-underwriting support depth constraints.
+CVF-15 Optional-support/source-package/admin ops paths.
+```
+
+Secondary diagnostic families:
+
+```text
+CVF-06 if wrong support-doc role leads to rendered/source reconciliation mismatch.
+CVF-08 if QA/action artifacts mispromote support-doc issues to delivery authority.
+```
+
+Patch 4 invariant:
+
+```text
+Support documents must be routed by explicit document role and source facts before final Document Treatment / Financing Readiness consumes them.
+
+A purchase/proposed acquisition assumptions doc must not become current debt, environmental due diligence, or generic debt support.
+A current debt statement must not become generic support when explicit outstanding balance/current debt facts exist.
+A structured renovation plan must not become rent roll context.
+```
+
+Patch 4 required behavior:
+
+```text
+1. Purchase/proposed acquisition assumptions:
+   - render as Purchase Assumptions / Proposed Acquisition Financing Context when source-complete;
+   - display purchase price, NOI basis, going-in cap, proposed loan amount, LTV, rate, amortization, and fee as bounded source facts if safely extracted;
+   - do not create DSCR/debt sizing/refi/DCF/waterfall/final recommendation unless current launch doctrine explicitly supports a bounded field.
+
+2. Current debt:
+   - render as Existing/Current Debt Context when outstanding balance/current debt terms are explicit;
+   - keep separate from proposed acquisition financing;
+   - do not unlock refinance, DSCR, DCF, waterfall, or recommendation.
+
+3. Structured renovation:
+   - render as Structured Renovation / CapEx Plan when budget/rent lift/phasing are explicit;
+   - display only source facts;
+   - do not model ROI, payback, NOI impact, stabilized value, refi, DCF, waterfall, or recommendation.
+
+4. Market survey:
+   - context only;
+   - must not override Rent Roll market rent.
+
+5. Appraisal:
+   - valuation context only;
+   - must not override purchase price, T12 NOI, or Rent Roll values.
+```
+
+## Current CVF launch posture
+
+```text
+Screening:
+- Still launchable / founder-beta ready from current evidence.
+- Needs final website/payment/access/DocRaptor/security smoke before public launch.
+
+Acquisition Memo:
+- Not launch-cleared after Attack Test 8.
+- Core math and delivery path are strong.
+- Support-doc role routing is not yet ELITE.
+
+Full Underwriting V2:
+- Deferred.
+- Claude’s PR A/B/C notes should be tracked as V2 roadmap.
+```
+
+## Next action
+
+Do not run another random test now.
+
+Next sequence:
+
+```text
+1. Commit Patches 1-3 separately if not already committed.
+2. Give Codex targeted Patch 4 prompt.
+3. Patch only support-doc role routing / acquisition assumptions / current debt / structured renovation path.
+4. Add Final Attack Test 8-style regression fixture(s).
+5. Rerun Final Attack Test 8 package.
+6. Update MD files again after Patch 4 result.
+```
+
+## Guardrails
+
+```text
+No broad audit by default.
+No report-specific hardcoding.
+No core T12/Rent Roll math changes unless a true source-binding defect is proven.
+No delivery gate/payment/access changes.
+No V2 reopen.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation.
+No support-doc override of T12/Rent Roll source truth.
+No DocRaptor production flip until final.
+```
+
+---
+
 # June 10, 2026 Addendum - InvestorIQ Learning Loop Doctrine / No Silent Financial Mutation
 
 ## Current controlling decision

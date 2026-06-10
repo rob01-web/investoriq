@@ -1,3 +1,399 @@
+# June 10, 2026 Session Closeout Addendum - Seven-Test Batch, Patches 1-3, Claude V2 Architecture Notes, and Final Attack Test 8
+
+## Current emotional / execution context
+
+Rob is stepping away after a long launch-hardening session.
+
+Important context:
+
+```text
+The latest tests are still revealing issues, but the pattern is no longer "the whole system is collapsing."
+The core T12/Rent Roll math, publish/fail behavior, V2 containment, and disclosure discipline are repeatedly holding.
+The newly exposed issues are concentrated around support-document role routing, acquisition assumptions extraction, current debt extraction, structured renovation routing, and advisory/legacy artifact cleanliness.
+```
+
+Do not let the next session reopen broad panic-driven audits by default.
+
+The correct interpretation is:
+
+```text
+InvestorIQ is in final root-hardening, not rebuild.
+Each new test is exposing narrower edge seams because the core engine is now strong enough for deeper adversarial packages.
+```
+
+## Today’s 7-test batch final result
+
+A seven-report live test batch was reviewed under the June 10 ELITE Launch Doctrine.
+
+Final batch outcome:
+
+```text
+Tests 1-4: customer-facing PASS with disclosure; repeated internal rent-roll canonical QA drift found.
+Test 5: correct fail-closed for unusable/bad rent roll.
+Test 6: correct fail-closed for financially impossible 10x T12/Rent Roll mismatch.
+Test 7: exact PASS against expected controlled source-reconciliation contract.
+```
+
+Batch-level interpretation:
+
+```text
+Core operating math generally held.
+Valid messy reports published with disclosure.
+True invalid-core cases failed closed with credit restoration.
+No dangerous V2 leakage appeared.
+Debt/proposed financing separation generally held in customer-facing PDFs.
+The confirmed blocker was not visible rent math; it was internal QA/canonical source authority drift.
+```
+
+## Patch 1 completed - Rent-roll canonical QA drift
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/_lib/report-contract-qa.js
+- tests/qa/report-contract-qa-smoke.js
+
+Root cause:
+- report-contract-qa had its own annual market rent selector that trusted summary totals first.
+- Polluted canonical summary values could beat the row/unit-derived market rent used by the renderer.
+
+Fix:
+- Contract QA now uses shared resolveCanonicalRentRollAnnualTotals(...) authority from api/_lib/report-surface-contracts.js.
+- Regression added for polluted summary total where row/unit-derived annual market rent is correct.
+- True mismatch case still fails.
+
+Tests run:
+- node --check api/_lib/report-contract-qa.js
+- node --check tests/qa/report-contract-qa-smoke.js
+- node tests/qa/report-contract-qa-smoke.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+This fixed the confirmed Tests 1-4 launch blocker without touching customer-facing renderer math.
+```
+
+## Patch 2 completed - Renovation / CapEx document treatment
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+Root cause:
+- Renovation / CapEx docs were detected but structured forward-looking cases fell through to generic acknowledgement copy and generic treatment labels.
+
+Fix:
+- Added differentiated renovation acknowledgement path in buildDocumentTreatmentSummaryHtml.
+- Budget-only docs now acknowledge budget/scope while stating rent lift / ROI / payback / phasing were not provided.
+- Structured forward-looking docs now say budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only.
+- Structured rows render as Structured Renovation / CapEx Plan with Structured renovation / CapEx context.
+- No ROI, payback, NOI impact, valuation, refinance, DCF, waterfall, or final recommendation logic added.
+
+Tests run:
+- node --check api/generate-client-report.js
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+This fixed a bounded source-treatment miss from Tests 3-4, but Final Attack Test 8 later proved the live routing path can still misroute some Reno Plan PDFs into rent-roll/recovery handling before the new treatment display path gets authority.
+```
+
+## Patch 3 completed - QA advisory calibration / stale public-sample noise cleanup
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/_lib/source-report-coverage-qa.js
+- api/_lib/qa-action-plan.js
+- tests/qa/qa-action-plan-smoke.js
+
+Root cause:
+- Source coverage QA was still emitting public_sample_blocker for reconciliation and underwriting-depth noise.
+- QA action-plan rollup still surfaced legacy public/high-value fields in ways that looked like active readiness authority.
+
+Fix:
+- Noisy source-coverage findings rerouted to advisory_only or render_gating_gap instead of public_sample_blocker.
+- DocRaptor kept in distribution_config_blocked only.
+- Legacy public/high-value fields preserved as compatibility metadata, while active routing now uses elite/distribution language.
+
+Tests run:
+- node --check api/_lib/source-report-coverage-qa.js
+- node --check api/_lib/qa-action-plan.js
+- node --check tests/qa/qa-action-plan-smoke.js
+- node --check tests/qa/source-report-coverage-qa-smoke.js
+- node tests/qa/source-report-coverage-qa-smoke.js
+- node tests/qa/qa-action-plan-smoke.js
+- node tests/qa/qa-fix-routing-smoke.js
+- node tests/qa/report-contract-qa-smoke.js
+- node tests/qa/acquisition-financing-field-limited-smoke.js
+- node tests/qa/source-package-cap-rate-rounding-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+Patch 3 improved advisory/action-plan authority cleanliness without changing customer math, delivery doctrine, payment/access, or report rendering.
+```
+
+## Claude V2 architecture verdict recorded
+
+Claude reviewed the codebase and gave a useful Full Underwriting V2 interpretation.
+
+Key takeaway:
+
+```text
+The codebase is fundamentally well-designed and does not need a rewrite.
+The remaining issues are source-authority alignment, support-doc routing, acquisition triangle hardening, and regression-suite coverage.
+```
+
+Claude’s specific V2 notes to preserve:
+
+```text
+1. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT root cause:
+   - resolveCanonicalRentRollAnnualMetric / resolveCanonicalRentRollAnnualTotals has multi-candidate selection.
+   - QA and renderer can diverge if they independently recompute canonical values from artifacts captured at slightly different moments or with different summary-row trust flags.
+   - Patch 1 addressed the launch problem by making contract QA use the shared canonical authority.
+   - Future V2 strengthening: renderer should write selected canonical rent-roll values and selected_reason/provenance to the QA artifact, and QA should read the exact rendered authority instead of recomputing.
+
+2. Section eligibility architecture is clean:
+   - buildFullUnderwritingSectionEligibility and UNDERWRITING_SECTION_BLUEPRINTS are a good architecture.
+   - DCF/advanced modeling often being source_constrained when verified current debt is absent is correct behavior, not a bug.
+   - V2 should add fixture-based section eligibility tests, not rewrite the section architecture.
+
+3. Current debt assessment copy is already canonicalized:
+   - formatCurrentDebtAssessmentCopy uses reason-code switch behavior.
+   - If phrase variants recur, likely QA is checking a different path rather than renderer creating new variants.
+
+4. sanitizeFinalCustomerHtml is not missing logic:
+   - Hidden-character sanitization exists.
+   - Prior issue was stage order: QA could run before final HTML sanitization.
+
+5. Acquisition triangle is the genuinely complex V2 path:
+   - loan term sheet normalizer does regex extraction of purchase price, LTV, loan amount, rate, amortization, fees.
+   - This is the most variant-prone path.
+   - Acquisition Memo can stay conservative; Full Underwriting V2 needs deliberate acquisition-triangle fixtures.
+```
+
+Claude’s recommended V2 PRs:
+
+```text
+V2 PR A - Renderer-selected canonical rent-roll value/provenance write-through.
+V2 PR B - Acquisition triangle text-extraction fixture suite and hardening.
+V2 PR C - Section eligibility smoke-test suite covering source package shapes.
+```
+
+InvestorIQ interpretation:
+
+```text
+Do not reopen Full Underwriting V2 before launch.
+Use Claude’s notes as V2 roadmap, not launch-blocking work unless the same family affects Acquisition Memo launch.
+```
+
+## Final Attack Test 8 - Stonebridge Lofts result
+
+Rob ran a newly generated unseen attack package using XLSX T12/Rent Roll plus multiple support PDFs.
+
+Package design:
+
+```text
+T12 + Rent Roll were valid XLSX files.
+Support docs included purchase/proposed acquisition assumptions, appraisal summary, current debt statement, structured renovation plan, market survey, and Phase I ESA.
+```
+
+Customer-facing PDF result:
+
+```text
+PASS with disclosure / safe but incomplete.
+```
+
+What passed:
+
+```text
+Report published.
+Core math passed.
+XLSX T12 and XLSX Rent Roll parsing worked.
+Rent-roll canonical drift did not recur.
+Report contract QA passed with zero violations.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation leaked.
+Appraisal did not override purchase price, T12 NOI, or Rent Roll market rent.
+Market survey did not inflate rent roll market rents.
+```
+
+Expected rendered values that passed:
+
+```text
+Units: 64
+Occupancy: 93.8%
+Annual In-Place Rent: $1,432,800
+Annual Market Rent: $1,718,400
+Annual Rent Upside: $285,600
+Rent Gap: 19.9%
+EGI: $1,500,000
+OpEx: $555,000
+NOI: $945,000
+Expense Ratio: 37.0%
+NOI Margin: 63.0%
+Break-Even Occupancy: 37.0%
+```
+
+Critical support-doc failures exposed:
+
+```text
+1. Purchase Assumptions / Proposed Acquisition Financing was not recognized correctly.
+   Source included purchase price $13,500,000, NOI basis $945,000, going-in cap 7.00%, proposed acquisition loan $9,450,000, LTV 70.0%, rate 5.95%, amortization 30 years, lender fee 0.85%.
+   PDF incorrectly said Purchase assumptions provided: No, Proposed acquisition loan terms complete: No, and Proposed Acquisition Financing: Not source-complete / not modeled.
+   Artifact parsed Stonebridge_Assumptions.pdf as mortgage_statement_parsed with rate/amortization but no loan amount, and bizarre semantic_doc_role environmental_due_diligence.
+
+2. Current Debt Statement was not recognized.
+   Source included current outstanding balance $6,800,000, rate 4.85%, amortization remaining 24 years, monthly payment $39,250, maturity 2029-11-01.
+   PDF incorrectly said No verified current debt context was provided and listed the file as Other Support Document / context only.
+
+3. Structured Reno Plan treatment failed on the live route despite Patch 2.
+   Source included total budget $1,280,000, 1BR and 2BR unit scopes, rent lifts, and phasing.
+   PDF incorrectly said no verified forward-looking renovation budget/rent-lift/phasing was provided.
+   Document Treatment labeled Stonebridge_Reno_Plan.pdf as Rent Roll / Context only, saying rent-roll support was displayed only.
+```
+
+Final Attack Test 8 verdict:
+
+```text
+Customer-facing PDF: PASS WITH DISCLOSURE / SAFE BUT INCOMPLETE.
+Core math: PASS.
+Publish/fail doctrine: PASS.
+V2 containment: PASS.
+Acquisition Memo product quality: FAIL / SUPPORT-DOC INTELLIGENCE BLOCKER.
+System/QA trust: WATCHLIST.
+```
+
+## Why more issues keep appearing
+
+Record this explanation for future emotional context:
+
+```text
+Every new attack test is not proving the whole system is broken.
+It is expanding the source-package shape space.
+Earlier tests were exposing core math, delivery, and V2 leakage.
+Those are now mostly holding.
+The new failures are concentrated in support-document role routing and acquisition-context intelligence, which only show up when a package includes overlapping debt, proposed financing, appraisal, market survey, renovation, and environmental documents.
+```
+
+Current root pattern:
+
+```text
+The core report engine is stronger than before.
+The support-doc routing/classification layer still has too many competing interpretations before final Document Treatment / Financing Readiness consumes the docs.
+```
+
+## New Patch 4 needed - Support Document Role Routing / Acquisition Context / Reno Path Fix
+
+Next Codex patch should be Patch 4, not a broad audit.
+
+Patch 4 target:
+
+```text
+Support-document role routing and bounded acquisition-context extraction for Acquisition Memo.
+```
+
+Likely affected seams:
+
+```text
+support-doc classifier / role routing
+support-doc parser dispatch
+acquisition assumptions extraction / proposed acquisition financing extraction
+current debt extraction and separation from proposed financing
+renovation / CapEx plan routing into structured renovation treatment
+Document Treatment Summary final row authority
+Preliminary Financing Readiness Summary consumption of validated support-doc facts
+QA/action-plan calibration for support-doc routing gaps
+```
+
+Patch 4 must not touch:
+
+```text
+core T12/Rent Roll math
+rent-roll row-derived canonical math
+delivery gate doctrine
+credit/payment/access
+DSCR/refi/DCF/waterfall/deal-score/final recommendation/V2 surfaces
+pricing/Stripe/SQL/routes/DocRaptor production config
+```
+
+Patch 4 acceptance criteria:
+
+```text
+1. Purchase/proposed acquisition assumptions doc with explicit purchase price, proposed loan, LTV, rate, amortization, and fee routes as Purchase Assumptions / Proposed Acquisition Financing Context, not mortgage/current debt/environmental.
+2. Current debt statement with explicit outstanding balance, rate, amortization/payment/maturity routes as Existing/Current Debt Context, not Other Support Document.
+3. Structured renovation plan with budget/rent lift/phasing routes as Structured Renovation / CapEx Plan, not Rent Roll.
+4. Support docs remain bounded/context-only or limited-use; no ROI/payback/NOI impact/value impact/refi/DCF/waterfall/recommendation unlocked.
+5. Market survey remains context only and does not override Rent Roll.
+6. Appraisal remains valuation context and does not override purchase price/T12 NOI/Rent Roll.
+7. Preliminary Financing Readiness Summary reflects validated purchase assumptions/current debt/proposed acquisition terms where source-complete.
+8. Incomplete support docs still collapse or qualify instead of blocking core-valid report.
+9. Report contract QA or smoke tests catch wrong visible Document Treatment role for these source shapes.
+10. Final Attack Test 8-style package becomes a regression fixture.
+```
+
+## Updated launch posture after Final Attack Test 8
+
+```text
+Screening Report: still launchable / founder-beta ready, subject to final launch smoke and website/checkout/DocRaptor/security/payment polish.
+
+Acquisition Memo: not launch-cleared after Attack Test 8. Core math/delivery/V2 containment are strong, but support-doc role routing is not yet ELITE enough for the product promise.
+
+Full Underwriting V2.0: still deferred. Claude’s PR A/B/C roadmap recorded for later.
+```
+
+## Immediate next-session continuation point
+
+Resume from here:
+
+```text
+June 10 session closeout.
+Patches 1-3 are safe to commit and should be committed separately if not already.
+Final Attack Test 8 exposed Patch 4: support-document role routing / acquisition assumptions / current debt / structured Reno Plan path.
+Do not run another random test before Patch 4.
+Do not ask for a broad audit.
+Use a targeted Patch 4 Codex prompt based on Attack Test 8.
+After Patch 4, rerun Final Attack Test 8 package as regression.
+Then update docs again and reassess Acquisition Memo launch readiness.
+```
+
+## Guardrails for next session
+
+```text
+Keep prompts compact.
+Bundle only by same subsystem/file seam.
+No broad repo audit unless Patch 4 reveals unknown authority conflict that cannot be scoped.
+No report-specific hardcoding.
+No new Vercel routes.
+No SQL/Stripe/pricing changes.
+No DocRaptor production flip yet.
+Do not reopen Full Underwriting V2 surfaces.
+Do not let support docs override T12/Rent Roll core truth.
+Do not let proposed acquisition financing become current debt or refinance logic.
+```
+
+---
+
 # June 10, 2026 Addendum - InvestorIQ Learning Loop Doctrine / No Silent Financial Mutation
 
 ## Current controlling decision

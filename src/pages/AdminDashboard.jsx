@@ -69,6 +69,44 @@ function SectionHeader({ eyebrow, title, action }) {
   );
 }
 
+function SystemHealthBanner({ snapshot }) {
+  if (!snapshot?.loaded) return null;
+
+  const rows = Array.isArray(snapshot.rows) ? snapshot.rows : [];
+  const occurrenceCount = (row) => Number(row?.count_30d ?? row?.count_7d ?? row?.occurrences ?? row?.occurrence_count ?? 0);
+  const hasCritical = rows.some((row) => String(row?.severity || '').toLowerCase() === 'critical' && occurrenceCount(row) > 0);
+  const hasHigh = !hasCritical && rows.some((row) => String(row?.severity || '').toLowerCase() === 'high' && occurrenceCount(row) > 0);
+  const hasDocRaptorConfig = !hasCritical && !hasHigh && rows.some((row) => String(row?.code || '').toUpperCase() === 'DOCRAPTOR_NOT_PRODUCTION_MODE' && occurrenceCount(row) > 0);
+
+  const config = hasCritical
+    ? { bg: T.errBg, border: T.errBorder, accent: T.errRed, text: 'Action Required — Critical QA flags active.' }
+    : hasHigh
+      ? { bg: T.warnBg, border: T.warnBorder, accent: T.warnAmber, text: 'Review Recommended — Active high-severity flags.' }
+      : hasDocRaptorConfig
+        ? { bg: T.warnBg, border: T.warnBorder, accent: T.warnAmber, text: 'Production PDF Mode is not enabled. Reports are in test mode. Enable DOCRAPTOR production config before public delivery.' }
+        : { bg: T.okBg, border: T.okBorder, accent: T.okGreen, text: 'All Clear — No active QA flags.' };
+
+  return (
+    <div
+      data-testid="system-health-banner"
+      style={{
+        width:'100%',
+        boxSizing:'border-box',
+        marginBottom:10,
+        padding:'12px 16px',
+        background:config.bg,
+        border:`1px solid ${config.border}`,
+        borderLeft:`4px solid ${config.accent}`,
+        color:T.ink,
+      }}
+    >
+      <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, letterSpacing:'0.16em', textTransform:'uppercase', lineHeight:1.45 }}>
+        SYSTEM HEALTH — {config.text}
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }) {
   const normalizedStatus = String(status || '').toLowerCase();
   const displayStatus =
@@ -240,6 +278,7 @@ export default function AdminDashboard() {
   // Command strip
   const [cmdStats, setCmdStats]       = useState(null);
   const [stuckJobs, setStuckJobs]     = useState([]);
+  const [diagnosticsSnapshot, setDiagnosticsSnapshot] = useState({ loaded: false, rows: [] });
 
   // Reports
   const [reports, setReports]         = useState([]);
@@ -263,6 +302,8 @@ export default function AdminDashboard() {
   const [issues, setIssues]           = useState([]);
   const [issueFilter, setIssueFilter] = useState('open');
   const [issuesBusy, setIssuesBusy]   = useState({});
+
+  const systemHealthSnapshot = useMemo(() => diagnosticsSnapshot, [diagnosticsSnapshot]);
   const [fixQueue, setFixQueue]       = useState([]);
   const [fixQueueLoading, setFixQueueLoading] = useState(false);
   const [fixQueueOpen, setFixQueueOpen] = useState(false);
@@ -780,6 +821,8 @@ export default function AdminDashboard() {
             <StatCard icon={Clock} label="Stuck Jobs" value={cmdStats?.stuckCount ?? '-'} sub={`>${STUCK_THRESHOLD_MINS}min in_progress`} accent={cmdStats?.stuckCount > 0 ? T.errRed : T.ink4} />
           </div>
 
+          <SystemHealthBanner snapshot={systemHealthSnapshot} />
+
           {/*  ZONE 2: STUCK JOBS ALERT  */}
           <AnimatePresence>
             {stuckJobs.length > 0 && (
@@ -829,12 +872,299 @@ export default function AdminDashboard() {
             )}
           </AnimatePresence>
 
-          {/*  ZONE 2.5: DIAGNOSTICS INTELLIGENCE — additive, read-only  */}
           <Card>
-            <DiagnosticsIntelligence adminRunKey={adminRunKey} />
+            <SectionHeader
+              eyebrow="Properties"
+              title="Reports"
+              action={
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                  <SearchInput value={rptSearch} onChange={setRptSearch} placeholder="Search property..." />
+                  <select
+                    value={rptFilter} onChange={e => { setRptFilter(e.target.value); setRptPage(0); }}
+                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
+                    <option value="all">All types</option>
+                    <option value="screening">Screening</option>
+                    <option value="underwriting">Underwriting</option>
+                  </select>
+                  <Btn onClick={() => fetchReports(rptPage, rptSearch, rptFilter)}>
+                    <RefreshCcw size={9} /> Refresh
+                  </Btn>
+                </div>
+              }
+            />
+
+            {rptLoading ? (
+              <div style={{ textAlign:'center', padding:'32px 0' }}>
+                <Loader2 size={18} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
+              </div>
+            ) : reports.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No reports found.</p>
+            ) : (
+              <>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                    <thead>
+                      <tr>
+                        <TblTh>Property</TblTh>
+                        <TblTh>User</TblTh>
+                        <TblTh>Type</TblTh>
+                        <TblTh>Created</TblTh>
+                        <TblTh>Status</TblTh>
+                          <TblTh right>Actions</TblTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((r, i) => {
+                        const isExpanded = expandedRpt === r.id;
+                        return (
+                          <React.Fragment key={r.id}>
+                            <tr
+                              style={{ background: i % 2 === 1 ? T.warm : T.white, cursor:'pointer' }}
+                              onClick={() => setExpandedRpt(isExpanded ? null : r.id)}
+                            >
+                              <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:200 }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                  {isExpanded ? <ChevronUp size={10} color={T.ink4} /> : <ChevronDown size={10} color={T.ink4} />}
+                                  {r.property_name || '-'}
+                                </div>
+                              </TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || '-'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{r.report_type || '-'}</TblTd>
+                              <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
+                              <TblTd><StatusBadge status={r.report_type} /></TblTd>
+                              <TblTd right onClick={e => e.stopPropagation()}>
+                                <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                                  {r.storage_path && (
+                                    <Btn onClick={() => window.open(r.storage_path, '_blank')} variant="ghost">
+                                      <Eye size={9} /> View
+                                    </Btn>
+                                  )}
+                                  <Btn onClick={() => regenReport(r.id)} disabled={rptBusy[`regen-${r.id}`]} variant="warn">
+                                    <RotateCcw size={9} /> Regen
+                                  </Btn>
+
+                                  <Btn onClick={() => setConfirmDelete({ id:r.id, addr:r.property_name })} disabled={rptBusy[`del-${r.id}`]} variant="danger">
+                                    <Trash2 size={9} /> Del
+                                  </Btn>
+                                </div>
+                              </TblTd>
+                            </tr>
+
+                            {/* Expanded job detail */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={7} style={{ padding:0, background:T.infoBg, borderBottom:`1px solid ${T.hairline}` }}>
+                                    <motion.div
+                                      initial={{ opacity:0, height:0 }}
+                                      animate={{ opacity:1, height:'auto' }}
+                                      exit={{ opacity:0, height:0 }}
+                                      style={{ padding:'14px 20px', overflow:'hidden' }}
+                                    >
+                                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, fontSize:12, fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:T.ink3 }}>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Job ID</div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.id}</div>
+                                        </div>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>User ID</div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.user_id || '-'}</div>
+                                        </div>
+                                        <div>
+                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
+                                          <div><span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None - deterministic only</span></div>
+                                        </div>
+                                        {r.storage_path && (
+                                          <div style={{ gridColumn:'1/-1' }}>
+                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Storage Path</div>
+                                            <a href={r.storage_path} target="_blank" rel="noreferrer"
+                                              style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.goldDark, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
+                                              <ExternalLink size={9} /> Open Report PDF
+                                            </a>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </motion.div>
+                                  </td>
+                                </tr>
+                              )}
+                            </AnimatePresence>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:14, paddingTop:12, borderTop:`1px solid ${T.hairline}` }}>
+                    <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4 }}>
+                      {rptTotal} reports  -  Page {rptPage + 1} of {totalPages}
+                    </span>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <Btn onClick={() => goPage(rptPage - 1)} disabled={rptPage === 0}>Prev</Btn>
+                      <Btn onClick={() => goPage(rptPage + 1)} disabled={rptPage >= totalPages - 1}>Next {"->"}</Btn>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </Card>
 
-          {/*  ZONE 3: TRIAGE WORKSPACE  */}
+          <Card>
+            <SectionHeader
+              eyebrow="Support"
+              title="Issues Queue"
+              action={
+                <div style={{ display:'flex', gap:8 }}>
+                  <select
+                    value={issueFilter} onChange={e => { setIssueFilter(e.target.value); fetchIssues(e.target.value); }}
+                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
+                    <option value="open">Open</option>
+                    <option value="reviewing">Internal review marker</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="all">All</option>
+                  </select>
+                  <Btn onClick={() => fetchIssues(issueFilter)}><RefreshCcw size={9} /> Refresh</Btn>
+                </div>
+              }
+            />
+            {issues.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>
+                {issueFilter === 'open' ? 'No open issues.' : 'No issues found.'}
+              </p>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      <TblTh>Date</TblTh>
+                      <TblTh>Status</TblTh>
+                      <TblTh>Job / Property</TblTh>
+                      <TblTh>User</TblTh>
+                      <TblTh>Message</TblTh>
+                      <TblTh right>Actions</TblTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {issues.map((issue, i) => {
+                      const isUpdating = issuesBusy[issue.id];
+                      const isRegen    = issuesBusy[`regen-${issue.id}`];
+                      const truncated  = issue.message?.length > 80 ? issue.message.slice(0, 80) + '...' : issue.message;
+                      return (
+                        <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString() : '-'}</TblTd>
+                          <TblTd><StatusBadge status={issue.status || 'open'} /></TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>
+                            <div>{issue.job_id?.slice(0,8) || '-'}</div>
+                            {issue.artifact_id && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>artifact: {issue.artifact_id.slice(0,8)}</div>}
+                          </TblTd>
+                          <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || '-'}</TblTd>
+                          <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || '-'}</TblTd>
+                          <TblTd right>
+                            <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                              {issue.status !== 'reviewing' && (
+                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Internal review marker</Btn>
+                              )}
+                              {issue.status !== 'resolved' && (
+                                <Btn onClick={() => updateIssue(issue.id, 'resolved')} disabled={isUpdating} variant="success">
+                                  <CheckCircle size={9} /> Resolve
+                                </Btn>
+                              )}
+                              {issue.job_id && (
+                                <Btn onClick={() => regenFromIssue(issue.job_id, issue.id)} disabled={isRegen || !issue.job_id} variant="ghost">
+                                  <RotateCcw size={9} /> Regen
+                                </Btn>
+                              )}
+                            </div>
+                          </TblTd>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <SectionHeader
+              eyebrow="Accounts"
+              title="Users & Credits"
+              action={
+                <div style={{ display:'flex', gap:8 }}>
+                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search name..." />
+                  <Btn onClick={() => fetchUsers(userSearch)}><RefreshCcw size={9} /> Refresh</Btn>
+                </div>
+              }
+            />
+            {userError && !userLoading && (
+              <div style={{ marginBottom:12, padding:'12px 14px', background:T.warnBg, border:`1px solid ${T.warnBorder}`, color:T.warnAmber, fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300 }}>
+                {userError}
+              </div>
+            )}
+            {userLoading ? (
+              <div style={{ textAlign:'center', padding:'24px 0' }}><Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} /></div>
+            ) : users.length === 0 ? (
+              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No users found.</p>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr>
+                      <TblTh>Name</TblTh>
+                      <TblTh>Role</TblTh>
+                      <TblTh>Screening</TblTh>
+                      <TblTh>Underwriting</TblTh>
+                      <TblTh right>Adjust Credits</TblTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u, i) => (
+                      <tr key={u.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
+                        <TblTd mono style={{ fontSize:10 }}>{u.full_name || '-'}</TblTd>
+                        <TblTd mono style={{ fontSize:9 }}>{u.role || '-'}</TblTd>
+                        <TblTd>
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.screening_credits > 0 ? T.okGreen : T.errRed }}>
+                            {u.screening_credits ?? 0}
+                          </span>
+                        </TblTd>
+                        <TblTd>
+                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.underwriting_credits > 0 ? T.okGreen : T.errRed }}>
+                            {u.underwriting_credits ?? 0}
+                          </span>
+                        </TblTd>
+                        <TblTd right>
+                          <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
+                            <Btn onClick={() => adjustCredits(u.id, 1, 'screening')} disabled={creditBusy[`${u.id}-screening`]} variant="success">
+                              <Plus size={9} /> Screen
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, 1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`]} variant="success">
+                              <Plus size={9} /> UW
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, -1, 'screening')} disabled={creditBusy[`${u.id}-screening`] || u.screening_credits <= 0} variant="danger">
+                              <Minus size={9} /> Screen
+                            </Btn>
+                            <Btn onClick={() => adjustCredits(u.id, -1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`] || u.underwriting_credits <= 0} variant="danger">
+                              <Minus size={9} /> UW
+                            </Btn>
+                          </div>
+                        </TblTd>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/*  ZONE 6: DIAGNOSTICS INTELLIGENCE  */}
+          <Card>
+            <DiagnosticsIntelligence adminRunKey={adminRunKey} onSummaryChange={setDiagnosticsSnapshot} />
+          </Card>
+
+          {/*  ZONE 7: TRIAGE WORKSPACE  */}
           <Card>
             <SectionHeader
               eyebrow="Internal"
@@ -1401,295 +1731,6 @@ export default function AdminDashboard() {
 
                   </div>
                 )}
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <SectionHeader
-              eyebrow="Properties"
-              title="Reports"
-              action={
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <SearchInput value={rptSearch} onChange={setRptSearch} placeholder="Search property..." />
-                  <select
-                    value={rptFilter} onChange={e => { setRptFilter(e.target.value); setRptPage(0); }}
-                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
-                    <option value="all">All types</option>
-                    <option value="screening">Screening</option>
-                    <option value="underwriting">Underwriting</option>
-                  </select>
-                  <Btn onClick={() => fetchReports(rptPage, rptSearch, rptFilter)}>
-                    <RefreshCcw size={9} /> Refresh
-                  </Btn>
-                </div>
-              }
-            />
-
-            {rptLoading ? (
-              <div style={{ textAlign:'center', padding:'32px 0' }}>
-                <Loader2 size={18} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} />
-              </div>
-            ) : reports.length === 0 ? (
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No reports found.</p>
-            ) : (
-              <>
-                <div style={{ overflowX:'auto' }}>
-                  <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                    <thead>
-                      <tr>
-                        <TblTh>Property</TblTh>
-                        <TblTh>User</TblTh>
-                        <TblTh>Type</TblTh>
-                        <TblTh>Created</TblTh>
-                        <TblTh>Status</TblTh>
-                          <TblTh right>Actions</TblTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reports.map((r, i) => {
-                        const isExpanded = expandedRpt === r.id;
-                        return (
-                          <React.Fragment key={r.id}>
-                            <tr
-                              style={{ background: i % 2 === 1 ? T.warm : T.white, cursor:'pointer' }}
-                              onClick={() => setExpandedRpt(isExpanded ? null : r.id)}
-                            >
-                              <TblTd style={{ fontWeight:400, color:T.ink, maxWidth:200 }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                                  {isExpanded ? <ChevronUp size={10} color={T.ink4} /> : <ChevronDown size={10} color={T.ink4} />}
-                                  {r.property_name || '-'}
-                                </div>
-                              </TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || '-'}</TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{r.report_type || '-'}</TblTd>
-                              <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
-                              <TblTd><StatusBadge status={r.report_type} /></TblTd>
-                              <TblTd right onClick={e => e.stopPropagation()}>
-                                <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                                  {r.storage_path && (
-                                    <Btn onClick={() => window.open(r.storage_path, '_blank')} variant="ghost">
-                                      <Eye size={9} /> View
-                                    </Btn>
-                                  )}
-                                  <Btn onClick={() => regenReport(r.id)} disabled={rptBusy[`regen-${r.id}`]} variant="warn">
-                                    <RotateCcw size={9} /> Regen
-                                  </Btn>
-
-                                  <Btn onClick={() => setConfirmDelete({ id:r.id, addr:r.property_name })} disabled={rptBusy[`del-${r.id}`]} variant="danger">
-                                    <Trash2 size={9} /> Del
-                                  </Btn>
-                                </div>
-                              </TblTd>
-                            </tr>
-
-                            {/* Expanded job detail */}
-                            <AnimatePresence>
-                              {isExpanded && (
-                                <tr>
-                                  <td colSpan={7} style={{ padding:0, background:T.infoBg, borderBottom:`1px solid ${T.hairline}` }}>
-                                    <motion.div
-                                      initial={{ opacity:0, height:0 }}
-                                      animate={{ opacity:1, height:'auto' }}
-                                      exit={{ opacity:0, height:0 }}
-                                      style={{ padding:'14px 20px', overflow:'hidden' }}
-                                    >
-                                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, fontSize:12, fontFamily:"'DM Sans',sans-serif", fontWeight:300, color:T.ink3 }}>
-                                        <div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Job ID</div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.id}</div>
-                                        </div>
-                                        <div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>User ID</div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:T.ink2, wordBreak:'break-all' }}>{r.user_id || '-'}</div>
-                                        </div>
-                                        <div>
-                                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>AI Recovery</div>
-                                          <div><span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.ink4 }}>None - deterministic only</span></div>
-                                        </div>
-                                        {r.storage_path && (
-                                          <div style={{ gridColumn:'1/-1' }}>
-                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:T.ink4, marginBottom:4 }}>Storage Path</div>
-                                            <a href={r.storage_path} target="_blank" rel="noreferrer"
-                                              style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:T.goldDark, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
-                                              <ExternalLink size={9} /> Open Report PDF
-                                            </a>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </motion.div>
-                                  </td>
-                                </tr>
-                              )}
-                            </AnimatePresence>
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:14, paddingTop:12, borderTop:`1px solid ${T.hairline}` }}>
-                    <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:300, color:T.ink4 }}>
-                      {rptTotal} reports  -  Page {rptPage + 1} of {totalPages}
-                    </span>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <Btn onClick={() => goPage(rptPage - 1)} disabled={rptPage === 0}>Prev</Btn>
-                      <Btn onClick={() => goPage(rptPage + 1)} disabled={rptPage >= totalPages - 1}>Next {"->"}</Btn>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </Card>
-
-          {/*  ZONE 4: USERS & CREDITS  */}
-          <Card>
-            <SectionHeader
-              eyebrow="Accounts"
-              title="Users & Credits"
-              action={
-                <div style={{ display:'flex', gap:8 }}>
-                  <SearchInput value={userSearch} onChange={v => { setUserSearch(v); clearTimeout(searchTimer.current); searchTimer.current = setTimeout(() => fetchUsers(v), 300); }} placeholder="Search name..." />
-                  <Btn onClick={() => fetchUsers(userSearch)}><RefreshCcw size={9} /> Refresh</Btn>
-                </div>
-              }
-            />
-            {userError && !userLoading && (
-              <div style={{ marginBottom:12, padding:'12px 14px', background:T.warnBg, border:`1px solid ${T.warnBorder}`, color:T.warnAmber, fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:300 }}>
-                {userError}
-              </div>
-            )}
-            {userLoading ? (
-              <div style={{ textAlign:'center', padding:'24px 0' }}><Loader2 size={16} color={T.ink4} style={{ animation:'spin 1s linear infinite' }} /></div>
-            ) : users.length === 0 ? (
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>No users found.</p>
-            ) : (
-              <div style={{ overflowX:'auto' }}>
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead>
-                    <tr>
-                      <TblTh>Name</TblTh>
-                      <TblTh>Role</TblTh>
-                      <TblTh>Screening</TblTh>
-                      <TblTh>Underwriting</TblTh>
-                      <TblTh right>Adjust Credits</TblTh>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u, i) => (
-                      <tr key={u.id || i} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                        <TblTd mono style={{ fontSize:10 }}>{u.full_name || '-'}</TblTd>
-                        <TblTd mono style={{ fontSize:9 }}>{u.role || '-'}</TblTd>
-                        <TblTd>
-                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.screening_credits > 0 ? T.okGreen : T.errRed }}>
-                            {u.screening_credits ?? 0}
-                          </span>
-                        </TblTd>
-                        <TblTd>
-                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:500, color: u.underwriting_credits > 0 ? T.okGreen : T.errRed }}>
-                            {u.underwriting_credits ?? 0}
-                          </span>
-                        </TblTd>
-                        <TblTd right>
-                          <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                            <Btn onClick={() => adjustCredits(u.id, 1, 'screening')} disabled={creditBusy[`${u.id}-screening`]} variant="success">
-                              <Plus size={9} /> Screen
-                            </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, 1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`]} variant="success">
-                              <Plus size={9} /> UW
-                            </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, -1, 'screening')} disabled={creditBusy[`${u.id}-screening`] || u.screening_credits <= 0} variant="danger">
-                              <Minus size={9} /> Screen
-                            </Btn>
-                            <Btn onClick={() => adjustCredits(u.id, -1, 'underwriting')} disabled={creditBusy[`${u.id}-underwriting`] || u.underwriting_credits <= 0} variant="danger">
-                              <Minus size={9} /> UW
-                            </Btn>
-                          </div>
-                        </TblTd>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-
-          {/*  ZONE 5: ISSUES QUEUE  */}
-          <Card>
-            <SectionHeader
-              eyebrow="Support"
-              title="Issues Queue"
-              action={
-                <div style={{ display:'flex', gap:8 }}>
-                  <select
-                    value={issueFilter} onChange={e => { setIssueFilter(e.target.value); fetchIssues(e.target.value); }}
-                    style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:'0.1em', padding:'7px 10px', border:`1px solid ${T.hairline}`, background:T.warm, color:T.ink3, outline:'none', cursor:'pointer' }}>
-                    <option value="open">Open</option>
-                    <option value="reviewing">Internal review marker</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="all">All</option>
-                  </select>
-                  <Btn onClick={() => fetchIssues(issueFilter)}><RefreshCcw size={9} /> Refresh</Btn>
-                </div>
-              }
-            />
-            {issues.length === 0 ? (
-              <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:300, color:T.ink4, textAlign:'center', padding:'24px 0' }}>
-                {issueFilter === 'open' ? 'No open issues.' : 'No issues found.'}
-              </p>
-            ) : (
-              <div style={{ overflowX:'auto' }}>
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead>
-                    <tr>
-                      <TblTh>Date</TblTh>
-                      <TblTh>Status</TblTh>
-                      <TblTh>Job / Property</TblTh>
-                      <TblTh>User</TblTh>
-                      <TblTh>Message</TblTh>
-                      <TblTh right>Actions</TblTh>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {issues.map((issue, i) => {
-                      const isUpdating = issuesBusy[issue.id];
-                      const isRegen    = issuesBusy[`regen-${issue.id}`];
-                      const truncated  = issue.message?.length > 80 ? issue.message.slice(0, 80) + '...' : issue.message;
-                      return (
-                        <tr key={issue.id} style={{ background: i % 2 === 1 ? T.warm : T.white }}>
-                          <TblTd mono style={{ fontSize:9 }}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString() : '-'}</TblTd>
-                          <TblTd><StatusBadge status={issue.status || 'open'} /></TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>
-                            <div>{issue.job_id?.slice(0,8) || '-'}</div>
-                            {issue.artifact_id && <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:10, fontWeight:300, color:T.ink4, marginTop:2 }}>artifact: {issue.artifact_id.slice(0,8)}</div>}
-                          </TblTd>
-                          <TblTd mono style={{ fontSize:9 }}>{issue.user_id?.slice(0,8) || '-'}</TblTd>
-                          <TblTd style={{ maxWidth:180, fontSize:11, color:T.ink3 }}>{truncated || '-'}</TblTd>
-                          <TblTd right>
-                            <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
-                              {issue.status !== 'reviewing' && (
-                                <Btn onClick={() => updateIssue(issue.id, 'reviewing')} disabled={isUpdating} variant="warn">Internal review marker</Btn>
-                              )}
-                              {issue.status !== 'resolved' && (
-                                <Btn onClick={() => updateIssue(issue.id, 'resolved')} disabled={isUpdating} variant="success">
-                                  <CheckCircle size={9} /> Resolve
-                                </Btn>
-                              )}
-                              {issue.job_id && (
-                                <Btn onClick={() => regenFromIssue(issue.job_id, issue.id)} disabled={isRegen || !issue.job_id} variant="ghost">
-                                  <RotateCcw size={9} /> Regen
-                                </Btn>
-                              )}
-                            </div>
-                          </TblTd>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
               </div>
             )}
           </Card>

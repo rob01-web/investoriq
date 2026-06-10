@@ -14,8 +14,8 @@
 //   - shows a compact table with optional per-row local expand for example job_ids
 //   - never wires job_ids into any mutating control
 // -----------------------------------------------------------------------------
-import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, AlertTriangle, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Visual tokens identical to AdminDashboard.jsx's T constants so the panel
 // blends in without importing private symbols.
@@ -69,12 +69,13 @@ function BlockChip({ label, color }) {
   );
 }
 
-export default function DiagnosticsIntelligence({ adminRunKey }) {
+export default function DiagnosticsIntelligence({ adminRunKey, onSummaryChange }) {
   const [rollup, setRollup] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [hasFetched, setHasFetched] = useState(false);
+  const [activeOnly, setActiveOnly] = useState(true);
 
   const load = useCallback(async () => {
     if (!adminRunKey?.trim()) {
@@ -105,6 +106,23 @@ export default function DiagnosticsIntelligence({ adminRunKey }) {
   }, [adminRunKey, load]);
 
   const toggleExpand = (code) => setExpanded((prev) => (prev === code ? null : code));
+  const occurrenceCount = useCallback(
+    (row) => Number(row?.count_30d ?? row?.count_7d ?? row?.occurrences ?? row?.occurrence_count ?? 0),
+    []
+  );
+  const filteredRollup = useMemo(
+    () => (activeOnly ? rollup.filter((row) => occurrenceCount(row) > 0) : rollup),
+    [activeOnly, occurrenceCount, rollup]
+  );
+
+  useEffect(() => {
+    if (typeof onSummaryChange !== 'function') return;
+    if (error || !hasFetched) {
+      onSummaryChange({ loaded: false, rows: [] });
+      return;
+    }
+    onSummaryChange({ loaded: true, rows: rollup });
+  }, [error, hasFetched, onSummaryChange, rollup]);
 
   return (
     <div data-testid="diagnostics-intelligence" style={{ marginBottom: 0 }}>
@@ -132,7 +150,7 @@ export default function DiagnosticsIntelligence({ adminRunKey }) {
               margin: 0,
             }}
           >
-            Product Intelligence · Cross-Job 30d
+            INTERNAL — QA SIGNAL REGISTRY
           </p>
           <h2
             style={{
@@ -148,29 +166,53 @@ export default function DiagnosticsIntelligence({ adminRunKey }) {
             Diagnostics Intelligence
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={load}
-          disabled={loading}
-          data-testid="diagnostics-refresh"
-          style={{
-            fontFamily: "'DM Mono',monospace",
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            padding: '6px 11px',
-            background: 'transparent',
-            color: loading ? T.ink4 : T.ink3,
-            border: `1px solid ${T.hairlineMid}`,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-          }}
-        >
-          <RefreshCcw size={10} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          {loading ? 'Refreshing' : 'Refresh'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={() => setActiveOnly((prev) => !prev)}
+            data-testid="diagnostics-active-toggle"
+            style={{
+              fontFamily: "'DM Mono',monospace",
+              fontSize: 9,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              padding: '6px 11px',
+              background: activeOnly ? T.warm : 'transparent',
+              color: T.ink3,
+              border: `1px solid ${T.hairlineMid}`,
+              borderRadius: 999,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            {activeOnly ? 'Active only' : 'Show all'}
+          </button>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            data-testid="diagnostics-refresh"
+            style={{
+              fontFamily: "'DM Mono',monospace",
+              fontSize: 9,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              padding: '6px 11px',
+              background: 'transparent',
+              color: loading ? T.ink4 : T.ink3,
+              border: `1px solid ${T.hairlineMid}`,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <RefreshCcw size={10} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            {loading ? 'Refreshing' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -190,25 +232,41 @@ export default function DiagnosticsIntelligence({ adminRunKey }) {
         </div>
       )}
 
-      {!error && hasFetched && rollup.length === 0 && !loading && (
+      {!error && hasFetched && activeOnly && filteredRollup.length === 0 && !loading && (
         <div
           data-testid="diagnostics-empty"
           style={{
             background: T.white,
             border: `1px solid ${T.hairline}`,
-            padding: '28px 24px',
+            padding: '24px',
             textAlign: 'center',
-            color: T.ink3,
+            color: T.ink4,
             fontFamily: "'DM Sans',sans-serif",
             fontSize: 13,
           }}
         >
-          <ShieldCheck size={20} color={T.okGreen} style={{ marginBottom: 8 }} />
-          <div>No diagnostics requiring product attention.</div>
+          No active diagnostic flags. System clean.
         </div>
       )}
 
-      {rollup.length > 0 && (
+      {!error && hasFetched && !loading && !activeOnly && rollup.length === 0 && (
+        <div
+          data-testid="diagnostics-empty"
+          style={{
+            background: T.white,
+            border: `1px solid ${T.hairline}`,
+            padding: '24px',
+            textAlign: 'center',
+            color: T.ink4,
+            fontFamily: "'DM Sans',sans-serif",
+            fontSize: 13,
+          }}
+        >
+          No diagnostics requiring product attention.
+        </div>
+      )}
+
+      {filteredRollup.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -234,7 +292,7 @@ export default function DiagnosticsIntelligence({ adminRunKey }) {
               </tr>
             </thead>
             <tbody>
-              {rollup.map((row) => {
+              {filteredRollup.map((row) => {
                 const sev = severityChip(row.severity);
                 const isOpen = expanded === row.code;
                 return (
