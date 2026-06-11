@@ -5773,3 +5773,168 @@ If live retesting reveals a new issue, start the next hardening family from evid
 - The current live-test interpretation that caused this pivot is recorded as follows: Screening Test 1 passed strongly and looked customer-deliverable; Underwriting Test 2 proved many core sections work, including T12, Rent Roll, current debt recognition, DSCR classification, property-tax support, environmental containment, market survey containment, appraisal containment, and renovation collapse; however, Underwriting still exposes too many advanced-surface, public-sample, and Ken-readiness issues, especially purchase-assumption, acquisition, cap-rate, and document-treatment consistency; rather than hold the business hostage to full Underwriting perfection, launch the reliable product first and move only proven low-risk value into it.
 - Next implementation direction after this documentation checkpoint: a small planning or audit slice, not a broad rewrite; identify exactly which existing collapsed or hidden Underwriting sections can safely be enabled for Screening; map which files control those Screening section gates; recommend the smallest implementation slice to create enhanced Screening or Acquisition Memo; no code changes during that planning or audit unless Rob explicitly asks.
 - Guardrails: no code changes in this docs update; no Stripe or pricing changes; no DocRaptor flip; no public samples; no new API or serverless routes; no SQL or RPC changes; no broad repo audit; preserve limited Codex usage discipline; keep future Codex prompts tight and receipt-only.
+
+---
+
+# June 11, 2026 Addendum - Support-Doc Authority Enforcement Audit Started Before Patch 4
+
+## Current controlling update
+
+After further discussion, the team clarified that Patch 4 must not become another symptom patch.
+
+The next Codex task is now an **audit-only support-document authority enforcement pass** before Patch 4.
+
+Reason:
+
+```text
+InvestorIQ already has canonical / AI-assisted / deterministic support-doc logic in several places.
+
+The issue is not that no canonical support-doc system exists.
+
+The issue is that some downstream consumers still appear able to bypass, duplicate, reinterpret, or ignore canonical support-doc decisions when rendering the Acquisition Memo or building QA/advisory artifacts.
+```
+
+Rob's controlling concern:
+
+```text
+If Ken Dunn ordered 5 Acquisition Memos and each report surfaced 1-3 visible support-doc treatment issues, that would destroy trust in InvestorIQ.
+
+Therefore the system must be forced to obey canonical authority, or every remaining bypass must be destroyed/demoted.
+```
+
+## Revised root interpretation
+
+Do not frame the issue as:
+
+```text
+"we need to invent canonical support-doc authority"
+```
+
+Frame it as:
+
+```text
+"we need to verify where canonical support-doc authority exists, then identify every downstream escape hatch that can still make its own document-role, treatment, allowed-use, financing-context, current-debt, or renovation-context decision."
+```
+
+## Active Codex task now running
+
+Codex is running this audit-only task:
+
+```text
+Support-doc authority enforcement audit for Acquisition Memo launch behavior.
+```
+
+Audit target:
+
+```text
+Find every remaining path where Acquisition Memo support-document role, treatment, allowed use, financing context, current-debt context, renovation/CapEx context, appraisal context, market-survey context, environmental context, or Document Treatment Summary rows can be decided independently of final canonical support-doc authority.
+```
+
+Do not patch during this audit.
+
+## Audit scope
+
+Inspect only the support-doc authority enforcement seam, especially:
+
+```text
+api/generate-client-report.js
+api/_lib/report-surface-contracts.js
+api/_lib/source-report-coverage-qa.js
+api/_lib/report-contract-qa.js
+api/_lib/qa-action-plan.js
+parser/support-doc routing helpers if they feed the above
+helpers that build Document Treatment Summary
+helpers that build Source Context / Support Document Treatment
+helpers that build Preliminary Financing Readiness Summary
+helpers that build Current Debt Context
+helpers that build Proposed Acquisition Financing Context
+helpers that build Renovation / CapEx context
+support-doc role labels / treatment labels / quantitative-use rows
+```
+
+## Audit questions to answer
+
+Codex must identify:
+
+```text
+1. Current highest-authority support-doc role object/function, if any.
+2. Whether that authority produces one canonical role per uploaded file.
+3. Whether it includes allowed uses and forbidden uses.
+4. Every downstream consumer still making its own support-doc role/treatment decision.
+5. Whether each consumer is a bypass, duplicate, reinterpretation risk, or diagnostic-only path.
+6. Whether the bypass can explain Attack Test 8:
+   - purchase assumptions misrouted;
+   - current debt statement missed;
+   - structured Reno Plan treated as Rent Roll.
+7. Minimum Patch 4 file/function set.
+8. Required regression fixtures.
+```
+
+## Required fix classification for each bypass
+
+Codex should classify each bypass as one of:
+
+```text
+DELETE duplicate decision-maker
+DEMOTE to display-only consumer
+FORCE to consume canonical support-doc authority
+KEEP as diagnostic-only, clearly non-authoritative
+NEEDS new canonical support-doc authority if none exists
+```
+
+## Patch 4 remains next
+
+Patch 4 is still required, but it must be based on the audit inventory.
+
+Patch 4 invariant:
+
+```text
+One uploaded support file -> one canonical support-doc role/treatment/allowed-use decision before final render.
+
+All customer-visible Acquisition Memo surfaces consume that decision.
+
+QA checks conformance to that decision instead of re-deciding document role.
+```
+
+Patch 4 must enforce:
+
+```text
+purchase assumptions cannot become current debt, environmental, mortgage-only, or generic support;
+current debt cannot become proposed acquisition financing;
+structured renovation / CapEx plan cannot become Rent Roll;
+appraisal cannot override purchase price, T12 NOI, or Rent Roll values;
+market survey cannot override Rent Roll market rents;
+Phase I cannot become quantitative financial support.
+```
+
+## Do not touch list
+
+The audit and Patch 4 must not touch:
+
+```text
+Screening core behavior
+T12/Rent Roll core math
+delivery gate doctrine
+credit/payment/access
+DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/V2 surfaces
+pricing/Stripe/SQL/routes/DocRaptor production config/auth/upload gates
+```
+
+## Updated next sequence
+
+```text
+1. Wait for Codex audit receipt.
+2. Review audit receipt for exact bypass inventory.
+3. Create Patch 4 prompt based on audit findings.
+4. Patch only the support-doc authority enforcement seam.
+5. Add regression fixtures, including Final Attack Test 8 support-doc package shape.
+6. Rerun Final Attack Test 8.
+7. Only after Attack Test 8 passes, run a small Acquisition Memo certification batch.
+```
+
+## Fresh-chat continuation note
+
+The next chat should begin with Codex's support-doc authority enforcement audit receipt if available.
+
+Do not start another random test and do not launch Acquisition Memo before Patch 4 + Attack Test 8 rerun.
+

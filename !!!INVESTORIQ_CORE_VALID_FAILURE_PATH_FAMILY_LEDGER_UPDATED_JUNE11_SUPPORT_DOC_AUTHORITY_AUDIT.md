@@ -3863,3 +3863,161 @@ Inventory count note: Explicit rows above: 70 row entries/groups. Combined with 
 5. Then controlled Underwriting lifecycle retest.
 
 If new issues appear, open the next hardening family from concrete evidence only.
+
+---
+
+# June 11, 2026 Addendum - Patch 4 Pre-Audit / Support-Doc Authority Enforcement Escape-Hatch Inventory
+
+## Current CVF interpretation
+
+Patch 4 remains the active blocker family, but the team has paused direct patching to avoid another symptom fix.
+
+Active blocker:
+
+```text
+Support-doc role routing / acquisition assumptions / current debt / structured renovation path.
+```
+
+Primary CVF families:
+
+```text
+CVF-04 Current-debt/refi render-contract drift and debt/proposed-financing separation.
+CVF-07 Optional/full-underwriting support depth constraints.
+CVF-15 Optional-support/source-package/admin ops paths.
+```
+
+Important clarification:
+
+```text
+InvestorIQ already has canonical / AI-assisted / deterministic support-doc decisions in places.
+
+The failure mode is likely downstream authority leakage:
+some consumers still make independent support-doc role/treatment/allowed-use decisions instead of obeying final canonical authority.
+```
+
+## Why this audit exists
+
+Rob challenged whether this is truly new, because support-doc canonical authority was already supposed to be implemented.
+
+The correct response:
+
+```text
+The concept was implemented in pieces.
+
+The remaining risk is enforcement:
+final renderer, Document Treatment Summary, Financing Readiness, source coverage QA, report contract QA, and action-plan consumers may still have duplicate or fallback decision paths.
+```
+
+Therefore the audit is not asking:
+
+```text
+"Should we create canonical support-doc authority?"
+```
+
+It is asking:
+
+```text
+"Where can any part of the Acquisition Memo still bypass canonical support-doc authority?"
+```
+
+## Active Codex audit
+
+Codex is currently running:
+
+```text
+Support-doc authority enforcement audit only.
+```
+
+Audit must find every path where these decisions can still be made independently:
+
+```text
+support-doc role
+support-doc treatment
+allowed use / forbidden use
+purchase assumptions provided
+proposed acquisition financing source-complete status
+current debt context uploaded
+Uploaded Existing Debt Context
+Proposed Acquisition Financing
+Renovation / CapEx acknowledgement
+Document Treatment Summary rows
+Modeled Inputs / Displayed Limited Use / Listed but Not Quantitatively Modeled groups
+appraisal context
+market survey context
+environmental Phase I context
+QA/report/action-plan support-doc role claims
+```
+
+## Attack Test 8 root-path questions
+
+The audit must explain how these failures were possible:
+
+```text
+1. Stonebridge_Assumptions.pdf contained purchase price + proposed loan terms but was not recognized as purchase/proposed acquisition financing context.
+2. Current_Debt_Stonebridge.pdf contained current outstanding balance and debt terms but was rendered as no verified current debt context / generic support.
+3. Stonebridge_Reno_Plan.pdf contained budget/rent lift/phasing but was labeled as Rent Roll context and rendered as no verified renovation budget/rent-lift/phasing provided.
+```
+
+## Required bypass disposition
+
+For each bypass or duplicate decision-maker, Codex must classify it as:
+
+```text
+DELETE duplicate decision-maker
+DEMOTE to display-only consumer
+FORCE to consume canonical support-doc authority
+KEEP as diagnostic-only / non-authoritative
+NEEDS new canonical support-doc authority if no single authority exists
+```
+
+## Patch 4 acceptance after audit
+
+Patch 4 should not be written until the audit identifies the minimum file/function set.
+
+Patch 4 must prove:
+
+```text
+1. Purchase/proposed acquisition assumptions doc routes as Purchase Assumptions / Proposed Acquisition Financing Context.
+2. Current debt statement routes as Existing/Current Debt Context.
+3. Structured Reno Plan routes as Structured Renovation / CapEx Plan.
+4. Document Treatment Summary obeys canonical role/treatment authority.
+5. Preliminary Financing Readiness Summary obeys canonical role/treatment authority.
+6. QA checks conformance to canonical authority instead of re-deciding document role.
+7. Support docs remain bounded and cannot override T12/Rent Roll core truth.
+8. No V2 surfaces reopen.
+```
+
+## Regression fixtures required
+
+Patch 4 must include or recommend fixtures for:
+
+```text
+purchase assumptions / proposed acquisition financing
+current debt statement
+structured renovation / CapEx plan
+appraisal summary
+market survey
+Phase I ESA
+mixed support package equivalent to Final Attack Test 8
+same-filename / duplicate-artifact support-doc conflict if relevant
+```
+
+## Launch posture unchanged
+
+```text
+Screening remains launchable / founder-beta ready from current evidence.
+Acquisition Memo remains not launch-cleared until support-doc authority enforcement patch and Final Attack Test 8 rerun pass.
+Full Underwriting V2 remains deferred.
+```
+
+## Next sequence
+
+```text
+1. Receive Codex audit receipt.
+2. Review whether audit found actual bypasses and minimum Patch 4 scope.
+3. Create Patch 4 prompt from audit results.
+4. Patch only support-doc authority enforcement.
+5. Rerun Final Attack Test 8.
+6. Update this ledger with audit findings and Patch 4 result.
+```
+
