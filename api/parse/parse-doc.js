@@ -479,6 +479,65 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
   if (requiredFinancialType !== 'unknown') return requiredFinancialType;
 
+  const explicitText = String(text || "");
+  const explicitNorm = explicitText.toUpperCase().replace(/\s+/g, ' ');
+  const explicitHas = (terms) => terms.some((term) => explicitNorm.includes(String(term || '').toUpperCase()));
+  const explicitCount = (terms) => terms.filter((term) => explicitNorm.includes(String(term || '').toUpperCase())).length;
+  const explicitPurchaseAssumptions =
+    explicitHas([
+      "PURCHASE ASSUMPTIONS / PROPOSED ACQUISITION FINANCING",
+      "PURCHASE ASSUMPTIONS",
+      "PROPOSED ACQUISITION FINANCING",
+      "ACQUISITION CONTEXT",
+      "PURCHASE PRICE",
+      "GOING-IN CAP RATE",
+      "NOI BASIS",
+    ]);
+  if (explicitPurchaseAssumptions) return 'loan_term_sheet';
+
+  const explicitCurrentDebt =
+    explicitHas([
+      "EXISTING CURRENT DEBT STATEMENT",
+      "CURRENT OUTSTANDING BALANCE",
+      "CURRENT DEBT CONTEXT",
+      "CURRENT MORTGAGE STATEMENT",
+      "EXISTING MORTGAGE",
+      "TRUE CURRENT DEBT",
+      "OUTSTANDING PRINCIPAL",
+      "UNPAID PRINCIPAL",
+      "CURRENT LOAN BALANCE",
+      "MONTHLY PAYMENT",
+      "MATURITY",
+    ]);
+  if (explicitCurrentDebt) return 'mortgage_statement';
+
+  const explicitRenovation =
+    explicitHas([
+      "STRUCTURED RENOVATION / CAPEX PLAN",
+      "STRUCTURED RENOVATION / CAPEX CONTEXT",
+      "FORWARD-LOOKING RENOVATION PLAN",
+      "TOTAL RENOVATION BUDGET",
+      "RENOVATION BUDGET",
+      "RENT LIFT",
+      "PHASING",
+      "IMPLEMENTATION SCHEDULE",
+    ]) ||
+    (
+      explicitHas(["CAPEX", "CAPITAL BUDGET", "CAPITAL EXPENDITURE", "SCOPE OF WORK", "UNIT TURN", "IMPROVEMENT"]) &&
+      explicitHas(["BUDGET", "TOTAL BUDGET", "RENT LIFT", "PHASING", "MONTHS", "PHASE"])
+    );
+  if (explicitRenovation) return 'renovation';
+
+  if (explicitHas(["MARKET RENT SURVEY", "MARKET SURVEY", "RENT SURVEY", "RENT COMP", "RENT COMPARABLES"])) {
+    return 'supporting_documents_unclassified';
+  }
+  if (explicitHas(["APPRAISAL SUMMARY", "APPRAISAL CONTEXT", "VALUATION CONTEXT", "APPRAISAL EXCERPT", "OPINION OF VALUE", "VALUATION REPORT"])) {
+    return 'appraisal';
+  }
+  if (explicitHas(["PHASE I ESA", "PHASE I", "PHASE 1", "ENVIRONMENTAL DUE DILIGENCE", "ENVIRONMENTAL REPORT", "ESA", "SITE ASSESSMENT", "RECOGNIZED ENVIRONMENTAL CONDITION"])) {
+    return 'supporting_documents_unclassified';
+  }
+
   const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
   const has = (terms) => terms.some((t) => norm.includes(String(t || '').toUpperCase()));
   const countMatches = (terms) => terms.filter((t) => norm.includes(String(t || '').toUpperCase())).length;

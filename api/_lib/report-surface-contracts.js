@@ -1504,6 +1504,166 @@ export function formatCurrentDebtAssessmentCopy({
   }
 }
 
+function resolveExplicitSupportDocAuthority({
+  declaredDocType = null,
+  detectedDocType = null,
+  originalFilename = null,
+  rawText = null,
+  payload = null,
+} = {}) {
+  const text = normalizeText([
+    declaredDocType,
+    detectedDocType,
+    originalFilename,
+    rawText,
+    payload?.original_filename,
+    payload?.semantic_doc_role,
+    payload?.semantic_doc_display_label,
+    payload?.doc_type,
+    payload?.display_doc_type,
+    payload?.source_text,
+    payload?.raw_text,
+    payload?.notes,
+    payload?.loan_terms_text,
+    payload?.extracted_text,
+  ].filter(Boolean).join(" "));
+  const hasText = (terms = []) => terms.some((term) => text.includes(normalizeText(term)));
+  const countText = (terms = []) => terms.filter((term) => text.includes(normalizeText(term))).length;
+
+  const purchaseAssumptions = hasText([
+    "purchase assumptions / proposed acquisition financing",
+    "purchase assumptions",
+    "proposed acquisition financing",
+    "acquisition context",
+    "purchase price",
+    "going-in cap rate",
+    "noi basis",
+  ]);
+  if (purchaseAssumptions) {
+    return {
+      semantic_doc_role: "purchase_assumptions",
+      semantic_doc_role_reason: "explicit_purchase_assumptions_source_text",
+      semantic_doc_role_confidence: 0.99,
+      semantic_doc_display_label: "Purchase Assumptions / Acquisition Context",
+    };
+  }
+
+  const currentDebt = hasText([
+    "existing current debt statement",
+    "current outstanding balance",
+    "current debt context",
+    "current mortgage statement",
+    "existing mortgage",
+    "true current debt",
+    "outstanding principal",
+    "unpaid principal",
+    "current loan balance",
+    "monthly payment",
+    "maturity",
+  ]);
+  if (currentDebt) {
+    return {
+      semantic_doc_role: "current_mortgage_statement",
+      semantic_doc_role_reason: "explicit_current_debt_source_text",
+      semantic_doc_role_confidence: 0.99,
+      semantic_doc_display_label: "Debt Support Received / Contextual",
+    };
+  }
+
+  const structuredRenovation =
+    !hasText([
+      "not provided",
+      "no rent lift",
+      "no roi",
+      "no payback",
+      "no implementation schedule",
+      "historical capex",
+      "historical capital",
+      "past repairs",
+      "prior work",
+      "completed work",
+    ]) && (
+    hasText([
+      "structured renovation / capex plan",
+      "structured renovation / capex context",
+      "forward-looking renovation plan",
+      "expected monthly rent lift",
+      "monthly rent lift",
+      "phasing",
+      "implementation schedule",
+    ]) ||
+      hasText(["capex", "capital budget", "capital expenditure", "scope of work", "unit turn", "improvement"]) &&
+      hasText(["budget", "total budget", "rent lift", "phasing", "months", "phase"])
+    );
+  if (structuredRenovation) {
+    const rowHasForwardLookingSignals = (rows = []) => rows.some((row) => {
+      const rowText = normalizeText([
+        row?.phase_timing,
+        row?.timing_or_phasing,
+        row?.notes,
+        row?.description,
+      ].filter(Boolean).join(" "));
+      const hasFutureTiming = /\b(month|months|phase|q[1-4]|quarter|year|years)\b/.test(rowText) && !/\bhistorical\b/.test(rowText);
+      const hasRentLift = positiveNumber(row?.expected_monthly_rent_lift) > 0 || positiveNumber(row?.rent_lift) > 0;
+      return hasFutureTiming || hasRentLift;
+    });
+    const forwardLooking =
+      hasText(["rent lift", "phasing", "implementation schedule", "months", "phase"]) ||
+      rowHasForwardLookingSignals(Array.isArray(payload?.budget_rows) ? payload.budget_rows : []) ||
+      rowHasForwardLookingSignals(Array.isArray(payload?.execution_rows) ? payload.execution_rows : []);
+    return {
+      semantic_doc_role: forwardLooking ? "structured_renovation_capex_plan" : "renovation_capex_budget_context",
+      semantic_doc_role_reason: forwardLooking
+        ? "explicit_renovation_capex_source_text"
+        : "explicit_renovation_budget_source_text",
+      semantic_doc_role_confidence: 0.99,
+      semantic_doc_display_label: forwardLooking
+        ? "Structured Renovation / CapEx Plan"
+        : "Renovation / CapEx Budget Context",
+    };
+  }
+
+  if (hasText(["market rent survey", "market survey", "rent survey", "rent comp", "rent comparables"])) {
+    return {
+      semantic_doc_role: "market_survey",
+      semantic_doc_role_reason: "explicit_market_survey_source_text",
+      semantic_doc_role_confidence: 0.98,
+      semantic_doc_display_label: "Market Rent Context",
+    };
+  }
+
+  if (hasText(["appraisal summary", "appraisal context", "valuation context", "appraisal excerpt", "opinion of value", "valuation report"]) ||
+    positiveNumber(payload?.appraised_value) ||
+    positiveNumber(payload?.cap_rate)) {
+    return {
+      semantic_doc_role: "appraisal",
+      semantic_doc_role_reason: "explicit_appraisal_source_text",
+      semantic_doc_role_confidence: 0.98,
+      semantic_doc_display_label: "Appraisal Context",
+    };
+  }
+
+  if (hasText(["phase i esa", "phase i", "phase 1", "environmental due diligence", "environmental report", "esa", "site assessment", "recognized environmental condition"])) {
+    return {
+      semantic_doc_role: "environmental_due_diligence",
+      semantic_doc_role_reason: "explicit_environmental_source_text",
+      semantic_doc_role_confidence: 0.98,
+      semantic_doc_display_label: "Environmental Due Diligence Context",
+    };
+  }
+
+  if (hasText(["property tax", "tax bill", "tax notice", "municipal tax", "assessment roll", "annual taxes", "realty tax", "real estate taxes"])) {
+    return {
+      semantic_doc_role: "property_tax",
+      semantic_doc_role_reason: "explicit_property_tax_source_text",
+      semantic_doc_role_confidence: 0.95,
+      semantic_doc_display_label: "Property Tax Support",
+    };
+  }
+
+  return null;
+}
+
 export function buildSupportDocTaxonomyState({
   declaredDocType = null,
   detectedDocType = null,
@@ -1522,6 +1682,103 @@ export function buildSupportDocTaxonomyState({
 
   const hasText = (terms = []) => terms.some((term) => text.includes(normalizeText(term)));
   const countText = (terms = []) => terms.filter((term) => text.includes(normalizeText(term))).length;
+  const explicitAuthority = resolveExplicitSupportDocAuthority({
+    declaredDocType,
+    detectedDocType,
+    originalFilename,
+    rawText,
+    payload,
+  });
+  if (explicitAuthority) {
+    return {
+      semantic_doc_role: explicitAuthority.semantic_doc_role,
+      semantic_doc_role_confidence: explicitAuthority.semantic_doc_role_confidence,
+      semantic_doc_role_reason: explicitAuthority.semantic_doc_role_reason,
+      semantic_doc_family: "support_doc",
+      semantic_doc_display_label: explicitAuthority.semantic_doc_display_label,
+    };
+  }
+  const hasExplicitPurchaseAssumptions =
+    hasText([
+      "purchase assumptions / proposed acquisition financing",
+      "purchase assumptions",
+      "proposed acquisition financing",
+      "acquisition context",
+      "purchase price",
+      "going-in cap rate",
+      "noi basis",
+    ]) &&
+    (
+      positiveNumber(payload?.purchase_price) ||
+      positiveNumber(payload?.going_in_cap_rate) ||
+      positiveNumber(payload?.noi_basis) ||
+      positiveNumber(payload?.stated_acquisition_loan_amount) ||
+      positiveNumber(payload?.derived_acquisition_loan_amount) ||
+      countText(["purchase", "assumption", "acquisition", "financ", "loan", "ltv", "amort", "closing"]) >= 2
+    );
+  const hasExplicitCurrentDebt =
+    hasText([
+      "existing current debt statement",
+      "current outstanding balance",
+      "current debt context",
+      "current mortgage statement",
+      "existing mortgage",
+      "true current debt",
+      "outstanding principal",
+      "unpaid principal",
+      "current loan balance",
+      "monthly payment",
+      "maturity",
+    ]) &&
+    (
+      positiveNumber(payload?.outstanding_balance) ||
+      positiveNumber(payload?.current_outstanding_balance) ||
+      positiveNumber(payload?.current_loan_balance)
+    );
+  const hasExplicitRenovation =
+    !hasText([
+      "not provided",
+      "no rent lift",
+      "no roi",
+      "no payback",
+      "no implementation schedule",
+      "historical capex",
+      "historical capital",
+      "past repairs",
+      "prior work",
+      "completed work",
+    ]) &&
+    (
+      hasText([
+        "structured renovation / capex plan",
+        "structured renovation / capex context",
+        "forward-looking renovation plan",
+        "total renovation budget",
+        "renovation budget",
+        "expected monthly rent lift",
+        "monthly rent lift",
+        "phasing",
+      ]) ||
+      (
+        hasText(["capex", "capital budget", "capital expenditure", "scope of work", "unit turn", "improvement"]) &&
+        hasText(["budget", "total budget", "rent lift", "phasing", "months", "phase"])
+      )
+    ) &&
+    (
+      positiveNumber(payload?.total_budget) ||
+      positiveNumber(payload?.total_capex) ||
+      positiveNumber(payload?.renovation_budget) ||
+      (Array.isArray(payload?.budget_rows) && payload.budget_rows.length > 0) ||
+      (Array.isArray(payload?.execution_rows) && payload.execution_rows.length > 0)
+    );
+  const hasExplicitMarketSurvey =
+    hasText(["market rent survey", "market survey", "rent survey", "rent comp", "rent comparables"]);
+  const hasExplicitAppraisal =
+    hasText(["appraisal summary", "appraisal context", "valuation context", "appraisal excerpt", "opinion of value", "valuation report"]) ||
+    positiveNumber(payload?.appraised_value) ||
+    positiveNumber(payload?.cap_rate);
+  const hasExplicitEnvironmental =
+    hasText(["phase i esa", "phase i", "phase 1", "environmental due diligence", "environmental report", "esa", "site assessment", "recognized environmental condition"]);
   const hasCurrentDebtSignals =
     [
       payload?.outstanding_balance,
@@ -1641,7 +1898,53 @@ export function buildSupportDocTaxonomyState({
   let semanticDocRoleReason = "fallback_other_support";
   let confidence = 0.5;
 
-  if (hasEnvironmentalSignals) {
+  if (hasExplicitPurchaseAssumptions) {
+    semanticDocRole = "purchase_assumptions";
+    semanticDocRoleReason = "explicit_purchase_assumptions_source_text";
+    confidence = 0.99;
+  } else if (hasExplicitCurrentDebt) {
+    semanticDocRole = "current_mortgage_statement";
+    semanticDocRoleReason = "explicit_current_debt_source_text";
+    confidence = 0.99;
+  } else if (hasExplicitRenovation) {
+    const structuredRenovation =
+      !hasText([
+        "not provided",
+        "no rent lift",
+        "no roi",
+        "no payback",
+        "no implementation schedule",
+        "historical capex",
+        "historical capital",
+        "past repairs",
+        "prior work",
+        "completed work",
+      ]) &&
+      (
+        hasText(["structured renovation / capex plan", "structured renovation / capex context", "forward-looking renovation plan", "expected monthly rent lift", "monthly rent lift", "phasing", "implementation schedule"]) ||
+        (
+          hasText(["capex", "capital budget", "capital expenditure", "scope of work", "unit turn", "improvement"]) &&
+          hasText(["budget", "total budget", "rent lift", "phasing", "months", "phase"])
+        )
+      );
+    semanticDocRole = structuredRenovation ? "structured_renovation_capex_plan" : "renovation_capex_budget_context";
+    semanticDocRoleReason = structuredRenovation
+      ? "explicit_renovation_capex_source_text"
+      : "explicit_renovation_budget_source_text";
+    confidence = 0.99;
+  } else if (hasExplicitMarketSurvey) {
+    semanticDocRole = "market_survey";
+    semanticDocRoleReason = "explicit_market_survey_source_text";
+    confidence = 0.98;
+  } else if (hasExplicitAppraisal) {
+    semanticDocRole = "appraisal";
+    semanticDocRoleReason = "explicit_appraisal_source_text";
+    confidence = 0.98;
+  } else if (hasExplicitEnvironmental) {
+    semanticDocRole = "environmental_due_diligence";
+    semanticDocRoleReason = "explicit_environmental_source_text";
+    confidence = 0.98;
+  } else if (hasEnvironmentalSignals) {
     semanticDocRole = "environmental_due_diligence";
     semanticDocRoleReason = "environmental_support_signals";
     confidence = 0.98;
@@ -1658,8 +1961,41 @@ export function buildSupportDocTaxonomyState({
     semanticDocRoleReason = "purchase_assumption_support_signals";
     confidence = 0.96;
   } else if (hasRenovationSignals) {
-    semanticDocRole = "renovation_budget";
-    semanticDocRoleReason = "renovation_support_signals";
+    const hasRenovationNegationSignals =
+      hasText([
+        "not provided",
+        "no rent lift",
+        "no roi",
+        "no payback",
+        "no implementation schedule",
+        "historical capex",
+        "historical capital",
+        "past repairs",
+        "prior work",
+        "completed work",
+      ]);
+    const hasStructuredRenovationSignals =
+      !hasRenovationNegationSignals &&
+      (
+        hasText(["structured renovation / capex plan", "structured renovation / capex context", "forward-looking renovation plan", "expected monthly rent lift", "monthly rent lift", "phasing", "implementation schedule"]) ||
+        (
+          hasText(["capex", "capital budget", "capital expenditure", "scope of work", "unit turn", "improvement"]) &&
+          hasText(["budget", "total budget", "rent lift", "phasing", "months", "phase"])
+        )
+      );
+    const hasBudgetContextSignals =
+      hasText(["renovation / capex budget context", "budget/scope only", "common areas scope only", "renovation budget"]) ||
+      hasRenovationNegationSignals;
+    semanticDocRole = hasStructuredRenovationSignals
+      ? "structured_renovation_capex_plan"
+      : hasBudgetContextSignals
+      ? "renovation_capex_budget_context"
+      : "renovation_budget";
+    semanticDocRoleReason = hasStructuredRenovationSignals
+      ? "renovation_support_signals"
+      : hasBudgetContextSignals
+      ? "renovation_budget_support_signals"
+      : "renovation_support_signals";
     confidence = 0.93;
   } else if (hasPropertyTaxSignals && !hasNonPropertyTaxSupportSignals) {
     semanticDocRole = "property_tax";

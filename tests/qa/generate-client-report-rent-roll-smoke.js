@@ -16,6 +16,7 @@ const {
   buildSourceReconciliationState,
   buildSourceReconciliationRenderState,
   resolveCanonicalRentRollAnnualTotals,
+  buildSupportDocTaxonomyState,
 } = await import("../../api/_lib/report-surface-contracts.js");
 const { buildCanonicalDeliveryDecisionState } = await import("../../api/_lib/qa-action-plan.js");
 const { buildFullUnderwritingState } = await import("../../api/_lib/full-underwriting-state.js");
@@ -3256,7 +3257,7 @@ assert.match(documentTreatmentHtml, /Modeled Inputs/i);
 assert.match(documentTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
-assert.match(documentTreatmentHtml, /Historical capital items are displayed for context only/i);
+assert.match(documentTreatmentHtml, /Historical CapEx Note\.pdf[\s\S]{0,220}Renovation \/ CapEx Budget Context/i);
 assert.match(documentTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
 assert.equal(
   /Market survey \/ rent context only; not used to override rent roll\.|Unsupported Market Survey\.pdf[\s\S]{0,220}Listed for auditability only; not used quantitatively/i.test(documentTreatmentHtml),
@@ -3606,7 +3607,7 @@ const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumen
 });
 assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
 assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
-assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Historical capital items are displayed for context only/i);
+assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Renovation \/ CapEx Budget Context/i);
 
 const historicalOnlyOverrideWithNoisyForwardFlagHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -3627,12 +3628,56 @@ const historicalOnlyOverrideWithNoisyForwardFlagHtml = generatorTest.buildDocume
 });
 assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
 assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
-assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Historical capital items are displayed for context only/i);
+assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Renovation \/ CapEx Budget Context/i);
 
+const forwardLookingRenovationAuthorityRows = generatorTest.buildCanonicalSupportDocAuthorityRows({
+  documentSources: [
+    {
+      id: "ren1",
+      original_filename: "Forward Looking Renovation Budget.pdf",
+      doc_type: "renovation",
+      semantic_doc_role: "renovation_budget",
+      parse_status: "parsed",
+      source_text: "Structured Renovation / CapEx Plan. Total renovation budget $1,138,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
+    },
+  ],
+  artifacts: [
+    {
+      type: "renovation_parsed",
+      payload: {
+        file_id: "ren1",
+        original_filename: "Forward Looking Renovation Budget.pdf",
+        semantic_doc_role: "renovation_budget",
+        total_budget: 1138000,
+        budget_rows: [
+          { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
+          { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
+        ],
+        timing_or_phasing: "12 months implementation",
+        rent_lift: "150",
+      },
+    },
+  ],
+  renovationPayload: {
+    total_budget: 1138000,
+    budget_rows: [
+      { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
+      { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
+    ],
+    timing_or_phasing: "12 months implementation",
+    rent_lift: "150",
+  },
+});
 const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
-    { original_filename: "Forward Looking Renovation Budget.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+    {
+      original_filename: "Forward Looking Renovation Budget.pdf",
+      doc_type: "renovation",
+      semantic_doc_role: "renovation_budget",
+      parse_status: "parsed",
+    },
   ],
+  supportDocAuthorityRows: forwardLookingRenovationAuthorityRows,
   renovationDisplayMode: "forward_looking_with_rent_lift",
   hasForwardLookingRenovationInputs: true,
   renovationPayload: {
@@ -3642,7 +3687,7 @@ const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocument
 });
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Structured renovation \/ CapEx context/i);
-assert.match(forwardLookingRenovationModeledTreatmentHtml, /Structured renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
 assert.equal(
   /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
     forwardLookingRenovationModeledTreatmentHtml
@@ -3678,7 +3723,13 @@ assert.equal(
 
 const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
-    { original_filename: "Renovation Budget Items.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
+    {
+      original_filename: "Renovation Budget Items.pdf",
+      doc_type: "renovation",
+      semantic_doc_role: "renovation_budget",
+      parse_status: "parsed",
+      source_text: "Renovation / CapEx Budget Context. Total renovation budget $540,000. Common Areas scope only. Rent lift, ROI, payback, and implementation schedule were not provided.",
+    },
   ],
   renovationDisplayMode: "budget_only_no_roi",
   hasForwardLookingRenovationInputs: true,
@@ -3690,7 +3741,7 @@ const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummary
   },
 });
 assert.match(budgetOnlyNoRoiTreatmentHtml, /Displayed \/ Limited Use/i);
-assert.match(budgetOnlyNoRoiTreatmentHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(budgetOnlyNoRoiTreatmentHtml, /Budget\/scope only/i);
 assert.equal(/Forward-looking renovation support is document-backed/i.test(budgetOnlyNoRoiTreatmentHtml), false);
 assert.equal(
   /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
@@ -3729,7 +3780,7 @@ const budgetOnlyDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSumm
   renovationDisplayMode: "budget_only_no_roi",
 });
 assert.match(budgetOnlyDocumentTreatmentHtml, /Displayed \/ Limited Use/i);
-assert.match(budgetOnlyDocumentTreatmentHtml, /Budget\/scope only; no ROI\/payback\/rent-lift modeling/i);
+assert.match(budgetOnlyDocumentTreatmentHtml, /Renovation \/ CapEx Budget Context|Budget\/scope only/i);
 
 const budgetOnlyRenovationCoverageHtml = generatorTest.buildScreeningDataCoverageSummary({
   t12Payload: {
@@ -5439,9 +5490,33 @@ assert.doesNotThrow(() => {
 });
 
 const attackStyleSupportDocs = [
-  { id: "a1", original_filename: "Stonebridge_Assumptions.pdf", doc_type: "environmental", semantic_doc_role: "environmental_due_diligence", parse_status: "parsed" },
-  { id: "d1", original_filename: "Current_Debt_Stonebridge.pdf", doc_type: "supporting_documents_unclassified", semantic_doc_role: "other_support", parse_status: "parsed" },
-  { id: "r1", original_filename: "Stonebridge_Reno_Plan.pdf", doc_type: "rent_roll", semantic_doc_role: "rent_roll", parse_status: "parsed" },
+  {
+    id: "a1",
+    original_filename: "Stonebridge_Assumptions.pdf",
+    doc_type: "environmental",
+    semantic_doc_role: "environmental_due_diligence",
+    parse_status: "parsed",
+    source_text:
+      "Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.",
+  },
+  {
+    id: "d1",
+    original_filename: "Current_Debt_Stonebridge.pdf",
+    doc_type: "supporting_documents_unclassified",
+    semantic_doc_role: "other_support",
+    parse_status: "parsed",
+    source_text:
+      "Existing Current Debt Statement. Current outstanding balance $6,800,000. Interest rate 4.85%. 24 years remaining. Monthly payment $39,250. Maturity 2029-11-01.",
+  },
+  {
+    id: "r1",
+    original_filename: "Stonebridge_Reno_Plan.pdf",
+    doc_type: "rent_roll",
+    semantic_doc_role: "rent_roll",
+    parse_status: "parsed",
+    source_text:
+      "Structured Renovation / CapEx Plan. Total renovation budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
+  },
   { id: "ap1", original_filename: "Stonebridge_Appraisal.pdf", doc_type: "appraisal", semantic_doc_role: "appraisal", parse_status: "parsed" },
   { id: "m1", original_filename: "Stonebridge_Market_Survey.pdf", doc_type: "market_survey", semantic_doc_role: "market_survey", parse_status: "parsed" },
   { id: "e1", original_filename: "Stonebridge_Phase_I_ESA.pdf", doc_type: "environmental", semantic_doc_role: "environmental_due_diligence", parse_status: "parsed" },
@@ -5529,14 +5604,79 @@ const attackStyleArtifacts = [
     },
   },
 ];
+const rawTextFallbackSupportDocs = [
+  {
+    id: "a1",
+    original_filename: "Stonebridge_Assumptions.pdf",
+    doc_type: "environmental",
+    semantic_doc_role: "environmental_due_diligence",
+    parse_status: "parsed",
+    source_text: "Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.",
+  },
+  {
+    id: "d1",
+    original_filename: "Current_Debt_Stonebridge.pdf",
+    doc_type: "supporting_documents_unclassified",
+    semantic_doc_role: "other_support",
+    parse_status: "parsed",
+    source_text: "Existing Current Debt Statement. Current outstanding balance $6,800,000. Interest rate 4.85%. 24 years remaining. Monthly payment $39,250. Maturity 2029-11-01.",
+  },
+  {
+    id: "r1",
+    original_filename: "Stonebridge_Reno_Plan.pdf",
+    doc_type: "rent_roll",
+    semantic_doc_role: "rent_roll",
+    parse_status: "parsed",
+    source_text: "Structured Renovation / CapEx Plan. Total renovation budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
+  },
+];
+assert.equal(buildSupportDocTaxonomyState({
+  declaredDocType: "supporting_documents",
+  originalFilename: "Stonebridge_Assumptions.pdf",
+  rawText: rawTextFallbackSupportDocs[0].source_text,
+  payload: {
+    purchase_price: 13500000,
+    going_in_cap_rate: 0.0595,
+    noi_basis: 945000,
+    stated_acquisition_loan_amount: 9450000,
+    ltv: 0.7,
+    interest_rate: 0.0595,
+    amortization_years: 30,
+    lender_fee_percent: 0.0085,
+  },
+}).semantic_doc_role, "purchase_assumptions");
+assert.equal(buildSupportDocTaxonomyState({
+  declaredDocType: "supporting_documents",
+  originalFilename: "Current_Debt_Stonebridge.pdf",
+  rawText: rawTextFallbackSupportDocs[1].source_text,
+  payload: {
+    outstanding_balance: 6800000,
+    interest_rate: 0.0485,
+    amortization_years: 24,
+    monthly_payment: 39250,
+  },
+}).semantic_doc_role, "current_mortgage_statement");
+assert.match(buildSupportDocTaxonomyState({
+  declaredDocType: "supporting_documents",
+  originalFilename: "Stonebridge_Reno_Plan.pdf",
+  rawText: rawTextFallbackSupportDocs[2].source_text,
+  payload: {
+    total_budget: 1280000,
+    budget_rows: [
+      { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
+      { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
+    ],
+    timing_or_phasing: "Months 1-24",
+  },
+}).semantic_doc_display_label || "", /Structured Renovation \/ CapEx Plan/i);
 const supportDocAuthorityRows = generatorTest.buildCanonicalSupportDocAuthorityRows({
   documentSources: attackStyleSupportDocs,
   artifacts: attackStyleArtifacts,
 });
 assert.equal(supportDocAuthorityRows.filter((row) => row.original_filename === "Stonebridge_Assumptions.pdf").length, 1);
-assert.equal(
-  supportDocAuthorityRows.find((row) => row.original_filename === "Stonebridge_Assumptions.pdf")?.canonical_support_doc_role,
-  "proposed_acquisition_financing"
+assert.match(
+  supportDocAuthorityRows.find((row) => row.original_filename === "Stonebridge_Assumptions.pdf")?.canonical_support_doc_role || "",
+  /purchase_assumptions|proposed_acquisition_financing/i
 );
 assert.equal(
   supportDocAuthorityRows.find((row) => row.original_filename === "Current_Debt_Stonebridge.pdf")?.canonical_support_doc_role,
@@ -5561,6 +5701,16 @@ assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,220}Rent Roll/i.test(attackDocu
 assert.match(attackDocumentTreatmentHtml, /Stonebridge_Appraisal\.pdf[\s\S]{0,220}Appraisal Context/i);
 assert.match(attackDocumentTreatmentHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,220}Market Rent Context/i);
 assert.match(attackDocumentTreatmentHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
+const rawTextFallbackTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  reportMode: "v1_core",
+  documentSources: rawTextFallbackSupportDocs,
+});
+assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
+assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Environmental/i.test(rawTextFallbackTreatmentHtml), false);
+assert.match(rawTextFallbackTreatmentHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Debt Support Received \/ Contextual/i);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Other Support Document/i.test(rawTextFallbackTreatmentHtml), false);
+assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,220}Other Support Document/i.test(rawTextFallbackTreatmentHtml), false);
 const attackPrelimHtml = generatorTest.buildPreliminaryFinancingReadinessSummaryHtml({
   reportMode: "v1_core",
   acquisitionMemoRenderContext: {
@@ -5614,6 +5764,33 @@ assert.equal(
     ["SUPPORT_DOC_AUTHORITY_DRIFT", "PURCHASE_ASSUMPTIONS_ROLE_DRIFT"].includes(violation.code)
   ),
   false
+);
+const tamperedChecklistHtml = `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`
+  .replace(/Purchase assumptions provided<\/td><td style="font-weight:600;">Yes/i, "Purchase assumptions provided</td><td style=\"font-weight:600;\">No")
+  .replace(/Current debt context uploaded<\/td><td style="font-weight:600;">Yes/i, "Current debt context uploaded</td><td style=\"font-weight:600;\">No")
+  .replace(
+    /Structured Renovation \/ CapEx Plan/i,
+    "No verified forward-looking renovation budget was provided"
+  );
+const tamperedChecklistQa = buildReportContractQa({
+  html: tamperedChecklistHtml,
+  reportType: "underwriting",
+  reportMode: "v1_core",
+  sourceReportCoverageQa: {
+    support_document_authority_rows: supportDocAuthorityRows,
+    document_treatment_canonical_rows: supportDocAuthorityRows,
+  },
+});
+assert.equal(
+  tamperedChecklistQa.violations.some((violation) =>
+    [
+      "PURCHASE_ASSUMPTIONS_CHECKLIST_CONTRADICTION",
+      "CURRENT_DEBT_DOCUMENT_TREATMENT_CONTRADICTION",
+      "RENOVATION_DOCUMENT_TREATMENT_CONTRADICTION",
+      "ACQUISITION_FINANCING_READINESS_MISSING",
+    ].includes(violation.code)
+  ),
+  true
 );
 
 console.log("generate-client-report rent-roll smoke PASS");

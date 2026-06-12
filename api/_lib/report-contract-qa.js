@@ -1973,6 +1973,36 @@ export function buildReportContractQa({
     : Array.isArray(sourceReportCoverageQa?.document_treatment_canonical_rows)
     ? sourceReportCoverageQa.document_treatment_canonical_rows
     : [];
+  const canonicalCurrentDebtDocumentRows = canonicalDocumentTreatmentRows.filter((row) => {
+    const canonicalText = [
+      row?.original_filename,
+      row?.file_name,
+      row?.filename,
+      row?.semantic_doc_role,
+      row?.semantic_doc_display_label,
+      row?.display_doc_type,
+      row?.doc_type,
+      row?.semantic_doc_role_reason,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return /(current[_\s-]*debt[_\s-]*context|current[_\s-]*mortgage[_\s-]*statement|current[_\s-]*debt|current outstanding balance|existing current debt statement|existing mortgage|unpaid principal|outstanding principal|current loan balance)/i.test(canonicalText);
+  });
+  const canonicalRenovationDocumentRows = canonicalDocumentTreatmentRows.filter((row) => {
+    const canonicalText = [
+      row?.original_filename,
+      row?.file_name,
+      row?.filename,
+      row?.semantic_doc_role,
+      row?.semantic_doc_display_label,
+      row?.display_doc_type,
+      row?.doc_type,
+      row?.semantic_doc_role_reason,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return /(structured[_\s-]*renovation|capex|renovation|capital budget|capital expenditure|rent lift|phasing)/i.test(canonicalText);
+  });
   const canonicalAcquisitionDocumentRows = canonicalDocumentTreatmentRows.filter((row) => {
     const canonicalText = [
       row?.original_filename,
@@ -2154,6 +2184,36 @@ export function buildReportContractQa({
     const acquisitionFinancingReadinessRows = tableRowsFromHtml(acquisitionFinancingReadinessTable);
     const acquisitionFinancingReadinessText = acquisitionFinancingReadinessRows.map((row) => row.text).join(" | ");
     const limitedNoteShown = /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i.test(acquisitionFinancingReadinessText);
+    const canonicalProposedAcquisitionRows = canonicalAcquisitionDocumentRows.filter((row) =>
+      row?.has_proposed_acquisition_financing === true ||
+      /proposed[_\s-]*acquisition[_\s-]*financing/i.test(
+        [
+          row?.canonical_support_doc_role,
+          row?.semantic_doc_role,
+          row?.semantic_doc_display_label,
+          row?.document_role_label,
+          row?.treatment_label,
+          row?.use_label,
+          row?.semantic_doc_role_reason,
+          row?.original_filename,
+        ].filter(Boolean).join(" ")
+      )
+    );
+    if (canonicalProposedAcquisitionRows.length > 0 && limitedNoteShown) {
+      addViolation(violations, {
+        code: "ACQUISITION_FINANCING_READINESS_MISSING",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Validated proposed acquisition financing exists but the memo still renders the limited fallback note.",
+        evidence: {
+          rows: canonicalProposedAcquisitionRows,
+          rendered_text: acquisitionFinancingReadinessText,
+        },
+        customer_delivery_impact: "disclose_only",
+        blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
     if (!limitedNoteShown) {
       if (/Going-In DSCR|Estimated Annual Debt Service/i.test(acquisitionFinancingReadinessText)) {
         addViolation(violations, {
@@ -2188,6 +2248,64 @@ export function buildReportContractQa({
           evidence: {
             missing_labels: missingLabels,
             rows: acquisitionFinancingReadinessRows,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
+      if (canonicalProposedAcquisitionRows.length > 0 && /Purchase assumptions provided[\s\S]{0,80}\bNo\b/i.test(acquisitionFinancingReadinessText)) {
+        addViolation(violations, {
+          code: "PURCHASE_ASSUMPTIONS_CHECKLIST_CONTRADICTION",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Canonical purchase assumptions support exists, but the lender diligence checklist says purchase assumptions were not provided.",
+          evidence: {
+            rows: canonicalProposedAcquisitionRows,
+            rendered_text: acquisitionFinancingReadinessText,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
+      if (canonicalCurrentDebtDocumentRows.length > 0 && /Current debt context uploaded[\s\S]{0,80}\bNo\b/i.test(acquisitionFinancingReadinessText)) {
+        addViolation(violations, {
+          code: "CURRENT_DEBT_DOCUMENT_TREATMENT_CONTRADICTION",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Current debt context exists in canonical support-doc authority, but the financing checklist says it was not uploaded.",
+          evidence: {
+            rows: canonicalCurrentDebtDocumentRows,
+            rendered_text: acquisitionFinancingReadinessText,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
+      if (canonicalCurrentDebtDocumentRows.length > 0 && /No verified current debt context was provided/i.test(rawHtml)) {
+        addViolation(violations, {
+          code: "CURRENT_DEBT_DOCUMENT_TREATMENT_CONTRADICTION",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Current debt context exists in canonical support-doc authority, but the memo says no verified current debt context was provided.",
+          evidence: {
+            rows: canonicalCurrentDebtDocumentRows,
+          },
+          customer_delivery_impact: "disclose_only",
+          blocks_customer_delivery: false,
+          legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+        });
+      }
+      if (canonicalRenovationDocumentRows.length > 0 && /No verified forward-looking renovation budget was provided/i.test(rawHtml)) {
+        addViolation(violations, {
+          code: "RENOVATION_DOCUMENT_TREATMENT_CONTRADICTION",
+          severity: "high",
+          category: "support_document_treatment_contract",
+          message: "Structured renovation / CapEx authority exists, but the memo says no forward-looking renovation budget was provided.",
+          evidence: {
+            rows: canonicalRenovationDocumentRows,
           },
           customer_delivery_impact: "disclose_only",
           blocks_customer_delivery: false,

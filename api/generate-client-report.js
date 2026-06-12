@@ -2721,6 +2721,64 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
 function canonicalizeDocumentTreatmentSources(documentSources = []) {
   const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
   const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
+  const firstFinite = (...values) => {
+    for (const value of values) {
+      const parsed = coerceNumber(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return null;
+  };
+  const extractMoneyNearLabels = (text, labels) => {
+    const source = String(text || "");
+    for (const label of Array.isArray(labels) ? labels : []) {
+      const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const patterns = [
+        new RegExp(`${escaped}[^0-9\\n]{0,60}\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)`, "i"),
+        new RegExp(`\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:is\\s+)?(?:the\\s+)?${escaped}`, "i"),
+      ];
+      for (const pattern of patterns) {
+        const match = pattern.exec(source);
+        if (!match) continue;
+        const numeric = Number(String(match[1]).replace(/,/g, ""));
+        if (Number.isFinite(numeric) && numeric > 0) return numeric;
+      }
+    }
+    return null;
+  };
+  const extractPercentNearLabels = (text, labels) => {
+    const source = String(text || "");
+    for (const label of Array.isArray(labels) ? labels : []) {
+      const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const patterns = [
+        new RegExp(`${escaped}[^0-9\\n]{0,60}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i"),
+        new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,60}${escaped}`, "i"),
+      ];
+      for (const pattern of patterns) {
+        const match = pattern.exec(source);
+        if (!match) continue;
+        const numeric = Number(match[1]);
+        if (Number.isFinite(numeric) && numeric > 0) return numeric / 100;
+      }
+    }
+    return null;
+  };
+  const extractYearsNearLabels = (text, labels) => {
+    const source = String(text || "");
+    for (const label of Array.isArray(labels) ? labels : []) {
+      const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const patterns = [
+        new RegExp(`${escaped}[^0-9\\n]{0,60}([0-9]{1,2}(?:\\.[0-9]+)?)`, "i"),
+        new RegExp(`([0-9]{1,2}(?:\\.[0-9]+)?)\\s*(?:years?|yrs?)?[^\\n]{0,60}${escaped}`, "i"),
+      ];
+      for (const pattern of patterns) {
+        const match = pattern.exec(source);
+        if (!match) continue;
+        const numeric = Number(match[1]);
+        if (Number.isFinite(numeric) && numeric > 0) return numeric;
+      }
+    }
+    return null;
+  };
   const rows = Array.isArray(documentSources)
     ? documentSources.filter((row) => row && typeof row === "object")
     : [];
@@ -2776,9 +2834,157 @@ function canonicalizeDocumentTreatmentSources(documentSources = []) {
     if (!Array.isArray(entries) || entries.length === 0) continue;
     entries.sort((left, right) => right.score - left.score || left.index - right.index);
     const winner = entries[0];
+    const winnerText = normalizeText([
+      winner.row?.source_text,
+      winner.row?.raw_text,
+      winner.row?.notes,
+      winner.row?.loan_terms_text,
+      winner.row?.extracted_text,
+    ].filter(Boolean).join(" | "));
+    const winnerTaxonomy = buildSupportDocTaxonomyState({
+      declaredDocType: winner.row?.doc_type || null,
+      detectedDocType: winner.row?.display_doc_type || null,
+      originalFilename: winner.row?.original_filename || null,
+      rawText: winnerText,
+      payload: winner.row,
+    });
+      const explicitRole = normalizeText(winnerTaxonomy?.semantic_doc_role || "");
+      const explicitDisplayLabel = String(winnerTaxonomy?.semantic_doc_display_label || "").trim();
+      const explicitRoleAuthority = (() => {
+        if (explicitRole === "structured_renovation_capex_plan") {
+          const rowText = winnerText;
+          const totalBudget = firstFinite(
+            winner.row?.total_budget,
+            winner.row?.total_capex,
+            winner.row?.renovation_budget,
+            extractMoneyNearLabels(rowText, [
+              "total renovation budget",
+              "renovation budget",
+              "capex budget",
+              "capital budget",
+            ])
+          );
+          return {
+            canonical_support_doc_role: "structured_renovation_capex_plan",
+            semantic_doc_role: "structured_renovation_capex_plan",
+            semantic_doc_display_label: "Structured Renovation / CapEx Plan",
+            document_role_label: "Structured Renovation / CapEx Plan",
+            treatment_label: "Structured renovation / CapEx context",
+            use_label: "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled.",
+            treatment_category: "Displayed / Limited Use",
+            has_structured_renovation_budget: true,
+            total_budget: totalBudget,
+            budget_rows: Array.isArray(winner.row?.budget_rows) ? winner.row.budget_rows : [],
+            execution_rows: Array.isArray(winner.row?.execution_rows) ? winner.row.execution_rows : [],
+            unit_count: firstFinite(winner.row?.unit_count, winner.row?.scope_units),
+            per_unit_cost: firstFinite(winner.row?.per_unit_cost, winner.row?.budget_per_unit),
+            timing_or_phasing: winner.row?.timing_or_phasing || null,
+            rent_lift: winner.row?.rent_lift || null,
+            has_renovation_rent_lift: /rent lift|expected monthly rent lift/i.test(winnerText),
+            has_renovation_phasing: /\b(month|months|phase|phasing|quarter|q[1-4]|implementation schedule)\b/i.test(winnerText),
+          };
+        }
+        if (explicitRole === "renovation_capex_budget_context") {
+          const rowText = winnerText;
+          const totalBudget = firstFinite(
+            winner.row?.total_budget,
+            winner.row?.total_capex,
+            winner.row?.renovation_budget,
+            extractMoneyNearLabels(rowText, [
+              "total renovation budget",
+              "renovation budget",
+              "capex budget",
+              "capital budget",
+            ])
+          );
+          return {
+            canonical_support_doc_role: "renovation_capex_budget_context",
+            semantic_doc_role: "renovation_capex_budget_context",
+            semantic_doc_display_label: "Renovation / CapEx Budget Context",
+            document_role_label: "Renovation / CapEx Budget Context",
+            treatment_label: "Budget/scope only",
+            use_label: "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided.",
+            treatment_category: "Displayed / Limited Use",
+            has_structured_renovation_budget: true,
+            total_budget: totalBudget,
+            budget_rows: Array.isArray(winner.row?.budget_rows) ? winner.row.budget_rows : [],
+            execution_rows: Array.isArray(winner.row?.execution_rows) ? winner.row.execution_rows : [],
+            has_renovation_rent_lift: false,
+            has_renovation_phasing: false,
+          };
+        }
+      if (explicitRole === "purchase_assumptions") {
+        return {
+          canonical_support_doc_role: "purchase_assumptions",
+          semantic_doc_role: "purchase_assumptions",
+          semantic_doc_display_label: explicitDisplayLabel || "Purchase Assumptions / Acquisition Context",
+          document_role_label: "Purchase Assumptions / Acquisition Context",
+          treatment_label: "Acquisition context / document-derived acquisition context",
+          use_label: "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth.",
+          treatment_category: "Displayed / Limited Use",
+          has_acquisition_support: true,
+          has_proposed_acquisition_financing: /proposed acquisition financing/i.test(winnerText),
+        };
+      }
+        if (explicitRole === "current_mortgage_statement") {
+          const rowText = winnerText;
+          const outstandingBalance = firstFinite(
+            winner.row?.outstanding_balance,
+            winner.row?.current_outstanding_balance,
+            winner.row?.current_loan_balance,
+            extractMoneyNearLabels(rowText, [
+              "current outstanding principal balance",
+              "unpaid principal balance",
+              "outstanding principal balance",
+              "current outstanding balance",
+              "outstanding balance",
+              "principal balance",
+              "current loan balance",
+              "mortgage balance",
+              "loan balance",
+              "outstanding loan",
+              "remaining balance",
+              "balance outstanding",
+            ])
+          );
+          const interestRate = firstFinite(
+            winner.row?.interest_rate,
+            extractPercentNearLabels(rowText, ["interest rate", "rate", "coupon rate", "note rate"])
+          );
+          const amortYears = firstFinite(
+            winner.row?.amortization_years,
+            winner.row?.amort_years,
+            extractYearsNearLabels(rowText, ["amortization", "amort", "remaining", "years remaining"])
+          );
+          const ltv = firstFinite(
+            winner.row?.ltv,
+            extractPercentNearLabels(rowText, ["ltv", "loan to value", "loan-to-value"])
+          );
+          return {
+            canonical_support_doc_role: "current_debt_context",
+            semantic_doc_role: "current_debt_context",
+            semantic_doc_display_label: explicitDisplayLabel || "Debt Support Received / Contextual",
+            document_role_label: "Debt Support Received / Contextual",
+            treatment_label: "Debt support received / contextual or deferred",
+            use_label: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+            treatment_category: "Displayed / Limited Use",
+            has_current_debt_context: true,
+            outstanding_balance: outstandingBalance,
+            current_outstanding_balance: outstandingBalance,
+            current_loan_balance: outstandingBalance,
+            interest_rate: interestRate,
+            amortization_years: amortYears,
+            amort_years: amortYears,
+            ltv,
+            debt_basis: "current_debt_context",
+          };
+        }
+      return null;
+    })();
     merged.push({
       ...winner.row,
       canonical_document_treatment_identity_key: canonicalIdentityKey(winner.row),
+      ...(explicitRoleAuthority || {}),
     });
   }
   return merged;
@@ -2796,14 +3002,65 @@ function buildCanonicalSupportDocAuthorityRows({
 } = {}) {
   const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
   const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
-  const firstFinite = (...values) => {
-    for (const value of values) {
-      const parsed = coerceNumber(value);
-      if (Number.isFinite(parsed) && parsed > 0) return parsed;
-    }
-    return null;
-  };
-  const identityKeyFor = (row = {}) => {
+    const firstFinite = (...values) => {
+      for (const value of values) {
+        const parsed = coerceNumber(value);
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+      }
+      return null;
+    };
+    const extractMoneyNearLabels = (text, labels) => {
+      const source = String(text || "");
+      for (const label of Array.isArray(labels) ? labels : []) {
+        const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const patterns = [
+          new RegExp(`${escaped}[^0-9\\n]{0,60}\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)`, "i"),
+          new RegExp(`\\$?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:is\\s+)?(?:the\\s+)?${escaped}`, "i"),
+        ];
+        for (const pattern of patterns) {
+          const match = pattern.exec(source);
+          if (!match) continue;
+          const numeric = Number(String(match[1]).replace(/,/g, ""));
+          if (Number.isFinite(numeric) && numeric > 0) return numeric;
+        }
+      }
+      return null;
+    };
+    const extractPercentNearLabels = (text, labels) => {
+      const source = String(text || "");
+      for (const label of Array.isArray(labels) ? labels : []) {
+        const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const patterns = [
+          new RegExp(`${escaped}[^0-9\\n]{0,60}([0-9]+(?:\\.[0-9]+)?)\\s*%`, "i"),
+          new RegExp(`([0-9]+(?:\\.[0-9]+)?)\\s*%[^\\n]{0,60}${escaped}`, "i"),
+        ];
+        for (const pattern of patterns) {
+          const match = pattern.exec(source);
+          if (!match) continue;
+          const numeric = Number(match[1]);
+          if (Number.isFinite(numeric) && numeric > 0) return numeric / 100;
+        }
+      }
+      return null;
+    };
+    const extractYearsNearLabels = (text, labels) => {
+      const source = String(text || "");
+      for (const label of Array.isArray(labels) ? labels : []) {
+        const escaped = String(label || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const patterns = [
+          new RegExp(`${escaped}[^0-9\\n]{0,60}([0-9]{1,2}(?:\\.[0-9]+)?)`, "i"),
+          new RegExp(`([0-9]{1,2}(?:\\.[0-9]+)?)\\s*(?:years?|yrs?)?[^\\n]{0,60}${escaped}`, "i"),
+        ];
+        for (const pattern of patterns) {
+          const match = pattern.exec(source);
+          if (!match) continue;
+          const numeric = Number(match[1]);
+          if (Number.isFinite(numeric) && numeric > 0) return numeric;
+        }
+      }
+      return null;
+    };
+    const identityKeyFor = (row = {}) => {
     const filename = normalizeToken(row?.original_filename || row?.source_original_filename || row?.file_name || row?.filename);
     if (filename) return `filename:${filename}`;
     const id = [
@@ -2900,36 +3157,80 @@ function buildCanonicalSupportDocAuthorityRows({
       [...(Array.isArray(row?.budget_rows) ? row.budget_rows : []), ...(Array.isArray(row?.execution_rows) ? row.execution_rows : [])]
         .some((item) => hasAnyText(item, ["phase_timing", "timing_or_phasing"], /\b(month|months|phase|phasing|q[1-4]|quarter)\b/i));
     const hasPropertyTax = hasAnyNumber(row, ["annual_tax", "property_tax", "tax_amount"]) || /(property tax|tax bill|tax notice|municipal tax)/i.test(text);
-    const hasMarketSurvey = /(market survey|market rent survey|rent survey|rent comp|rent comparable)/i.test(text);
-    const hasEnvironmental = /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(text);
-    const hasAppraisal = /(appraisal|appraised value|valuation report|opinion of value)/i.test(text);
+      const hasMarketSurvey = /(market survey|market rent survey|rent survey|rent comp|rent comparable)/i.test(text);
+      const hasEnvironmental = /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(text);
+      const hasAppraisal = /(appraisal|appraised value|valuation report|opinion of value)/i.test(text);
+      const evidenceBonus =
+        (row?.validated === true ? 50 : 0) +
+        (typeof row?.artifact_type === "string" && /_parsed$/i.test(String(row?.artifact_type)) ? 25 : 0) +
+        (row?.ai_assisted === true ? 10 : 0);
 
-    if (hasPurchaseContext || hasProposedFinancing) {
-      return {
-        score: 800,
-        canonical_support_doc_role: hasProposedFinancing ? "proposed_acquisition_financing" : "purchase_assumptions",
-        document_role_label: "Purchase Assumptions / Acquisition Context",
+      if (hasProposedFinancing || hasPurchaseContext) {
+        return {
+          score: (hasProposedFinancing ? 860 : 800) + evidenceBonus,
+          canonical_support_doc_role: hasProposedFinancing ? "proposed_acquisition_financing" : "purchase_assumptions",
+          document_role_label: "Purchase Assumptions / Acquisition Context",
         treatment_label: "Acquisition context / document-derived acquisition context",
         use_label: "Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.",
         treatment_category: "Displayed / Limited Use",
         has_acquisition_support: true,
         has_proposed_acquisition_financing: Boolean(hasProposedFinancing),
       };
-    }
-    if (hasCurrentDebt) {
-      return {
-        score: 700,
-        canonical_support_doc_role: "current_debt_context",
-        document_role_label: "Debt Support Received / Contextual",
-        treatment_label: "Debt support received / contextual or deferred",
-        use_label: "Uploaded existing/current debt context only; not proposed acquisition financing.",
-        treatment_category: "Displayed / Limited Use",
-        has_current_debt_context: true,
-      };
-    }
-    if (hasPropertyTax) {
-      return {
-        score: 650,
+      }
+      if (hasCurrentDebt) {
+        const outstandingBalance = firstFinite(
+          row?.outstanding_balance,
+          row?.current_outstanding_balance,
+          row?.current_loan_balance,
+          extractMoneyNearLabels(text, [
+            "current outstanding principal balance",
+            "unpaid principal balance",
+            "outstanding principal balance",
+            "current outstanding balance",
+            "outstanding balance",
+            "principal balance",
+            "current loan balance",
+            "mortgage balance",
+            "loan balance",
+            "outstanding loan",
+            "remaining balance",
+            "balance outstanding",
+          ])
+        );
+        const interestRate = firstFinite(
+          row?.interest_rate,
+          extractPercentNearLabels(text, ["interest rate", "rate", "coupon rate", "note rate"])
+        );
+        const amortYears = firstFinite(
+          row?.amortization_years,
+          row?.amort_years,
+          extractYearsNearLabels(text, ["amortization", "amort", "remaining", "years remaining"])
+        );
+        const ltv = firstFinite(
+          row?.ltv,
+          extractPercentNearLabels(text, ["ltv", "loan to value", "loan-to-value"])
+        );
+        return {
+          score: 700 + evidenceBonus,
+          canonical_support_doc_role: "current_debt_context",
+          document_role_label: "Debt Support Received / Contextual",
+          treatment_label: "Debt support received / contextual or deferred",
+          use_label: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+          treatment_category: "Displayed / Limited Use",
+          has_current_debt_context: true,
+          outstanding_balance: outstandingBalance,
+          current_outstanding_balance: outstandingBalance,
+          current_loan_balance: outstandingBalance,
+          interest_rate: interestRate,
+          amortization_years: amortYears,
+          amort_years: amortYears,
+          ltv,
+          debt_basis: "current_debt_context",
+        };
+      }
+      if (hasPropertyTax) {
+        return {
+          score: 650 + evidenceBonus,
         canonical_support_doc_role: "property_tax",
         document_role_label: "Property Tax Support",
         treatment_label: "Corroborating support",
@@ -2937,25 +3238,39 @@ function buildCanonicalSupportDocAuthorityRows({
         treatment_category: "Displayed / Limited Use",
       };
     }
-    if (hasRenovation) {
-      const structured = hasRenovationRentLift || hasRenovationPhasing;
-      return {
-        score: 600,
-        canonical_support_doc_role: structured ? "structured_renovation_capex_plan" : "renovation_capex_budget_context",
-        document_role_label: structured ? "Structured Renovation / CapEx Plan" : "Renovation / CapEx Budget Context",
-        treatment_label: structured ? "Structured renovation / CapEx context" : "Budget/scope only",
+      if (hasRenovation) {
+        const hasRenovationNegationSignals = /not provided|no rent lift|no roi|no payback|no implementation schedule|historical capex|historical capital|past repairs|prior work|completed work/i.test(text);
+        const structured = !hasRenovationNegationSignals && (hasRenovationRentLift || hasRenovationPhasing || /structured renovation \/ capex plan|forward-looking renovation plan/i.test(text));
+        const totalBudget = firstFinite(
+          row?.total_budget,
+          row?.total_capex,
+          row?.renovation_budget,
+          extractMoneyNearLabels(text, ["total renovation budget", "renovation budget", "capex budget", "capital budget"])
+        );
+        return {
+          score: 600 + evidenceBonus,
+          canonical_support_doc_role: structured ? "structured_renovation_capex_plan" : "renovation_capex_budget_context",
+          document_role_label: structured ? "Structured Renovation / CapEx Plan" : "Renovation / CapEx Budget Context",
+          treatment_label: structured ? "Structured renovation / CapEx context" : "Budget/scope only",
         use_label: structured
-          ? "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled."
-          : "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided.",
-        treatment_category: "Displayed / Limited Use",
-        has_structured_renovation_budget: true,
-        has_renovation_rent_lift: Boolean(hasRenovationRentLift),
-        has_renovation_phasing: Boolean(hasRenovationPhasing),
-      };
-    }
-    if (hasMarketSurvey) {
-      return {
-        score: 500,
+            ? "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled."
+            : "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided.",
+          treatment_category: "Displayed / Limited Use",
+          has_structured_renovation_budget: true,
+          total_budget: totalBudget,
+          budget_rows: Array.isArray(row?.budget_rows) ? row.budget_rows : [],
+          execution_rows: Array.isArray(row?.execution_rows) ? row.execution_rows : [],
+          unit_count: firstFinite(row?.unit_count, row?.scope_units),
+          per_unit_cost: firstFinite(row?.per_unit_cost, row?.budget_per_unit),
+          timing_or_phasing: row?.timing_or_phasing || null,
+          rent_lift: row?.rent_lift || null,
+          has_renovation_rent_lift: Boolean(hasRenovationRentLift),
+          has_renovation_phasing: Boolean(hasRenovationPhasing),
+        };
+      }
+      if (hasMarketSurvey) {
+        return {
+          score: 500 + evidenceBonus,
         canonical_support_doc_role: "market_survey_context",
         document_role_label: "Market Rent Context",
         treatment_label: "Context only",
@@ -2963,9 +3278,9 @@ function buildCanonicalSupportDocAuthorityRows({
         treatment_category: "Listed but Not Quantitatively Modeled",
       };
     }
-    if (hasEnvironmental) {
-      return {
-        score: 400,
+      if (hasEnvironmental) {
+        return {
+          score: 400 + evidenceBonus,
         canonical_support_doc_role: "environmental_due_diligence_context",
         document_role_label: "Environmental Due Diligence Context",
         treatment_label: "Context only",
@@ -2973,9 +3288,9 @@ function buildCanonicalSupportDocAuthorityRows({
         treatment_category: "Listed but Not Quantitatively Modeled",
       };
     }
-    if (hasAppraisal) {
-      return {
-        score: 300,
+      if (hasAppraisal) {
+        return {
+          score: 300 + evidenceBonus,
         canonical_support_doc_role: "appraisal_context",
         document_role_label: "Appraisal Context",
         treatment_label: "Context only",
@@ -2983,8 +3298,8 @@ function buildCanonicalSupportDocAuthorityRows({
         treatment_category: "Listed but Not Quantitatively Modeled",
       };
     }
-    return {
-      score: 100,
+      return {
+        score: 100 + evidenceBonus,
       canonical_support_doc_role: "other_support_context",
       document_role_label: "Other Support Document",
       treatment_label: "Context only",
@@ -3209,9 +3524,7 @@ function buildDocumentTreatmentSummaryHtml({
       const phaseTiming = normalizedText(row?.phase_timing || row?.timing_or_phasing || "");
       const hasFutureTiming = /\b(month|months|phase|q[1-4]|quarter|year|years)\b/.test(phaseTiming) && !/\bhistorical\b/.test(phaseTiming);
       const hasRentLift = Number.isFinite(coerceNumber(row?.expected_monthly_rent_lift)) && coerceNumber(row?.expected_monthly_rent_lift) > 0;
-      const hasCostPerUnit = Number.isFinite(coerceNumber(row?.cost_per_unit)) && coerceNumber(row?.cost_per_unit) > 0;
-      const hasUnitCount = Number.isFinite(coerceNumber(row?.unit_count)) && coerceNumber(row?.unit_count) > 0;
-      return hasFutureTiming || hasRentLift || (hasCostPerUnit && hasUnitCount);
+      return hasFutureTiming || hasRentLift;
     });
   };
   const hasHistoricalOnlyRenovationEvidence = (row = null) => {
@@ -3383,6 +3696,13 @@ function buildDocumentTreatmentSummaryHtml({
       declaredDocType: row?.doc_type || null,
       detectedDocType: row?.display_doc_type || null,
       originalFilename: row?.original_filename || null,
+      rawText: [
+        row?.source_text,
+        row?.raw_text,
+        row?.notes,
+        row?.loan_terms_text,
+        row?.extracted_text,
+      ].filter(Boolean).join(" | "),
       payload: {
         semantic_doc_role: row?.semantic_doc_role || null,
         semantic_doc_role_reason: row?.semantic_doc_role_reason || null,
@@ -3467,7 +3787,9 @@ function buildDocumentTreatmentSummaryHtml({
         : /(^|\b)(property tax|property_tax|tax bill|tax notice|municipal tax)(\b|$)/.test(semanticText);
     const supportedRenovation =
       hasUsefulCanonicalRole
-        ? effectiveCanonicalRole === "renovation_budget"
+        ? effectiveCanonicalRole === "renovation_budget" ||
+          effectiveCanonicalRole === "structured_renovation_capex_plan" ||
+          effectiveCanonicalRole === "renovation_capex_budget_context"
         : /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
     const supportedLoanTerms =
       hasUsefulCanonicalRole
@@ -3876,7 +4198,7 @@ function buildDocumentTreatmentSummaryHtml({
     if (/^(market survey|market rent survey|rent survey|rent comps|rent comparables)$/.test(canonicalRole)) {
       return "Market Rent Context";
     }
-    if (/^(renovation budget|capex|capital expenditure|capital budget|construction budget|renovation)$/.test(canonicalRole)) {
+    if (/^(structured renovation capex plan|structured renovation \/ capex plan|renovation capex budget context|renovation budget|capex|capital expenditure|capital budget|construction budget|renovation)$/.test(canonicalRole)) {
       return "CapEx / Renovation Context";
     }
     if (/^(environmental due diligence|phase i|phase 1|esa|environmental)$/.test(canonicalRole)) {
@@ -3959,6 +4281,10 @@ function buildDocumentTreatmentSummaryHtml({
         return "Context only";
       case "renovation_budget_no_roi_inputs":
         return "Budget/scope only";
+      case "renovation_capex_budget_context":
+        return "Budget/scope only";
+      case "structured_renovation_capex_plan":
+        return "Structured renovation / CapEx context";
       case "renovation_forward_looking_transparency_only":
       case "forward_looking_renovation_input":
       case "forward_looking_renovation_rent_lift_input":
@@ -4392,7 +4718,7 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   ) || null;
   const currentDebtAuthorityRow = authorityRows.find((row) =>
     row?.has_current_debt_context === true ||
-    /current_debt_context/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+    /(current_debt_context|current_mortgage_statement|debt_support_received)/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || row?.document_role_label || row?.treatment_label || ""))
   ) || null;
   const renovationAuthorityRow = authorityByRole(/renovation|capex/i);
   const appraisalAuthorityRow = authorityByRole(/appraisal/i);
@@ -5469,6 +5795,7 @@ function buildScreeningDataCoverageSummary({
   propertyTaxPayload = null,
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
+  supportDocAuthorityRows = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const t12Checks = [
@@ -5686,6 +6013,7 @@ function buildScreeningDataCoverageSummary({
       propertyTaxPayload,
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
+      supportDocAuthorityRows,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
@@ -9793,10 +10121,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         const lower = name.toLowerCase();
         return lower && renovationFilenameTerms.some((term) => lower.includes(term));
       }) : [];
-    const renovationAuthorityRows = buildCanonicalSupportDocAuthorityRows({
-      documentSources,
-      renovationPayload,
-    });
+    const renovationAuthorityRows = Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
+      ? acquisitionMemoRenderContext.supportDocAuthorityRows
+      : buildCanonicalSupportDocAuthorityRows({
+          documentSources,
+          renovationPayload,
+        });
     const renovationAuthorityRow = renovationAuthorityRows.find((row) =>
       /renovation|capex/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
     ) || null;
@@ -10861,6 +11191,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       propertyTaxPayload,
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
+      supportDocAuthorityRows: acquisitionMemoRenderContext?.supportDocAuthorityRows || null,
     });
     screeningCoverageHtml = dataCoverageBlockHtml;
     finalHtml = replaceAll(
