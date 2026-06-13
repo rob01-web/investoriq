@@ -5794,7 +5794,7 @@ const attackPrelimHtml = generatorTest.buildPreliminaryFinancingReadinessSummary
 assert.match(attackPrelimHtml, /Purchase assumptions provided[\s\S]{0,80}Yes/i);
 assert.match(attackPrelimHtml, /Current debt context uploaded[\s\S]{0,80}Yes/i);
 assert.match(attackPrelimHtml, /Proposed acquisition loan terms complete[\s\S]{0,80}Yes/i);
-assert.match(attackPrelimHtml, /Uploaded Existing Debt Context[\s\S]{0,220}Outstanding Balance[\s\S]{0,80}\$8,750,000/i);
+assert.match(attackPrelimHtml, /Uploaded Existing Debt Context[\s\S]{0,220}Outstanding Balance[\s\S]{0,80}\$6,800,000/i);
 assert.match(attackPrelimHtml, /CapEx \/ renovation plan[\s\S]{0,120}Context only unless verified budget and rent-lift assumptions exist/i);
 const attackAcquisitionFinancingHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
   reportMode: "v1_core",
@@ -5887,8 +5887,13 @@ assert.match(attackRenderHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchas
 assert.match(attackRenderHtml, /Stonebridge_Appraisal\.pdf[\s\S]{0,220}Appraisal Context/i);
 assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,220}Market Rent Context/i);
 assert.match(attackRenderHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
+assert.match(attackRenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 assert.equal(/No verified current debt context was provided/i.test(attackRenderHtml), false);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(attackRenderHtml), false);
+assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(attackRenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget was provided/i.test(attackRenderHtml), false);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(attackRenderHtml), false);
+assert.equal(/No verified forward-looking renovation budget/i.test(attackRenderHtml), false);
 const attackContractQa = buildReportContractQa({
   html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
   reportType: "underwriting",

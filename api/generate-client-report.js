@@ -3124,10 +3124,116 @@ function buildCanonicalSupportDocAuthorityRows({
     row?.notes,
     row?.loan_terms_text,
     row?.extracted_text,
+    row?.text,
+    row?.payload?.text,
+    row?.excerpt,
+    row?.payload?.excerpt,
   ].filter(Boolean).join(" | ");
 
   const classifyAuthority = (row) => {
     const text = normalizeText(combinedTextFor(row));
+    const evidenceBonus =
+      (row?.validated === true ? 50 : 0) +
+      (typeof row?.artifact_type === "string" && /_parsed$/i.test(String(row?.artifact_type)) ? 25 : 0) +
+      (row?.ai_assisted === true ? 10 : 0);
+    const hasExplicitCurrentDebtEvidence =
+      /(existing current debt statement|current debt context|existing current debt|current debt terms|current outstanding balance|current mortgage|existing debt|current mortgage statement)/i.test(text) &&
+      /(interest rate|note rate|coupon rate)/i.test(text) &&
+      /(amortization|amortization remaining|monthly payment|maturity date|outstanding balance|principal balance|years remaining|remaining years)/i.test(text);
+    const hasStructuredRenovationEvidence =
+      /(structured renovation \/ capex plan|structured forward-looking renovation|total renovation budget|forward[-\s]*looking renovation)/i.test(text) &&
+      /(rent lift|expected rent lift|expected monthly rent lift)/i.test(text) &&
+      /(phasing|months|implementation schedule|phase)/i.test(text);
+    if (hasExplicitCurrentDebtEvidence) {
+      const outstandingBalance = firstFinite(
+        row?.outstanding_balance,
+        row?.current_outstanding_balance,
+        row?.current_loan_balance,
+        extractMoneyNearLabels(text, [
+          "current outstanding principal balance",
+          "unpaid principal balance",
+          "outstanding principal balance",
+          "current outstanding balance",
+          "outstanding balance",
+          "principal balance",
+          "current loan balance",
+          "mortgage balance",
+          "loan balance",
+          "outstanding loan",
+          "remaining balance",
+          "balance outstanding",
+        ])
+      );
+      const interestRate = firstFinite(
+        row?.interest_rate,
+        extractPercentNearLabels(text, ["interest rate", "rate", "coupon rate", "note rate"])
+      );
+      const amortYears = firstFinite(
+        row?.amortization_years,
+        row?.amort_years,
+        extractYearsNearLabels(text, ["amortization", "amort", "remaining", "years remaining"])
+      );
+      const ltv = firstFinite(
+        row?.ltv,
+        extractPercentNearLabels(text, ["ltv", "loan to value", "loan-to-value"])
+      );
+      return {
+        score: 2000 + evidenceBonus,
+        canonical_support_doc_role: "current_debt_context",
+        document_role_label: "Debt Support Received / Contextual",
+        treatment_label: "Debt support received / contextual or deferred",
+        use_label: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+        treatment_category: "Displayed / Limited Use",
+        has_current_debt_context: true,
+        outstanding_balance: outstandingBalance,
+        current_outstanding_balance: outstandingBalance,
+        current_loan_balance: outstandingBalance,
+        interest_rate: interestRate,
+        amortization_years: amortYears,
+        amort_years: amortYears,
+        ltv,
+        debt_basis: "current_debt_context",
+        authoritySource: "explicit_current_debt_source_text",
+      };
+    }
+    if (hasStructuredRenovationEvidence) {
+      const totalBudget = firstFinite(
+        row?.total_budget,
+        row?.total_capex,
+        row?.renovation_budget,
+        extractMoneyNearLabels(text, ["total renovation budget", "renovation budget", "capex budget", "capital budget"])
+      );
+      const rentLift = firstFinite(
+        row?.rent_lift,
+        row?.expected_monthly_rent_lift,
+        extractMoneyNearLabels(text, ["rent lift", "expected rent lift", "expected monthly rent lift"])
+      );
+      const phasingText =
+        row?.timing_or_phasing ||
+        row?.phase_timing ||
+        row?.execution_note ||
+        row?.notes ||
+        row?.source_text ||
+        row?.raw_text ||
+        row?.payload?.text ||
+        row?.text ||
+        null;
+      return {
+        score: 1900 + evidenceBonus,
+        canonical_support_doc_role: "structured_renovation_capex_plan",
+        document_role_label: "Structured Renovation / CapEx Plan",
+        treatment_label: "Structured renovation / CapEx context",
+        use_label: "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled.",
+        treatment_category: "Displayed / Limited Use",
+        has_structured_renovation_budget: true,
+        total_budget: totalBudget,
+        has_renovation_rent_lift: true,
+        has_renovation_phasing: true,
+        rent_lift: rentLift,
+        timing_or_phasing: phasingText,
+        authoritySource: "explicit_renovation_source_text",
+      };
+    }
     const hasPurchaseContext =
       hasAnyNumber(row, ["purchase_price", "purchasePrice", "acquisition_price", "asking_price", "purchase_price_amount", "going_in_cap_rate", "noi_basis", "net_operating_income_basis"]) ||
       /(purchase[_\s-]*assumptions|acquisition[_\s-]*context|purchase price|going[-\s]*in cap|noi basis|proposed acquisition)/i.test(text);
@@ -3160,11 +3266,7 @@ function buildCanonicalSupportDocAuthorityRows({
     const hasPropertyTax = hasAnyNumber(row, ["annual_tax", "property_tax", "tax_amount"]) || /(property tax|tax bill|tax notice|municipal tax)/i.test(text);
       const hasMarketSurvey = /(market survey|market rent survey|rent survey|rent comp|rent comparable)/i.test(text);
       const hasEnvironmental = /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(text);
-      const hasAppraisal = /(appraisal|appraised value|valuation report|opinion of value)/i.test(text);
-      const evidenceBonus =
-        (row?.validated === true ? 50 : 0) +
-        (typeof row?.artifact_type === "string" && /_parsed$/i.test(String(row?.artifact_type)) ? 25 : 0) +
-        (row?.ai_assisted === true ? 10 : 0);
+    const hasAppraisal = /(appraisal|appraised value|valuation report|opinion of value)/i.test(text);
 
       if (hasProposedFinancing || hasPurchaseContext) {
         return {
