@@ -17,6 +17,7 @@ const {
   buildSourceReconciliationRenderState,
   resolveCanonicalRentRollAnnualTotals,
   buildSupportDocTaxonomyState,
+  resolveCanonicalSupportDocAuthority,
 } = await import("../../api/_lib/report-surface-contracts.js");
 const { buildCanonicalDeliveryDecisionState } = await import("../../api/_lib/qa-action-plan.js");
 const { buildFullUnderwritingState } = await import("../../api/_lib/full-underwriting-state.js");
@@ -5669,6 +5670,57 @@ assert.match(buildSupportDocTaxonomyState({
     timing_or_phasing: "Months 1-24",
   },
 }).semantic_doc_display_label || "", /Structured Renovation \/ CapEx Plan/i);
+
+const sovereignCurrentDebtAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Current_Debt_Stonebridge.pdf",
+  rawText: "Existing Current Debt Statement. Current Outstanding Balance $6,800,000. Interest rate 4.85%. 24 years remaining. Monthly payment $39,250. Maturity 2029-11-01.",
+  payload: {
+    outstanding_balance: 6800000,
+    interest_rate: 0.0485,
+    amortization_years: 24,
+    monthly_payment: 39250,
+  },
+});
+assert.equal(sovereignCurrentDebtAuthority.role, "current_debt_context");
+assert.equal(sovereignCurrentDebtAuthority.authoritySource, "explicit_keyword");
+assert.equal(sovereignCurrentDebtAuthority.confidence, 1);
+assert.equal(sovereignCurrentDebtAuthority.outstanding_balance, 6800000);
+
+const sovereignRenovationAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Stonebridge_Reno_Plan.pdf",
+  rawText: "Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
+  payload: {
+    total_budget: 1280000,
+    budget_rows: [
+      { category: "1BR", total_cost: 324000, expected_monthly_rent_lift: 225 },
+    ],
+    execution_rows: [
+      { phase_timing: "Months 1-18", expected_monthly_rent_lift: 225 },
+    ],
+  },
+});
+assert.equal(sovereignRenovationAuthority.role, "structured_renovation");
+assert.equal(sovereignRenovationAuthority.authoritySource, "explicit_keyword");
+assert.equal(sovereignRenovationAuthority.confidence, 1);
+assert.equal(sovereignRenovationAuthority.total_budget, 1280000);
+
+const sovereignPurchaseAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Stonebridge_Assumptions.pdf",
+  rawText: "Purchase Assumptions / Proposed Acquisition Financing. Purchase Price $13,500,000. NOI Basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%. Going-In Cap Reference 7.00%.",
+  payload: {
+    purchase_price: 13500000,
+    going_in_cap_rate: 0.07,
+    noi_basis: 945000,
+    ltv: 0.7,
+    interest_rate: 0.0595,
+    amortization_years: 30,
+    lender_fee_percent: 0.0085,
+  },
+});
+assert.equal(sovereignPurchaseAuthority.role, "purchase_assumptions");
+assert.equal(sovereignPurchaseAuthority.authoritySource, "explicit_keyword");
+assert.equal(sovereignPurchaseAuthority.confidence, 1);
+assert.equal(sovereignPurchaseAuthority.purchase_price, 13500000);
 const supportDocAuthorityRows = generatorTest.buildCanonicalSupportDocAuthorityRows({
   documentSources: attackStyleSupportDocs,
   artifacts: attackStyleArtifacts,
@@ -5690,6 +5742,15 @@ const attackDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryH
   reportMode: "v1_core",
   documentSources: attackStyleSupportDocs,
   supportDocAuthorityRows,
+  canonicalSupportDocMap: new Map([
+    ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
+    ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
+    ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+  ]),
+  renderedDocumentTreatmentRowsOut: [],
 });
 assert.match(attackDocumentTreatmentHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
 assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Environmental/i.test(attackDocumentTreatmentHtml), false);
@@ -5758,12 +5819,49 @@ const attackContractQa = buildReportContractQa({
     support_document_authority_rows: supportDocAuthorityRows,
     document_treatment_canonical_rows: supportDocAuthorityRows,
   },
+  canonicalSupportDocMap: new Map([
+    ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
+    ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
+    ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+  ]),
+  renderedDocumentTreatmentRows: [
+    { filename: "Stonebridge_Assumptions.pdf", displayLabel: "Purchase Assumptions / Acquisition Context", treatment: "Acquisition context / document-derived acquisition context", use: "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth." },
+    { filename: "Current_Debt_Stonebridge.pdf", displayLabel: "Debt Support Received / Contextual", treatment: "Debt support received / contextual or deferred", use: "Uploaded existing/current debt context only; not proposed acquisition financing." },
+    { filename: "Stonebridge_Reno_Plan.pdf", displayLabel: "Structured Renovation / CapEx Plan", treatment: "Structured renovation / CapEx context", use: "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled." },
+  ],
 });
 assert.equal(
   attackContractQa.violations.some((violation) =>
     ["SUPPORT_DOC_AUTHORITY_DRIFT", "PURCHASE_ASSUMPTIONS_ROLE_DRIFT"].includes(violation.code)
   ),
   false
+);
+const contradictoryContractQa = buildReportContractQa({
+  html: attackDocumentTreatmentHtml,
+  reportType: "underwriting",
+  reportMode: "v1_core",
+  sourceReportCoverageQa: {
+    support_document_authority_rows: supportDocAuthorityRows,
+    document_treatment_canonical_rows: supportDocAuthorityRows,
+  },
+  canonicalSupportDocMap: new Map([
+    ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
+    ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
+    ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+  ]),
+  renderedDocumentTreatmentRows: [
+    { filename: "Stonebridge_Assumptions.pdf", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively." },
+  ],
+});
+assert.equal(
+  contradictoryContractQa.violations.some((violation) => violation.code === "DOCUMENT_TREATMENT_CONTRADICTS_CANONICAL_AUTHORITY" && violation.blocks_acquisition_memo_launch_ready === true && violation.blocks_customer_delivery === false),
+  true
 );
 const tamperedChecklistHtml = `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`
   .replace(/Purchase assumptions provided<\/td><td style="font-weight:600;">Yes/i, "Purchase assumptions provided</td><td style=\"font-weight:600;\">No")

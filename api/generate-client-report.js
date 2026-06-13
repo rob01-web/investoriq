@@ -29,6 +29,7 @@ import {
   formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationRenderState,
   buildSupportDocTaxonomyState,
+  resolveCanonicalSupportDocAuthority,
   resolveCanonicalRentRollAnnualTotals,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
@@ -3356,6 +3357,8 @@ function buildDocumentTreatmentSummaryHtml({
   propertyTaxPayload = null,
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
+  canonicalSupportDocMap = null,
+  renderedDocumentTreatmentRowsOut = null,
 } = {}) {
   const normalizeIdentityToken = (value) => {
     const token = String(value ?? "").trim().toLowerCase();
@@ -3477,10 +3480,88 @@ function buildDocumentTreatmentSummaryHtml({
       has_structured_renovation_budget: row?.has_structured_renovation_budget === true,
       has_renovation_rent_lift: row?.has_renovation_rent_lift === true,
       has_renovation_phasing: row?.has_renovation_phasing === true,
-    }))
+  }))
     .filter((row) => row.original_filename.length > 0);
   if (!files.length) return "";
+  const setRenderedDocumentTreatmentRows = (rows) => {
+    if (!renderedDocumentTreatmentRowsOut) return;
+    const nextRows = Array.isArray(rows) ? rows : [];
+    if (Array.isArray(renderedDocumentTreatmentRowsOut)) {
+      renderedDocumentTreatmentRowsOut.splice(0, renderedDocumentTreatmentRowsOut.length, ...nextRows);
+      return;
+    }
+    if (typeof renderedDocumentTreatmentRowsOut === "object") {
+      renderedDocumentTreatmentRowsOut.rows = nextRows;
+    }
+  };
 
+  const canonicalSupportDocEntries = canonicalSupportDocMap instanceof Map && canonicalSupportDocMap.size > 0
+    ? Array.from(canonicalSupportDocMap.entries()).filter(([fileId, authority]) => Boolean(fileId) && authority && typeof authority === "object")
+    : [];
+  if (canonicalSupportDocEntries.length > 0) {
+    const canonicalRows = canonicalSupportDocEntries.map(([fileId, authority]) => {
+      const category = String(authority?.category || "").trim() || "Listed but Not Quantitatively Modeled";
+      const roleLabel = String(authority?.displayLabel || "Other Support Document").trim() || "Other Support Document";
+      const treatmentLabel = String(authority?.treatment || "Context only").trim() || "Context only";
+      const useLabel = String(authority?.use || "Listed for auditability only; not used quantitatively.").trim() || "Listed for auditability only; not used quantitatively.";
+      const originalFilename = String(authority?.originalFilename || authority?.original_filename || authority?.file_name || authority?.filename || fileId || "").trim() || String(fileId || "");
+      const sourceBasis = String(authority?.authoritySource || "canonical_support_doc_authority").trim() || "canonical_support_doc_authority";
+      const reasonCode = `canonical_support_doc_${String(authority?.role || "other_support").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") || "other_support"}`;
+      return {
+        key: String(fileId).toLowerCase(),
+        name: escapeHtml(originalFilename),
+        role: escapeHtml(roleLabel),
+        treatment: escapeHtml(treatmentLabel),
+        use: escapeHtml(useLabel),
+        note: escapeHtml(useLabel),
+        source_basis: sourceBasis,
+        reason_code: reasonCode,
+        category,
+      };
+    });
+    const canonicalModeled = [];
+    const canonicalLimitedUse = [];
+    const canonicalNotModeled = [];
+    const pushUnique = (bucket, entry) => {
+      if (!entry || bucket.some((existing) => existing.key === entry.key)) return;
+      bucket.push(entry);
+    };
+    for (const row of canonicalRows) {
+      if (row.category === "Modeled Inputs") {
+        pushUnique(canonicalModeled, row);
+      } else if (row.category === "Displayed / Limited Use") {
+        pushUnique(canonicalLimitedUse, row);
+      } else {
+        pushUnique(canonicalNotModeled, row);
+      }
+    }
+    const section = (title, items, emptyNote) => {
+      const listHtml = items.length
+        ? `<ul style="margin:6px 0 0 18px;padding:0;">${items
+            .map((item) => `<li data-treatment-source="${escapeHtml(item.source_basis || "")}" data-treatment-code="${escapeHtml(item.reason_code || "")}" style="margin:0 0 4px 0;">${item.name}${item.note ? ` <span style="color:#64748b;">- ${item.note}</span>` : ""}</li>`)
+            .join("")}</ul>`
+        : `<p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(emptyNote)}</p>`;
+      return `<div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">${escapeHtml(title)}</div>${listHtml}</div>`;
+    };
+    const sourceTreatmentCellStyle = "padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;";
+    const sourceTreatmentRowsHtml = canonicalRows
+      .map((row) => `<tr><td style="${sourceTreatmentCellStyle}">${row.name}</td><td style="${sourceTreatmentCellStyle}">${row.role}</td><td style="${sourceTreatmentCellStyle}">${row.treatment}</td><td style="${sourceTreatmentCellStyle}">${row.use}</td></tr>`)
+      .join("");
+    const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
+      ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:28%;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
+      : "";
+    setRenderedDocumentTreatmentRows(
+      canonicalRows.map((row) => ({
+        filename: String(row.name || "").trim(),
+        displayLabel: String(row.role || "").trim(),
+        treatment: String(row.treatment || "").trim(),
+        use: String(row.use || "").trim(),
+      }))
+    );
+    return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", canonicalModeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", canonicalLimitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", canonicalNotModeled, "No additional unmodeled support files were identified.")}</div>`;
+  }
+
+  // LEGACY FALLBACK – DO NOT USE FOR NEW REPORTS
   const modeled = [];
   const limitedUse = [];
   const notModeled = [];
@@ -4318,7 +4399,23 @@ function buildDocumentTreatmentSummaryHtml({
   const sourceTreatmentTableHtml = sourceTreatmentRowsHtml
     ? `<div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:28%;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Use</th></tr></thead><tbody>${sourceTreatmentRowsHtml}</tbody></table></div>`
     : "";
+  setRenderedDocumentTreatmentRows(
+    sourceTreatmentEntries.map((entry) => ({
+      filename: String(entry.file?.original_filename || "").trim(),
+      displayLabel: String(resolveDocumentRoleLabel(entry.file, entry.classification) || "").trim(),
+      treatment: String(resolveTreatmentLabel(entry.file, entry.classification) || "").trim(),
+      use: String(entry.classification?.note || "").trim(),
+    }))
+  );
 
+  setRenderedDocumentTreatmentRows(
+    sourceTreatmentEntries.map((entry) => ({
+      filename: String(entry.file?.original_filename || "").trim(),
+      displayLabel: String(resolveDocumentRoleLabel(entry.file, entry.classification) || "").trim(),
+      treatment: String(resolveTreatmentLabel(entry.file, entry.classification) || "").trim(),
+      use: String(entry.classification?.note || "").trim(),
+    }))
+  );
   return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", modeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", limitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", notModeled, "No additional unmodeled support files were identified.")}</div>`;
 }
 
@@ -4684,6 +4781,7 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   propertyTaxBindingState = null,
   sourceReportCoverageQa = null,
   supportDocAuthorityRows = null,
+  canonicalSupportDocMap = null,
   formatCurrency,
   formatPercent1,
   formatInterestRatePercent,
@@ -4699,7 +4797,9 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     }
     return null;
   };
-  const authorityRows = Array.isArray(supportDocAuthorityRows) && supportDocAuthorityRows.length > 0
+  const authorityRows = canonicalSupportDocMap instanceof Map && canonicalSupportDocMap.size > 0
+    ? Array.from(canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
+    : Array.isArray(supportDocAuthorityRows) && supportDocAuthorityRows.length > 0
     ? supportDocAuthorityRows
     : Array.isArray(sourceReportCoverageQa?.support_document_authority_rows)
     ? sourceReportCoverageQa.support_document_authority_rows
@@ -4707,7 +4807,7 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     ? sourceReportCoverageQa.document_treatment_canonical_rows
     : [];
   const authorityByRole = (pattern) => authorityRows.find((row) => pattern.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || "")));
-  const acquisitionAuthorityRow = authorityRows.find((row) =>
+  const purchaseAssumptionsAuthorityRow = authorityRows.find((row) =>
     row?.has_acquisition_support === true ||
     row?.has_proposed_acquisition_financing === true ||
     /(purchase_assumptions|proposed_acquisition_financing)/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
@@ -4732,9 +4832,9 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.present === true &&
     sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.has_total_units === true
   );
-  const purchasePrice = firstFinite(ctx.purchasePrice, acquisitionTermsPayload?.purchase_price, acquisitionTermsPayload?.purchasePrice, acquisitionAuthorityRow?.purchase_price, acquisitionAuthorityRow?.purchasePrice, acquisitionAuthorityRow?.acquisition_price);
-  const noiBasis = firstFinite(ctx.acquisitionNoiBasis, acquisitionTermsPayload?.noi_basis, acquisitionTermsPayload?.net_operating_income_basis, acquisitionTermsPayload?.noi, acquisitionAuthorityRow?.noi_basis, acquisitionAuthorityRow?.net_operating_income_basis);
-  const goingInCapRate = firstFinite(ctx.goingInCapRate, acquisitionTermsPayload?.going_in_cap_rate, acquisitionAuthorityRow?.going_in_cap_rate);
+  const purchasePrice = firstFinite(ctx.purchasePrice, purchaseAssumptionsAuthorityRow?.purchase_price, purchaseAssumptionsAuthorityRow?.purchasePrice, purchaseAssumptionsAuthorityRow?.acquisition_price, acquisitionTermsPayload?.purchase_price, acquisitionTermsPayload?.purchasePrice);
+  const noiBasis = firstFinite(ctx.acquisitionNoiBasis, purchaseAssumptionsAuthorityRow?.noi_basis, purchaseAssumptionsAuthorityRow?.net_operating_income_basis, acquisitionTermsPayload?.noi_basis, acquisitionTermsPayload?.net_operating_income_basis, acquisitionTermsPayload?.noi);
+  const goingInCapRate = firstFinite(ctx.goingInCapRate, purchaseAssumptionsAuthorityRow?.going_in_cap_rate, acquisitionTermsPayload?.going_in_cap_rate);
   const units = firstFinite(ctx.units, sourceReportCoverageQa?.artifact_inventory?.rent_roll_parsed?.total_units);
   const pricePerUnit = Number.isFinite(purchasePrice) && Number.isFinite(units) && units > 0 ? purchasePrice / units : null;
   const noiPerUnit = Number.isFinite(noiBasis) && Number.isFinite(units) && units > 0 ? noiBasis / units : null;
@@ -4766,42 +4866,42 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
   );
   const proposedAcquisitionFinancingSourceComplete = Boolean(
     proposedFinancingAuthorityRow?.has_proposed_acquisition_financing === true ||
-    /proposed_acquisition_financing/i.test(String(loanTermSheetTermsPayload?.semantic_doc_role || acquisitionTermsPayload?.semantic_doc_role || "")) ||
-    /proposed\s+acquisition\s+(financing|loan|debt)|proposed\s+loan\s+terms|future\s+underwriting/i.test(
-      String(loanTermSheetTermsPayload?.source_text || acquisitionTermsPayload?.source_text || loanTermSheetTermsPayload?.notes || acquisitionTermsPayload?.notes || "")
-    )
+    (purchaseAssumptionsAuthorityRow && (
+      Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.purchase_price)) &&
+      (
+        Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.stated_acquisition_loan_amount)) ||
+        Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.loan_amount)) ||
+        Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.derived_acquisition_loan_amount)) ||
+        Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.ltv))
+      ) &&
+      Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.interest_rate)) &&
+      Number.isFinite(coerceNumber(purchaseAssumptionsAuthorityRow?.amort_years ?? purchaseAssumptionsAuthorityRow?.amortization_years))
+    ))
   );
   const currentDebtHasVerifiedBalance = Boolean(currentDebtAssessmentState?.has_true_current_debt_balance === true || currentDebtAuthorityRow);
   const currentDebtBalance = firstFinite(
     currentDebtAssessmentState?.current_debt_balance,
-    mortgagePayload?.outstanding_balance,
-    mortgagePayload?.current_outstanding_balance,
-    mortgagePayload?.current_loan_balance,
-    loanTermSheetTermsPayload?.outstanding_balance,
-    loanTermSheetTermsPayload?.current_outstanding_balance,
-    loanTermSheetTermsPayload?.current_loan_balance,
     currentDebtAuthorityRow?.outstanding_balance,
     currentDebtAuthorityRow?.current_outstanding_balance,
-    currentDebtAuthorityRow?.current_loan_balance
+    currentDebtAuthorityRow?.current_loan_balance,
+    mortgagePayload?.outstanding_balance,
+    mortgagePayload?.current_outstanding_balance,
+    mortgagePayload?.current_loan_balance
   );
   const currentDebtInterestRate = firstFinite(
+    currentDebtAuthorityRow?.interest_rate,
     mortgagePayload?.interest_rate,
-    mortgagePayload?.rate,
-    loanTermSheetTermsPayload?.interest_rate,
-    currentDebtAuthorityRow?.interest_rate
+    mortgagePayload?.rate
   );
   const currentDebtAmortYears = firstFinite(
-    mortgagePayload?.amort_years,
-    mortgagePayload?.amortization_years,
-    loanTermSheetTermsPayload?.amort_years,
-    loanTermSheetTermsPayload?.amortization_years,
     currentDebtAuthorityRow?.amort_years,
-    currentDebtAuthorityRow?.amortization_years
+    currentDebtAuthorityRow?.amortization_years,
+    mortgagePayload?.amort_years,
+    mortgagePayload?.amortization_years
   );
   const currentDebtLtv = firstFinite(
-    mortgagePayload?.ltv,
-    loanTermSheetTermsPayload?.ltv,
-    currentDebtAuthorityRow?.ltv
+    currentDebtAuthorityRow?.ltv,
+    mortgagePayload?.ltv
   );
   const currentDebtRows = currentDebtHasVerifiedBalance
     ? [
@@ -4859,13 +4959,13 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
   ];
   const supportPresenceRows = [
-    Boolean(appraisalAuthorityRow) || Boolean(sourceReportCoverageQa?.artifact_inventory?.appraisal_parsed?.present) || /\bappraisal\b/i.test(String(sourceReportCoverageQa?.uploaded_files?.map?.((row) => `${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`).join(" ")) || "")
+    Boolean(appraisalAuthorityRow)
       ? `<tr><td>Appraisal support</td><td style="font-weight:600;">Context only unless structured value exists</td></tr>`
       : "",
-    Boolean(environmentalAuthorityRow) || Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /phase\s*i|esa|environment/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+    Boolean(environmentalAuthorityRow)
       ? `<tr><td>Environmental / Phase I support</td><td style="font-weight:600;">Context only / not modeled</td></tr>`
       : "",
-    Boolean(renovationAuthorityRow) || Boolean(sourceReportCoverageQa?.uploaded_files?.some?.((row) => /capex|renovation|capital budget|construction budget/i.test(`${row?.original_filename || ""} ${row?.semantic_doc_role || ""} ${row?.display_doc_type || ""}`)))
+    Boolean(renovationAuthorityRow)
       ? `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`
       : "",
   ].filter(Boolean);
@@ -4971,6 +5071,8 @@ function buildLaunchSourceContextBlock({
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
   supportDocAuthorityRows = null,
+  canonicalSupportDocMap = null,
+  renderedDocumentTreatmentRowsOut = null,
 } = {}) {
   const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
   const treatment = buildDocumentTreatmentSummaryHtml({
@@ -4987,6 +5089,8 @@ function buildLaunchSourceContextBlock({
     propertyTaxBindingState,
     documentQuantitativeUsageMap,
     supportDocAuthorityRows,
+    canonicalSupportDocMap,
+    renderedDocumentTreatmentRowsOut,
   });
   const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
   return `${intro}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatment}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${excludedDeferredHtml}`;
@@ -9382,6 +9486,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     const acquisitionMemoUnits = coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
     const rrUnits = Number.isFinite(acquisitionMemoUnits) ? acquisitionMemoUnits : null;
     let hasForwardLookingRenovationInputs = false;
+    const renderedDocumentTreatmentRows = [];
     const renderSupportDocAuthorityRows = buildCanonicalSupportDocAuthorityRows({
       documentSources,
       loanTermSheetTermsPayload,
@@ -9391,6 +9496,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       propertyTaxPayload,
       appraisalPayload,
     });
+    const canonicalSupportDocMap = new Map();
     const renderAcquisitionAuthorityRow = renderSupportDocAuthorityRows.find((row) =>
       row?.has_acquisition_support === true ||
       row?.has_proposed_acquisition_financing === true ||
@@ -9444,6 +9550,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
       documentSources,
+      canonicalSupportDocMap,
       supportDocAuthorityRows: renderSupportDocAuthorityRows,
     };
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
@@ -9563,6 +9670,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTaxBindingState,
         sourceReportCoverageQa,
         supportDocAuthorityRows: acquisitionMemoRenderContext.supportDocAuthorityRows,
+        canonicalSupportDocMap: acquisitionMemoRenderContext.canonicalSupportDocMap,
         formatCurrency,
         formatPercent1,
         formatInterestRatePercent,
@@ -9583,6 +9691,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTaxBindingState: acquisitionMemoRenderContext.propertyTaxBindingState,
         documentQuantitativeUsageMap: acquisitionMemoRenderContext.documentQuantitativeUsageMap,
         supportDocAuthorityRows: acquisitionMemoRenderContext.supportDocAuthorityRows,
+        canonicalSupportDocMap: acquisitionMemoRenderContext.canonicalSupportDocMap,
+        renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
       dataCoverageBlockHtml = "";
       execVerdictExpansionHtml = `${summaryCard}${contextCard}`;
@@ -10121,23 +10231,29 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         const lower = name.toLowerCase();
         return lower && renovationFilenameTerms.some((term) => lower.includes(term));
       }) : [];
-    const renovationAuthorityRows = Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
+    const renovationAuthorityRows = acquisitionMemoRenderContext?.canonicalSupportDocMap instanceof Map && acquisitionMemoRenderContext.canonicalSupportDocMap.size > 0
+      ? Array.from(acquisitionMemoRenderContext.canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
+      : Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
       ? acquisitionMemoRenderContext.supportDocAuthorityRows
       : buildCanonicalSupportDocAuthorityRows({
           documentSources,
           renovationPayload,
         });
-    const renovationAuthorityRow = renovationAuthorityRows.find((row) =>
-      /renovation|capex/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || ""))
+    const canonicalRenovationAuthorityRow = renovationAuthorityRows.find((row) =>
+      row?.role === "structured_renovation" ||
+      row?.role === "renovation_capex_budget_context" ||
+      /structured_renovation|renovation_capex_budget_context|renovation|capex/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || row?.document_role_label || row?.treatment_label || ""))
     ) || null;
     const hasRenovationFilenameSignal = renovationSourceFilenames.length > 0;
-    const hasRenovationAuthoritySignal = Boolean(renovationAuthorityRow);
+    const hasRenovationAuthoritySignal = Boolean(canonicalRenovationAuthorityRow);
     const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
     const renovationAcknowledgmentHtml = !hasRenovationFilenameSignal && !hasRenovationAuthoritySignal
       ? ""
-      : hasForwardLookingRenovationAssumptions || Boolean(renovationAuthorityRow?.has_renovation_rent_lift || renovationAuthorityRow?.has_renovation_phasing)
+      : canonicalRenovationAuthorityRow?.role === "structured_renovation" ||
+        hasForwardLookingRenovationAssumptions ||
+        Boolean(canonicalRenovationAuthorityRow?.has_renovation_rent_lift || canonicalRenovationAuthorityRow?.has_renovation_phasing)
       ? `<strong>Uploaded Renovation / CapEx Document:</strong> Structured renovation budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only. Renovation ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.`
-      : hasExplicitRenovationInput || Boolean(renovationAuthorityRow?.has_structured_renovation_budget)
+      : hasExplicitRenovationInput || Boolean(canonicalRenovationAuthorityRow?.has_structured_renovation_budget)
       ? `<strong>Uploaded Renovation / CapEx Document:</strong> Budget/scope items were received. Rent lift, ROI, payback, phasing, and implementation schedule were not provided; therefore renovation returns were not assessed.`
       : `<strong>Uploaded Renovation / CapEx Document:</strong> Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.`;
     if (renovationAcknowledgmentHtml && documentSourcesHtml) {
@@ -12264,6 +12380,60 @@ try {
   }
   sourcePackageQaFiles = coverageFiles;
   sourcePackageQaArtifacts = coverageArtifacts;
+  const supportFileRows = Array.isArray(coverageFiles)
+    ? coverageFiles.filter((file) => {
+      const text = String([
+        file?.original_filename,
+        file?.doc_type,
+        file?.display_doc_type,
+      ].filter(Boolean).join(" ")).toLowerCase();
+      return Boolean(file?.id) && !/(t12|rent[_\s-]*roll)/i.test(text);
+    })
+    : [];
+  const documentTextByFileId = new Map();
+  const parserArtifactByFileId = new Map();
+  for (const artifact of Array.isArray(coverageArtifacts) ? coverageArtifacts : []) {
+    const payload = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : null;
+    const fileId = String(payload?.file_id || payload?.source_file_id || payload?.fileId || "").trim();
+    if (!fileId) continue;
+    if (artifact?.type === "document_text_extracted") {
+      documentTextByFileId.set(
+        fileId,
+        String(payload?.text || payload?.excerpt || payload?.raw_text || "").trim()
+      );
+      continue;
+    }
+    if (artifact?.type && /_parsed$/i.test(artifact.type) && !parserArtifactByFileId.has(fileId)) {
+      parserArtifactByFileId.set(fileId, artifact);
+    }
+  }
+  const canonicalSupportDocEntries = [];
+  for (const file of supportFileRows) {
+    const fileId = String(file?.id || "").trim();
+    if (!fileId) continue;
+    const parserArtifact = parserArtifactByFileId.get(fileId) || null;
+    const parserPayload = parserArtifact?.payload && typeof parserArtifact.payload === "object"
+      ? parserArtifact.payload
+      : null;
+    const extractedText = documentTextByFileId.get(fileId) || parserPayload?.source_text || parserPayload?.raw_text || "";
+    const authority = resolveCanonicalSupportDocAuthority({
+      fileId,
+      originalFilename: file?.original_filename || null,
+      extractedText,
+      rawText: extractedText,
+      declaredDocType: file?.doc_type || null,
+      detectedDocType: file?.display_doc_type || null,
+      payload: parserPayload || file,
+      parserArtifact,
+      aiRecoveryHints: parserPayload?.ai_recovery_evidence || null,
+    });
+    canonicalSupportDocMap.set(fileId, authority);
+    canonicalSupportDocEntries.push({
+      file_id: fileId,
+      original_filename: file?.original_filename || null,
+      authority,
+    });
+  }
   const supportDocAuthorityRowsForQa = buildCanonicalSupportDocAuthorityRows({
     documentSources: coverageFiles,
     artifacts: coverageArtifacts,
@@ -12357,6 +12527,8 @@ try {
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
       supportDocAuthorityRows: sourceCoverageQa.support_document_authority_rows,
+      canonicalSupportDocMap,
+      renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
     });
     finalHtml = finalHtml.replace(
       /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -12376,6 +12548,23 @@ try {
   ]);
   if (coverageQaErr) {
     console.error("Failed to write source_report_coverage_qa artifact:", coverageQaErr);
+  }
+  const canonicalSupportDocAuthorityTimestamp = new Date().toISOString().replace(/:/g, "-");
+  const { error: canonicalSupportDocAuthorityErr } = await supabase.from("analysis_artifacts").insert([
+    {
+      job_id: jobId || null,
+      user_id: effectiveUserId || null,
+      type: "canonical_support_doc_authority",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId || "unknown"}/canonical_support_doc_authority/${canonicalSupportDocAuthorityTimestamp}.json`,
+      payload: {
+        canonical_support_doc_entries: canonicalSupportDocEntries,
+        canonical_support_doc_count: canonicalSupportDocEntries.length,
+      },
+    },
+  ]);
+  if (canonicalSupportDocAuthorityErr) {
+    console.error("Failed to write canonical_support_doc_authority artifact:", canonicalSupportDocAuthorityErr);
   }
 } catch (err) {
   console.error("Failed to build source_report_coverage_qa artifact:", err?.message || err);
@@ -12680,6 +12869,8 @@ try {
     reportQaFlags,
     qaFixRouting: qaFixRoutingResult || null,
     deliveryGateDecision: deliveryGateDecisionResult || null,
+    canonicalSupportDocMap,
+    renderedDocumentTreatmentRows,
   });
   reportContractQaResult = reportContractQa;
   const contractTimestamp = new Date().toISOString().replace(/:/g, "-");

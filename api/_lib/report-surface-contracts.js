@@ -1664,6 +1664,217 @@ function resolveExplicitSupportDocAuthority({
   return null;
 }
 
+function collectSupportDocSourceFacts(payload = null) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  return {
+    outstanding_balance: positiveNumber(source?.outstanding_balance) ? source.outstanding_balance : null,
+    current_outstanding_balance: positiveNumber(source?.current_outstanding_balance) ? source.current_outstanding_balance : null,
+    current_loan_balance: positiveNumber(source?.current_loan_balance) ? source.current_loan_balance : null,
+    purchase_price: positiveNumber(source?.purchase_price) ? source.purchase_price : null,
+    acquisition_price: positiveNumber(source?.acquisition_price) ? source.acquisition_price : null,
+    asking_price: positiveNumber(source?.asking_price) ? source.asking_price : null,
+    going_in_cap_rate: positiveNumber(source?.going_in_cap_rate) ? source.going_in_cap_rate : null,
+    noi_basis: positiveNumber(source?.noi_basis) ? source.noi_basis : null,
+    total_budget: positiveNumber(source?.total_budget) ? source.total_budget : null,
+    total_capex: positiveNumber(source?.total_capex) ? source.total_capex : null,
+    renovation_budget: positiveNumber(source?.renovation_budget) ? source.renovation_budget : null,
+    interest_rate: positiveNumber(source?.interest_rate) ? source.interest_rate : null,
+    amortization_years: positiveNumber(source?.amortization_years) ? source.amortization_years : null,
+    amort_years: positiveNumber(source?.amort_years) ? source.amort_years : null,
+    ltv: positiveNumber(source?.ltv) ? source.ltv : null,
+    lender_fee_percent: positiveNumber(source?.lender_fee_percent) ? source.lender_fee_percent : null,
+    financing_fee_percent: positiveNumber(source?.financing_fee_percent) ? source.financing_fee_percent : null,
+    origination_fee_percent: positiveNumber(source?.origination_fee_percent) ? source.origination_fee_percent : null,
+    rent_lift: source?.rent_lift || null,
+    timing_or_phasing: source?.timing_or_phasing || null,
+    budget_rows: Array.isArray(source?.budget_rows) ? source.budget_rows : null,
+    execution_rows: Array.isArray(source?.execution_rows) ? source.execution_rows : null,
+  };
+}
+
+function normalizeCanonicalSupportDocRole(role = "") {
+  const normalized = String(role || "").trim().toLowerCase();
+  if (["current_mortgage_statement", "current_debt_terms", "mortgage_statement"].includes(normalized)) {
+    return "current_debt_context";
+  }
+  if (normalized === "structured_renovation_capex_plan") {
+    return "structured_renovation";
+  }
+  return normalized || "other_support";
+}
+
+export function resolveCanonicalSupportDocAuthority({
+  fileId = null,
+  declaredDocType = null,
+  detectedDocType = null,
+  originalFilename = null,
+  extractedText = null,
+  rawText = null,
+  payload = null,
+  parserArtifact = null,
+  aiRecoveryHints = null,
+} = {}) {
+  const parserPayload = parserArtifact && typeof parserArtifact === "object" && parserArtifact.payload && typeof parserArtifact.payload === "object"
+    ? parserArtifact.payload
+    : null;
+  const effectivePayload = payload && typeof payload === "object" ? payload : parserPayload;
+  const categoryForRole = (role) =>
+    role === "purchase_assumptions" ||
+    role === "current_debt_context" ||
+    role === "structured_renovation" ||
+    role === "renovation_capex_budget_context" ||
+    role === "property_tax"
+      ? "Displayed / Limited Use"
+      : role === "t12" || role === "rent_roll"
+      ? "Modeled Inputs"
+      : "Listed but Not Quantitatively Modeled";
+  const explicitAuthority = resolveExplicitSupportDocAuthority({
+    declaredDocType,
+    detectedDocType,
+    originalFilename,
+    rawText: extractedText || rawText,
+    payload: effectivePayload,
+  });
+  if (explicitAuthority) {
+    const role = normalizeCanonicalSupportDocRole(explicitAuthority.semantic_doc_role);
+    return {
+      role,
+      displayLabel: String(explicitAuthority.semantic_doc_display_label || "").trim() || "Other Support Document",
+      category: categoryForRole(role),
+      treatment: role === "purchase_assumptions"
+        ? "Acquisition context / document-derived acquisition context"
+        : role === "current_debt_context"
+        ? "Debt support received / contextual or deferred"
+        : role === "structured_renovation"
+        ? "Structured renovation / CapEx context"
+        : role === "renovation_capex_budget_context"
+        ? "Budget/scope only"
+        : role === "appraisal"
+        ? "Context only"
+        : role === "market_survey"
+        ? "Context only"
+        : role === "environmental_due_diligence"
+        ? "Context only"
+        : "Context only",
+      use: role === "purchase_assumptions"
+        ? "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth."
+        : role === "current_debt_context"
+        ? "Uploaded existing/current debt context only; not proposed acquisition financing."
+        : role === "structured_renovation"
+        ? "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled."
+        : role === "renovation_capex_budget_context"
+        ? "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided."
+        : role === "appraisal"
+        ? "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation."
+        : role === "market_survey"
+        ? "Market/rent context only; does not override Rent Roll market rent."
+        : role === "environmental_due_diligence"
+        ? "Environmental due-diligence context only; no quantitative model impact."
+        : "Listed for auditability only; not used quantitatively.",
+      authoritySource: "explicit_keyword",
+      confidence: 1.0,
+      fileId: String(fileId || "").trim() || null,
+      originalFilename: String(originalFilename || "").trim() || null,
+      ...collectSupportDocSourceFacts(effectivePayload),
+    };
+  }
+
+  const aiConfidence = Number(aiRecoveryHints?.confidence);
+  if (Number.isFinite(aiConfidence) && aiConfidence > 0.8) {
+    const aiRole = normalizeCanonicalSupportDocRole(String(
+      aiRecoveryHints?.semantic_doc_role ||
+      aiRecoveryHints?.role ||
+      aiRecoveryHints?.doc_role ||
+      ""
+    ));
+    return {
+      role: aiRole || "other_support",
+      displayLabel: String(
+        aiRecoveryHints?.semantic_doc_display_label ||
+        aiRecoveryHints?.display_label ||
+        aiRecoveryHints?.document_role_label ||
+        "Other Support Document"
+      ).trim() || "Other Support Document",
+      category: categoryForRole(aiRole || "other_support"),
+      treatment: String(aiRecoveryHints?.treatment_label || aiRecoveryHints?.treatment || "Context only").trim() || "Context only",
+      use: String(aiRecoveryHints?.use_label || aiRecoveryHints?.use || "Listed for auditability only; not used quantitatively.").trim() || "Listed for auditability only; not used quantitatively.",
+      authoritySource: "ai_recovery",
+      confidence: aiConfidence,
+      fileId: String(fileId || "").trim() || null,
+      originalFilename: String(originalFilename || "").trim() || null,
+      ...collectSupportDocSourceFacts(aiRecoveryHints?.payload || effectivePayload),
+    };
+  }
+
+  const parsedTaxonomy = buildSupportDocTaxonomyState({
+    declaredDocType,
+    detectedDocType,
+    originalFilename,
+    rawText: extractedText || rawText,
+    payload: effectivePayload,
+  });
+  const parsedConfidence = Number(parsedTaxonomy?.semantic_doc_role_confidence);
+  if (Number.isFinite(parsedConfidence) && parsedConfidence >= 0.8) {
+    const role = normalizeCanonicalSupportDocRole(parsedTaxonomy?.semantic_doc_role);
+    return {
+      role: role || "other_support",
+      displayLabel: String(parsedTaxonomy?.semantic_doc_display_label || "Other Support Document").trim() || "Other Support Document",
+      category: categoryForRole(role || "other_support"),
+      treatment:
+        role === "purchase_assumptions"
+          ? "Acquisition context / document-derived acquisition context"
+          : role === "current_debt_context"
+          ? "Debt support received / contextual or deferred"
+          : role === "structured_renovation"
+          ? "Structured renovation / CapEx context"
+          : role === "renovation_capex_budget_context"
+          ? "Budget/scope only"
+          : role === "appraisal"
+          ? "Context only"
+          : role === "market_survey"
+          ? "Context only"
+          : role === "environmental_due_diligence"
+          ? "Context only"
+          : "Context only",
+      use:
+        role === "purchase_assumptions"
+          ? "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth."
+          : role === "current_debt_context"
+          ? "Uploaded existing/current debt context only; not proposed acquisition financing."
+          : role === "structured_renovation"
+          ? "Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled."
+          : role === "renovation_capex_budget_context"
+          ? "Document-stated renovation budget/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided."
+          : role === "appraisal"
+          ? "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation."
+          : role === "market_survey"
+          ? "Market/rent context only; does not override Rent Roll market rent."
+          : role === "environmental_due_diligence"
+          ? "Environmental due-diligence context only; no quantitative model impact."
+          : "Listed for auditability only; not used quantitatively.",
+      authoritySource: "parser",
+      confidence: parsedConfidence,
+      fileId: String(fileId || "").trim() || null,
+      originalFilename: String(originalFilename || "").trim() || null,
+      ...collectSupportDocSourceFacts(effectivePayload),
+    };
+  }
+
+  const fallbackPayload = effectivePayload && typeof effectivePayload === "object" ? effectivePayload : {};
+  return {
+    role: "other_support",
+    displayLabel: "Other Support Document",
+    category: categoryForRole("other_support"),
+    treatment: "Context only",
+    use: "Listed for auditability only; not used quantitatively.",
+    authoritySource: "fallback",
+    confidence: 0.3,
+    fileId: String(fileId || "").trim() || null,
+    originalFilename: String(originalFilename || "").trim() || null,
+    ...collectSupportDocSourceFacts(fallbackPayload),
+  };
+}
+
 export function buildSupportDocTaxonomyState({
   declaredDocType = null,
   detectedDocType = null,

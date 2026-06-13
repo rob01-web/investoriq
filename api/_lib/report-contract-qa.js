@@ -479,6 +479,7 @@ function addViolation(violations, violation) {
     report_quality_impact: violation.report_quality_impact || null,
     distribution_impact: violation.distribution_impact || null,
     blocks_customer_delivery: Boolean(violation.blocks_customer_delivery),
+    blocks_acquisition_memo_launch_ready: Boolean(violation.blocks_acquisition_memo_launch_ready),
   });
 }
 
@@ -1051,6 +1052,8 @@ export function buildReportContractQa({
   reportQaFlags = [],
   qaFixRouting = null,
   deliveryGateDecision = null,
+  canonicalSupportDocMap = null,
+  renderedDocumentTreatmentRows = [],
 } = {}) {
   const rawHtml = String(html || "");
   const text = stripHtml(html);
@@ -2142,6 +2145,73 @@ export function buildReportContractQa({
         },
         customer_delivery_impact: "disclose_only",
         blocks_customer_delivery: false,
+        legacy_compatibility_input_only: legacyCompatibilityInputOnly,
+      });
+    }
+  }
+  const canonicalSupportDocAuthorityRows = canonicalSupportDocMap instanceof Map && canonicalSupportDocMap.size > 0
+    ? Array.from(canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
+    : [];
+  const renderedDocumentTreatmentRowsByFilename = new Map();
+  for (const row of Array.isArray(renderedDocumentTreatmentRows) ? renderedDocumentTreatmentRows : []) {
+    const filename = String(row?.filename || "").trim().toLowerCase();
+    if (!filename) continue;
+    if (!renderedDocumentTreatmentRowsByFilename.has(filename)) {
+      renderedDocumentTreatmentRowsByFilename.set(filename, []);
+    }
+    renderedDocumentTreatmentRowsByFilename.get(filename).push(row);
+  }
+  if (canonicalSupportDocAuthorityRows.length > 0 && renderedDocumentTreatmentRowsByFilename.size > 0) {
+    const displayLabelMismatches = [];
+    for (const canonicalRow of canonicalSupportDocAuthorityRows) {
+      const filename = String(
+        canonicalRow?.originalFilename ||
+        canonicalRow?.original_filename ||
+        canonicalRow?.file_name ||
+        canonicalRow?.filename ||
+        canonicalRow?.fileId ||
+        canonicalRow?.file_id ||
+        ""
+      ).trim().toLowerCase();
+      if (!filename) continue;
+      const renderedRows = renderedDocumentTreatmentRowsByFilename.get(filename) || [];
+      if (renderedRows.length === 0) continue;
+      const canonicalDisplayLabel = String(
+        canonicalRow?.displayLabel ||
+        canonicalRow?.semantic_doc_display_label ||
+        canonicalRow?.document_role_label ||
+        canonicalRow?.canonical_support_doc_role ||
+        canonicalRow?.semantic_doc_role ||
+        ""
+      ).trim();
+      const renderedDisplayLabel = String(renderedRows[0]?.displayLabel || "").trim();
+      if (
+        canonicalDisplayLabel &&
+        renderedDisplayLabel &&
+        canonicalDisplayLabel.toLowerCase() !== renderedDisplayLabel.toLowerCase()
+      ) {
+        displayLabelMismatches.push({
+          filename,
+          canonical_display_label: canonicalDisplayLabel,
+          rendered_display_label: renderedDisplayLabel,
+          canonical_treatment: String(canonicalRow?.treatment || canonicalRow?.treatment_label || "").trim() || null,
+          rendered_treatment: String(renderedRows[0]?.treatment || "").trim() || null,
+          rendered_use: String(renderedRows[0]?.use || "").trim() || null,
+        });
+      }
+    }
+    if (displayLabelMismatches.length > 0) {
+      addViolation(violations, {
+        code: "DOCUMENT_TREATMENT_CONTRADICTS_CANONICAL_AUTHORITY",
+        severity: "high",
+        category: "support_document_treatment_contract",
+        message: "Document treatment for uploaded support documents contradicts canonical authority.",
+        evidence: {
+          rows: displayLabelMismatches,
+        },
+        blocks_acquisition_memo_launch_ready: true,
+        blocks_customer_delivery: false,
+        customer_delivery_impact: "disclose_only",
         legacy_compatibility_input_only: legacyCompatibilityInputOnly,
       });
     }
