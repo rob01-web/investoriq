@@ -1,3 +1,298 @@
+# June 12, 2026 Addendum - Final Attack Test 8 RETEST 2 / Patch 4 Still Not Launch-Cleared / Current Debt + Reno Authority Still Disobeying
+
+## Current controlling status
+
+Final Attack Test 8 RETEST 2 was run after the latest bounded support-doc authority patch was deployed.
+
+Runtime marker confirmed the new deployment was active:
+
+```text
+git_commit_sha / build_marker: f88d9a9b6430a1af0043213a28b678d5e0c03819
+```
+
+This means the retest was valid. The observed failures are not a stale-deployment issue.
+
+Current verdict:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+NOT launch-cleared.
+Patch 4 improved Purchase Assumptions, but support-doc authority is still not sovereign.
+Current Debt and Structured Reno Plan still disobey the extracted source truth in visible customer output.
+
+Full Underwriting V2.0:
+Still deferred.
+```
+
+## What improved in RETEST 2
+
+The Purchase Assumptions / Proposed Acquisition Financing source path improved materially.
+
+Visible PDF now correctly includes:
+
+```text
+Purchase Price: $13,500,000
+NOI Basis: $945,000
+Going-In Cap Rate: 7.0%
+Purchase assumptions provided: Yes
+Proposed acquisition loan terms complete: Yes
+Proposed Acquisition Financing: Source-complete inputs provided / available for future underwriting.
+```
+
+Document Treatment now renders `Stonebridge_Assumptions.pdf` as:
+
+```text
+Document Role: Purchase Assumptions / Acquisition Context
+Treatment: Acquisition context / document-derived acquisition context
+Use: Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.
+```
+
+Interpretation:
+
+```text
+The purchase-assumptions side of Patch 4 is materially improved and should be preserved.
+```
+
+## What still failed
+
+### 1. Current Debt still does not obey source truth
+
+Extracted source text for `Current_Debt_Stonebridge.pdf` clearly states:
+
+```text
+Stonebridge Lofts - Existing Current Debt Statement
+This is an existing/current debt context document.
+Current Outstanding Balance: $6,800,000
+Interest Rate: 4.85%
+Amortization Remaining: 24 years
+Monthly Payment: $39,250
+Maturity Date: 2029-11-01
+```
+
+But the visible PDF still says:
+
+```text
+Uploaded Existing Debt Context
+No verified current debt context was provided.
+
+Current debt context uploaded: No
+```
+
+And Document Treatment still lists the file as:
+
+```text
+Current_Debt_Stonebridge.pdf
+Document Role: Other Support Document
+Treatment: Context only
+Use: Listed for auditability only; not used quantitatively.
+```
+
+Artifact evidence shows the parser/authority route still misclassified this file:
+
+```text
+inferred_doc_type: loan_term_sheet
+semantic_doc_role: purchase_assumptions
+semantic_doc_display_label: Purchase Assumptions / Acquisition Context
+explicit_current_debt_proof: false
+mixed_financing_signals: true
+```
+
+Interpretation:
+
+```text
+Current Debt authority is still not obeying extracted source text.
+The source text is clear; the system is still allowing stale/incorrect financing-role inference to outrank explicit current-debt proof.
+```
+
+### 2. Structured Reno Plan still does not obey source truth
+
+Extracted source text for `Stonebridge_Reno_Plan.pdf` clearly states:
+
+```text
+Stonebridge Lofts - Structured Renovation / CapEx Plan
+This is a structured forward-looking renovation / CapEx plan.
+It provides budget, unit scope, stated rent lift, and phasing as source facts.
+Total Renovation Budget: $1,280,000
+1BR Interiors: 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18
+2BR Interiors: 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24
+Common Area Refresh: $210,000
+Exterior / Security: $115,000
+Contingency: $153,000
+```
+
+But the visible PDF still says:
+
+```text
+Uploaded Renovation / CapEx Document:
+Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.
+```
+
+And Document Treatment still lists the file as:
+
+```text
+Stonebridge_Reno_Plan.pdf
+Document Role: Other Support Document
+Treatment: Context only
+Use: Listed for auditability only; not used quantitatively.
+```
+
+Artifact evidence shows the file was still routed through rent-roll failure/recovery paths:
+
+```text
+rent_roll_parse_error for Stonebridge_Reno_Plan.pdf
+ai_rent_roll_recovery_diagnostic attempted: true
+final_outcome: validation_rejected
+inferred_doc_type: rent_roll
+```
+
+Interpretation:
+
+```text
+Structured Reno Plan authority is still not sovereign.
+The system correctly extracted the renovation text, but a rent-roll/recovery or generic-support path still bypassed the final structured renovation treatment.
+```
+
+### 3. Report-contract QA now sees a problem, but the authority system is still not hard enough
+
+RETEST 2 artifacts show:
+
+```text
+report_contract_qa: warn
+violations: ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+severity: high
+customer_delivery_ready: true
+delivery_conformance_source: legacy_fallback_only
+canonical_delivery_state_present: false
+```
+
+This is progress compared to prior zero-violation passes, but it is still not enough.
+
+Current interpretation:
+
+```text
+QA is beginning to catch the debt-separation family, but visible authority contradictions still publish as advisory-only.
+For Acquisition Memo launch quality, visible support-doc authority contradiction must not be treated as a harmless advisory.
+```
+
+## Updated root diagnosis
+
+Patch 4 did not fail everywhere.
+
+It fixed or improved:
+
+```text
+Purchase assumptions / proposed acquisition financing source recognition.
+Purchase price / NOI basis / going-in cap acquisition context rendering.
+Proposed acquisition financing checklist status.
+```
+
+But it did not finish:
+
+```text
+Current Debt source-text authority.
+Structured Reno Plan source-text authority.
+QA hard-fail / contract enforcement for visible authority contradiction.
+```
+
+Controlling root issue:
+
+```text
+InvestorIQ still has a support-doc authority helper, not a fully sovereign support-doc authority regime.
+```
+
+A true regime means:
+
+```text
+1. One uploaded support file receives one canonical role/treatment/use decision.
+2. Explicit extracted source text can override polluted parser semantics.
+3. Renderers consume only that canonical decision for visible Document Treatment / Financing Readiness / Reno acknowledgement.
+4. Report-contract QA fails when visible output contradicts canonical support-doc authority.
+5. Legacy/fallback paths cannot remain live authority when canonical authority exists.
+```
+
+## Updated launch posture
+
+```text
+Screening:
+Launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+Not launch-cleared.
+Core math, publish path, V2 containment, and purchase assumptions have improved.
+However, Current Debt and Structured Reno Plan authority failures remain customer-visible and launch-blocking for the Acquisition Memo product promise.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Current safest interpretation for Rob
+
+Do not treat this as the whole system collapsing.
+
+The report still proved major strengths:
+
+```text
+Core math held.
+T12/Rent Roll parsing held.
+Report published.
+Source Reconciliation Disclosure worked.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation leaked.
+Purchase assumptions improved materially.
+```
+
+But do treat this as a real launch blocker for Acquisition Memo:
+
+```text
+The AI boss is not fully obeyed yet.
+Current Debt and Reno Plan still have disobedient support-doc paths.
+```
+
+## Immediate next action after docs update
+
+Do not issue another Codex prompt until Rob is ready.
+
+When work resumes, the next patch must be strictly bounded to:
+
+```text
+1. Current_Debt_Stonebridge-style explicit current-debt source text outranking purchase/acquisition/loan-term fallback.
+2. Stonebridge_Reno_Plan-style structured renovation source text outranking rent-roll recovery and generic support fallback.
+3. Contract QA escalation when visible Document Treatment / Financing Readiness contradict canonical support-doc authority.
+```
+
+Do not broaden into:
+
+```text
+Screening
+T12/Rent Roll core math
+delivery gate doctrine except visible authority contradiction handling if truly necessary
+credit/payment/access
+pricing/Stripe
+SQL/RPC/Supabase
+Dashboard
+DocRaptor config
+auth/upload gates
+Full Underwriting V2 surfaces
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 2 was a valid retest on runtime SHA f88d9a9b6430a1af0043213a28b678d5e0c03819.
+Purchase assumptions improved and should be preserved.
+Current Debt still renders as Other Support / No verified current debt context despite explicit current-debt source text.
+Structured Reno Plan still renders as Other Support / no verified forward-looking renovation budget despite explicit structured Reno/CapEx source text.
+Report-contract QA now flags a high current-debt separation violation, but it remains advisory and legacy-fallback-sourced.
+Acquisition Memo is not launch-cleared.
+Next work should be a narrow Current Debt + Reno authority enforcement patch only, when Rob is ready.
+```
+
+---
+
 # June 10, 2026 Session Closeout Addendum - Seven-Test Batch, Patches 1-3, Claude V2 Architecture Notes, and Final Attack Test 8
 
 ## Current emotional / execution context

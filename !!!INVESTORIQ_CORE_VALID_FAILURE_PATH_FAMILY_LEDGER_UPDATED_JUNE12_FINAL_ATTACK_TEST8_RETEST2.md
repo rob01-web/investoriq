@@ -1,3 +1,385 @@
+# June 12, 2026 Addendum - Final Attack Test 8 RETEST 2 CVF Update / Patch 4 Partial Pass, Current Debt + Reno Still Open
+
+## Current CVF status after RETEST 2
+
+Final Attack Test 8 RETEST 2 was run on an active post-Patch-4 deployment.
+
+Runtime marker:
+
+```text
+git_commit_sha / build_marker: f88d9a9b6430a1af0043213a28b678d5e0c03819
+```
+
+This was a valid retest, not a stale deployment.
+
+Controlling CVF verdict:
+
+```text
+Core-valid publish path: PASS.
+Core T12/Rent Roll math: PASS.
+V2 leakage prevention: PASS.
+Purchase assumptions / proposed acquisition context: PARTIAL PASS / materially improved.
+Current debt support-doc authority: FAIL / launch blocker for Acquisition Memo.
+Structured Reno Plan support-doc authority: FAIL / launch blocker for Acquisition Memo.
+Report-contract QA authority enforcement: PARTIAL / warning exists, but visible contradictions still publish as advisory.
+```
+
+## CVF family mapping
+
+### CVF-01 / CVF-02 - Core T12 and Rent Roll parsing
+
+Status:
+
+```text
+PASS / holding.
+```
+
+Evidence from RETEST 2:
+
+```text
+T12 parsed successfully.
+Rent Roll parsed successfully.
+PDF rendered 64 units, 93.8% occupancy, $1,432,800 annual in-place rent, $1,718,400 annual market rent, $945,000 NOI, $555,000 OpEx, 37.0% expense ratio, 63.0% NOI margin.
+```
+
+Disposition:
+
+```text
+No new CVF-01/CVF-02 issue.
+```
+
+### CVF-03 / CVF-06 - Source reconciliation disclosure
+
+Status:
+
+```text
+PASS WITH DISCLOSURE / holding.
+```
+
+Visible classification:
+
+```text
+Review - Source Reconciliation Disclosure
+Primary Constraint: Rent roll and T12 income evidence remain materially unreconciled; classification is capped pending source reconciliation.
+```
+
+Disposition:
+
+```text
+Correct conservative disclosure, not a false fail-closed.
+```
+
+### CVF-04 / CVF-15 - Purchase assumptions / proposed acquisition financing
+
+Status:
+
+```text
+PARTIAL PASS / materially improved.
+```
+
+Observed corrected behavior:
+
+```text
+Stonebridge_Assumptions.pdf now renders as Purchase Assumptions / Acquisition Context.
+Purchase Price $13,500,000 appears.
+NOI Basis $945,000 appears.
+Going-In Cap Rate 7.0% appears.
+Purchase assumptions provided: Yes.
+Proposed acquisition loan terms complete: Yes.
+Proposed Acquisition Financing: Source-complete inputs provided / available for future underwriting.
+```
+
+Disposition:
+
+```text
+Preserve this fix.
+Do not regress purchase assumptions while fixing current debt and Reno.
+```
+
+Remaining caution:
+
+```text
+The wording “available for future underwriting” is acceptable as bounded context only if it does not open DSCR/refi/DCF/waterfall/deal-score/final recommendation.
+No forbidden V2 surfaces were observed in RETEST 2.
+```
+
+### CVF-04 / CVF-15 - Current debt statement authority
+
+Status:
+
+```text
+FAIL / true Acquisition Memo launch blocker.
+```
+
+Observed source facts:
+
+```text
+Current_Debt_Stonebridge.pdf extracted text:
+- Existing Current Debt Statement
+- existing/current debt context document
+- Current Outstanding Balance $6,800,000
+- Interest Rate 4.85%
+- Amortization Remaining 24 years
+- Monthly Payment $39,250
+- Maturity Date 2029-11-01
+```
+
+Observed wrong behavior:
+
+```text
+PDF says No verified current debt context was provided.
+Lender Diligence Checklist says Current debt context uploaded: No.
+Document Treatment lists Current_Debt_Stonebridge.pdf as Other Support Document / Context only / Listed for auditability only.
+```
+
+Artifact root signal:
+
+```text
+Current_Debt_Stonebridge.pdf still inferred as loan_term_sheet.
+semantic_doc_role: purchase_assumptions.
+semantic_doc_display_label: Purchase Assumptions / Acquisition Context.
+explicit_current_debt_proof: false.
+mixed_financing_signals: true.
+```
+
+CVF classification:
+
+```text
+CVF family: CVF-04 and CVF-15.
+Human red-pen decision: true_launch_blocker for Acquisition Memo.
+Customer visible: yes.
+Math affected: no unsafe modeled DSCR/refi math rendered.
+Source binding affected: yes.
+Owner area: support-doc parser / canonical authority builder / Financing Readiness consumer / Document Treatment consumer / report-contract QA.
+Patch required: yes.
+Regression required: yes.
+```
+
+Required future behavior:
+
+```text
+Explicit “Existing Current Debt Statement”, “Current Outstanding Balance”, interest rate, monthly payment, amortization remaining, and maturity date must outrank purchase/acquisition/loan-term fallback for the same file.
+```
+
+### CVF-07 / CVF-15 - Structured Reno Plan authority
+
+Status:
+
+```text
+FAIL / true Acquisition Memo launch blocker.
+```
+
+Observed source facts:
+
+```text
+Stonebridge_Reno_Plan.pdf extracted text:
+- Structured Renovation / CapEx Plan
+- structured forward-looking renovation / CapEx plan
+- budget, unit scope, stated rent lift, and phasing
+- Total Renovation Budget $1,280,000
+- 1BR Interiors 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18
+- 2BR Interiors 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24
+- Common Area Refresh $210,000
+- Exterior / Security $115,000
+- Contingency $153,000
+```
+
+Observed wrong behavior:
+
+```text
+PDF says renovation/CapEx support was received, but no verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided.
+Document Treatment lists Stonebridge_Reno_Plan.pdf as Other Support Document / Context only / Listed for auditability only.
+```
+
+Artifact root signal:
+
+```text
+Stonebridge_Reno_Plan.pdf still went through rent_roll_parse_error and ai_rent_roll_recovery_diagnostic.
+ai_rent_roll_recovery_diagnostic attempted: true.
+final_outcome: validation_rejected.
+inferred_doc_type: rent_roll.
+```
+
+CVF classification:
+
+```text
+CVF family: CVF-07 and CVF-15.
+Human red-pen decision: true_launch_blocker for Acquisition Memo support-doc intelligence.
+Customer visible: yes.
+Math affected: no unsafe modeled ROI/payback/NOI impact/refi/DCF math rendered.
+Source binding affected: yes.
+Owner area: support-doc parser dispatch / canonical authority builder / renovation acknowledgement renderer / Document Treatment consumer / report-contract QA.
+Patch required: yes.
+Regression required: yes.
+```
+
+Required future behavior:
+
+```text
+Explicit “Structured Renovation / CapEx Plan”, “Total Renovation Budget”, “rent lift”, and “phasing” must outrank rent-roll parsing/recovery and generic support fallback for the same file.
+```
+
+### CVF-05 / V2 containment
+
+Status:
+
+```text
+PASS / holding.
+```
+
+Observed safe behavior:
+
+```text
+No DSCR.
+No current-debt DSCR.
+No refinance proceeds or refinance stability.
+No DCF.
+No waterfall.
+No equity return.
+No deal score.
+No final recommendation.
+No BUY / SELL / HOLD.
+```
+
+Disposition:
+
+```text
+Do not reopen V2 surfaces while fixing Current Debt and Reno authority.
+```
+
+### CVF-08 / CVF-09 / CVF-10 - Delivery/publish path
+
+Status:
+
+```text
+Customer delivery path: PASS.
+Internal conformance authority: WATCHLIST.
+```
+
+Observed behavior:
+
+```text
+Report published.
+Email sent.
+Status reached published.
+Customer delivery was allowed.
+```
+
+But artifacts show:
+
+```text
+report_contract_qa delivery_conformance_source: legacy_fallback_only.
+canonical_delivery_state_present: false.
+qa_action_plan readiness_source: legacy_action_plan_fallback.
+```
+
+Disposition:
+
+```text
+Do not patch delivery gate broadly right now.
+But retain watchlist: legacy fallback remains visible in diagnostic authority artifacts.
+```
+
+### CVF-14 / advisory QA
+
+Status:
+
+```text
+PARTIAL / advisory layer is no longer silent, but not sovereign.
+```
+
+Observed behavior:
+
+```text
+report_contract_qa now emits ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT as high severity.
+But advisory_only remains true and customer_delivery_ready remains true.
+```
+
+Interpretation:
+
+```text
+The QA layer is beginning to see the issue, but visible support-doc authority contradictions are still treated as advisory instead of contract-enforced.
+```
+
+Future rule:
+
+```text
+When visible Document Treatment / Financing Readiness contradicts canonical support-doc authority, this must be a contract violation strong enough to prevent launch-clearance and fail regression, even if ordinary customer delivery remains possible under Publish-or-Fail doctrine.
+```
+
+## Updated blocker name
+
+Current active blocker after RETEST 2:
+
+```text
+Patch 4B - Current Debt + Structured Reno Support-Doc Authority Enforcement
+```
+
+This is not a broad Patch 5 and not a new product rewrite.
+
+It is the unfinished remainder of Patch 4:
+
+```text
+Purchase assumptions side: improved / preserve.
+Current Debt side: still open.
+Structured Reno side: still open.
+Contract QA authority contradiction escalation: still open.
+```
+
+## Required future patch scope when Rob resumes
+
+Only patch:
+
+```text
+1. Current-debt explicit source-text authority over acquisition/loan-term fallback.
+2. Structured-renovation explicit source-text authority over rent-roll recovery/generic support fallback.
+3. Document Treatment / Financing Readiness / Reno acknowledgement consumers reading the same canonical support-doc authority.
+4. Contract QA detecting visible contradictions against canonical support-doc authority.
+```
+
+Do not touch:
+
+```text
+Screening.
+T12/Rent Roll core math.
+Delivery gate/payment/access except if strictly needed for visible authority contradiction enforcement.
+Pricing/Stripe.
+SQL/RPC/Supabase.
+Dashboard.
+DocRaptor config.
+Auth/upload gates.
+Full Underwriting V2 surfaces.
+```
+
+## Updated launch posture
+
+```text
+Screening:
+Launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+Not launch-cleared.
+Core math and publish path are strong, but Current Debt and Structured Reno support-doc authority failures remain customer-visible and launch-blocking for the Acquisition Memo product promise.
+
+Full Underwriting V2:
+Deferred.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 2 was valid on runtime SHA f88d9a9b6430a1af0043213a28b678d5e0c03819.
+Purchase assumptions now work materially better and must be preserved.
+Current_Debt_Stonebridge.pdf still renders as Other Support / no verified current debt despite explicit current-debt source text.
+Stonebridge_Reno_Plan.pdf still renders as Other Support / no verified forward-looking renovation budget despite explicit structured Reno/CapEx source text.
+Report-contract QA now flags ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT, but remains advisory and legacy-fallback-sourced.
+Next patch, when Rob is ready, should be Patch 4B: Current Debt + Structured Reno Support-Doc Authority Enforcement only.
+```
+
+---
+
 # June 10, 2026 Session Closeout Addendum - CVF / Learning Ledger Update After Seven-Test Batch, Patches 1-3, Claude V2 Notes, and Final Attack Test 8
 
 ## Current CVF status after today’s session
