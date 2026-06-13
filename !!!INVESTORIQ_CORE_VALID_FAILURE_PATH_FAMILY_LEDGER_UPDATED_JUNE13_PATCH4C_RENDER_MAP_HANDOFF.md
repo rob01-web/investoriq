@@ -4403,3 +4403,256 @@ Full Underwriting V2 remains deferred.
 6. Update this ledger with audit findings and Patch 4 result.
 ```
 
+
+
+---
+
+# June 13, 2026 Addendum - CVF Update / Patch 4C Render-Time Canonical Authority Handoff
+
+## Current CVF status
+
+Final Attack Test 8 and follow-up Patch 4C work have narrowed the active Acquisition Memo blocker.
+
+Current CVF verdict:
+
+```text
+CVF-01 / CVF-02 Core T12 + Rent Roll parsing:
+PASS / holding.
+
+Core-valid publish path:
+PASS / holding.
+
+V2 leakage prevention:
+PASS / holding.
+
+Purchase assumptions / proposed acquisition context:
+PASS or near-pass in the current tested path; preserve.
+
+Current debt support-doc authority:
+OPEN / launch blocker for Acquisition Memo.
+
+Structured Reno support-doc authority:
+OPEN / launch blocker for Acquisition Memo until full render propagation is proven.
+
+Report-contract / render authority conformance:
+OPEN / root now narrowed to live render-time canonical map consumption.
+```
+
+## Updated blocker name
+
+Current active blocker:
+
+```text
+Patch 4C - Render-Time Canonical Support-Doc Authority Propagation
+```
+
+This supersedes broader language that described the blocker only as parser/support-doc intelligence.
+
+The current issue is now narrower:
+
+```text
+The helper authority path can classify the support docs correctly, but the live Acquisition Memo render path still loses or misreads the canonical authority row before final visible HTML/PDF output.
+```
+
+## Root-cause investigation result
+
+Codex confirmed:
+
+```text
+1. buildCanonicalSupportDocAuthorityRows(...) is classifying the Stonebridge support docs correctly in the helper path.
+2. buildDocumentTreatmentSummaryHtml(...) correctly renders the canonical row when called directly with the canonical authority rows/map.
+3. The end-to-end generateClientReport(...) path still diverges from that helper result for live HTML.
+```
+
+Current interpretation:
+
+```text
+The remaining CVF failure is not a missing current-debt keyword.
+It is not a missing Reno keyword.
+It is not proof that the canonical authority design is impossible.
+It is a final render propagation / consumer-shape / call-site issue.
+```
+
+## Specific suspected implementation fault
+
+The live canonicalSupportDocMap now likely contains authority-row-style objects from `buildCanonicalSupportDocAuthorityRows(...)`, while `buildDocumentTreatmentSummaryHtml(...)` still reads resolver-style keys.
+
+Expected by consumer:
+
+```text
+authority.displayLabel
+authority.treatment
+authority.use
+authority.role
+authority.authoritySource
+authority.originalFilename
+```
+
+Likely provided by authority rows:
+
+```text
+authority.document_role_label
+authority.treatment_label
+authority.use_label
+authority.canonical_support_doc_role
+authority.semantic_doc_display_label
+authority.authority_source
+authority.original_filename
+```
+
+Resulting failure mode:
+
+```text
+The authority row can be correct, but the renderer reads empty fields and defaults to:
+- Other Support Document
+- Context only
+- Listed for auditability only; not used quantitatively.
+```
+
+This matches the observed smoke failure:
+
+```text
+Current_Debt_Stonebridge.pdf is present in live full-render HTML, but Debt Support Received / Contextual does not propagate into final visible Acquisition Memo output.
+```
+
+## CVF mapping
+
+### CVF-04 / CVF-15 - Current debt authority
+
+Status:
+
+```text
+OPEN / launch blocker.
+```
+
+Updated owner area:
+
+```text
+api/generate-client-report.js
+buildDocumentTreatmentSummaryHtml canonical map consumer branch
+active v1_core buildDocumentTreatmentSummaryHtml call sites
+late DOCUMENT_TREATMENT_SUMMARY replacement path
+```
+
+Human red-pen decision:
+
+```text
+true_launch_blocker for Acquisition Memo until current debt visible label propagation passes local full-render smoke and live Final Attack Test 8 retest.
+```
+
+### CVF-07 / CVF-15 - Structured Reno authority
+
+Status:
+
+```text
+OPEN / launch blocker until full render propagation proves structured Reno rows survive final HTML.
+```
+
+Updated owner area:
+
+```text
+same canonical map consumer/field-shape path as Current Debt.
+```
+
+### CVF-14 / QA authority enforcement
+
+Status:
+
+```text
+OPEN / partially improved.
+```
+
+Updated interpretation:
+
+```text
+QA can only be trusted after the render path and QA path compare against the same canonical map shape.
+If renderer consumes one shape and QA records another, QA can still miss visible contradictions or produce misleading green checks.
+```
+
+## What must be patched next
+
+Patch only:
+
+```text
+1. Normalize canonicalSupportDocMap value shape inside buildDocumentTreatmentSummaryHtml.
+2. Ensure active Acquisition Memo call sites pass the canonical map or are replaced by the canonical late block before final HTML returns.
+3. Ensure renderedDocumentTreatmentRowsOut receives normalized rendered rows.
+4. Preserve current helper authority rows and resolver behavior unless a tiny compatibility alias is unavoidable.
+```
+
+Do not patch:
+
+```text
+T12/Rent Roll math
+Screening
+Delivery gate / credit restore
+Pricing / Stripe
+SQL / RPC / Supabase
+Dashboard
+DocRaptor config
+Auth / upload gates
+Full Underwriting V2
+DSCR / refi / DCF / waterfall / deal score / final recommendation
+```
+
+## Required acceptance tests
+
+The next patch is not acceptable until:
+
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+The live full-render smoke must prove:
+
+```text
+Current debt fixture renders Debt Support Received / Contextual.
+Structured Reno fixture renders Structured Renovation / CapEx Plan.
+Purchase assumptions remain Purchase Assumptions / Acquisition Context.
+Appraisal remains Appraisal Context.
+Market survey remains Market Rent Context.
+Phase I remains Environmental Due Diligence Context.
+No forbidden V2 surfaces appear.
+```
+
+## Retest rule
+
+Do not run another live Final Attack Test 8 retest until the local full-render smoke passes.
+
+Reason:
+
+```text
+A live retest before the smoke passes only burns time and confirms the known gap.
+The local smoke is now the immediate gate.
+```
+
+## Launch posture
+
+```text
+Screening:
+Launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+Not launch-cleared.
+Current active blocker is Patch 4C render-time canonical authority propagation, not broad product design.
+
+Full Underwriting V2:
+Deferred.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Patch 4C partially improved canonical map wiring but full-render smoke still fails current debt visible label propagation.
+The helper authority path works.
+The direct Document Treatment helper call works.
+The end-to-end generateClientReport path diverges.
+Likely fault: canonicalSupportDocMap contains authority-row fields, but buildDocumentTreatmentSummaryHtml reads resolver-style fields and defaults to Other Support / Context only.
+Next patch must normalize the map consumer and inspect remaining v1_core call sites.
+No live retest until node tests/qa/generate-client-report-rent-roll-smoke.js passes.
+```

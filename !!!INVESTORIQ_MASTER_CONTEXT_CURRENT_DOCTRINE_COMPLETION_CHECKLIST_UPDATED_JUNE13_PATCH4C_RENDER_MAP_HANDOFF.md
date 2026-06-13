@@ -6233,3 +6233,292 @@ The next chat should begin with Codex's support-doc authority enforcement audit 
 
 Do not start another random test and do not launch Acquisition Memo before Patch 4 + Attack Test 8 rerun.
 
+
+
+---
+
+# June 13, 2026 Addendum - Patch 4C Investigation / Render-Time Canonical Map Wiring Improved But Final Live Render Still Diverges
+
+## Current controlling status
+
+InvestorIQ is still in narrow Acquisition Memo support-doc authority hardening.
+
+Current product posture remains:
+
+```text
+Screening Report:
+Launchable / founder-beta ready from current evidence.
+Do not reopen Screening while fixing Acquisition Memo support-doc authority.
+
+Acquisition Memo:
+NOT launch-cleared.
+Core math, publish path, source-reconciliation disclosure, V2 containment, and purchase assumptions are strong.
+However, support-doc canonical authority is still not sovereign in the live Acquisition Memo HTML/PDF path.
+
+Full Underwriting V2.0:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/deal-score/final-recommendation surfaces inside Acquisition Memo.
+```
+
+## Patch 4C investigation result
+
+Codex completed a root-cause investigation into why the new canonical support-doc authority / “AI Boss” did not control the live report output.
+
+The important finding:
+
+```text
+The break is not the helper authority path itself.
+The helper path can classify the Stonebridge support docs correctly.
+The break is in api/generate-client-report.js at the live render-time canonical support-doc assembly and final render consumption.
+```
+
+The earlier render-time map was still being built from a weak source selection:
+
+```text
+documentSources + first _parsed artifact per fileId
+```
+
+This allowed stale or incomplete parser artifacts to win before render. The stronger authority rows were being built later for QA/diagnostics, but the visible PDF did not necessarily consume that stronger authority.
+
+Current conclusion:
+
+```text
+The system did not fail because support-doc authority is impossible.
+It failed because the visible Acquisition Memo render path still had at least one weaker/older authority branch or incompatible map-shape branch in control.
+```
+
+## Patch 4C partial implementation status
+
+Codex then began the systemic Patch 4C wiring fix.
+
+Reported changes so far:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+Validation passed:
+- node --check api/generate-client-report.js
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js
+
+Validation still failing:
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Current smoke failure:
+
+```text
+The live Stonebridge full-render assertion still fails for current debt label propagation.
+Current_Debt_Stonebridge.pdf is present in final HTML, but the visible Debt Support Received / Contextual label is still not making it into the final Acquisition Memo output.
+```
+
+Interpretation:
+
+```text
+Patch 4C is not done yet.
+The helper classification path works.
+The direct Document Treatment helper call works when passed the right canonical rows/map.
+The end-to-end generateClientReport(...) path still diverges from that helper result.
+```
+
+## Newly identified likely downstream gap
+
+After reviewing the uploaded `generate-client-report.js`, the likely remaining bug is a canonical map value-shape mismatch or final call-site overwrite.
+
+Observed field-shape issue:
+
+```text
+buildDocumentTreatmentSummaryHtml canonical-map branch expects resolver-style fields:
+- displayLabel
+- treatment
+- use
+- role
+- authoritySource
+- originalFilename
+
+buildCanonicalSupportDocAuthorityRows emits authority-row-style fields:
+- document_role_label
+- treatment_label
+- use_label
+- canonical_support_doc_role
+- semantic_doc_display_label
+- authority_source / authoritySource
+- original_filename
+```
+
+If the live canonicalSupportDocMap now contains correct authority-row objects, but the renderer reads only resolver-style field names, the renderer can still default to:
+
+```text
+Other Support Document
+Context only
+Listed for auditability only; not used quantitatively.
+```
+
+This explains why:
+
+```text
+1. helper authority rows classify the file correctly;
+2. a direct helper call can render correctly;
+3. full generateClientReport(...) still loses the current-debt label in visible final HTML.
+```
+
+The next patch should normalize both supported field shapes at the consumer boundary instead of adding another authority layer.
+
+## Current suspected exact fix
+
+The next Codex patch should continue Patch 4C and focus only on:
+
+```text
+Canonical map value-shape normalization and final live render consumption.
+```
+
+Specifically:
+
+```text
+In buildDocumentTreatmentSummaryHtml, canonicalSupportDocMap entries must accept both:
+
+Resolver-style object fields:
+- role
+- displayLabel
+- treatment
+- use
+- authoritySource
+- originalFilename
+
+Authority-row-style object fields:
+- canonical_support_doc_role
+- semantic_doc_role
+- document_role_label
+- semantic_doc_display_label
+- treatment_label
+- treatment
+- use_label
+- use
+- treatment_category
+- original_filename
+```
+
+Required local normalization:
+
+```text
+canonicalRole = authority.role || authority.canonical_support_doc_role || authority.semantic_doc_role || "other_support"
+roleLabel = authority.displayLabel || authority.document_role_label || authority.semantic_doc_display_label || "Other Support Document"
+treatmentLabel = authority.treatment || authority.treatment_label || "Context only"
+useLabel = authority.use || authority.use_label || "Listed for auditability only; not used quantitatively."
+category = authority.category || authority.treatment_category || "Listed but Not Quantitatively Modeled"
+originalFilename = authority.originalFilename || authority.original_filename || authority.file_name || authority.filename || fileId
+sourceBasis = authority.authoritySource || authority.authority_source || "canonical_support_doc_authority"
+```
+
+Also inspect active Acquisition Memo call sites for `buildDocumentTreatmentSummaryHtml(...)`:
+
+```text
+1. buildLaunchSourceContextBlock(...) path.
+2. Late DOCUMENT_TREATMENT_SUMMARY replacement path after sourceCoverageQa.
+3. Any Data Coverage / Source Treatment path that can render inside v1_core.
+```
+
+If a v1_core/Acquisition Memo call site still invokes `buildDocumentTreatmentSummaryHtml(...)` without `canonicalSupportDocMap`, patch that call site to pass the same map or prove its output is replaced before final HTML returns.
+
+## Do not broaden the patch
+
+The next Codex prompt must not broaden into:
+
+```text
+Screening
+T12/Rent Roll core math
+rent-roll canonical math
+delivery gate
+credit restore
+pricing / Stripe
+SQL / RPC / Supabase
+Dashboard
+DocRaptor config
+auth / upload gates
+Full Underwriting V2
+DSCR / refi / DCF / waterfall / equity return / deal score / final recommendation
+```
+
+Do not patch test reports.
+Do not hardcode Final Attack Test 8 filenames in production behavior.
+Do not add a new canonical authority architecture.
+Do not add another “AI Boss.”
+
+## Current next Codex prompt status
+
+A tight continuation prompt is ready:
+
+```text
+Patch 4C continuation - Fix live canonical map value shape / final render consumption.
+```
+
+Rob should give Codex that prompt next.
+
+Acceptance for the continuation patch:
+
+```text
+1. node --check api/generate-client-report.js passes.
+2. node --check tests/qa/generate-client-report-rent-roll-smoke.js passes.
+3. node tests/qa/generate-client-report-rent-roll-smoke.js passes.
+4. git diff --check passes.
+5. Full-render smoke shows current debt label propagation:
+   Current_Debt_Stonebridge.pdf / current-debt fixture renders Debt Support Received / Contextual, not Other Support Document.
+6. Structured Reno still renders Structured Renovation / CapEx Plan when source facts support it.
+7. Purchase assumptions remain Purchase Assumptions / Acquisition Context.
+8. No V2 forbidden surfaces appear.
+```
+
+## Current launch posture after this handoff
+
+```text
+Screening:
+Still launchable / founder-beta ready.
+
+Acquisition Memo:
+Still not launch-cleared.
+The current blocker is no longer broad support-doc intelligence generally; it is specifically live canonical authority propagation into final Acquisition Memo render output.
+
+Full Underwriting V2:
+Deferred.
+```
+
+## Current safe sequence
+
+```text
+1. Update MD files with this checkpoint.
+2. Give Codex the Patch 4C continuation prompt.
+3. Require the full-render smoke to pass locally before any live retest.
+4. After local smoke passes, rerun Final Attack Test 8 once.
+5. If live retest passes, stop coding Acquisition Memo and move to launch/outreach/cash motion.
+```
+
+## Emotional / execution context
+
+Rob is under severe time and cash pressure and cannot keep spending days on InvestorIQ.
+
+The controlling discipline from here:
+
+```text
+No more broad audits.
+No more “while we are here.”
+No more adding another boss.
+No more random tests before the smoke passes.
+Find the exact live render propagation gap, patch it, run one regression, then move to launch/outreach/cash.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 13 Patch 4C handoff.
+Codex improved render-time canonical map wiring but hit usage limit before finishing the final live render gap.
+Helper authority rows classify Stonebridge support docs correctly.
+Direct Document Treatment helper call works.
+End-to-end generateClientReport still fails current debt visible label propagation.
+Likely cause is canonical map value-shape mismatch: Document Treatment expects displayLabel/treatment/use/role, while authority rows provide document_role_label/treatment_label/use_label/canonical_support_doc_role.
+Next Codex prompt should normalize canonical map values at buildDocumentTreatmentSummaryHtml consumer boundary and inspect remaining v1_core call sites.
+Do not broaden scope.
+Do not retest live until node tests/qa/generate-client-report-rent-roll-smoke.js passes.
+```
