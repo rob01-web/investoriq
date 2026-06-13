@@ -3499,24 +3499,90 @@ function buildDocumentTreatmentSummaryHtml({
     ? Array.from(canonicalSupportDocMap.entries()).filter(([fileId, authority]) => Boolean(fileId) && authority && typeof authority === "object")
     : [];
   if (canonicalSupportDocEntries.length > 0) {
-    const canonicalRows = canonicalSupportDocEntries.map(([fileId, authority]) => {
-      const category = String(authority?.category || "").trim() || "Listed but Not Quantitatively Modeled";
-      const roleLabel = String(authority?.displayLabel || "Other Support Document").trim() || "Other Support Document";
-      const treatmentLabel = String(authority?.treatment || "Context only").trim() || "Context only";
-      const useLabel = String(authority?.use || "Listed for auditability only; not used quantitatively.").trim() || "Listed for auditability only; not used quantitatively.";
-      const originalFilename = String(authority?.originalFilename || authority?.original_filename || authority?.file_name || authority?.filename || fileId || "").trim() || String(fileId || "");
-      const sourceBasis = String(authority?.authoritySource || "canonical_support_doc_authority").trim() || "canonical_support_doc_authority";
-      const reasonCode = `canonical_support_doc_${String(authority?.role || "other_support").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") || "other_support"}`;
+    const normalizeCanonicalSupportDocAuthorityRow = (authority = {}, fileId = "") => {
+      const canonicalRole = String(
+        authority?.role ||
+        authority?.canonical_support_doc_role ||
+        authority?.semantic_doc_role ||
+        ""
+      ).trim();
+      const roleLabel = String(
+        authority?.displayLabel ||
+        authority?.document_role_label ||
+        authority?.semantic_doc_display_label ||
+        ""
+      ).trim() || "Other Support Document";
+      const treatmentLabel = String(
+        authority?.treatment ||
+        authority?.treatment_label ||
+        ""
+      ).trim() || "Context only";
+      const useLabel = String(
+        authority?.use ||
+        authority?.use_label ||
+        (Array.isArray(authority?.allowed_uses) ? authority.allowed_uses[0] : "") ||
+        ""
+      ).trim() || "Listed for auditability only; not used quantitatively.";
+      const category = String(
+        authority?.category ||
+        authority?.treatment_category ||
+        ""
+      ).trim() || "Listed but Not Quantitatively Modeled";
+      const originalFilename = String(
+        authority?.originalFilename ||
+        authority?.original_filename ||
+        authority?.file_name ||
+        authority?.filename ||
+        fileId ||
+        ""
+      ).trim() || String(fileId || "");
       return {
-        key: String(fileId).toLowerCase(),
-        name: escapeHtml(originalFilename),
-        role: escapeHtml(roleLabel),
-        treatment: escapeHtml(treatmentLabel),
-        use: escapeHtml(useLabel),
-        note: escapeHtml(useLabel),
-        source_basis: sourceBasis,
-        reason_code: reasonCode,
+        fileId: String(fileId || "").trim(),
         category,
+        canonicalRole: canonicalRole || "other_support_context",
+        displayLabel: roleLabel || "Other Support Document",
+        treatmentLabel,
+        useLabel,
+        originalFilename,
+        authoritySource: String(authority?.authoritySource || authority?.authority_source || "canonical_support_doc_authority").trim() || "canonical_support_doc_authority",
+        confidence: Number.isFinite(Number(authority?.confidence)) ? Number(authority.confidence) : null,
+        sourceText: String(
+          authority?.source_text ||
+          authority?.raw_text ||
+          authority?.extracted_text ||
+          authority?.notes ||
+          authority?.loan_terms_text ||
+          ""
+        ).trim(),
+        parserRole: String(authority?.semantic_doc_role || authority?.parser_role || "").trim(),
+        parserDisplayLabel: String(authority?.semantic_doc_display_label || authority?.parser_display_label || "").trim(),
+        outstanding_balance: authority?.outstanding_balance ?? authority?.current_outstanding_balance ?? authority?.current_loan_balance ?? null,
+        purchase_price: authority?.purchase_price ?? authority?.acquisition_price ?? authority?.asking_price ?? null,
+        total_budget: authority?.total_budget ?? authority?.total_capex ?? authority?.renovation_budget ?? null,
+        interest_rate: authority?.interest_rate ?? null,
+        amortization_years: authority?.amortization_years ?? authority?.amort_years ?? null,
+        ltv: authority?.ltv ?? null,
+        lender_fee_percent: authority?.lender_fee_percent ?? authority?.financing_fee_percent ?? authority?.origination_fee_percent ?? null,
+        rent_lift: authority?.rent_lift ?? null,
+        timing_or_phasing: authority?.timing_or_phasing ?? null,
+        budget_rows: Array.isArray(authority?.budget_rows) ? authority.budget_rows : null,
+        execution_rows: Array.isArray(authority?.execution_rows) ? authority.execution_rows : null,
+        invariant_status: authority?.invariant_status || authority?.treatment_category || null,
+      };
+    };
+    const canonicalRows = canonicalSupportDocEntries.map(([fileId, authority]) => {
+      const normalized = normalizeCanonicalSupportDocAuthorityRow(authority, fileId);
+      return {
+        key: String(normalized.fileId || fileId).toLowerCase(),
+        name: escapeHtml(normalized.originalFilename),
+        role: escapeHtml(normalized.displayLabel),
+        treatment: escapeHtml(normalized.treatmentLabel),
+        use: escapeHtml(normalized.useLabel),
+        note: escapeHtml(normalized.useLabel),
+        source_basis: normalized.authoritySource,
+        reason_code: `canonical_support_doc_${String(normalized.canonicalRole || "other_support").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "other_support"}`,
+        category: normalized.category,
+        normalized,
       };
     });
     const canonicalModeled = [];
@@ -3552,10 +3618,10 @@ function buildDocumentTreatmentSummaryHtml({
       : "";
     setRenderedDocumentTreatmentRows(
       canonicalRows.map((row) => ({
-        filename: String(row.name || "").trim(),
-        displayLabel: String(row.role || "").trim(),
-        treatment: String(row.treatment || "").trim(),
-        use: String(row.use || "").trim(),
+        filename: String(row.normalized?.originalFilename || row.name || "").trim(),
+        displayLabel: String(row.normalized?.displayLabel || row.role || "").trim(),
+        treatment: String(row.normalized?.treatmentLabel || row.treatment || "").trim(),
+        use: String(row.normalized?.useLabel || row.use || "").trim(),
       }))
     );
     return `<div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p>${sourceTreatmentTableHtml}${section("Modeled Inputs", canonicalModeled, "No modeled inputs were classified from structured source metadata.")}${section("Displayed / Limited Use", canonicalLimitedUse, "No limited-use historical capital items were classified from structured source metadata.")}${section("Listed but Not Quantitatively Modeled", canonicalNotModeled, "No additional unmodeled support files were identified.")}</div>`;
@@ -5900,6 +5966,8 @@ function buildScreeningDataCoverageSummary({
   propertyTaxBindingState = null,
   documentQuantitativeUsageMap = null,
   supportDocAuthorityRows = null,
+  canonicalSupportDocMap = null,
+  renderedDocumentTreatmentRowsOut = null,
 }) {
   const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
   const t12Checks = [
@@ -6118,6 +6186,8 @@ function buildScreeningDataCoverageSummary({
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
       supportDocAuthorityRows,
+      canonicalSupportDocMap,
+      renderedDocumentTreatmentRowsOut,
     });
     return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : currentDebtCoverageCopy)}</p>${reconciliationCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationCopy)}</p>` : ""}${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatmentSummaryHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${coverageTableHtml}${fieldCompletenessClarification}</div>${hasUploadedFiles ? `<p class="small" style="margin-top:8px;">Uploaded files are listed separately; only structured inputs are used quantitatively.</p>` : ""}`;
   }
@@ -9487,8 +9557,55 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     const rrUnits = Number.isFinite(acquisitionMemoUnits) ? acquisitionMemoUnits : null;
     let hasForwardLookingRenovationInputs = false;
     const renderedDocumentTreatmentRows = [];
-    const renderSupportDocAuthorityRows = buildCanonicalSupportDocAuthorityRows({
-      documentSources,
+    let sourcePackageQaFiles = [];
+    let sourcePackageQaArtifacts = [];
+    let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
+    let coverageArtifacts = [];
+    if (isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object" && Array.isArray(body.__test_payloads.coverageArtifacts)) {
+      coverageArtifacts = body.__test_payloads.coverageArtifacts;
+    }
+    if (jobId) {
+      const { data: jobFiles, error: jobFilesErr } = await supabase
+        .from("analysis_job_files")
+        .select("id, original_filename, doc_type, mime_type, parse_status, parse_error")
+        .eq("job_id", jobId);
+      if (!jobFilesErr && Array.isArray(jobFiles)) {
+        coverageFiles = jobFiles;
+      }
+      const { data: artifactRows, error: artifactRowsErr } = await supabase
+        .from("analysis_artifacts")
+        .select("type, payload, created_at")
+        .eq("job_id", jobId)
+        .in("type", [
+          "rent_roll_parsed",
+          "t12_parsed",
+          "loan_term_sheet_parsed",
+          "mortgage_statement_parsed",
+          "renovation_parsed",
+          "appraisal_parsed",
+          "property_tax_parsed",
+          "document_text_extracted",
+        ])
+        .order("created_at", { ascending: false });
+      if (!artifactRowsErr && Array.isArray(artifactRows)) {
+        coverageArtifacts = artifactRows;
+      }
+    }
+    sourcePackageQaFiles = coverageFiles;
+    sourcePackageQaArtifacts = coverageArtifacts;
+    const supportFileRows = Array.isArray(coverageFiles)
+      ? coverageFiles.filter((file) => {
+        const text = String([
+          file?.original_filename,
+          file?.doc_type,
+          file?.display_doc_type,
+        ].filter(Boolean).join(" ")).toLowerCase();
+        return !/(t12|rent[_\s-]*roll)/i.test(text);
+      })
+      : [];
+    const canonicalSupportDocAuthorityRows = buildCanonicalSupportDocAuthorityRows({
+      documentSources: supportFileRows,
+      artifacts: coverageArtifacts,
       loanTermSheetTermsPayload,
       acquisitionTermsPayload,
       mortgagePayload,
@@ -9497,7 +9614,64 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       appraisalPayload,
     });
     const canonicalSupportDocMap = new Map();
-    const renderAcquisitionAuthorityRow = renderSupportDocAuthorityRows.find((row) =>
+    const canonicalSupportDocAuthorityMapRows = [];
+    const supportDocMapKeyForRow = (row = {}) => String(
+      row?.file_id ||
+      row?.source_file_id ||
+      row?.document_id ||
+      row?.artifact_file_id ||
+      row?.id ||
+      row?.canonical_support_doc_identity_key ||
+      row?.original_filename ||
+      ""
+    ).trim().toLowerCase();
+    for (const authority of canonicalSupportDocAuthorityRows) {
+      if (!authority || typeof authority !== "object") continue;
+      const mapKey = supportDocMapKeyForRow(authority);
+      if (!mapKey) continue;
+      canonicalSupportDocMap.set(mapKey, authority);
+      const extractedText = String(
+        authority?.source_text ||
+        authority?.raw_text ||
+        authority?.extracted_text ||
+        authority?.notes ||
+        authority?.loan_terms_text ||
+        ""
+      ).trim();
+      canonicalSupportDocAuthorityMapRows.push({
+        filename: authority?.original_filename || null,
+        file_id: authority?.file_id || authority?.source_file_id || authority?.document_id || authority?.artifact_file_id || authority?.id || null,
+        map_keys_written: [mapKey],
+        extracted_text_present: Boolean(extractedText),
+        extracted_text_snippet: extractedText ? extractedText.slice(0, 500) : null,
+        parser_role: authority?.semantic_doc_role || null,
+        parser_display_label: authority?.semantic_doc_display_label || null,
+        authority_source: authority?.authoritySource || authority?.authority_source || null,
+        final_canonical_role: authority?.canonical_support_doc_role || authority?.semantic_doc_role || null,
+        final_display_label: authority?.document_role_label || authority?.semantic_doc_display_label || null,
+        treatment: authority?.treatment_label || authority?.treatment || null,
+        use: authority?.use_label || authority?.use || null,
+        confidence: Number.isFinite(Number(authority?.confidence)) ? Number(authority.confidence) : null,
+        outstanding_balance: authority?.outstanding_balance ?? authority?.current_outstanding_balance ?? authority?.current_loan_balance ?? null,
+        purchase_price: authority?.purchase_price ?? authority?.acquisition_price ?? authority?.asking_price ?? null,
+        total_budget: authority?.total_budget ?? authority?.total_capex ?? authority?.renovation_budget ?? null,
+        interest_rate: authority?.interest_rate ?? null,
+        amortization_years: authority?.amortization_years ?? authority?.amort_years ?? null,
+        ltv: authority?.ltv ?? null,
+        lender_fee_percent: authority?.lender_fee_percent ?? authority?.financing_fee_percent ?? authority?.origination_fee_percent ?? null,
+        rent_lift: authority?.rent_lift ?? null,
+        timing_or_phasing: authority?.timing_or_phasing ?? null,
+        budget_rows: Array.isArray(authority?.budget_rows) ? authority.budget_rows : null,
+        execution_rows: Array.isArray(authority?.execution_rows) ? authority.execution_rows : null,
+        invariant_status: authority?.treatment_category || null,
+      });
+    }
+    const canonicalSupportDocAuthorityMapArtifact = {
+      type: "canonical_support_doc_authority_map",
+      bucket: "internal",
+      payload: canonicalSupportDocAuthorityMapRows,
+    };
+    const renderAcquisitionAuthorityRow = canonicalSupportDocAuthorityRows.find((row) =>
       row?.has_acquisition_support === true ||
       row?.has_proposed_acquisition_financing === true ||
       /(purchase_assumptions|proposed_acquisition_financing)/i.test(String(row?.canonical_support_doc_role || ""))
@@ -9551,7 +9725,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       documentQuantitativeUsageMap,
       documentSources,
       canonicalSupportDocMap,
-      supportDocAuthorityRows: renderSupportDocAuthorityRows,
+      supportDocAuthorityRows: canonicalSupportDocAuthorityRows,
+      canonical_support_doc_authority_map: canonicalSupportDocAuthorityMapArtifact,
     };
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
@@ -11308,6 +11483,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       propertyTaxBindingState,
       documentQuantitativeUsageMap,
       supportDocAuthorityRows: acquisitionMemoRenderContext?.supportDocAuthorityRows || null,
+      canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
+      renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
     });
     screeningCoverageHtml = dataCoverageBlockHtml;
     finalHtml = replaceAll(
@@ -11683,6 +11860,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTaxPayload,
         propertyTaxBindingState,
         documentQuantitativeUsageMap,
+        canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
+        renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
       if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
@@ -12343,107 +12522,8 @@ let qaDirectorReviewResult = null;
 let deliveryGateDecisionResult = null;
 let deliveryDecisionStateResult = null;
 let sourcePackageQaResult = null;
-let sourcePackageQaFiles = [];
-let sourcePackageQaArtifacts = [];
 try {
-  let coverageFiles = Array.isArray(documentSources) ? documentSources : [];
-  let coverageArtifacts = [];
-  if (isFullRenderHarness && body?.__test_payloads && typeof body.__test_payloads === "object" && Array.isArray(body.__test_payloads.coverageArtifacts)) {
-    coverageArtifacts = body.__test_payloads.coverageArtifacts;
-  }
-  if (jobId) {
-    const { data: jobFiles, error: jobFilesErr } = await supabase
-      .from("analysis_job_files")
-      .select("id, original_filename, doc_type, mime_type, parse_status, parse_error")
-      .eq("job_id", jobId);
-    if (!jobFilesErr && Array.isArray(jobFiles)) {
-      coverageFiles = jobFiles;
-    }
-    const { data: artifactRows, error: artifactRowsErr } = await supabase
-      .from("analysis_artifacts")
-      .select("type, payload, created_at")
-      .eq("job_id", jobId)
-      .in("type", [
-        "rent_roll_parsed",
-        "t12_parsed",
-        "loan_term_sheet_parsed",
-        "mortgage_statement_parsed",
-        "renovation_parsed",
-        "appraisal_parsed",
-        "property_tax_parsed",
-        "document_text_extracted",
-      ])
-      .order("created_at", { ascending: false });
-    if (!artifactRowsErr && Array.isArray(artifactRows)) {
-      coverageArtifacts = artifactRows;
-    }
-  }
-  sourcePackageQaFiles = coverageFiles;
-  sourcePackageQaArtifacts = coverageArtifacts;
-  const supportFileRows = Array.isArray(coverageFiles)
-    ? coverageFiles.filter((file) => {
-      const text = String([
-        file?.original_filename,
-        file?.doc_type,
-        file?.display_doc_type,
-      ].filter(Boolean).join(" ")).toLowerCase();
-      return Boolean(file?.id) && !/(t12|rent[_\s-]*roll)/i.test(text);
-    })
-    : [];
-  const documentTextByFileId = new Map();
-  const parserArtifactByFileId = new Map();
-  for (const artifact of Array.isArray(coverageArtifacts) ? coverageArtifacts : []) {
-    const payload = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : null;
-    const fileId = String(payload?.file_id || payload?.source_file_id || payload?.fileId || "").trim();
-    if (!fileId) continue;
-    if (artifact?.type === "document_text_extracted") {
-      documentTextByFileId.set(
-        fileId,
-        String(payload?.text || payload?.excerpt || payload?.raw_text || "").trim()
-      );
-      continue;
-    }
-    if (artifact?.type && /_parsed$/i.test(artifact.type) && !parserArtifactByFileId.has(fileId)) {
-      parserArtifactByFileId.set(fileId, artifact);
-    }
-  }
-  const canonicalSupportDocEntries = [];
-  for (const file of supportFileRows) {
-    const fileId = String(file?.id || "").trim();
-    if (!fileId) continue;
-    const parserArtifact = parserArtifactByFileId.get(fileId) || null;
-    const parserPayload = parserArtifact?.payload && typeof parserArtifact.payload === "object"
-      ? parserArtifact.payload
-      : null;
-    const extractedText = documentTextByFileId.get(fileId) || parserPayload?.source_text || parserPayload?.raw_text || "";
-    const authority = resolveCanonicalSupportDocAuthority({
-      fileId,
-      originalFilename: file?.original_filename || null,
-      extractedText,
-      rawText: extractedText,
-      declaredDocType: file?.doc_type || null,
-      detectedDocType: file?.display_doc_type || null,
-      payload: parserPayload || file,
-      parserArtifact,
-      aiRecoveryHints: parserPayload?.ai_recovery_evidence || null,
-    });
-    canonicalSupportDocMap.set(fileId, authority);
-    canonicalSupportDocEntries.push({
-      file_id: fileId,
-      original_filename: file?.original_filename || null,
-      authority,
-    });
-  }
-  const supportDocAuthorityRowsForQa = buildCanonicalSupportDocAuthorityRows({
-    documentSources: coverageFiles,
-    artifacts: coverageArtifacts,
-    loanTermSheetTermsPayload,
-    acquisitionTermsPayload,
-    mortgagePayload,
-    renovationPayload,
-    propertyTaxPayload,
-    appraisalPayload,
-  });
+  const supportDocAuthorityRowsForQa = canonicalSupportDocAuthorityRows;
   const sourceCoverageQa = buildSourceReportCoverageQa({
     jobId: jobId || null,
     userId: effectiveUserId || null,
@@ -12451,8 +12531,8 @@ try {
     reportType,
     reportTier,
     html: qaHtml,
-    uploadedFiles: coverageFiles,
-    artifacts: coverageArtifacts,
+    uploadedFiles: sourcePackageQaFiles,
+    artifacts: sourcePackageQaArtifacts,
     sourceReconciliationState,
     visibleClassificationState: underwritingState?.core?.classification?.visibleClassificationState || null,
     currentDebtState:
@@ -12485,6 +12565,7 @@ try {
       null,
     underwritingState,
   });
+  sourceCoverageQa.canonical_support_doc_authority_map = canonicalSupportDocAuthorityMapArtifact;
   sourceCoverageQa.support_document_authority_rows = supportDocAuthorityRowsForQa;
   sourceCoverageQa.document_treatment_canonical_rows = supportDocAuthorityRowsForQa.length > 0
     ? supportDocAuthorityRowsForQa

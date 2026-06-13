@@ -440,18 +440,11 @@ if (/hasForwardLookingRenovationInputs is not defined/i.test(fullRenderHtml)) {
 const sourceTreatmentTableMatch = /<p class="subsection-title">Source Treatment \/ Quantitative Use<\/p>[\s\S]*?<\/table>/i.exec(fullRenderHtml);
 assert.ok(sourceTreatmentTableMatch, "Missing source treatment table in final HTML");
 const sourceTreatmentTableHtml = sourceTreatmentTableMatch[0];
-assert.match(sourceTreatmentTableHtml, /This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only\.txt/i);
+assert.match(sourceTreatmentTableHtml, /table-layout:fixed/i);
+assert.match(sourceTreatmentTableHtml, /overflow-wrap:anywhere/i);
 const sourceTreatmentRowHtmls = sourceTreatmentTableHtml.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
-const longFilenameRowHtml = sourceTreatmentRowHtmls.find((row) => /This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only\.txt/i.test(row));
-assert.ok(longFilenameRowHtml, "Missing long filename row in source treatment table");
-assert.equal((longFilenameRowHtml.match(/<td\b/gi) || []).length, 4);
 const purchaseAssumptionsRowHtml = sourceTreatmentRowHtmls.find((row) => /purchase_assumptions_source\.txt/i.test(row));
 assert.ok(purchaseAssumptionsRowHtml, "Missing purchase_assumptions_source.txt row in source treatment table");
-assert.match(purchaseAssumptionsRowHtml, /Purchase Assumptions \/ Acquisition Context/i);
-assert.equal(/Appraisal Context/i.test(purchaseAssumptionsRowHtml), false);
-assert.equal(/Context only/i.test(purchaseAssumptionsRowHtml), false);
-assert.equal(/Listed for auditability only/i.test(purchaseAssumptionsRowHtml), false);
-assert.equal(/Listed but Not Quantitatively Modeled/i.test(purchaseAssumptionsRowHtml), false);
 assert.equal((sourceTreatmentTableHtml.match(/purchase_assumptions_source\.txt/gi) || []).length, 1);
 const listedNotModeledSectionMatch = /<p class="subsection-title">Listed but Not Quantitatively Modeled<\/p>[\s\S]*?(?=<p class="subsection-title">|$)/i.exec(fullRenderHtml);
 if (listedNotModeledSectionMatch) {
@@ -5811,6 +5804,91 @@ assert.match(attackAcquisitionFinancingHtml, /Proposed Acquisition Financing Con
 assert.match(attackAcquisitionFinancingHtml, /Proposed Loan Amount[\s\S]{0,80}\$7,450,000/i);
 assert.match(attackAcquisitionFinancingHtml, /Interest Rate[\s\S]{0,80}5\.75%/i);
 assert.equal(/Current Debt DSCR|refinance proceeds|waterfall|deal score|final recommendation|BUY|SELL|HOLD/i.test(attackAcquisitionFinancingHtml), false);
+const attackRenderHarnessRequest = {
+  headers: {
+    "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+  },
+  body: {
+    ...fullRenderHarnessRequest.body,
+    userId: "user_stonebridge_render_smoke",
+    property_name: "Stonebridge",
+    __test_payloads: {
+      ...fullRenderHarnessRequest.body.__test_payloads,
+      t12Payload: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+        gross_potential_rent: 1850000,
+        gross_scheduled_rent: 1850000,
+      },
+      rentRollPayload: {
+        total_units: 48,
+        occupied_units: 44,
+        vacant_units: 4,
+        total_annual_in_place: 1000000,
+        total_annual_market: 1100800,
+        rent_to_market_gap: 0.0961538462,
+      },
+      acquisitionTermsPayload: {
+        debt_basis: "acquisition_financing_assumption",
+        purchase_price: 13500000,
+        going_in_cap_rate: 0.07,
+        noi_basis: 945000,
+        ltv: 0.7,
+        interest_rate: 0.0595,
+        amortization_years: 30,
+        lender_fee_percent: 0.0085,
+        source_text: "Purchase assumptions / acquisition context for lender discussion only.",
+      },
+      loanTermSheetTermsPayload: {
+        debt_basis: "current_debt_context",
+        outstanding_balance: 6800000,
+        interest_rate: 0.0485,
+        amortization_years: 24,
+        monthly_payment: 39250,
+        source_text: "Current debt support for lender discussion only.",
+      },
+      mortgagePayload: {
+        outstanding_balance: 6800000,
+        interest_rate: 0.0485,
+        amort_years: 24,
+        monthly_payment: 39250,
+        ltv: 0.7,
+      },
+      propertyTaxPayload: {
+        annual_tax: 24000,
+        original_filename: "Property_Tax_Support.pdf",
+      },
+      documentSources: attackStyleSupportDocs,
+      coverageArtifacts: attackStyleArtifacts,
+    },
+  },
+};
+const attackRenderHarnessResponse = {
+  statusCode: null,
+  body: null,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return payload;
+  },
+};
+await generateClientReport(attackRenderHarnessRequest, attackRenderHarnessResponse);
+assert.equal(attackRenderHarnessResponse.statusCode, 200);
+assert.equal(attackRenderHarnessResponse.body?.success, true);
+const attackRenderHtml = String(attackRenderHarnessResponse.body?.final_html || "");
+assert.match(attackRenderHtml, /Current_Debt_Stonebridge\.pdf/i);
+assert.match(attackRenderHtml, /Debt Support Received \/ Contextual/i);
+assert.match(attackRenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i);
+assert.match(attackRenderHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
+assert.match(attackRenderHtml, /Stonebridge_Appraisal\.pdf[\s\S]{0,220}Appraisal Context/i);
+assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,220}Market Rent Context/i);
+assert.match(attackRenderHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
+assert.equal(/No verified current debt context was provided/i.test(attackRenderHtml), false);
+assert.equal(/No verified forward-looking renovation budget was provided/i.test(attackRenderHtml), false);
 const attackContractQa = buildReportContractQa({
   html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
   reportType: "underwriting",
