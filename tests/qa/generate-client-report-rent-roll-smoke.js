@@ -5894,6 +5894,129 @@ assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(attackRender
 assert.equal(/No verified forward-looking renovation budget was provided/i.test(attackRenderHtml), false);
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(attackRenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget/i.test(attackRenderHtml), false);
+const retest4ShapeSupportDocs = [
+  {
+    id: "sb-assumptions",
+    original_filename: "Stonebridge_Assumptions.pdf",
+    doc_type: "supporting_documents_unclassified",
+    semantic_doc_role: "purchase_assumptions",
+    parse_status: "parsed",
+    source_text: "Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.",
+  },
+  {
+    id: "sb-current-debt",
+    original_filename: "Current_Debt_Stonebridge.pdf",
+    doc_type: "supporting_documents_unclassified",
+    semantic_doc_role: "purchase_assumptions",
+    debt_basis: "acquisition_financing_assumption",
+    parse_status: "parsed",
+    source_text: "Current debt support. Existing/current debt context. Current outstanding balance $6,800,000. Interest rate 4.85%. Amortization remaining 24 years. Monthly payment $39,250. Maturity date 2029-11-01. Keep this document separate from Stonebridge_Assumptions.pdf proposed acquisition financing.",
+  },
+  {
+    id: "sb-reno-plan",
+    original_filename: "Stonebridge_Reno_Plan.pdf",
+    doc_type: "rent_roll",
+    semantic_doc_role: "rent_roll",
+    parse_status: "parsed",
+    source_text: "Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325. Phasing Months 1-24. Common/exterior/contingency rows included.",
+  },
+];
+const retest4ShapeArtifacts = [
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "sb-current-debt",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      text: "Existing Current Debt Statement. This is an existing/current debt context document. Current Outstanding Balance $6,800,000. Interest Rate 4.85%. Amortization Remaining 24 years. Monthly Payment $39,250. Maturity Date 2029-11-01. Keep this document separate from Stonebridge_Assumptions.pdf proposed acquisition financing.",
+      excerpt: "Existing Current Debt Statement. This is an existing/current debt context document. Current Outstanding Balance $6,800,000.",
+    },
+  },
+  {
+    type: "loan_term_sheet_parsed",
+    payload: {
+      file_id: "sb-current-debt",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      semantic_doc_role: "purchase_assumptions",
+      debt_basis: "acquisition_financing_assumption",
+      outstanding_balance: 6800000,
+      interest_rate: 0.0485,
+      amortization_years: 24,
+      monthly_payment: 39250,
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "sb-reno-plan",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      text: "Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325. Phasing Months 1-24. Common/exterior/contingency rows included.",
+      excerpt: "Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000.",
+    },
+  },
+  {
+    type: "rent_roll_parsed",
+    payload: {
+      file_id: "sb-reno-plan",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      semantic_doc_role: "rent_roll",
+      budget_rows: [
+        { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
+        { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
+      ],
+      total_budget: 1280000,
+      timing_or_phasing: "Months 1-24",
+    },
+  },
+];
+const retest4SovereignRows = generatorTest.buildCanonicalSupportDocAuthorityRows({
+  documentSources: retest4ShapeSupportDocs,
+  artifacts: retest4ShapeArtifacts,
+});
+assert.equal(
+  retest4SovereignRows.find((row) => row.original_filename === "Current_Debt_Stonebridge.pdf")?.canonical_support_doc_role,
+  "current_debt_context"
+);
+assert.equal(
+  retest4SovereignRows.find((row) => row.original_filename === "Stonebridge_Reno_Plan.pdf")?.canonical_support_doc_role,
+  "structured_renovation_capex_plan"
+);
+const retest4RenderRequest = {
+  ...attackRenderHarnessRequest,
+  body: {
+    ...attackRenderHarnessRequest.body,
+    __test_payloads: {
+      ...attackRenderHarnessRequest.body.__test_payloads,
+      documentSources: retest4ShapeSupportDocs,
+      coverageArtifacts: retest4ShapeArtifacts,
+    },
+  },
+};
+const retest4RenderResponse = {
+  statusCode: null,
+  body: null,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return payload;
+  },
+};
+await generateClientReport(retest4RenderRequest, retest4RenderResponse);
+assert.equal(retest4RenderResponse.statusCode, 200);
+assert.equal(retest4RenderResponse.body?.success, true);
+const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
+assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i);
+assert.match(retest4RenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Structured Renovation \/ CapEx Plan/i);
+assert.equal(/No verified current debt context was provided/i.test(retest4RenderHtml), false);
+assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(retest4RenderHtml), false);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(retest4RenderHtml), false);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Other Support Document/i.test(retest4RenderHtml), false);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(retest4RenderHtml), false);
+assert.equal(/No verified forward-looking renovation budget/i.test(retest4RenderHtml), false);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}rent-roll parse\/recovery/i.test(retest4RenderHtml), false);
 const attackContractQa = buildReportContractQa({
   html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
   reportType: "underwriting",
