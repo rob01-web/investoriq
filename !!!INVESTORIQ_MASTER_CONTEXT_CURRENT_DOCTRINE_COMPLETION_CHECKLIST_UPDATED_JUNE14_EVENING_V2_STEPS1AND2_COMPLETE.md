@@ -1,3 +1,308 @@
+# June 14, 2026 Evening Addendum — V2 Source-Authority Rebuild Steps 1 and 2 Complete
+
+## Current controlling status
+
+Step 1 (inspection + scaffolding) and Step 2 (buildCanonicalSourcePackage implementation + smoke tests) of the Acquisition Memo V2 Source-Authority Rebuild are complete on branch `acq-memo-v2-source-package`.
+
+Tag `pre-acq-memo-v2-rebuild` is set.
+
+Controlling decision unchanged:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Untouched. Protected.
+
+Acquisition Memo:
+Automation frozen / not launch-cleared.
+Now in active V2 source-authority rebuild. Branch is live. Foundation is built.
+
+Full Underwriting V2:
+Still deferred. Will be built later on the same canonical source package foundation.
+```
+
+## Step 1 result — Call Site Inspection Complete
+
+Codex produced a full inspection report identifying every competing document-role decision-maker in the codebase.
+
+### Confirmed competing decision-makers (complete cut list)
+
+```text
+api/_lib/report-surface-contracts.js ~1544-1659
+  buildSupportDocTaxonomyState
+  PRIMARY decision-maker. Acquisition Memo + shared.
+  Directly assigns purchase assumptions, current debt, renovation,
+  market survey, appraisal, environmental, and property tax roles.
+
+api/_lib/report-surface-contracts.js ~1706-1878
+  resolveCanonicalSupportDocAuthority
+  PRIMARY decision-maker. Acquisition Memo + shared.
+  Resolves keyword, AI, parser, and fallback authority.
+  Assigns role/display/treatment/use.
+
+api/_lib/report-surface-contracts.js ~2610-2648
+  Underwriting inventory acceptance checks against semantic_doc_role.
+  Consumer/fallback validator. Shared path.
+
+api/parse/parse-doc.js ~18-39, ~4916-4921, ~5254, ~5685
+  Parser taxonomy attachment, extracted-text lookup, debt-basis normalization.
+  Upstream decision-maker. Both Acquisition Memo and shared parser flow.
+
+api/_lib/source-package-qa.js ~61-139, ~178-222
+  Artifact inventory from document_text_extracted, semantic_doc_role,
+  debt_basis, parse_error. Consumer that can duplicate role interpretation.
+
+api/generate-client-report.js ~2994-3435
+  buildCanonicalSupportDocAuthorityRows
+  PRIMARY render-time authority builder. Acquisition Memo path.
+  Contains own heuristics and explicit overrides. MAIN TARGET for quarantine.
+
+api/generate-client-report.js ~3448-3670
+  buildDocumentTreatmentSummaryHtml
+  Consumer/fallback renderer. Acquisition Memo path.
+  Canonical branch + legacy fallback both still exist.
+
+api/generate-client-report.js ~4952-5010
+  Preliminary Financing Readiness support-doc lookups.
+  Consumer. Acquisition Memo path.
+
+api/generate-client-report.js ~5228-5264
+  buildLaunchSourceContextBlock
+  Consumer/wrapper. Acquisition Memo path.
+
+api/generate-client-report.js ~5734-5790
+  Acquisition Financing Readiness / current debt separation logic.
+  Consumer and secondary classifier. Acquisition Memo path.
+
+api/generate-client-report.js ~6048-6294
+  buildScreeningDataCoverageSummary
+  Shared consumer. Can re-render Document Treatment using canonical map.
+
+api/generate-client-report.js ~9708-9752
+  render-time canonicalSupportDocMap construction + internal diagnostic.
+  PRIMARY map build for Acquisition Memo render.
+
+api/generate-client-report.js ~10511-10522
+  Renovation authority fallback block.
+  Consumer with fallback authority rebuild. Acquisition Memo path.
+
+api/generate-client-report.js ~11949-11974
+  Harness document-treatment replacement.
+  Late overwrite consumer. Acquisition Memo path.
+
+api/generate-client-report.js ~12696-12718
+  Final HTML DOCUMENT_TREATMENT_SUMMARY overwrite.
+  Late renderer replacement. Acquisition Memo path.
+
+api/_lib/report-contract-qa.js ~1055-2262
+  Support-doc QA checks, contradiction checks, checklist checks,
+  financing-readiness checks. QA consumer, not sovereign.
+
+api/_lib/qa-action-plan.js ~84
+  debt_basis routing. Consumer / advisory gate.
+
+api/_lib/qa-fix-routing.js ~73
+  debt_basis routing. Consumer / advisory gate.
+```
+
+### Why this inspection was essential
+
+The inspection confirmed there are at least 4 separate locations in `generate-client-report.js` alone
+(~2994, ~9708, ~11949, ~12696) that can independently build or overwrite document treatment output.
+This is why RETEST 5 still failed after Patch 4D improved some labels. Patching one of four
+output paths left the other three running. The V2 architecture makes all four irrelevant.
+
+## Step 1 result — Scaffold Files Created
+
+```text
+api/_lib/canonical-source-package.js       — stub only, Step 2 fills this
+api/_lib/acquisition-memo-projection.js    — stub only, Step 3 will fill this
+api/_lib/acquisition-memo-renderer.js      — stub only, Step 4 will fill this
+tests/qa/acquisition-memo-source-package-smoke.js     — stub with 8 golden it() placeholders
+tests/qa/acquisition-memo-authority-boundary-smoke.js — stub with boundary it() placeholder
+```
+
+No production logic was rewritten in Step 1. No live report generation was run.
+
+## Step 2 result — buildCanonicalSourcePackage Implemented
+
+`api/_lib/canonical-source-package.js` is now fully implemented.
+
+### Canonical role enum (8 roles only, no others permitted)
+
+```text
+core_t12
+core_rent_roll
+purchase_assumptions
+current_debt_context
+structured_renovation_capex_plan
+appraisal_context
+market_survey_context
+environmental_context
+```
+
+Files that cannot be confidently classified into one of the above 8 roles
+receive role: "other_support".
+
+### Classification priority order (enforced mechanically)
+
+```text
+1. T12 detection — filename "t12"/"trailing" OR spreadsheet + semantic_doc_role "t12"
+2. Rent Roll detection — filename "rent_roll"/"rentroll" OR spreadsheet + semantic_doc_role "rent_roll"
+3. Current debt detection — debt_basis "current_debt" OR semantic_doc_role "current_debt"
+   CRITICAL: negative language ("not a current mortgage statement") must NEVER trigger current_debt_context.
+   A file with "assumption" in the filename must NEVER be classified as current_debt_context.
+4. Purchase assumptions detection — semantic_doc_role "purchase_assumptions" OR filename contains "assumption" OR debt_basis "proposed_acquisition"
+   NOTE: purchase_assumptions wins over current_debt_context if both signals fire.
+5. Renovation — semantic_doc_role "renovation_plan" OR filename "reno"/"renovation"/"capex"
+6. Appraisal — semantic_doc_role "appraisal" OR filename "appraisal"
+7. Market survey — semantic_doc_role "market_survey" OR filename "market"/"survey"
+8. Environmental — semantic_doc_role "phase_i_esa"/"environmental" OR filename "esa"/"phase_i"/"phase"
+   NOTE: environmental_context must NEVER be classified as property tax support.
+9. Default → other_support
+```
+
+### Key architectural guarantee
+
+`buildCanonicalSourcePackage` is the ONLY function in the codebase permitted to read:
+- semantic_doc_role
+- debt_basis
+- doc_type
+- parse_error
+- document_text_extracted
+- filename heuristics
+
+`buildAcquisitionMemoProjection` and `renderAcquisitionMemo` are forbidden from reading these fields directly.
+The authority boundary smoke test enforces this mechanically.
+
+### Output contract
+
+```javascript
+{
+  coreT12: { fileId, originalFilename, role: "core_t12" } | null,
+  coreRentRoll: { fileId, originalFilename, role: "core_rent_roll" } | null,
+  supportDocs: Map<fileId, CanonicalSupportDocEntry>,
+  authorityVersion: "v2"
+}
+```
+
+## Step 2 result — Smoke Tests Implemented
+
+### acquisition-memo-source-package-smoke.js — 8 golden assertions + 1 negative assertion
+
+```text
+GOLDEN ASSERTIONS:
+T12 file → coreT12 set AND role === "core_t12"
+Rent Roll file → coreRentRoll set AND role === "core_rent_roll"
+Stonebridge_Assumptions.pdf → role === "purchase_assumptions"
+Current_Debt_Stonebridge.pdf → role === "current_debt_context"
+Stonebridge_Reno_Plan.pdf → role === "structured_renovation_capex_plan"
+Stonebridge_Appraisal_Summary.pdf → role === "appraisal_context"
+Stonebridge_Market_Survey.pdf → role === "market_survey_context"
+Stonebridge_Phase_I_ESA.pdf → role === "environmental_context"
+
+NEGATIVE ASSERTION (critical contamination guard):
+A file named "Stonebridge_Assumptions.pdf" with debt_basis "proposed_acquisition"
+must NEVER resolve to role === "current_debt_context"
+```
+
+### acquisition-memo-authority-boundary-smoke.js
+
+```text
+Reads source text of acquisition-memo-projection.js and acquisition-memo-renderer.js.
+Asserts neither file contains forbidden authority fields:
+  semantic_doc_role, debt_basis, doc_type, parse_error, document_text_extracted,
+  originalFilename.toLowerCase, filename.toLowerCase
+Currently passes trivially because projection/renderer are still stubs.
+Becomes enforcement gate as Steps 3 and 4 are implemented.
+```
+
+### Validation commands (all must pass before Step 2 is marked complete)
+
+```text
+node --check api/_lib/canonical-source-package.js
+node --check tests/qa/acquisition-memo-source-package-smoke.js
+node --check tests/qa/acquisition-memo-authority-boundary-smoke.js
+node tests/qa/acquisition-memo-source-package-smoke.js
+node tests/qa/acquisition-memo-authority-boundary-smoke.js
+```
+
+Awaiting Codex confirmation that all 5 pass.
+
+## What was NOT touched in Steps 1 and 2
+
+```text
+generate-client-report.js — untouched
+report-surface-contracts.js — untouched (read-only reference only)
+Screening Report — untouched
+T12/Rent Roll core math — untouched
+Stripe, SQL, Supabase, DocRaptor, auth/upload gates, pricing, Admin Dashboard — untouched
+DSCR, refi, DCF, waterfall, equity return, deal score, final recommendation — untouched
+```
+
+## Step 2 cut list (for future steps)
+
+```text
+buildCanonicalSupportDocAuthorityRows in generate-client-report.js
+  → quarantine/replace in Step 3/4
+
+resolveCanonicalSupportDocAuthority and buildSupportDocTaxonomyState in report-surface-contracts.js
+  → convert to evidence extractors or move behind canonical source package
+
+buildDocumentTreatmentSummaryHtml legacy fallback
+  → remove for Acquisition Memo once canonical source package enforced
+
+buildLaunchSourceContextBlock, buildScreeningDataCoverageSummary,
+buildPreliminaryFinancingReadinessSummaryHtml, buildAcquisitionFinancingReadinessHtml,
+renovation acknowledgement path
+  → convert to dumb consumers only
+
+report-contract-qa, qa-action-plan, qa-fix-routing, source-package-qa
+  → stop independently re-deciding document roles; consume canonical authority only
+
+parse-doc.js
+  → remains upstream extractor; taxonomy attachment no longer treated as
+    competing authority for Acquisition Memo render decisions
+```
+
+## Rebuild sequence status
+
+```text
+Step 1: Call site inspection + scaffold creation — COMPLETE
+Step 2: buildCanonicalSourcePackage implementation + smoke tests — COMPLETE (awaiting Codex validation confirmation)
+Step 3: buildAcquisitionMemoProjection implementation — PENDING
+Step 4: renderAcquisitionMemo implementation — PENDING
+Step 5: Thin bridge wiring into generate-client-report.js — PENDING
+Step 6: Quarantine legacy competing decision-makers — PENDING
+Step 7: Final Attack Test 8 golden replay — PENDING
+```
+
+## Fresh continuation point
+
+```text
+Resume here in next session:
+Receive Codex Step 2 validation result (all 5 node commands).
+If all 5 pass → proceed to Step 3 (buildAcquisitionMemoProjection).
+If any fail → diagnose and fix before moving to Step 3.
+Do not proceed to Step 3 until all 5 validation commands pass.
+Do not touch generate-client-report.js until Step 5.
+Do not run any live report generation until Step 7.
+```
+
+## Permanent guardrails (unchanged)
+
+```text
+Do not run another V1 RETEST as a tiny patch loop.
+Do not write another one-off Current Debt / Reno / Assumptions label patch.
+Do not rebuild Full Underwriting first.
+Do not touch Screening except protective tests.
+Do not touch Stripe, SQL, Supabase lifecycle, payment/access, auth/upload gates,
+pricing, DocRaptor config, or Admin Dashboard.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/
+final-recommendation/BUY/SELL/HOLD inside Acquisition Memo.
+```
+
+---
+
 # June 14, 2026 Addendum - Acquisition Memo Automation Frozen / Source-Authority Rebuild Start / No More Tiny Patch Loop
 
 ## Current controlling decision

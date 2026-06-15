@@ -1,3 +1,132 @@
+# June 14, 2026 Evening Addendum — CVF Update / V2 Rebuild Steps 1 and 2 Complete
+
+## Current CVF status after Steps 1 and 2
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll parsing: PASS / holding.
+CVF-03 / CVF-06 Source reconciliation disclosure: PASS WITH DISCLOSURE / holding.
+CVF-04 Current debt / proposed acquisition financing separation: ACTIVE REBUILD — Step 2 foundation complete.
+CVF-05 V2 containment: PASS / holding.
+CVF-07 / CVF-15 Optional-support/source-package authority: ACTIVE REBUILD — Step 2 foundation complete.
+CVF-08 / CVF-09 / CVF-10 Delivery/publish path: PASS for customer delivery.
+CVF-14 Advisory QA: Will be fixed in Step 6 when QA is converted to dumb consumer.
+```
+
+## Why the patch loop is permanently closed
+
+Step 1 inspection confirmed there are at least 4 separate locations in `generate-client-report.js`
+alone (~2994, ~9708, ~11949, ~12696) that can independently build or overwrite document treatment output.
+
+This is the structural proof of why RETEST 1 through RETEST 5 each fixed a visible surface
+while leaving another competing path running underneath. No patch can win against 4 independent
+output paths. The V2 rebuild eliminates all 4 by making them dumb consumers of a single authority.
+
+## Step 2 CVF progress
+
+CVF-04 and CVF-07/CVF-15 now have a mechanically enforced solution at the foundation level.
+
+`buildCanonicalSourcePackage` enforces:
+
+```text
+Stonebridge_Assumptions.pdf → purchase_assumptions (never current_debt_context)
+Current_Debt_Stonebridge.pdf → current_debt_context (never contaminated by assumption terms)
+Stonebridge_Reno_Plan.pdf → structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf → appraisal_context (never purchase_assumptions)
+Stonebridge_Phase_I_ESA.pdf → environmental_context (never property tax support)
+T12 file → core_t12 (never other_support)
+Rent Roll file → core_rent_roll (never other_support)
+Stonebridge_Market_Survey.pdf → market_survey_context
+```
+
+The negative contamination guard is also enforced by the smoke test:
+A file with "assumption" in its filename and debt_basis "proposed_acquisition" can NEVER
+resolve to current_debt_context regardless of any other signal.
+
+## CVF-04 specific enforcement mechanism
+
+The old failure mode:
+
+```text
+Negative language in Stonebridge_Assumptions.pdf ("not a current mortgage statement",
+"does not represent existing debt") triggered the current-debt classification path
+because the system read for the presence of debt-related language rather than
+distinguishing positive current-debt evidence from limiting/exclusion language.
+```
+
+The new enforcement:
+
+```text
+Classification rule 3 (current_debt_context) requires POSITIVE evidence:
+current outstanding balance, current interest rate, or existing mortgage maturity.
+Negative/exclusion language is not positive evidence and cannot trigger the role.
+
+Classification rule 4 (purchase_assumptions) explicitly wins over rule 3
+if a file contains "assumption" in the filename OR has debt_basis "proposed_acquisition".
+Priority order is mechanically enforced — not a hint or preference.
+```
+
+## CVF-07/CVF-15 specific enforcement mechanism
+
+The old failure mode:
+
+```text
+Phase I ESA was classified as Property Tax Support because environmental language
+co-occurred with property-related terms. No strict role separation existed.
+Appraisal was overpromoted to Purchase Assumptions because acquisition context
+language co-occurred with price/value terms.
+```
+
+The new enforcement:
+
+```text
+environmental_context is a discrete canonical role.
+appraisal_context is a discrete canonical role.
+Neither can bleed into property_tax_support or purchase_assumptions
+because those are separate canonical roles with separate detection rules.
+A file cannot hold two canonical roles simultaneously.
+The first matching rule in priority order wins and classification stops.
+```
+
+## CVF-15 T12/Rent Roll demoted-to-support-doc fix
+
+```text
+T12 and Rent Roll now return as coreT12 and coreRentRoll on the canonical source package root,
+not as entries in the supportDocs map.
+They carry role "core_t12" and "core_rent_roll" with treatment "Primary quantitative input".
+They can never appear as "Other Support Document / Context only / not used quantitatively."
+```
+
+## Rebuild sequence CVF mapping
+
+```text
+Step 1 (complete): Inspection — confirmed all competing decision-makers
+Step 2 (complete): buildCanonicalSourcePackage — CVF-04, CVF-07, CVF-15 foundation enforced
+Step 3 (pending): buildAcquisitionMemoProjection — CVF-04, CVF-07, CVF-15 propagation
+Step 4 (pending): renderAcquisitionMemo — CVF-04, CVF-07, CVF-15 visible output
+Step 5 (pending): Thin bridge in generate-client-report.js — live path wiring
+Step 6 (pending): Quarantine legacy paths — closes all remaining CVF-14 noise
+Step 7 (pending): Final Attack Test 8 golden replay — permanent RETEST 5 expectations verified
+```
+
+## Launch posture unchanged
+
+```text
+Screening: Launchable / founder-beta ready.
+Acquisition Memo: Not launch-cleared. V2 rebuild active on branch acq-memo-v2-source-package.
+Full Underwriting V2: Deferred.
+```
+
+## Fresh continuation point
+
+```text
+Resume in next session with Codex Step 2 validation result.
+All 5 node commands must pass before proceeding to Step 3.
+Step 3 prompt will implement buildAcquisitionMemoProjection consuming
+the canonical source package output with zero independent classification.
+```
+
+---
+
 # June 14, 2026 Addendum - CVF Ledger Update / Acquisition Memo V2 Source-Authority Rebuild Start
 
 ## Current CVF controlling status after RETEST 5
