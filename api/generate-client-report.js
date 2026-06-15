@@ -10014,7 +10014,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         effectiveReportMode === "v1_core" &&
         acqMemoV2SourceAuthorityEnabled &&
         acquisitionMemoV2Bridge?.renderedAcquisitionMemo &&
-        acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
+        acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
         typeof preliminaryFinancingReadinessSummaryBlockHtml === "string"
       ) {
         preliminaryFinancingReadinessSummaryBlockHtml = preliminaryFinancingReadinessSummaryBlockHtml.replace(

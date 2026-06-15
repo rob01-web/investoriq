@@ -1,0 +1,1121 @@
+[dotenv@17.2.3] injecting env (8) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+No storage option exists to persist the session, which may result in unexpected behavior when using auth.
+        If you want to set persistSession to true, please provide a storage option or you may set persistSession to false to disable this warning.
+WARN Missing narrative sections: execSummary, cashFlowProjections, riskAssessment, renovationNarrative, debtStructure, dealScoreSummary, dealScoreInterpretation, advancedModelingIntro, dcfInterpretation, finalRecommendation
+WARN Missing narrative sections: execSummary, unitValueAdd, cashFlowProjections, neighborhoodAnalysis, riskAssessment, renovationNarrative, debtStructure, dealScoreSummary, dealScoreInterpretation, advancedModelingIntro, dcfInterpretation, finalRecommendation
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i. Input:
+
+'<!DOCTYPE html>\r\n' +
+  '<html lang="en">\r\n' +
+  '<head>\r\n' +
+  ' <meta charset="UTF-8" />\r\n' +
+  ' <title>InvestorIQ Capital Intelligence Memorandum - Stonebridge </title>\r\n' +
+  ' <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />\r\n' +
+  ' <style>\r\n' +
+  ' @page {\r\n' +
+  ' size: Letter;\r\n' +
+  ' margin: 36px 36px 48px 36px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' @page :first {\r\n' +
+  ' margin: 0;\r\n' +
+  ' }\r\n' +
+  ' :root {\r\n' +
+  ' --cover-bg: #0F2318;\r\n' +
+  ' --gold: #C9A84C;\r\n' +
+  ' --gold-dark: #9A7A2C;\r\n' +
+  ' --white: #FFFFFF;\r\n' +
+  ' --paper-warm: #FAFAF8;\r\n' +
+  ' --ink: #0C0C0C;\r\n' +
+  ' --ink-2: #363636;\r\n' +
+  ' --ink-3: #606060;\r\n' +
+  ' --ink-4: #9A9A9A;\r\n' +
+  ' --hairline: #E8E5DF;\r\n' +
+  ' --hairline-mid: #D0CCC4;\r\n' +
+  ' --row-alt: #FAFAF8;\r\n' +
+  " --font-display: 'Cormorant Garamond', Georgia, serif;\r\n" +
+  " --font-body: 'DM Sans', system-ui, sans-serif;\r\n" +
+  " --font-mono: 'DM Mono', 'Courier New', monospace;\r\n" +
+  ' }\r\n' +
+  '\r\n' +
+  ' * {\r\n' +
+  ' box-sizing: border-box;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' html,\r\n' +
+  ' body {\r\n' +
+  ' margin: 0;\r\n' +
+  ' padding: 0;\r\n' +
+  ' background: var(--white);\r\n' +
+  ' color: var(--ink);\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' line-height: 1.5;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' body {\r\n' +
+  ' margin: 0;\r\n' +
+  ' padding: 0;\r\n' +
+  ' background: var(--white);\r\n' +
+  ' color: var(--ink);\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' line-height: 1.5;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  ' .report-container {\r\n' +
+  ' width: 100%;\r\n' +
+  ' padding: 0.5in 0.55in 0.52in 0.55in;\r\n' +
+  ' box-sizing: border-box;\r\n' +
+  ' background: var(--white);\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-wrap {\r\n' +
+  ' page-break-after: always;\r\n' +
+  ' page-break-inside: avoid;\r\n' +
+  ' margin: 0;\r\n' +
+  ' padding: 0;\r\n' +
+  ' width: 100%;\r\n' +
+  ' height: 10.5in;\r\n' +
+  ' overflow: hidden;\r\n' +
+  ' position: relative;\r\n' +
+  ' background: var(--cover-bg);\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-wrap::before {\r\n' +
+  " content: '';\r\n" +
+  ' position: absolute;\r\n' +
+  ' top: 0;\r\n' +
+  ' bottom: 0;\r\n' +
+  ' left: 0.6in;\r\n' +
+  ' width: 1px;\r\n' +
+  ' background: linear-gradient(\r\n' +
+  ' to bottom,\r\n' +
+  ' transparent 0%,\r\n' +
+  ' rgba(201,168,76,0.45) 12%,\r\n' +
+  ' rgba(201,168,76,0.45) 88%,\r\n' +
+  ' transparent 100%\r\n' +
+  ' );\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-wrap::after {\r\n' +
+  " content: '';\r\n" +
+  ' position: absolute;\r\n' +
+  ' top: 0.6in;\r\n' +
+  ' right: 0.52in;\r\n' +
+  ' width: 1in;\r\n' +
+  ' height: 1in;\r\n' +
+  ' border-top: 1px solid rgba(201,168,76,0.1);\r\n' +
+  ' border-right: 1px solid rgba(201,168,76,0.1);\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-table {\r\n' +
+  ' width: 100%;\r\n' +
+  ' border-collapse: collapse;\r\n' +
+  ' height: 100%;\r\n' +
+  ' table-layout: fixed;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-cell {\r\n' +
+  ' background: var(--cover-bg);\r\n' +
+  ' padding: 1.6in 0.52in 0.72in 0.92in;\r\n' +
+  ' vertical-align: top;\r\n' +
+  ' width: 100%;\r\n' +
+  ' height: 100%;\r\n' +
+  ' overflow: hidden;\r\n' +
+  ' position: relative;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-brand-name {\r\n' +
+  ' position: absolute;\r\n' +
+  ' top: 0.2in;\r\n' +
+  ' left: 0.52in;\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' font-size: 13pt;\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' color: var(--gold);\r\n' +
+  ' letter-spacing: 0.02em;\r\n' +
+  ' white-space: nowrap;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' margin: 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-brand-sub {\r\n' +
+  ' position: absolute;\r\n' +
+  ' top: 0.24in;\r\n' +
+  ' right: 0.52in;\r\n' +
+  ' font-family: var(--font-mono);\r\n' +
+  ' font-size: 6pt;\r\n' +
+  ' font-weight: 400;\r\n' +
+  ' color: rgba(201,168,76,0.28);\r\n' +
+  ' letter-spacing: 0.2em;\r\n' +
+  ' white-space: nowrap;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' margin: 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-prop-name {\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' font-size: 38pt;\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' color: var(--white);\r\n' +
+  ' line-height: 1;\r\n' +
+  ' letter-spacing: -0.02em;\r\n' +
+  ' max-width: 100%;\r\n' +
+  ' white-space: normal;\r\n' +
+  ' overflow-wrap: break-word;\r\n' +
+  ' word-break: normal;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' margin: 0 0 0.1in 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-prop-sub {\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 9pt;\r\n' +
+  ' font-weight: 300;\r\n' +
+  ' color: rgba(255,255,255,0.35);\r\n' +
+  ' letter-spacing: 0.07em;\r\n' +
+  ' margin: 0 0 0.52in 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-divider {\r\n' +
+  ' border: none;\r\n' +
+  ' width: 0.52in;\r\n' +
+  ' height: 1.5px;\r\n' +
+  ' background: var(--gold);\r\n' +
+  ' opacity: 0.65;\r\n' +
+  ' margin: 0 0 0.18in 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-verdict-value {\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' font-size: 22pt;\r\n' +
+  ' font-weight: 500;\r\n' +
+  ' color: var(--gold);\r\n' +
+  ' text-transform: none;\r\n' +
+  ' letter-spacing: -0.01em;\r\n' +
+  ' margin: 0 0 0.22in 0;\r\n' +
+  ' line-height: 1.05;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-verdict-value.verdict-stable { color: var(--gold); }\r\n' +
+  '.cover-verdict-value.verdict-sensitized { color: var(--gold); }\r\n' +
+  '.cover-verdict-value.verdict-fragile { color: var(--gold); }\r\n' +
+  '.cover-verdict-value.verdict-insufficient { color: rgba(255,255,255,0.55); }\r\n' +
+  '\r\n' +
+  '.cover-metric-strip {\r\n' +
+  ' margin: 0 0 0.22in 0;\r\n' +
+  ' padding: 0 0 0.18in 0;\r\n' +
+  ' border-bottom: 1px solid rgba(201,168,76,0.15);\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-metric-rule {\r\n' +
+  ' display: none;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-metric-row {\r\n' +
+  ' color: rgba(255,255,255,0.52);\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 8pt;\r\n' +
+  ' font-weight: 300;\r\n' +
+  ' letter-spacing: 0.02em;\r\n' +
+  ' text-align: left;\r\n' +
+  ' line-height: 1.7;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-footer-row {\r\n' +
+  ' display: flex;\r\n' +
+  ' justify-content: space-between;\r\n' +
+  ' align-items: center;\r\n' +
+  ' position: absolute;\r\n' +
+  ' bottom: 0;\r\n' +
+  ' left: 0;\r\n' +
+  ' right: 0;\r\n' +
+  ' height: 0.46in;\r\n' +
+  ' padding: 0 0.52in;\r\n' +
+  ' background: rgba(0,0,0,0.2);\r\n' +
+  ' border-top: 1px solid rgba(201,168,76,0.07);\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-footer-text {\r\n' +
+  ' font-family: var(--font-mono);\r\n' +
+  ' font-size: 6pt;\r\n' +
+  ' color: rgba(255,255,255,0.12);\r\n' +
+  ' letter-spacing: 0.12em;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.cover-footer-row .cover-footer-text:last-child {\r\n' +
+  ' color: rgba(201,168,76,0.25);\r\n' +
+  ' letter-spacing: 0.14em;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.brand-nowrap { white-space: nowrap; }\r\n' +
+  '\r\n' +
+  ' h1,\r\n' +
+  ' h2,\r\n' +
+  ' h4 {\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' margin: 0;\r\n' +
+  ' }\r\n' +
+  ' h3 {\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 13px;\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' letter-spacing: 0.02em;\r\n' +
+  ' color: var(--ink-2);\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' h1 {\r\n' +
+  ' font-size: 28px;\r\n' +
+  ' margin-bottom: 8px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' h2 {\r\n' +
+  ' font-size: 16px;\r\n' +
+  ' margin-bottom: 4px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' h3 {\r\n' +
+  ' font-size: 16px;\r\n' +
+  ' margin-bottom: 4px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' p {\r\n' +
+  ' margin: 3px 0 6px 0;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .data-not-available {\r\n' +
+  ' color: var(--ink-3);\r\n' +
+  ' font-weight: 500;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .tagline {\r\n' +
+  ' display: none;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section {\r\n' +
+  ' margin-top: 12px;\r\n' +
+  ' padding: 16px 0;\r\n' +
+  ' background: #ffffff;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  ' .section-header {\r\n' +
+  ' position: relative;\r\n' +
+  ' margin-top: 0;\r\n' +
+  ' margin-bottom: 0.38in;\r\n' +
+  ' padding-bottom: 0.14in;\r\n' +
+  ' border-bottom: 1px solid var(--hairline);\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section-header::after {\r\n' +
+  " content: '';\r\n" +
+  ' position: absolute;\r\n' +
+  ' left: 0;\r\n' +
+  ' bottom: -1px;\r\n' +
+  ' width: 0.28in;\r\n' +
+  ' height: 1.5px;\r\n' +
+  ' background: var(--gold);\r\n' +
+  ' opacity: 0.8;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section-header-eyebrow {\r\n' +
+  ' display: none;\r\n' +
+  ' font-family: var(--font-mono);\r\n' +
+  ' font-size: 6.5pt;\r\n' +
+  ' font-weight: 400;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' letter-spacing: 0.22em;\r\n' +
+  ' color: var(--ink-4);\r\n' +
+  ' margin-bottom: 6pt;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section-header-title {\r\n' +
+  ' display: block;\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' font-size: 18pt;\r\n' +
+  ' font-weight: 500;\r\n' +
+  ' letter-spacing: -0.025em;\r\n' +
+  ' color: var(--ink);\r\n' +
+  ' line-height: 1.05;\r\n' +
+  ' word-break: keep-all;\r\n' +
+  ' overflow-wrap: normal;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' margin-bottom: 4pt;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section-header-sub {\r\n' +
+  ' display: block;\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 8pt;\r\n' +
+  ' font-weight: 300;\r\n' +
+  ' font-style: italic;\r\n' +
+  ' color: var(--ink-3);\r\n' +
+  ' letter-spacing: 0;\r\n' +
+  ' word-break: keep-all;\r\n' +
+  ' overflow-wrap: normal;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' margin: 0;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .section-header-rule {\r\n' +
+  ' display: none;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  '\r\n' +
+  ' .grid-2,\r\n' +
+  '.grid-2-balanced,\r\n' +
+  '.exhibit-grid,\r\n' +
+  '.grid-3,\r\n' +
+  '.summary-bullets,\r\n' +
+  '.metric-grid {\r\n' +
+  ' width: 100%;\r\n' +
+  ' min-width: 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  ' .grid-2 {\r\n' +
+  ' display: grid;\r\n' +
+  ' grid-template-columns: 1.4fr 1fr;\r\n' +
+  ' gap: 14px;\r\n' +
+  ' align-items: start;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.grid-2-balanced {\r\n' +
+  ' display: grid;\r\n' +
+  ' grid-template-columns: repeat(2, minmax(0, 1fr));\r\n' +
+  ' gap: 14px;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.exhibit-grid {\r\n' +
+  ' display: grid;\r\n' +
+  ' grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.95fr);\r\n' +
+  ' gap: 14px;\r\n' +
+  ' align-items: start;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.exhibit-main,\r\n' +
+  '.exhibit-side {\r\n' +
+  ' min-width: 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.exhibit-side {\r\n' +
+  ' width: 100%;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  '.exhibit-side .chart-block,\r\n' +
+  '.exhibit-side .card,\r\n' +
+  '.exhibit-side table {\r\n' +
+  ' margin-top: 0;\r\n' +
+  '}\r\n' +
+  '\r\n' +
+  ' .grid-3 {\r\n' +
+  ' display: grid;\r\n' +
+  ' grid-template-columns: repeat(3, minmax(0, 1fr));\r\n' +
+  ' gap: 10px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .card {\r\n' +
+  ' border-top: 1px solid var(--hairline);\r\n' +
+  ' padding: 6px 0;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .subsection-title {\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 8px;\r\n' +
+  ' letter-spacing: 0.08em;\r\n' +
+  ' color: var(--ink-4);\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' word-break: keep-all;\r\n' +
+  ' overflow-wrap: normal;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' margin: 0 0 6px 0;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' table {\r\n' +
+  ' width: 100%;\r\n' +
+  ' border-collapse: collapse;\r\n' +
+  ' table-layout: fixed;\r\n' +
+  ' font-size: 10.5px;\r\n' +
+  ' margin-top: 8px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' th,\r\n' +
+  ' td {\r\n' +
+  ' border-top: none;\r\n' +
+  ' border-bottom: 1px solid var(--hairline);\r\n' +
+  ' border-left: none;\r\n' +
+  ' border-right: none;\r\n' +
+  ' padding: 6px 8px;\r\n' +
+  ' text-align: left;\r\n' +
+  ' vertical-align: top;\r\n' +
+  ' line-height: 1.35;\r\n' +
+  ' white-space: normal;\r\n' +
+  ' word-break: keep-all;\r\n' +
+  ' overflow-wrap: normal;\r\n' +
+  ' hyphens: none;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' th {\r\n' +
+  ' background: #FFFFFF;\r\n' +
+  ' color: var(--ink-3);\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-size: 10px;\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' letter-spacing: 0.04em;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' border-top: 1px solid var(--hairline);\r\n' +
+  ' border-bottom: 1px solid var(--hairline-mid);\r\n' +
+  ' padding-top: 0;\r\n' +
+  ' padding-bottom: 6px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' tr:nth-child(even) td {\r\n' +
+  ' background: var(--row-alt);\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .summary-bullets {\r\n' +
+  ' display: grid;\r\n' +
+  ' grid-template-columns: repeat(2, minmax(0, 1fr));\r\n' +
+  ' gap: 12px;\r\n' +
+  ' margin-top: 8px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .summary-bullets ul {\r\n' +
+  ' margin: 4px 0 0 18px;\r\n' +
+  ' padding: 0;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .summary-bullets li {\r\n' +
+  ' margin-bottom: 4px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .no-break {\r\n' +
+  ' page-break-inside: avoid;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .small {\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .exec-kpis{\r\n' +
+  ' margin: 6px 0 0 0;\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' letter-spacing: 0.2px;\r\n' +
+  ' opacity: 0.95;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .verdict-block {\r\n' +
+  ' background: #FFFFFF;\r\n' +
+  ' border: none;\r\n' +
+  ' border-top: 1px solid var(--hairline);\r\n' +
+  ' padding: 10px 0 0 0;\r\n' +
+  ' margin-bottom: 14px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .verdict-label {\r\n' +
+  ' font-size: 8px;\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-weight: 600;\r\n' +
+  ' letter-spacing: 0.08em;\r\n' +
+  ' text-transform: uppercase;\r\n' +
+  ' color: var(--ink-4);\r\n' +
+  ' margin-bottom: 6px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .verdict-classification {\r\n' +
+  ' font-size: 22px;\r\n' +
+  ' font-family: var(--font-display);\r\n' +
+  ' font-weight: 500;\r\n' +
+  ' color: var(--ink);\r\n' +
+  ' letter-spacing: 0;\r\n' +
+  ' text-transform: none;\r\n' +
+  ' margin-bottom: 8px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .verdict-pressure {\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' font-weight: 500;\r\n' +
+  ' color: var(--ink-2);\r\n' +
+  ' margin-bottom: 6px;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .verdict-rationale {\r\n' +
+  ' font-size: 11px;\r\n' +
+  ' font-family: var(--font-body);\r\n' +
+  ' color: var(--ink-3);\r\n' +
+  ' line-height: 1.55;\r\n' +
+  ' }\r\n' +
+  '\r\n' +
+  ' .exec-signal-drivers {\r\n' +
+  ' margin: 6px 0 0 18px;\r\n' +
+  ' padding: 0;\r\n' +
+  ' font-size: '... 32489 more characters
+
+    at file:///C:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/tests/qa/generate-client-report-rent-roll-smoke.js:6083:8 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<!DOCTYPE html>\r\n' +
+    '<html lang="en">\r\n' +
+    '<head>\r\n' +
+    ' <meta charset="UTF-8" />\r\n' +
+    ' <title>InvestorIQ Capital Intelligence Memorandum - Stonebridge </title>\r\n' +
+    ' <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />\r\n' +
+    ' <style>\r\n' +
+    ' @page {\r\n' +
+    ' size: Letter;\r\n' +
+    ' margin: 36px 36px 48px 36px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' @page :first {\r\n' +
+    ' margin: 0;\r\n' +
+    ' }\r\n' +
+    ' :root {\r\n' +
+    ' --cover-bg: #0F2318;\r\n' +
+    ' --gold: #C9A84C;\r\n' +
+    ' --gold-dark: #9A7A2C;\r\n' +
+    ' --white: #FFFFFF;\r\n' +
+    ' --paper-warm: #FAFAF8;\r\n' +
+    ' --ink: #0C0C0C;\r\n' +
+    ' --ink-2: #363636;\r\n' +
+    ' --ink-3: #606060;\r\n' +
+    ' --ink-4: #9A9A9A;\r\n' +
+    ' --hairline: #E8E5DF;\r\n' +
+    ' --hairline-mid: #D0CCC4;\r\n' +
+    ' --row-alt: #FAFAF8;\r\n' +
+    " --font-display: 'Cormorant Garamond', Georgia, serif;\r\n" +
+    " --font-body: 'DM Sans', system-ui, sans-serif;\r\n" +
+    " --font-mono: 'DM Mono', 'Courier New', monospace;\r\n" +
+    ' }\r\n' +
+    '\r\n' +
+    ' * {\r\n' +
+    ' box-sizing: border-box;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' html,\r\n' +
+    ' body {\r\n' +
+    ' margin: 0;\r\n' +
+    ' padding: 0;\r\n' +
+    ' background: var(--white);\r\n' +
+    ' color: var(--ink);\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' line-height: 1.5;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' body {\r\n' +
+    ' margin: 0;\r\n' +
+    ' padding: 0;\r\n' +
+    ' background: var(--white);\r\n' +
+    ' color: var(--ink);\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' line-height: 1.5;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    ' .report-container {\r\n' +
+    ' width: 100%;\r\n' +
+    ' padding: 0.5in 0.55in 0.52in 0.55in;\r\n' +
+    ' box-sizing: border-box;\r\n' +
+    ' background: var(--white);\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-wrap {\r\n' +
+    ' page-break-after: always;\r\n' +
+    ' page-break-inside: avoid;\r\n' +
+    ' margin: 0;\r\n' +
+    ' padding: 0;\r\n' +
+    ' width: 100%;\r\n' +
+    ' height: 10.5in;\r\n' +
+    ' overflow: hidden;\r\n' +
+    ' position: relative;\r\n' +
+    ' background: var(--cover-bg);\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-wrap::before {\r\n' +
+    " content: '';\r\n" +
+    ' position: absolute;\r\n' +
+    ' top: 0;\r\n' +
+    ' bottom: 0;\r\n' +
+    ' left: 0.6in;\r\n' +
+    ' width: 1px;\r\n' +
+    ' background: linear-gradient(\r\n' +
+    ' to bottom,\r\n' +
+    ' transparent 0%,\r\n' +
+    ' rgba(201,168,76,0.45) 12%,\r\n' +
+    ' rgba(201,168,76,0.45) 88%,\r\n' +
+    ' transparent 100%\r\n' +
+    ' );\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-wrap::after {\r\n' +
+    " content: '';\r\n" +
+    ' position: absolute;\r\n' +
+    ' top: 0.6in;\r\n' +
+    ' right: 0.52in;\r\n' +
+    ' width: 1in;\r\n' +
+    ' height: 1in;\r\n' +
+    ' border-top: 1px solid rgba(201,168,76,0.1);\r\n' +
+    ' border-right: 1px solid rgba(201,168,76,0.1);\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-table {\r\n' +
+    ' width: 100%;\r\n' +
+    ' border-collapse: collapse;\r\n' +
+    ' height: 100%;\r\n' +
+    ' table-layout: fixed;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-cell {\r\n' +
+    ' background: var(--cover-bg);\r\n' +
+    ' padding: 1.6in 0.52in 0.72in 0.92in;\r\n' +
+    ' vertical-align: top;\r\n' +
+    ' width: 100%;\r\n' +
+    ' height: 100%;\r\n' +
+    ' overflow: hidden;\r\n' +
+    ' position: relative;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-brand-name {\r\n' +
+    ' position: absolute;\r\n' +
+    ' top: 0.2in;\r\n' +
+    ' left: 0.52in;\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' font-size: 13pt;\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' color: var(--gold);\r\n' +
+    ' letter-spacing: 0.02em;\r\n' +
+    ' white-space: nowrap;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' margin: 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-brand-sub {\r\n' +
+    ' position: absolute;\r\n' +
+    ' top: 0.24in;\r\n' +
+    ' right: 0.52in;\r\n' +
+    ' font-family: var(--font-mono);\r\n' +
+    ' font-size: 6pt;\r\n' +
+    ' font-weight: 400;\r\n' +
+    ' color: rgba(201,168,76,0.28);\r\n' +
+    ' letter-spacing: 0.2em;\r\n' +
+    ' white-space: nowrap;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' margin: 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-prop-name {\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' font-size: 38pt;\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' color: var(--white);\r\n' +
+    ' line-height: 1;\r\n' +
+    ' letter-spacing: -0.02em;\r\n' +
+    ' max-width: 100%;\r\n' +
+    ' white-space: normal;\r\n' +
+    ' overflow-wrap: break-word;\r\n' +
+    ' word-break: normal;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' margin: 0 0 0.1in 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-prop-sub {\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 9pt;\r\n' +
+    ' font-weight: 300;\r\n' +
+    ' color: rgba(255,255,255,0.35);\r\n' +
+    ' letter-spacing: 0.07em;\r\n' +
+    ' margin: 0 0 0.52in 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-divider {\r\n' +
+    ' border: none;\r\n' +
+    ' width: 0.52in;\r\n' +
+    ' height: 1.5px;\r\n' +
+    ' background: var(--gold);\r\n' +
+    ' opacity: 0.65;\r\n' +
+    ' margin: 0 0 0.18in 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-verdict-value {\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' font-size: 22pt;\r\n' +
+    ' font-weight: 500;\r\n' +
+    ' color: var(--gold);\r\n' +
+    ' text-transform: none;\r\n' +
+    ' letter-spacing: -0.01em;\r\n' +
+    ' margin: 0 0 0.22in 0;\r\n' +
+    ' line-height: 1.05;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-verdict-value.verdict-stable { color: var(--gold); }\r\n' +
+    '.cover-verdict-value.verdict-sensitized { color: var(--gold); }\r\n' +
+    '.cover-verdict-value.verdict-fragile { color: var(--gold); }\r\n' +
+    '.cover-verdict-value.verdict-insufficient { color: rgba(255,255,255,0.55); }\r\n' +
+    '\r\n' +
+    '.cover-metric-strip {\r\n' +
+    ' margin: 0 0 0.22in 0;\r\n' +
+    ' padding: 0 0 0.18in 0;\r\n' +
+    ' border-bottom: 1px solid rgba(201,168,76,0.15);\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-metric-rule {\r\n' +
+    ' display: none;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-metric-row {\r\n' +
+    ' color: rgba(255,255,255,0.52);\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 8pt;\r\n' +
+    ' font-weight: 300;\r\n' +
+    ' letter-spacing: 0.02em;\r\n' +
+    ' text-align: left;\r\n' +
+    ' line-height: 1.7;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-footer-row {\r\n' +
+    ' display: flex;\r\n' +
+    ' justify-content: space-between;\r\n' +
+    ' align-items: center;\r\n' +
+    ' position: absolute;\r\n' +
+    ' bottom: 0;\r\n' +
+    ' left: 0;\r\n' +
+    ' right: 0;\r\n' +
+    ' height: 0.46in;\r\n' +
+    ' padding: 0 0.52in;\r\n' +
+    ' background: rgba(0,0,0,0.2);\r\n' +
+    ' border-top: 1px solid rgba(201,168,76,0.07);\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-footer-text {\r\n' +
+    ' font-family: var(--font-mono);\r\n' +
+    ' font-size: 6pt;\r\n' +
+    ' color: rgba(255,255,255,0.12);\r\n' +
+    ' letter-spacing: 0.12em;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.cover-footer-row .cover-footer-text:last-child {\r\n' +
+    ' color: rgba(201,168,76,0.25);\r\n' +
+    ' letter-spacing: 0.14em;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.brand-nowrap { white-space: nowrap; }\r\n' +
+    '\r\n' +
+    ' h1,\r\n' +
+    ' h2,\r\n' +
+    ' h4 {\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' margin: 0;\r\n' +
+    ' }\r\n' +
+    ' h3 {\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 13px;\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' letter-spacing: 0.02em;\r\n' +
+    ' color: var(--ink-2);\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' h1 {\r\n' +
+    ' font-size: 28px;\r\n' +
+    ' margin-bottom: 8px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' h2 {\r\n' +
+    ' font-size: 16px;\r\n' +
+    ' margin-bottom: 4px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' h3 {\r\n' +
+    ' font-size: 16px;\r\n' +
+    ' margin-bottom: 4px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' p {\r\n' +
+    ' margin: 3px 0 6px 0;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .data-not-available {\r\n' +
+    ' color: var(--ink-3);\r\n' +
+    ' font-weight: 500;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .tagline {\r\n' +
+    ' display: none;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section {\r\n' +
+    ' margin-top: 12px;\r\n' +
+    ' padding: 16px 0;\r\n' +
+    ' background: #ffffff;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    ' .section-header {\r\n' +
+    ' position: relative;\r\n' +
+    ' margin-top: 0;\r\n' +
+    ' margin-bottom: 0.38in;\r\n' +
+    ' padding-bottom: 0.14in;\r\n' +
+    ' border-bottom: 1px solid var(--hairline);\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section-header::after {\r\n' +
+    " content: '';\r\n" +
+    ' position: absolute;\r\n' +
+    ' left: 0;\r\n' +
+    ' bottom: -1px;\r\n' +
+    ' width: 0.28in;\r\n' +
+    ' height: 1.5px;\r\n' +
+    ' background: var(--gold);\r\n' +
+    ' opacity: 0.8;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section-header-eyebrow {\r\n' +
+    ' display: none;\r\n' +
+    ' font-family: var(--font-mono);\r\n' +
+    ' font-size: 6.5pt;\r\n' +
+    ' font-weight: 400;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' letter-spacing: 0.22em;\r\n' +
+    ' color: var(--ink-4);\r\n' +
+    ' margin-bottom: 6pt;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section-header-title {\r\n' +
+    ' display: block;\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' font-size: 18pt;\r\n' +
+    ' font-weight: 500;\r\n' +
+    ' letter-spacing: -0.025em;\r\n' +
+    ' color: var(--ink);\r\n' +
+    ' line-height: 1.05;\r\n' +
+    ' word-break: keep-all;\r\n' +
+    ' overflow-wrap: normal;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' margin-bottom: 4pt;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section-header-sub {\r\n' +
+    ' display: block;\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 8pt;\r\n' +
+    ' font-weight: 300;\r\n' +
+    ' font-style: italic;\r\n' +
+    ' color: var(--ink-3);\r\n' +
+    ' letter-spacing: 0;\r\n' +
+    ' word-break: keep-all;\r\n' +
+    ' overflow-wrap: normal;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' margin: 0;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .section-header-rule {\r\n' +
+    ' display: none;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    '\r\n' +
+    ' .grid-2,\r\n' +
+    '.grid-2-balanced,\r\n' +
+    '.exhibit-grid,\r\n' +
+    '.grid-3,\r\n' +
+    '.summary-bullets,\r\n' +
+    '.metric-grid {\r\n' +
+    ' width: 100%;\r\n' +
+    ' min-width: 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    ' .grid-2 {\r\n' +
+    ' display: grid;\r\n' +
+    ' grid-template-columns: 1.4fr 1fr;\r\n' +
+    ' gap: 14px;\r\n' +
+    ' align-items: start;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.grid-2-balanced {\r\n' +
+    ' display: grid;\r\n' +
+    ' grid-template-columns: repeat(2, minmax(0, 1fr));\r\n' +
+    ' gap: 14px;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.exhibit-grid {\r\n' +
+    ' display: grid;\r\n' +
+    ' grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.95fr);\r\n' +
+    ' gap: 14px;\r\n' +
+    ' align-items: start;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.exhibit-main,\r\n' +
+    '.exhibit-side {\r\n' +
+    ' min-width: 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.exhibit-side {\r\n' +
+    ' width: 100%;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    '.exhibit-side .chart-block,\r\n' +
+    '.exhibit-side .card,\r\n' +
+    '.exhibit-side table {\r\n' +
+    ' margin-top: 0;\r\n' +
+    '}\r\n' +
+    '\r\n' +
+    ' .grid-3 {\r\n' +
+    ' display: grid;\r\n' +
+    ' grid-template-columns: repeat(3, minmax(0, 1fr));\r\n' +
+    ' gap: 10px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .card {\r\n' +
+    ' border-top: 1px solid var(--hairline);\r\n' +
+    ' padding: 6px 0;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .subsection-title {\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 8px;\r\n' +
+    ' letter-spacing: 0.08em;\r\n' +
+    ' color: var(--ink-4);\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' word-break: keep-all;\r\n' +
+    ' overflow-wrap: normal;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' margin: 0 0 6px 0;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' table {\r\n' +
+    ' width: 100%;\r\n' +
+    ' border-collapse: collapse;\r\n' +
+    ' table-layout: fixed;\r\n' +
+    ' font-size: 10.5px;\r\n' +
+    ' margin-top: 8px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' th,\r\n' +
+    ' td {\r\n' +
+    ' border-top: none;\r\n' +
+    ' border-bottom: 1px solid var(--hairline);\r\n' +
+    ' border-left: none;\r\n' +
+    ' border-right: none;\r\n' +
+    ' padding: 6px 8px;\r\n' +
+    ' text-align: left;\r\n' +
+    ' vertical-align: top;\r\n' +
+    ' line-height: 1.35;\r\n' +
+    ' white-space: normal;\r\n' +
+    ' word-break: keep-all;\r\n' +
+    ' overflow-wrap: normal;\r\n' +
+    ' hyphens: none;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' th {\r\n' +
+    ' background: #FFFFFF;\r\n' +
+    ' color: var(--ink-3);\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-size: 10px;\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' letter-spacing: 0.04em;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' border-top: 1px solid var(--hairline);\r\n' +
+    ' border-bottom: 1px solid var(--hairline-mid);\r\n' +
+    ' padding-top: 0;\r\n' +
+    ' padding-bottom: 6px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' tr:nth-child(even) td {\r\n' +
+    ' background: var(--row-alt);\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .summary-bullets {\r\n' +
+    ' display: grid;\r\n' +
+    ' grid-template-columns: repeat(2, minmax(0, 1fr));\r\n' +
+    ' gap: 12px;\r\n' +
+    ' margin-top: 8px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .summary-bullets ul {\r\n' +
+    ' margin: 4px 0 0 18px;\r\n' +
+    ' padding: 0;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .summary-bullets li {\r\n' +
+    ' margin-bottom: 4px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .no-break {\r\n' +
+    ' page-break-inside: avoid;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .small {\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .exec-kpis{\r\n' +
+    ' margin: 6px 0 0 0;\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' letter-spacing: 0.2px;\r\n' +
+    ' opacity: 0.95;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .verdict-block {\r\n' +
+    ' background: #FFFFFF;\r\n' +
+    ' border: none;\r\n' +
+    ' border-top: 1px solid var(--hairline);\r\n' +
+    ' padding: 10px 0 0 0;\r\n' +
+    ' margin-bottom: 14px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .verdict-label {\r\n' +
+    ' font-size: 8px;\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-weight: 600;\r\n' +
+    ' letter-spacing: 0.08em;\r\n' +
+    ' text-transform: uppercase;\r\n' +
+    ' color: var(--ink-4);\r\n' +
+    ' margin-bottom: 6px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .verdict-classification {\r\n' +
+    ' font-size: 22px;\r\n' +
+    ' font-family: var(--font-display);\r\n' +
+    ' font-weight: 500;\r\n' +
+    ' color: var(--ink);\r\n' +
+    ' letter-spacing: 0;\r\n' +
+    ' text-transform: none;\r\n' +
+    ' margin-bottom: 8px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .verdict-pressure {\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' font-weight: 500;\r\n' +
+    ' color: var(--ink-2);\r\n' +
+    ' margin-bottom: 6px;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .verdict-rationale {\r\n' +
+    ' font-size: 11px;\r\n' +
+    ' font-family: var(--font-body);\r\n' +
+    ' color: var(--ink-3);\r\n' +
+    ' line-height: 1.55;\r\n' +
+    ' }\r\n' +
+    '\r\n' +
+    ' .exec-signal-drivers {\r\n' +
+    ' margin: 6px 0 0 18px;\r\n' +
+    ' padding: 0;\r\n' +
+    ' font-size: '... 32489 more characters,
+  expected: /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.11.0

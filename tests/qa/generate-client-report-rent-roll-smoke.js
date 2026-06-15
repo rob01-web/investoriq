@@ -6079,6 +6079,7 @@ assert.equal(retest4RenderResponse.statusCode, 200);
 assert.equal(retest4RenderResponse.body?.success, true);
 const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
 assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i);
+fs.writeFileSync("retest4-final-html.html", retest4RenderHtml);
 assert.match(retest4RenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Structured Renovation \/ CapEx Plan/i);
 assert.equal(/No verified current debt context was provided/i.test(retest4RenderHtml), false);
