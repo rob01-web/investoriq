@@ -1,3 +1,528 @@
+# June 14, 2026 Addendum - Acquisition Memo Automation Frozen / Source-Authority Rebuild Start / No More Tiny Patch Loop
+
+## Current controlling decision
+
+Final Attack Test 8 RETEST 5 confirmed the support-document authority family is not fully solved by the Patch 4B/4C/4D-style patch loop.
+
+The project is now moving from incremental Acquisition Memo patching into a quarantined rebuild of the shared source-authority foundation.
+
+Controlling decision:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready from current evidence. Keep it protected and do not let the Acquisition Memo rebuild destabilize it.
+
+Acquisition Memo:
+Automation is frozen / not launch-cleared. Do not run more tiny support-doc authority patches and live retests as a loop.
+
+Full Underwriting V2.0:
+Still deferred. Do not rebuild Full Underwriting first. Build the shared source-authority foundation first, then Acquisition Memo V2, then Full Underwriting V2 later on that same foundation.
+```
+
+This supersedes the prior posture of “one more Patch 4C/4D/RETEST.”
+
+The issue is no longer treated as a one-document Current Debt or Reno label bug. The controlling root issue is now:
+
+```text
+The live Acquisition Memo path does not yet have a mechanically enforced single source-authority regime.
+```
+
+## RETEST 5 result - what improved
+
+Final Attack Test 8 RETEST 5 showed real improvement in some visible surfaces:
+
+```text
+Report generated and published.
+Core math held.
+V2 forbidden surfaces stayed closed.
+Current_Debt_Stonebridge.pdf now appeared in Document Treatment as Debt Support Received / Contextual.
+Stonebridge_Reno_Plan.pdf now appeared in Document Treatment as Structured Renovation / CapEx Plan.
+The visible report no longer said no verified current debt context was provided.
+The visible report acknowledged the structured Reno / CapEx budget, rent-lift assumptions, and phasing as source-transparent context.
+```
+
+Core values that continued to hold:
+
+```text
+Units: 64
+Occupancy: 93.8%
+Annual In-Place Rent: $1,432,800
+Annual Market Rent: $1,718,400
+Annual Rent Upside: $285,600
+Rent Gap: 19.9%
+EGI: $1,500,000
+OpEx: $555,000
+NOI: $945,000
+Expense Ratio: 37.0%
+NOI Margin: 63.0%
+Break-Even Occupancy: 37.0%
+Purchase Price: $13,500,000
+Going-In Cap Rate: 7.0%
+```
+
+Interpretation:
+
+```text
+The report engine, core math, publish path, and V2 containment remain strong.
+Patch 4D improved the exact Current Debt and Reno treatment rows.
+But the broader support-doc/source-authority system still leaks contradictions into final customer-visible output.
+```
+
+## RETEST 5 result - remaining customer-visible authority failures
+
+### 1. Uploaded Existing Debt Context still contaminated by proposed acquisition terms
+
+Visible PDF showed:
+
+```text
+Uploaded Existing Debt Context
+Interest Rate: 5.95%
+Amortization: 30 years
+LTV: 70.0%
+```
+
+Those are not the current-debt document facts. They are proposed acquisition financing assumptions from `Stonebridge_Assumptions.pdf`.
+
+The true `Current_Debt_Stonebridge.pdf` source facts were:
+
+```text
+Current Outstanding Balance: $6,800,000
+Interest Rate: 4.85%
+Amortization Remaining: 24 years
+Monthly Payment: $39,250
+Maturity Date: 2029-11-01
+```
+
+Interpretation:
+
+```text
+The label improved, but the facts feeding Uploaded Existing Debt Context were still wrong.
+This proves the source-authority path remains fragmented: proposed acquisition financing can still contaminate current debt context.
+```
+
+### 2. Stonebridge_Assumptions.pdf was misclassified as current debt support
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Assumptions.pdf
+Document Role: Debt Support Received / Contextual
+Treatment: Debt support received / contextual or deferred
+Use: Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Assumptions.pdf should be Purchase Assumptions / Proposed Acquisition Financing Context.
+It must not be current debt or existing debt support.
+```
+
+### 3. Stonebridge_Phase_I_ESA.pdf was misclassified as Property Tax Support
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Phase_I_ESA.pdf
+Document Role: Property Tax Support
+Treatment: Corroborating support
+Use: Corroborating property-tax support; does not override T12 totals.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Phase_I_ESA.pdf is Environmental / Phase I due diligence context only.
+It must not become property tax support.
+```
+
+### 4. Stonebridge_Appraisal_Summary.pdf was still overpromoted
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Appraisal_Summary.pdf
+Document Role: Purchase Assumptions / Acquisition Context
+```
+
+Correct behavior:
+
+```text
+Appraisal summary should be appraisal / valuation context only.
+It must not override purchase assumptions, T12 NOI, Rent Roll market rent, or cap-rate value framework.
+```
+
+### 5. T12 and Rent Roll were listed as generic Other Support Document rows
+
+Document Treatment Summary showed the core files as:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only
+```
+
+Correct behavior:
+
+```text
+T12 and Rent Roll are core quantitative sources, not generic support docs.
+They may appear in a core source table, but not as context-only support documents that are “not used quantitatively.”
+```
+
+### 6. Internal QA still showed stale/contradictory authority noise
+
+Artifacts still showed advisory/legacy fallback inconsistencies, including:
+
+```text
+UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED
+structured_renovation_present: false
+readiness_source: legacy_action_plan_fallback
+canonical_delivery_state_present: false
+```
+
+Interpretation:
+
+```text
+Internal QA is not the final customer delivery authority, but it still proves the old authority ecosystem has not been fully collapsed into one sovereign source package.
+```
+
+## Updated root diagnosis after RETEST 5
+
+The prior root diagnosis is confirmed and sharpened:
+
+```text
+InvestorIQ does not need one more support-doc label patch.
+InvestorIQ needs a single mechanically enforced source-authority foundation.
+```
+
+The broken pattern is:
+
+```text
+raw uploaded files
++ parser semantic roles
++ AI recovery artifacts
++ document_text_extracted artifacts
++ filename heuristics
++ canonical support doc map
++ renderer fallbacks
++ QA/action-plan fallbacks
+= competing decision makers
+```
+
+The rebuild target is:
+
+```text
+raw uploaded files + extracted text + parsed artifacts
+-> buildCanonicalSourcePackage(...)
+-> buildAcquisitionMemoProjection(...)
+-> renderAcquisitionMemo(...)
+```
+
+No downstream renderer, financing section, checklist, Document Treatment table, or QA layer may independently reinterpret document roles after the canonical source package exists.
+
+## New architecture decision - rebuild shared source-authority foundation, not Full Underwriting first
+
+Do not rebuild Full Underwriting first.
+
+Reason:
+
+```text
+Full Underwriting would multiply the same source-authority problem across DSCR, debt sizing, refinance, DCF, waterfall, equity returns, and final recommendation surfaces.
+```
+
+Correct sequence:
+
+```text
+1. Preserve / launch Screening first.
+2. Build Canonical Source Package foundation.
+3. Rebuild Acquisition Memo V2 on that foundation.
+4. Build Full Underwriting V2 later on the same foundation.
+```
+
+This is a source-authority rebuild, not a whole InvestorIQ rewrite.
+
+## Acquisition Memo V2 rebuild boundary
+
+The rebuild must be quarantined and reversible.
+
+Recommended branch:
+
+```text
+git checkout -b acq-memo-v2-source-package
+```
+
+Recommended tag before work:
+
+```text
+git tag pre-acq-memo-v2-rebuild
+```
+
+Recommended new files / modules:
+
+```text
+api/_lib/canonical-source-package.js
+api/_lib/acquisition-memo-projection.js
+api/_lib/acquisition-memo-renderer.js
+tests/qa/acquisition-memo-source-package-smoke.js
+tests/qa/acquisition-memo-final-render-smoke.js
+tests/qa/acquisition-memo-authority-boundary-smoke.js
+```
+
+Do not rewrite `api/generate-client-report.js` wholesale.
+
+Only add a thin bridge when ready:
+
+```text
+if report mode is Acquisition Memo V2:
+  buildCanonicalSourcePackage(...)
+  buildAcquisitionMemoProjection(...)
+  renderAcquisitionMemo(...)
+else:
+  preserve current Screening / legacy paths
+```
+
+## Canonical Source Package contract
+
+`buildCanonicalSourcePackage(...)` must return one canonical object per source file.
+
+Minimum fields:
+
+```text
+fileId
+originalFilename
+sourceKind: core_t12 | core_rent_roll | support_doc
+canonicalRole
+canonicalLabel
+allowedUses
+forbiddenUses
+extractedFacts
+confidence
+sourceEvidence
+sourceAuthorityVersion
+provenance
+```
+
+Required canonical roles:
+
+```text
+core_t12
+core_rent_roll
+purchase_assumptions
+proposed_acquisition_financing
+current_debt_context
+structured_renovation_capex_plan
+appraisal_context
+market_survey_context
+environmental_context
+property_tax_support
+zoning_or_compliance_context
+broker_or_diligence_context
+other_support_context
+unclassified_support_context
+```
+
+Core source examples:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_t12
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_rent_roll
+```
+
+Support-doc examples from RETEST 5:
+
+```text
+Stonebridge_Assumptions.pdf -> purchase_assumptions / proposed_acquisition_financing
+Current_Debt_Stonebridge.pdf -> current_debt_context
+Stonebridge_Reno_Plan.pdf -> structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf -> appraisal_context
+Stonebridge_Market_Survey.pdf -> market_survey_context
+Stonebridge_Phase_I_ESA.pdf -> environmental_context
+```
+
+## Acquisition Memo Projection contract
+
+`buildAcquisitionMemoProjection(canonicalSourcePackage, coreMetrics)` must create the only object the Acquisition Memo renderer consumes.
+
+Minimum projection fields:
+
+```text
+coreOperatingMetrics
+rentPositioning
+acquisitionContext
+proposedFinancingContext
+currentDebtContext
+renovationContext
+appraisalContext
+marketSurveyContext
+environmentalContext
+propertyTaxContext
+documentTreatmentRows
+lenderDiligenceChecklist
+omittedSections
+disclosures
+sourcePackageDiagnostics
+```
+
+The renderer must not read raw artifacts or parser roles. It must only render the projection.
+
+## Mechanical enforcement requirements
+
+The rebuild is not complete because the report looks right once.
+
+It is complete only when bypassing the source package becomes mechanically detectable.
+
+Required enforcement:
+
+```text
+1. Acquisition Memo renderer does not receive raw documentSources, coverageArtifacts, parser artifacts, or extracted text.
+2. Acquisition Memo renderer consumes only acquisitionMemoProjection.
+3. Forbidden-field/source-scan test fails if Acquisition Memo renderer/projection files directly read parser authority fields outside the source package builder.
+4. Old support-doc authority helpers are deleted, quarantined, or converted into adapters that call buildCanonicalSourcePackage.
+5. Final HTML tests assert source-package lineage for every support-doc row.
+6. RETEST 5 artifact replay becomes a permanent golden regression.
+7. Screening smoke must pass unchanged.
+8. V2 forbidden surfaces must stay absent.
+```
+
+Forbidden direct authority fields outside `canonical-source-package.js` include:
+
+```text
+semantic_doc_role
+semantic_doc_display_label
+debt_basis
+doc_type
+parse_error
+supporting_documents_unclassified
+loan_term_sheet_parsed
+rent_roll_parse_error
+document_text_extracted
+original_filename.includes(...)
+filename.includes(...)
+```
+
+Nuance:
+
+```text
+The source-package builder may read these fields as evidence.
+The Acquisition Memo projection/renderer may not use them as live authority.
+```
+
+## Old-path quarantine requirement
+
+Old helpers cannot remain live independent decision makers for Acquisition Memo V2.
+
+Relevant helpers to inspect and either delete, quarantine, or adapt:
+
+```text
+buildCanonicalSupportDocAuthorityRows(...)
+resolveExplicitSupportDocAuthority(...)
+buildSupportDocTaxonomyState(...)
+buildDocumentTreatmentSummaryHtml(...) if it performs its own role decisions
+buildPreliminaryFinancingReadinessSummaryHtml(...) if it performs its own role decisions
+QA/action-plan support-doc role inference helpers
+renderer filename/doc_type/debt_basis fallbacks
+```
+
+If kept, they must become wrappers/adapters around `buildCanonicalSourcePackage(...)` or V1 legacy-only paths not imported by Acquisition Memo V2.
+
+## Production doctrine preserved
+
+The rebuild must not violate Publish-or-Fail doctrine.
+
+Production report generation should still only fail closed for:
+
+```text
+true missing/unusable required T12;
+true missing/unusable required Rent Roll;
+true runtime/storage/PDF/catastrophic render failure.
+```
+
+Optional/support document ambiguity should not kill a core-valid report.
+
+Correct support-doc behavior remains:
+
+```text
+classify if source-bound;
+render as context-only / limited-use if bounded;
+collapse or disclose if incomplete;
+never fabricate;
+never override T12/Rent Roll core truth;
+never unlock V2 surfaces in Acquisition Memo.
+```
+
+The source-authority contract is a developer/test/CI contract, not a customer fail gate for optional docs.
+
+## Current business posture
+
+```text
+Do not use Acquisition Memo as an automated customer launch product until V2 source-package rebuild passes.
+```
+
+Recommended near-term business posture:
+
+```text
+1. Continue with Screening as the launchable/founder-beta product.
+2. Keep Acquisition Memo manual/controlled/internal until the source-authority rebuild is complete.
+3. Do not run more random live Acquisition Memo retests from the current V1 patch loop.
+4. Do not open Full Underwriting V2 until the shared source-authority foundation exists.
+```
+
+## Acceptance criteria for Acquisition Memo V2 rebuild
+
+Before Acquisition Memo V2 can be called certification-batch ready:
+
+```text
+1. Canonical source package correctly classifies RETEST 5 files.
+2. Acquisition Memo projection correctly separates purchase assumptions, proposed acquisition financing, current debt, appraisal, market survey, environmental context, Reno, T12, and Rent Roll.
+3. Final customer HTML renders Current Debt facts from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf.
+4. Final customer HTML renders proposed acquisition financing facts only as proposed/acquisition context.
+5. Stonebridge_Assumptions.pdf never becomes current debt.
+6. Phase I ESA never becomes property tax support.
+7. Appraisal summary never becomes purchase assumptions unless a separate validated purchase-assumption source actually exists for that same file.
+8. T12 and Rent Roll never appear as “Other Support Document / not used quantitatively.”
+9. Reno plan renders as source-transparency context only and does not unlock ROI/payback/NOI impact/refi/DCF/waterfall/recommendation.
+10. No DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD surfaces render.
+11. Screening regression remains unchanged.
+12. Forbidden-field/source-scan tests prove Acquisition Memo renderer cannot bypass the projection.
+13. Old support-doc authority paths are quarantined, deleted, or adapters only.
+14. Final report artifacts include or can emit canonical_source_package.json and acquisition_memo_projection.json for auditability.
+```
+
+## Do not do next
+
+Do not:
+
+```text
+write another tiny Current Debt or Reno patch;
+run RETEST 6 against the same V1 patch loop;
+rewrite generate-client-report.js wholesale;
+rebuild Full Underwriting first;
+touch Screening except protective regression;
+touch Stripe, SQL, Supabase lifecycle, auth/upload gates, pricing, DocRaptor config, or Admin Dashboard as part of this rebuild;
+reopen DSCR/refi/DCF/waterfall/deal-score/final-recommendation/V2 surfaces inside Acquisition Memo.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 5 confirmed the Patch 4 support-doc authority loop is not enough.
+Core math, publish path, and V2 containment held.
+Current Debt and Reno visible labels improved, but the system still contaminated Uploaded Existing Debt Context with proposed acquisition terms, misclassified Stonebridge_Assumptions as debt support, misclassified Phase I as property tax, overpromoted Appraisal as purchase assumptions, and listed T12/Rent Roll as generic Other Support Documents.
+Acquisition Memo automation is frozen / not launch-cleared.
+No more tiny patches or RETEST loop.
+Next work is a quarantined Acquisition Memo V2 source-authority rebuild on a branch:
+- buildCanonicalSourcePackage
+- buildAcquisitionMemoProjection
+- renderAcquisitionMemo
+- source-scan/forbidden-field tests
+- RETEST 5 golden replay
+- Screening untouched.
+Full Underwriting V2 remains deferred until the shared source-authority foundation is stable.
+```
+
+---
+
 # June 12, 2026 Addendum - Final Attack Test 8 RETEST 2 / Patch 4 Still Not Launch-Cleared / Current Debt + Reno Authority Still Disobeying
 
 ## Current controlling status
