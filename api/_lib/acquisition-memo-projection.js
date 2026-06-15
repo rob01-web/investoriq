@@ -12,8 +12,37 @@ function isSupportRole(entry, role) {
   return String(entry?.canonicalRole || "").trim() === role;
 }
 
-function toArray(value) {
-  return Array.isArray(value) ? value : [];
+function cloneEntry(entry) {
+  return entry && typeof entry === "object" ? { ...entry } : null;
+}
+
+function buildChecklist(projection) {
+  return [
+    {
+      label: "Purchase assumptions provided",
+      value: Boolean(projection?.supportDocProjection?.purchaseAssumptions),
+    },
+    {
+      label: "Current debt context uploaded",
+      value: Boolean(projection?.supportDocProjection?.currentDebtContext),
+    },
+    {
+      label: "Proposed acquisition loan terms complete",
+      value: Boolean(projection?.supportDocProjection?.purchaseAssumptions?.extractedFacts?.proposed_loan_amount),
+    },
+    {
+      label: "Property tax support",
+      value: false,
+    },
+    {
+      label: "Environmental / Phase I support",
+      value: Boolean(projection?.supportDocProjection?.environmentalContext),
+    },
+    {
+      label: "Structured renovation / CapEx plan",
+      value: Boolean(projection?.supportDocProjection?.structuredRenovation),
+    },
+  ];
 }
 
 export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
@@ -40,8 +69,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
 
   const coreT12 = canonicalSourcePackage?.coreT12 && typeof canonicalSourcePackage.coreT12 === "object" ? canonicalSourcePackage.coreT12 : null;
   const coreRentRoll = canonicalSourcePackage?.coreRentRoll && typeof canonicalSourcePackage.coreRentRoll === "object" ? canonicalSourcePackage.coreRentRoll : null;
-
-  return {
+  const projection = {
     authorityVersion: "v2",
     coreSourceSummary: {
       t12: coreT12 ? { fileId: coreT12.fileId || null, originalFilename: coreT12.originalFilename || null, role: coreT12.role || "core_t12" } : null,
@@ -53,16 +81,16 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
       bothCoreSourcesPresent: Boolean(coreT12) && Boolean(coreRentRoll),
     },
     supportDocProjection: {
-      purchaseAssumptions,
-      currentDebtContext,
-      structuredRenovation,
-      appraisalContext,
-      marketSurveyContext,
-      environmentalContext,
-      otherSupportDocs,
-      allSupportDocs,
+      purchaseAssumptions: cloneEntry(purchaseAssumptions),
+      currentDebtContext: cloneEntry(currentDebtContext),
+      structuredRenovation: cloneEntry(structuredRenovation),
+      appraisalContext: cloneEntry(appraisalContext),
+      marketSurveyContext: cloneEntry(marketSurveyContext),
+      environmentalContext: cloneEntry(environmentalContext),
+      otherSupportDocs: otherSupportDocs.map(cloneEntry).filter(Boolean),
+      allSupportDocs: allSupportDocs.map(cloneEntry).filter(Boolean),
     },
-    documentTreatmentRows: allSupportDocs,
+    documentTreatmentRows: allSupportDocs.map(cloneEntry).filter(Boolean),
     financingReadinessSignals: {
       hasPurchaseAssumptions: Boolean(purchaseAssumptions),
       hasCurrentDebtContext: Boolean(currentDebtContext),
@@ -78,4 +106,21 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
       projectedBy: "buildAcquisitionMemoProjection",
     },
   };
+
+  projection.acquisitionContext = cloneEntry(purchaseAssumptions);
+  projection.proposedFinancingContext = cloneEntry(purchaseAssumptions);
+  projection.currentDebtContext = cloneEntry(currentDebtContext);
+  projection.renovationContext = cloneEntry(structuredRenovation);
+  projection.appraisalContext = cloneEntry(appraisalContext);
+  projection.marketSurveyContext = cloneEntry(marketSurveyContext);
+  projection.environmentalContext = cloneEntry(environmentalContext);
+  projection.lenderDiligenceChecklist = buildChecklist(projection);
+  projection.sourcePackageDiagnostics = {
+    authorityVersion: "v2",
+    supportDocCount: allSupportDocs.length,
+    coreT12Present: Boolean(coreT12),
+    coreRentRollPresent: Boolean(coreRentRoll),
+  };
+
+  return projection;
 }

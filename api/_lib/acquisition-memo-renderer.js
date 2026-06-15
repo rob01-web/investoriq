@@ -18,13 +18,36 @@ function renderTable(rows) {
     return '<table><tbody><tr><td colspan="4">No support documents provided.</td></tr></tbody></table>';
   }
 
+  const renderFacts = (row) => {
+    const facts = row?.extractedFacts && typeof row.extractedFacts === "object" ? row.extractedFacts : {};
+    const parts = [];
+    if (Number.isFinite(facts.purchase_price)) parts.push(`Purchase Price: $${Number(facts.purchase_price).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(facts.noi_basis)) parts.push(`NOI Basis: $${Number(facts.noi_basis).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(facts.going_in_cap_rate)) parts.push(`Going-In Cap Rate: ${(Number(facts.going_in_cap_rate) * 100).toFixed(1)}%`);
+    if (Number.isFinite(facts.proposed_loan_amount)) parts.push(`Proposed Loan Amount: $${Number(facts.proposed_loan_amount).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(facts.ltv)) parts.push(`LTV: ${(Number(facts.ltv) * 100).toFixed(0)}%`);
+    if (Number.isFinite(facts.interest_rate)) parts.push(`Interest Rate: ${(Number(facts.interest_rate) * 100).toFixed(2)}%`);
+    if (Number.isFinite(facts.amortization_years)) parts.push(`Amortization: ${Number(facts.amortization_years).toFixed(0)} years`);
+    if (Number.isFinite(facts.lender_fee_percent)) parts.push(`Lender Fee: ${(Number(facts.lender_fee_percent) * 100).toFixed(2)}%`);
+    if (Number.isFinite(facts.current_outstanding_balance)) parts.push(`Current Outstanding Balance: $${Number(facts.current_outstanding_balance).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(facts.amortization_remaining_years)) parts.push(`Amortization Remaining: ${Number(facts.amortization_remaining_years).toFixed(0)} years`);
+    if (Number.isFinite(facts.monthly_payment)) parts.push(`Monthly Payment: $${Number(facts.monthly_payment).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (facts.maturity_date) parts.push(`Maturity Date: ${facts.maturity_date}`);
+    if (Number.isFinite(facts.total_renovation_budget)) parts.push(`Total Renovation Budget: $${Number(facts.total_renovation_budget).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (facts.has_rent_lift) parts.push("Rent Lift: Yes");
+    if (facts.has_phasing) parts.push("Phasing: Yes");
+    if (Number.isFinite(facts.appraisal_value)) parts.push(`Appraisal Value: $${Number(facts.appraisal_value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    return parts.length > 0 ? `<div style="margin-top:4px;color:#374151;font-size:11px;line-height:1.45;">${parts.map((part) => `<div>${escapeHtml(part)}</div>`).join("")}</div>` : "";
+  };
+
   const body = rows
     .map((row) => {
       const filename = escapeHtml(row?.originalFilename || "");
       const label = escapeHtml(row?.roleLabel || "");
       const treatment = escapeHtml(row?.treatment || "");
       const use = escapeHtml(row?.use || "");
-      return `<tr><td>${filename}</td><td>${label}</td><td>${treatment}</td><td>${use}</td></tr>`;
+      const factsHtml = renderFacts(row);
+      return `<tr><td>${filename}</td><td>${label}</td><td>${treatment}</td><td>${use}${factsHtml}</td></tr>`;
     })
     .join("");
 

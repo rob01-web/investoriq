@@ -9698,9 +9698,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     }
     sourcePackageQaFiles = coverageFiles;
     sourcePackageQaArtifacts = coverageArtifacts;
+    const acqMemoV2SourceAuthorityEnabled =
+      process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
+      body?.__test_enable_acq_memo_v2_source_authority === true;
     let acquisitionMemoV2Bridge = null;
     // --- V2 SOURCE AUTHORITY BRIDGE START ---
-    if (effectiveReportMode === "v1_core") {
+    if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
       const canonicalSourcePackage = buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
       const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
       const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
@@ -12557,7 +12560,7 @@ if (jobId) {
   }
 }
 // --- V2 SOURCE AUTHORITY BRIDGE START ---
-if (effectiveReportMode === "v1_core" && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
   const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
   htmlString = replaceAll(
     htmlString,
@@ -12750,7 +12753,32 @@ try {
     sourceCoverageQa.rendered_text_signals = renderedSignals;
   }
   sourceCoverageQaResult = sourceCoverageQa;
-  if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+  if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+    const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
+    finalHtml = replaceAll(
+      finalHtml,
+      "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}",
+      v2Rendered.financingReadinessSummaryHtml || ""
+    );
+    if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+      finalHtml = finalHtml.replace(
+        /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+        `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+      );
+    }
+    finalHtml = replaceAll(finalHtml, "{{SOURCE_AUTHORITY_DIAGNOSTIC}}", v2Rendered.sourceAuthorityDiagnosticHtml || "");
+    finalHtml = replaceAll(finalHtml, "{{CORE_SOURCE_SUMMARY}}", `<!-- ${v2Rendered.coreSourceSummaryHtml || ""} -->`);
+    if (typeof finalHtml === "string") {
+      const coreSummaryComment = `<!-- ${v2Rendered.coreSourceSummaryHtml || ""} -->`;
+      const authorityDiagnosticComment = v2Rendered.sourceAuthorityDiagnosticHtml || "";
+      if (finalHtml.includes("</body>")) {
+        finalHtml = finalHtml.replace(/<\/body>\s*$/i, `${coreSummaryComment}${authorityDiagnosticComment}</body>`);
+      } else {
+        finalHtml += `${coreSummaryComment}${authorityDiagnosticComment}`;
+      }
+    }
+  }
+  if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
