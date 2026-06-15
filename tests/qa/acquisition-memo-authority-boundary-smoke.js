@@ -31,18 +31,44 @@ describe("acquisition memo authority boundary smoke", () => {
     }
   });
 
-  it("v2 bridge region in generate-client-report is gated and does not classify docs", () => {
+  it("v2 bridge regions in generate-client-report are gated and do not classify docs", () => {
     const bridgeSource = fs.readFileSync(path.resolve("api/generate-client-report.js"), "utf8");
-    const start = bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---");
-    const end = bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE END ---", start + 1);
+    assert.ok(
+      bridgeSource.includes("const acqMemoV2SourceAuthorityEnabled ="),
+      "V2 gate variable missing from generate-client-report.js"
+    );
+    assert.ok(
+      bridgeSource.includes('process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true"'),
+      "Environment gate missing from generate-client-report.js"
+    );
+    assert.ok(
+      bridgeSource.includes("body?.__test_enable_acq_memo_v2_source_authority === true"),
+      "Test-only gate missing from generate-client-report.js"
+    );
 
-    assert.ok(start >= 0 && end > start, "V2 bridge markers not found in generate-client-report.js");
+    const regionStarts = [
+      bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---"),
+      bridgeSource.indexOf("if (effectiveReportMode === \"v1_core\" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {"),
+      bridgeSource.indexOf("if (!(effectiveReportMode === \"v1_core\" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === \"string\" && finalHtml.includes(\"<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->\")) {"),
+    ];
 
-    const bridgeBlock = bridgeSource.slice(start, end);
-    assert.ok(bridgeBlock.includes("acqMemoV2SourceAuthorityEnabled"), "Bridge gate missing from V2 bridge block");
-    assert.ok(bridgeBlock.includes("buildCanonicalSourcePackage"), "Bridge block must build the canonical source package");
-    assert.ok(bridgeBlock.includes("buildAcquisitionMemoProjection"), "Bridge block must build the projection");
-    assert.ok(bridgeBlock.includes("renderAcquisitionMemo"), "Bridge block must render the memo");
+    for (const regionStart of regionStarts) {
+      assert.ok(regionStart >= 0, "Expected V2 gated region not found in generate-client-report.js");
+      const region = bridgeSource.slice(Math.max(0, regionStart - 80), Math.min(bridgeSource.length, regionStart + 1200));
+      assert.ok(
+        region.includes("effectiveReportMode === \"v1_core\" && acqMemoV2SourceAuthorityEnabled"),
+        "Every V2 bridge/injection/fallback region must be gated by effectiveReportMode and acqMemoV2SourceAuthorityEnabled"
+      );
+    }
+
+    assert.ok(bridgeSource.includes("buildCanonicalSourcePackage"), "Bridge must build the canonical source package");
+    assert.ok(bridgeSource.includes("buildAcquisitionMemoProjection"), "Bridge must build the projection");
+    assert.ok(bridgeSource.includes("renderAcquisitionMemo"), "Bridge must render the memo");
+
+    const bridgeBlock = bridgeSource.slice(
+      bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---"),
+      bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE END ---", bridgeSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---") + 1)
+    );
 
     const forbiddenBridgeStrings = [
       "semantic_doc_role",
