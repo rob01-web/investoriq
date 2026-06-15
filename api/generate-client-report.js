@@ -37,6 +37,9 @@ import {
   buildSourceReconciliationNarrativeProminencePolicy,
   sanitizeFinalCustomerHtml,
 } from "./_lib/report-surface-contracts.js";
+import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js";
+import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
+import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -9695,6 +9698,19 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     }
     sourcePackageQaFiles = coverageFiles;
     sourcePackageQaArtifacts = coverageArtifacts;
+    let acquisitionMemoV2Bridge = null;
+    // --- V2 SOURCE AUTHORITY BRIDGE START ---
+    if (effectiveReportMode === "v1_core") {
+      const canonicalSourcePackage = buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
+      const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
+      const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
+      acquisitionMemoV2Bridge = {
+        canonicalSourcePackage,
+        acquisitionMemoProjection,
+        renderedAcquisitionMemo,
+      };
+    }
+    // --- V2 SOURCE AUTHORITY BRIDGE END ---
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
         const text = String([
@@ -9952,6 +9968,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         formatPercent1,
         formatInterestRatePercent,
       });
+      if (acquisitionMemoV2Bridge?.renderedAcquisitionMemo?.financingReadinessSummaryHtml) {
+        preliminaryFinancingReadinessSummaryBlockHtml = acquisitionMemoV2Bridge.renderedAcquisitionMemo.financingReadinessSummaryHtml;
+      }
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
         reportMode: effectiveReportMode,
         documentSources: acquisitionMemoRenderContext.documentSources,
@@ -12537,6 +12556,44 @@ if (jobId) {
     console.error("Failed to write generate_client_report_runtime_marker artifact:", err?.message || err);
   }
 }
+// --- V2 SOURCE AUTHORITY BRIDGE START ---
+if (effectiveReportMode === "v1_core" && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+  const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
+  htmlString = replaceAll(
+    htmlString,
+    "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}",
+    v2Rendered.financingReadinessSummaryHtml || ""
+  );
+  if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+    htmlString = htmlString.replace(
+      /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+      `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+    );
+  }
+  htmlString = replaceAll(
+    htmlString,
+    "{{SOURCE_AUTHORITY_DIAGNOSTIC}}",
+    v2Rendered.sourceAuthorityDiagnosticHtml || ""
+  );
+  htmlString = replaceAll(
+    htmlString,
+    "{{CORE_SOURCE_SUMMARY}}",
+    `<!-- ${v2Rendered.coreSourceSummaryHtml || ""} -->`
+  );
+  if (typeof htmlString === "string") {
+    const coreSummaryComment = `<!-- ${v2Rendered.coreSourceSummaryHtml || ""} -->`;
+    const authorityDiagnosticComment = v2Rendered.sourceAuthorityDiagnosticHtml || "";
+    if (htmlString.includes("</body>")) {
+      htmlString = htmlString.replace(
+        /<\/body>\s*$/i,
+        `${coreSummaryComment}${authorityDiagnosticComment}</body>`
+      );
+    } else {
+      htmlString += `${coreSummaryComment}${authorityDiagnosticComment}`;
+    }
+  }
+}
+// --- V2 SOURCE AUTHORITY BRIDGE END ---
 let qaHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
