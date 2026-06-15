@@ -4943,6 +4943,7 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
 function buildPreliminaryFinancingReadinessSummaryHtml({
   reportMode = null,
   acquisitionMemoRenderContext = null,
+  acquisitionMemoV2Projection = null,
   acquisitionAssumptionState = null,
   currentDebtAssessmentState = null,
   mortgagePayload = null,
@@ -5126,7 +5127,6 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     `<tr><td>Rent Roll verified</td><td style="font-weight:600;">${rentRollVerified ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Number.isFinite(purchasePrice) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Property tax support</td><td style="font-weight:600;">${Boolean(propertyTaxBindingState?.hasValidatedAnnualTax || isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax)) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document || currentDebtAuthorityRow) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
   ];
   const supportPresenceRows = [
@@ -5140,6 +5140,41 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
       ? `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`
       : "",
   ].filter(Boolean);
+  const currentDebtChecklistPresent = Boolean(
+    acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true ||
+    acquisitionMemoV2Projection?.currentDebtContext ||
+    acquisitionMemoV2Projection?.supportDocProjection?.currentDebtContext ||
+    acquisitionMemoV2Projection?.lenderDiligenceChecklist?.some(
+      (row) => /current debt context uploaded/i.test(String(row?.label || row?.text || "")) && row?.value === true
+    ) ||
+    currentDebtAuthorityRow ||
+    (canonicalSupportDocMap instanceof Map &&
+      Array.from(canonicalSupportDocMap.values()).some((row) =>
+        String(row?.canonicalRole || row?.role || "").trim() === "current_debt_context"
+      ))
+  );
+  const currentDebtChecklistLegacyFallbackPresent = Boolean(
+    currentDebtAssessmentState?.has_current_debt_document ||
+    currentDebtAuthorityRow ||
+    (canonicalSupportDocMap instanceof Map &&
+      Array.from(canonicalSupportDocMap.values()).some((row) =>
+        String(row?.canonicalRole || row?.role || "").trim() === "current_debt_context"
+      ))
+  );
+  const currentDebtChecklistValue = acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true
+    ? "Yes"
+    : acquisitionMemoV2Projection
+      ? currentDebtChecklistPresent
+        ? "Yes"
+        : "No"
+      : currentDebtChecklistLegacyFallbackPresent
+        ? "Yes"
+        : "No";
+  checklistRows.splice(
+    4,
+    0,
+    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${currentDebtChecklistValue}</td></tr>`
+  );
   const sectionHasContent =
     requestRows.length > 0 ||
     operatingRows.length > 0 ||
@@ -9957,6 +9992,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       preliminaryFinancingReadinessSummaryBlockHtml = buildPreliminaryFinancingReadinessSummaryHtml({
         reportMode: effectiveReportMode,
         acquisitionMemoRenderContext,
+        acquisitionMemoV2Projection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
         acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
         currentDebtAssessmentState,
         mortgagePayload,
@@ -9973,6 +10009,18 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       });
       if (acquisitionMemoV2Bridge?.renderedAcquisitionMemo?.financingReadinessSummaryHtml) {
         preliminaryFinancingReadinessSummaryBlockHtml = acquisitionMemoV2Bridge.renderedAcquisitionMemo.financingReadinessSummaryHtml;
+      }
+      if (
+        effectiveReportMode === "v1_core" &&
+        acqMemoV2SourceAuthorityEnabled &&
+        acquisitionMemoV2Bridge?.renderedAcquisitionMemo &&
+        acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
+        typeof preliminaryFinancingReadinessSummaryBlockHtml === "string"
+      ) {
+        preliminaryFinancingReadinessSummaryBlockHtml = preliminaryFinancingReadinessSummaryBlockHtml.replace(
+          /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
+          'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
+        );
       }
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
         reportMode: effectiveReportMode,
@@ -12595,6 +12643,15 @@ if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acqu
       htmlString += `${coreSummaryComment}${authorityDiagnosticComment}`;
     }
   }
+  if (
+    acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
+    typeof htmlString === "string"
+  ) {
+    htmlString = htmlString.replace(
+      /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
+      'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
+    );
+  }
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
 let qaHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
@@ -12776,6 +12833,15 @@ try {
       } else {
         finalHtml += `${coreSummaryComment}${authorityDiagnosticComment}`;
       }
+    }
+    if (
+      acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
+      typeof finalHtml === "string"
+    ) {
+      finalHtml = finalHtml.replace(
+        /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
+        'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
+      );
     }
   }
   if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {

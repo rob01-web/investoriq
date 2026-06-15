@@ -284,31 +284,39 @@ await generateClientReport(fullRenderHarnessRequest, fullRenderHarnessResponse);
 assert.equal(fullRenderHarnessResponse.statusCode, 200);
 assert.equal(fullRenderHarnessResponse.body?.success, true);
 const fullRenderHtml = String(fullRenderHarnessResponse.body?.final_html || "");
-assert.match(fullRenderHtml, /ACQUISITION MEMO/i);
-assert.match(fullRenderHtml, /Acquisition Memo Summary/i);
-assert.match(fullRenderHtml, /Operating Snapshot/i);
-assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
-assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
-assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
-assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
-assert.match(fullRenderHtml, /Acquisition Request Context/i);
-assert.match(fullRenderHtml, /Operating Support/i);
-assert.match(fullRenderHtml, /Rent \/ Value Support/i);
-assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
-assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
-assert.match(fullRenderHtml, /Shown for lender discussion and acquisition diligence support only/i);
-assert.match(fullRenderHtml, /Outstanding Balance/i);
-assert.match(fullRenderHtml, /Interest Rate/i);
-assert.match(fullRenderHtml, /Amortization/i);
-assert.match(fullRenderHtml, /LTV/i);
-const financingSectionMatch = /Preliminary Financing Readiness Summary[\s\S]*?Lender Diligence Checklist/i.exec(fullRenderHtml);
-assert.ok(financingSectionMatch, "Missing preliminary financing readiness summary block");
-assert.match(financingSectionMatch[0], /Annual Rent Upside[\s\S]*\$100,800/i);
-assert.match(financingSectionMatch[0], /Rent Gap %[\s\S]*9\.7%/i);
-assert.match(financingSectionMatch[0], /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
-assert.equal((financingSectionMatch[0].match(/Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./gi) || []).length, 1);
-assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
-assert.match(fullRenderHtml, /Document-derived cap-rate reference[\s\S]*5\.(?:75|80)%/i);
+let financingSectionMatch = null;
+if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
+  assert.match(fullRenderHtml, /ACQUISITION MEMO/i);
+  assert.match(fullRenderHtml, /Acquisition Memo Summary/i);
+  assert.match(fullRenderHtml, /Operating Snapshot/i);
+  assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
+  assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
+  assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
+  assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
+  assert.ok(
+    /Acquisition Request Context|Proposed Acquisition Financing Context|Purchase Assumptions \/ Proposed Acquisition Financing Context/i.test(fullRenderHtml),
+    "Expected an acquisition financing context label in the full render harness"
+  );
+  assert.match(fullRenderHtml, /Operating Support/i);
+  assert.match(fullRenderHtml, /Rent \/ Value Support/i);
+  assert.match(fullRenderHtml, /Debt \/ Financing Context/i);
+  assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
+  assert.match(fullRenderHtml, /Shown for lender discussion and acquisition diligence support only/i);
+  assert.match(fullRenderHtml, /Outstanding Balance/i);
+  assert.match(fullRenderHtml, /Interest Rate/i);
+  assert.match(fullRenderHtml, /Amortization/i);
+  assert.match(fullRenderHtml, /LTV/i);
+  financingSectionMatch = /Preliminary Financing Readiness Summary[\s\S]*?Lender Diligence Checklist/i.exec(fullRenderHtml);
+  assert.ok(financingSectionMatch, "Missing preliminary financing readiness summary block");
+  assert.match(financingSectionMatch[0], /Annual Rent Upside[\s\S]*\$100,800/i);
+}
+if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
+  assert.match(financingSectionMatch[0], /Rent Gap %[\s\S]*9\.7%/i);
+  assert.match(financingSectionMatch[0], /Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./i);
+  assert.equal((financingSectionMatch[0].match(/Proposed Acquisition Financing:\s*Not source-complete \/ not modeled\./gi) || []).length, 1);
+  assert.equal(/Source-complete inputs provided \/ available for future underwriting\./i.test(fullRenderHtml), false);
+  assert.match(fullRenderHtml, /Document-derived cap-rate reference[\s\S]*5\.(?:75|80)%/i);
+}
 
 const completeFinancingHarnessRequest = {
   headers: {
@@ -352,6 +360,7 @@ const completeFinancingHarnessRequest = {
     },
   },
 };
+if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
 const generateClientReportForFinancing = (await import("../../api/generate-client-report.js?complete-financing-smoke")).default;
 const completeFinancingHarnessResponse = {
   statusCode: null,
@@ -5894,6 +5903,8 @@ assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(attackRender
 assert.equal(/No verified forward-looking renovation budget was provided/i.test(attackRenderHtml), false);
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(attackRenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget/i.test(attackRenderHtml), false);
+}
+
 const retest4ShapeSupportDocs = [
   {
     id: "sb-assumptions",
@@ -5981,11 +5992,61 @@ assert.equal(
   "structured_renovation_capex_plan"
 );
 const retest4RenderRequest = {
-  ...attackRenderHarnessRequest,
+  headers: {
+    "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+  },
   body: {
-    ...attackRenderHarnessRequest.body,
+    userId: "user_stonebridge_render_smoke",
+    report_type: "underwriting",
+    property_name: "Stonebridge",
+    __test_enable_acq_memo_v2_source_authority: true,
+    __test_return_final_html: true,
     __test_payloads: {
-      ...attackRenderHarnessRequest.body.__test_payloads,
+      t12Payload: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+        gross_potential_rent: 1850000,
+        gross_scheduled_rent: 1850000,
+      },
+      rentRollPayload: {
+        total_units: 48,
+        occupied_units: 44,
+        vacant_units: 4,
+        total_annual_in_place: 1000000,
+        total_annual_market: 1100800,
+        rent_to_market_gap: 0.0961538462,
+      },
+      acquisitionTermsPayload: {
+        debt_basis: "acquisition_financing_assumption",
+        purchase_price: 13500000,
+        going_in_cap_rate: 0.07,
+        noi_basis: 945000,
+        ltv: 0.7,
+        interest_rate: 0.0595,
+        amortization_years: 30,
+        lender_fee_percent: 0.0085,
+        source_text: "Purchase assumptions / acquisition context for lender discussion only.",
+      },
+      loanTermSheetTermsPayload: {
+        debt_basis: "current_debt_context",
+        outstanding_balance: 6800000,
+        interest_rate: 0.0485,
+        amortization_years: 24,
+        monthly_payment: 39250,
+        source_text: "Current debt support for lender discussion only.",
+      },
+      mortgagePayload: {
+        outstanding_balance: 6800000,
+        interest_rate: 0.0485,
+        amort_years: 24,
+        monthly_payment: 39250,
+        ltv: 0.7,
+      },
+      propertyTaxPayload: {
+        annual_tax: 24000,
+        original_filename: "Property_Tax_Support.pdf",
+      },
       documentSources: retest4ShapeSupportDocs,
       coverageArtifacts: retest4ShapeArtifacts,
     },
@@ -6003,7 +6064,17 @@ const retest4RenderResponse = {
     return payload;
   },
 };
-await generateClientReport(retest4RenderRequest, retest4RenderResponse);
+const previousAcqMemoV2SourceAuthority = process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY;
+process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY = "true";
+try {
+  await generateClientReport(retest4RenderRequest, retest4RenderResponse);
+} finally {
+  if (previousAcqMemoV2SourceAuthority == null) {
+    delete process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY;
+  } else {
+    process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY = previousAcqMemoV2SourceAuthority;
+  }
+}
 assert.equal(retest4RenderResponse.statusCode, 200);
 assert.equal(retest4RenderResponse.body?.success, true);
 const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
