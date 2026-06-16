@@ -1,3 +1,311 @@
+# June 15, 2026 Pause Addendum — Acquisition Memo V2 Bridge Whack-a-Mole / Final HTML Assembly Not Yet Sovereign
+
+## Current controlling status
+
+Rob paused the Acquisition Memo V2 bridge patch loop after the June 15 controlled local smoke/debug sequence.
+
+This pause is intentional and correct.
+
+The active issue is no longer treated as another Current Debt label patch, another Reno label patch, or another source-classification patch.
+
+The controlling issue is now:
+
+```text
+Acquisition Memo V2 source authority exists upstream, but the bridge into legacy generate-client-report.js final HTML assembly is not yet sovereign.
+```
+
+Current product status remains:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Untouched and protected.
+
+Acquisition Memo:
+Not launch-cleared.
+V2 source-authority rebuild remains active, but the current bridge/integration path is paused because final HTML assembly is still being fought by legacy template/token/marked-section/test-return paths.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Why the pause happened
+
+Codex used substantial quota while repeatedly patching the same symptom family without proving the actual final HTML state first.
+
+The loop pattern was:
+
+```text
+1. Patch current-debt checklist row.
+2. Run smoke.
+3. Fail.
+4. Search/reason through many legacy paths.
+5. Patch another row/bridge location.
+6. Repeat.
+7. Eventually introduce a new ReferenceError.
+```
+
+Rob manually took control and uploaded the relevant outputs/files.
+
+## Local smoke/debug sequence results
+
+### 1. ReferenceError introduced and fixed
+
+A Codex patch introduced:
+
+```text
+ReferenceError: acquisitionMemoV2Projection is not defined
+```
+
+Root cause:
+
+```text
+The handler referenced acquisitionMemoV2Projection outside its scope.
+The valid scoped path is acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+```
+
+Surgical fix applied:
+
+```javascript
+acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext
+```
+
+was replaced with:
+
+```javascript
+acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext
+```
+
+This fixed the crash class and `api/generate-client-report.js` passed syntax check afterward.
+
+### 2. Final HTML artifact proved the original row patch was aimed at a missing section
+
+The local `retest4-final-html.html` showed:
+
+```text
+Current debt context uploaded: 0 occurrences
+Lender Diligence Checklist: 0 occurrences
+Preliminary Financing Readiness Summary: 0 occurrences
+```
+
+The final HTML still contained an empty marked section:
+
+```html
+<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+```
+
+Interpretation:
+
+```text
+There was no current-debt checklist row to rewrite.
+The whole financing-readiness/checklist section was not being inserted into the final HTML.
+```
+
+### 3. Current Debt classification itself was correct in the appended Document Treatment Summary
+
+The same final HTML showed:
+
+```text
+Current_Debt_Stonebridge.pdf
+Debt Support Received / Contextual
+Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+Interpretation:
+
+```text
+The source authority / document-treatment role was no longer the primary blocker in this local smoke path.
+The blocker was final HTML assembly placement.
+```
+
+### 4. Document Treatment Summary remained outside the actual HTML document
+
+The final HTML still had:
+
+```html
+</body>
+</html>
+
+<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->...
+```
+
+Interpretation:
+
+```text
+DOCUMENT_TREATMENT_SUMMARY was still being appended after the closing HTML tag in at least one test-return/final assembly path.
+This is invalid report assembly and proves the legacy final assembly pipeline is still not fully under V2 control.
+```
+
+### 5. Latest smoke moved to a new assertion but did not prove the report is fixed
+
+After another bounded Codex final-assembly patch, the local smoke failed on:
+
+```javascript
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i
+```
+
+But the uploaded `retest4-final-html.html` still proved:
+
+```text
+SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY remains empty.
+Current debt context uploaded remains absent.
+Lender Diligence Checklist remains absent.
+Document Treatment Summary remains after </html>.
+```
+
+Interpretation:
+
+```text
+The latest patch did not fix the actual bridge/final assembly path returned by the test.
+No commit, deploy, or UI retest should occur from this state.
+```
+
+## Sharpened root diagnosis
+
+The V2 source-authority rebuild is conceptually correct:
+
+```text
+buildCanonicalSourcePackage(...)
+-> buildAcquisitionMemoProjection(...)
+-> renderAcquisitionMemo(...)
+```
+
+The problem is the current Step 5 bridge approach is still half-new / half-old:
+
+```text
+V2 modules produce source/projection/rendered memo data,
+but generate-client-report.js still owns:
+- legacy template tokens,
+- marked sections,
+- late replacement passes,
+- test-return htmlString paths,
+- Document Treatment harness fallbacks,
+- legacy preliminary financing blocks,
+- legacy source-context sections,
+- late finalHtml overwrites.
+```
+
+This creates the same structural whack-a-mole the rebuild was supposed to eliminate.
+
+The practical lesson:
+
+```text
+Do not keep row-patching legacy final assembly.
+Acquisition Memo V2 needs one sovereign memo body / section-owner path.
+generate-client-report.js should insert the finished V2 rendered body/block once, then stop legacy paths from overwriting or appending behind it.
+```
+
+## Current local files / working-tree caution
+
+The current local repo may contain uncommitted changes from the debugging sequence:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+The smoke test also has a temporary manual debug line:
+
+```javascript
+fs.writeFileSync("retest4-final-html.html", retest4RenderHtml);
+```
+
+This temporary test-write line must be removed before any commit unless intentionally preserved as a named artifact-writing test utility.
+
+Current status:
+
+```text
+Do not commit.
+Do not deploy.
+Do not run UI retest.
+Do not ask Codex for broad investigation.
+```
+
+## Recommended next strategy
+
+When work resumes in a fresh chat, do not continue the same micro-patch loop.
+
+Choose one of two bounded paths:
+
+### Option A — Final bridge ownership patch
+
+Patch only the V2 gate path so that when:
+
+```javascript
+effectiveReportMode === "v1_core" &&
+acqMemoV2SourceAuthorityEnabled &&
+acquisitionMemoV2Bridge?.renderedAcquisitionMemo
+```
+
+then the final Acquisition Memo V2 financing/document-treatment/source-context surface is owned by V2 rendered output, and legacy template/token/test-return paths cannot append or overwrite those sections.
+
+Acceptance:
+
+```text
+SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is not empty.
+It includes Preliminary Financing Readiness Summary.
+It includes Lender Diligence Checklist.
+It includes Current debt context uploaded = Yes.
+DOCUMENT_TREATMENT_SUMMARY is inside <body>, not after </html>.
+Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual.
+No duplicate/conflicting legacy row remains.
+V2 gate off behavior remains unchanged.
+```
+
+### Option B — Stop bridge patching and render a complete V2 Acquisition Memo body
+
+Instead of fighting legacy section-by-section replacements, make `renderAcquisitionMemo(projection)` produce a complete V2 memo body/block and insert it into one known Acquisition Memo container under the V2 feature gate.
+
+Acceptance:
+
+```text
+Projection/renderer own all V2 Acquisition Memo customer-visible source surfaces.
+generate-client-report.js is a thin shell only.
+Legacy Document Treatment / Preliminary Financing / support-doc helpers do not run for V2-gated memo body.
+```
+
+Preferred direction:
+
+```text
+Option B is cleaner and more aligned with the original rebuild doctrine.
+Option A may be faster, but risks continuing the same bridge whack-a-mole.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+We paused on June 15 after local smoke/debug proved the current Acquisition Memo V2 bridge is still not sovereign.
+
+Important latest evidence:
+- ReferenceError from acquisitionMemoV2Projection was fixed by using acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+- Current debt role/classification appears correct in Document Treatment.
+- However SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is still empty in final HTML.
+- Current debt context uploaded / Lender Diligence Checklist / Preliminary Financing Readiness Summary are absent.
+- DOCUMENT_TREATMENT_SUMMARY is still appended after </html>.
+- Latest smoke failure moved to a document-treatment assertion, but final HTML still proves bridge/final assembly is wrong.
+- Do not commit/deploy/UI retest from current local state.
+- Remove temporary fs.writeFileSync debug line before commit.
+- Next decision: either one bounded V2 bridge ownership patch or pivot to a cleaner complete V2 memo-body insertion so generate-client-report.js stops fighting the new V2 modules.
+```
+
+## Permanent guardrails still active
+
+```text
+Do not touch Screening except protective regression.
+Do not touch Stripe, SQL, Supabase, auth/upload gates, pricing, DocRaptor config, or Admin Dashboard.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD in Acquisition Memo.
+Do not hardcode Stonebridge production logic.
+Do not treat support-doc ambiguity as a customer fail gate.
+Do not let optional support docs override T12/Rent Roll core truth.
+Do not continue broad Codex investigation loops.
+Use get-in/get-out prompts only if Codex is used.
+```
+
+---
+
 # June 14, 2026 Evening Addendum — V2 Source-Authority Rebuild Steps 1 and 2 Complete
 
 ## Current controlling status

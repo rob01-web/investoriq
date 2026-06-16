@@ -1,3 +1,246 @@
+# June 15, 2026 CVF Addendum — V2 Bridge Final HTML Assembly Failure / Patch Loop Paused
+
+## Current CVF status
+
+The Acquisition Memo V2 source-authority rebuild remains active, but Step 5 bridge wiring is not currently passing.
+
+The latest local smoke/debug sequence updates CVF status as follows:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll parsing:
+PASS / protected. Not implicated.
+
+CVF-04 Current debt / proposed acquisition financing separation:
+PARTIAL UPSTREAM PASS / FINAL RENDER FAIL.
+Current_Debt_Stonebridge.pdf reaches correct Debt Support Received / Contextual document-treatment output in one path, but Current debt context uploaded / Lender Diligence Checklist is absent from final HTML.
+
+CVF-05 V2 containment:
+PASS / continue protecting. No reason to reopen forbidden surfaces.
+
+CVF-07 / CVF-15 Optional-support/source-package authority:
+PARTIAL UPSTREAM PASS / FINAL ASSEMBLY FAIL.
+Document Treatment can classify Current Debt correctly, but the Document Treatment block is still appended after </html> in the local test-return path.
+
+CVF-13 Runtime/render stability:
+WATCHLIST.
+A ReferenceError was introduced by a bridge patch and then fixed. This proves Step 5 bridge wiring can create runtime defects if patched blindly.
+
+CVF-14 Advisory/final assembly diagnostics:
+ACTIVE.
+The smoke/test-return path and final HTML path are not yet aligned to V2 source-package truth.
+```
+
+## New active blocker classification
+
+Active blocker name:
+
+```text
+CVF-15 / CVF-13 — Acquisition Memo V2 Bridge Final HTML Assembly Ownership Failure
+```
+
+This is distinct from the earlier pure classification failures.
+
+The current root is:
+
+```text
+V2 source/projection/render output is not yet the sole owner of the customer-visible Acquisition Memo V2 body.
+Legacy final assembly still controls tokens, marked sections, test-return htmlString, and append fallbacks.
+```
+
+## Evidence recorded
+
+### ReferenceError fixed
+
+Observed failure:
+
+```text
+ReferenceError: acquisitionMemoV2Projection is not defined
+```
+
+Disposition:
+
+```text
+Fixed locally by replacing out-of-scope acquisitionMemoV2Projection access with acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+```
+
+CVF mapping:
+
+```text
+CVF-13 runtime/render defect introduced during bridge patching.
+Status: fixed in uploaded local file; do not broaden.
+```
+
+### Financing readiness section absent
+
+Latest final HTML evidence:
+
+```text
+Current debt context uploaded: absent.
+Lender Diligence Checklist: absent.
+Preliminary Financing Readiness Summary: absent.
+```
+
+The marked section remains empty:
+
+```html
+<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+```
+
+CVF mapping:
+
+```text
+CVF-04 final visible checklist/current-debt readiness not rendered.
+CVF-15 final assembly does not consume V2 projection/renderer output correctly.
+```
+
+### Document Treatment Summary appended after closing HTML
+
+Latest final HTML evidence:
+
+```html
+</body>
+</html>
+
+<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->...
+```
+
+CVF mapping:
+
+```text
+CVF-15 final support-doc treatment path exists but is not inserted into the valid report body.
+CVF-13/CVF-15 final HTML assembly failure.
+```
+
+### Current debt source treatment row is correct where it appears
+
+Latest Document Treatment block includes:
+
+```text
+Current_Debt_Stonebridge.pdf
+Debt Support Received / Contextual
+Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+CVF mapping:
+
+```text
+CVF-04 source classification is no longer the immediate blocker in this local path.
+The remaining blocker is final assembly/placement/ownership.
+```
+
+## Why the patch loop is paused
+
+This sequence reproduced the same structural problem the V2 rebuild was meant to solve:
+
+```text
+Patching one local row or replacement path leaves another legacy final assembly path active.
+```
+
+Observed active legacy behaviors include:
+
+```text
+empty marked sections,
+token replacement that misses marked sections,
+late V2 bridge replacement timing,
+test-return htmlString fallback,
+DOCUMENT_TREATMENT_SUMMARY append-after-html fallback,
+legacy preliminary financing/readiness builders,
+legacy support-doc treatment output paths.
+```
+
+CVF conclusion:
+
+```text
+Further micro-patches are likely to keep moving the failure unless Step 5 is reframed as ownership, not row replacement.
+```
+
+## Required next acceptance criteria
+
+Before Step 5 can be considered passing:
+
+```text
+1. V2 gate on:
+   - SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is populated.
+   - Preliminary Financing Readiness Summary appears.
+   - Lender Diligence Checklist appears.
+   - Current debt context uploaded appears and says Yes.
+   - Current debt facts come from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf.
+
+2. Document Treatment:
+   - Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual.
+   - Stonebridge_Assumptions.pdf remains Purchase Assumptions / Acquisition Context.
+   - Reno remains Structured Renovation / CapEx Plan.
+   - Document Treatment Summary is inside <body>, not after </html>.
+
+3. Legacy containment:
+   - No duplicate/conflicting legacy current-debt/document-treatment rows.
+   - No legacy append-after-html fallback for V2 test-return path.
+   - V2 gate off behavior remains unchanged.
+
+4. Hygiene:
+   - Temporary fs.writeFileSync debug line is removed before commit.
+   - No diagnostics/logs remain.
+   - No commit/deploy/UI retest until local smoke passes.
+```
+
+## Recommended next CVF handling
+
+Do not continue with a broad audit.
+
+Preferred next approach:
+
+```text
+Reframe Step 5 as a V2 memo-body ownership bridge:
+generate-client-report.js may provide shell/layout only;
+renderAcquisitionMemo(projection) must own the Acquisition Memo V2 customer-visible source sections;
+legacy support-doc and financing-readiness helpers must not append/overwrite those sections under the V2 gate.
+```
+
+If a smaller patch is attempted, it must be bounded to:
+
+```text
+V2-gated final assembly ownership only.
+```
+
+It must not touch:
+
+```text
+core math,
+Screening,
+parser classification,
+source package,
+projection/renderer authority boundary,
+payment/access,
+Stripe,
+SQL/Supabase,
+DocRaptor,
+Admin Dashboard,
+Full Underwriting V2 surfaces.
+```
+
+## Fresh continuation point
+
+```text
+Pause point: June 15 local smoke/debug.
+
+Do not commit/deploy/UI retest.
+
+Latest known state:
+- acquisitionMemoV2Projection ReferenceError fixed.
+- current-debt document treatment row can be correct.
+- final HTML still has empty SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY.
+- final HTML still lacks Current debt context uploaded / Lender Diligence Checklist / Preliminary Financing Readiness Summary.
+- Document Treatment Summary still appears after </html>.
+- Latest smoke failure moved to Current_Debt_Stonebridge.pdf / Debt Support Received assertion, but final HTML shows the deeper final-assembly placement problem remains.
+- Next work should be a clean fresh-chat decision between:
+  A) one V2-gated final assembly ownership patch; or
+  B) replacing section-by-section bridge patching with a complete V2 Acquisition Memo body insertion.
+```
+
+---
+
 # June 14, 2026 Evening Addendum — CVF Update / V2 Rebuild Steps 1 and 2 Complete
 
 ## Current CVF status after Steps 1 and 2

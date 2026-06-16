@@ -1,4 +1,4 @@
-[dotenv@17.2.3] injecting env (8) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (8) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
 No storage option exists to persist the session, which may result in unexpected behavior when using auth.
         If you want to set persistSession to true, please provide a storage option or you may set persistSession to false to disable this warning.
 WARN Missing narrative sections: execSummary, cashFlowProjections, riskAssessment, renovationNarrative, debtStructure, dealScoreSummary, dealScoreInterpretation, advancedModelingIntro, dcfInterpretation, finalRecommendation
@@ -7,7 +7,7 @@ node:internal/modules/run_main:107
     triggerUncaughtException(
     ^
 
-AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i. Input:
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i. Input:
 
 '<!DOCTYPE html>\r\n' +
   '<html lang="en">\r\n' +
@@ -558,9 +558,9 @@ AssertionError [ERR_ASSERTION]: The input did not match the regular expression /
   ' .exec-signal-drivers {\r\n' +
   ' margin: 6px 0 0 18px;\r\n' +
   ' padding: 0;\r\n' +
-  ' font-size: '... 32489 more characters
+  ' font-size: '... 25602 more characters
 
-    at file:///C:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/tests/qa/generate-client-report-rent-roll-smoke.js:6083:8 {
+    at file:///C:/Users/robmc/Desktop/InvestorIQ/InvestorIQ-Empire-v1/tests/qa/generate-client-report-rent-roll-smoke.js:6081:8 {
   generatedMessage: true,
   code: 'ERR_ASSERTION',
   actual: '<!DOCTYPE html>\r\n' +
@@ -1112,8 +1112,8 @@ AssertionError [ERR_ASSERTION]: The input did not match the regular expression /
     ' .exec-signal-drivers {\r\n' +
     ' margin: 6px 0 0 18px;\r\n' +
     ' padding: 0;\r\n' +
-    ' font-size: '... 32489 more characters,
-  expected: /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i,
+    ' font-size: '... 25602 more characters,
+  expected: /Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i,
   operator: 'match',
   diff: 'simple'
 }

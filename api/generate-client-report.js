@@ -10106,6 +10106,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{NEIGHBORHOOD_CONTEXT_BLOCK}}", sourceContextBlockHtml || neighborhoodContextHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
+    finalHtml = replaceMarkedSection(
+      finalHtml,
+      "SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY",
+      `<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->${preliminaryFinancingReadinessSummaryBlockHtml || ""}<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->`
+    );
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -12040,8 +12045,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           /\{\{DOCUMENT_TREATMENT_SUMMARY\}\}/g,
           harnessDocumentTreatmentHtml || ""
         );
-      } else if (harnessDocumentTreatmentHtml) {
-        htmlString += `\n<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->\n`;
       }
       return res.status(200).json({
         success: true,
