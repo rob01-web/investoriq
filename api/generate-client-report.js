@@ -41,6 +41,10 @@ import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js"
 import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-document.js";
+import {
+  buildDeliveryResponseCompatibilityAliases,
+  sanitizeTypography,
+} from "./_lib/report-delivery-output.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -203,59 +207,6 @@ function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   if (!userPart || !seedPart) return "";
   return `${userPart}/${seedPart}.pdf`;
 }
-function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
-  const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
-  const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
-  const customerDeliveryAllowed =
-    state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null
-      ? Boolean(state.customer_delivery_allowed)
-      : rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery);
-  const holdDelivery = Boolean(state.hold_delivery);
-  const publicSampleReady = Boolean(state.public_sample_ready);
-  const highValueOutreachReady = Boolean(state.high_value_outreach_ready);
-  const launchPathRecommendation =
-    customerDeliveryAllowed
-      ? (publicSampleReady && highValueOutreachReady
-        ? "customer_deliverable"
-        : "customer_deliverable_with_internal_advisory")
-      : (rawDeliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
-  const readinessHierarchy = {
-    final_delivery_authority: "delivery_gate",
-    final_delivery_status: rawDeliveryGateStatus,
-    customer_delivery_ready: customerDeliveryAllowed,
-    customer_publish_eligible: customerDeliveryAllowed,
-    report_publishable: customerDeliveryAllowed,
-    report_blocked: !customerDeliveryAllowed,
-    public_sample_ready: publicSampleReady,
-    high_value_outreach_ready: highValueOutreachReady,
-    advisory_only_findings: Array.isArray(state.advisory_only_findings) ? state.advisory_only_findings.length : 0,
-  };
-  return {
-    delivery_gate_status: rawDeliveryGateStatus,
-    customer_delivery_allowed: customerDeliveryAllowed,
-    hold_delivery: holdDelivery,
-    holdDelivery,
-    report_publishable: customerDeliveryAllowed,
-    report_blocked: !customerDeliveryAllowed,
-    customer_delivery_ready: customerDeliveryAllowed,
-    customer_publish_eligible: customerDeliveryAllowed,
-    launch_path_recommendation: launchPathRecommendation,
-    readiness_hierarchy: readinessHierarchy,
-    legacy_compatibility: {
-      delivery_gate_status: rawDeliveryGateStatus,
-      customer_delivery_ready: customerDeliveryAllowed,
-      customer_publish_eligible: customerDeliveryAllowed,
-      report_publishable: customerDeliveryAllowed,
-      report_blocked: !customerDeliveryAllowed,
-      launch_path_recommendation: launchPathRecommendation,
-      hold_delivery: holdDelivery,
-      holdDelivery,
-      public_sample_ready: publicSampleReady,
-      high_value_outreach_ready: highValueOutreachReady,
-    },
-  };
-}
-
 function resolveReportTypeAndTier({
   bodyReportType = null,
   jobReportType = null,
@@ -1924,10 +1875,6 @@ function sanitizePropertyNameDisplayText(s) {
     .replace(/\s{2,}/g, " ")
     .trim();
 }
-function sanitizeTypography(html) {
-  return sanitizeFinalCustomerHtml(html);
-}
-
 function sanitizeScreeningRankedDriversHtml(html) {
   if (typeof html !== "string") return html;
   const sectionPattern = /<!-- BEGIN EXEC_RANKED_DRIVERS -->([\s\S]*?)<!-- END EXEC_RANKED_DRIVERS -->/g;
@@ -12637,7 +12584,7 @@ if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acqu
   htmlString = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
-let qaHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
+  let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,

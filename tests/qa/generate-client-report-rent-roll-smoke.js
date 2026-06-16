@@ -6088,6 +6088,9 @@ assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Other Support Document/i
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(retest4RenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget/i.test(retest4RenderHtml), false);
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}rent-roll parse\/recovery/i.test(retest4RenderHtml), false);
+const attackPrelimHtml = retest4RenderHtml;
+const attackAcquisitionFinancingHtml = retest4RenderHtml;
+const attackDocumentTreatmentHtml = retest4RenderHtml;
 const attackContractQa = buildReportContractQa({
   html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
   reportType: "underwriting",
