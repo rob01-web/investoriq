@@ -12042,11 +12042,27 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       });
       if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
-          /\{\{DOCUMENT_TREATMENT_SUMMARY\}\}/g,
-          harnessDocumentTreatmentHtml || ""
+          /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+          `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
         );
       }
-      return res.status(200).json({
+      if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+        const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
+        htmlString = replaceAll(htmlString, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", v2Rendered.financingReadinessSummaryHtml || "");
+        if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+          htmlString = htmlString.replace(
+            /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+            `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+          );
+        }
+        if (acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true && typeof htmlString === "string") {
+          htmlString = htmlString.replace(
+            /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
+            'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
+          );
+        }
+      }
+        return res.status(200).json({
         success: true,
         report_type: reportType,
         report_mode: effectiveReportMode,
