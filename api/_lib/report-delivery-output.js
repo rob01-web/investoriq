@@ -56,3 +56,71 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     },
   };
 }
+
+export function isValidReportStoragePath(storagePath) {
+  const normalized = typeof storagePath === "string" ? storagePath.trim() : "";
+  return normalized.length > 0 && normalized.includes("/") && normalized.toLowerCase().endsWith(".pdf");
+}
+
+export function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
+  const userPart = String(effectiveUserId ?? "").trim();
+  const seedPart = String(reportSeed ?? "").trim();
+  if (!userPart || !seedPart) return "";
+  return `${userPart}/${seedPart}.pdf`;
+}
+
+export function assertValidReportPublicationInsert({
+  storagePath,
+  reportType,
+  deliveryGateStatus = null,
+  holdDelivery = false,
+  coreValidRequiredCoverage = false,
+  context = {},
+} = {}) {
+  const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
+  const normalizedDeliveryGateStatus =
+    String(deliveryGateStatus || "deliverable") === "admin_review_required"
+      ? "deliverable"
+      : deliveryGateStatus;
+  if (
+    !coreValidRequiredCoverage &&
+    (
+      holdDelivery ||
+      (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
+    )
+  ) {
+    const err = new Error("Report publication blocked before storage insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath || null,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+      coreValidRequiredCoverage: Boolean(coreValidRequiredCoverage),
+    };
+    throw err;
+  }
+  if (!isValidReportStoragePath(normalizedStoragePath)) {
+    const err = new Error("Missing valid report storage path before report insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath || null,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
+  if (!String(reportType ?? "").trim()) {
+    const err = new Error("Missing report type before report insert");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      ...context,
+      storagePath: normalizedStoragePath,
+      deliveryGateStatus: normalizedDeliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
+  return normalizedStoragePath;
+}

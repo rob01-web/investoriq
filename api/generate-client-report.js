@@ -43,6 +43,8 @@ import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-document.js";
 import {
   buildDeliveryResponseCompatibilityAliases,
+  buildReportStoragePath,
+  assertValidReportPublicationInsert,
   sanitizeTypography,
 } from "./_lib/report-delivery-output.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
@@ -197,16 +199,6 @@ function replaceAll(str, token, value) {
   if (!str || !token) return str;
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
 }
-function isValidReportStoragePath(storagePath) {
-  const normalized = typeof storagePath === "string" ? storagePath.trim() : "";
-  return normalized.length > 0 && normalized.includes("/") && normalized.toLowerCase().endsWith(".pdf");
-}
-function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
-  const userPart = String(effectiveUserId ?? "").trim();
-  const seedPart = String(reportSeed ?? "").trim();
-  if (!userPart || !seedPart) return "";
-  return `${userPart}/${seedPart}.pdf`;
-}
 function resolveReportTypeAndTier({
   bodyReportType = null,
   jobReportType = null,
@@ -271,61 +263,6 @@ function resolveReportTypeAndTier({
     providedToken: String(explicitRawToken || ""),
     normalizedToken: normalizedExplicitToken,
   };
-}
-function assertValidReportPublicationInsert({
-  storagePath,
-  reportType,
-  deliveryGateStatus = null,
-  holdDelivery = false,
-  coreValidRequiredCoverage = false,
-  context = {},
-} = {}) {
-  const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
-  const normalizedDeliveryGateStatus =
-    String(deliveryGateStatus || "deliverable") === "admin_review_required"
-      ? "deliverable"
-      : deliveryGateStatus;
-  if (
-    !coreValidRequiredCoverage &&
-    (
-      holdDelivery ||
-      (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
-    )
-  ) {
-    const err = new Error("Report publication blocked before storage insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-      coreValidRequiredCoverage: Boolean(coreValidRequiredCoverage),
-    };
-    throw err;
-  }
-  if (!isValidReportStoragePath(normalizedStoragePath)) {
-    const err = new Error("Missing valid report storage path before report insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-    };
-    throw err;
-  }
-  if (!String(reportType ?? "").trim()) {
-    const err = new Error("Missing report type before report insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-    };
-    throw err;
-  }
-  return normalizedStoragePath;
 }
 const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
