@@ -12040,19 +12040,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
-      if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-        htmlString = htmlString.replace(
-          /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-          `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
-        );
-      }
       if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
         const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
         htmlString = replaceAll(htmlString, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", v2Rendered.financingReadinessSummaryHtml || "");
         if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
           htmlString = htmlString.replace(
             /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-            `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+            v2Rendered.documentTreatmentSummaryHtml || ""
           );
         }
         if (acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true && typeof htmlString === "string") {
@@ -12061,8 +12055,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
           );
         }
+      } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+        htmlString = htmlString.replace(
+          /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+          `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
+        );
       }
-        return res.status(200).json({
+      return res.status(200).json({
         success: true,
         report_type: reportType,
         report_mode: effectiveReportMode,

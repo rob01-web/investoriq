@@ -85,7 +85,7 @@ function renderFinancingReadinessSummary(signals) {
 }
 
 export function renderAcquisitionMemo(acquisitionMemoProjection) {
-  const documentTreatmentSummaryHtml = renderTable(acquisitionMemoProjection?.documentTreatmentRows);
+  const documentTreatmentSummaryHtml = `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${renderTable(acquisitionMemoProjection?.documentTreatmentRows)}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`;
   const coreSourceSummaryHtml = renderCoreSourceSummary(acquisitionMemoProjection?.coreSourceSummary);
   const financingReadinessSummaryHtml = renderFinancingReadinessSummary(acquisitionMemoProjection?.financingReadinessSignals);
   const sourceAuthorityDiagnosticHtml = `<!-- IQ_SOURCE_AUTHORITY: ${JSON.stringify({
