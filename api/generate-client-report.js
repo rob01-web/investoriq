@@ -40,6 +40,7 @@ import {
 import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js";
 import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
+import { applyAcquisitionMemoV2FinalAssembly } from "./_lib/acquisition-memo-v2-final-assembly.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -10007,21 +10008,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         formatPercent1,
         formatInterestRatePercent,
       });
-      if (acquisitionMemoV2Bridge?.renderedAcquisitionMemo?.financingReadinessSummaryHtml) {
-        preliminaryFinancingReadinessSummaryBlockHtml = acquisitionMemoV2Bridge.renderedAcquisitionMemo.financingReadinessSummaryHtml;
-      }
-      if (
-        effectiveReportMode === "v1_core" &&
-        acqMemoV2SourceAuthorityEnabled &&
-        acquisitionMemoV2Bridge?.renderedAcquisitionMemo &&
-        acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
-        typeof preliminaryFinancingReadinessSummaryBlockHtml === "string"
-      ) {
-        preliminaryFinancingReadinessSummaryBlockHtml = preliminaryFinancingReadinessSummaryBlockHtml.replace(
-          /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
-          'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
-        );
-      }
       sourceContextBlockHtml = buildLaunchSourceContextBlock({
         reportMode: effectiveReportMode,
         documentSources: acquisitionMemoRenderContext.documentSources,
@@ -10102,15 +10088,17 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{OPERATING_SNAPSHOT_BLOCK}}", operatingSnapshotBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{RENT_UPSIDE_VALUE_SENSITIVITY_BLOCK}}", rentUpsideValueSensitivityBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{CAP_RATE_VALUE_INDICATION_BLOCK}}", capRateValueIndicationBlockHtml);
-    finalHtml = replaceAll(finalHtml, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", preliminaryFinancingReadinessSummaryBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{NEIGHBORHOOD_CONTEXT_BLOCK}}", sourceContextBlockHtml || neighborhoodContextHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
-    finalHtml = replaceMarkedSection(
-      finalHtml,
-      "SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY",
-      `<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->${preliminaryFinancingReadinessSummaryBlockHtml || ""}<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->`
-    );
+    if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo)) {
+      finalHtml = replaceAll(finalHtml, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", preliminaryFinancingReadinessSummaryBlockHtml);
+      finalHtml = replaceMarkedSection(
+        finalHtml,
+        "SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY",
+        `<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->${preliminaryFinancingReadinessSummaryBlockHtml || ""}<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->`
+      );
+    }
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -12041,20 +12029,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
       if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
-        const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
-        htmlString = replaceAll(htmlString, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", v2Rendered.financingReadinessSummaryHtml || "");
-        if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-          htmlString = htmlString.replace(
-            /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-            v2Rendered.documentTreatmentSummaryHtml || ""
-          );
-        }
-        if (acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true && typeof htmlString === "string") {
-          htmlString = htmlString.replace(
-            /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
-            'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
-          );
-        }
+        htmlString = applyAcquisitionMemoV2FinalAssembly({
+          html: htmlString,
+          renderedAcquisitionMemo: acquisitionMemoV2Bridge.renderedAcquisitionMemo,
+          acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+        });
       } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
           /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -12627,18 +12606,12 @@ if (jobId) {
 }
 // --- V2 SOURCE AUTHORITY BRIDGE START ---
 if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+  htmlString = applyAcquisitionMemoV2FinalAssembly({
+    html: htmlString,
+    renderedAcquisitionMemo: acquisitionMemoV2Bridge.renderedAcquisitionMemo,
+    acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+  });
   const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
-  htmlString = replaceAll(
-    htmlString,
-    "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}",
-    v2Rendered.financingReadinessSummaryHtml || ""
-  );
-  if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-    htmlString = htmlString.replace(
-      /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-      `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
-    );
-  }
   htmlString = replaceAll(
     htmlString,
     "{{SOURCE_AUTHORITY_DIAGNOSTIC}}",
@@ -12660,15 +12633,6 @@ if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acqu
     } else {
       htmlString += `${coreSummaryComment}${authorityDiagnosticComment}`;
     }
-  }
-  if (
-    acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
-    typeof htmlString === "string"
-  ) {
-    htmlString = htmlString.replace(
-      /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
-      'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
-    );
   }
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
@@ -12829,18 +12793,12 @@ try {
   }
   sourceCoverageQaResult = sourceCoverageQa;
   if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) {
+    finalHtml = applyAcquisitionMemoV2FinalAssembly({
+      html: finalHtml,
+      renderedAcquisitionMemo: acquisitionMemoV2Bridge.renderedAcquisitionMemo,
+      acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+    });
     const v2Rendered = acquisitionMemoV2Bridge.renderedAcquisitionMemo;
-    finalHtml = replaceAll(
-      finalHtml,
-      "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}",
-      v2Rendered.financingReadinessSummaryHtml || ""
-    );
-    if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-      finalHtml = finalHtml.replace(
-        /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-        `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${v2Rendered.documentTreatmentSummaryHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
-      );
-    }
     finalHtml = replaceAll(finalHtml, "{{SOURCE_AUTHORITY_DIAGNOSTIC}}", v2Rendered.sourceAuthorityDiagnosticHtml || "");
     finalHtml = replaceAll(finalHtml, "{{CORE_SOURCE_SUMMARY}}", `<!-- ${v2Rendered.coreSourceSummaryHtml || ""} -->`);
     if (typeof finalHtml === "string") {
@@ -12851,15 +12809,6 @@ try {
       } else {
         finalHtml += `${coreSummaryComment}${authorityDiagnosticComment}`;
       }
-    }
-    if (
-      acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true &&
-      typeof finalHtml === "string"
-    ) {
-      finalHtml = finalHtml.replace(
-        /Current debt context uploaded<\/td><td style="font-weight:600;">No<\/td>/i,
-        'Current debt context uploaded</td><td style="font-weight:600;">Yes</td>'
-      );
     }
   }
   if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {

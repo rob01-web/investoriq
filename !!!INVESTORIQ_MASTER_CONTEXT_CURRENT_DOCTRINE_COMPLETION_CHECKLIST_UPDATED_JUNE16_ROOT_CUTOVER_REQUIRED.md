@@ -1,3 +1,330 @@
+# June 16, 2026 Addendum — Owner Escalation / V2 Final Bridge Rejected / Real Root Cutover Required TODAY
+
+## Current controlling status
+
+Rob escalated after the June 16 local smoke loop continued to fail even after the Acquisition Memo V2 source-authority rebuild, V2 final assembly helper, and multiple tightly scoped bridge corrections.
+
+This escalation is warranted.
+
+The controlling conclusion is now:
+
+```text
+Acquisition Memo V2 has a cleaner upstream brain, but it still does not have a sovereign final report body.
+The current bridge still depends on legacy generate-client-report.js HTML assembly, markers, tokens, fallbacks, and test-return paths.
+Therefore the system is still structurally capable of whack-a-mole failures even after V2 source/projection/render modules are correct.
+```
+
+Product status:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Protect and do not touch except regression.
+
+Acquisition Memo:
+Not launch-cleared. V2 source-authority foundation is conceptually strong, but final HTML ownership is not solved.
+Acquisition Memo V2 must now hard-cut over to a complete V2-owned memo body/document path or equivalent sovereign final HTML owner.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Rob's escalation / owner red-line
+
+Rob's frustration must be preserved as project context because it is the correct product-owner signal.
+
+Rob's substance, recorded plainly:
+
+```text
+For weeks Rob has been asking for the ROOT problem, not another small patch.
+He repeatedly warned that the work was turning into whack-a-mole.
+He asked whether rebuilding generate-client-report.js or the Acquisition Memo path would be faster/safer.
+He was repeatedly advised to avoid a wholesale rebuild and keep doing bounded patches.
+The June 16 smoke loop proved that this advice was incomplete for Acquisition Memo final assembly.
+Rob is right to reject another tiny patch loop.
+Rob needs Screening and Acquisition Memo operational urgently.
+The next work must solve the ownership boundary TODAY, not move the smoke failure again.
+```
+
+Verbatim-style owner sentiment to preserve:
+
+```text
+"No more patching every single issue again."
+"Get to the fucking ROOT of the issue."
+"If V2 is supposed to be brand new, why is it still fighting generate-client-report?"
+"If the final bridge is still contaminated, then V2 is not truly bypassing the monster file."
+"One patch, rebuild, or whatever it takes today — no more fucking around."
+```
+
+Interpretation:
+
+```text
+This is not ordinary venting.
+This is a valid project-management correction.
+The active issue is no longer a row, regex, marker, or idempotency bug.
+The active issue is that Acquisition Memo V2 final report ownership is still not properly separated from the legacy generator.
+```
+
+## June 16 smoke / patch-loop evidence
+
+After the V2 final assembly helper was added:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- api/_lib/acquisition-memo-v2-final-assembly.js
+```
+
+Codex reported:
+
+```text
+- New helper file created.
+- generate-client-report.js calls one helper in harness/intermediate/final paths.
+- old ad hoc row/marker replacements removed or bypassed.
+- Current debt context uploaded now driven from acquisitionMemoProjection.financingReadinessSignals.hasCurrentDebtContext.
+- helper inserts before </body> or before </html>, never after </html>.
+```
+
+Additional tiny correction followed:
+
+```text
+api/_lib/acquisition-memo-v2-final-assembly.js
+- current-debt row regex corrected to include the opening first <td>.
+```
+
+Manual smoke then failed again:
+
+```text
+node tests/qa/generate-client-report-rent-roll-smoke.js 2>&1 | findstr "PASS ERR_ASSERTION"
+
+AssertionError [ERR_ASSERTION]:
+The input did not match the regular expression
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i
+```
+
+Interpretation:
+
+```text
+The failure moved back to Document Treatment visibility.
+This proves the V2 final assembly helper is still a patch layer operating on legacy-produced HTML, not a true sovereign V2 memo body.
+```
+
+## Corrected architecture diagnosis
+
+The V2 source-authority rebuild is NOT the failed part:
+
+```text
+buildCanonicalSourcePackage(...)
+buildAcquisitionMemoProjection(...)
+renderAcquisitionMemo(...)
+```
+
+The failed part is Step 5:
+
+```text
+bridge into generate-client-report.js final HTML assembly
+```
+
+The current helper is not a true bypass.
+
+It is:
+
+```text
+a centralized patch layer that inserts/replaces V2 fragments inside legacy htmlString/finalHtml.
+```
+
+That means it can still be defeated by:
+
+```text
+legacy marked sections,
+legacy token timing,
+legacy finalHtml/htmlString split paths,
+test-return path,
+late append fallbacks,
+old preliminary financing builders,
+old document treatment builders,
+old strip/dedupe/sanitize passes,
+old QA/source-coverage post-processing assumptions,
+old report template structure.
+```
+
+## Required doctrine change
+
+The prior doctrine:
+
+```text
+"Do not rewrite generate-client-report.js wholesale."
+```
+
+remains correct for Screening and whole-platform safety, but it is no longer sufficient for Acquisition Memo V2 final assembly.
+
+New doctrine:
+
+```text
+Do not rewrite the entire platform generator.
+Do hard-cut Acquisition Memo V2 to its own complete final HTML body/document owner under the V2 gate.
+generate-client-report.js may remain request/data/PDF/storage/delivery plumbing only, but it must not own Acquisition Memo V2 customer-visible body sections.
+```
+
+This means the next patch must not continue:
+
+```text
+replace SECTION_0_8;
+insert before </body>;
+patch Document Treatment idempotency;
+regex one row from No to Yes;
+marker chase DOCUMENT_TREATMENT_SUMMARY;
+append missing V2 block after legacy output.
+```
+
+## Required next root cutover
+
+Implement a true V2 final document owner such as:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+Required exported function:
+
+```javascript
+renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection,
+  renderedAcquisitionMemo,
+  coreMetrics,
+  reportMeta,
+  propertyProfile,
+  sourcePackage,
+})
+```
+
+Or adapt the current renderer so that it returns a complete document/body, not fragments.
+
+Under the V2 gate:
+
+```javascript
+effectiveReportMode === "v1_core" &&
+acqMemoV2SourceAuthorityEnabled &&
+acquisitionMemoV2Bridge?.acquisitionMemoProjection
+```
+
+the generator must do conceptually:
+
+```javascript
+finalHtml = renderCompleteAcquisitionMemoV2Html(...);
+```
+
+and skip legacy Acquisition Memo body assembly.
+
+Allowed generate-client-report.js responsibilities under V2 gate:
+
+```text
+request/job parsing
+auth/user/job loading
+core T12/Rent Roll deterministic data preparation
+calling buildCanonicalSourcePackage
+calling buildAcquisitionMemoProjection
+calling renderCompleteAcquisitionMemoV2Html
+PDF generation
+storage
+delivery state
+artifact writing
+error handling
+```
+
+Forbidden generate-client-report.js responsibilities under V2 gate:
+
+```text
+legacy Acquisition Memo section marker ownership
+legacy preliminary financing readiness ownership
+legacy document treatment ownership
+legacy source-context/support-doc treatment ownership
+late append-after-html fallback
+row-level current debt regex mutation
+fragment insertion / body insertion patching
+legacy helper reclassification of support docs
+```
+
+## Acceptance criteria for the next patch
+
+The next patch is not accepted because one assertion passes once.
+
+It is accepted only if all of these hold:
+
+```text
+1. V2 gate on uses one complete V2-owned Acquisition Memo HTML body/document.
+2. generate-client-report.js does not insert V2 Document Treatment or Financing blocks by marker/regex/body insertion.
+3. SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is no longer the authority for V2 output.
+4. DOCUMENT_TREATMENT_SUMMARY marker is no longer the authority for V2 output.
+5. Current_Debt_Stonebridge.pdf appears within valid body HTML as Debt Support Received / Contextual.
+6. Current debt context uploaded appears and says Yes.
+7. Lender Diligence Checklist appears.
+8. Preliminary Financing Readiness Summary appears.
+9. Document Treatment is inside <body>, not after </html>.
+10. Stonebridge_Assumptions remains purchase/proposed acquisition context, not current debt.
+11. Reno remains Structured Renovation / CapEx Plan.
+12. Appraisal remains appraisal context.
+13. Phase I remains environmental context.
+14. T12/Rent Roll remain core quantitative sources, not Other Support Document.
+15. No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation/BUY/SELL/HOLD/loan approval language appears.
+16. Screening smoke remains protected.
+17. V2 gate off behavior remains unchanged.
+18. No production hardcoding of Stonebridge filenames except in tests.
+```
+
+## Working-tree caution
+
+As of the June 16 escalation, the repo may contain uncommitted changes from:
+
+```text
+api/generate-client-report.js
+api/_lib/acquisition-memo-v2-final-assembly.js
+```
+
+Previous temp/debug warning remains:
+
+```text
+Remove any temporary fs.writeFileSync("retest4-final-html.html", ...) test line before commit unless intentionally made into a named artifact-writing utility.
+```
+
+Do not commit the current bridge-helper patch series as final if the true root cutover replaces it.
+
+The next patch should either:
+
+```text
+A. replace the helper-based bridge with a complete V2 final document owner; or
+B. explicitly keep the helper only as an internal implementation inside the complete V2 document owner, no longer as a legacy-body patcher.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 16 owner escalation.
+
+The latest smoke still fails:
+Current_Debt_Stonebridge.pdf ... Debt Support Received / Contextual not found in final_html.
+
+The failure persists after:
+- V2 final assembly helper creation,
+- current debt checklist row ownership change,
+- row regex correction,
+- generate-client-report bridge cleanup attempts.
+
+Conclusion:
+The bridge-helper approach is still contaminated by legacy final assembly.
+No more row/marker/body-insertion patches.
+
+Next work:
+Hard-cut Acquisition Memo V2 to a complete V2-owned final HTML body/document under the V2 gate.
+generate-client-report.js may provide plumbing only.
+Screening must remain untouched/protected.
+One patch/rebuild today, not another micro-patch loop.
+```
+
+---
+
+
 # June 15, 2026 Pause Addendum — Acquisition Memo V2 Bridge Whack-a-Mole / Final HTML Assembly Not Yet Sovereign
 
 ## Current controlling status

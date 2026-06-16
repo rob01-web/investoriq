@@ -1,3 +1,217 @@
+# June 16, 2026 CVF Addendum — Owner Escalation / CVF-15 Final Assembly Root Not Solved / Hard V2 Cutover Required
+
+## Current CVF status
+
+The CVF ledger is updated after Rob's June 16 escalation.
+
+Active blocker:
+
+```text
+CVF-15 / CVF-13 — Acquisition Memo V2 Final HTML Ownership Failure
+```
+
+This supersedes treating the current failure as:
+
+```text
+a current-debt row bug,
+a Document Treatment idempotency bug,
+a marker replacement bug,
+or a test assertion tweak.
+```
+
+Current CVF mapping:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll:
+PASS / protected.
+
+CVF-04 Current debt / proposed acquisition separation:
+UPSTREAM PARTIAL PASS, FINAL HTML FAIL.
+Source package/projection can identify current debt context, but the final customer-visible body still does not reliably render the Document Treatment and checklist proof.
+
+CVF-05 V2 containment:
+PASS / protect. Do not reopen forbidden surfaces.
+
+CVF-07 / CVF-15 Optional support/source package authority:
+UPSTREAM PARTIAL PASS, FINAL HTML OWNERSHIP FAIL.
+Source authority can classify rows, but final report assembly still fails to make V2 the sole customer-visible owner.
+
+CVF-13 Runtime/render stability:
+WATCHLIST.
+Multiple bridge patches changed failure shape and one introduced a ReferenceError earlier. This confirms patching legacy final assembly is risky.
+
+CVF-14 Advisory/final assembly diagnostics:
+ACTIVE.
+Final smoke/test-return paths are not yet aligned with canonical V2 authority.
+```
+
+## Owner escalation recorded
+
+Rob escalated because the same CVF family has consumed weeks through repeated tiny patches.
+
+Substance of escalation:
+
+```text
+Rob has repeatedly asked for the root problem, not one more small patch.
+Rob correctly identified the repeated pattern as whack-a-mole.
+Rob challenged the earlier advice not to rebuild generate-client-report / final assembly.
+Rob now requires a same-day root fix: one patch/rebuild/cutover that changes the ownership boundary.
+```
+
+Ledger interpretation:
+
+```text
+This is a valid owner escalation.
+It should prevent future assistants/Codex prompts from proposing another marker, regex, or row-level patch as the main strategy.
+```
+
+## Latest smoke evidence
+
+Manual command:
+
+```text
+node tests/qa/generate-client-report-rent-roll-smoke.js 2>&1 | findstr "PASS ERR_ASSERTION"
+```
+
+Latest failure:
+
+```text
+AssertionError [ERR_ASSERTION]:
+The input did not match the regular expression
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i
+```
+
+This occurred after:
+
+```text
+- new api/_lib/acquisition-memo-v2-final-assembly.js helper,
+- generate-client-report.js calls to helper in harness/intermediate/final paths,
+- removal/bypass of old ad hoc row/marker replacements,
+- current debt row driven by acquisitionMemoProjection.financingReadinessSignals.hasCurrentDebtContext,
+- row regex correction to avoid nested <td>.
+```
+
+CVF conclusion:
+
+```text
+The helper-centered bridge did not close CVF-15.
+The failure moved, then returned.
+The root is final HTML ownership, not one assertion.
+```
+
+## Why the current approach still fails CVF-15
+
+The V2 system currently owns:
+
+```text
+source classification,
+projection,
+some rendered fragments,
+a final assembly helper.
+```
+
+But it does NOT yet sovereignly own:
+
+```text
+the complete Acquisition Memo V2 customer-visible HTML document/body.
+```
+
+`generate-client-report.js` still owns too much under the V2 path:
+
+```text
+legacy htmlString/finalHtml shell,
+legacy marked sections,
+legacy token replacement,
+legacy test-return path,
+legacy section stripping/sanitizing,
+legacy Document Treatment paths,
+legacy preliminary financing readiness paths,
+late fallback paths.
+```
+
+This creates repeated CVF failures because V2 output is inserted into or patched over legacy output.
+
+## CVF correction
+
+The next patch must change the architecture boundary:
+
+Old failed pattern:
+
+```text
+legacy Acquisition Memo HTML
++ V2 fragment replacements
++ body insertions
++ marker fallback suppression
+= recurring CVF-15 failures
+```
+
+Required pattern:
+
+```text
+V2 gate on
+-> build canonical source package
+-> build Acquisition Memo projection
+-> render complete Acquisition Memo V2 HTML/body/document
+-> pass complete finalHtml to PDF/storage/delivery
+```
+
+`generate-client-report.js` may still provide:
+
+```text
+core data extraction,
+job plumbing,
+PDF/storage/delivery plumbing,
+error handling.
+```
+
+It must not provide V2 customer-visible section ownership.
+
+## Required CVF acceptance
+
+Before CVF-15 can move from ACTIVE to PASS:
+
+```text
+1. Acquisition Memo V2 under feature gate renders complete final HTML from V2-owned document/body.
+2. No marker replacement is required to make V2 Financing Readiness appear.
+3. No marker replacement is required to make V2 Document Treatment appear.
+4. No append-after-html fallback is possible under V2.
+5. No row-level regex mutation is needed for Current debt context uploaded.
+6. Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual in valid body HTML.
+7. Current debt context uploaded: Yes appears.
+8. Preliminary Financing Readiness Summary appears.
+9. Lender Diligence Checklist appears.
+10. V2 gate off keeps legacy/Screening unaffected.
+11. Screening regression remains green.
+12. Forbidden V2 surfaces remain absent.
+```
+
+## Stop condition
+
+If Codex or any assistant proposes another patch whose primary mechanism is:
+
+```text
+replace one marker,
+fix one regex,
+insert one block before </body>,
+patch one row,
+or change one assertion,
+```
+
+then reject it unless it is explicitly part of a complete V2 final document ownership cutover.
+
+## Fresh CVF continuation point
+
+```text
+CVF-15 remains ACTIVE.
+The final HTML bridge is not solved.
+The correct next move is a hard V2 final document/body owner, not another helper patch.
+Screening is protected.
+Acquisition Memo remains not launch-cleared until this cutover passes local smoke and visible final HTML validation.
+```
+
+---
+
+
 # June 15, 2026 CVF Addendum — V2 Bridge Final HTML Assembly Failure / Patch Loop Paused
 
 ## Current CVF status
