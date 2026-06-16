@@ -45,6 +45,7 @@ import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
   assertValidReportPublicationInsert,
+  isValidReportStoragePath,
   sanitizeTypography,
 } from "./_lib/report-delivery-output.js";
 import {
