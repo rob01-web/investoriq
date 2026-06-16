@@ -67,6 +67,13 @@ import {
   sanitizeDisplayText,
   sanitizePropertyNameDisplayText,
 } from "./_lib/report-formatting-helpers.js";
+import {
+  isFiniteNumber,
+  isFinitePositive,
+  materiallyDifferent,
+  toRateRatio,
+  toCapRatio,
+} from "./_lib/report-number-helpers.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -144,14 +151,6 @@ const coerceNumber = (value) => {
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 };
-function materiallyDifferent(a, b, absoluteTolerance = 10, relativeTolerance = 0.02) {
-  const left = Number(a);
-  const right = Number(b);
-  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
-  const delta = Math.abs(left - right);
-  const scale = Math.max(Math.abs(left), Math.abs(right), 1);
-  return delta > absoluteTolerance && delta / scale > relativeTolerance;
-}
 function resolveSafeAnnualRentTotal({
   totalUnits,
   weightedAvgRent,
@@ -795,14 +794,6 @@ function buildDealScorecardState({
     dealScoreTableHtml,
   };
 }
-function isFiniteNumber(x) {
-  const n = Number(x);
-  return Number.isFinite(n);
-}
-function isFinitePositive(x) {
-  const n = Number(x);
-  return Number.isFinite(n) && n > 0;
-}
 // Returns true only when a parsed debt payload contains the minimum
 // field set required to support debt-aware underwriting analysis.
 // Prevents weak partial debt payloads from being treated as valid debt data
@@ -1298,16 +1289,6 @@ function computeMortgageConstant(rateAnnual, amortYears) {
   const pm = rm / denominator;
   const mc = pm * 12;
   return Number.isFinite(mc) && mc > 0 ? mc : null;
-}
-function toRateRatio(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n > 1.5 ? n / 100 : n; // treat 5.25 as 5.25% => 0.0525
-}
-function toCapRatio(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n > 1.5 ? n / 100 : n; // treat 6.0 as 6.0% => 0.06
 }
 function buildRefiStabilityModel({
   financials,
