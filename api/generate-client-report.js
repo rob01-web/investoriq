@@ -47,6 +47,10 @@ import {
   assertValidReportPublicationInsert,
   sanitizeTypography,
 } from "./_lib/report-delivery-output.js";
+import {
+  resolveReportTypeAndTier,
+  constantTimeEqual,
+} from "./_lib/report-request-context.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -198,71 +202,6 @@ function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visible
 function replaceAll(str, token, value) {
   if (!str || !token) return str;
   return str.includes(token) ? str.split(token).join(value ?? "") : str;
-}
-function resolveReportTypeAndTier({
-  bodyReportType = null,
-  jobReportType = null,
-} = {}) {
-  const normalizeToken = (value) =>
-    String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-  const hasExplicitBodyType = String(bodyReportType || "").trim().length > 0;
-  const hasExplicitJobType = String(jobReportType || "").trim().length > 0;
-  const explicitRawToken = hasExplicitBodyType ? bodyReportType : hasExplicitJobType ? jobReportType : null;
-  const normalizedExplicitToken = normalizeToken(explicitRawToken);
-  const canonicalByToken = new Map([
-    ["screening", "screening"],
-    ["underwriting", "underwriting"],
-    ["ic", "ic"],
-    ["full_underwriting", "underwriting"],
-    ["underwriting_report", "underwriting"],
-    ["underwriting_v1", "underwriting"],
-    ["tier_2", "underwriting"],
-    ["tier2", "underwriting"],
-  ]);
-  const hasExplicitType = hasExplicitBodyType || hasExplicitJobType;
-  if (!hasExplicitType) {
-    return {
-      ok: true,
-      reportType: "screening",
-      reportTier: 1,
-      effectiveReportMode: "screening_v1",
-      usedDefault: true,
-      explicitUnknown: false,
-      providedToken: null,
-      normalizedToken: "",
-    };
-  }
-  const canonicalType = canonicalByToken.get(normalizedExplicitToken) || null;
-  if (!canonicalType) {
-    return {
-      ok: false,
-      explicitUnknown: true,
-      providedToken: String(explicitRawToken || ""),
-      normalizedToken: normalizedExplicitToken,
-      allowedTypes: ["screening", "underwriting", "ic"],
-      supportedAliases: [
-        "full_underwriting",
-        "underwriting_report",
-        "underwriting_v1",
-        "tier_2",
-        "tier2",
-      ],
-    };
-  }
-  const reportTier = canonicalType === "underwriting" ? 2 : canonicalType === "ic" ? 3 : 1;
-  return {
-    ok: true,
-    reportType: canonicalType,
-    reportTier,
-    effectiveReportMode: canonicalType === "screening" ? "screening_v1" : "v1_core",
-    usedDefault: false,
-    explicitUnknown: false,
-    providedToken: String(explicitRawToken || ""),
-    normalizedToken: normalizedExplicitToken,
-  };
 }
 const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
@@ -2224,15 +2163,6 @@ function shouldStripDataCoverageSectionByRenderedCopy({
   }
   const dnaCount = (coverageHtml.match(/DATA NOT AVAILABLE/g) || []).length;
   return dnaCount >= 3;
-}
-function constantTimeEqual(a, b) {
-  if (typeof a !== "string" || typeof b !== "string") return false;
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
 }
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   const toNum = (v) => {
