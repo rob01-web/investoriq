@@ -74,6 +74,13 @@ import {
   toRateRatio,
   toCapRatio,
 } from "./_lib/report-number-helpers.js";
+import {
+  stripMarkedSection,
+  replaceMarkedSection,
+  stripT12DetailSubsection,
+  stripEmptyHeadingBlocks,
+  stripChartBlockByAlt,
+} from "./_lib/report-html-helpers.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -1685,60 +1692,6 @@ function dedupeDataNotAvailableBySection(html) {
     return `<!-- BEGIN ${token} -->${nextBody}<!-- END ${token} -->`;
   });
 }
-function stripMarkedSection(html, key) {
-  const token = String(key || "");
-  if (!token) return html;
-  const begin = `<!-- BEGIN ${token} -->`;
-  const end = `<!-- END ${token} -->`;
-  if (!html.includes(begin)) return html;
-  if (!html.includes(end)) {
-    console.warn(`Section marker missing END for ${token}`);
-    return html;
-  }
-  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
-    "g"
-  );
-  return html.replace(re, "");
-}
-function replaceMarkedSection(html, key, replacement = "") {
-  const token = String(key || "");
-  if (!token) return html;
-  const begin = `<!-- BEGIN ${token} -->`;
-  const end = `<!-- END ${token} -->`;
-  if (!html.includes(begin) || !html.includes(end)) return html;
-  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
-    "g"
-  );
-  return html.replace(re, replacement);
-}
-function stripT12DetailSubsection(html, headingText) {
-  if (!html) return html;
-  const escapedHeading = String(headingText || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (!escapedHeading) return html;
-  // Pattern A: heading is <h3> or similar + the next table
-  const patternA = new RegExp(
-    String.raw`<h[1-6][^>]*>\s*${escapedHeading}\s*<\/h[1-6]>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
-    "i"
-  );
-  // Pattern B: heading is a div/span label + the next table (common in templates)
-  const patternB = new RegExp(
-    String.raw`<(div|span)[^>]*>\s*${escapedHeading}\s*<\/\1>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
-    "i"
-  );
-  let out = html.replace(patternA, "");
-  out = out.replace(patternB, "");
-  return out;
-}
-function stripEmptyHeadingBlocks(html) {
-  if (!html) return html;
-  return String(html)
-    .replace(/<p class="section-intro">\s*<\/p>\s*/gi, "")
-    .replace(/<p class="subsection-title">\s*<\/p>\s*/gi, "");
-}
 function stripThinSectionPages(html) {
   if (!html) return html;
   return String(html).replace(/<section class="section page-break">([\s\S]*?)<\/section>/gi, (match, inner) => {
@@ -1877,16 +1830,6 @@ function collapseSummaryOnlyUnitMixSection(
     denseSummaryCard
   );
 }
-function stripChartBlockByAlt(html, altText) {
-  if (!altText) return html;
-  const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<div class=\"chart-block[\\s\\S]*?<img[^>]*(alt=\"${escapedAlt}\"[^>]*src=\"\"|src=\"\"[^>]*alt=\"${escapedAlt}\")[^>]*>[\\s\\S]*?<\\/div>`,
-    "g"
-  );
-  return html.replace(re, "");
-}
-
 function resolveCanonicalDataCoverageHeadlineState({
   dataCoverageState = null,
   sourceReconciliationState = null,
