@@ -121,6 +121,11 @@ assert.equal(typeof finalHtml, "string");
 assert.match(finalHtml, /^<!doctype html>/i);
 assert.match(finalHtml, /<html[\s>]/i);
 assert.match(finalHtml, /<body[\s>]/i);
+assert.match(finalHtml, /INVESTORIQ CONFIDENTIAL/i);
+assert.match(finalHtml, /Acquisition Memo/i);
+assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(finalHtml), false);
+assert.equal(/Document-driven Acquisition Memo V2/i.test(finalHtml), false);
+assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Lender Diligence Checklist/i);
 assert.match(finalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
@@ -143,6 +148,10 @@ assert.equal(finalHtml.slice(bodyEnd).includes("Document Treatment Summary"), fa
 assert.equal(finalHtml.indexOf("Preliminary Financing Readiness Summary") < bodyEnd, true);
 assert.equal(finalHtml.indexOf("Document Treatment Summary") < bodyEnd, true);
 assert.equal(finalHtml.indexOf("</html>") > finalHtml.indexOf("Document Treatment Summary"), true);
+assert.match(finalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
+assert.match(finalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
+assert.match(finalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.equal(/\$135,000\b/i.test(finalHtml), false);
 
 const forbiddenPatterns = [
   /\bDSCR\b/i,
@@ -212,15 +221,20 @@ const retest6FinalHtml = renderCompleteAcquisitionMemoV2Html({
     propertyTitle: "Stonebridge",
   },
 });
+assert.match(retest6FinalHtml, /INVESTORIQ CONFIDENTIAL/i);
+assert.match(retest6FinalHtml, /Acquisition Memo/i);
+assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(retest6FinalHtml), false);
+assert.equal(/Document-driven Acquisition Memo V2/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Acquisition Memo Summary/i);
-assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
 assert.match(retest6FinalHtml, /Operating Snapshot/i);
-assert.match(retest6FinalHtml, /Unit Mix \/ Rent Positioning/i);
+assert.match(retest6FinalHtml, /Unit Mix and Rent Positioning/i);
 assert.match(retest6FinalHtml, /Rent Upside \/ Value Sensitivity/i);
+assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);
 assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
-assert.match(retest6FinalHtml, /Data Coverage \/ Source Reliability/i);
+assert.match(retest6FinalHtml, /Operating Statement \/ TTM Summary/i);
+assert.match(retest6FinalHtml, /Data Coverage &amp; Source Limitations/i);
 assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
-assert.match(retest6FinalHtml, /Methodology \/ Limitations/i);
+assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
 assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 assert.match(retest6FinalHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i);
@@ -232,5 +246,47 @@ assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Enviro
 assert.match(retest6FinalHtml, /Document Treatment Summary/i);
 assert.ok(retest6FinalHtml.indexOf("Document Treatment Summary") < retest6FinalHtml.toLowerCase().indexOf("</body>"));
 assert.ok(retest6FinalHtml.toLowerCase().indexOf("</body>") < retest6FinalHtml.toLowerCase().indexOf("</html>"));
+assert.match(retest6FinalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
+assert.match(retest6FinalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
+assert.match(retest6FinalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.equal(/\$135,000\b/i.test(retest6FinalHtml), false);
+
+const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: retest6Projection,
+  renderedAcquisitionMemo: retest6RenderedAcquisitionMemo,
+  sourcePackage: retest6SourcePackage,
+  coreMetrics: {
+    occupancy: 0.9375,
+    annualInPlaceRent: 1080000,
+    annualMarketRent: 1188000,
+    egi: 1074000,
+    opEx: 414000,
+    noi: 945000,
+    expenseRatio: 0.385,
+    noiMargin: 0.615,
+    breakEvenOccupancy: 0.875,
+    purchasePrice: 13500000,
+    goingInCapRate: 7,
+  },
+  reportMeta: {
+    reportType: "underwriting",
+    effectiveReportMode: "v1_core",
+    reportTier: 2,
+    generatedAt: new Date().toISOString(),
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+  propertyProfile: {
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+});
+assert.match(capRateSevenFinalHtml, /Implied value at going-in cap rate<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(capRateSevenFinalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
+assert.match(capRateSevenFinalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
+assert.match(capRateSevenFinalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.equal(/\$135,000\b/i.test(capRateSevenFinalHtml), false);
 
 console.log("acquisition-memo-v2-document smoke PASS");

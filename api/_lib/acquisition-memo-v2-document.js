@@ -1,3 +1,5 @@
+import { toCapRatio } from "./report-number-helpers.js";
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -24,6 +26,13 @@ function formatPercentDisplay(value) {
   if (!Number.isFinite(n)) return "";
   const pct = Math.abs(n) <= 1 ? n * 100 : n;
   return `${pct.toFixed(1)}%`;
+}
+
+function formatCapRateValue(noiBasis, capRatePct) {
+  const capRatio = toCapRatio(capRatePct);
+  const noi = Number(noiBasis);
+  if (!Number.isFinite(noi) || !Number.isFinite(capRatio) || capRatio <= 0) return "";
+  return formatMoney(noi / capRatio);
 }
 
 function getSupportDocs(sourcePackage = null) {
@@ -73,6 +82,56 @@ function renderSourceDocRows(sourcePackage = null) {
   return rows;
 }
 
+function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage }) {
+  const sourceRows = renderSourceDocRows(sourcePackage);
+  const assetClass = Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+    ? `Multifamily | ${Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))} Units`
+    : "Multifamily";
+  const badge = reportMeta?.reportTier === 2 ? "Tier II Launch Memo" : "Launch Memo";
+  return `<section class="cover">
+    <div class="cover-shell">
+      <div class="cover-brand">INVESTORIQ CONFIDENTIAL</div>
+      <div class="cover-kicker">${escapeHtml(badge)}</div>
+      <h1 class="cover-title">Acquisition Memo</h1>
+      <p class="cover-subtitle">${escapeHtml(propertyName || "Property")}</p>
+      ${propertyTitle ? `<p class="cover-meta">${escapeHtml(propertyTitle)}</p>` : ""}
+      ${propertyAddress ? `<p class="cover-meta">${escapeHtml(propertyAddress)}</p>` : ""}
+      <div class="cover-grid">
+        <div><span>Asset Class</span><strong>${escapeHtml(assetClass)}</strong></div>
+        <div><span>Source Authority</span><strong>V2 Canonical Package</strong></div>
+        <div><span>Memo Status</span><strong>Confidential / Customer Facing</strong></div>
+      </div>
+      ${sourceRows.length ? `<div class="cover-sources"><p class="subsection-title">Core Quantitative Sources</p><table class="source-table"><tbody>${sourceRows.join("")}</tbody></table></div>` : ""}
+    </div>
+  </section>`;
+}
+
+function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null } = {}) {
+  const supportDocCount = getSupportDocs(sourcePackage).length;
+  const rows = [
+    `<tr><td>Source authority version</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.authorityVersion || "v2")}</td></tr>`,
+    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocCount}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+  ];
+  const occupancy = Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available";
+  const noi = Number.isFinite(Number(coreMetrics?.noi)) ? formatMoney(coreMetrics.noi) : "Not available";
+  const annualUpside = Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))
+    ? formatMoney(Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent))
+    : "Not available";
+  return `<div class="card no-break">
+    <p class="subsection-title">Executive Summary</p>
+    <p class="body-copy">InvestorIQ Acquisition Memo. This memo is document-driven and source-authority bound: the canonical source package determines document roles, the V2 projection determines readiness and checklist state, and the report shell stays presentation-only.</p>
+    <table class="detail-table"><tbody>${rows.join("")}</tbody></table>
+    <div class="summary-strip">
+      <div><span>Occupancy</span><strong>${escapeHtml(occupancy)}</strong></div>
+      <div><span>NOI</span><strong>${escapeHtml(noi)}</strong></div>
+      <div><span>Annual Rent Upside</span><strong>${escapeHtml(annualUpside)}</strong></div>
+    </div>
+  </div>`;
+}
+
 function renderSupportDocRows(sourcePackage = null) {
   return getSupportDocs(sourcePackage).map((doc) => {
     const filename = doc?.originalFilename || doc?.roleLabel || doc?.canonicalLabel || doc?.canonicalRole || "Support Document";
@@ -109,13 +168,9 @@ function renderReadinessSection({ renderedAcquisitionMemo = null, acquisitionMem
 function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePackage = null) {
   const tableHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.documentTreatmentSummaryHtml || "").trim();
   if (!tableHtml) return "";
-  const supportDocRows = renderSupportDocRows(sourcePackage);
-  const docRowsHtml = supportDocRows.length
-    ? `<div class="subsection-block"><p class="subsection-title">Support Document Treatment</p><table class="detail-table"><tbody>${supportDocRows.join("")}</tbody></table></div>`
-    : "";
   return renderSection(
     "Source Context / Support Document Treatment",
-    `<p class="subsection-title">Document Treatment Summary</p>${tableHtml}${docRowsHtml}`,
+    `<p class="body-copy">Support documents are treated through the canonical source package and V2 projection. The customer-visible treatment table stays inside the memo body.</p><p class="subsection-title">Document Treatment Summary</p>${tableHtml}`,
     { id: "document-treatment-title", pageBreakBefore: true }
   );
 }
@@ -135,9 +190,48 @@ function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = 
   const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   return renderSection(
     "Acquisition Memo Summary",
-    `<p class="body-copy">Document-driven Acquisition Memo V2 summary built from the canonical source package, the V2 projection, and the source-authority render. The document owner keeps fact authority in the V2 path and avoids legacy row or marker patching.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p>${renderedCoreSourceSummary}</div>` : ""}`,
+    `<p class="body-copy">This memo is document-driven and source-authority bound. The canonical source package identifies document roles, the V2 projection carries readiness state, and the presentation layer remains deterministic.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p>${renderedCoreSourceSummary}</div>` : ""}`,
     { id: "acq-summary-title", pageBreakBefore: false }
   );
+}
+
+function renderOperatingStatementSection({ sourcePackage = null, coreMetrics = null, acquisitionMemoProjection = null } = {}) {
+  const rows = [];
+  const t12Name = sourcePackage?.coreT12?.originalFilename || "Not present";
+  const rentRollName = sourcePackage?.coreRentRoll?.originalFilename || "Not present";
+  if (Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualInPlaceRent)}</td></tr>`);
+  if (Number.isFinite(Number(coreMetrics?.annualMarketRent))) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualMarketRent)}</td></tr>`);
+  if (Number.isFinite(Number(coreMetrics?.egi))) rows.push(`<tr><td>Effective Gross Income</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>`);
+  if (Number.isFinite(Number(coreMetrics?.opEx))) rows.push(`<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatMoney(coreMetrics.opEx)}</td></tr>`);
+  if (Number.isFinite(Number(coreMetrics?.noi))) rows.push(`<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>`);
+  if (Number.isFinite(Number(coreMetrics?.occupancy))) rows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>`);
+  const t12Snippet = sourcePackage?.coreT12?.sourceEvidence?.textSnippet || "";
+  const occupancyNote = Number.isFinite(Number(coreMetrics?.breakEvenOccupancy)) && Number.isFinite(Number(coreMetrics?.occupancy))
+    ? `Break-even occupancy is ${formatPercentDisplay(coreMetrics.breakEvenOccupancy)} versus current occupancy of ${formatPercentDisplay(coreMetrics.occupancy)}.`
+    : "";
+  return `<div class="card no-break">
+    <p class="subsection-title">Operating Statement / TTM Summary</p>
+    <table class="detail-table"><tbody>
+      <tr><td>Core T12 source</td><td style="font-weight:600;">${escapeHtml(t12Name)}</td></tr>
+      <tr><td>Core Rent Roll source</td><td style="font-weight:600;">${escapeHtml(rentRollName)}</td></tr>
+      ${rows.join("")}
+    </tbody></table>
+    ${t12Snippet ? `<div class="subsection-block"><p class="subsection-title">TTM Source Excerpt</p><p class="body-copy">${escapeHtml(t12Snippet.slice(0, 420))}</p></div>` : ""}
+    ${occupancyNote ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(occupancyNote)}</p>` : ""}
+  </div>`;
+}
+
+function renderCapRateValueSection({ acquisitionMemoProjection = null, coreMetrics = null } = {}) {
+  const noiBasis = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? NaN);
+  const capRates = [5.0, 6.0, 7.0];
+  const rows = capRates.map((cap) => `<tr><td>${cap.toFixed(1)}% cap rate</td><td style="font-weight:600;">${formatCapRateValue(noiBasis, cap)}</td></tr>`).join("");
+  const headlineValue = formatCapRateValue(noiBasis, 7.0);
+  return `<div class="card no-break">
+    <p class="subsection-title">Cap-Rate Value Indication</p>
+    <p class="body-copy">Document-derived NOI basis is capitalized at stable cap-rate assumptions. The display is deterministic and source-basis driven.</p>
+    <table class="detail-table"><tbody>${rows}</tbody></table>
+    <p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">7.0% cap value: ${escapeHtml(headlineValue || "Not available")}</p>
+  </div>`;
 }
 
 function renderMetricsSnapshotSection(coreMetrics = null) {
@@ -186,7 +280,7 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null } = {})
     `<tr><td>Core rent roll evidence</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
   ];
   return renderSection(
-    "Unit Mix / Rent Positioning",
+    "Unit Mix and Rent Positioning",
     `<p class="body-copy">Rent positioning is anchored to the canonical rent roll and the in-place versus market rent spread. Unit-level detail remains source-driven and is not re-authored here.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${rentRollSnippet ? `<div class="subsection-block"><p class="subsection-title">Rent Roll Snippet</p><p class="body-copy">${escapeHtml(rentRollSnippet.slice(0, 420))}</p></div>` : ""}`,
     { id: "unit-mix-title", pageBreakBefore: true }
   );
@@ -196,7 +290,7 @@ function renderValueSensitivitySection({ coreMetrics = null } = {}) {
   const annualRentUpside = Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))
     ? Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent)
     : null;
-  const capRate = Number(coreMetrics?.goingInCapRate);
+  const capRate = toCapRatio(coreMetrics?.goingInCapRate);
   const impliedValue = Number.isFinite(Number(coreMetrics?.noi)) && Number.isFinite(capRate) && capRate > 0
     ? Number(coreMetrics.noi) / capRate
     : null;
@@ -223,7 +317,6 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
     `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocs.length}</td><td>${escapeHtml(sourcePackage?.authorityVersion || "v2")}</td></tr>`,
   ];
   const sourceSummaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
-  const treatmentSummaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.financingReadinessSummaryHtml || "").trim();
   const stateRows = [
     `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
@@ -232,20 +325,17 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
     `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
   ];
-  const supportDocsRows = supportDocs
-    .map((doc) => `<tr><td>${escapeHtml(doc?.originalFilename || doc?.canonicalLabel || doc?.roleLabel || "Support Document")}</td><td style="font-weight:600;">${escapeHtml(doc?.canonicalLabel || doc?.roleLabel || doc?.canonicalRole || "Other Support Document")}</td><td>${escapeHtml(doc?.treatment || "")}</td><td>${escapeHtml(doc?.use || "")}</td></tr>`)
-    .join("");
   return renderSection(
-    "Data Coverage / Source Reliability",
-    `<table class="detail-table"><tbody>${rows.join("")}</tbody></table><div class="subsection-block"><p class="subsection-title">Support-Doc Reliability Snapshot</p><table class="detail-table"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p>${sourceSummaryHtml}</div>` : ""}${treatmentSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Financing Readiness Detail</p>${treatmentSummaryHtml}</div>` : ""}${supportDocsRows ? `<div class="subsection-block"><p class="subsection-title">Support Document Registry</p><table class="detail-table"><tbody>${supportDocsRows}</tbody></table></div>` : ""}`,
+    "Data Coverage & Source Limitations",
+    `<table class="detail-table"><tbody>${rows.join("")}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Reliability Snapshot</p><table class="detail-table"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p>${sourceSummaryHtml}</div>` : ""}`,
     { id: "data-coverage-title", pageBreakBefore: true }
   );
 }
 
 function renderMethodologySection() {
   return renderSection(
-    "Methodology / Limitations",
-    `<p class="body-copy">Acquisition Memo V2 is document-driven, fail-closed, and source-authority bound. The V2 body is rendered directly from the canonical source package and V2 projection so the report does not depend on legacy marker replacement, row mutation, or append-after-HTML fallback behavior.</p><p class="body-copy">The memo is limited to operating context, support-document treatment, and lender-readiness disclosure. It does not add advanced underwriting outputs beyond the source-backed memo shell.</p>`,
+    "Methodology & Data Transparency",
+    `<p class="body-copy">Acquisition Memo is document-driven, fail-closed, and source-authority bound. The body is rendered directly from the canonical source package and projection so the report does not depend on legacy marker replacement, row mutation, or append-after-HTML fallback behavior.</p><p class="body-copy">The memo is limited to operating context, support-document treatment, and lender-readiness disclosure. It does not add advanced underwriting outputs beyond the source-backed memo shell.</p>`,
     { id: "methodology-title", pageBreakBefore: true }
   );
 }
@@ -297,48 +387,58 @@ export function renderCompleteAcquisitionMemoV2Html({
   reportMeta = null,
   propertyProfile = null,
 } = {}) {
-  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo V2";
+  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
   const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
   const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
-  const reportType = reportMeta?.reportType || reportMeta?.report_type || "Acquisition Memo";
-  const reportMode = reportMeta?.reportMode || reportMeta?.report_mode || "v1_core";
   const generatedLabel = reportMeta?.generatedAt || reportMeta?.generated_at || "";
-  const sourceRows = renderSourceDocRows(sourcePackage);
+  const reportTierLabel = reportMeta?.reportTier === 2 ? "Tier II" : "Tier I";
+  const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage });
+  const executiveSummarySection = renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
   const summarySection = renderSummarySection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
-  const metricsSection = renderMetricsSnapshotSection(coreMetrics);
+  const operatingStatementSection = renderOperatingStatementSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
   const operatingSection = renderOperatingSnapshotSection({ sourcePackage, coreMetrics });
   const unitMixSection = renderUnitMixSection({ sourcePackage, coreMetrics });
   const valueSensitivitySection = renderValueSensitivitySection({ coreMetrics });
+  const capRateValueSection = renderCapRateValueSection({ acquisitionMemoProjection, coreMetrics });
   const readinessSection = renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection });
   const dataCoverageSection = renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
   const treatmentSection = renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage);
   const methodologySection = renderMethodologySection();
-  const sourceAuthorityDiagnosticHtml = renderedAcquisitionMemo?.sourceAuthorityDiagnosticHtml || "";
+  const footerSection = `<div class="report-footer">InvestorIQ Confidential | ${escapeHtml(reportTierLabel)} | Acquisition Memo | Source-backed presentation only.${generatedLabel ? ` | Generated ${escapeHtml(generatedLabel)}` : ""}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(`${propertyName} - Acquisition Memo V2`)}</title>
+  <title>${escapeHtml(`${propertyName} - InvestorIQ Acquisition Memo`)}</title>
   <style>
     :root { --ink:#102033; --muted:#5b6472; --border:#d7dde5; --bg:#f7f8fb; --panel:#ffffff; --accent:#b8860b; }
     html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: Arial, Helvetica, sans-serif; font-size:12px; line-height:1.5; }
-    body { padding:24px; }
-    .report { max-width: 980px; margin: 0 auto; }
-    .header { background:linear-gradient(180deg,#ffffff 0%,#fdfdfd 100%); border:1px solid var(--border); border-radius:14px; padding:20px 22px; margin-bottom:16px; }
-    .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:10px; color:var(--muted); margin:0 0 8px 0; }
-    .title { font-size:28px; font-weight:700; margin:0 0 4px 0; }
-    .subtitle { font-size:14px; color:var(--muted); margin:0; }
+    body { padding:22px 24px 28px; }
+    .report { max-width: 920px; margin: 0 auto; }
+    .cover { background: linear-gradient(180deg, #16263b 0%, #0f1d31 100%); color:#F8FAFC; border-radius:18px; padding:24px 26px 20px; margin-bottom:14px; box-shadow:0 8px 20px rgba(15,23,42,.12); }
+    .cover-shell { border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:18px 18px 16px; background:rgba(255,255,255,.03); }
+    .cover-brand { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:#E2E8F0; margin-bottom:6px; }
+    .cover-kicker { font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:#D6B35A; margin-bottom:8px; }
+    .cover-title { font-size:30px; line-height:1.1; margin:0 0 6px 0; font-weight:800; }
+    .cover-subtitle { font-size:14px; margin:0 0 4px 0; color:#E5E7EB; }
+    .cover-meta { font-size:12px; margin:0 0 4px 0; color:#CBD5E1; }
+    .cover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; margin-top:16px; }
+    .cover-grid div { border-top:1px solid rgba(255,255,255,.16); padding-top:8px; }
+    .cover-grid span { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:#C7D2FE; margin-bottom:2px; }
+    .cover-grid strong { font-size:12px; color:#fff; }
+    .cover-sources { margin-top:16px; }
     .meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 18px; margin-top:14px; }
-    .meta-line { display:flex; justify-content:space-between; gap:12px; border-top:1px solid rgba(215,221,229,.7); padding-top:8px; }
-    .meta-label { color:var(--muted); }
-    .meta-value { font-weight:600; text-align:right; }
+    .summary-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .summary-strip div { border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#FBFCFE; }
+    .summary-strip span { display:block; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+    .summary-strip strong { font-size:14px; color:var(--ink); }
     .section { margin-bottom:16px; }
     .section-break { break-before: page; page-break-before: always; }
     .section-header { border-bottom:1px solid var(--border); margin-bottom:12px; padding-bottom:8px; }
     .section-header-title { font-size:18px; font-weight:700; }
-    .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px 18px 16px; box-shadow:0 1px 1px rgba(16,32,51,.03); }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px 16px 14px; box-shadow:0 1px 1px rgba(16,32,51,.03); }
     .no-break { break-inside:avoid; page-break-inside:avoid; }
     .body-copy { margin:0 0 12px 0; color:var(--muted); }
     .subsection-block + .subsection-block { margin-top:14px; }
@@ -353,32 +453,27 @@ export function renderCompleteAcquisitionMemoV2Html({
     .source-table tr:first-child td { border-top:none; }
     .source-table td:first-child { width:55%; }
     .footer-note { margin-top:16px; color:var(--muted); font-size:11px; }
+    .report-footer { margin-top:18px; text-align:center; color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding-top:10px; border-top:1px solid var(--border); }
   </style>
 </head>
 <body>
   <main class="report">
-    <section class="header">
-      <p class="eyebrow">${escapeHtml(reportType)}${reportMode ? ` | ${escapeHtml(reportMode)}` : ""}</p>
-      <h1 class="title">${escapeHtml(propertyName)}</h1>
-      ${propertyTitle ? `<p class="subtitle">${escapeHtml(propertyTitle)}</p>` : ""}
-      ${propertyAddress ? `<p class="subtitle">${escapeHtml(propertyAddress)}</p>` : ""}
-      <div class="meta-grid">
-        ${renderMetaLine("Generated", generatedLabel)}
-        ${renderMetaLine("Report Type", reportType)}
-        ${renderMetaLine("Report Mode", reportMode)}
-      </div>
-      ${sourceRows.length ? `<div class="subsection-block" style="margin-top:14px;"><p class="subsection-title">Core Quantitative Sources</p><table class="source-table"><tbody>${sourceRows.map((row) => row).join("")}</tbody></table></div>` : ""}
+    ${coverSection}
+    <section class="section">
+      <div class="section-header"><span class="section-header-title">Executive Summary</span></div>
+      ${executiveSummarySection}
     </section>
     ${summarySection}
-    ${metricsSection}
     ${operatingSection}
     ${unitMixSection}
     ${valueSensitivitySection}
+    ${capRateValueSection}
     ${readinessSection}
+    ${operatingStatementSection}
     ${dataCoverageSection}
     ${treatmentSection}
     ${methodologySection}
-    ${sourceAuthorityDiagnosticHtml ? `<div class="footer-note">${sourceAuthorityDiagnosticHtml}</div>` : ""}
+    ${footerSection}
   </main>
 </body>
 </html>`;
