@@ -37,6 +37,50 @@ import {
   buildSourceReconciliationNarrativeProminencePolicy,
   sanitizeFinalCustomerHtml,
 } from "./_lib/report-surface-contracts.js";
+import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js";
+import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
+import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
+import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-document.js";
+import {
+  buildDeliveryResponseCompatibilityAliases,
+  buildReportStoragePath,
+  assertValidReportPublicationInsert,
+  sanitizeTypography,
+} from "./_lib/report-delivery-output.js";
+import {
+  resolveReportTypeAndTier,
+  constantTimeEqual,
+} from "./_lib/report-request-context.js";
+import {
+  isNil,
+  formatCurrency,
+  formatPercent,
+  formatPercent1,
+  formatPercentExactDisplay,
+  formatCapPercentExact,
+  formatInterestRatePercent,
+  formatMultiple,
+  formatYears,
+  formatDistanceKm,
+  escapeHtml,
+  replaceAll,
+  sanitizeDisplayText,
+  sanitizePropertyNameDisplayText,
+} from "./_lib/report-formatting-helpers.js";
+import {
+  isFiniteNumber,
+  isFinitePositive,
+  materiallyDifferent,
+  toRateRatio,
+  toCapRatio,
+} from "./_lib/report-number-helpers.js";
+import {
+  stripMarkedSection,
+  replaceMarkedSection,
+  stripT12DetailSubsection,
+  stripEmptyHeadingBlocks,
+  stripChartBlockByAlt,
+} from "./_lib/report-html-helpers.js";
 import { buildFullUnderwritingState } from "./_lib/full-underwriting-state.js";
 // Convert __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -45,86 +89,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-// ---------- Formatting Helpers ----------
-function isNil(value) {
-  return value === undefined || value === null;
-}
-function formatCurrency(value, options = {}) {
-  const { decimals = 0, prefix = "$", suffix = "" } = options;
-  if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value);
-  return (
-    prefix +
-    num.toLocaleString("en-CA", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) +
-    suffix
-  );
-}
-function formatPercent(value, decimals = 1) {
-  if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value) * 100;
-  return (
-    num.toLocaleString("en-CA", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) + "%"
-  );
-}
-function formatPercent1(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
-  return `${pct.toFixed(1)}%`;
-}
-function formatPercentExactDisplay(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  return `${n.toFixed(1)}%`;
-}
-function formatCapPercentExact(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
-  return `${pct.toFixed(2)}%`;
-}
-function formatInterestRatePercent(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
-  return `${pct.toFixed(2)}%`;
-}
-function formatMultiple(value, decimals = 2) {
-  if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value);
-  return (
-    num.toLocaleString("en-CA", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) + "x"
-  );
-}
-function formatYears(value, decimals = 1) {
-  if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value);
-  return (
-    num.toLocaleString("en-CA", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) + " yrs"
-  );
-}
-function formatDistanceKm(value) {
-  if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value);
-  return (
-    num.toLocaleString("en-CA", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }) + " km"
-  );
-}
 function normalizeVisibleReportClassification({
   baseClass = null,
   effectiveReportMode = "screening_v1",
@@ -184,194 +148,6 @@ function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visible
     `$1${escapeHtml(visibleClassificationLabel)}$3`
   );
 }
-// Helper to safely replace all occurrences of a token
-function replaceAll(str, token, value) {
-  if (!str || !token) return str;
-  return str.includes(token) ? str.split(token).join(value ?? "") : str;
-}
-function isValidReportStoragePath(storagePath) {
-  const normalized = typeof storagePath === "string" ? storagePath.trim() : "";
-  return normalized.length > 0 && normalized.includes("/") && normalized.toLowerCase().endsWith(".pdf");
-}
-function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
-  const userPart = String(effectiveUserId ?? "").trim();
-  const seedPart = String(reportSeed ?? "").trim();
-  if (!userPart || !seedPart) return "";
-  return `${userPart}/${seedPart}.pdf`;
-}
-function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
-  const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
-  const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
-  const customerDeliveryAllowed =
-    state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null
-      ? Boolean(state.customer_delivery_allowed)
-      : rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery);
-  const holdDelivery = Boolean(state.hold_delivery);
-  const publicSampleReady = Boolean(state.public_sample_ready);
-  const highValueOutreachReady = Boolean(state.high_value_outreach_ready);
-  const launchPathRecommendation =
-    customerDeliveryAllowed
-      ? (publicSampleReady && highValueOutreachReady
-        ? "customer_deliverable"
-        : "customer_deliverable_with_internal_advisory")
-      : (rawDeliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
-  const readinessHierarchy = {
-    final_delivery_authority: "delivery_gate",
-    final_delivery_status: rawDeliveryGateStatus,
-    customer_delivery_ready: customerDeliveryAllowed,
-    customer_publish_eligible: customerDeliveryAllowed,
-    report_publishable: customerDeliveryAllowed,
-    report_blocked: !customerDeliveryAllowed,
-    public_sample_ready: publicSampleReady,
-    high_value_outreach_ready: highValueOutreachReady,
-    advisory_only_findings: Array.isArray(state.advisory_only_findings) ? state.advisory_only_findings.length : 0,
-  };
-  return {
-    delivery_gate_status: rawDeliveryGateStatus,
-    customer_delivery_allowed: customerDeliveryAllowed,
-    hold_delivery: holdDelivery,
-    holdDelivery,
-    report_publishable: customerDeliveryAllowed,
-    report_blocked: !customerDeliveryAllowed,
-    customer_delivery_ready: customerDeliveryAllowed,
-    customer_publish_eligible: customerDeliveryAllowed,
-    launch_path_recommendation: launchPathRecommendation,
-    readiness_hierarchy: readinessHierarchy,
-    legacy_compatibility: {
-      delivery_gate_status: rawDeliveryGateStatus,
-      customer_delivery_ready: customerDeliveryAllowed,
-      customer_publish_eligible: customerDeliveryAllowed,
-      report_publishable: customerDeliveryAllowed,
-      report_blocked: !customerDeliveryAllowed,
-      launch_path_recommendation: launchPathRecommendation,
-      hold_delivery: holdDelivery,
-      holdDelivery,
-      public_sample_ready: publicSampleReady,
-      high_value_outreach_ready: highValueOutreachReady,
-    },
-  };
-}
-
-function resolveReportTypeAndTier({
-  bodyReportType = null,
-  jobReportType = null,
-} = {}) {
-  const normalizeToken = (value) =>
-    String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-  const hasExplicitBodyType = String(bodyReportType || "").trim().length > 0;
-  const hasExplicitJobType = String(jobReportType || "").trim().length > 0;
-  const explicitRawToken = hasExplicitBodyType ? bodyReportType : hasExplicitJobType ? jobReportType : null;
-  const normalizedExplicitToken = normalizeToken(explicitRawToken);
-  const canonicalByToken = new Map([
-    ["screening", "screening"],
-    ["underwriting", "underwriting"],
-    ["ic", "ic"],
-    ["full_underwriting", "underwriting"],
-    ["underwriting_report", "underwriting"],
-    ["underwriting_v1", "underwriting"],
-    ["tier_2", "underwriting"],
-    ["tier2", "underwriting"],
-  ]);
-  const hasExplicitType = hasExplicitBodyType || hasExplicitJobType;
-  if (!hasExplicitType) {
-    return {
-      ok: true,
-      reportType: "screening",
-      reportTier: 1,
-      effectiveReportMode: "screening_v1",
-      usedDefault: true,
-      explicitUnknown: false,
-      providedToken: null,
-      normalizedToken: "",
-    };
-  }
-  const canonicalType = canonicalByToken.get(normalizedExplicitToken) || null;
-  if (!canonicalType) {
-    return {
-      ok: false,
-      explicitUnknown: true,
-      providedToken: String(explicitRawToken || ""),
-      normalizedToken: normalizedExplicitToken,
-      allowedTypes: ["screening", "underwriting", "ic"],
-      supportedAliases: [
-        "full_underwriting",
-        "underwriting_report",
-        "underwriting_v1",
-        "tier_2",
-        "tier2",
-      ],
-    };
-  }
-  const reportTier = canonicalType === "underwriting" ? 2 : canonicalType === "ic" ? 3 : 1;
-  return {
-    ok: true,
-    reportType: canonicalType,
-    reportTier,
-    effectiveReportMode: canonicalType === "screening" ? "screening_v1" : "v1_core",
-    usedDefault: false,
-    explicitUnknown: false,
-    providedToken: String(explicitRawToken || ""),
-    normalizedToken: normalizedExplicitToken,
-  };
-}
-function assertValidReportPublicationInsert({
-  storagePath,
-  reportType,
-  deliveryGateStatus = null,
-  holdDelivery = false,
-  coreValidRequiredCoverage = false,
-  context = {},
-} = {}) {
-  const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
-  const normalizedDeliveryGateStatus =
-    String(deliveryGateStatus || "deliverable") === "admin_review_required"
-      ? "deliverable"
-      : deliveryGateStatus;
-  if (
-    !coreValidRequiredCoverage &&
-    (
-      holdDelivery ||
-      (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
-    )
-  ) {
-    const err = new Error("Report publication blocked before storage insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-      coreValidRequiredCoverage: Boolean(coreValidRequiredCoverage),
-    };
-    throw err;
-  }
-  if (!isValidReportStoragePath(normalizedStoragePath)) {
-    const err = new Error("Missing valid report storage path before report insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath || null,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-    };
-    throw err;
-  }
-  if (!String(reportType ?? "").trim()) {
-    const err = new Error("Missing report type before report insert");
-    err.code = "REPORT_GENERATION_FAILED";
-    err.context = {
-      ...context,
-      storagePath: normalizedStoragePath,
-      deliveryGateStatus: normalizedDeliveryGateStatus || null,
-      holdDelivery: Boolean(holdDelivery),
-    };
-    throw err;
-  }
-  return normalizedStoragePath;
-}
 const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
 const coerceNumber = (value) => {
@@ -382,14 +158,6 @@ const coerceNumber = (value) => {
   const num = Number(cleaned);
   return Number.isFinite(num) ? num : null;
 };
-function materiallyDifferent(a, b, absoluteTolerance = 10, relativeTolerance = 0.02) {
-  const left = Number(a);
-  const right = Number(b);
-  if (!Number.isFinite(left) || !Number.isFinite(right)) return false;
-  const delta = Math.abs(left - right);
-  const scale = Math.max(Math.abs(left), Math.abs(right), 1);
-  return delta > absoluteTolerance && delta / scale > relativeTolerance;
-}
 function resolveSafeAnnualRentTotal({
   totalUnits,
   weightedAvgRent,
@@ -1033,14 +801,6 @@ function buildDealScorecardState({
     dealScoreTableHtml,
   };
 }
-function isFiniteNumber(x) {
-  const n = Number(x);
-  return Number.isFinite(n);
-}
-function isFinitePositive(x) {
-  const n = Number(x);
-  return Number.isFinite(n) && n > 0;
-}
 // Returns true only when a parsed debt payload contains the minimum
 // field set required to support debt-aware underwriting analysis.
 // Prevents weak partial debt payloads from being treated as valid debt data
@@ -1537,16 +1297,6 @@ function computeMortgageConstant(rateAnnual, amortYears) {
   const mc = pm * 12;
   return Number.isFinite(mc) && mc > 0 ? mc : null;
 }
-function toRateRatio(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n > 1.5 ? n / 100 : n; // treat 5.25 as 5.25% => 0.0525
-}
-function toCapRatio(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n > 1.5 ? n / 100 : n; // treat 6.0 as 6.0% => 0.06
-}
 function buildRefiStabilityModel({
   financials,
   t12Payload,
@@ -1785,14 +1535,6 @@ function buildRefiStabilityModel({
   )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
   return { tier: refiTier, evidence, html: refiHtml };
 }
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 function normalizeExitCapSourceLabel(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return "";
@@ -1904,26 +1646,6 @@ function hasMeaningfulNarrative(html) {
   if (!html.replace(/<[^>]*>/g, "").trim()) return false;
   return true;
 }
-function sanitizeDisplayText(s) {
-  if (!s) return s;
-  return String(s)
-    .replace(/\bUnderwritting\b/gi, "Underwriting")
-    .replace(/\s+([,.])/g, "$1")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-function sanitizePropertyNameDisplayText(s) {
-  if (!s) return s;
-  return sanitizeDisplayText(s)
-    .replace(/\s*[-|:]\s*$/g, "")
-    .replace(/^\s*[-|:]\s*/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-function sanitizeTypography(html) {
-  return sanitizeFinalCustomerHtml(html);
-}
-
 function sanitizeScreeningRankedDriversHtml(html) {
   if (typeof html !== "string") return html;
   const sectionPattern = /<!-- BEGIN EXEC_RANKED_DRIVERS -->([\s\S]*?)<!-- END EXEC_RANKED_DRIVERS -->/g;
@@ -1969,60 +1691,6 @@ function dedupeDataNotAvailableBySection(html) {
     }
     return `<!-- BEGIN ${token} -->${nextBody}<!-- END ${token} -->`;
   });
-}
-function stripMarkedSection(html, key) {
-  const token = String(key || "");
-  if (!token) return html;
-  const begin = `<!-- BEGIN ${token} -->`;
-  const end = `<!-- END ${token} -->`;
-  if (!html.includes(begin)) return html;
-  if (!html.includes(end)) {
-    console.warn(`Section marker missing END for ${token}`);
-    return html;
-  }
-  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
-    "g"
-  );
-  return html.replace(re, "");
-}
-function replaceMarkedSection(html, key, replacement = "") {
-  const token = String(key || "");
-  if (!token) return html;
-  const begin = `<!-- BEGIN ${token} -->`;
-  const end = `<!-- END ${token} -->`;
-  if (!html.includes(begin) || !html.includes(end)) return html;
-  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<!-- BEGIN ${escapedToken} -->[\\s\\S]*?<!-- END ${escapedToken} -->`,
-    "g"
-  );
-  return html.replace(re, replacement);
-}
-function stripT12DetailSubsection(html, headingText) {
-  if (!html) return html;
-  const escapedHeading = String(headingText || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (!escapedHeading) return html;
-  // Pattern A: heading is <h3> or similar + the next table
-  const patternA = new RegExp(
-    String.raw`<h[1-6][^>]*>\s*${escapedHeading}\s*<\/h[1-6]>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
-    "i"
-  );
-  // Pattern B: heading is a div/span label + the next table (common in templates)
-  const patternB = new RegExp(
-    String.raw`<(div|span)[^>]*>\s*${escapedHeading}\s*<\/\1>\s*[\s\S]*?<table[\s\S]*?<\/table>\s*`,
-    "i"
-  );
-  let out = html.replace(patternA, "");
-  out = out.replace(patternB, "");
-  return out;
-}
-function stripEmptyHeadingBlocks(html) {
-  if (!html) return html;
-  return String(html)
-    .replace(/<p class="section-intro">\s*<\/p>\s*/gi, "")
-    .replace(/<p class="subsection-title">\s*<\/p>\s*/gi, "");
 }
 function stripThinSectionPages(html) {
   if (!html) return html;
@@ -2162,16 +1830,6 @@ function collapseSummaryOnlyUnitMixSection(
     denseSummaryCard
   );
 }
-function stripChartBlockByAlt(html, altText) {
-  if (!altText) return html;
-  const escapedAlt = altText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<div class=\"chart-block[\\s\\S]*?<img[^>]*(alt=\"${escapedAlt}\"[^>]*src=\"\"|src=\"\"[^>]*alt=\"${escapedAlt}\")[^>]*>[\\s\\S]*?<\\/div>`,
-    "g"
-  );
-  return html.replace(re, "");
-}
-
 function resolveCanonicalDataCoverageHeadlineState({
   dataCoverageState = null,
   sourceReconciliationState = null,
@@ -2336,15 +1994,6 @@ function shouldStripDataCoverageSectionByRenderedCopy({
   }
   const dnaCount = (coverageHtml.match(/DATA NOT AVAILABLE/g) || []).length;
   return dnaCount >= 3;
-}
-function constantTimeEqual(a, b) {
-  if (typeof a !== "string" || typeof b !== "string") return false;
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
 }
 function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
   const toNum = (v) => {
@@ -4940,6 +4589,7 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
 function buildPreliminaryFinancingReadinessSummaryHtml({
   reportMode = null,
   acquisitionMemoRenderContext = null,
+  acquisitionMemoV2Projection = null,
   acquisitionAssumptionState = null,
   currentDebtAssessmentState = null,
   mortgagePayload = null,
@@ -5123,7 +4773,6 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
     `<tr><td>Rent Roll verified</td><td style="font-weight:600;">${rentRollVerified ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Number.isFinite(purchasePrice) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Property tax support</td><td style="font-weight:600;">${Boolean(propertyTaxBindingState?.hasValidatedAnnualTax || isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax)) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(currentDebtAssessmentState?.has_current_debt_document || currentDebtAuthorityRow) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Proposed acquisition loan terms complete</td><td style="font-weight:600;">${proposedAcquisitionFinancingSourceComplete ? "Yes" : "No"}</td></tr>`,
   ];
   const supportPresenceRows = [
@@ -5137,6 +4786,41 @@ function buildPreliminaryFinancingReadinessSummaryHtml({
       ? `<tr><td>CapEx / renovation plan</td><td style="font-weight:600;">Context only unless verified budget and rent-lift assumptions exist</td></tr>`
       : "",
   ].filter(Boolean);
+  const currentDebtChecklistPresent = Boolean(
+    acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true ||
+    acquisitionMemoV2Projection?.currentDebtContext ||
+    acquisitionMemoV2Projection?.supportDocProjection?.currentDebtContext ||
+    acquisitionMemoV2Projection?.lenderDiligenceChecklist?.some(
+      (row) => /current debt context uploaded/i.test(String(row?.label || row?.text || "")) && row?.value === true
+    ) ||
+    currentDebtAuthorityRow ||
+    (canonicalSupportDocMap instanceof Map &&
+      Array.from(canonicalSupportDocMap.values()).some((row) =>
+        String(row?.canonicalRole || row?.role || "").trim() === "current_debt_context"
+      ))
+  );
+  const currentDebtChecklistLegacyFallbackPresent = Boolean(
+    currentDebtAssessmentState?.has_current_debt_document ||
+    currentDebtAuthorityRow ||
+    (canonicalSupportDocMap instanceof Map &&
+      Array.from(canonicalSupportDocMap.values()).some((row) =>
+        String(row?.canonicalRole || row?.role || "").trim() === "current_debt_context"
+      ))
+  );
+  const currentDebtChecklistValue = acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext === true
+    ? "Yes"
+    : acquisitionMemoV2Projection
+      ? currentDebtChecklistPresent
+        ? "Yes"
+        : "No"
+      : currentDebtChecklistLegacyFallbackPresent
+        ? "Yes"
+        : "No";
+  checklistRows.splice(
+    4,
+    0,
+    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${currentDebtChecklistValue}</td></tr>`
+  );
   const sectionHasContent =
     requestRows.length > 0 ||
     operatingRows.length > 0 ||
@@ -9695,6 +9379,22 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     }
     sourcePackageQaFiles = coverageFiles;
     sourcePackageQaArtifacts = coverageArtifacts;
+    const acqMemoV2SourceAuthorityEnabled =
+      process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
+      body?.__test_enable_acq_memo_v2_source_authority === true;
+    let acquisitionMemoV2Bridge = null;
+    // --- V2 SOURCE AUTHORITY BRIDGE START ---
+    if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
+      const canonicalSourcePackage = buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
+      const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
+      const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
+      acquisitionMemoV2Bridge = {
+        canonicalSourcePackage,
+        acquisitionMemoProjection,
+        renderedAcquisitionMemo,
+      };
+    }
+    // --- V2 SOURCE AUTHORITY BRIDGE END ---
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
         const text = String([
@@ -9938,6 +9638,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       preliminaryFinancingReadinessSummaryBlockHtml = buildPreliminaryFinancingReadinessSummaryHtml({
         reportMode: effectiveReportMode,
         acquisitionMemoRenderContext,
+        acquisitionMemoV2Projection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
         acquisitionAssumptionState: underwritingState?.core?.acquisition?.assumptionState || null,
         currentDebtAssessmentState,
         mortgagePayload,
@@ -10032,10 +9733,49 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{OPERATING_SNAPSHOT_BLOCK}}", operatingSnapshotBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{RENT_UPSIDE_VALUE_SENSITIVITY_BLOCK}}", rentUpsideValueSensitivityBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{CAP_RATE_VALUE_INDICATION_BLOCK}}", capRateValueIndicationBlockHtml);
-    finalHtml = replaceAll(finalHtml, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", preliminaryFinancingReadinessSummaryBlockHtml);
     finalHtml = replaceAll(finalHtml, "{{NEIGHBORHOOD_CONTEXT_BLOCK}}", sourceContextBlockHtml || neighborhoodContextHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", upsideHtml);
     finalHtml = replaceAll(finalHtml, "{{KEY_RISKS_BULLETS}}", risksHtml);
+    if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo)) {
+      finalHtml = replaceAll(finalHtml, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", preliminaryFinancingReadinessSummaryBlockHtml);
+      finalHtml = replaceMarkedSection(
+        finalHtml,
+        "SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY",
+        `<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->${preliminaryFinancingReadinessSummaryBlockHtml || ""}<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->`
+      );
+    }
+    const acquisitionMemoV2DocumentArgs = {
+      acquisitionMemoProjection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
+      renderedAcquisitionMemo: acquisitionMemoV2Bridge?.renderedAcquisitionMemo || null,
+      sourcePackage: acquisitionMemoV2Bridge?.canonicalSourcePackage || null,
+      coreMetrics: {
+        occupancy: execOccupancy,
+        annualInPlaceRent: execAnnualInPlace,
+        annualMarketRent: acquisitionMemoRenderContext?.annualMarketRent ?? null,
+        egi: execEgi,
+        opEx: execOpex,
+        noi: execNoi,
+        expenseRatio: expenseRatioR,
+        noiMargin: noiMarginR,
+        breakEvenOccupancy: breakEvenOccR,
+        purchasePrice: acquisitionMemoRenderContext?.purchasePrice ?? null,
+        goingInCapRate: acquisitionMemoRenderContext?.goingInCapRate ?? null,
+      },
+      reportMeta: {
+        reportType,
+        reportMode: effectiveReportMode,
+        reportTier,
+        generatedAt: new Date().toISOString(),
+        propertyName: propertyNameDisplay,
+        propertyAddress: displayPropertyAddress,
+        propertyTitle: displayPropertyTitle,
+      },
+      propertyProfile: {
+        propertyName: propertyNameDisplay,
+        propertyAddress: displayPropertyAddress,
+        propertyTitle: displayPropertyTitle,
+      },
+    };
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -11965,13 +11705,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
-      if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+      if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+        htmlString = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+      } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
-          /\{\{DOCUMENT_TREATMENT_SUMMARY\}\}/g,
-          harnessDocumentTreatmentHtml || ""
+          /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
+          `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
         );
-      } else if (harnessDocumentTreatmentHtml) {
-        htmlString += `\n<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml}<!-- END DOCUMENT_TREATMENT_SUMMARY -->\n`;
       }
       return res.status(200).json({
         success: true,
@@ -11987,7 +11727,7 @@ const htmlStringRaw =
     : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
       ? safeHtml.html
       : String(safeHtml || "");
-const htmlString = sanitizeTypography(htmlStringRaw);
+let htmlString = sanitizeTypography(htmlStringRaw);
 const htmlLength = htmlString.length;
 const hasClosingHtml = htmlString.includes("</html>");
 const hasFinalRecommendation =
@@ -12537,7 +12277,12 @@ if (jobId) {
     console.error("Failed to write generate_client_report_runtime_marker artifact:", err?.message || err);
   }
 }
-let qaHtml = sanitizeFinalCustomerHtml(dedupeDataNotAvailableBySection(htmlString));
+// --- V2 SOURCE AUTHORITY BRIDGE START ---
+if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+  htmlString = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+}
+// --- V2 SOURCE AUTHORITY BRIDGE END ---
+  let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,
@@ -12693,7 +12438,10 @@ try {
     sourceCoverageQa.rendered_text_signals = renderedSignals;
   }
   sourceCoverageQaResult = sourceCoverageQa;
-  if (typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+  if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+    finalHtml = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+  }
+  if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
@@ -13508,8 +13256,6 @@ export const __test__ = {
   resolveRenovationDisplayMode,
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
-  buildReportStoragePath,
-  buildDeliveryResponseCompatibilityAliases,
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,
   applyFinalSectionHealRenderGuards,
@@ -13523,8 +13269,6 @@ export const __test__ = {
   buildRenovationExecutionRows,
   buildRenovationExecutionCardHtml,
   buildScreeningDataCoverageSummary,
-  assertValidReportPublicationInsert,
-  isValidReportStoragePath,
   buildT12SummaryHtml,
   resolveCanonicalT12GprValue,
   materiallyDifferent,
@@ -13541,6 +13285,4 @@ export const __test__ = {
   resolveFinalRecommendationSectionVisibility,
   resolveDocumentSourcesSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
-  buildDeliveryResponseCompatibilityAliases,
-  resolveReportTypeAndTier,
 };

@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <title>InvestorIQ Capital Intelligence Memorandum - Stonebridge </title>
+ <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+ <style>
+ @page {
+ size: Letter;
+ margin: 36px 36px 48px 36px;
+ }
+
+ @page :first {
+ margin: 0;
+ }
+ :root {
+ --cover-bg: #0F2318;
+ --gold: #C9A84C;
+ --gold-dark: #9A7A2C;
+ --white: #FFFFFF;
+ --paper-warm: #FAFAF8;
+ --ink: #0C0C0C;
+ --ink-2: #363636;
+ --ink-3: #606060;
+ --ink-4: #9A9A9A;
+ --hairline: #E8E5DF;
+ --hairline-mid: #D0CCC4;
+ --row-alt: #FAFAF8;
+ --font-display: 'Cormorant Garamond', Georgia, serif;
+ --font-body: 'DM Sans', system-ui, sans-serif;
+ --font-mono: 'DM Mono', 'Courier New', monospace;
+ }
+
+ * {
+ box-sizing: border-box;
+ }
+
+ html,
+ body {
+ margin: 0;
+ padding: 0;
+ background: var(--white);
+ color: var(--ink);
+ font-family: var(--font-body);
+ font-size: 11px;
+ line-height: 1.5;
+ }
+
+ body {
+ margin: 0;
+ padding: 0;
+ background: var(--white);
+ color: var(--ink);
+ font-family: var(--font-body);
+ font-size: 11px;
+ line-height: 1.5;
+}
+
+ .report-container {
+ width: 100%;
+ padding: 0.5in 0.55in 0.52in 0.55in;
+ box-sizing: border-box;
+ background: var(--white);
+}
+
+.cover-wrap {
+ page-break-after: always;
+ page-break-inside: avoid;
+ margin: 0;
+ padding: 0;
+ width: 100%;
+ height: 10.5in;
+ overflow: hidden;
+ position: relative;
+ background: var(--cover-bg);
+}
+
+.cover-wrap::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ bottom: 0;
+ left: 0.6in;
+ width: 1px;
+ background: linear-gradient(
+ to bottom,
+ transparent 0%,
+ rgba(201,168,76,0.45) 12%,
+ rgba(201,168,76,0.45) 88%,
+ transparent 100%
+ );
+}
+
+.cover-wrap::after {
+ content: '';
+ position: absolute;
+ top: 0.6in;
+ right: 0.52in;
+ width: 1in;
+ height: 1in;
+ border-top: 1px solid rgba(201,168,76,0.1);
+ border-right: 1px solid rgba(201,168,76,0.1);
+}
+
+.cover-table {
+ width: 100%;
+ border-collapse: collapse;
+ height: 100%;
+ table-layout: fixed;
+}
+
+.cover-cell {
+ background: var(--cover-bg);
+ padding: 1.6in 0.52in 0.72in 0.92in;
+ vertical-align: top;
+ width: 100%;
+ height: 100%;
+ overflow: hidden;
+ position: relative;
+}
+
+.cover-brand-name {
+ position: absolute;
+ top: 0.2in;
+ left: 0.52in;
+ font-family: var(--font-display);
+ font-size: 13pt;
+ font-weight: 600;
+ color: var(--gold);
+ letter-spacing: 0.02em;
+ white-space: nowrap;
+ hyphens: none;
+ text-transform: uppercase;
+ margin: 0;
+}
+
+.cover-brand-sub {
+ position: absolute;
+ top: 0.24in;
+ right: 0.52in;
+ font-family: var(--font-mono);
+ font-size: 6pt;
+ font-weight: 400;
+ color: rgba(201,168,76,0.28);
+ letter-spacing: 0.2em;
+ white-space: nowrap;
+ hyphens: none;
+ text-transform: uppercase;
+ margin: 0;
+}
+
+.cover-prop-name {
+ font-family: var(--font-display);
+ font-size: 38pt;
+ font-weight: 600;
+ color: var(--white);
+ line-height: 1;
+ letter-spacing: -0.02em;
+ max-width: 100%;
+ white-space: normal;
+ overflow-wrap: break-word;
+ word-break: normal;
+ hyphens: none;
+ margin: 0 0 0.1in 0;
+}
+
+.cover-prop-sub {
+ font-family: var(--font-body);
+ font-size: 9pt;
+ font-weight: 300;
+ color: rgba(255,255,255,0.35);
+ letter-spacing: 0.07em;
+ margin: 0 0 0.52in 0;
+}
+
+.cover-divider {
+ border: none;
+ width: 0.52in;
+ height: 1.5px;
+ background: var(--gold);
+ opacity: 0.65;
+ margin: 0 0 0.18in 0;
+}
+
+.cover-verdict-value {
+ font-family: var(--font-display);
+ font-size: 22pt;
+ font-weight: 500;
+ color: var(--gold);
+ text-transform: none;
+ letter-spacing: -0.01em;
+ margin: 0 0 0.22in 0;
+ line-height: 1.05;
+}
+
+.cover-verdict-value.verdict-stable { color: var(--gold); }
+.cover-verdict-value.verdict-sensitized { color: var(--gold); }
+.cover-verdict-value.verdict-fragile { color: var(--gold); }
+.cover-verdict-value.verdict-insufficient { color: rgba(255,255,255,0.55); }
+
+.cover-metric-strip {
+ margin: 0 0 0.22in 0;
+ padding: 0 0 0.18in 0;
+ border-bottom: 1px solid rgba(201,168,76,0.15);
+}
+
+.cover-metric-rule {
+ display: none;
+}
+
+.cover-metric-row {
+ color: rgba(255,255,255,0.52);
+ font-family: var(--font-body);
+ font-size: 8pt;
+ font-weight: 300;
+ letter-spacing: 0.02em;
+ text-align: left;
+ line-height: 1.7;
+}
+
+.cover-footer-row {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ position: absolute;
+ bottom: 0;
+ left: 0;
+ right: 0;
+ height: 0.46in;
+ padding: 0 0.52in;
+ background: rgba(0,0,0,0.2);
+ border-top: 1px solid rgba(201,168,76,0.07);
+}
+
+.cover-footer-text {
+ font-family: var(--font-mono);
+ font-size: 6pt;
+ color: rgba(255,255,255,0.12);
+ letter-spacing: 0.12em;
+ text-transform: uppercase;
+}
+
+.cover-footer-row .cover-footer-text:last-child {
+ color: rgba(201,168,76,0.25);
+ letter-spacing: 0.14em;
+}
+
+.brand-nowrap { white-space: nowrap; }
+
+ h1,
+ h2,
+ h4 {
+ font-family: var(--font-display);
+ margin: 0;
+ }
+ h3 {
+ font-family: var(--font-body);
+ font-size: 13px;
+ font-weight: 600;
+ letter-spacing: 0.02em;
+ color: var(--ink-2);
+ }
+
+ h1 {
+ font-size: 28px;
+ margin-bottom: 8px;
+ }
+
+ h2 {
+ font-size: 16px;
+ margin-bottom: 4px;
+ }
+
+ h3 {
+ font-size: 16px;
+ margin-bottom: 4px;
+ }
+
+ p {
+ margin: 3px 0 6px 0;
+ }
+
+ .data-not-available {
+ color: var(--ink-3);
+ font-weight: 500;
+ }
+
+ .tagline {
+ display: none;
+ }
+
+ .section {
+ margin-top: 12px;
+ padding: 16px 0;
+ background: #ffffff;
+}
+
+ .section-header {
+ position: relative;
+ margin-top: 0;
+ margin-bottom: 0.38in;
+ padding-bottom: 0.14in;
+ border-bottom: 1px solid var(--hairline);
+ }
+
+ .section-header::after {
+ content: '';
+ position: absolute;
+ left: 0;
+ bottom: -1px;
+ width: 0.28in;
+ height: 1.5px;
+ background: var(--gold);
+ opacity: 0.8;
+ }
+
+ .section-header-eyebrow {
+ display: none;
+ font-family: var(--font-mono);
+ font-size: 6.5pt;
+ font-weight: 400;
+ text-transform: uppercase;
+ letter-spacing: 0.22em;
+ color: var(--ink-4);
+ margin-bottom: 6pt;
+ }
+
+ .section-header-title {
+ display: block;
+ font-family: var(--font-display);
+ font-size: 18pt;
+ font-weight: 500;
+ letter-spacing: -0.025em;
+ color: var(--ink);
+ line-height: 1.05;
+ word-break: keep-all;
+ overflow-wrap: normal;
+ hyphens: none;
+ margin-bottom: 4pt;
+ }
+
+ .section-header-sub {
+ display: block;
+ font-family: var(--font-body);
+ font-size: 8pt;
+ font-weight: 300;
+ font-style: italic;
+ color: var(--ink-3);
+ letter-spacing: 0;
+ word-break: keep-all;
+ overflow-wrap: normal;
+ hyphens: none;
+ margin: 0;
+ }
+
+ .section-header-rule {
+ display: none;
+ }
+
+
+ .grid-2,
+.grid-2-balanced,
+.exhibit-grid,
+.grid-3,
+.summary-bullets,
+.metric-grid {
+ width: 100%;
+ min-width: 0;
+}
+
+ .grid-2 {
+ display: grid;
+ grid-template-columns: 1.4fr 1fr;
+ gap: 14px;
+ align-items: start;
+}
+
+.grid-2-balanced {
+ display: grid;
+ grid-template-columns: repeat(2, minmax(0, 1fr));
+ gap: 14px;
+}
+
+.exhibit-grid {
+ display: grid;
+ grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.95fr);
+ gap: 14px;
+ align-items: start;
+}
+
+.exhibit-main,
+.exhibit-side {
+ min-width: 0;
+}
+
+.exhibit-side {
+ width: 100%;
+}
+
+.exhibit-side .chart-block,
+.exhibit-side .card,
+.exhibit-side table {
+ margin-top: 0;
+}
+
+ .grid-3 {
+ display: grid;
+ grid-template-columns: repeat(3, minmax(0, 1fr));
+ gap: 10px;
+ }
+
+ .card {
+ border-top: 1px solid var(--hairline);
+ padding: 6px 0;
+ }
+
+ .subsection-title {
+ text-transform: uppercase;
+ font-family: var(--font-body);
+ font-size: 8px;
+ letter-spacing: 0.08em;
+ color: var(--ink-4);
+ font-weight: 600;
+ word-break: keep-all;
+ overflow-wrap: normal;
+ hyphens: none;
+ margin: 0 0 6px 0;
+ }
+
+ table {
+ width: 100%;
+ border-collapse: collapse;
+ table-layout: fixed;
+ font-size: 10.5px;
+ margin-top: 8px;
+ }
+
+ th,
+ td {
+ border-top: none;
+ border-bottom: 1px solid var(--hairline);
+ border-left: none;
+ border-right: none;
+ padding: 6px 8px;
+ text-align: left;
+ vertical-align: top;
+ line-height: 1.35;
+ white-space: normal;
+ word-break: keep-all;
+ overflow-wrap: normal;
+ hyphens: none;
+ }
+
+ th {
+ background: #FFFFFF;
+ color: var(--ink-3);
+ font-family: var(--font-body);
+ font-size: 10px;
+ font-weight: 600;
+ letter-spacing: 0.04em;
+ text-transform: uppercase;
+ border-top: 1px solid var(--hairline);
+ border-bottom: 1px solid var(--hairline-mid);
+ padding-top: 0;
+ padding-bottom: 6px;
+ }
+
+ tr:nth-child(even) td {
+ background: var(--row-alt);
+ }
+
+ .summary-bullets {
+ display: grid;
+ grid-template-columns: repeat(2, minmax(0, 1fr));
+ gap: 12px;
+ margin-top: 8px;
+ }
+
+ .summary-bullets ul {
+ margin: 4px 0 0 18px;
+ padding: 0;
+ }
+
+ .summary-bullets li {
+ margin-bottom: 4px;
+ }
+
+ .no-break {
+ page-break-inside: avoid;
+ }
+
+ .small {
+ font-size: 11px;
+ }
+
+ .exec-kpis{
+ margin: 6px 0 0 0;
+ font-size: 11px;
+ font-weight: 600;
+ letter-spacing: 0.2px;
+ opacity: 0.95;
+ }
+
+ .verdict-block {
+ background: #FFFFFF;
+ border: none;
+ border-top: 1px solid var(--hairline);
+ padding: 10px 0 0 0;
+ margin-bottom: 14px;
+ }
+
+ .verdict-label {
+ font-size: 8px;
+ font-family: var(--font-body);
+ font-weight: 600;
+ letter-spacing: 0.08em;
+ text-transform: uppercase;
+ color: var(--ink-4);
+ margin-bottom: 6px;
+ }
+
+ .verdict-classification {
+ font-size: 22px;
+ font-family: var(--font-display);
+ font-weight: 500;
+ color: var(--ink);
+ letter-spacing: 0;
+ text-transform: none;
+ margin-bottom: 8px;
+ }
+
+ .verdict-pressure {
+ font-size: 11px;
+ font-family: var(--font-body);
+ font-weight: 500;
+ color: var(--ink-2);
+ margin-bottom: 6px;
+ }
+
+ .verdict-rationale {
+ font-size: 11px;
+ font-family: var(--font-body);
+ color: var(--ink-3);
+ line-height: 1.55;
+ }
+
+ .exec-signal-drivers {
+ margin: 6px 0 0 18px;
+ padding: 0;
+ font-size: 11px;
+ line-height: 1.35;
+ }
+
+ .exec-signal-drivers li {
+ margin: 3px 0;
+ }
+
+ .exec-major-heading {
+ font-family: var(--font-body);
+ font-size: 10px;
+ font-weight: 600;
+ letter-spacing: 0.06em;
+ text-transform: uppercase;
+ color: var(--ink-3);
+ margin: 14px 0 8px 0;
+ padding-bottom: 4px;
+ border-bottom: 1px solid var(--hairline);
+ }
+
+ .kpi-grid {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: 14px;
+ margin-top: 10px;
+ margin-bottom: 14px;
+ }
+
+ .kpi-card {
+ padding: 6px 0;
+ border-top: 1px solid var(--hairline);
+ font-size: 10px;
+ }
+
+ .kpi-card:nth-child(3n) {}
+
+ .kpi-card--flagged {
+ border-top: 1px solid var(--hairline);
+ }
+
+ .kpi-label {
+ font-family: var(--font-body);
+ font-size: 7px;
+ letter-spacing: 0.08em;
+ text-transform: uppercase;
+ color: var(--ink-4);
+ margin-bottom: 2px;
+ }
+
+ .kpi-value {
+ font-family: var(--font-display);
+ font-size: 16px;
+ font-weight: 500;
+ color: var(--ink);
+ }
+
+ .exec-bullet-block ul {
+ margin: 6px 0 0 18px;
+ padding: 0;
+ }
+
+ .exec-bullet-block {
+ page-break-inside: avoid;
+ break-inside: avoid;
+ }
+
+ .exec-bullet-block .exec-major-heading {
+ page-break-after: avoid;
+ break-after: avoid;
+ }
+
+ .exec-bullet-block li {
+ margin: 3px 0;
+ line-height: 1.35;
+ }
+
+ .header-strip {
+ position: relative;
+ border-top: none;
+ border-bottom: 1px solid var(--hairline);
+ padding: 0 0 0.12in 0;
+ margin: -0.5in -0.55in 0.38in -0.55in;
+ background: var(--white);
+ }
+
+ .header-strip::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: 0;
+ right: 0;
+ height: 1.5px;
+ background: var(--gold);
+ opacity: 0.55;
+ }
+
+ .header-top {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 12px;
+ padding: 0.12in 0.55in 0 0.55in;
+ }
+
+ .brand-mark {
+ font-family: var(--font-display);
+ font-size: 8pt;
+ font-weight: 600;
+ color: var(--ink);
+ letter-spacing: 0.04em;
+ text-transform: uppercase;
+ white-space: nowrap;
+ hyphens: none;
+ }
+
+ .watermark {
+ font-size: 10px;
+ text-transform: uppercase;
+ letter-spacing: 0.18em;
+ color: var(--ink-4);
+ margin-top: 6px;
+ }
+
+
+ .scenario-label {
+ font-weight: 600;
+ }
+
+ .section-intro {
+ margin-bottom: 10px;
+ }
+
+ /* Executive verdict */
+ .verdict-leftbar {
+ border-left: 1px solid var(--hairline-mid);
+ padding: 4px 0 4px 10px;
+ font-family: var(--font-display);
+ font-size: 18px;
+ font-weight: 500;
+ color: var(--ink);
+ text-transform: none;
+ letter-spacing: 0;
+ margin-bottom: 16px;
+ max-width: 520px;
+ }
+
+ .metric-grid {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: 14px;
+ margin-top: 10px;
+ }
+
+ .metric {
+ color: var(--ink);
+ padding: 6px 0;
+ border-top: 1px solid var(--hairline);
+ }
+
+ .metric-label {
+ font-family: var(--font-body);
+ font-size: 7px;
+ letter-spacing: 0.08em;
+ text-transform: uppercase;
+ color: var(--ink-4);
+ margin-bottom: 2px;
+ }
+
+ .metric-value {
+ font-family: var(--font-display);
+ font-size: 16px;
+ font-weight: 500;
+ color: var(--ink);
+ }
+
+ .methodology-section p {
+ margin-bottom: 12px;
+ }
+
+ .metric-sub {
+ font-family: var(--font-body);
+ font-size: 7px;
+ color: var(--ink-3);
+ margin-top: 2px;
+ }
+
+ .page-break {
+ page-break-before: always;
+ }
+
+ .chart-block {
+ margin: 6px 0 4px 0;
+ text-align: center;
+}
+
+.chart-block img,
+.chart-small img,
+.chart-medium img,
+.chart-large img {
+ width: 100%;
+ max-width: 100%;
+ height: auto;
+ display: block;
+ margin: 6px auto;
+}
+
+/* Primary (core) charts */
+.chart-large {
+ max-width: 680px;
+ margin-left: auto;
+ margin-right: auto;
+}
+
+.chart-title{
+ font-size: 12px;
+ font-weight: 600;
+ margin: 4px 0 6px 0;
+}
+
+.analysis-chart-table .subsection-title,
+.analysis-chart-table-label {
+ word-break: keep-all;
+ overflow-wrap: normal;
+ hyphens: none;
+}
+
+.analysis-chart-table-value,
+.analysis-chart-table-pct {
+ white-space: nowrap;
+}
+
+.chart-clip{
+ overflow: hidden;
+}
+
+.chart-clip--radar{
+ height: 430px;
+}
+
+.chart-img--radar{
+ width: 100%;
+ transform: translateY(-55px);
+}
+
+.chart-clip--deal-score-radar{
+ height: 300px;
+}
+
+.chart-img--deal-score-radar{
+ width: 100%;
+ transform: translateY(-55px);
+}
+
+.chart-clip--cashflow-waterfall{
+ height: 430px;
+}
+
+.chart-img--cashflow-waterfall{
+ width: 100%;
+ transform: translateY(-55px);
+}
+
+/* Small supporting charts */
+.chart-small img {
+ max-width: 38%;
+}
+
+/* Standard analytical charts */
+.chart-medium img {
+ max-width: 56%;
+}
+
+ .report-footer {
+ margin-top: 18px;
+ font-size: 10px;
+ color: var(--ink-4);
+ text-align: center;
+ }
+ 
+ /* Pagination tuning for DocRaptor */
+h2, h3, .subsection-title {
+ page-break-after: avoid;
+}
+
+table, ul, ol, .chart-block, .summary-bullets {
+ page-break-inside: avoid;
+}
+
+ul, ol {
+ margin-top: 6px; /* Prevent bullet lists from sticking to previous paragraph */
+}
+
+/* ================================
+ GLOBAL REPORT FOOTER (LOCKED)
+ ================================ */
+.report-footer {
+ position: fixed;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ height: 0.34in;
+ padding: 0 0.55in;
+ font-size: 10px;
+ line-height: 1.2;
+ color: var(--ink-4);
+ border-top: 1px solid var(--hairline);
+ background: var(--white);
+ z-index: 9999;
+ display: flex;
+ align-items: center;
+}
+
+.report-footer-inner {
+ width: 100%;
+ display: flex;
+ justify-content: space-between;
+ gap: 12px;
+ align-items: center;
+}
+
+.report-footer-inner span:first-child {
+ font-family: var(--font-mono);
+ font-size: 6pt;
+ color: var(--ink-4);
+ letter-spacing: 0.1em;
+ text-transform: uppercase;
+}
+
+.report-footer-inner span:last-child {
+ font-family: var(--font-body);
+ font-size: 6.5pt;
+ color: var(--ink-4);
+ letter-spacing: 0.02em;
+}
+
+.section-intro {
+ page-break-inside: avoid;
+}
+
+.unit-mix-table {
+ table-layout: fixed;
+ width: 100%;
+ font-size: 9.5px;
+}
+
+.unit-mix-table th,
+.unit-mix-table td {
+ padding: 4px 6px;
+}
+
+.unit-mix-table th {
+ white-space: normal;
+ line-height: 1.15;
+ font-size: 9px;
+}
+
+.unit-mix-table th:nth-child(1),
+.unit-mix-table td:nth-child(1) {
+ width: 18%;
+ white-space: normal;
+}
+
+.unit-mix-table th:nth-child(2),
+.unit-mix-table td:nth-child(2) {
+ width: 8%;
+ white-space: nowrap;
+}
+
+.unit-mix-table th:nth-child(3),
+.unit-mix-table td:nth-child(3) {
+ width: 10%;
+ white-space: nowrap;
+}
+
+.unit-mix-table th:nth-child(4),
+.unit-mix-table td:nth-child(4) {
+ width: 20%;
+ white-space: nowrap;
+}
+
+.unit-mix-table th:nth-child(5),
+.unit-mix-table td:nth-child(5) {
+ width: 22%;
+ white-space: nowrap;
+}
+
+.unit-mix-table th:nth-child(6),
+.unit-mix-table td:nth-child(6) {
+ width: 22%;
+ white-space: nowrap;
+}
+</style>
+<!-- <link rel="stylesheet" media="screen" href="screen.css"> -->
+<!-- <link rel="stylesheet" media="print" href="print.css"> -->
+
+</head>
+<body>
+ <!-- COVER PAGE -->
+ <div class="cover-wrap">
+ <table class="cover-table" width="100%">
+ <tr>
+ <td class="cover-cell">
+
+ <div class="cover-brand-name">INVESTORIQ</div>
+ <div class="cover-brand-sub">Institutional Real Estate Analysis</div>
+
+ <!-- removed duplicate report type label for clean institutional hierarchy -->
+
+ <div class="cover-prop-name">Stonebridge</div>
+ <div class="cover-prop-sub"></div>
+
+ <div class="cover-verdict-value verdict-sensitized">Review - Insufficient Core Support</div>
+
+ <hr class="cover-divider">
+
+<!-- BEGIN COVER_METRIC_STRIP -->
+ <div class="cover-metric-strip">
+ <div class="cover-metric-row">48 Units &nbsp;&nbsp;|&nbsp;&nbsp; NOI $650,000 &nbsp;&nbsp;|&nbsp;&nbsp; Expense Ratio 40.9% &nbsp;&nbsp;|&nbsp;&nbsp; NOI Margin 59.1%</div>
+ </div>
+<!-- END COVER_METRIC_STRIP -->
+
+ <div style="margin-top:0;padding-top:0;"><div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="color:#F9FAFB;font-size:11px;font-weight:600;">3 uploaded files</span></div><div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="color:#F9FAFB;font-size:11px;font-weight:600;">Acquisition Memo</div></div></div>
+
+ <div class="cover-footer-row">
+ <span class="cover-footer-text">Confidential - InvestorIQ Technologies Inc.</span>
+ <span class="cover-footer-text">June 15, 2026</span>
+ </div>
+
+ </td>
+ </tr>
+ </table>
+ </div>
+ <!-- END COVER PAGE -->
+
+ <div class="report-container">
+ <div style="background:#ffffff; height:0;"></div>
+
+ <!-- 1.0 Executive Summary -->
+<!-- BEGIN SECTION_0_5 -->
+<section class="section no-break">
+ <div class="header-strip">
+ <div class="header-top">
+ <div>
+ <div class="brand-mark">INVESTORIQ</div>
+ <div class="tagline">Institutional Grade Property Intelligence</div>
+ </div>
+ <div style="text-align:center; font-family: var(--font-body); font-size:7.5pt; font-weight:300; color:var(--ink-3);">
+ Stonebridge
+ </div>
+ <div style="text-align:right; font-family: var(--font-mono); font-size:6.5pt; font-weight:400; color:var(--ink-4); letter-spacing:0.08em;">
+ June 15, 2026
+ </div>
+ </div>
+ </div>
+
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 01</span>
+ <span class="section-header-title">Executive Summary</span>
+ <span class="section-header-sub">Deal overview, operating profile, and primary risk drivers</span>
+ </div>
+ <!-- BEGIN PROPERTY_DESCRIPTOR_LINE -->
+ <p class="small">48-Unit Multifamily</p>
+ <!-- END PROPERTY_DESCRIPTOR_LINE -->
+
+ <div class="grid-2-balanced">
+ <div>
+ <!-- EXEC SUMMARY PLACEHOLDER -->
+ <!-- BEGIN EXEC_SUMMARY -->
+ <div class="exec-summary-block">
+ <div class="verdict-block">
+ <div class="verdict-label">ACQUISITION MEMO</div>
+ <div class="verdict-classification">Review - Insufficient Core Support</div>
+ <div class="verdict-pressure">Primary Constraint: No material operating pressure signal was triggered from assessed core metrics; refer to Data Coverage for source-limited areas.</div>
+ <div class="verdict-rationale">Insufficient operating data to determine classification.</div>
+ </div>
+
+ <p class="exec-major-heading">Key Metrics Snapshot</p>
+ <div class="kpi-grid">
+
+ <div class="kpi-card">
+ <div class="kpi-label">Units</div>
+ <div class="kpi-value">48</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Occupancy</div>
+ <div class="kpi-value">Not assessed</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Annual In-Place Rent</div>
+ <div class="kpi-value">Not assessed</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Effective Gross Income</div>
+ <div class="kpi-value">$1,100,000</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Operating Expenses</div>
+ <div class="kpi-value">$450,000</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Net Operating Income</div>
+ <div class="kpi-value">$650,000</div>
+ </div>
+
+ <div class="kpi-card kpi-card--flagged">
+ <div class="kpi-label">Expense Ratio</div>
+ <div class="kpi-value">40.9% (Stable)</div>
+ </div>
+
+ <div class="kpi-card kpi-card--flagged">
+ <div class="kpi-label">NOI Margin</div>
+ <div class="kpi-value">59.1% (Stable)</div>
+ </div>
+
+ <div class="kpi-card">
+ <div class="kpi-label">Break-even Occupancy</div>
+ <div class="kpi-value">40.9% (Stable)</div>
+ </div>
+
+ 
+
+ </div>
+
+ 
+
+ 
+
+ </div>
+ <!-- END EXEC_SUMMARY -->
+ </div>
+
+ </div>
+
+ 
+
+ <!-- BEGIN SECTION_DOC_SOURCES -->
+ <div class="section-intro">
+ <div class="section-header">Uploaded Files</div>
+ <p class="section-intro">
+ This section lists the files uploaded and associated with this report.
+ </p>
+ <ul><li>Stonebridge_Assumptions.pdf - Unknown date</li><li>Current_Debt_Stonebridge.pdf - Unknown date</li><li>Stonebridge_Reno_Plan.pdf - Unknown date</li></ul><p class="small" style="margin-top:8px;"><strong>Uploaded Renovation / CapEx Document:</strong> Structured renovation budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only. Renovation ROI, payback, NOI impact, valuation, and refinance outputs are not modeled.</p>
+ </div>
+ <!-- END SECTION_DOC_SOURCES -->
+
+</section>
+<!-- END SECTION_0_5 -->
+
+<!-- BEGIN SECTION_0_6_ACQUISITION_MEMO_SUMMARY -->
+
+<!-- END SECTION_0_6_ACQUISITION_MEMO_SUMMARY -->
+
+<!-- BEGIN SECTION_0_7_OPERATING_SNAPSHOT -->
+
+<!-- END SECTION_0_7_OPERATING_SNAPSHOT -->
+
+
+
+
+ <!-- BEGIN SECTION_7_DEBT -->
+<section class="section page-break">
+ <div class="no-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 03</span>
+ <span class="section-header-title">Proposed Acquisition Financing Context</span>
+ <span class="section-header-sub">Source-bound proposed acquisition financing context only</span>
+ </div>
+ <div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Proposed Acquisition Financing Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">This is source-bound proposed acquisition financing context only. It is not loan approval, lender commitment, credit decision, refinance sufficiency analysis, or debt-service underwriting.</p><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Input</th><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Value</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Purchase Price</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">$13,500,000</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Proposed Loan Amount</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">$9,450,000</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">LTV</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">70.0%</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Interest Rate</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">5.95%</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Amortization</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">30 years</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Closing / Lender Fee</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">0.0%</td></tr></tbody></table></div>
+ </div>
+</section>
+<!-- END SECTION_7_DEBT -->
+
+ <!-- BEGIN SECTION_2_UNIT_VALUE_ADD -->
+<!-- 2.0 Unit-Level Rent Positioning -->
+<!-- BEGIN SECTION_2 -->
+<section class="section page-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 04</span>
+ <span class="section-header-title">Unit-Level Rent Positioning & Value Sensitivity</span>
+ <span class="section-header-sub">Market-rent gap and implied value sensitivity</span>
+ </div>
+
+ <div class="grid-2-balanced">
+ <!-- LEFT COLUMN -->
+ <div class="no-break">
+ 
+
+ </div>
+ <div class="no-break"><div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Positioning Summary</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>$0</td></tr><tr><td>Annual Market Rent</td><td>$0</td></tr><tr><td>Annual Gross Rent Upside</td><td>Not assessed</td></tr><tr><td>Rent Gap %</td><td>Not assessed</td></tr><tr><td>Total Units</td><td>48</td></tr><tr><td>Occupied Units</td><td>44</td></tr><tr><td>Vacant Units</td><td>4</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound rent positioning evidence uses verified totals where available and leaves unsupported metrics unassessed.</p></div></div>
+ </div>
+
+ 
+
+ </section>
+<!-- END SECTION_2 -->
+<!-- END SECTION_2_UNIT_VALUE_ADD -->
+
+<!-- BEGIN SECTION_2_1_RENT_UPSIDE_VALUE_SENSITIVITY -->
+
+<!-- END SECTION_2_1_RENT_UPSIDE_VALUE_SENSITIVITY -->
+
+<!-- BEGIN SECTION_2_2_CAP_RATE_VALUE_INDICATION -->
+
+<!-- END SECTION_2_2_CAP_RATE_VALUE_INDICATION -->
+
+<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- BEGIN SECTION_3_OPERATING_STATEMENT -->
+<section class="section page-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 05</span>
+ <span class="section-header-title">Operating Statement (Trailing Twelve Months)</span>
+ <span class="section-header-sub">Operating summary based on uploaded financials</span>
+ </div>
+
+ <div class="grid-2-balanced">
+ <!-- BEGIN T12_INCOME_TABLE -->
+ <div class="no-break">
+ <p class="subsection-title">Income Reconstruction (TTM)</p>
+ <table>
+ <thead>
+ <tr>
+ <th>Income Line Item</th>
+ <th>TTM Amount</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Effective Gross Income (TTM): $1,100,000.</td></tr>
+ </tbody>
+ </table>
+ </div>
+ <!-- END T12_INCOME_TABLE -->
+
+ <!-- BEGIN T12_EXPENSE_TABLE -->
+ <div class="no-break">
+ <p class="subsection-title">Operating Expenses (TTM)</p>
+ <table>
+ <thead>
+ <tr>
+ <th>Expense Line Item</th>
+ <th>TTM Amount</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Total Operating Expenses (TTM): $450,000.</td></tr>
+ </tbody>
+ </table>
+ </div>
+ <!-- END T12_EXPENSE_TABLE -->
+ </div>
+
+ <div class="no-break" style="margin-top:24px;">
+ <p class="subsection-title">Net Operating Income Summary</p>
+ <table>
+ <thead>
+ <tr>
+ <th>Metric</th>
+ <th>Value</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td><strong>Effective Gross Income (TTM)</strong></td>
+ <td><strong>$1,100,000</strong></td>
+ </tr>
+ <tr>
+ <td><strong>Total Operating Expenses (TTM)</strong></td>
+ <td><strong>$450,000</strong></td>
+ </tr>
+ <tr>
+ <td><strong>Net Operating Income (TTM)</strong></td>
+ <td><strong>$650,000</strong></td>
+ </tr>
+ <tr>
+ <td><strong>Operating Expense Ratio</strong></td>
+ <td><strong>40.9%</strong></td>
+ </tr>
+ <tr><td>EGI per Unit (TTM)</td><td>$22,917</td></tr><tr><td>OpEx per Unit (TTM)</td><td>$9,375</td></tr><tr><td>NOI per Unit (TTM)</td><td>$13,542</td></tr>
+ </tbody>
+ </table>
+ </div>
+
+ 
+
+</section>
+<!-- END SECTION_3_OPERATING_STATEMENT -->
+
+<!-- BEGIN SECTION_S2_INCOME_FORENSICS -->
+
+<!-- END SECTION_S2_INCOME_FORENSICS -->
+
+<!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->
+
+<!-- END SECTION_S3_EXPENSE_STRUCTURE -->
+
+<!-- BEGIN SECTION_S4_NOI_STABILITY -->
+
+<!-- END SECTION_S4_NOI_STABILITY -->
+
+<!-- BEGIN SECTION_S5_RENT_ROLL_DISTRIBUTION -->
+
+<!-- END SECTION_S5_RENT_ROLL_DISTRIBUTION -->
+
+<!-- BEGIN SECTION_S7_DATA_COVERAGE_GAPS -->
+<section class="section page-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 10</span>
+ <span class="section-header-title">Data Coverage &amp; Source Limitations</span>
+ <span class="section-header-sub">Core input coverage and omitted advanced surfaces</span>
+ </div>
+
+ <p>Coverage is measured deterministically from uploaded T12 and rent roll inputs only.</p><table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">4/4</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">100.0%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">None</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">1/4</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">25.0%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">in_place_rent, market_rent, Occupancy / unit status (occupied/vacant) or occupied/total summary</td></tr></tbody></table><div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Core quantitative source</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">EGI, OpEx, and NOI</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Core quantitative source</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Units, occupancy, in-place rent, and market rent</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Support documents</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Context only unless validated</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Corroborating support, not an override for modeled core inputs</td></tr></tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div><p class="subsection-title" style="margin-top:6px;">Next Best Document Uploads</p><ul><li>Current Rent Roll with in-place &amp; market rents</li><li>Rent Roll with unit status (occupied/vacant) or occupied/total summary</li></ul><p class="small">Sections not supported by minimum verified source coverage were intentionally withheld from analysis.</p>
+</section>
+<!-- END SECTION_S7_DATA_COVERAGE_GAPS -->
+
+
+
+ 
+
+
+<!-- BEGIN SECTION_4_NEIGHBORHOOD -->
+<section class="section page-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 13</span>
+ <span class="section-header-title">Source Context / Support Document Treatment</span>
+ <span class="section-header-sub">Modeled core inputs, corroborating support, and context-only documents</span>
+ </div>
+ <div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Context</p><table><tbody><tr><td>Purchase Price</td><td style="font-weight:600;">$13,500,000</td></tr><tr><td>Going-In Cap Rate</td><td style="font-weight:600;">7.0%</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">Source-bound operating and acquisition context only. No projections, debt sizing, refinance, or return modeling.</p></div>
+ </section>
+<!-- END SECTION_4_NEIGHBORHOOD -->
+
+
+ <!-- BEGIN SECTION_5_RISK_MATRIX -->
+ 
+<!-- END SECTION_5_RISK_MATRIX -->
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 12.0 Methodology & Data Transparency -->
+<!-- BEGIN SECTION_12 -->
+<section class="section page-break">
+ <div class="section-header">
+ <span class="section-header-eyebrow">Section 20</span>
+ <span class="section-header-title">Methodology &amp; Data Transparency</span>
+ <span class="section-header-sub">Assumptions, methodology notes, and data limitations</span>
+ </div>
+ <div class="methodology-section">
+
+ <p class="section-intro">
+ InvestorIQ does not assume or gap-fill missing data. Outputs are primarily attributable to uploaded documents and
+ defined modeling frameworks, with transparency and auditability as core design principles.
+ </p>
+
+ <p class="small">Assumptions in this memorandum are permitted only when anchored to uploaded documents or standardized underwriting frameworks. Unverified inputs are excluded; no synthetic values are introduced into deterministic outputs.</p>
+
+ <h3>Document-Backed Acquisition Memo Outputs</h3>
+ <p>InvestorIQ acquisition memo outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred.</p>
+
+ <h3>Methodology Notes</h3>
+ <p>Metrics and tables reflect document-backed inputs, deterministic calculations, and framework-constrained outputs. Missing source data is not gap-filled.</p>
+
+ <h3>Data Limitations &amp; Missing Inputs</h3>
+ <p>This memorandum is limited to the documents provided and the fields that could be verified. Missing values are disclosed and excluded from analysis.</p>
+ </div>
+
+</section>
+<!-- END SECTION_12 -->
+<!-- GLOBAL REPORT FOOTER (LOCKED) -->
+<div class="report-footer">
+ <div class="report-footer-inner">
+ <span>InvestorIQ Capital Intelligence Memorandum | Confidential</span>
+ <span>&copy; InvestorIQ Technologies Inc.</span>
+ </div>
+</div>
+ </div>
+</body>
+</html>
+
+
+
+
+<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY --><div class="card no-break" style="margin-top:10px;"><p class="subsection-title">Document Treatment Summary</p><p class="small" style="margin:0;color:#374151;">Uploaded files are listed for auditability. Only structured source inputs are used quantitatively. Unsupported or unclassified support files are not used to override modeled outputs.</p><div style="margin-top:10px;"><p class="subsection-title">Source Treatment / Quantitative Use</p><table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:28%;">Filename</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Document Role</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;width:24%;">Use</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Stonebridge_Assumptions.pdf</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Purchase Assumptions / Acquisition Context</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Acquisition context / document-derived acquisition context</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Current_Debt_Stonebridge.pdf</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Debt Support Received / Contextual</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Debt support received / contextual or deferred</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Uploaded existing/current debt context only; not proposed acquisition financing.</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Property_Tax_Support.pdf</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Property Tax Support</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Corroborating support</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Corroborating property-tax support; does not override T12 totals.</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Stonebridge_Reno_Plan.pdf</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Structured Renovation / CapEx Plan</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Structured renovation / CapEx context</td><td style="padding:4px 8px;border:1px solid #E5E7EB;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;hyphens:auto;">Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled.</td></tr></tbody></table></div><div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">Modeled Inputs</div><p class="small" style="margin:6px 0 0 0;color:#64748b;">No modeled inputs were classified from structured source metadata.</p></div><div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">Displayed / Limited Use</div><ul style="margin:6px 0 0 18px;padding:0;"><li data-treatment-source="canonical_support_doc_authority" data-treatment-code="canonical_support_doc_purchase_assumptions" style="margin:0 0 4px 0;">Stonebridge_Assumptions.pdf <span style="color:#64748b;">- Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.</span></li><li data-treatment-source="explicit_current_debt_source_text" data-treatment-code="canonical_support_doc_current_debt_context" style="margin:0 0 4px 0;">Current_Debt_Stonebridge.pdf <span style="color:#64748b;">- Uploaded existing/current debt context only; not proposed acquisition financing.</span></li><li data-treatment-source="canonical_support_doc_authority" data-treatment-code="canonical_support_doc_property_tax" style="margin:0 0 4px 0;">Property_Tax_Support.pdf <span style="color:#64748b;">- Corroborating property-tax support; does not override T12 totals.</span></li><li data-treatment-source="explicit_renovation_source_text" data-treatment-code="canonical_support_doc_structured_renovation_capex_plan" style="margin:0 0 4px 0;">Stonebridge_Reno_Plan.pdf <span style="color:#64748b;">- Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled.</span></li></ul></div><div style="margin-top:10px;"><div style="font-size:11px;font-weight:700;color:#1F3A5F;">Listed but Not Quantitatively Modeled</div><p class="small" style="margin:6px 0 0 0;color:#64748b;">No additional unmodeled support files were identified.</p></div></div><!-- END DOCUMENT_TREATMENT_SUMMARY -->

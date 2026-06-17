@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
-const { resolveReportTypeAndTier } = generatorTest;
+const { resolveReportTypeAndTier } = await import("../../api/_lib/report-request-context.js");
 
 // Underwriting aliases must normalize to underwriting/tier 2.
 for (const alias of [

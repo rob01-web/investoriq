@@ -1,3 +1,1588 @@
+# June 16, 2026 Late CVF Addendum — V2 Root Cutover Progress / Helper Split Checkpoint / Smoke Harness Reclassification
+
+## Current CVF status
+
+The June 16 owner-escalation diagnosis remains correct:
+
+```text
+CVF-15 / CVF-13 — Acquisition Memo V2 final HTML ownership failure
+```
+
+is still the controlling Acquisition Memo launch blocker until focused final HTML validation passes.
+
+However, the project has now made meaningful architectural progress toward closing the family.
+
+Current updated CVF status:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll:
+PASS / protected.
+
+CVF-04 Current debt / proposed acquisition separation:
+UPSTREAM PASS candidate / FINAL HTML VALIDATION PENDING.
+V2 source/projection can represent current debt context, but focused final HTML proof is still required.
+
+CVF-05 V2 containment:
+PASS / protect. No forbidden surfaces should be reopened.
+
+CVF-07 / CVF-15 Optional support/source-package authority:
+ROOT CUTOVER IN PROGRESS.
+The new V2 document owner is the correct final assembly direction, but final focused smoke is still required.
+
+CVF-13 Runtime/render stability:
+WATCHLIST, improved.
+The const/let V2 reassignment blocker was caught and fixed. Request-context split regression was also caught and repaired.
+
+CVF-14 Advisory/final assembly diagnostics:
+ACTIVE.
+The monster rent-roll smoke is now considered a bloated regression harness, not a clean smoke.
+Focused V2/screening/source-authority smokes are required.
+```
+
+## What changed since the prior CVF addendum
+
+### CVF-15 root direction moved from patching to ownership
+
+Old failed pattern:
+
+```text
+legacy Acquisition Memo HTML
++ V2 marker replacements
++ row regex rewrites
++ before-body insertion
++ after-html fallback suppression
+```
+
+New active pattern:
+
+```text
+V2 gate on
+-> canonical source package / projection
+-> renderCompleteAcquisitionMemoV2Html(...)
+-> complete V2-owned final HTML body/document
+-> PDF/storage/delivery plumbing
+```
+
+New owner:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+Key function:
+
+```javascript
+renderCompleteAcquisitionMemoV2Html(...)
+```
+
+CVF interpretation:
+
+```text
+This is the right architecture for closing CVF-15.
+It is not launch-cleared until focused final HTML validation proves it.
+```
+
+### CVF-13 runtime blocker fixed
+
+A syntax-passing runtime failure was identified:
+
+```javascript
+const htmlString = sanitizeTypography(htmlStringRaw);
+...
+htmlString = renderCompleteAcquisitionMemoV2Html(...);
+```
+
+Risk:
+
+```text
+TypeError: Assignment to constant variable
+```
+
+Fix:
+
+```javascript
+let htmlString = sanitizeTypography(htmlStringRaw);
+```
+
+CVF interpretation:
+
+```text
+CVF-13 remains watchlist, but this specific runtime blocker is fixed.
+```
+
+### Request-context regression caught and repaired
+
+During helper extraction, `resolveReportTypeAndTier(...)` initially lost required return fields:
+
+```text
+reportTier
+effectiveReportMode
+allowedTypes
+supportedAliases
+```
+
+It also temporarily added screening aliases that were not in the original behavior.
+
+Repair completed:
+
+```text
+original return contract restored.
+original alias behavior restored.
+constantTimeEqual(...) preserved.
+```
+
+CVF interpretation:
+
+```text
+This prevented a quiet report-mode/branching regression that could have affected Screening and Acquisition Memo routing.
+```
+
+## Helper boundary split progress
+
+These splits are not direct CVF fixes by themselves, but they reduce the monster-file risk that repeatedly caused CVF-13/CVF-15 patch-loop failures.
+
+### Split complete — V2 document owner
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+CVF relevance:
+
+```text
+Directly targets CVF-15 by moving Acquisition Memo V2 customer-visible final body ownership out of legacy final assembly.
+```
+
+### Split complete — delivery/output helper plumbing
+
+```text
+api/_lib/report-delivery-output.js
+```
+
+Moved:
+
+```text
+sanitizeTypography(...)
+buildDeliveryResponseCompatibilityAliases(...)
+isValidReportStoragePath(...)
+buildReportStoragePath(...)
+assertValidReportPublicationInsert(...)
+```
+
+CVF relevance:
+
+```text
+Supports CVF-08/CVF-09/CVF-10 clarity, but hot DocRaptor/Supabase/delivery gate/credit logic was correctly left in place.
+```
+
+### Split complete — request/context helper plumbing
+
+```text
+api/_lib/report-request-context.js
+```
+
+Moved:
+
+```text
+resolveReportTypeAndTier(...)
+constantTimeEqual(...)
+```
+
+CVF relevance:
+
+```text
+Supports stable report-mode routing and prevents helper clutter inside generate-client-report.js.
+Regression was caught and repaired before proceeding.
+```
+
+### Split complete — formatting/display helpers
+
+```text
+api/_lib/report-formatting-helpers.js
+```
+
+Moved:
+
+```text
+isNil(...)
+formatCurrency(...)
+formatPercent(...)
+formatPercent1(...)
+formatPercentExactDisplay(...)
+formatCapPercentExact(...)
+formatInterestRatePercent(...)
+formatMultiple(...)
+formatYears(...)
+formatDistanceKm(...)
+escapeHtml(...)
+replaceAll(...)
+sanitizeDisplayText(...)
+sanitizePropertyNameDisplayText(...)
+```
+
+CVF relevance:
+
+```text
+Low-risk helper cleanup. No CVF business behavior should change.
+```
+
+### Split complete / safe-to-commit — number helpers
+
+```text
+api/_lib/report-number-helpers.js
+```
+
+Moved:
+
+```text
+isFiniteNumber(...)
+isFinitePositive(...)
+materiallyDifferent(...)
+toRateRatio(...)
+toCapRatio(...)
+```
+
+Left local:
+
+```text
+coerceNumber(...)
+computeMortgageConstant(...)
+normalizeCapRatePercent(...)
+capRateMatches(...)
+```
+
+Reason:
+
+```text
+Those remaining helpers are either too deeply tied to local business logic or financial modeling.
+```
+
+CVF relevance:
+
+```text
+Low-risk helper cleanup. Helps reduce future patch blast radius.
+```
+
+### Split in progress — HTML utility helpers
+
+Target module:
+
+```text
+api/_lib/report-html-helpers.js
+```
+
+Allowed candidates:
+
+```text
+stripMarkedSection(...)
+replaceMarkedSection(...)
+stripT12DetailSubsection(...)
+stripEmptyHeadingBlocks(...)
+stripChartBlockByAlt(...)
+```
+
+CVF caution:
+
+```text
+Moving HTML utilities must not become another way to mutate customer-visible report behavior.
+Bodies/regex must be preserved exactly.
+```
+
+## Monster smoke reclassification
+
+The large smoke test:
+
+```text
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+is now classified as:
+
+```text
+bloated regression harness / not a clean smoke
+```
+
+Reason:
+
+```text
+It failed on scope errors before reaching meaningful V2 assertions:
+- attackPrelimHtml not defined
+- supportDocAuthorityRows not defined
+```
+
+CVF interpretation:
+
+```text
+A harness scope error is not the same as a V2 final HTML failure.
+The monster smoke still matters, but it cannot be the only validator for CVF-15.
+```
+
+Required focused tests:
+
+```text
+1. Acquisition Memo V2 document smoke.
+2. Source-package/source-authority smoke.
+3. Acquisition Memo projection smoke.
+4. Forbidden V2 surface smoke.
+5. Screening regression smoke.
+6. Delivery/PDF smoke.
+```
+
+## Updated CVF acceptance for CVF-15
+
+CVF-15 can move from ACTIVE to PASS only when focused tests prove:
+
+```text
+1. V2 gate on uses complete V2-owned final HTML.
+2. Preliminary Financing Readiness Summary appears.
+3. Lender Diligence Checklist appears.
+4. Current debt context uploaded says Yes when source package says current debt exists.
+5. Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual.
+6. Stonebridge_Assumptions.pdf remains purchase/acquisition context.
+7. Stonebridge_Reno_Plan.pdf remains Structured Renovation / CapEx Plan.
+8. Document Treatment is inside <body>, not after </html>.
+9. No after-html V2 fallback exists.
+10. No marker replacement or row regex is required for V2 correctness.
+11. Screening remains unchanged/protected.
+12. Forbidden V2 surfaces remain absent.
+```
+
+## Current CVF stop conditions
+
+Reject any next patch whose primary mechanism is:
+
+```text
+patch one V2 row;
+replace one marker;
+insert one V2 block before </body>;
+append one missing block;
+change one monster-smoke assertion;
+fix one out-of-scope smoke variable as the main strategy.
+```
+
+Allowed if explicitly bounded:
+
+```text
+pure helper extraction;
+focused smoke creation;
+V2 final document ownership verification;
+legacy V2 path quarantine;
+Screening protective regression.
+```
+
+## Fresh CVF continuation point
+
+```text
+June 16 late CVF checkpoint.
+
+Progress:
+- V2 complete document owner exists.
+- Helper boundaries are being split safely out of generate-client-report.js.
+- Runtime const/let blocker fixed.
+- Request-context regression fixed.
+- Formatting helpers committed.
+- Number helpers extracted / safe to commit if not already committed.
+- HTML helper split is in progress.
+- Monster rent-roll smoke is downgraded to bloated regression harness.
+
+Still required:
+- focused V2 document smoke;
+- Screening regression smoke;
+- source authority/projection smokes;
+- final proof that V2 Document Treatment and Financing Readiness are inside valid body HTML;
+- no forbidden surface leakage.
+
+Acquisition Memo remains not launch-cleared until CVF-15 focused validation passes.
+```
+
+---
+
+# June 16, 2026 CVF Addendum — Owner Escalation / CVF-15 Final Assembly Root Not Solved / Hard V2 Cutover Required
+
+## Current CVF status
+
+The CVF ledger is updated after Rob's June 16 escalation.
+
+Active blocker:
+
+```text
+CVF-15 / CVF-13 — Acquisition Memo V2 Final HTML Ownership Failure
+```
+
+This supersedes treating the current failure as:
+
+```text
+a current-debt row bug,
+a Document Treatment idempotency bug,
+a marker replacement bug,
+or a test assertion tweak.
+```
+
+Current CVF mapping:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll:
+PASS / protected.
+
+CVF-04 Current debt / proposed acquisition separation:
+UPSTREAM PARTIAL PASS, FINAL HTML FAIL.
+Source package/projection can identify current debt context, but the final customer-visible body still does not reliably render the Document Treatment and checklist proof.
+
+CVF-05 V2 containment:
+PASS / protect. Do not reopen forbidden surfaces.
+
+CVF-07 / CVF-15 Optional support/source package authority:
+UPSTREAM PARTIAL PASS, FINAL HTML OWNERSHIP FAIL.
+Source authority can classify rows, but final report assembly still fails to make V2 the sole customer-visible owner.
+
+CVF-13 Runtime/render stability:
+WATCHLIST.
+Multiple bridge patches changed failure shape and one introduced a ReferenceError earlier. This confirms patching legacy final assembly is risky.
+
+CVF-14 Advisory/final assembly diagnostics:
+ACTIVE.
+Final smoke/test-return paths are not yet aligned with canonical V2 authority.
+```
+
+## Owner escalation recorded
+
+Rob escalated because the same CVF family has consumed weeks through repeated tiny patches.
+
+Substance of escalation:
+
+```text
+Rob has repeatedly asked for the root problem, not one more small patch.
+Rob correctly identified the repeated pattern as whack-a-mole.
+Rob challenged the earlier advice not to rebuild generate-client-report / final assembly.
+Rob now requires a same-day root fix: one patch/rebuild/cutover that changes the ownership boundary.
+```
+
+Ledger interpretation:
+
+```text
+This is a valid owner escalation.
+It should prevent future assistants/Codex prompts from proposing another marker, regex, or row-level patch as the main strategy.
+```
+
+## Latest smoke evidence
+
+Manual command:
+
+```text
+node tests/qa/generate-client-report-rent-roll-smoke.js 2>&1 | findstr "PASS ERR_ASSERTION"
+```
+
+Latest failure:
+
+```text
+AssertionError [ERR_ASSERTION]:
+The input did not match the regular expression
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i
+```
+
+This occurred after:
+
+```text
+- new api/_lib/acquisition-memo-v2-final-assembly.js helper,
+- generate-client-report.js calls to helper in harness/intermediate/final paths,
+- removal/bypass of old ad hoc row/marker replacements,
+- current debt row driven by acquisitionMemoProjection.financingReadinessSignals.hasCurrentDebtContext,
+- row regex correction to avoid nested <td>.
+```
+
+CVF conclusion:
+
+```text
+The helper-centered bridge did not close CVF-15.
+The failure moved, then returned.
+The root is final HTML ownership, not one assertion.
+```
+
+## Why the current approach still fails CVF-15
+
+The V2 system currently owns:
+
+```text
+source classification,
+projection,
+some rendered fragments,
+a final assembly helper.
+```
+
+But it does NOT yet sovereignly own:
+
+```text
+the complete Acquisition Memo V2 customer-visible HTML document/body.
+```
+
+`generate-client-report.js` still owns too much under the V2 path:
+
+```text
+legacy htmlString/finalHtml shell,
+legacy marked sections,
+legacy token replacement,
+legacy test-return path,
+legacy section stripping/sanitizing,
+legacy Document Treatment paths,
+legacy preliminary financing readiness paths,
+late fallback paths.
+```
+
+This creates repeated CVF failures because V2 output is inserted into or patched over legacy output.
+
+## CVF correction
+
+The next patch must change the architecture boundary:
+
+Old failed pattern:
+
+```text
+legacy Acquisition Memo HTML
++ V2 fragment replacements
++ body insertions
++ marker fallback suppression
+= recurring CVF-15 failures
+```
+
+Required pattern:
+
+```text
+V2 gate on
+-> build canonical source package
+-> build Acquisition Memo projection
+-> render complete Acquisition Memo V2 HTML/body/document
+-> pass complete finalHtml to PDF/storage/delivery
+```
+
+`generate-client-report.js` may still provide:
+
+```text
+core data extraction,
+job plumbing,
+PDF/storage/delivery plumbing,
+error handling.
+```
+
+It must not provide V2 customer-visible section ownership.
+
+## Required CVF acceptance
+
+Before CVF-15 can move from ACTIVE to PASS:
+
+```text
+1. Acquisition Memo V2 under feature gate renders complete final HTML from V2-owned document/body.
+2. No marker replacement is required to make V2 Financing Readiness appear.
+3. No marker replacement is required to make V2 Document Treatment appear.
+4. No append-after-html fallback is possible under V2.
+5. No row-level regex mutation is needed for Current debt context uploaded.
+6. Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual in valid body HTML.
+7. Current debt context uploaded: Yes appears.
+8. Preliminary Financing Readiness Summary appears.
+9. Lender Diligence Checklist appears.
+10. V2 gate off keeps legacy/Screening unaffected.
+11. Screening regression remains green.
+12. Forbidden V2 surfaces remain absent.
+```
+
+## Stop condition
+
+If Codex or any assistant proposes another patch whose primary mechanism is:
+
+```text
+replace one marker,
+fix one regex,
+insert one block before </body>,
+patch one row,
+or change one assertion,
+```
+
+then reject it unless it is explicitly part of a complete V2 final document ownership cutover.
+
+## Fresh CVF continuation point
+
+```text
+CVF-15 remains ACTIVE.
+The final HTML bridge is not solved.
+The correct next move is a hard V2 final document/body owner, not another helper patch.
+Screening is protected.
+Acquisition Memo remains not launch-cleared until this cutover passes local smoke and visible final HTML validation.
+```
+
+---
+
+
+# June 15, 2026 CVF Addendum — V2 Bridge Final HTML Assembly Failure / Patch Loop Paused
+
+## Current CVF status
+
+The Acquisition Memo V2 source-authority rebuild remains active, but Step 5 bridge wiring is not currently passing.
+
+The latest local smoke/debug sequence updates CVF status as follows:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll parsing:
+PASS / protected. Not implicated.
+
+CVF-04 Current debt / proposed acquisition financing separation:
+PARTIAL UPSTREAM PASS / FINAL RENDER FAIL.
+Current_Debt_Stonebridge.pdf reaches correct Debt Support Received / Contextual document-treatment output in one path, but Current debt context uploaded / Lender Diligence Checklist is absent from final HTML.
+
+CVF-05 V2 containment:
+PASS / continue protecting. No reason to reopen forbidden surfaces.
+
+CVF-07 / CVF-15 Optional-support/source-package authority:
+PARTIAL UPSTREAM PASS / FINAL ASSEMBLY FAIL.
+Document Treatment can classify Current Debt correctly, but the Document Treatment block is still appended after </html> in the local test-return path.
+
+CVF-13 Runtime/render stability:
+WATCHLIST.
+A ReferenceError was introduced by a bridge patch and then fixed. This proves Step 5 bridge wiring can create runtime defects if patched blindly.
+
+CVF-14 Advisory/final assembly diagnostics:
+ACTIVE.
+The smoke/test-return path and final HTML path are not yet aligned to V2 source-package truth.
+```
+
+## New active blocker classification
+
+Active blocker name:
+
+```text
+CVF-15 / CVF-13 — Acquisition Memo V2 Bridge Final HTML Assembly Ownership Failure
+```
+
+This is distinct from the earlier pure classification failures.
+
+The current root is:
+
+```text
+V2 source/projection/render output is not yet the sole owner of the customer-visible Acquisition Memo V2 body.
+Legacy final assembly still controls tokens, marked sections, test-return htmlString, and append fallbacks.
+```
+
+## Evidence recorded
+
+### ReferenceError fixed
+
+Observed failure:
+
+```text
+ReferenceError: acquisitionMemoV2Projection is not defined
+```
+
+Disposition:
+
+```text
+Fixed locally by replacing out-of-scope acquisitionMemoV2Projection access with acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+```
+
+CVF mapping:
+
+```text
+CVF-13 runtime/render defect introduced during bridge patching.
+Status: fixed in uploaded local file; do not broaden.
+```
+
+### Financing readiness section absent
+
+Latest final HTML evidence:
+
+```text
+Current debt context uploaded: absent.
+Lender Diligence Checklist: absent.
+Preliminary Financing Readiness Summary: absent.
+```
+
+The marked section remains empty:
+
+```html
+<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+```
+
+CVF mapping:
+
+```text
+CVF-04 final visible checklist/current-debt readiness not rendered.
+CVF-15 final assembly does not consume V2 projection/renderer output correctly.
+```
+
+### Document Treatment Summary appended after closing HTML
+
+Latest final HTML evidence:
+
+```html
+</body>
+</html>
+
+<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->...
+```
+
+CVF mapping:
+
+```text
+CVF-15 final support-doc treatment path exists but is not inserted into the valid report body.
+CVF-13/CVF-15 final HTML assembly failure.
+```
+
+### Current debt source treatment row is correct where it appears
+
+Latest Document Treatment block includes:
+
+```text
+Current_Debt_Stonebridge.pdf
+Debt Support Received / Contextual
+Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+CVF mapping:
+
+```text
+CVF-04 source classification is no longer the immediate blocker in this local path.
+The remaining blocker is final assembly/placement/ownership.
+```
+
+## Why the patch loop is paused
+
+This sequence reproduced the same structural problem the V2 rebuild was meant to solve:
+
+```text
+Patching one local row or replacement path leaves another legacy final assembly path active.
+```
+
+Observed active legacy behaviors include:
+
+```text
+empty marked sections,
+token replacement that misses marked sections,
+late V2 bridge replacement timing,
+test-return htmlString fallback,
+DOCUMENT_TREATMENT_SUMMARY append-after-html fallback,
+legacy preliminary financing/readiness builders,
+legacy support-doc treatment output paths.
+```
+
+CVF conclusion:
+
+```text
+Further micro-patches are likely to keep moving the failure unless Step 5 is reframed as ownership, not row replacement.
+```
+
+## Required next acceptance criteria
+
+Before Step 5 can be considered passing:
+
+```text
+1. V2 gate on:
+   - SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is populated.
+   - Preliminary Financing Readiness Summary appears.
+   - Lender Diligence Checklist appears.
+   - Current debt context uploaded appears and says Yes.
+   - Current debt facts come from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf.
+
+2. Document Treatment:
+   - Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual.
+   - Stonebridge_Assumptions.pdf remains Purchase Assumptions / Acquisition Context.
+   - Reno remains Structured Renovation / CapEx Plan.
+   - Document Treatment Summary is inside <body>, not after </html>.
+
+3. Legacy containment:
+   - No duplicate/conflicting legacy current-debt/document-treatment rows.
+   - No legacy append-after-html fallback for V2 test-return path.
+   - V2 gate off behavior remains unchanged.
+
+4. Hygiene:
+   - Temporary fs.writeFileSync debug line is removed before commit.
+   - No diagnostics/logs remain.
+   - No commit/deploy/UI retest until local smoke passes.
+```
+
+## Recommended next CVF handling
+
+Do not continue with a broad audit.
+
+Preferred next approach:
+
+```text
+Reframe Step 5 as a V2 memo-body ownership bridge:
+generate-client-report.js may provide shell/layout only;
+renderAcquisitionMemo(projection) must own the Acquisition Memo V2 customer-visible source sections;
+legacy support-doc and financing-readiness helpers must not append/overwrite those sections under the V2 gate.
+```
+
+If a smaller patch is attempted, it must be bounded to:
+
+```text
+V2-gated final assembly ownership only.
+```
+
+It must not touch:
+
+```text
+core math,
+Screening,
+parser classification,
+source package,
+projection/renderer authority boundary,
+payment/access,
+Stripe,
+SQL/Supabase,
+DocRaptor,
+Admin Dashboard,
+Full Underwriting V2 surfaces.
+```
+
+## Fresh continuation point
+
+```text
+Pause point: June 15 local smoke/debug.
+
+Do not commit/deploy/UI retest.
+
+Latest known state:
+- acquisitionMemoV2Projection ReferenceError fixed.
+- current-debt document treatment row can be correct.
+- final HTML still has empty SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY.
+- final HTML still lacks Current debt context uploaded / Lender Diligence Checklist / Preliminary Financing Readiness Summary.
+- Document Treatment Summary still appears after </html>.
+- Latest smoke failure moved to Current_Debt_Stonebridge.pdf / Debt Support Received assertion, but final HTML shows the deeper final-assembly placement problem remains.
+- Next work should be a clean fresh-chat decision between:
+  A) one V2-gated final assembly ownership patch; or
+  B) replacing section-by-section bridge patching with a complete V2 Acquisition Memo body insertion.
+```
+
+---
+
+# June 14, 2026 Evening Addendum — CVF Update / V2 Rebuild Steps 1 and 2 Complete
+
+## Current CVF status after Steps 1 and 2
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll parsing: PASS / holding.
+CVF-03 / CVF-06 Source reconciliation disclosure: PASS WITH DISCLOSURE / holding.
+CVF-04 Current debt / proposed acquisition financing separation: ACTIVE REBUILD — Step 2 foundation complete.
+CVF-05 V2 containment: PASS / holding.
+CVF-07 / CVF-15 Optional-support/source-package authority: ACTIVE REBUILD — Step 2 foundation complete.
+CVF-08 / CVF-09 / CVF-10 Delivery/publish path: PASS for customer delivery.
+CVF-14 Advisory QA: Will be fixed in Step 6 when QA is converted to dumb consumer.
+```
+
+## Why the patch loop is permanently closed
+
+Step 1 inspection confirmed there are at least 4 separate locations in `generate-client-report.js`
+alone (~2994, ~9708, ~11949, ~12696) that can independently build or overwrite document treatment output.
+
+This is the structural proof of why RETEST 1 through RETEST 5 each fixed a visible surface
+while leaving another competing path running underneath. No patch can win against 4 independent
+output paths. The V2 rebuild eliminates all 4 by making them dumb consumers of a single authority.
+
+## Step 2 CVF progress
+
+CVF-04 and CVF-07/CVF-15 now have a mechanically enforced solution at the foundation level.
+
+`buildCanonicalSourcePackage` enforces:
+
+```text
+Stonebridge_Assumptions.pdf → purchase_assumptions (never current_debt_context)
+Current_Debt_Stonebridge.pdf → current_debt_context (never contaminated by assumption terms)
+Stonebridge_Reno_Plan.pdf → structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf → appraisal_context (never purchase_assumptions)
+Stonebridge_Phase_I_ESA.pdf → environmental_context (never property tax support)
+T12 file → core_t12 (never other_support)
+Rent Roll file → core_rent_roll (never other_support)
+Stonebridge_Market_Survey.pdf → market_survey_context
+```
+
+The negative contamination guard is also enforced by the smoke test:
+A file with "assumption" in its filename and debt_basis "proposed_acquisition" can NEVER
+resolve to current_debt_context regardless of any other signal.
+
+## CVF-04 specific enforcement mechanism
+
+The old failure mode:
+
+```text
+Negative language in Stonebridge_Assumptions.pdf ("not a current mortgage statement",
+"does not represent existing debt") triggered the current-debt classification path
+because the system read for the presence of debt-related language rather than
+distinguishing positive current-debt evidence from limiting/exclusion language.
+```
+
+The new enforcement:
+
+```text
+Classification rule 3 (current_debt_context) requires POSITIVE evidence:
+current outstanding balance, current interest rate, or existing mortgage maturity.
+Negative/exclusion language is not positive evidence and cannot trigger the role.
+
+Classification rule 4 (purchase_assumptions) explicitly wins over rule 3
+if a file contains "assumption" in the filename OR has debt_basis "proposed_acquisition".
+Priority order is mechanically enforced — not a hint or preference.
+```
+
+## CVF-07/CVF-15 specific enforcement mechanism
+
+The old failure mode:
+
+```text
+Phase I ESA was classified as Property Tax Support because environmental language
+co-occurred with property-related terms. No strict role separation existed.
+Appraisal was overpromoted to Purchase Assumptions because acquisition context
+language co-occurred with price/value terms.
+```
+
+The new enforcement:
+
+```text
+environmental_context is a discrete canonical role.
+appraisal_context is a discrete canonical role.
+Neither can bleed into property_tax_support or purchase_assumptions
+because those are separate canonical roles with separate detection rules.
+A file cannot hold two canonical roles simultaneously.
+The first matching rule in priority order wins and classification stops.
+```
+
+## CVF-15 T12/Rent Roll demoted-to-support-doc fix
+
+```text
+T12 and Rent Roll now return as coreT12 and coreRentRoll on the canonical source package root,
+not as entries in the supportDocs map.
+They carry role "core_t12" and "core_rent_roll" with treatment "Primary quantitative input".
+They can never appear as "Other Support Document / Context only / not used quantitatively."
+```
+
+## Rebuild sequence CVF mapping
+
+```text
+Step 1 (complete): Inspection — confirmed all competing decision-makers
+Step 2 (complete): buildCanonicalSourcePackage — CVF-04, CVF-07, CVF-15 foundation enforced
+Step 3 (pending): buildAcquisitionMemoProjection — CVF-04, CVF-07, CVF-15 propagation
+Step 4 (pending): renderAcquisitionMemo — CVF-04, CVF-07, CVF-15 visible output
+Step 5 (pending): Thin bridge in generate-client-report.js — live path wiring
+Step 6 (pending): Quarantine legacy paths — closes all remaining CVF-14 noise
+Step 7 (pending): Final Attack Test 8 golden replay — permanent RETEST 5 expectations verified
+```
+
+## Launch posture unchanged
+
+```text
+Screening: Launchable / founder-beta ready.
+Acquisition Memo: Not launch-cleared. V2 rebuild active on branch acq-memo-v2-source-package.
+Full Underwriting V2: Deferred.
+```
+
+## Fresh continuation point
+
+```text
+Resume in next session with Codex Step 2 validation result.
+All 5 node commands must pass before proceeding to Step 3.
+Step 3 prompt will implement buildAcquisitionMemoProjection consuming
+the canonical source package output with zero independent classification.
+```
+
+---
+
+# June 14, 2026 Addendum - CVF Ledger Update / Acquisition Memo V2 Source-Authority Rebuild Start
+
+## Current CVF controlling status after RETEST 5
+
+Final Attack Test 8 RETEST 5 confirmed that the incremental Patch 4B/4C/4D authority loop improved some visible labels but did not close the underlying CVF family.
+
+Current CVF verdict:
+
+```text
+CVF-01 / CVF-02 Core T12 and Rent Roll parsing: PASS / holding.
+CVF-03 / CVF-06 Source reconciliation disclosure: PASS WITH DISCLOSURE / holding.
+CVF-04 Current debt / proposed acquisition financing separation: FAIL for Acquisition Memo V1 automation.
+CVF-05 V2 containment: PASS / holding.
+CVF-07 / CVF-15 Optional-support/source-package authority: FAIL for Acquisition Memo V1 automation.
+CVF-08 / CVF-09 / CVF-10 Delivery/publish path: PASS for customer delivery, but diagnostic authority remains noisy.
+CVF-14 Advisory QA: PARTIAL / still noisy and not sovereign.
+```
+
+Controlling action:
+
+```text
+Stop the tiny support-doc patch loop.
+Freeze Acquisition Memo automation.
+Start quarantined Acquisition Memo V2 source-authority rebuild.
+```
+
+## RETEST 5 CVF pass findings
+
+### CVF-01 / CVF-02 - Core parsing
+
+Status:
+
+```text
+PASS / holding.
+```
+
+Observed stable rendered values:
+
+```text
+Units: 64
+Occupancy: 93.8%
+Annual In-Place Rent: $1,432,800
+Annual Market Rent: $1,718,400
+Annual Rent Upside: $285,600
+Rent Gap: 19.9%
+EGI: $1,500,000
+OpEx: $555,000
+NOI: $945,000
+Expense Ratio: 37.0%
+NOI Margin: 63.0%
+Break-Even Occupancy: 37.0%
+```
+
+Disposition:
+
+```text
+Do not reopen core T12/Rent Roll math or parser work as part of Acquisition Memo V2 rebuild, except protective regression.
+```
+
+### CVF-03 / CVF-06 - Source reconciliation / disclosure
+
+Status:
+
+```text
+PASS WITH DISCLOSURE / holding.
+```
+
+Visible report classification remained:
+
+```text
+Review - Source Reconciliation Disclosure
+```
+
+Disposition:
+
+```text
+Correct conservative disclosure. Not the active blocker.
+```
+
+### CVF-05 - V2 containment
+
+Status:
+
+```text
+PASS / holding.
+```
+
+No visible prohibited V2 surfaces were observed:
+
+```text
+No DSCR.
+No current-debt DSCR.
+No refinance proceeds.
+No DCF.
+No waterfall.
+No equity return.
+No deal score.
+No final recommendation.
+No BUY / SELL / HOLD.
+```
+
+Disposition:
+
+```text
+Do not reopen V2 surfaces during the Acquisition Memo V2 source-authority rebuild.
+```
+
+## RETEST 5 CVF failures
+
+### CVF-04 - Current debt / proposed acquisition financing contamination
+
+Status:
+
+```text
+FAIL / true Acquisition Memo V1 launch blocker.
+```
+
+Observed wrong visible behavior:
+
+```text
+Uploaded Existing Debt Context showed:
+- Interest Rate 5.95%
+- Amortization 30 years
+- LTV 70.0%
+```
+
+Those are proposed acquisition financing terms from `Stonebridge_Assumptions.pdf`, not current-debt facts from `Current_Debt_Stonebridge.pdf`.
+
+Correct current-debt source facts:
+
+```text
+Current Outstanding Balance: $6,800,000
+Interest Rate: 4.85%
+Amortization Remaining: 24 years
+Monthly Payment: $39,250
+Maturity Date: 2029-11-01
+```
+
+CVF classification:
+
+```text
+CVF family: CVF-04 and CVF-15.
+Human red-pen decision: true_launch_blocker for Acquisition Memo automated launch.
+Customer visible: yes.
+Math affected: current debt context facts wrong / contaminated.
+Source binding affected: yes.
+Patch-loop disposition: stop tiny patching; rebuild source-authority foundation.
+Regression required: yes, permanent RETEST 5 golden replay.
+```
+
+Required V2 behavior:
+
+```text
+Current_Debt_Stonebridge.pdf must supply current debt context facts.
+Stonebridge_Assumptions.pdf must never supply Uploaded Existing Debt Context facts.
+Proposed acquisition financing and existing/current debt must be separate canonical roles with separate allowed/forbidden uses.
+```
+
+### CVF-04 / CVF-15 - Stonebridge_Assumptions.pdf misclassified as debt support
+
+Status:
+
+```text
+FAIL / source-authority role contamination.
+```
+
+Observed wrong visible Document Treatment:
+
+```text
+Stonebridge_Assumptions.pdf
+Document Role: Debt Support Received / Contextual
+Use: Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Assumptions.pdf should be Purchase Assumptions / Proposed Acquisition Financing Context.
+It must not be current debt or existing debt support.
+```
+
+Disposition:
+
+```text
+This confirms negative language like “not a current mortgage statement” or “does not represent existing debt” must not trigger current-debt classification.
+Canonical role rules must distinguish positive current-debt proof from limitation sentences.
+```
+
+### CVF-07 / CVF-15 - Phase I ESA misclassified as Property Tax Support
+
+Status:
+
+```text
+FAIL / support-doc role contamination.
+```
+
+Observed wrong visible Document Treatment:
+
+```text
+Stonebridge_Phase_I_ESA.pdf
+Document Role: Property Tax Support
+Treatment: Corroborating support
+Use: Corroborating property-tax support; does not override T12 totals.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Phase_I_ESA.pdf should be Environmental / Phase I due diligence context only.
+It must not become property tax support.
+```
+
+Disposition:
+
+```text
+Environmental context and property tax support must be separate canonical roles.
+```
+
+### CVF-07 / CVF-15 - Appraisal summary overpromoted to Purchase Assumptions
+
+Status:
+
+```text
+FAIL / appraisal-context overpromotion.
+```
+
+Observed wrong visible Document Treatment:
+
+```text
+Stonebridge_Appraisal_Summary.pdf
+Document Role: Purchase Assumptions / Acquisition Context
+```
+
+Correct behavior:
+
+```text
+Appraisal summary should be appraisal / valuation context only.
+It must not become purchase assumptions unless explicit purchase-assumption facts are present and validated for that file.
+It must not override purchase price, T12 NOI, Rent Roll market rent, or cap-rate value framework.
+```
+
+Disposition:
+
+```text
+Appraisal context requires its own canonical role and forbidden uses.
+```
+
+### CVF-15 - Core T12/Rent Roll listed as generic support docs
+
+Status:
+
+```text
+FAIL / visible source-treatment credibility issue.
+```
+
+Observed wrong visible Document Treatment:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only / not used quantitatively
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only / not used quantitatively
+```
+
+Correct behavior:
+
+```text
+T12 and Rent Roll are core quantitative sources.
+They may appear in a core-source treatment table, but must not be described as generic support docs not used quantitatively.
+```
+
+Disposition:
+
+```text
+Canonical Source Package must include core_t12 and core_rent_roll roles, not just support-doc roles.
+```
+
+### CVF-14 - Advisory QA still not aligned to source-authority truth
+
+Status:
+
+```text
+PARTIAL / noisy and stale.
+```
+
+Observed internal artifacts included:
+
+```text
+UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED
+structured_renovation_present: false
+legacy_action_plan_fallback
+canonical_delivery_state_present: false
+```
+
+Interpretation:
+
+```text
+Advisory QA is not blocking delivery, but it still proves old authority paths remain active diagnostically.
+```
+
+Disposition:
+
+```text
+Do not broaden the rebuild into QA first.
+First rebuild source package + projection + renderer authority.
+Then QA must consume source package/projection artifacts instead of reinterpreting raw support docs.
+```
+
+## Updated active blocker name
+
+The active blocker is no longer named as another Patch 4x.
+
+New active blocker:
+
+```text
+Acquisition Memo V2 Source-Authority Rebuild
+```
+
+Primary CVF families:
+
+```text
+CVF-04 - current debt / proposed acquisition financing / debt-context separation.
+CVF-07 - optional/support document treatment and source-depth boundaries.
+CVF-15 - optional-support/source-package/admin diagnostic authority.
+```
+
+Secondary families to protect:
+
+```text
+CVF-01/CVF-02 - core parsing must remain untouched/protected.
+CVF-05 - V2 surfaces must remain closed.
+CVF-08/CVF-09/CVF-10 - delivery/publish path must remain stable.
+CVF-14 - advisory QA must be downstream of source-package truth, not a separate authority.
+```
+
+## New CVF doctrine for Acquisition Memo V2 rebuild
+
+The rebuild must create a mechanically enforced authority path:
+
+```text
+uploaded files + extracted text + parsed artifacts
+-> buildCanonicalSourcePackage(...)
+-> buildAcquisitionMemoProjection(...)
+-> renderAcquisitionMemo(...)
+-> final HTML / PDF
+```
+
+No downstream renderer, checklist, financing section, document-treatment summary, or QA layer may independently decide file role after `buildCanonicalSourcePackage(...)`.
+
+## Canonical source package CVF requirements
+
+For each file, the source package must emit one canonical source object:
+
+```text
+fileId
+originalFilename
+sourceKind
+canonicalRole
+canonicalLabel
+allowedUses
+forbiddenUses
+extractedFacts
+confidence
+sourceEvidence
+sourceAuthorityVersion
+provenance
+```
+
+Required roles include:
+
+```text
+core_t12
+core_rent_roll
+purchase_assumptions
+proposed_acquisition_financing
+current_debt_context
+structured_renovation_capex_plan
+appraisal_context
+market_survey_context
+environmental_context
+property_tax_support
+zoning_or_compliance_context
+broker_or_diligence_context
+other_support_context
+unclassified_support_context
+```
+
+RETEST 5 golden expected roles:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_t12
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_rent_roll
+Stonebridge_Assumptions.pdf -> purchase_assumptions / proposed_acquisition_financing
+Current_Debt_Stonebridge.pdf -> current_debt_context
+Stonebridge_Reno_Plan.pdf -> structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf -> appraisal_context
+Stonebridge_Market_Survey.pdf -> market_survey_context
+Stonebridge_Phase_I_ESA.pdf -> environmental_context
+```
+
+## Acquisition Memo projection CVF requirements
+
+`buildAcquisitionMemoProjection(...)` must be the only source used by the Acquisition Memo renderer.
+
+Projection fields should include:
+
+```text
+coreOperatingMetrics
+rentPositioning
+acquisitionContext
+proposedFinancingContext
+currentDebtContext
+renovationContext
+appraisalContext
+marketSurveyContext
+environmentalContext
+propertyTaxContext
+documentTreatmentRows
+lenderDiligenceChecklist
+omittedSections
+disclosures
+sourcePackageDiagnostics
+```
+
+Renderer may not read:
+
+```text
+raw artifacts
+raw documentSources
+parser semantic_doc_role
+parser semantic_doc_display_label
+debt_basis
+doc_type
+parse_error
+filename heuristics
+AI recovery labels
+```
+
+## CVF enforcement tests required
+
+The rebuild must add contract tests that fail if Acquisition Memo V2 bypasses the source package.
+
+Required test classes:
+
+```text
+1. Source-package unit smoke:
+   - validates canonical roles and extracted facts for RETEST 5 source package.
+
+2. Acquisition Memo projection smoke:
+   - validates current debt, proposed financing, appraisal, environmental, market survey, Reno, T12, and Rent Roll treatment before rendering.
+
+3. Final HTML smoke:
+   - validates customer-visible rows and values.
+
+4. Forbidden-field / source-scan smoke:
+   - fails if Acquisition Memo projection/renderer files directly reference parser authority fields or filename heuristics outside the source-package builder.
+
+5. Screening regression smoke:
+   - proves Screening remains untouched.
+
+6. V2 containment smoke:
+   - proves no DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD surfaces render.
+```
+
+Forbidden direct fields outside `canonical-source-package.js`:
+
+```text
+semantic_doc_role
+semantic_doc_display_label
+debt_basis
+doc_type
+parse_error
+supporting_documents_unclassified
+loan_term_sheet_parsed
+rent_roll_parse_error
+document_text_extracted
+original_filename.includes
+filename.includes
+```
+
+## Old authority path disposition
+
+Old support-doc authority helpers must not remain independent authorities for Acquisition Memo V2.
+
+Inspect and resolve:
+
+```text
+buildCanonicalSupportDocAuthorityRows(...)
+resolveExplicitSupportDocAuthority(...)
+buildSupportDocTaxonomyState(...)
+Document Treatment row builders that classify roles themselves
+Preliminary Financing Readiness builders that classify roles themselves
+QA/action-plan support-doc role inference helpers
+renderer filename/doc_type/debt_basis fallbacks
+```
+
+Allowed dispositions:
+
+```text
+delete;
+quarantine as legacy V1 only;
+rename as LEGACY_DO_NOT_USE;
+convert into adapter around buildCanonicalSourcePackage(...).
+```
+
+Not allowed:
+
+```text
+leave old helpers as live independent decision-makers beside the new source package.
+```
+
+## Publish-or-Fail doctrine preserved
+
+The rebuild must not convert support-doc uncertainty into whole-report fail.
+
+Production doctrine remains:
+
+```text
+Only true missing/unusable required T12, true missing/unusable required Rent Roll, true runtime/storage/PDF fatal, or catastrophic render failure can fail a report.
+```
+
+Optional/support docs must:
+
+```text
+classify when clear;
+render as bounded context when allowed;
+collapse / omit / qualify when incomplete;
+never fabricate;
+never override T12/Rent Roll;
+never unlock V2 surfaces in Acquisition Memo.
+```
+
+Developer/test doctrine:
+
+```text
+CI/tests fail if code bypasses source package or final HTML contradicts canonical authority.
+```
+
+Customer delivery doctrine:
+
+```text
+Core-valid reports still publish with section-level collapse/qualification/disclosure for optional/support ambiguity.
+```
+
+## Updated launch posture
+
+```text
+Screening:
+Launchable / founder-beta ready from current evidence. Protect with regression.
+
+Acquisition Memo V1:
+Frozen / not launch-cleared. Do not keep patching.
+
+Acquisition Memo V2:
+New rebuild target, behind branch/feature boundary, not active production until source-package/projection/final HTML contract passes.
+
+Full Underwriting V2:
+Deferred until shared source-authority foundation is stable.
+```
+
+## Do not do next
+
+Do not:
+
+```text
+run another V1 RETEST 6 as a tiny patch loop;
+write another one-off Current Debt / Reno / Assumptions label patch;
+rewrite generate-client-report.js wholesale;
+start Full Underwriting V2 first;
+touch Screening except protective tests;
+touch Stripe, SQL, Supabase lifecycle, payment/access, auth/upload gates, pricing, DocRaptor config, or Admin Dashboard;
+reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation surfaces.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 5 was the stop point for the Patch 4 loop.
+Core math/publish/V2 containment held.
+Current Debt/Reno labels improved, but source-authority contamination remains:
+- Uploaded Existing Debt Context used proposed acquisition terms.
+- Stonebridge_Assumptions became Debt Support.
+- Phase I became Property Tax Support.
+- Appraisal became Purchase Assumptions.
+- Core T12/Rent Roll appeared as Other Support Docs.
+
+Acquisition Memo V1 automation is frozen.
+Next work is Acquisition Memo V2 Source-Authority Rebuild:
+- branch/tag first;
+- new canonical-source-package module;
+- new acquisition-memo-projection module;
+- dumb acquisition-memo-renderer;
+- source-scan/forbidden-field tests;
+- permanent RETEST 5 golden fixture;
+- Screening protected;
+- Full Underwriting V2 deferred.
+```
+
+---
+
 # June 12, 2026 Addendum - Final Attack Test 8 RETEST 2 CVF Update / Patch 4 Partial Pass, Current Debt + Reno Still Open
 
 ## Current CVF status after RETEST 2
